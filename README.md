@@ -29,34 +29,37 @@ You can also build and query your own corpus using Coquery: simply put your text
 
 Coquery is a command line tool (a graphical interface may be added at a later stage). Here are a view examples of how Coquery can be used:
 
-* Get a word frequency list, based on orthographic form:
+**Get a word frequency list, based on orthographic form**
 ```
 #!bash
-
 coquery -q "*" -O FREQ
 ```
-* Get a bigram frequency list, based on orthographic form
+**Get a bigram frequency list, based on orthographic form**
 ```
 #!bash
 coquery -q "* *" -O FREQ
 ```
-
-* Get a frequency list of the part-of-speech labels:
+**Get a frequency list of the part-of-speech labels, and store results in file output.csv**
 ```
 #!bash
-coquery -q "*" -P FREQ
+coquery -q "*" -p FREQ -o output.csv
 ```
-
-* Get a list of all co-occurrences of the word 'residualized' followed by a noun:
+**Get a list of all co-occurrences of the word 'residualized' followed by a noun**
 ```
 #!bash
 coquery -q "residualized [n*]" -O
 ```
-* Get all five-word contexts preceding and following an ART-NOUN sequence:
+**Get all five-word contexts preceding and following an ART-NOUN sequence**
 ```
 #!bash
 coquery -q "the|a|an [n*]" -c 5
 ```
+**Run all queries given in the 3rd column (-n 3) of file input.csv. Output the orthographic form (-O), the part-of-speech tag (-p), a five-word context (-c 5) and the text information (-t) of all matches to file output.csv**
+```
+#!bash
+coquery -i input.csv -o output.csv -n 3 -O -p -t
+```
+
 ### Maintainer ###
 
 * Gero Kunter, [Universität Düsseldorf](http://www.anglistik.hhu.de/sections/anglistik-iii-english-language-and-linguistics/facultystaff/detailseite-kunter.html)
