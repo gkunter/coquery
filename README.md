@@ -38,23 +38,25 @@ coquery -q "*" -O FREQ
 * Get a bigram frequency list, based on orthographic form
 ```
 #!bash
-
 coquery -q "* *" -O FREQ
 ```
 
 * Get a frequency list of the part-of-speech labels:
 ```
 #!bash
-
 coquery -q "*" -P FREQ
 ```
 
 * Get a list of all co-occurrences of the word 'residualized' followed by a noun:
+```
+#!bash
 coquery -q "residualized [n*]" -O
-
+```
 * Get all five-word contexts preceding and following an ART-NOUN sequence:
-  coquery -q "the|a|an [n*]" -c 5
-
+```
+#!bash
+coquery -q "the|a|an [n*]" -c 5
+```
 ### Maintainer ###
 
 * Gero Kunter, [Universität Düsseldorf](http://www.anglistik.hhu.de/sections/anglistik-iii-english-language-and-linguistics/facultystaff/detailseite-kunter.html)
