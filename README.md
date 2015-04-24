@@ -2,9 +2,8 @@
 
 Coquery is a corpus query tool.
 
-### What is Coquery for? ###
-
-Coquery was conceived to make the search features from the [Corpus of Contemporary American English](http://corpus.byu.edu/coca/) available locally, but has quickly developed into a more generic corpus query tool. It
+### About ###
+Coquery is a tool that can search a number of linguistic corpora using a unified interface. Its initial purpose was to handle the off-line texts from the [Corpus of Contemporary American English](http://corpus.byu.edu/coca/) on your own computer, but has quickly developed into a more generic corpus query tool.
 
 The latest release is version 0.9. 
 
