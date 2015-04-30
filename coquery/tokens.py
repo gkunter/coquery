@@ -71,6 +71,7 @@ corpus-specific.
         self.transcript_specifiers = []
         self.negated = False
         self.transcript = False
+        self.parse()
         
     def __eq__(self, S):
         return self.S == S
@@ -91,7 +92,6 @@ the appropriate SQL correspondents.
                 self.S = self.S.replace(old, new)
         
     def get_parse(self):
-        self.parse()
         if self.word_specifiers:
             assert not self.lemma_specifiers
         return self.word_specifiers, self.lemma_specifiers, self.class_specifiers, self.negated
@@ -156,7 +156,6 @@ class COCAToken(QueryToken):
         return self.S
 
     def get_parse(self):
-        self.parse()
         return self.word_specifiers, self.lemma_specifiers, self.class_specifiers, self.negated
 
     def parse (self):
@@ -222,7 +221,6 @@ class COCATextToken(COCAToken):
     check_part_of_speech = False
 
     def get_parse(self):
-        self.parse()
         return self.word_specifiers, self.class_specifiers, self.negated
     
     def parse(self):
@@ -247,7 +245,7 @@ Examples:   FIC (equivalent to FIC.[*])
             self.class_specifiers = self.lemma_specifiers
             self.lemma_specifiers = []
             
-def parse(S, token_type):
+def parse_query_string(S, token_type):
     ST_NORMAL = 0
     ST_IN_BRACKET = 1
     ST_IN_TRANSCRIPT = 2

@@ -14,9 +14,9 @@ class DBConnection(object):
         self.db_name = db_name
         self.dry_run = False
 
-        self.execute(cur, "SET autocommit=0")
-        self.execute(cur, "SET unique_checks=0")
-        self.execute(cur, "SET foreign_key_checks=0")
+        self.set_variable("autocommit", 0)
+        self.set_variable("unique_checks", 0)
+        self.set_variable("foreign_key_checks", 0)
         self.Con.commit()
 
     def execute(self, cursor, command, override=False):
@@ -35,17 +35,15 @@ class DBConnection(object):
 
     def has_table(self, table_name):
         cur = self.Con.cursor()
-        return self.execute(cur, "SELECT * FROM information_schema.tables WHERE table_schema = '%s' AND table_name = '%s'" % (self.db_name, table_name), override=True)
+        return self.execute(cur, "SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name), override=True)
 
     def load_data(self, table_name, path, arguments=""):
         cur = self.Con.cursor()
-        self.execute(cur, 
-                     "LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(
-                         path, table_name, arguments))
+        return self.execute(cur, "LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(path, table_name, arguments))
 
     def create_table(self, table_name, description, override=False):
         cur = self.Con.cursor()
-        self.execute(cur, 'CREATE TABLE %s (%s)' % (table_name, description), override=override)
+        return self.execute(cur, 'CREATE TABLE {} ({})'.format(table_name, description), override=override)
 
     def has_index(self, table_name, index_name):
         cur = self.Con.cursor()
@@ -56,9 +54,9 @@ class DBConnection(object):
         if index_length:
             variables = ["%s(%s)" % (variables[0], index_length)]
         if index_type:
-            self.execute(cur, 'CREATE INDEX %s ON %s(%s) USING %s' % (index_name, table_name, ",".join(variables), index_type))
+            self.execute(cur, 'CREATE INDEX {} ON {}({}) USING {}'.format(index_name, table_name, ",".join(variables), index_type))
         else:
-            self.execute(cur, 'CREATE INDEX %s ON %s(%s)' % (index_name, table_name, ",".join(variables)))
+            self.execute(cur, 'CREATE INDEX {} ON {}({})'.format(index_name, table_name, ",".join(variables)))
             
     def get_field_type(self, table_name, column_name):
         cur = self.Con.cursor()
@@ -122,9 +120,9 @@ class DBConnection(object):
         
         # take care of single quotation marks:
         if any("'" in str(x) for x in data):
-            values = u", ".join(['"%s"' % x for x in data]).encode("utf-8")
+            values = ", ".join(['"%s"' % x for x in data]).encode("utf-8")
         else:
-            values = u", ".join(["'%s'" % x for x in data]).encode("utf-8")
+            values = ", ".join(["'%s'" % x for x in data]).encode("utf-8")
         # take care of backslashes:
         values = values.replace("\\", "\\\\")
 

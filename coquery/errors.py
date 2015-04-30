@@ -35,8 +35,6 @@ import logging
 
 import __init__
 
-
-
 class GenericException(Exception):
     def __init__(self, par=""):
         self.par = par
@@ -91,6 +89,9 @@ class CorpusUnavailableQueryTypeError(GenericException):
 
 class CorpusUnsupportedFunctionError(GenericException):
     error_message = "Function not yet supported by corpus."
+
+class ResourceIncompleteDefinitionError(GenericException):
+    error_message = "Resource definition does not contain all requested fields."
 
 class LexiconUnsupportedFunctionError(GenericException):
     error_message = "Function not yet supported by lexicon."

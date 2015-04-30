@@ -25,23 +25,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
-from __future__ import print_function
-import sys
-
-import __init__
-
-import logging
-
 from corpus import *
-import options
-
-import sqlwrap
 import tokens
 
-
-class BNCResource(SQLResource):
-    DB = sqlwrap.SqlDB (Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=options.cfg.db_name)
-
+class Resource(SQLResource):
     pos_table = "entity"
     pos_label_column = "C5"
     pos_id_column = "C5"
@@ -60,101 +47,61 @@ class BNCResource(SQLResource):
     corpus_table = "element"
     corpus_word_id_column = "Entity_id"
     corpus_token_id_column = "id"
-
-    source_table = "text"
-    source_id_column = "XMLName"
-    source_label_column = "XMLName"
-    
     corpus_source_id_column = "Sentence_id"
+
+    sentence_table = "sentence"
+    sentence_id_column = "id"
+    sentence_text_id_column = "Text_id"
+
+    source_table_name = "text"
+    source_table_alias = "SOURCETABLE"
+    source_id_column = "id"
+    source_label_column = "XMLName"
+    source_year_column = "Date"
+    source_genre_column = "Type"
+    source_oldname_column = "OldName"
+    source_file_id_column = "File_id"
+    source_table = "(SELECT {sentence_table}.{sentence_id}, {text_table}.{genre}, {text_table}.{date}, {text_table}.{old_name}, {text_table}.{xml_name} FROM {sentence_table}, {text_table} WHERE {sentence_table}.{sentence_text} = {text_table}.id) AS {source_name}".format(
+        sentence_table=sentence_table,
+        sentence_id=sentence_id_column,
+        sentence_text=sentence_text_id_column,
+        text_table=source_table_name,
+        genre=source_genre_column,
+        date=source_year_column,
+        old_name=source_oldname_column,
+        xml_name=source_label_column,
+        source_name=source_table_alias)
+    
+    speaker_table = "speaker"
+    speaker_id_column = "id"
+    
+    file_table = "file"
+    file_id_column = "id"
+    file_label_column = "Filename"
     
 class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_ORTH, LEX_LEMMA, LEX_POS]
 
-    def __init__(self, resource):
-        super(Lexicon, self).__init__(resource)
-        self.resource = resource
-
 class Corpus(SQLCorpus):
     provides = [CORP_CONTEXT, CORP_SOURCE, CORP_FILENAME, CORP_STATISTICS]
 
-    def get_context(self, token_id, number_of_tokens):
-        if options.cfg.context_span > token_id:
-            left_span = token_id - 1
-        else:
-            left_span = options.cfg.context_span
-        start = token_id - left_span
-        end = token_id + number_of_tokens + options.cfg.context_span - 1
-        QueryString = "SELECT entity_id FROM element WHERE id BETWEEN %s AND %s" % (start, end)
-        Resource.DB.execute(QueryString)
-        ContextList = []
-        for i, CurrentResult in enumerate(Resource.DB.Cur):
-            entry = self.lexicon.get_entry(CurrentResult[0])
-            # if the query is not case sensitive, capitalize the words that
-            # match the query string:
-            if not options.cfg.case_sensitive and i in range(options.cfg.context_span, options.cfg.context_span + number_of_tokens):
-                ContextList.append (entry.orth.upper())
-            else:
-                ContextList.append (entry.orth)
-        return ContextList
- 
-    def get_text_wherelist(self, text_filter):
-        token = tokens.COCATextToken(text_filter, self.lexicon)
-        Genres, Years, Negated = token.get_parse()
-        query_string = "SELECT sentence.id FROM sentence INNER JOIN text ON (sentence.Text_id = text.id)"
-        where_list = []
-        if Genres:
-            where_list += ['text.Type LIKE "%s"' % x for x in Genres]
-        if where_list:
-            where_string = " OR ".join(where_list)
-        
-        query_string = "%s WHERE %s" % (query_string, where_string)
-        Resource.DB.execute(query_string)
-        Results = Resource.DB.fetch_all()
-        if not Results:
-            raise TextfilterError
-        return [str(x) for x in Results]
- 
-    def get_source_info(self, source_id):
-        source_info_headers = self.get_source_info_headers()
-        ErrorValue = ["<na>"] * len(source_info_headers)
-        if not source_id:
-            return ErrorValue
-        try:
-            cursor = Resource.DB.execute_cursor("SELECT * FROM sentence INNER JOIN text where sentence.Text_id = text.id AND sentence.id = {}".format(source_id))
-            Result = cursor.fetchone()
-        except SQLOperationalError: 
-            return ErrorValue
-        return [Result[x] for x in source_info_headers]
-    
     def get_source_info_headers(self):
         return ["Type", "Date", "OldName"]
     
-    def get_file_info(self, file_id):
-        file_info_headers = self.get_file_info_headers()
-        ErrorValue = ["<na>"] * len(file_info_headers)
-        if not file_id:
-            return ErrorValue
-        try:
-            cursor = Resource.DB.execute_cursor("SELECT * FROM text, file WHERE text.file_id = file.id AND file.id = %s" % file_id)
-            Result = cursor.fetchone()
-        except (SQLOperationalError, IndexError):
-            return ErrorValue
-        return [Result[x] for x in file_info_headers]
-    
+    def sql_string_get_file_info(self, source_id):
+        return "SELECT {text_table}.{text} AS XMLName, {file_table}.{file_name} AS Filename FROM {sentence_table}, {text_table}, {file_table} WHERE {sentence_table}.{sentence_id} = {this_id} AND {sentence_table}.{sentence_text} = {text_table}.{text_id} AND {text_table}.{text_file_id} = {file_table}.{file_id}".format(
+            text_table=self.resource.source_table_name,
+            text=self.resource.source_label_column,
+            file_table=self.resource.file_table,
+            file_name=self.resource.file_label_column,
+            sentence_table=self.resource.sentence_table,
+            sentence_id=self.resource.sentence_id_column,
+            this_id=source_id,
+            sentence_text=self.resource.sentence_text_id_column,
+            text_id=self.resource.source_id_column,
+            text_file_id=self.resource.source_file_id_column,
+            file_id=self.resource.file_id_column)
+        
     def get_file_info_headers(self):
         return ["XMLName", "Filename"]
  
-if __name__ == "__main__":
-    print("""This module is part of the Coquery corpus query tool and cannot be run on its own.""", file=sys.stderr)
-    sys.exit(1)
-else:
-    logger = logging.getLogger(__init__.NAME)
-    Resource = BNCResource()
-
-    logger.info("Connected to database %s@%s:%s."  % (options.cfg.db_name, options.cfg.db_host, options.cfg.db_port))
-    logger.info("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))            
-
-    if options.cfg.no_cache:
-        logger.info("Resetting query cache.")
-        Resource.DB.execute("RESET QUERY CACHE")
-        Resource.DB.execute("SET SESSION query_cache_type = OFF")

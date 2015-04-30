@@ -72,10 +72,16 @@ class QueryResult(dict):
             L = ["NA"] * self.query.number_of_tokens
         return L
 
+    def __getitem__(self, *args):
+        try:
+            return super(QueryResult, self).__getitem__(*args)
+        except KeyError:
+            return None
+
     def get_lexicon_entries(self):
         """ returns a list of lexicon entries representing the tokens in
         the current row matching the query."""
-        return map(self.query.Corpus.lexicon.get_entry, self.get_wordid_list())
+        return [self.query.Corpus.lexicon.get_entry(x, self.query.request_list) for x in self.get_wordid_list()]
         
     def get_row(self, number_of_token_columns):
         L = []
@@ -106,22 +112,19 @@ class QueryResult(dict):
         if self.query.requested(LEX_POS):
             L += expand_list(POSs, number_of_token_columns)
         if self.query.requested(CORP_SOURCE):
-            try:
-                L += self.query.Corpus.get_source_info(self["SourceId"])
-            except KeyError:
-                L += self.query.Corpus.get_source_info(None)
+            L += self.query.Corpus.get_source_info(self["SourceId"])
+        if self.query.requested(CORP_SPEAKER):
+            L += self.query.Corpus.get_speaker_info(self["SpeakerId"])
+        if self.query.requested(CORP_FILENAME):
+            L += self.query.Corpus.get_file_info(self["SourceId"])
+        if self.query.requested(CORP_TIMING):
+            L += self.query.Corpus.get_time_info(self["TokenId"])
         if self.query.requested(CORP_CONTEXT):
             context = self.query.Corpus.get_context(self["TokenId"], self.query.number_of_tokens)
             if options.cfg.separate_columns:
                 L += context
             else:
                 L += [CollapseContext(context)]
-        if self.query.requested(CORP_SPEAKER):
-            L += self.query.Corpus.get_speaker_info(self["SpeakerId"])
-        if self.query.requested(CORP_FILENAME):
-            L += self.query.Corpus.get_file_info(self["FileId"])
-        if self.query.requested(CORP_TIMING):
-            L += self.query.Corpus.get_time_info(self["TokenId"])
         if self.query.requested(LEX_FREQ):
             if options.cfg.freq_label in self:
                 L += [self[options.cfg.freq_label]]
@@ -165,8 +168,8 @@ class CorpusQuery(object):
 
     ErrorInQuery = False
 
-    def __init__(self, S, Corpus, token_class, TextFilter):
-        self.tokens = [token_class(x, Corpus.lexicon) for x in tokens.parse(S, token_class)]
+    def __init__(self, S, Corpus, token_class, source_filter):
+        self.tokens = [token_class(x, Corpus.lexicon) for x in tokens.parse_query_string(S, token_class)]
         self.number_of_tokens = len(self.tokens)
         self.query_string = S
         self._current = 0
@@ -176,9 +179,9 @@ class CorpusQuery(object):
         self.request_list = []
 
         if self.Corpus.provides_feature(CORP_SOURCE):
-            self.text_filter = TextFilter
+            self.source_filter = source_filter
         else:
-            self.text_filter = None
+            self.source_filter = None
         
         if options.cfg.show_orth:
             self.request_list.append(LEX_ORTH)        
@@ -240,8 +243,8 @@ class TokenQuery(CorpusQuery):
             if current_result != None:
                 if options.cfg.show_parameters:
                     output_list.append(options.cfg.parameter_string)
-                if self.text_filter:
-                    output_list.append(self.text_filter)
+                if self.source_filter:
+                    output_list.append(self.source_filter)
                 output_list += current_result.get_row(number_of_token_columns)
                 
                 output_file.writerow(output_list)
@@ -256,8 +259,8 @@ class DistinctQuery(CorpusQuery):
             if current_result != None:
                 if options.cfg.show_parameters:
                     output_list.append(options.cfg.parameter_string)
-                if self.text_filter:
-                    output_list.append(self.text_filter)
+                if self.source_filter:
+                    output_list.append(self.source_filter)
                 output_list += current_result.get_row(number_of_token_columns)
                 if output_list not in output_cache:
                     output_file.writerow(output_list)
@@ -277,11 +280,7 @@ class FrequencyQuery(CorpusQuery):
     def __init__(self, *args):
         super(FrequencyQuery, self).__init__(*args)
         self.request_list.append(LEX_FREQ)
-        try:
-            self.request_list.remove(CORP_CONTEXT)
-        except ValueError:
-            pass
-    
+
     def write_results(self, output_file, number_of_token_columns):
         Lines = {}
         results = self.get_result_list()
@@ -291,8 +290,8 @@ class FrequencyQuery(CorpusQuery):
                 output_list.insert (options.cfg.query_column_number - 1, self.query_string)
             if options.cfg.show_parameters:
                 output_list.append (options.cfg.parameter_string)
-            if self.text_filter:
-                output_list.append (self.text_filter)
+            if self.source_filter:
+                output_list.append (self.source_filter)
             output_list += current_result.get_row(number_of_token_columns)
             
             LineKey = "".join(map(str, output_list[:-1]))
@@ -309,8 +308,8 @@ class FrequencyQuery(CorpusQuery):
                 output_list.insert (options.cfg.query_column_number - 1, self.query_string)
             if options.cfg.show_parameters:
                 output_list.append (options.cfg.parameter_string)
-            if self.text_filter:
-                output_list.append (self.text_filter)
+            if self.source_filter:
+                output_list.append (self.source_filter)
             output_list += empty_result.get_row(number_of_token_columns)
             
             output_file.writerow(output_list)

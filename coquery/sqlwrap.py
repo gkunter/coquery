@@ -34,7 +34,7 @@ logger = logging.getLogger(__init__.NAME)
 
 
 from errors import *
-from options import *
+import options
 
 try:
     import MySQLdb as mysql
@@ -194,16 +194,13 @@ Value       no return value
             logger.warning("Command '%s' not categorized, assuming modifying commannd" % Command)
             Modify = True
 
-        if Command == "SELECT" and cfg.no_cache: 
-            S = S.replace ("SELECT", "SELECT SQL_NO_CACHE")
-
         self.last_command = S
-        if cfg.explain_queries:
+        if options.cfg.explain_queries:
             self.explain(S)
-        if cfg.verbose:
+        if options.cfg.verbose:
             logger.debug(S)
 
-        if cfg.dry_run:
+        if options.cfg.dry_run:
             ExecutedLastCommand = not Modify
             cursor = []
         else:
@@ -222,10 +219,10 @@ Value       no return value
         """
 Call        execute(self, S, ForceExecution=False)
 Summary     Executes the SQL command string provided in S, or pretend to do 
-            so if cfg.dry_run is True and the SQL command is a modifying 
+            so if options.cfg.dry_run is True and the SQL command is a modifying 
             command. The parameter ForceExecution can be used to override 
-            cfg.dry_run.
-            if cfg.ExplainQueries is True, an SQL EXPLAIN command will be
+            options.cfg.dry_run.
+            if options.cfg.ExplainQueries is True, an SQL EXPLAIN command will be
             executed as well, and the output will be displayed.
 Value       no return value
         """
@@ -240,15 +237,12 @@ Value       no return value
         else:
             Modify = True
 
-        if Command == "SELECT" and cfg.no_cache: 
-            S = S.replace ("SELECT", "SELECT SQL_NO_CACHE")
-
         self.last_command = S
-        if cfg.explain_queries:
+        if options.cfg.explain_queries:
             self.explain(S)
         logger.debug(S)
 
-        if cfg.dry_run and not ForceExecution:
+        if options.cfg.dry_run and not ForceExecution:
             ExecutedLastCommand = not Modify
         else:
             ExecutedLastCommand = True
@@ -261,11 +255,11 @@ Value       no return value
                 raise SQLProgrammingError(S)
 
     def commit (self):
-        if not cfg.dry_run:
+        if not options.cfg.dry_run:
             self.Con.commit ()
         
     def rollback (self):
-        if not cfg.dry_run:
+        if not options.cfg.dry_run:
             self.Con.rollback ()
 
     def fetch_all (self):
