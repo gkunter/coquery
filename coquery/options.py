@@ -144,7 +144,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         group = self.parser.add_mutually_exclusive_group()
         group.add_argument("-i", "--inputfile", help="read query strings from INPUTFILE", type=str, dest="input_path")
         group.add_argument("-q", "--query", help="use QUERY for search, ignoring any INPUTFILE", dest="query_list")
-        self.parser.add_argument("-T", "--textfilter", help="use TEXTFILTER to query only a selection of texts", type=str, default="", dest="text_filter")
+        self.parser.add_argument("-F", "--filter", help="use FILTER to query only a selection of texts", type=str, default="", dest="source_filter")
         self.parser.add_argument("--configuration", help="use CONF_FILE as the configuration file (default: use config file in the same location as program file, i.e. %s)" % default_config_path, default=default_config_path, dest="config_path")
         self.parser.add_argument("--db-name", help="use DB_NAME as the SQL database", type=str, dest="db_name")
 

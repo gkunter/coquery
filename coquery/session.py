@@ -75,7 +75,9 @@ class Session(object):
         current_corpus = options.cfg.corpora[options.cfg.corpus]
         corpus_name, ext = os.path.splitext(os.path.basename(current_corpus))
         module = imp.load_source(corpus_name, current_corpus)
-        self.Corpus = module.Corpus(module.Lexicon(module.Resource), module.Resource)
+        current_resource = module.Resource()
+        self.Corpus = module.Corpus(module.Lexicon(current_resource), current_resource)
+        #self.Corpus = module.Corpus(module.Lexicon(module.Resource), module.Resource)
 
         self.show_header = options.cfg.show_header
 
@@ -116,7 +118,7 @@ class Session(object):
         if options.cfg.show_parameters:
             self.header.append ("Parameters")
             
-        if options.cfg.text_filter:
+        if options.cfg.source_filter:
             self.header.append ("Filter")
         
         if options.cfg.show_id:
@@ -143,10 +145,10 @@ class Session(object):
         if options.cfg.show_time and self.Corpus.provides_feature(CORP_TIMING):
             self.header += self.Corpus.get_time_info_headers()
             
-        if options.cfg.MODE in [QUERY_MODE_TOKENS, QUERY_MODE_DISTINCT]:
-            if options.cfg.context_span and self.Corpus.provides_feature(CORP_CONTEXT):
-                self.header += self.Corpus.get_context_headers(options.cfg.context_span, self.max_number_of_tokens, options.cfg.separate_columns)
-        elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
+        if options.cfg.context_span and self.Corpus.provides_feature(CORP_CONTEXT):
+            self.header += self.Corpus.get_context_headers(options.cfg.context_span, self.max_number_of_tokens, options.cfg.separate_columns)
+
+        if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             self.header.append (options.cfg.freq_label)
 
     def open_output_file(self):
@@ -198,7 +200,7 @@ class SessionCommandLine(Session):
         logger.info("%s provided at command line (%s)" % (S, ", ".join(options.cfg.query_list)))
         for query_string in options.cfg.query_list:
             if self.query_type:
-                new_query = self.query_type(query_string, self.Corpus, tokens.COCAToken, options.cfg.text_filter)
+                new_query = self.query_type(query_string, self.Corpus, tokens.COCAToken, options.cfg.source_filter)
             else: 
                 raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
             self.query_list.append(new_query)
@@ -230,7 +232,7 @@ class SessionInputFile(Session):
                             new_query = self.query_type(
                                     query_string, self.Corpus,
                                     tokens.COCAToken,
-                                    options.cfg.text_filter)
+                                    options.cfg.source_filter)
                             new_query.InputLine = copy.copy(CurrentLine)
                             self.query_list.append(new_query)
                             self.max_number_of_tokens = max(new_query.number_of_tokens, self.max_number_of_tokens)
@@ -256,7 +258,7 @@ class SessionStdIn(Session):
                     if read_lines >= options.cfg.skip_lines:
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
                         new_query = self.query_type(
-                                query_string, self.Corpus, tokens.COCAToken, options.cfg.text_filter)
+                                query_string, self.Corpus, tokens.COCAToken, options.cfg.source_filter)
                         
                         new_query.InputLine = copy.copy(current_line)
                         self.query_list.append(new_query)
