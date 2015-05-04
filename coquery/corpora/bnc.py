@@ -86,7 +86,10 @@ class Corpus(SQLCorpus):
     provides = [CORP_CONTEXT, CORP_SOURCE, CORP_FILENAME, CORP_STATISTICS]
 
     def get_source_info_headers(self):
-        return ["Type", "Date", "OldName"]
+        return [
+            self.resource.source_genre_column,
+            self.resource.source_year_column,
+            self.resource.source_oldname_column]
     
     def sql_string_get_file_info(self, source_id):
         return "SELECT {text_table}.{text} AS XMLName, {file_table}.{file_name} AS Filename FROM {sentence_table}, {text_table}, {file_table} WHERE {sentence_table}.{sentence_id} = {this_id} AND {sentence_table}.{sentence_text} = {text_table}.{text_id} AND {text_table}.{text_file_id} = {file_table}.{file_id}".format(
@@ -103,5 +106,7 @@ class Corpus(SQLCorpus):
             file_id=self.resource.file_id_column)
         
     def get_file_info_headers(self):
-        return ["XMLName", "Filename"]
+        return [
+            self.resource.source_label_column,
+            self.resource.file_label_column]
  

@@ -215,6 +215,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
 
     def read_configuration(self):
         # defaults:
+        db_name = None
         db_user = "mysql"
         db_password = "mysql"
         db_port = 3306
@@ -253,30 +254,21 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
 
             current_corpus = self.args.corpus.lower()
             if current_corpus not in config_file.sections():
-                logger.error("No [%s] section found in config file." % self.args.corpus)
-                raise ConfigurationError
-
-            if current_corpus == "celex":
-                db_name = ""
+                logger.warning("No [%s] section found in config file." % self.args.corpus)
+            else:
                 try:
-                    vars(self.args) ["celex_base_path"] = config_file.get("celex", "location")
+                    db_name = config_file.get(current_corpus, "db_name")
                 except configparser.NoOptionError:
-                    logger.warning("Option 'celex_base_path' not found in config file. Using default.")
-
-            try:
-                db_name = config_file.get(current_corpus, "db_name")
-            except configparser.NoOptionError:
-                logger.warning("Option 'db_name' not found in section %s of config file. Using default." % current_corpus)
+                    logger.warning("Option 'db_name' not found in section %s of config file. Using default." % current_corpus)
         else:
             logger.warning("Configuration file %s not found, using defaults." % self.args.config_path)
 
         if db_name:
-            if not self.args.db_name:
-                vars(self.args) ["db_name"] = db_name
-            vars(self.args) ["db_user"] = db_user
-            vars(self.args) ["db_password"] = db_password
-            vars(self.args) ["db_port"] = db_port
-            vars(self.args) ["db_host"] = db_host
+            vars(self.args) ["db_name"] = db_name
+        vars(self.args) ["db_user"] = db_user
+        vars(self.args) ["db_password"] = db_password
+        vars(self.args) ["db_port"] = db_port
+        vars(self.args) ["db_host"] = db_host
     
 cfg = None
 

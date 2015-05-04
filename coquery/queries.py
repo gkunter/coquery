@@ -39,23 +39,36 @@ def expand_list(L, length, fill=""):
     of fill for additional elements. """
     return L + [fill] * (length - len(L))
 
-def CollapseContext (ContextList):
-    ContextString = " ".join (ContextList)
-    ContextString = ContextString.replace ('""""', '"')
-    S = ""
-    Punct = '!\'),-./:;?^_`}'
-    for i, CurrentChar in enumerate(ContextString):
-        if CurrentChar == " ":
-            if ContextString [i + 1] in Punct:
-                pass
-            else:
-                if ContextString [i - 1] in '([{"':
-                    pass
-                else:
-                    S += CurrentChar
-        else:
-            S += CurrentChar
-    return S
+def collapse_context (ContextList):
+    stop_words = ["<p>", "<P>"]
+    conflate_words = ["n't"]
+    #ContextString = " ".join([x.strip() for x in ContextList])
+    #ContextString = ContextString.replace ('""""', '"')
+    #token_list = []
+    #Punct = '!\'),-./:;?^_`}'
+    #for i, CurrentChar in enumerate(ContextString):
+        #if CurrentChar == " ":
+            #if ContextString [i + 1] in Punct:
+                #pass
+            #else:
+                #if ContextString [i - 1] in '([{"':
+                    #pass
+                #else:
+                    #token_list.append(CurrentChar)
+        #else:
+            #token_list.append(CurrentChar)
+    #return "".join(token_list)
+
+    token_list = []
+    punct = '!\'),-./:;?^_`}’'
+    context_list = [x.strip() for x in ContextList]
+    for i, current_token in enumerate(context_list):
+        if current_token not in stop_words:
+            if current_token not in punct and current_token not in conflate_words:
+                if i > 0 and context_list[i-1] not in "([{‘":
+                    token_list.append(" ")
+            token_list.append(current_token)
+    return "".join(token_list)
 
 class QueryResult(dict):
     """ A little class that represents a single row of results from a query."""
@@ -69,38 +82,55 @@ class QueryResult(dict):
         try:
             L = [self["W%s" % (x + 1)] for x in range(self.query.number_of_tokens)]
         except KeyError:
-            L = ["NA"] * self.query.number_of_tokens
+            L = ["<NA>"] * self.query.number_of_tokens
         return L
 
-    def __getitem__(self, *args):
-        try:
-            return super(QueryResult, self).__getitem__(*args)
-        except KeyError:
-            return None
+    #def __getitem__(self, *args):
+        #try:
+            #return super(QueryResult, self).__getitem__(*args)
+        #except KeyError:
+            #return None
 
     def get_lexicon_entries(self):
         """ returns a list of lexicon entries representing the tokens in
         the current row matching the query."""
-        return [self.query.Corpus.lexicon.get_entry(x, self.query.request_list) for x in self.get_wordid_list()]
+        word_ids = self.get_wordid_list()
+        
+        lexicon_entries = []
+        for current_id in self.get_wordid_list():
+            if current_id == "<NA>":
+                return []
+            lexicon_entries.append(
+                self.query.Corpus.lexicon.get_entry(current_id, self.query.request_list))
+        return lexicon_entries
+                         
+        
+        if all([x != "<NA>" for x in word_ids]):
+            return [self.query.Corpus.lexicon.get_entry(x, self.query.request_list) for x in word_ids]
+        else:
+            return []
         
     def get_row(self, number_of_token_columns):
         L = []
         entry_list = self.get_lexicon_entries()
-        Words = []
-        Lemmas = []
-        POSs = []
-        Phon = []
-        for current_entry in entry_list:
-            if options.cfg.case_sensitive:
-                Words.append(current_entry.orth)
-            else:
-                Words.append(current_entry.orth.lower())
-            if self.query.requested(LEX_LEMMA):
-                Lemmas.append(current_entry.lemma)
-            if self.query.requested(LEX_POS):
-                POSs.append(current_entry.pos)
-            if self.query.requested(LEX_PHON):
-                Phon.append(current_entry.phon)
+        if not entry_list:
+            return ["<NA>"] * len(self.query.Session.header)
+        else:
+            Words = []
+            Lemmas = []
+            POSs = []
+            Phon = []
+            for current_entry in entry_list:
+                if options.cfg.case_sensitive:
+                    Words.append(current_entry.orth)
+                else:
+                    Words.append(current_entry.orth.lower())
+                if self.query.requested(LEX_LEMMA):
+                    Lemmas.append(current_entry.lemma)
+                if self.query.requested(LEX_POS):
+                    POSs.append(current_entry.pos)
+                if self.query.requested(LEX_PHON):
+                    Phon.append(current_entry.phon)
         if options.cfg.show_id:
             L += [self["TokenId"]]
         if self.query.requested(LEX_ORTH):
@@ -120,11 +150,11 @@ class QueryResult(dict):
         if self.query.requested(CORP_TIMING):
             L += self.query.Corpus.get_time_info(self["TokenId"])
         if self.query.requested(CORP_CONTEXT):
-            context = self.query.Corpus.get_context(self["TokenId"], self.query.number_of_tokens)
+            context = self.query.Corpus.get_context(self["TokenId"], self.query.number_of_tokens, True)
             if options.cfg.separate_columns:
                 L += context
             else:
-                L += [CollapseContext(context)]
+                L += [collapse_context(context)]
         if self.query.requested(LEX_FREQ):
             if options.cfg.freq_label in self:
                 L += [self[options.cfg.freq_label]]
@@ -168,12 +198,13 @@ class CorpusQuery(object):
 
     ErrorInQuery = False
 
-    def __init__(self, S, Corpus, token_class, source_filter):
-        self.tokens = [token_class(x, Corpus.lexicon) for x in tokens.parse_query_string(S, token_class)]
+    def __init__(self, S, Session, token_class, source_filter):
+        self.tokens = [token_class(x, Session.Corpus.lexicon) for x in tokens.parse_query_string(S, token_class)]
         self.number_of_tokens = len(self.tokens)
         self.query_string = S
         self._current = 0
-        self.Corpus = Corpus
+        self.Session = Session
+        self.Corpus = Session.Corpus
         self.Results = [None]
         self.InputLine = []
         self.request_list = []
@@ -285,32 +316,30 @@ class FrequencyQuery(CorpusQuery):
         Lines = {}
         results = self.get_result_list()
         for current_result in results:
-            output_list = copy.copy (self.InputLine)
-            if options.cfg.show_query:
-                output_list.insert (options.cfg.query_column_number - 1, self.query_string)
-            if options.cfg.show_parameters:
-                output_list.append (options.cfg.parameter_string)
-            if self.source_filter:
-                output_list.append (self.source_filter)
-            output_list += current_result.get_row(number_of_token_columns)
-            
-            LineKey = "".join(map(str, output_list[:-1]))
-            if LineKey in Lines:
-                output_list[-1] += Lines[LineKey][-1]
-            Lines[LineKey] = output_list
-
+            # cuCorpusrrent_result can be None if the query token was not in the
+            # lexicon
+            if current_result:
+                output_list = copy.copy (self.InputLine)
+                if options.cfg.show_query:
+                    output_list.insert (options.cfg.query_column_number - 1, self.query_string)
+                if options.cfg.show_parameters:
+                    output_list.append (options.cfg.parameter_string)
+                if self.source_filter:
+                    output_list.append (self.source_filter)
+                output_list += current_result.get_row(number_of_token_columns)
+                
+                LineKey = "".join(map(str, output_list[:-1]))
+                if LineKey in Lines:
+                    output_list[-1] += Lines[LineKey][-1]
+                Lines[LineKey] = output_list
         if not Lines:
             # write entry with frequency of zero for query results with no hits:
             empty_result = QueryResult(self) 
-            empty_result[options.cfg.freq_label] = 0
             output_list = copy.copy (self.InputLine)
+            output_list = empty_result.get_row(number_of_token_columns)
             if options.cfg.show_query:
-                output_list.insert (options.cfg.query_column_number - 1, self.query_string)
-            if options.cfg.show_parameters:
-                output_list.append (options.cfg.parameter_string)
-            if self.source_filter:
-                output_list.append (self.source_filter)
-            output_list += empty_result.get_row(number_of_token_columns)
+                output_list[options.cfg.query_column_number - 1] = self.query_string
+            output_list[-1] = 0
             
             output_file.writerow(output_list)
         else:

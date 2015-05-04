@@ -294,8 +294,11 @@ class SQLResource(BaseResource):
         return Operators [self.has_wildcards(Token)] [False]
     
     def __init__(self):
-        self.DB = sqlwrap.SqlDB (Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=options.cfg.db_name)
-        logger.info("Connected to database %s@%s:%s."  % (options.cfg.db_name, options.cfg.db_host, options.cfg.db_port))
+        db_name = options.cfg.db_name
+        if not db_name:
+            db_name = self.db_name
+        self.DB = sqlwrap.SqlDB (Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=db_name)
+        logger.info("Connected to database %s@%s:%s."  % (db_name, options.cfg.db_host, options.cfg.db_port))
         logger.info("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))            
 
 class SQLLexicon(BaseLexicon):
@@ -536,6 +539,7 @@ class SQLLexicon(BaseLexicon):
         if token.S == "*":
             return []
         try:
+            S = self.sql_string_get_wordid_list(token)
             self.resource.DB.execute(self.sql_string_get_wordid_list(token))
         except SQLOperationalError:
             return []
@@ -740,7 +744,7 @@ class SQLCorpus(BaseCorpus):
                         self.resource.word_pos_id_column)
                     prefixed_clauses = ["e{num}.{clause}".format(
                         num=i+1, 
-                        clause=clause) for clause in current_where_clauses if "-1" not in clause]
+                        clause=clause) for clause in current_where_clauses]
                     if prefixed_clauses:
                         where_clauses.append (" AND ".join(prefixed_clauses))
         if options.cfg.verbose:
@@ -808,7 +812,7 @@ class SQLCorpus(BaseCorpus):
 
 
         try:
-            cursor = self.resource.DB.execute_cursor (query_string)
+            cursor = self.resource.DB.execute_cursor(query_string)
         except SQLOperationalError:
             raise SQLOperationalError(query_string)
             Query.query_results = [None]
@@ -822,7 +826,7 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_token_id_column,
             start, end)
 
-    def get_context(self, token_id, number_of_tokens):
+    def get_context(self, token_id, number_of_tokens, case_sensitive):
         if options.cfg.context_span > token_id:
             left_span = token_id - 1
         else:
@@ -833,7 +837,7 @@ class SQLCorpus(BaseCorpus):
             self.sql_string_get_span_wordid(start, end))
         context_list = []
         for i, (word_id,) in enumerate(self.resource.DB.Cur):
-            entry = self.lexicon.get_entry(word_id)
+            entry = self.lexicon.get_entry(word_id, [LEX_ORTH])
             # if the query is not case sensitive, capitalize the words that
             # match the query string:
             if not options.cfg.case_sensitive and i in range(left_span, left_span + number_of_tokens):
@@ -844,14 +848,10 @@ class SQLCorpus(BaseCorpus):
 
     def sql_string_get_source_info(self, source_id):
         if "source_table" in dir(self.resource) and "source_table_alias" in dir(self.resource):
-            return "SELECT * FROM {} WHERE {}.id = {}".format(
+            return "SELECT * FROM {} WHERE {}.{} = {}".format(
                 self.resource.source_table, 
-                self.resource.source_table_alias, source_id)
-            #return "SELECT {} as Source FROM {} WHERE {} = {}".format(
-                    #self.resource.source_label_column,
-                    #self.resource.source_table,
-                    #self.resource.source_id_column,
-                    #source_id)        
+                self.resource.source_table_alias, 
+                self.resource.source_id_column, source_id)
         else:
             raise ResourceIncompleteDefinitionError
 
@@ -861,14 +861,22 @@ class SQLCorpus(BaseCorpus):
         if not source_id:
             return error_values
         try:
-            cursor = self.resource.DB.execute_cursor(self.sql_string_get_source_info(source_id))
+            S = self.sql_string_get_source_info(source_id)
+            cursor = self.resource.DB.execute_cursor(S)
             query_result = cursor.fetchone()
         except SQLOperationalError:
             return error_values
         return [query_result[x] for x in source_info_headers]
 
     def get_source_info_headers(self):
-        return ["Source"]
+        header_list = []
+        if "source_label_column" in dir(self.resource):
+            header_list.append(self.resource.source_label_column)
+        if "source_year_column" in dir(self.resource):
+            header_list.append(self.resource.source_year_column)
+        if "source_genre_column" in dir(self.resource):
+            header_list.append(self.resource.source_genre_column)
+        return header_list
 
     def sql_string_get_time_info(self, token_id):
         raise CorpusUnsupportedFunctionError
@@ -921,9 +929,9 @@ class SQLCorpus(BaseCorpus):
                 source_table=self.resource.source_table))
             stats["corpus_sources"] = self.resource.DB.Cur.fetchone()[0]
         if CORP_FILENAME in self.provides:
-            self.resource.DB.execute("SELECT COUNT(*) FROM {source_table}".format(
-                source_table=self.resource.source_table))
-            stats["corpus_sources"] = self.resource.DB.Cur.fetchone()[0]
+            self.resource.DB.execute("SELECT COUNT(*) FROM {}".format(
+                self.resource.file_table))
+            stats["corpus_files"] = self.resource.DB.Cur.fetchone()[0]
         
         return stats
 

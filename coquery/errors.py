@@ -136,7 +136,7 @@ def print_exception(e):
             Indent += "  "
         if Text:
             error_string += "%s> %s\n" % (Indent[:-1], Text)
-    error_string += "ERROR: %s\n" % (e)
+    error_string += "ERROR %s: %s\n" % (type(e).__name__, e)
     #logger.error(error_string)
     print(error_string, file=sys.stderr)
     

@@ -55,6 +55,7 @@ class Resource(SQLResource):
     
     source_table = "source"
     source_id_column = "SourceId"
+    source_label_column = "Source"
     
 class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_LEMMA, LEX_ORTH, LEX_POS, LEX_PHON]

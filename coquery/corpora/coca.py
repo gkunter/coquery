@@ -59,7 +59,7 @@ class Resource(SQLResource):
     source_id_column = "TextId"
     source_year_column = "Year"
     source_genre_column = "Genre"
-    source_source_column = "Source"
+    source_label_column = "Source"
     source_title_column = "Title"
     
     self_join_corpus = "corpusBig"
@@ -103,7 +103,7 @@ class Corpus(SQLCorpus):
         return "SELECT {} AS Year, {} AS Genre, {} AS Source, {} AS Title FROM {} WHERE {} = {}".format(
             self.resource.source_year_column,
             self.resource.source_genre_column,
-            self.resource.source_source_column,
+            self.resource.source_label_column,
             self.resource.source_title_column,
             self.resource.source_table,
             self.resource.source_id_column,

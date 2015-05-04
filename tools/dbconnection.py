@@ -115,7 +115,7 @@ class DBConnection(object):
         self.execute(cur, 'SET {}={}'.format(variable, value), override=True)
 
     def insert(self, table_name, data):
-        assert len(data) == (len(table_description[table_name]["CREATE"]) -1 )
+        #assert len(data) == (len(table_description[table_name]["CREATE"]) -1 )
         cur = self.Con.cursor()
         
         # take care of single quotation marks:

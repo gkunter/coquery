@@ -80,6 +80,7 @@ class Session(object):
         #self.Corpus = module.Corpus(module.Lexicon(module.Resource), module.Resource)
 
         self.show_header = options.cfg.show_header
+        self.expand_header()
 
         # select the query class depending on the value of options.cfg.MODE, i.e.
         # which mode has been specified in the options:
@@ -163,7 +164,6 @@ class Session(object):
                 FileMode = "wt"
             self.output_file = csv.writer(open(options.cfg.output_path, FileMode), delimiter=options.cfg.output_separator)
         if not options.cfg.append and self.show_header:
-            self.expand_header()
             self.output_file.writerow (self.header)
         
     def run_queries(self):
@@ -200,7 +200,7 @@ class SessionCommandLine(Session):
         logger.info("%s provided at command line (%s)" % (S, ", ".join(options.cfg.query_list)))
         for query_string in options.cfg.query_list:
             if self.query_type:
-                new_query = self.query_type(query_string, self.Corpus, tokens.COCAToken, options.cfg.source_filter)
+                new_query = self.query_type(query_string, self, tokens.COCAToken, options.cfg.source_filter)
             else: 
                 raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
             self.query_list.append(new_query)
@@ -230,7 +230,7 @@ class SessionInputFile(Session):
                         if read_lines >= options.cfg.skip_lines:
                             query_string = CurrentLine.pop(options.cfg.query_column_number - 1)
                             new_query = self.query_type(
-                                    query_string, self.Corpus,
+                                    query_string, self,
                                     tokens.COCAToken,
                                     options.cfg.source_filter)
                             new_query.InputLine = copy.copy(CurrentLine)
@@ -258,7 +258,7 @@ class SessionStdIn(Session):
                     if read_lines >= options.cfg.skip_lines:
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
                         new_query = self.query_type(
-                                query_string, self.Corpus, tokens.COCAToken, options.cfg.source_filter)
+                                query_string, self, tokens.COCAToken, options.cfg.source_filter)
                         
                         new_query.InputLine = copy.copy(current_line)
                         self.query_list.append(new_query)

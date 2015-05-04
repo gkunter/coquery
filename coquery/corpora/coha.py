@@ -31,7 +31,7 @@ from corpus import *
 class Resource(SQLResource):
     word_table = "lexicon"
     word_id_column = "WordId"
-    word_label_column = "Word"
+    word_label_column = "WordCS"
     word_transcript_id_column = "Word"
     word_pos_id_column = "PoS"
     word_lemma_id_column = "Lemma"
@@ -55,10 +55,15 @@ class Resource(SQLResource):
     
     source_table = "sources"
     source_id_column = "TextId"
+    source_label_column = "Title"
+    source_table_alias = "sources"
+    source_year_column = "Year"
+    source_genre_column = "Genre"
+    
     
 class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_LEMMA, LEX_ORTH, LEX_POS]
 
 class Corpus(SQLCorpus):
-    provides = [CORP_CONTEXT, CORP_STATISTICS]
+    provides = [CORP_CONTEXT, CORP_SOURCE, CORP_STATISTICS]
  
