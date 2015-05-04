@@ -42,23 +42,6 @@ def expand_list(L, length, fill=""):
 def collapse_context (ContextList):
     stop_words = ["<p>", "<P>"]
     conflate_words = ["n't"]
-    #ContextString = " ".join([x.strip() for x in ContextList])
-    #ContextString = ContextString.replace ('""""', '"')
-    #token_list = []
-    #Punct = '!\'),-./:;?^_`}'
-    #for i, CurrentChar in enumerate(ContextString):
-        #if CurrentChar == " ":
-            #if ContextString [i + 1] in Punct:
-                #pass
-            #else:
-                #if ContextString [i - 1] in '([{"':
-                    #pass
-                #else:
-                    #token_list.append(CurrentChar)
-        #else:
-            #token_list.append(CurrentChar)
-    #return "".join(token_list)
-
     token_list = []
     punct = '!\'),-./:;?^_`}’'
     context_list = [x.strip() for x in ContextList]
@@ -85,12 +68,6 @@ class QueryResult(dict):
             L = ["<NA>"] * self.query.number_of_tokens
         return L
 
-    #def __getitem__(self, *args):
-        #try:
-            #return super(QueryResult, self).__getitem__(*args)
-        #except KeyError:
-            #return None
-
     def get_lexicon_entries(self):
         """ returns a list of lexicon entries representing the tokens in
         the current row matching the query."""
@@ -103,7 +80,6 @@ class QueryResult(dict):
             lexicon_entries.append(
                 self.query.Corpus.lexicon.get_entry(current_id, self.query.request_list))
         return lexicon_entries
-                         
         
         if all([x != "<NA>" for x in word_ids]):
             return [self.query.Corpus.lexicon.get_entry(x, self.query.request_list) for x in word_ids]
