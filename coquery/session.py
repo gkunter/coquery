@@ -80,7 +80,6 @@ class Session(object):
         #self.Corpus = module.Corpus(module.Lexicon(module.Resource), module.Resource)
 
         self.show_header = options.cfg.show_header
-        self.expand_header()
 
         # select the query class depending on the value of options.cfg.MODE, i.e.
         # which mode has been specified in the options:
@@ -167,6 +166,7 @@ class Session(object):
             self.output_file.writerow (self.header)
         
     def run_queries(self):
+        self.expand_header()
         for current_query in self.query_list:
             start_time = time.time()
             if current_query.tokens:
