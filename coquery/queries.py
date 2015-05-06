@@ -280,7 +280,9 @@ class StatisticsQuery(CorpusQuery):
         self.tokens = []
         
     def write_results(self, output_file, number_of_token_columns):
-        for x in self.Results:
+        output_file.writerow(["Variable", "Value"])
+        
+        for x in sorted(self.Results):
             output_file.writerow([x, self.Results[x]])
 
 class FrequencyQuery(CorpusQuery):

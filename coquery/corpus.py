@@ -551,6 +551,7 @@ class SQLLexicon(BaseLexicon):
         
     def get_statistics(self):
         stats = {}
+        stats["lexicon_features"] = " ".join(self.provides)
         self.resource.DB.execute("SELECT COUNT(*) FROM {word_table}".format(
             word_table=self.resource.word_table))
         stats["lexicon_words"] = self.resource.DB.Cur.fetchone()[0]
@@ -920,6 +921,7 @@ class SQLCorpus(BaseCorpus):
 
     def get_statistics(self):
         stats = self.lexicon.get_statistics()
+        stats["corpus_features"] = " ".join(self.provides)
         if CORP_CONTEXT in self.provides:
             self.resource.DB.execute("SELECT COUNT(*) FROM {corpus_table}".format(
                 corpus_table=self.resource.corpus_table))
