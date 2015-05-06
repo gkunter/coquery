@@ -33,6 +33,7 @@ import tokens
 class Resource(SQLResource):
     pos_table = "pos"
     pos_label_column = "PoS"
+    pos_clean_label_column = "PosClean"
     pos_id_column = "PosId"
 
     word_table = "lexicon"
@@ -70,14 +71,18 @@ class Lexicon(SQLLexicon):
 
     def __init__(self, resource):
         super(Lexicon, self).__init__(resource)
-        self.resource.DB.execute("SELECT * FROM pos", ForceExecution=True)
-        Results = self.resource.DB.fetch_all ()
-        for CurrentResult in Results:
-            if options.cfg.ignore_pos_chars:
-                self.pos_dict[CurrentResult [0]] = CurrentResult [2]
-            else:
-                self.pos_dict[CurrentResult [0]] = CurrentResult [1]
-        self.pos_dict[0] = "<na>"
+        if options.cfg.ignore_pos_chars:
+            query_string = "SELECT {} AS ID, {} AS POS FROM {}".format(
+                self.resource.pos_id_column,
+                self.resource.pos_clean_label_column, 
+                self.resource.pos_table)
+        else:
+            query_string = "SELECT {} AS ID, {} AS POS FROM {}".format(
+                self.resource.pos_id_column,
+                self.resource.pos_label_column, 
+                self.resource.pos_table)
+        for current_pos in self.resource.DB.execute_cursor(query_string):
+            self.pos_dict[current_pos["ID"]] = current_pos["POS"]
 
     def sql_string_get_posid_list(self, token):
         where_string = self.sql_string_get_posid_list_where(token)
