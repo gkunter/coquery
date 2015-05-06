@@ -53,15 +53,15 @@ class Resource(SQLResource):
     corpus_source_id_column = "SourceId"
     corpus_time_column = "Time"
     
-    source_table = "source"
-    source_id_column = "SourceId"
-    source_label_column = "Source"
+    file_table = "source"
+    file_id_column = "SourceId"
+    file_label_column = "Text"
     
 class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_LEMMA, LEX_ORTH, LEX_POS, LEX_PHON]
 
 class Corpus(SQLCorpus):
-    provides = [CORP_CONTEXT, CORP_SOURCE, CORP_STATISTICS, CORP_TIMING]
+    provides = [CORP_CONTEXT, CORP_FILENAME, CORP_STATISTICS, CORP_TIMING]
 
     def sql_string_get_time_info(self, token_id):
         return "SELECT Time FROM {} WHERE {} = {}".format(
