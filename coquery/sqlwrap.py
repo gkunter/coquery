@@ -56,59 +56,19 @@ class myDictCursor(mysql_cursors.Cursor):
         super(myDictCursor, self).__init__(*args)
         self.column_names = None
         
-    def fetchone(self, *args):
-        next_row = super(myDictCursor, self).fetchone(*args)
-        if not self.column_names:
-            self.column_names = [current_column[0] for i, current_column in enumerate(self.description)]
-        if next_row == None:
-            return None
-        else:
-            return dict(zip(self.column_names, next_row))
-        
-    def __next__(self):
-        return self.next()
-        
     def next(self):
-        next_row = self.fetchone()
+        next_row = super(myDictCursor, self).fetchone()
         if next_row == None:
             raise StopIteration
         else:
-            return next_row
+            if not self.column_names:
+                self.column_names = [x[0] for x in self.description]
+            return dict(zip(self.column_names, next_row))
         
     def __iter__(self):
-        self.column_names = [current_column[0] for i, current_column in enumerate(self.description)]
+        self.column_names = [x[0] for x in self.description]
         return self
 
-class mySSDictCursor(mysql_cursors.SSCursor):
-    """ a DictCursor that is fully iterable. For some reason, this didn't
-    work with the mysql.DictCursor class."""
-    def __init__(self, *args):
-        super(mySSDictCursor, self).__init__(*args)
-        self.column_names = None
-        
-    def fetchone(self, *args):
-        next_row = super(mySSDictCursor, self).fetchone(*args)
-        if not self.column_names:
-            self.column_names = [current_column[0] for i, current_column in enumerate(self.description)]
-        if next_row == None:
-            return None
-        else:
-            return dict(zip(self.column_names, next_row))
-        
-    def __next__(self):
-        return self.next()
-        
-    def next(self):
-        next_row = self.fetchone()
-        if next_row == None:
-            raise StopIteration
-        else:
-            return next_row
-        
-    def __iter__(self):
-        self.column_names = [current_column[0] for i, current_column in enumerate(self.description)]
-        return self
-    
 class SqlDB (object):
     def __init__(self, Host, Port, User, Password, Database):
         self.Con = None
