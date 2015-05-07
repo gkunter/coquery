@@ -1,4 +1,5 @@
-residualize% scores.[jj*]
-fragmented.[*jj*]
-residualize% [*n*]
-[residualized] scores
+N,Query,Dummy
+1,residualize% scores.[jj*],d1
+2,fragmented.[*jj*],d2
+3,residualize% [*n*],d3
+4,[residualized] scores,d4
