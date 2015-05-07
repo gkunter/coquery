@@ -31,7 +31,6 @@ import re
 from defines import *
 from errors import *
 
-
 class QueryToken(object):
     """ 
 A QueryToken is one element in a corpus query. The syntax is 
@@ -179,10 +178,8 @@ class COCAToken(QueryToken):
         else:
             for current_word in S.split("|"):
                 current_word = current_word.strip()
-                if current_word and current_word not in self.lexicon.resource.wildcards:
+                if current_word:
                     if self.check_transcript(current_word):
-                        if LEX_PHON not in self.lexicon.provides:
-                            raise TokenUnsupportedTranscriptError(self)
                         current_word = current_word.translate(
                             string.maketrans("", "", ), 
                             "".join([self.transcript_open, self.transcript_close]))
@@ -209,17 +206,21 @@ class COCARegExpToken(COCAToken):
         except KeyError:
             class_specification = None
 
-        self.word_specifiers = [x.strip() for x in word_specification.split("|") if x.strip()]
-        self.transcript_specifiers = [x.strip() for x in transcript_specification.split("|") if x.strip()]
-        self.lemma_specifiers = [x.strip() for x in lemma_specification.split("|") if x.strip()]
-        self.class_specifiers = [x.strip() for x in class_specification.split("|") if x.strip()]
+        if word_specification:
+            self.word_specifiers = [x.strip() for x in word_specification.split("|") if x.strip()]
+        if transcript_specification:
+            self.transcript_specifiers = [x.strip() for x in transcript_specification.split("|") if x.strip()]
+        if lemma_specification:
+            self.lemma_specifiers = [x.strip() for x in lemma_specification.split("|") if x.strip()]
+        if class_specification:
+            self.class_specifiers = [x.strip() for x in class_specification.split("|") if x.strip()]
         
         if lemma_specification and not class_specification:
             if self.check_part_of_speech:
                 # check if all elements pass as part-of-speech-tags:
-                if len(self.lemma_specifier) == self.lexicon.check_pos_list(self.lemma_specifier):
+                if len(self.lemma_specifiers) == self.lexicon.check_pos_list(self.lemma_specifiers):
                     # if so, interpret elements as part-of-speech tags:
-                    self.class_specifiers = self.lemma_specifier
+                    self.class_specifiers = self.lemma_specifiers
                     self.lemma_specifiers = []
 
 class COCAWord(COCAToken):
@@ -315,13 +316,115 @@ def parse_query_string(S, token_type):
 
 class TestCOCARegExpToken(unittest.TestCase):
     
+    token_type = COCARegExpToken
+    
+    def setUp(self):
+        import corpus
+        self.lexicon = corpus.TestLexicon(corpus.BaseResource())
+    
     def test_word_only(self):
-        token = COCARegExpToken("word", None)
+        token = self.token_type("word", self.lexicon)
         token.parse()
         self.assertEqual(token.lemma_specifiers, [])
         self.assertEqual(token.transcript_specifiers, [])
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.word_specifiers, ["word"])
+
+    def test_several_words(self):
+        token = self.token_type("word1|word2", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["word1", "word2"])
+
+    def test_lemma_only(self):
+        token = self.token_type("[lemma]", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, ["lemma"])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+
+    def test_several_lemmas(self):
+        token = self.token_type("[lemma1|lemma2]", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, ["lemma1", "lemma2"])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+
+    def test_words_and_pos(self):
+        token = self.token_type("word1|word2.[N]", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, ["N"])
+        self.assertEqual(token.word_specifiers, ["word1", "word2"])
+        
+    def test_words_and_several_pos(self):
+        token = self.token_type("word1|word2.[N|V]", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, ["N", "V"])
+        self.assertEqual(token.word_specifiers, ["word1", "word2"])
+
+    def test_lemmas_and_pos(self):
+        token = self.token_type("[lemma1|lemma2].[N]", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, ["lemma1", "lemma2"])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, ["N"])
+        self.assertEqual(token.word_specifiers, [])
+        
+    def test_lemmas_and_several_pos(self):
+        token = self.token_type("[lemma1|lemma2].[N|V]", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, ["lemma1", "lemma2"])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, ["N", "V"])
+        self.assertEqual(token.word_specifiers, [])
+        
+    def test_only_pos(self):
+        token = self.token_type("[N|V]", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, ["N", "V"])
+        self.assertEqual(token.word_specifiers, [])        
+        
+    def test_transcripts(self):
+        token = self.token_type("/trans1|trans2/", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, ["trans1", "trans2"])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+
+    def test_transcripts_and_several_pos(self):
+        token = self.token_type("/trans1|trans2/.[N|V]", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, ["trans1", "trans2"])
+        self.assertEqual(token.class_specifiers, ["N", "V"])
+        self.assertEqual(token.word_specifiers, [])
+
+    def test_transcripts_multiple_slashes(self):
+        token = self.token_type("/trans1/|/trans2/", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, ["trans1/", "/trans2"])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+
+class TestCOCAToken(TestCOCARegExpToken):
+    token_type = COCAToken
     
 if __name__ == '__main__':
-    unittest.main()
+    
+    suite = unittest.TestSuite([
+        unittest.TestLoader().loadTestsFromTestCase(TestCOCAToken),
+        unittest.TestLoader().loadTestsFromTestCase(TestCOCARegExpToken)])
+    unittest.TextTestRunner().run(suite)
+
