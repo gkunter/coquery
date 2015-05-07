@@ -97,7 +97,7 @@ class Corpus(SQLCorpus):
     provides = [CORP_SOURCE, CORP_CONTEXT, CORP_STATISTICS]
     
     def run_query(self, Query, self_join=True):
-        if Query.number_of_tokens == 1:
+        if Query.number_of_tokens == 1 or Query.number_of_tokens > 7:
             super(Corpus, self).run_query(Query, False)
             return
         else: 
