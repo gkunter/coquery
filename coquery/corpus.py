@@ -287,11 +287,13 @@ class SQLResource(BaseResource):
     def get_operator(self, Token):
         """ returns a string containing the appropriate operator for an 
         SQL query using the Token (considering wildcards and negation) """
-        Operators = {True:                                  # has wildcard?
-                        {True: "NOT LIKE", False: "LIKE"},  # is negated?
-                     False:                                 # no wildcard?
-                        {True: "!=", False: "="}}           # is negated?
-        return Operators [self.has_wildcards(Token)] [False]
+        if options.cfg.regexp:
+            return "REGEXP"
+        if self.has_wildcards(Token):
+            Operators = {True: "NOT LIKE", False: "LIKE"}
+        else:
+            Operators = {True: "!=", False: "="}
+        return Operators [False]
     
     def __init__(self):
         db_name = options.cfg.db_name
@@ -327,10 +329,10 @@ class SQLLexicon(BaseLexicon):
         where_clauses = []
         for current_pos in token.class_specifiers:
             current_token = tokens.COCAToken(current_pos, self)
-            S = '{pos_label_column} {operator} "{value}"'.format(
-                pos_label_column=self.resource.pos_label_column, 
-                operator=comparing_operator, 
-                value=current_token)
+            S = '{} {} "{}"'.format(
+                self.resource.pos_label_column, 
+                comparing_operator, 
+                current_token)
             where_clauses.append (S)
         return "(%s)" % "OR ".join (where_clauses)
     

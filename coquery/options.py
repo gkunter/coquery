@@ -166,6 +166,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         # Query options:
         self.parser.add_argument("-C", "--case", help="be case-sensitive (default: be COCA-compatible and ignore case)", action="store_true", dest="case_sensitive")
         self.parser.add_argument("-L", "--lemmatize-tokens", help="treat all tokens in query as lemma searches (default: be COCA-compatible and only do lemma searches if explicitly specified in query string)", action="store_true")
+        self.parser.add_argument("-r", "--regexp", help="use regular expressions", action="store_true", dest="regexp")
 
         # Output options:
         self.parser.add_argument("--suppress-header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
