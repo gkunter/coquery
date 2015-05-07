@@ -130,9 +130,6 @@ class COCAToken(QueryToken):
     # a part-of-speech tag:
     check_part_of_speech = True
     
-    def __init__(self, S, Corpus):
-        super(COCAToken, self).__init__(S, Corpus)
-
     def __repr__(self):
         return self.S
 
@@ -427,7 +424,6 @@ class TestCOCAToken(TestQueryToken):
     token_type = COCAToken
     
 if __name__ == '__main__':
-    
     import timeit
     
     t1 = timeit.Timer("""
