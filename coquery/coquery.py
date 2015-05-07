@@ -39,6 +39,8 @@ import options
 from session import *
 from errors import *
 
+import cProfile
+
 import time
 import __init__
 
@@ -78,10 +80,12 @@ def main():
                 Session = SessionCommandLine()
             else:
                 Session = SessionStdIn()
-        #else:
-            #options.Options().parser.print_help()
-            #raise NoArgumentsError
-        Session.run_queries()
+
+        if options.cfg.profile:
+            cProfile.runctx("Session.run_queries()", globals(), locals())
+        else:
+            Session.run_queries()
+            
     except Exception as e:
         print_exception(e)
     logger.info("--- Done (after %.3f seconds) ---" % (time.time() - start_time))

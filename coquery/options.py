@@ -162,6 +162,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         self.parser.add_argument("-V", "--super-verbose", help="be super-verbose (i.e. log function calls)", action="store_true")
         self.parser.add_argument("-E", "--explain", help="explain mySQL queries in log file", action="store_true", dest="explain_queries")
         self.parser.add_argument("--no-cache", help="attempts to circumwent the mySQL cache", action="store_true")
+        self.parser.add_argument("--profile", help="deterministic profiling of Coquery", action="store_true")
 
         # Query options:
         self.parser.add_argument("-C", "--case", help="be case-sensitive (default: be COCA-compatible and ignore case)", action="store_true", dest="case_sensitive")
