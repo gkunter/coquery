@@ -23,6 +23,8 @@ This module defines classes that represent tokens in a query string.
 # The method parse() is used to translate the token string into these
 # structures.
 
+import unittest
+
 import string
 import re
 
@@ -311,3 +313,15 @@ def parse_query_string(S, token_type):
     
     return S.split()
 
+class TestCOCARegExpToken(unittest.TestCase):
+    
+    def test_word_only(self):
+        token = COCARegExpToken("word", None)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["word"])
+    
+if __name__ == '__main__':
+    unittest.main()
