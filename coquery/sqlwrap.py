@@ -84,20 +84,12 @@ class SqlDB (object):
         self.LastQuery = None
         
         try:
-            if mysql.__name__ == "mysql.connector":
-                self.Con = mysql.connect (
-                    host=Host, 
-                    port=Port, 
-                    user=User, 
-                    password=Password, 
-                    database=Database)
-            else:
-                self.Con = mysql.connect (
-                    host=Host, 
-                    port=Port, 
-                    user=User, 
-                    passwd=Password, 
-                    db=Database)
+            self.Con = mysql.connect(
+                host=Host, 
+                port=Port, 
+                user=User, 
+                passwd=Password, 
+                db=Database)
         except Exception as e:
              raise SQLInitializationError(e)
         
@@ -141,41 +133,16 @@ Value       no return value
             logger.debug("\n".join(log_rows))
 
     def execute_cursor(self, S, cursor_type=myDictCursor):
-        if cursor_type is "SSCursor":
-            cursor_type = mysql_cursors.SSCursor
-        elif cursor_type is "Cursor":
-            cursor_type = mysql_cursors.Cursor
         S = S.strip()
-
-        Command = S.partition(" ")[0].upper()
-
-        if Command in ModifyingCommands:
-            Modify = True
-        elif Command in NonModifyingCommands:
-            Modify = False
-        else:
-            logger.warning("Command '%s' not categorized, assuming modifying commannd" % Command)
-            Modify = True
-
-        self.last_command = S
         if options.cfg.explain_queries:
             self.explain(S)
-        if options.cfg.verbose:
-            logger.debug(S)
+        logger.debug(S)
 
         if options.cfg.dry_run:
-            ExecutedLastCommand = not Modify
             cursor = []
         else:
-            ExecutedLastCommand = True
-            self.last_command = S
             cursor = self.Con.cursor(cursor_type)
-            try:
-                cursor.execute(S)
-            except mysql.OperationalError:
-                raise SQLOperationalError(S)
-            except mysql.ProgrammingError:
-                raise SQLProgrammingError(S)
+            cursor.execute(S)
         return cursor
     
     def execute(self, S, ForceExecution = False):
@@ -190,32 +157,12 @@ Summary     Executes the SQL command string provided in S, or pretend to do
 Value       no return value
         """
         S = S.strip()
-
-        Command = S.partition(" ")[0].upper()
-
-        if Command in ModifyingCommands:
-            Modify = True
-        elif Command in NonModifyingCommands:
-            Modify = False
-        else:
-            Modify = True
-
-        self.last_command = S
         if options.cfg.explain_queries:
             self.explain(S)
         logger.debug(S)
 
-        if options.cfg.dry_run and not ForceExecution:
-            ExecutedLastCommand = not Modify
-        else:
-            ExecutedLastCommand = True
-            self.last_command = S
-            try:
-                self.Cur.execute(S)
-            except mysql.OperationalError:
-                raise SQLOperationalError(S)
-            except mysql.ProgrammingError:
-                raise SQLProgrammingError(S)
+        if not options.cfg.dry_run or ForceExecution:
+            self.Cur.execute(S)
 
     def commit (self):
         if not options.cfg.dry_run:
