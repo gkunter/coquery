@@ -259,7 +259,7 @@ Examples:   FIC (equivalent to FIC.[*])
         if self.lemma_specifiers:
             self.class_specifiers = self.lemma_specifiers
             self.lemma_specifiers = []
-            
+
 def parse_query_string(S, token_type):
     ST_NORMAL = 0
     ST_IN_BRACKET = 1
@@ -314,9 +314,11 @@ def parse_query_string(S, token_type):
     
     return S.split()
 
-class TestCOCARegExpToken(unittest.TestCase):
+class TestQueryToken(unittest.TestCase):
+    token_type = QueryToken
     
-    token_type = COCARegExpToken
+    def runTest(self):
+        super(TestQueryToken, self).runTest()
     
     def setUp(self):
         import corpus
@@ -418,13 +420,43 @@ class TestCOCARegExpToken(unittest.TestCase):
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
 
-class TestCOCAToken(TestCOCARegExpToken):
+class TestCOCARegExpToken(TestQueryToken):
+    token_type = COCARegExpToken
+
+class TestCOCAToken(TestQueryToken):
     token_type = COCAToken
     
 if __name__ == '__main__':
+    
+    import timeit
+    
+    t1 = timeit.Timer("""
+        import unittest
+        from tokens import *
+        import corpus
+        lexicon = corpus.TestLexicon(corpus.BaseResource())
+        test = COCARegExpToken("[lemma1|lemma2].[N|V]", lexicon)
+        test.parse()
+        test = COCARegExpToken("[N|V]", lexicon)
+        test.parse()
+        """)
+    t2 = timeit.Timer("""
+        import unittest
+        import corpus
+        from tokens import *
+        lexicon = corpus.TestLexicon(corpus.BaseResource())
+        test = COCAToken("[lemma1|lemma2].[N|V]", lexicon)
+        test.parse()
+        test = COCAToken("[N|V]", lexicon)
+        test.parse()
+        """)
+    
+    print(t1.timeit(10000))
+    print(t2.timeit(10000))
+
+    
     
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestCOCAToken),
         unittest.TestLoader().loadTestsFromTestCase(TestCOCARegExpToken)])
     unittest.TextTestRunner().run(suite)
-
