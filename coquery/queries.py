@@ -28,6 +28,7 @@ THE SOFTWARE.
 
 import copy
 import string
+import collections
 
 from errors import *
 from corpus import *
@@ -71,8 +72,7 @@ class QueryResult(dict):
     def get_lexicon_entries(self):
         """ returns a list of lexicon entries representing the tokens in
         the current row matching the query."""
-        word_ids = self.get_wordid_list()
-        
+
         lexicon_entries = []
         for current_id in self.get_wordid_list():
             if current_id == "<NA>":
@@ -80,17 +80,15 @@ class QueryResult(dict):
             lexicon_entries.append(
                 self.query.Corpus.lexicon.get_entry(current_id, self.query.request_list))
         return lexicon_entries
-        
-        if all([x != "<NA>" for x in word_ids]):
-            return [self.query.Corpus.lexicon.get_entry(x, self.query.request_list) for x in word_ids]
-        else:
-            return []
-        
+          
     def get_row(self, number_of_token_columns):
         L = []
         entry_list = self.get_lexicon_entries()
         if not entry_list:
-            return ["<NA>"] * len(self.query.Session.header)
+            if LEX_FREQ in self.query.request_list:
+                return ["<NA>"] * (len(self.query.Session.header) - len(self.query.InputLine) - 1)
+            else:
+                return ["<NA>"] * (len(self.query.Session.header) - len(self.query.InputLine))
         else:
             Words = []
             Lemmas = []
@@ -101,41 +99,36 @@ class QueryResult(dict):
                     Words.append(current_entry.orth)
                 else:
                     Words.append(current_entry.orth.lower())
-                if self.query.requested(LEX_LEMMA):
+                if LEX_LEMMA in self.query.request_list:
                     Lemmas.append(current_entry.lemma)
-                if self.query.requested(LEX_POS):
+                if LEX_POS in self.query.request_list:
                     POSs.append(current_entry.pos)
-                if self.query.requested(LEX_PHON):
+                if LEX_PHON in self.query.request_list:
                     Phon.append(current_entry.phon)
         if options.cfg.show_id:
             L += [self["TokenId"]]
-        if self.query.requested(LEX_ORTH):
+        if LEX_ORTH in self.query.request_list:
             L += expand_list(Words, number_of_token_columns)
-        if self.query.requested(LEX_PHON):
+        if LEX_PHON in self.query.request_list:
             L += expand_list(Phon, number_of_token_columns)
-        if self.query.requested(LEX_LEMMA):
+        if LEX_LEMMA in self.query.request_list:
             L += expand_list(Lemmas, number_of_token_columns)
-        if self.query.requested(LEX_POS):
+        if LEX_POS in self.query.request_list:
             L += expand_list(POSs, number_of_token_columns)
-        if self.query.requested(CORP_SOURCE):
+        if CORP_SOURCE in self.query.request_list:
             L += self.query.Corpus.get_source_info(self["SourceId"])
-        if self.query.requested(CORP_SPEAKER):
+        if CORP_SPEAKER in self.query.request_list:
             L += self.query.Corpus.get_speaker_info(self["SpeakerId"])
-        if self.query.requested(CORP_FILENAME):
+        if CORP_FILENAME in self.query.request_list:
             L += self.query.Corpus.get_file_info(self["SourceId"])
-        if self.query.requested(CORP_TIMING):
+        if CORP_TIMING in self.query.request_list:
             L += self.query.Corpus.get_time_info(self["TokenId"])
-        if self.query.requested(CORP_CONTEXT):
+        if CORP_CONTEXT in self.query.request_list:
             context = self.query.Corpus.get_context(self["TokenId"], self.query.number_of_tokens, True)
             if options.cfg.separate_columns:
                 L += context
             else:
                 L += [collapse_context(context)]
-        if self.query.requested(LEX_FREQ):
-            if options.cfg.freq_label in self:
-                L += [self[options.cfg.freq_label]]
-            else:
-                L += [1]
         return L
 
 class CorpusQuery(object):
@@ -150,11 +143,11 @@ class CorpusQuery(object):
         def __iter__(self):
             self.count = 0
             return self
-        
+
         def next(self):
-            if "next" in dir(self.data):
+            try:
                 next_result = self.data.next()
-            else: 
+            except NameError:
                 try:
                     next_result = self.data[self.count]
                 except IndexError:
@@ -211,9 +204,6 @@ class CorpusQuery(object):
             
         self.request_list = [x for x in self.request_list if self.Corpus.provides_feature(x)]
             
-    def requested(self, feature):
-        return feature in self.request_list
-
     def __iter__(self):
         return self
     
@@ -244,7 +234,10 @@ class CorpusQuery(object):
 class TokenQuery(CorpusQuery):
     def write_results(self, output_file, number_of_token_columns):
         for current_result in self.get_result_list():
-            output_list = copy.copy(self.InputLine)
+            if self.InputLine:
+                output_list = copy.copy(self.InputLine)
+            else:
+                output_list = []
             if options.cfg.show_query:
                 output_list.insert(options.cfg.query_column_number - 1, self.query_string)
             if current_result != None:
@@ -260,7 +253,10 @@ class DistinctQuery(CorpusQuery):
     def write_results(self, output_file, number_of_token_columns):
         output_cache = []
         for current_result in self.get_result_list():
-            output_list = copy.copy(self.InputLine)
+            if self.InputLine:
+                output_list = copy.copy(self.InputLine)
+            else:
+                output_list = []
             if options.cfg.show_query:
                 output_list.insert(options.cfg.query_column_number - 1, self.query_string)
             if current_result != None:
@@ -272,7 +268,6 @@ class DistinctQuery(CorpusQuery):
                 if output_list not in output_cache:
                     output_file.writerow(output_list)
                     output_cache.append(output_list)
-
 
 class StatisticsQuery(CorpusQuery):
     def __init__(self, corpus):
@@ -291,39 +286,36 @@ class FrequencyQuery(CorpusQuery):
         self.request_list.append(LEX_FREQ)
 
     def write_results(self, output_file, number_of_token_columns):
-        Lines = {}
+        Lines = collections.Counter()
         results = self.get_result_list()
         for current_result in results:
-            # cuCorpusrrent_result can be None if the query token was not in the
+            # current_result can be None if the query token was not in the
             # lexicon
             if current_result:
-                output_list = copy.copy (self.InputLine)
-                if options.cfg.show_query:
-                    output_list.insert (options.cfg.query_column_number - 1, self.query_string)
-                if options.cfg.show_parameters:
-                    output_list.append (options.cfg.parameter_string)
-                if self.source_filter:
-                    output_list.append (self.source_filter)
-                output_list += current_result.get_row(number_of_token_columns)
-                
-                LineKey = "".join(map(str, output_list[:-1]))
-                if LineKey in Lines:
-                    output_list[-1] += Lines[LineKey][-1]
-                Lines[LineKey] = output_list
+                output_list = current_result.get_row(number_of_token_columns)
+                LineKey = "<|>".join(output_list)
+                Lines[LineKey] += 1
         if not Lines:
-            # write entry with frequency of zero for query results with no hits:
             empty_result = QueryResult(self) 
-            output_list = copy.copy (self.InputLine)
             output_list = empty_result.get_row(number_of_token_columns)
-            if options.cfg.show_query:
-                output_list[options.cfg.query_column_number - 1] = self.query_string
-            output_list[-1] = 0
+            LineKey = "<|>".join(output_list)
+            Lines[LineKey] = 0
             
+        
+        for current_key in Lines:
+            if self.InputLine:
+                output_list = copy.copy(self.InputLine)
+            else:
+                output_list = []
+            if options.cfg.show_query:
+                output_list.insert(options.cfg.query_column_number - 1, self.query_string)
+            if options.cfg.show_parameters:
+                output_list.append(options.cfg.parameter_string)
+            if self.source_filter:
+                output_list.append(self.source_filter)
+                
+            output_list += current_key.split("<|>")
+            output_list.append(Lines[current_key])
+            if self.ErrorInQuery:
+                output_list[-1] = -1
             output_file.writerow(output_list)
-        else:
-            # otherwise, write entry with token frequency:
-            for current_key in Lines:
-                current_line = Lines[current_key]
-                if self.ErrorInQuery:
-                    current_line[-1] = -1
-                output_file.writerow(current_line)

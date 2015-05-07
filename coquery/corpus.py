@@ -480,7 +480,7 @@ class SQLLexicon(BaseLexicon):
     
     def get_entry(self, word_id, requested):
         # an entry has to provide at least LEX_ORTH:
-        provide_fields = list(set(self.provides) & set(requested) | set([LEX_ORTH]))
+        provide_fields = set(self.provides) & set(requested) | set([LEX_ORTH])
         if word_id in self.entry_cache:
             return self.entry_cache[word_id]
         error_value = [word_id] + ["<na>"] * (len(self.provides) - 1)
@@ -645,12 +645,12 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_word_id_column)]
         table_list = [self.resource.corpus_table]
         
-        if Query.requested(CORP_CONTEXT) or Query.number_of_tokens > 1:
+        if CORP_CONTEXT in Query.request_list or Query.number_of_tokens > 1:
             column_list.append("{}.{}".format(
                 self.resource.corpus_table,
                 self.resource.corpus_token_id_column))
         if number == 1:
-            if Query.requested(CORP_SOURCE) or Query.requested(CORP_FILENAME) or Query.source_filter:
+            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list or Query.source_filter:
                 column_list.append("{}.{}".format(
                     self.resource.corpus_table,
                     self.resource.corpus_source_id_column))
@@ -763,11 +763,11 @@ class SQLCorpus(BaseCorpus):
         #   requested
         column_list = []
         if self_join:
-            if Query.requested(CORP_CONTEXT) or Query.number_of_tokens > 1:
+            if CORP_CONTEXT in Query.request_list or Query.number_of_tokens > 1:
                 column_list.append("{}.{} AS TokenId".format(
                     self.resource.self_join_corpus,
                     self.resource.corpus_token_id_column))
-            if Query.requested(CORP_SOURCE) or Query.requested(CORP_FILENAME):
+            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list:
                 column_list.append("{}.{} AS SourceId".format(
                     self.resource.self_join_corpus,
                     self.resource.corpus_source_id_column))
@@ -775,10 +775,10 @@ class SQLCorpus(BaseCorpus):
                 self.resource.self_join_corpus,
                 x+1) for x in range(Query.number_of_tokens)]        
         else:
-            if Query.requested(CORP_CONTEXT) or Query.number_of_tokens > 1:
+            if CORP_CONTEXT in Query.request_list or Query.number_of_tokens > 1:
                 column_list.append("e1.{} AS TokenId".format(
                     self.resource.corpus_token_id_column))
-            if Query.requested(CORP_SOURCE) or Query.requested(CORP_FILENAME):
+            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list:
                 column_list.append("e1.{} AS SourceId".format(
                     self.resource.corpus_source_id_column))
             column_list += ["e{num}.{corpus_word} AS W{num}".format(
