@@ -207,10 +207,10 @@ class COCARegExpToken(COCAToken):
         except KeyError:
             class_specification = None
 
-        self.word_specifiers = [x.strip() for x in word_specification.split("|")] if x.strip()]
-        self.transcript_specifiers = [x.strip() for x in transcript_specification.split("|")] if x.strip()]
-        self.lemma_specifiers = [x.strip() for x in lemma_specification.split("|")] if x.strip()]
-        self.class_specifiers = [x.strip() for x in class_specification.split("|")] if x.strip()]
+        self.word_specifiers = [x.strip() for x in word_specification.split("|") if x.strip()]
+        self.transcript_specifiers = [x.strip() for x in transcript_specification.split("|") if x.strip()]
+        self.lemma_specifiers = [x.strip() for x in lemma_specification.split("|") if x.strip()]
+        self.class_specifiers = [x.strip() for x in class_specification.split("|") if x.strip()]
         
         if lemma_specification and not class_specification:
             if self.check_part_of_speech:
@@ -310,3 +310,4 @@ def parse_query_string(S, token_type):
     return tokens
     
     return S.split()
+
