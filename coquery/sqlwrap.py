@@ -56,6 +56,9 @@ class myDictCursor(mysql_cursors.Cursor):
         super(myDictCursor, self).__init__(*args)
         self.column_names = None
         
+    def __next__(self):
+        return self.next()
+        
     def next(self):
         next_row = super(myDictCursor, self).fetchone()
         if next_row == None:
