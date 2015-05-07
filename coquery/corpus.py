@@ -939,4 +939,7 @@ class SQLCorpus(BaseCorpus):
         
         return stats
 
-Resource = BaseResource()
+class TestLexicon(BaseLexicon):
+    def is_part_of_speech(self, pos):
+        return pos in ["N", "V"]
+    
