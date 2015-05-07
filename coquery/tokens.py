@@ -4,26 +4,6 @@ FILENAME: tokens.py -- part of Coquery corpus query tool
 
 This module defines classes that represent tokens in a query string.
 
-LICENSE:
-Copyright (c) 2015 Gero Kunter
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
 """
 
 # tokens.py contains classes that represent a query token from a query 
@@ -87,7 +67,7 @@ corpus-specific.
 replace_wildcards() replaces the characters from self.lexicon.wildcards by
 the appropriate SQL correspondents.
         """
-        if len (self.S) > 1:
+        if self.lexicon and len(self.S) > 1:
             for old, new in zip(["*", "?"], self.lexicon.resource.wildcards):
                 self.S = self.S.replace(old, new)
         
@@ -207,6 +187,38 @@ class COCAToken(QueryToken):
                         self.transcript_specifiers.append(current_word.strip())
                     else:
                         self.word_specifiers.append(current_word)
+
+class COCARegExpToken(COCAToken):
+    def parse (self):
+        self.word_specifiers = []
+        self.class_specifiers = []
+        self.lemma_specifiers = []        
+        self.transcript_specifiers = []
+
+        match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", self.S)
+        if not match:
+            match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}", self.S)
+
+        word_specification = match.groupdict()["word"]
+        lemma_specification = match.groupdict()["lemma"]
+        transcript_specification = match.groupdict()["trans"]
+        try:
+            class_specification = match.groupdict()["class"]
+        except KeyError:
+            class_specification = None
+
+        self.word_specifiers = [x.strip() for x in word_specification.split("|")] if x.strip()]
+        self.transcript_specifiers = [x.strip() for x in transcript_specification.split("|")] if x.strip()]
+        self.lemma_specifiers = [x.strip() for x in lemma_specification.split("|")] if x.strip()]
+        self.class_specifiers = [x.strip() for x in class_specification.split("|")] if x.strip()]
+        
+        if lemma_specification and not class_specification:
+            if self.check_part_of_speech:
+                # check if all elements pass as part-of-speech-tags:
+                if len(self.lemma_specifier) == self.lexicon.check_pos_list(self.lemma_specifier):
+                    # if so, interpret elements as part-of-speech tags:
+                    self.class_specifiers = self.lemma_specifier
+                    self.lemma_specifiers = []
 
 class COCAWord(COCAToken):
     """ A class that is simply parsed as a single word. """
