@@ -213,9 +213,9 @@ class BaseCorpus(object):
         """
         raise CorpusUnsupportedFunctionError
     
-    #def get_word_id(self, token_id):
-        #""" returns the word id of the token specified by token_id. """
-        #raise CorpusUnsupportedFunctionError
+    def get_word_id(self, token_id):
+        """ returns the word id of the token specified by token_id. """
+        raise CorpusUnsupportedFunctionError
     
     def get_context(self, token_id):
         """ returns the context of the token specified by token_id. """
@@ -573,6 +573,20 @@ class SQLCorpus(BaseCorpus):
     def __init__(self, lexicon, resource):
         super(SQLCorpus, self).__init__(lexicon, resource)
         self.query_results = None
+
+    def sql_string_get_word_id_of_token(self, token_id):
+        return "SELECT {} FROM {} WHERE {} = {}".format(
+            self.resource.corpus_word_id_column,
+            self.resource.corpus_table,
+            self.resource.corpus_token_id_column,
+            token_id)
+    
+    def get_word_id(self, token_id):
+        self.resource.DB.execute(self.sql_string_get_word_id_of_token(token_id))
+        try:
+            return self.resource.DB.Cur.fetchone()[0]
+        except IndexError:
+            raise CorpusConsistencyError
     
     def get_whereclauses(self, Token, WordTarget, PosTarget):
         if not Token:
@@ -710,14 +724,15 @@ class SQLCorpus(BaseCorpus):
         else:
             corpus_table="e1"
             for i, current_token in enumerate (Query.tokens):
-                table_string = self.sql_string_token_table(i+1, current_token, Query)
-                # create a new inner join for any token on top of the first one:
-                if len(table_string_list) > 0:
-                    table_string = "INNER JOIN {table_string} ON (e{num1}.{token_id} = e1.{token_id} + {num})".format(
-                        table_string=table_string,
-                        token_id=self.resource.corpus_token_id_column,
-                        num1=i+1, num=i)
-                table_string_list.append(table_string)
+                if current_token <> "*":
+                    table_string = self.sql_string_token_table(i+1, current_token, Query)
+                    # create a new inner join for any token on top of the first one:
+                    if len(table_string_list) > 0:
+                        table_string = "INNER JOIN {table_string} ON (e{num1}.{token_id} = e1.{token_id} + {num})".format(
+                            table_string=table_string,
+                            token_id=self.resource.corpus_token_id_column,
+                            num1=i+1, num=i)
+                    table_string_list.append(table_string)
         if Query.source_filter:
             if self.resource.source_table_alias is not self.resource.corpus_table:
                 table_string_list.append(self.sql_string_run_query_source_table_string(Query, self_join))
@@ -762,6 +777,7 @@ class SQLCorpus(BaseCorpus):
         # - a SourceId column if either the source or the filename is
         #   requested
         column_list = []
+        non_empty_token = [x for x in range(Query.number_of_tokens) if Query.tokens[x] <> "*"]
         if self_join:
             if CORP_CONTEXT in Query.request_list or Query.number_of_tokens > 1:
                 column_list.append("{}.{} AS TokenId".format(
@@ -773,7 +789,7 @@ class SQLCorpus(BaseCorpus):
                     self.resource.corpus_source_id_column))
             column_list += ["{}.W{}".format(
                 self.resource.self_join_corpus,
-                x+1) for x in range(Query.number_of_tokens)]        
+                x+1) for x in non_empty_token]        
         else:
             if CORP_CONTEXT in Query.request_list or Query.number_of_tokens > 1:
                 column_list.append("e1.{} AS TokenId".format(
@@ -783,7 +799,7 @@ class SQLCorpus(BaseCorpus):
                     self.resource.corpus_source_id_column))
             column_list += ["e{num}.{corpus_word} AS W{num}".format(
                 num=x+1, 
-                corpus_word=self.resource.corpus_word_id_column) for x in range(Query.number_of_tokens)]
+                corpus_word=self.resource.corpus_word_id_column) for x in non_empty_token]
         if options.cfg.verbose:
             return ",\n\t".join(column_list)
         else:

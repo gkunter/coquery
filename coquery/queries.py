@@ -63,16 +63,16 @@ class QueryResult(dict):
     def get_wordid_list(self):
         """ returns a list containing all word_id values stored in the word 
         columns, i.e. columns named W1, ..., Wn. """
-        try:
-            L = [self["W%s" % (x + 1)] for x in range(self.query.number_of_tokens)]
-        except KeyError:
-            L = ["<NA>"] * self.query.number_of_tokens
+        start = int(self["TokenId"]) + 1
+        end = start + self.query.number_of_tokens - 1
+        L = [self["W1"]] + [self.query.Corpus.get_word_id(x) for x in range(start,end)]
         return L
 
     def get_lexicon_entries(self):
         """ returns a list of lexicon entries representing the tokens in
         the current row matching the query."""
-
+        if not self:
+            return []
         lexicon_entries = []
         for current_id in self.get_wordid_list():
             if current_id == "<NA>":
@@ -84,27 +84,26 @@ class QueryResult(dict):
     def get_row(self, number_of_token_columns):
         L = []
         entry_list = self.get_lexicon_entries()
-        if not entry_list:
+        if not self or not entry_list:
             if LEX_FREQ in self.query.request_list:
                 return ["<NA>"] * (len(self.query.Session.header) - len(self.query.InputLine) - 1)
             else:
                 return ["<NA>"] * (len(self.query.Session.header) - len(self.query.InputLine))
-        else:
-            Words = []
-            Lemmas = []
-            POSs = []
-            Phon = []
-            for current_entry in entry_list:
-                if options.cfg.case_sensitive:
-                    Words.append(current_entry.orth)
-                else:
-                    Words.append(current_entry.orth.lower())
-                if LEX_LEMMA in self.query.request_list:
-                    Lemmas.append(current_entry.lemma)
-                if LEX_POS in self.query.request_list:
-                    POSs.append(current_entry.pos)
-                if LEX_PHON in self.query.request_list:
-                    Phon.append(current_entry.phon)
+        Words = []
+        Lemmas = []
+        POSs = []
+        Phon = []
+        for current_entry in entry_list:
+            if options.cfg.case_sensitive:
+                Words.append(current_entry.orth)
+            else:
+                Words.append(current_entry.orth.lower())
+            if LEX_LEMMA in self.query.request_list:
+                Lemmas.append(current_entry.lemma)
+            if LEX_POS in self.query.request_list:
+                POSs.append(current_entry.pos)
+            if LEX_PHON in self.query.request_list:
+                Phon.append(current_entry.phon)
         if options.cfg.show_id:
             L += [self["TokenId"]]
         if LEX_ORTH in self.query.request_list:
