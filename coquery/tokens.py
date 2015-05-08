@@ -24,7 +24,7 @@ This module defines classes that represent tokens in a query string.
 # structures.
 
 import unittest
-
+import itertools
 import string
 import re
 
@@ -258,6 +258,7 @@ Examples:   FIC (equivalent to FIC.[*])
             self.lemma_specifiers = []
 
 def parse_query_string(S, token_type):
+    
     ST_NORMAL = 0
     ST_IN_BRACKET = 1
     ST_IN_TRANSCRIPT = 2
@@ -268,7 +269,9 @@ def parse_query_string(S, token_type):
     negated = False
     
     t2 = []
+    
     for current_char in S:
+            
         if state == ST_NORMAL:
             if current_char == " ":
                 if current_word:
@@ -310,6 +313,35 @@ def parse_query_string(S, token_type):
     return tokens
     
     return S.split()
+
+def preprocess_query(S):
+    def preprocess_token(T):
+        L = []
+        match = re.match("(?P<token>.*)(\{(?P<start>\d+)(,(?P<end>\d+))?\})+", T)
+        if match:
+            start = int(match.groupdict()["start"])
+            try:
+                end = int(match.groupdict()["end"])
+            except TypeError:
+                end = start
+            token = match.groupdict()["token"]
+            for x in range(start, end + 1):
+                L.append([token] * x)
+        else:
+            L.append([T])
+        return L
+    
+    tokens = S.split(" ")
+    token_lists = []
+    for current_token in tokens:
+        token_lists.append(preprocess_token(current_token))
+    
+    return [" ".join(list(itertools.chain.from_iterable(x))) for x in itertools.product(*token_lists)]
+    
+    for current_list in itertools.product(*token_lists):
+        print " ".join(list(itertools.chain.from_iterable(current_list)))
+        
+    return token_lists
 
 class TestQueryToken(unittest.TestCase):
     token_type = QueryToken
@@ -426,29 +458,29 @@ class TestCOCAToken(TestQueryToken):
 if __name__ == '__main__':
     import timeit
     
-    t1 = timeit.Timer("""
-        import unittest
-        from tokens import *
-        import corpus
-        lexicon = corpus.TestLexicon(corpus.BaseResource())
-        test = COCARegExpToken("[lemma1|lemma2].[N|V]", lexicon)
-        test.parse()
-        test = COCARegExpToken("[N|V]", lexicon)
-        test.parse()
-        """)
-    t2 = timeit.Timer("""
-        import unittest
-        import corpus
-        from tokens import *
-        lexicon = corpus.TestLexicon(corpus.BaseResource())
-        test = COCAToken("[lemma1|lemma2].[N|V]", lexicon)
-        test.parse()
-        test = COCAToken("[N|V]", lexicon)
-        test.parse()
-        """)
+    #t1 = timeit.Timer("""
+        #import unittest
+        #from tokens import *
+        #import corpus
+        #lexicon = corpus.TestLexicon(corpus.BaseResource())
+        #test = COCARegExpToken("[lemma1|lemma2].[N|V]", lexicon)
+        #test.parse()
+        #test = COCARegExpToken("[N|V]", lexicon)
+        #test.parse()
+        #""")
+    #t2 = timeit.Timer("""
+        #import unittest
+        #import corpus
+        #from tokens import *
+        #lexicon = corpus.TestLexicon(corpus.BaseResource())
+        #test = COCAToken("[lemma1|lemma2].[N|V]", lexicon)
+        #test.parse()
+        #test = COCAToken("[N|V]", lexicon)
+        #test.parse()
+        #""")
     
-    print(t1.timeit(10000))
-    print(t2.timeit(10000))
+    #print(t1.timeit(10000))
+    #print(t2.timeit(10000))
 
     
     

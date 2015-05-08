@@ -31,7 +31,7 @@ from errors import *
 import tokens
 import options
 import sqlwrap
-
+import time
 from defines import *
 
 class BaseLexicon(object):
@@ -659,10 +659,9 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_word_id_column)]
         table_list = [self.resource.corpus_table]
         
-        if CORP_CONTEXT in Query.request_list or Query.number_of_tokens > 1:
-            column_list.append("{}.{}".format(
-                self.resource.corpus_table,
-                self.resource.corpus_token_id_column))
+        column_list.append("{}.{}".format(
+            self.resource.corpus_table,
+            self.resource.corpus_token_id_column))
         if number == 1:
             if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list or Query.source_filter:
                 column_list.append("{}.{}".format(
@@ -680,11 +679,11 @@ class SQLCorpus(BaseCorpus):
             if self.resource.pos_table is self.resource.word_table:
                 column_list.append("{}.{}".format(
                     self.resource.word_table,
-                    self.resource.pos_label_column))
+                    self.resource.pos_id_column))
             else:
                 column_list.append("{}.{}".format(
                     self.resource.pos_table,
-                    self.resource.pos_label_column))
+                    self.resource.pos_id_column))
                 where_list.append("{}.{} = {}.{}".format(
                     self.resource.word_table,
                     self.resource.word_pos_id_column,
@@ -779,10 +778,9 @@ class SQLCorpus(BaseCorpus):
         column_list = []
         non_empty_token = [x for x in range(Query.number_of_tokens) if Query.tokens[x] <> "*"]
         if self_join:
-            if CORP_CONTEXT in Query.request_list or Query.number_of_tokens > 1:
-                column_list.append("{}.{} AS TokenId".format(
-                    self.resource.self_join_corpus,
-                    self.resource.corpus_token_id_column))
+            column_list.append("{}.{} AS TokenId".format(
+                self.resource.self_join_corpus,
+                self.resource.corpus_token_id_column))
             if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list:
                 column_list.append("{}.{} AS SourceId".format(
                     self.resource.self_join_corpus,
@@ -791,9 +789,8 @@ class SQLCorpus(BaseCorpus):
                 self.resource.self_join_corpus,
                 x+1) for x in non_empty_token]        
         else:
-            if CORP_CONTEXT in Query.request_list or Query.number_of_tokens > 1:
-                column_list.append("e1.{} AS TokenId".format(
-                    self.resource.corpus_token_id_column))
+            column_list.append("e1.{} AS TokenId".format(
+                self.resource.corpus_token_id_column))
             if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list:
                 column_list.append("e1.{} AS SourceId".format(
                     self.resource.corpus_source_id_column))
@@ -805,8 +802,7 @@ class SQLCorpus(BaseCorpus):
         else:
             return ", ".join(column_list)
     
-    def run_query(self, Query, self_join=False):
-        
+    def yield_query_results(self, Query, self_join=False):
         column_string = self.sql_string_run_query_column_string(Query, self_join)
         table_string = self.sql_string_run_query_table_string(Query, self_join)
         where_string = self.sql_string_run_query_where_string(Query, self_join)
@@ -829,15 +825,10 @@ class SQLCorpus(BaseCorpus):
             query_string = query_string.replace("FROM ", "\nFROM \n\t")
             query_string = query_string.replace("WHERE ", "\nWHERE \n\t")
 
+        cursor = self.resource.DB.execute_cursor(query_string)
+        for current_result in cursor:
+            yield current_result
 
-        try:
-            cursor = self.resource.DB.execute_cursor(query_string)
-        except SQLOperationalError:
-            raise SQLOperationalError(query_string)
-            Query.query_results = [None]
-        else:
-            Query.set_result_list(cursor)
-  
     def sql_string_get_span_wordid(self, start, end):
         return "SELECT {} FROM {} WHERE {} BETWEEN {} AND {}".format(
             self.resource.corpus_word_id_column,

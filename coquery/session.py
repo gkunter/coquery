@@ -164,22 +164,51 @@ class Session(object):
             self.output_file = csv.writer(open(options.cfg.output_path, FileMode), delimiter=options.cfg.output_separator)
         if not options.cfg.append and self.show_header:
             self.output_file.writerow (self.header)
-        
+    
     def run_queries(self):
         self.expand_header()
         for current_query in self.query_list:
-            start_time = time.time()
-            if current_query.tokens:
-                self.Corpus.run_query(current_query)
-            logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
-
-            # output result of current query:
-            if not options.cfg.dry_run:
-                if not self.output_file:
-                    self.open_output_file()
+            
+            if len(current_query.query_list) > 1:
                 start_time = time.time()
-                current_query.write_results(self.output_file, self.max_number_of_tokens)
-                logger.info("Results written (%.3f seconds)" % (time.time() - start_time))
+                any_result = False
+                for sub_query in current_query.query_list:
+                    query_results = []
+                    for current_result in self.Corpus.yield_query_results(sub_query):
+                        query_results.append(current_result)
+                    sub_query.set_result_list(query_results)
+                    if query_results:
+                        any_result = True
+                        if not self.output_file:
+                            self.open_output_file()
+                        sub_query.write_results(
+                            self.output_file, 
+                            sub_query.number_of_tokens, 
+                            self.max_number_of_tokens)                
+                if not any_result:
+                    if not self.output_file:
+                        self.open_output_file()
+                    current_query.write_results(
+                        self.output_file,
+                        sub_query.number_of_tokens,
+                        self.max_number_of_tokens)
+                logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
+                
+            else:
+                start_time = time.time()
+                if current_query.tokens:
+                    current_query.set_result_list(self.Corpus.yield_query_results(current_query))
+                logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
+
+                if not options.cfg.dry_run:
+                    if not self.output_file:
+                        self.open_output_file()
+                    start_time = time.time()
+                    current_query.write_results(
+                        self.output_file, 
+                        current_query.number_of_tokens,
+                        self.max_number_of_tokens)
+                    logger.info("Results written (%.3f seconds)" % (time.time() - start_time))
 
 class StatisticsSession(Session):
     def __init__(self):
@@ -204,7 +233,7 @@ class SessionCommandLine(Session):
             else: 
                 raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
             self.query_list.append(new_query)
-            self.max_number_of_tokens = max(new_query.number_of_tokens, self.max_number_of_tokens)
+            self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
         self.max_number_of_input_columns = 0
         self.query_column_number = 1
 
@@ -235,7 +264,7 @@ class SessionInputFile(Session):
                                     options.cfg.source_filter)
                             new_query.InputLine = copy.copy(CurrentLine)
                             self.query_list.append(new_query)
-                            self.max_number_of_tokens = max(new_query.number_of_tokens, self.max_number_of_tokens)
+                            self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
                     self.max_number_of_input_columns = max(len(CurrentLine), self.max_number_of_input_columns)
                 read_lines += 1
         logger.info("Input file scanned, %s queries" % len (self.query_list))
@@ -262,7 +291,7 @@ class SessionStdIn(Session):
                         
                         new_query.InputLine = copy.copy(current_line)
                         self.query_list.append(new_query)
-                        self.max_number_of_tokens = max(new_query.number_of_tokens, self.max_number_of_tokens)
+                        self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
                 self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
             read_lines += 1
         logger.info("Command line scanned, %s queries" % len (self.query_list))

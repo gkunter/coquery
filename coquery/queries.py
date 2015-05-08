@@ -60,30 +60,30 @@ class QueryResult(dict):
         super(QueryResult, self).__init__(*args)
         self.query = query
         
-    def get_wordid_list(self):
+    def get_wordid_list(self, number_of_columns):
         """ returns a list containing all word_id values stored in the word 
         columns, i.e. columns named W1, ..., Wn. """
         start = int(self["TokenId"]) + 1
-        end = start + self.query.number_of_tokens - 1
+        end = start + number_of_columns - 1
         L = [self["W1"]] + [self.query.Corpus.get_word_id(x) for x in range(start,end)]
         return L
 
-    def get_lexicon_entries(self):
+    def get_lexicon_entries(self, number_of_columns):
         """ returns a list of lexicon entries representing the tokens in
         the current row matching the query."""
         if not self:
             return []
         lexicon_entries = []
-        for current_id in self.get_wordid_list():
+        for current_id in self.get_wordid_list(number_of_columns):
             if current_id == "<NA>":
                 return []
             lexicon_entries.append(
                 self.query.Corpus.lexicon.get_entry(current_id, self.query.request_list))
         return lexicon_entries
           
-    def get_row(self, number_of_token_columns):
+    def get_row(self, number_of_token_columns, max_number_of_tokens):
         L = []
-        entry_list = self.get_lexicon_entries()
+        entry_list = self.get_lexicon_entries(number_of_token_columns)
         if not self or not entry_list:
             if LEX_FREQ in self.query.request_list:
                 return ["<NA>"] * (len(self.query.Session.header) - len(self.query.InputLine) - 1)
@@ -107,13 +107,13 @@ class QueryResult(dict):
         if options.cfg.show_id:
             L += [self["TokenId"]]
         if LEX_ORTH in self.query.request_list:
-            L += expand_list(Words, number_of_token_columns)
+            L += expand_list(Words, max_number_of_tokens)
         if LEX_PHON in self.query.request_list:
-            L += expand_list(Phon, number_of_token_columns)
+            L += expand_list(Phon, max_number_of_tokens)
         if LEX_LEMMA in self.query.request_list:
-            L += expand_list(Lemmas, number_of_token_columns)
+            L += expand_list(Lemmas, max_number_of_tokens)
         if LEX_POS in self.query.request_list:
-            L += expand_list(POSs, number_of_token_columns)
+            L += expand_list(POSs, max_number_of_tokens)
         if CORP_SOURCE in self.query.request_list:
             L += self.query.Corpus.get_source_info(self["SourceId"])
         if CORP_SPEAKER in self.query.request_list:
@@ -146,7 +146,7 @@ class CorpusQuery(object):
         def next(self):
             try:
                 next_result = self.data.next()
-            except NameError:
+            except AttributeError:
                 try:
                     next_result = self.data[self.count]
                 except IndexError:
@@ -167,13 +167,25 @@ class CorpusQuery(object):
     ErrorInQuery = False
 
     def __init__(self, S, Session, token_class, source_filter):
-        self.tokens = [token_class(x, Session.Corpus.lexicon) for x in tokens.parse_query_string(S, token_class)]
-        self.number_of_tokens = len(self.tokens)
+        
+        self.query_list = []
+        self.max_number_of_tokens = 0
+        repeated_queries = tokens.preprocess_query(S)
+        if len(repeated_queries) > 1:
+            for current_string in repeated_queries:
+                current_query = self.__class__(current_string, Session, token_class, source_filter)
+                self.query_list.append(current_query)
+                self.max_number_of_tokens = max(self.max_number_of_tokens, current_query.number_of_tokens)
+        else:
+            self.tokens = [token_class(x, Session.Corpus.lexicon) for x in tokens.parse_query_string(S, token_class)]
+            self.number_of_tokens = len(self.tokens)
+            self.max_number_of_tokens = len(self.tokens)
+            
         self.query_string = S
         self._current = 0
         self.Session = Session
         self.Corpus = Session.Corpus
-        self.Results = [None]
+        self.Results = []
         self.InputLine = []
         self.request_list = []
 
@@ -226,12 +238,12 @@ class CorpusQuery(object):
     def get_result_list(self):
         return self.Results
     
-    def write_results(self, output_file, number_of_token_columns):
+    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         for CurrentLine in self.get_result_list():
             output_file.writerow(CurrentLine)
 
 class TokenQuery(CorpusQuery):
-    def write_results(self, output_file, number_of_token_columns):
+    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         for current_result in self.get_result_list():
             if self.InputLine:
                 output_list = copy.copy(self.InputLine)
@@ -244,12 +256,12 @@ class TokenQuery(CorpusQuery):
                     output_list.append(options.cfg.parameter_string)
                 if self.source_filter:
                     output_list.append(self.source_filter)
-                output_list += current_result.get_row(number_of_token_columns)
+                output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns)
                 
                 output_file.writerow(output_list)
 
 class DistinctQuery(CorpusQuery):
-    def write_results(self, output_file, number_of_token_columns):
+    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         output_cache = []
         for current_result in self.get_result_list():
             if self.InputLine:
@@ -263,7 +275,7 @@ class DistinctQuery(CorpusQuery):
                     output_list.append(options.cfg.parameter_string)
                 if self.source_filter:
                     output_list.append(self.source_filter)
-                output_list += current_result.get_row(number_of_token_columns)
+                output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns)
                 if output_list not in output_cache:
                     output_file.writerow(output_list)
                     output_cache.append(output_list)
@@ -284,23 +296,22 @@ class FrequencyQuery(CorpusQuery):
         super(FrequencyQuery, self).__init__(*args)
         self.request_list.append(LEX_FREQ)
 
-    def write_results(self, output_file, number_of_token_columns):
+    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         Lines = collections.Counter()
         results = self.get_result_list()
         for current_result in results:
             # current_result can be None if the query token was not in the
             # lexicon
             if current_result:
-                output_list = current_result.get_row(number_of_token_columns)
+                output_list = current_result.get_row(number_of_token_columns, max_number_of_token_columns)
                 LineKey = "<|>".join(output_list)
                 Lines[LineKey] += 1
         if not Lines:
             empty_result = QueryResult(self) 
-            output_list = empty_result.get_row(number_of_token_columns)
+            output_list = empty_result.get_row(number_of_token_columns, max_number_of_token_columns)
             LineKey = "<|>".join(output_list)
             Lines[LineKey] = 0
             
-        
         for current_key in Lines:
             if self.InputLine:
                 output_list = copy.copy(self.InputLine)
@@ -312,8 +323,8 @@ class FrequencyQuery(CorpusQuery):
                 output_list.append(options.cfg.parameter_string)
             if self.source_filter:
                 output_list.append(self.source_filter)
-                
-            output_list += current_key.split("<|>")
+            if current_key:
+                output_list += current_key.split("<|>")
             output_list.append(Lines[current_key])
             if self.ErrorInQuery:
                 output_list[-1] = -1

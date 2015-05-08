@@ -96,13 +96,11 @@ class Lexicon(SQLLexicon):
 class Corpus(SQLCorpus):
     provides = [CORP_SOURCE, CORP_CONTEXT, CORP_STATISTICS]
     
-    def run_query(self, Query, self_join=True):
+    def yield_query_results(self, Query, self_join=True):
         if Query.number_of_tokens == 1 or Query.number_of_tokens > 7:
-            super(Corpus, self).run_query(Query, False)
-            return
+            return super(Corpus, self).yield_query_results(Query, False)
         else: 
-            super(Corpus, self).run_query(Query, self_join)
-            return
+            return super(Corpus, self).yield_query_results(Query, self_join)
  
     def sql_string_get_source_info(self, source_id):
         return "SELECT {} AS Year, {} AS Genre, {} AS Source, {} AS Title FROM {} WHERE {} = {}".format(
