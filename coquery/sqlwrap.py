@@ -49,28 +49,8 @@ ModifyingCommands = ["ALTER", "CREATE", "DELETE", "DROP", "INSERT",
                      "LOAD", "UPDATE"]
 NonModifyingCommands = ["SELECT", "SHOW", "DESCRIBE", "SET", "RESET"]
 
-class myDictCursor(mysql_cursors.Cursor):
-    """ a DictCursor that is fully iterable. For some reason, this didn't
-    work with the mysql.DictCursor class."""
-    def __init__(self, *args):
-        super(myDictCursor, self).__init__(*args)
-        self.column_names = None
-        
-    def __next__(self):
-        return self.next()
-        
-    def next(self):
-        next_row = super(myDictCursor, self).fetchone()
-        if next_row == None:
-            raise StopIteration
-        else:
-            if not self.column_names:
-                self.column_names = [x[0] for x in self.description]
-            return dict(zip(self.column_names, next_row))
-        
-    def __iter__(self):
-        self.column_names = [x[0] for x in self.description]
-        return self
+class myDictCursor(mysql_cursors.DictCursor):
+    pass
 
 class SqlDB (object):
     def __init__(self, Host, Port, User, Password, Database):
@@ -132,7 +112,7 @@ Value       no return value
             log_rows.append(line_string)
             logger.debug("\n".join(log_rows))
 
-    def execute_cursor(self, S, cursor_type=myDictCursor):
+    def execute_cursor(self, S):
         S = S.strip()
         if options.cfg.explain_queries:
             self.explain(S)
@@ -141,7 +121,7 @@ Value       no return value
         if options.cfg.dry_run:
             cursor = []
         else:
-            cursor = self.Con.cursor(cursor_type)
+            cursor = self.Con.cursor(mysql_cursors.DictCursor)
             cursor.execute(S)
         return cursor
     

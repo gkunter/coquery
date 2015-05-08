@@ -723,7 +723,7 @@ class SQLCorpus(BaseCorpus):
         else:
             corpus_table="e1"
             for i, current_token in enumerate (Query.tokens):
-                if current_token <> "*":
+                if current_token is not "*":
                     table_string = self.sql_string_token_table(i+1, current_token, Query)
                     # create a new inner join for any token on top of the first one:
                     if len(table_string_list) > 0:
@@ -776,7 +776,7 @@ class SQLCorpus(BaseCorpus):
         # - a SourceId column if either the source or the filename is
         #   requested
         column_list = []
-        non_empty_token = [x for x in range(Query.number_of_tokens) if Query.tokens[x] <> "*"]
+        non_empty_token = [x for x in range(Query.number_of_tokens) if Query.tokens[x] != "*"]
         if self_join:
             column_list.append("{}.{} AS TokenId".format(
                 self.resource.self_join_corpus,

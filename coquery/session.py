@@ -103,15 +103,13 @@ class Session(object):
         header. The number of labels depends on the maximum number of query 
         tokens in this session. """
     
-        ColumnNumbers = range (self.max_number_of_input_columns)
-        
         if not self.header:
             # If there is no header yet (e.g. because the input file did not
-            # contain headsers, create a new header with column labels 'Inputx'
-            # for the maximum number of input columns available, with x 
-            # corresponding to the number of the column.
+            # contain headsers), create a new header with column labels 
+            # 'Inputx' for the maximum number of input columns available, 
+            # with x corresponding to the number of the column.
             # The column containing the query string is labelled 'Query'.
-            self.header = ["Input%s" % (x+1) for x in ColumnNumbers]
+            self.header = ["Input%s" % (x+1) for x in range(self.max_number_of_input_columns)]
             if options.cfg.show_query:
                 self.header.insert (options.cfg.query_column_number - 1, "Query")
         
@@ -177,6 +175,7 @@ class Session(object):
                     for current_result in self.Corpus.yield_query_results(sub_query):
                         query_results.append(current_result)
                     sub_query.set_result_list(query_results)
+                    #sub_query.Results = query_results
                     if query_results:
                         any_result = True
                         if not self.output_file:
@@ -198,6 +197,7 @@ class Session(object):
                 start_time = time.time()
                 if current_query.tokens:
                     current_query.set_result_list(self.Corpus.yield_query_results(current_query))
+                    #current_query.Results = self.Corpus.yield_query_results(current_query))
                 logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
 
                 if not options.cfg.dry_run:

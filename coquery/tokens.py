@@ -337,11 +337,6 @@ def preprocess_query(S):
         token_lists.append(preprocess_token(current_token))
     
     return [" ".join(list(itertools.chain.from_iterable(x))) for x in itertools.product(*token_lists)]
-    
-    for current_list in itertools.product(*token_lists):
-        print " ".join(list(itertools.chain.from_iterable(current_list)))
-        
-    return token_lists
 
 class TestQueryToken(unittest.TestCase):
     token_type = QueryToken

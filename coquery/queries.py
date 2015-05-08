@@ -26,6 +26,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+try:
+    range = xrange
+except NameError:
+    pass
+
 import copy
 import string
 import collections
@@ -80,15 +85,36 @@ class QueryResult(dict):
             lexicon_entries.append(
                 self.query.Corpus.lexicon.get_entry(current_id, self.query.request_list))
         return lexicon_entries
-          
+     
+    def get_expected_length(self, max_number_of_tokens):
+        count = 0
+        if options.cfg.show_id:
+            count += 1
+        if LEX_ORTH in self.query.request_list:
+            count += max_number_of_tokens
+        if LEX_PHON in self.query.request_list:
+            count += max_number_of_tokens
+        if LEX_LEMMA in self.query.request_list:
+            count += max_number_of_tokens
+        if LEX_POS in self.query.request_list:
+            count += max_number_of_tokens
+        if CORP_SOURCE in self.query.request_list:
+            count += len(self.query.Corpus.get_source_info_header())
+        if CORP_SPEAKER in self.query.request_list:
+            count += len(self.query.Corpus.get_speaker_info_header())
+        if CORP_FILENAME in self.query.request_list:
+            count += len(self.query.Corpus.get_file_info_header())
+        if CORP_TIMING in self.query.request_list:
+            count += len(self.query.Corpus.get_time_info_header())
+        if CORP_CONTEXT in self.query.request_list:
+            count += len(self.query.Corpus.get_context_header())
+        return count
+    
     def get_row(self, number_of_token_columns, max_number_of_tokens):
         L = []
         entry_list = self.get_lexicon_entries(number_of_token_columns)
         if not self or not entry_list:
-            if LEX_FREQ in self.query.request_list:
-                return ["<NA>"] * (len(self.query.Session.header) - len(self.query.InputLine) - 1)
-            else:
-                return ["<NA>"] * (len(self.query.Session.header) - len(self.query.InputLine))
+            return ["<NA>"] * self.get_expected_length(max_number_of_tokens)
         Words = []
         Lemmas = []
         POSs = []
@@ -145,7 +171,7 @@ class CorpusQuery(object):
 
         def next(self):
             try:
-                next_result = self.data.next()
+                next_result = next(self.data)
             except AttributeError:
                 try:
                     next_result = self.data[self.count]
@@ -185,7 +211,7 @@ class CorpusQuery(object):
         self._current = 0
         self.Session = Session
         self.Corpus = Session.Corpus
-        self.Results = []
+        self.Results = self.ResultList(self, [])
         self.InputLine = []
         self.request_list = []
 
