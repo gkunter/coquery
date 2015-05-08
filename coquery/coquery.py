@@ -85,7 +85,8 @@ def main():
             cProfile.runctx("Session.run_queries()", globals(), locals())
         else:
             Session.run_queries()
-            
+    except KeyboardInterrupt:
+        logger.error("Execution interrupted, exiting.")
     except Exception as e:
         print_exception(e)
     logger.info("--- Done (after %.3f seconds) ---" % (time.time() - start_time))
