@@ -59,32 +59,26 @@ def collapse_context (ContextList):
             token_list.append(current_token)
     return "".join(token_list)
 
-class QueryResult(dict):
+class QueryResult(object):
     """ A little class that represents a single row of results from a query."""
-    def __init__(self, query, *args):
-        super(QueryResult, self).__init__(*args)
+    def __init__(self, query, args):
+        self.data = args
         self.query = query
         
     def get_wordid_list(self, number_of_columns):
         """ returns a list containing all word_id values stored in the word 
         columns, i.e. columns named W1, ..., Wn. """
-        start = int(self["TokenId"]) + 1
+        start = int(self.data["TokenId"]) + 1
         end = start + number_of_columns - 1
-        L = [self["W1"]] + [self.query.Corpus.get_word_id(x) for x in range(start,end)]
-        return L
+        return [self.data["W1"]] + [self.query.Corpus.get_word_id(x) for x in range(start,end)]
+
 
     def get_lexicon_entries(self, number_of_columns):
         """ returns a list of lexicon entries representing the tokens in
         the current row matching the query."""
-        if not self:
+        if not self.data:
             return []
-        lexicon_entries = []
-        for current_id in self.get_wordid_list(number_of_columns):
-            if current_id == "<NA>":
-                return []
-            lexicon_entries.append(
-                self.query.Corpus.lexicon.get_entry(current_id, self.query.request_list))
-        return lexicon_entries
+        return [self.query.Corpus.lexicon.get_entry(x, self.query.request_list) for x in self.get_wordid_list(number_of_columns)]
      
     def get_expected_length(self, max_number_of_tokens):
         count = 0
@@ -113,7 +107,7 @@ class QueryResult(dict):
     def get_row(self, number_of_token_columns, max_number_of_tokens):
         L = []
         entry_list = self.get_lexicon_entries(number_of_token_columns)
-        if not self or not entry_list:
+        if not self.data or not entry_list:
             return ["<NA>"] * self.get_expected_length(max_number_of_tokens)
         Words = []
         Lemmas = []
@@ -131,7 +125,7 @@ class QueryResult(dict):
             if LEX_PHON in self.query.request_list:
                 Phon.append(current_entry.phon)
         if options.cfg.show_id:
-            L += [self["TokenId"]]
+            L += [self.data["TokenId"]]
         if LEX_ORTH in self.query.request_list:
             L += expand_list(Words, max_number_of_tokens)
         if LEX_PHON in self.query.request_list:
@@ -141,15 +135,15 @@ class QueryResult(dict):
         if LEX_POS in self.query.request_list:
             L += expand_list(POSs, max_number_of_tokens)
         if CORP_SOURCE in self.query.request_list:
-            L += self.query.Corpus.get_source_info(self["SourceId"])
+            L += self.query.Corpus.get_source_info(self.data["SourceId"])
         if CORP_SPEAKER in self.query.request_list:
-            L += self.query.Corpus.get_speaker_info(self["SpeakerId"])
+            L += self.query.Corpus.get_speaker_info(self.data["SpeakerId"])
         if CORP_FILENAME in self.query.request_list:
-            L += self.query.Corpus.get_file_info(self["SourceId"])
+            L += self.query.Corpus.get_file_info(self.data["SourceId"])
         if CORP_TIMING in self.query.request_list:
-            L += self.query.Corpus.get_time_info(self["TokenId"])
+            L += self.query.Corpus.get_time_info(self.data["TokenId"])
         if CORP_CONTEXT in self.query.request_list:
-            context = self.query.Corpus.get_context(self["TokenId"], self.query.number_of_tokens, True)
+            context = self.query.Corpus.get_context(self.data["TokenId"], self.query.number_of_tokens, True)
             if options.cfg.separate_columns:
                 L += context
             else:
@@ -162,7 +156,6 @@ class CorpusQuery(object):
         and the iterator returns QueryResult() objects."""
         def __init__(self, query, data):
             self.data = data
-            self.current = None
             self.query = query
             
         def __iter__(self):
@@ -171,18 +164,13 @@ class CorpusQuery(object):
 
         def next(self):
             try:
-                next_result = next(self.data)
+                return QueryResult(self.query, next(self.data))
             except AttributeError:
                 try:
-                    next_result = self.data[self.count]
+                    self.count += 1
+                    return QueryResult(self.data[self.count - 1])
                 except IndexError:
-                    next_result = None
-                self.count += 1
-            self.current = next_result
-            if next_result == None:
-                raise StopIteration
-            else:
-                return QueryResult(self.query, next_result)
+                    raise StopIteration
 
         def __next__(self):
             return self.next()
@@ -333,7 +321,7 @@ class FrequencyQuery(CorpusQuery):
                 LineKey = "<|>".join(output_list)
                 Lines[LineKey] += 1
         if not Lines:
-            empty_result = QueryResult(self) 
+            empty_result = QueryResult(self, {}) 
             output_list = empty_result.get_row(number_of_token_columns, max_number_of_token_columns)
             LineKey = "<|>".join(output_list)
             Lines[LineKey] = 0

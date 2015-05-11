@@ -49,9 +49,6 @@ ModifyingCommands = ["ALTER", "CREATE", "DELETE", "DROP", "INSERT",
                      "LOAD", "UPDATE"]
 NonModifyingCommands = ["SELECT", "SHOW", "DESCRIBE", "SET", "RESET"]
 
-class myDictCursor(mysql_cursors.DictCursor):
-    pass
-
 class SqlDB (object):
     def __init__(self, Host, Port, User, Password, Database):
         self.Con = None
