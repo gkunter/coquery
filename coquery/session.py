@@ -175,7 +175,6 @@ class Session(object):
                     for current_result in self.Corpus.yield_query_results(sub_query):
                         query_results.append(current_result)
                     sub_query.set_result_list(query_results)
-                    #sub_query.Results = query_results
                     if query_results:
                         any_result = True
                         if not self.output_file:
@@ -197,7 +196,6 @@ class Session(object):
                 start_time = time.time()
                 if current_query.tokens:
                     current_query.set_result_list(self.Corpus.yield_query_results(current_query))
-                    #current_query.Results = self.Corpus.yield_query_results(current_query))
                 logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
 
                 if not options.cfg.dry_run:
@@ -247,25 +245,25 @@ class SessionInputFile(Session):
             
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
-            for CurrentLine in csv.reader(InputFile, delimiter=options.cfg.input_separator):
-                if CurrentLine:
-                    if options.cfg.query_column_number > len(CurrentLine):
+            for current_line in csv.reader(InputFile, delimiter=options.cfg.input_separator):
+                if current_line:
+                    if options.cfg.query_column_number > len(current_line):
                         raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)
-                    if options.cfg.file_has_headers and not self.header:
-                        self.header = CurrentLine
+                    if options.cfg.file_has_headers and self.header == None:
+                        self.header = copy.copy(current_line)
                         if not options.cfg.show_query:
                             self.header.pop(options.cfg.query_column_number - 1)
                     else:
                         if read_lines >= options.cfg.skip_lines:
-                            query_string = CurrentLine.pop(options.cfg.query_column_number - 1)
+                            query_string = current_line.pop(options.cfg.query_column_number - 1)
                             new_query = self.query_type(
                                     query_string, self,
                                     tokens.COCAToken,
                                     options.cfg.source_filter)
-                            new_query.InputLine = copy.copy(CurrentLine)
+                            new_query.InputLine = copy.copy(current_line)
                             self.query_list.append(new_query)
                             self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
-                    self.max_number_of_input_columns = max(len(CurrentLine), self.max_number_of_input_columns)
+                    self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
                 read_lines += 1
         logger.info("Input file scanned, %s queries" % len (self.query_list))
 
