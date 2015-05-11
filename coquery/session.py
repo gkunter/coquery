@@ -109,14 +109,14 @@ class Session(object):
             # 'Inputx' for the maximum number of input columns available, 
             # with x corresponding to the number of the column.
             # The column containing the query string is labelled 'Query'.
-            self.header = ["Input%s" % (x+1) for x in range(self.max_number_of_input_columns)]
+            self.header = ["Input%s" % (x+1) for x in range(self.max_number_of_input_columns - 1)]
             if options.cfg.show_query:
                 self.header.insert (options.cfg.query_column_number - 1, "Query")
         
         if options.cfg.show_parameters:
             self.header.append ("Parameters")
             
-        if options.cfg.source_filter:
+        if options.cfg.show_filter:
             self.header.append ("Filter")
         
         if options.cfg.show_id:

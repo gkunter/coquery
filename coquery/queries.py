@@ -268,7 +268,7 @@ class TokenQuery(CorpusQuery):
             if current_result != None:
                 if options.cfg.show_parameters:
                     output_list.append(options.cfg.parameter_string)
-                if self.source_filter:
+                if options.cfg.show_filter:
                     output_list.append(self.source_filter)
                 output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns)
                 
@@ -287,7 +287,7 @@ class DistinctQuery(CorpusQuery):
             if current_result != None:
                 if options.cfg.show_parameters:
                     output_list.append(options.cfg.parameter_string)
-                if self.source_filter:
+                if options.cfg.show_filter:
                     output_list.append(self.source_filter)
                 output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns)
                 if output_list not in output_cache:
@@ -335,7 +335,7 @@ class FrequencyQuery(CorpusQuery):
                 output_list.insert(options.cfg.query_column_number - 1, self.query_string)
             if options.cfg.show_parameters:
                 output_list.append(options.cfg.parameter_string)
-            if self.source_filter:
+            if options.cfg.show_filter:
                 output_list.append(self.source_filter)
             if current_key:
                 output_list += current_key.split("<|>")
