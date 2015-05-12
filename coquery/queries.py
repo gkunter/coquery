@@ -47,14 +47,18 @@ def expand_list(L, length, fill=""):
 
 def collapse_context (ContextList):
     stop_words = ["<p>", "<P>"]
-    conflate_words = ["n't"]
+    conflate_words = ["n't", "'s", "'ve"]
     token_list = []
     punct = '!\'),-./:;?^_`}’'
+    quote_list = ['"', "'"]
     context_list = [x.strip() for x in ContextList]
+    open_quote = {}
+    open_quote ['"'] = False
+    open_quote ["'"] = False
     for i, current_token in enumerate(context_list):
         if current_token not in stop_words:
             if current_token not in punct and current_token not in conflate_words:
-                if i > 0 and context_list[i-1] not in "([{‘":
+                if i > 0 and context_list[i-1] not in '([{‘':
                     token_list.append(" ")
             token_list.append(current_token)
     return "".join(token_list)
@@ -117,7 +121,7 @@ class QueryResult(object):
             if options.cfg.case_sensitive:
                 Words.append(current_entry.orth)
             else:
-                Words.append(current_entry.orth.lower())
+                Words.append(current_entry.orth.upper())
             if LEX_LEMMA in self.query.request_list:
                 Lemmas.append(current_entry.lemma)
             if LEX_POS in self.query.request_list:
@@ -143,8 +147,12 @@ class QueryResult(object):
         if CORP_TIMING in self.query.request_list:
             L += self.query.Corpus.get_time_info(self.data["TokenId"])
         if CORP_CONTEXT in self.query.request_list:
-            context = self.query.Corpus.get_context(self.data["TokenId"], self.query.number_of_tokens, True)
-            if options.cfg.separate_columns:
+            if options.cfg.context_sentence:
+                context = self.query.Corpus.get_context_sentence(self.data["SourceId"]) 
+            else:
+                context_left, context_right = self.query.Corpus.get_context(self.data["TokenId"], self.query.number_of_tokens, True)
+                context = context_left + Words + context_right
+            if options.cfg.context_columns:
                 L += context
             else:
                 L += [collapse_context(context)]
@@ -163,6 +171,8 @@ class CorpusQuery(object):
             return self
 
         def next(self):
+            if not self.data:
+                raise StopIteration
             try:
                 return QueryResult(self.query, next(self.data))
             except AttributeError:
@@ -224,7 +234,7 @@ class CorpusQuery(object):
             self.request_list.append(CORP_SPEAKER)
         if options.cfg.show_time:
             self.request_list.append(CORP_TIMING)
-        if options.cfg.context_span:
+        if options.cfg.context_span or options.cfg.context_columns or options.cfg.context_sentence:
             self.request_list.append(CORP_CONTEXT)
             
         self.request_list = [x for x in self.request_list if self.Corpus.provides_feature(x)]

@@ -173,9 +173,15 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         self.parser.add_argument("--suppress-header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
         self.parser.add_argument("-Q", "--show-query", help="include query string in the output", action="store_true", dest="show_query")
         self.parser.add_argument("-O", "--orth", help="include orthographic word in the output", action="store_true", dest="show_orth")
-        self.parser.add_argument("-c", "--span", help="include context with SPAN words to the left and the right", default=0, type=int, dest="context_span")
+        #self.parser.add_argument("-c", "--context", help="include context with SPAN words to the left and the right", default=0, type=int, dest="context_span")
+        
+        group = self.parser.add_mutually_exclusive_group()
+        group.add_argument("-c", "--context", help="include context with N words to the left and the right as one text string", default=0, type=int, dest="context_span")
+        group.add_argument("--context_columns", help="include context with N words to the left and the right in separate columns", default=0, type=int, dest="context_columns")
+        group.add_argument("--sentence", help="include the sentence of the token as a context (not supported by all corpora)", dest="context_sentence", action="store_true")
+
+
         self.parser.add_argument("--number-of-tokens", help="output up to NUMBER different tokens (default: all tokens)", default=0, type=int, dest="number_of_tokens", metavar="NUMBER")
-        self.parser.add_argument("-S", "--separate-columns", help="include a separate column for each word in the context (default: include a single column for the whole output)", action="store_true")
         self.parser.add_argument("-l", "--lemma", help="include a lemma column for each token in the output", action="store_true", dest="show_lemma")
         self.parser.add_argument("-p", "--POS", help="include a part-of-speech column for each token in the output", action="store_true", dest="show_pos")
         self.parser.add_argument("-t", "--text", help="include text information (e.g. Year, Genre, Source, Title) in the output", action="store_true", dest="show_text")

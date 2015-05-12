@@ -191,27 +191,27 @@ class BaseCorpus(object):
         self.lexicon = lexicon
         self.resource = resource
 
-    def run_query(self, Query):
-        """ Runs the specified query. 
+    #def run_query(self, Query):
+        #""" Runs the specified query. 
         
-        Each row of the output contains a column for each token in the 
-        query. Token columns are labeled W1, W2, ... . They contain a 
-        word_id that can be used as an argument for Lexicon.get_entry(word_id) 
-        to look up the associated lexicon entry.
+        #Each row of the output contains a column for each token in the 
+        #query. Token columns are labeled W1, W2, ... . They contain a 
+        #word_id that can be used as an argument for Lexicon.get_entry(word_id) 
+        #to look up the associated lexicon entry.
         
-        Depending the features provided by the corpus, the following columns
-        are also contained in the output row:
+        #Depending the features provided by the corpus, the following columns
+        #are also contained in the output row:
         
-        TokenId     required by CORP_CONTEXT and CORP_TIMING, a unique 
-                    identifier for the token that allows retrieval of the 
-                    context. Additionally, the TokenId is used to access 
-                    timing data.
-        SourceId    required by CORP_SOURCE and CORP_FILENAME, specifies the 
-                    source in which the token can be found
-        SpeakerId   required by CORP_SPEAKER, specifies the speaker who has 
-                    produced the token
-        """
-        raise CorpusUnsupportedFunctionError
+        #TokenId     required by CORP_CONTEXT and CORP_TIMING, a unique 
+                    #identifier for the token that allows retrieval of the 
+                    #context. Additionally, the TokenId is used to access 
+                    #timing data.
+        #SourceId    required by CORP_CONTEXT, CORP_SOURCE and CORP_FILENAME,
+                    #specifies the source in which the token can be found
+        #SpeakerId   required by CORP_SPEAKER, specifies the speaker who has 
+                    #produced the token
+        #"""
+        #raise CorpusUnsupportedFunctionError
     
     def get_word_id(self, token_id):
         """ returns the word id of the token specified by token_id. """
@@ -221,18 +221,21 @@ class BaseCorpus(object):
         """ returns the context of the token specified by token_id. """
         raise CorpusUnsupportedFunctionError
     
-    def get_context_headers(self, context_span, max_number_of_tokens, separate_columns):
+    def get_context_headers(self, max_number_of_tokens):
         if self.provides_feature(CORP_CONTEXT):
             L = []
-            if separate_columns:
-                L += ["LC%s" % (x+1) for x in range(context_span)[::-1]]
+            if options.cfg.context_columns:
+                L += ["LC%s" % (x+1) for x in range(options.cfg.context_columns)[::-1]]
                 L += ["X%s" % (x+1) for x in range(max_number_of_tokens)]
-                L += ["RC%s" % (x+1) for x in range(context_span)]
+                L += ["RC%s" % (x+1) for x in range(options.cfg.context_columns)]
             else:
                 L.append ("Context")
             return L
         else:
             raise CorpusUnsupportedFunctionError
+        
+    def get_context_sentence_headers(self):
+        return ["Sentence"]
         
     def get_source_info(self, source_id):
         """ returns a list containing the text information associated with 
@@ -663,7 +666,7 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_table,
             self.resource.corpus_token_id_column))
         if number == 1:
-            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list or Query.source_filter:
+            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list or Query.source_filter or CORP_CONTEXT in Query.request_list:
                 column_list.append("{}.{}".format(
                     self.resource.corpus_table,
                     self.resource.corpus_source_id_column))
@@ -773,7 +776,7 @@ class SQLCorpus(BaseCorpus):
         # Create a list of the columns that the query should return:
         # - a Wx column for each query token
         # - a TokenId column if context is requested
-        # - a SourceId column if either the source or the filename is
+        # - a SourceId column if context, the source or the filename is
         #   requested
         column_list = []
         non_empty_token = [x for x in range(Query.number_of_tokens) if Query.tokens[x] != "*"]
@@ -781,7 +784,7 @@ class SQLCorpus(BaseCorpus):
             column_list.append("{}.{} AS TokenId".format(
                 self.resource.self_join_corpus,
                 self.resource.corpus_token_id_column))
-            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list:
+            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list or CORP_CONTEXT in Query.request_list:
                 column_list.append("{}.{} AS SourceId".format(
                     self.resource.self_join_corpus,
                     self.resource.corpus_source_id_column))
@@ -791,7 +794,7 @@ class SQLCorpus(BaseCorpus):
         else:
             column_list.append("e1.{} AS TokenId".format(
                 self.resource.corpus_token_id_column))
-            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list:
+            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list or CORP_CONTEXT in Query.request_list:
                 column_list.append("e1.{} AS SourceId".format(
                     self.resource.corpus_source_id_column))
             column_list += ["e{num}.{corpus_word} AS W{num}".format(
@@ -829,32 +832,58 @@ class SQLCorpus(BaseCorpus):
         for current_result in cursor:
             yield current_result
 
-    def sql_string_get_span_wordid(self, start, end):
-        return "SELECT {} FROM {} WHERE {} BETWEEN {} AND {}".format(
-            self.resource.corpus_word_id_column,
-            self.resource.corpus_table,
-            self.resource.corpus_token_id_column,
-            start, end)
+    def sql_string_get_sentence_wordid(self,  source_id):
+        return "SELECT {corpus_wordid} FROM {corpus} INNER JOIN {source} ON {corpus}.{corpus_source} = {source_alias}.{source_id} WHERE {source_alias}.{source_id} = {this_source}{verbose}".format(
+            corpus_wordid=self.resource.corpus_word_id_column,
+            corpus=self.resource.corpus_table,
+            source=self.resource.source_table,
+            source_alias=self.resource.source_table_alias,
+            corpus_source=self.resource.corpus_source_id_column,
+            source_id=self.resource.source_id_column,
+            corpus_token=self.resource.corpus_token_id_column,
+            this_source=source_id,
+            verbose=" -- sql_string_get_sentence_wordid" if options.cfg.verbose else "")
 
-    def get_context(self, token_id, number_of_tokens, case_sensitive):
-        if options.cfg.context_span > token_id:
-            left_span = token_id - 1
-        else:
-            left_span = options.cfg.context_span
-        start = token_id - left_span
-        end = token_id + number_of_tokens + options.cfg.context_span - 1
+    def get_context_sentence(self, sentence_id):
         self.resource.DB.execute(
-            self.sql_string_get_span_wordid(start, end))
-        context_list = []
-        for i, (word_id,) in enumerate(self.resource.DB.Cur):
-            entry = self.lexicon.get_entry(word_id, [LEX_ORTH])
-            # if the query is not case sensitive, capitalize the words that
-            # match the query string:
-            if not options.cfg.case_sensitive and i in range(left_span, left_span + number_of_tokens):
-                context_list.append(entry.orth.upper())
+            self.sql_string_get_sentence_wordid(sentence_id))
+        return [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+
+    def sql_string_get_span_wordid(self, start, end):
+        return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} AND {end} {verbose}".format(
+            corpus_wordid=self.resource.corpus_word_id_column,
+            corpus=self.resource.corpus_table,
+            corpus_token=self.resource.corpus_token_id_column,
+            start=start, end=end,
+            verbose=" -- sql_string_get_span_wordid" if options.cfg.verbose else "")
+ 
+    def get_context(self, token_id, number_of_tokens, case_sensitive):
+        if options.cfg.context_sentence:
+            asd
+        if options.cfg.context_span:
+            span = options.cfg.context_span
+        elif options.cfg.context_columns:
+            span = options.cfg.context_columns
+
+        if span:
+            if span > token_id:
+                start = 1
             else:
-                context_list.append(entry.orth)
-        return context_list
+                start = token_id - span
+                
+        self.resource.DB.execute(
+            self.sql_string_get_span_wordid(
+                start, 
+                token_id - 1))
+        left_context_words = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+
+        self.resource.DB.execute(
+            self.sql_string_get_span_wordid(
+                token_id + number_of_tokens, 
+                token_id + number_of_tokens + span - 1))
+        right_context_words = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+
+        return (left_context_words, right_context_words)
 
     def sql_string_get_source_info(self, source_id):
         if "source_table" in dir(self.resource) and "source_table_alias" in dir(self.resource):

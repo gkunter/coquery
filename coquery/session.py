@@ -143,8 +143,10 @@ class Session(object):
         if options.cfg.show_time and self.Corpus.provides_feature(CORP_TIMING):
             self.header += self.Corpus.get_time_info_headers()
             
-        if options.cfg.context_span and self.Corpus.provides_feature(CORP_CONTEXT):
-            self.header += self.Corpus.get_context_headers(options.cfg.context_span, self.max_number_of_tokens, options.cfg.separate_columns)
+        if (options.cfg.context_span or options.cfg.context_columns) and self.Corpus.provides_feature(CORP_CONTEXT):
+            self.header += self.Corpus.get_context_headers(self.max_number_of_tokens)
+        if options.cfg.context_sentence and self.Corpus.provides_feature(CORP_CONTEXT):
+            self.header += self.Corpus.get_context_sentence_headers()
 
         if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             self.header.append (options.cfg.freq_label)
