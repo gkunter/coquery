@@ -33,6 +33,10 @@ class Resource(SQLResource):
     file_id_column = "SourceId"
     file_label_column = "Text"
     
+    source_table = "source"
+    source_table_alias = "source"
+    source_id_column = "SourceId"
+    
 class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_LEMMA, LEX_ORTH, LEX_POS]
 

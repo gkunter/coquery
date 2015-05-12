@@ -115,6 +115,11 @@ class Resource(SQLResource):
     file_table = "{source_table}"
     file_id_column = "{source_id}"
     file_label_column = "{source_label}"
+
+    source_table = "{source_table}"
+    source_table_alias = "{source_table}"
+    source_id_column = "{source_id}"
+
     
 class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_LEMMA, LEX_ORTH, LEX_POS]
