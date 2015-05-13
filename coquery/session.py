@@ -90,7 +90,29 @@ class Session(object):
         elif options.cfg.MODE == QUERY_MODE_DISTINCT:
             self.query_type = queries.DistinctQuery
             
-
+        self.requested_fields = []
+            
+        if options.cfg.show_orth:
+            self.requested_fields.append(LEX_ORTH)        
+        if options.cfg.show_lemma:
+            self.requested_fields.append(LEX_LEMMA)
+        if options.cfg.show_pos:
+            self.requested_fields.append(LEX_POS)
+        if options.cfg.show_phon:
+            self.requested_fields.append(LEX_PHON)
+        if options.cfg.show_text:
+            self.requested_fields.append(CORP_SOURCE)
+        if options.cfg.show_filename:
+            self.requested_fields.append(CORP_FILENAME)
+        if options.cfg.show_speaker:
+            self.requested_fields.append(CORP_SPEAKER)
+        if options.cfg.show_time:
+            self.requested_fields.append(CORP_TIMING)
+        if options.cfg.context_span or options.cfg.context_columns or options.cfg.context_sentence:
+            self.requested_fields.append(CORP_CONTEXT)
+            
+        self.output_fields = [x for x in self.requested_fields if self.Corpus.provides_feature(x)]
+        
         logger.info("Using corpus %s" % options.cfg.corpus)
         self.output_file = None
 

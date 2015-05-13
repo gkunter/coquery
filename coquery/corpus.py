@@ -654,7 +654,7 @@ class SQLCorpus(BaseCorpus):
                 return "({})".format(filter_string)
         raise TextFilterError
     
-    def sql_string_token_table(self, number, token, Query):
+    def sql_string_token_table(self, number, token, requested):
         where_list = []
 
         column_list = ["{}.{}".format(
@@ -666,7 +666,7 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_table,
             self.resource.corpus_token_id_column))
         if number == 1:
-            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list or Query.source_filter or CORP_CONTEXT in Query.request_list:
+            if CORP_SOURCE in requested or CORP_FILENAME in requested or CORP_CONTEXT in requested or Query.source_filter:
                 column_list.append("{}.{}".format(
                     self.resource.corpus_table,
                     self.resource.corpus_source_id_column))
@@ -727,7 +727,7 @@ class SQLCorpus(BaseCorpus):
             corpus_table="e1"
             for i, current_token in enumerate (Query.tokens):
                 if current_token is not "*":
-                    table_string = self.sql_string_token_table(i+1, current_token, Query)
+                    table_string = self.sql_string_token_table(i+1, current_token, Query.Session.output_fields)
                     # create a new inner join for any token on top of the first one:
                     if len(table_string_list) > 0:
                         table_string = "INNER JOIN {table_string} ON (e{num1}.{token_id} = e1.{token_id} + {num})".format(
@@ -784,7 +784,7 @@ class SQLCorpus(BaseCorpus):
             column_list.append("{}.{} AS TokenId".format(
                 self.resource.self_join_corpus,
                 self.resource.corpus_token_id_column))
-            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list or CORP_CONTEXT in Query.request_list:
+            if CORP_SOURCE in Query.Session.output_fields or CORP_FILENAME in Query.Session.output_fields or CORP_CONTEXT in Query.Session.output_fields:
                 column_list.append("{}.{} AS SourceId".format(
                     self.resource.self_join_corpus,
                     self.resource.corpus_source_id_column))
@@ -794,7 +794,7 @@ class SQLCorpus(BaseCorpus):
         else:
             column_list.append("e1.{} AS TokenId".format(
                 self.resource.corpus_token_id_column))
-            if CORP_SOURCE in Query.request_list or CORP_FILENAME in Query.request_list or CORP_CONTEXT in Query.request_list:
+            if CORP_SOURCE in Query.Session.output_fields or CORP_FILENAME in Query.Session.output_fields or CORP_CONTEXT in Query.Session.output_fields:
                 column_list.append("e1.{} AS SourceId".format(
                     self.resource.corpus_source_id_column))
             column_list += ["e{num}.{corpus_word} AS W{num}".format(

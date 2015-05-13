@@ -82,33 +82,35 @@ class QueryResult(object):
         the current row matching the query."""
         if not self.data:
             return []
-        return [self.query.Corpus.lexicon.get_entry(x, self.query.request_list) for x in self.get_wordid_list(number_of_columns)]
+        return [self.query.Corpus.lexicon.get_entry(x, self.query.Session.output_fields) for x in self.get_wordid_list(number_of_columns)]
      
     def get_expected_length(self, max_number_of_tokens):
+        output_fields = self.query.Session.output_fields
         count = 0
         if options.cfg.show_id:
             count += 1
-        if LEX_ORTH in self.query.request_list:
+        if LEX_ORTH in output_fields:
             count += max_number_of_tokens
-        if LEX_PHON in self.query.request_list:
+        if LEX_PHON in output_fields:
             count += max_number_of_tokens
-        if LEX_LEMMA in self.query.request_list:
+        if LEX_LEMMA in output_fields:
             count += max_number_of_tokens
-        if LEX_POS in self.query.request_list:
+        if LEX_POS in output_fields:
             count += max_number_of_tokens
-        if CORP_SOURCE in self.query.request_list:
+        if CORP_SOURCE in output_fields:
             count += len(self.query.Corpus.get_source_info_header())
-        if CORP_SPEAKER in self.query.request_list:
+        if CORP_SPEAKER in output_fields:
             count += len(self.query.Corpus.get_speaker_info_header())
-        if CORP_FILENAME in self.query.request_list:
+        if CORP_FILENAME in output_fields:
             count += len(self.query.Corpus.get_file_info_header())
-        if CORP_TIMING in self.query.request_list:
+        if CORP_TIMING in output_fields:
             count += len(self.query.Corpus.get_time_info_header())
-        if CORP_CONTEXT in self.query.request_list:
+        if CORP_CONTEXT in output_fields:
             count += len(self.query.Corpus.get_context_header())
         return count
     
     def get_row(self, number_of_token_columns, max_number_of_tokens):
+        output_fields = self.query.Session.output_fields
         L = []
         entry_list = self.get_lexicon_entries(number_of_token_columns)
         if not self.data or not entry_list:
@@ -122,31 +124,31 @@ class QueryResult(object):
                 Words.append(current_entry.orth)
             else:
                 Words.append(current_entry.orth.upper())
-            if LEX_LEMMA in self.query.request_list:
+            if LEX_LEMMA in output_fields:
                 Lemmas.append(current_entry.lemma)
-            if LEX_POS in self.query.request_list:
+            if LEX_POS in output_fields:
                 POSs.append(current_entry.pos)
-            if LEX_PHON in self.query.request_list:
+            if LEX_PHON in output_fields:
                 Phon.append(current_entry.phon)
         if options.cfg.show_id:
             L += [self.data["TokenId"]]
-        if LEX_ORTH in self.query.request_list:
+        if LEX_ORTH in output_fields:
             L += expand_list(Words, max_number_of_tokens)
-        if LEX_PHON in self.query.request_list:
+        if LEX_PHON in output_fields:
             L += expand_list(Phon, max_number_of_tokens)
-        if LEX_LEMMA in self.query.request_list:
+        if LEX_LEMMA in output_fields:
             L += expand_list(Lemmas, max_number_of_tokens)
-        if LEX_POS in self.query.request_list:
+        if LEX_POS in output_fields:
             L += expand_list(POSs, max_number_of_tokens)
-        if CORP_SOURCE in self.query.request_list:
+        if CORP_SOURCE in output_fields:
             L += self.query.Corpus.get_source_info(self.data["SourceId"])
-        if CORP_SPEAKER in self.query.request_list:
+        if CORP_SPEAKER in output_fields:
             L += self.query.Corpus.get_speaker_info(self.data["SpeakerId"])
-        if CORP_FILENAME in self.query.request_list:
+        if CORP_FILENAME in output_fields:
             L += self.query.Corpus.get_file_info(self.data["SourceId"])
-        if CORP_TIMING in self.query.request_list:
+        if CORP_TIMING in output_fields:
             L += self.query.Corpus.get_time_info(self.data["TokenId"])
-        if CORP_CONTEXT in self.query.request_list:
+        if CORP_CONTEXT in output_fields:
             if options.cfg.context_sentence:
                 context = self.query.Corpus.get_context_sentence(self.data["SourceId"]) 
             else:
@@ -211,34 +213,12 @@ class CorpusQuery(object):
         self.Corpus = Session.Corpus
         self.Results = self.ResultList(self, [])
         self.InputLine = []
-        self.request_list = []
 
         if self.Corpus.provides_feature(CORP_SOURCE):
             self.source_filter = source_filter
         else:
             self.source_filter = None
         
-        if options.cfg.show_orth:
-            self.request_list.append(LEX_ORTH)        
-        if options.cfg.show_lemma:
-            self.request_list.append(LEX_LEMMA)
-        if options.cfg.show_pos:
-            self.request_list.append(LEX_POS)
-        if options.cfg.show_phon:
-            self.request_list.append(LEX_PHON)
-        if options.cfg.show_text:
-            self.request_list.append(CORP_SOURCE)
-        if options.cfg.show_filename:
-            self.request_list.append(CORP_FILENAME)
-        if options.cfg.show_speaker:
-            self.request_list.append(CORP_SPEAKER)
-        if options.cfg.show_time:
-            self.request_list.append(CORP_TIMING)
-        if options.cfg.context_span or options.cfg.context_columns or options.cfg.context_sentence:
-            self.request_list.append(CORP_CONTEXT)
-            
-        self.request_list = [x for x in self.request_list if self.Corpus.provides_feature(x)]
-            
     def __iter__(self):
         return self
     
@@ -318,7 +298,7 @@ class StatisticsQuery(CorpusQuery):
 class FrequencyQuery(CorpusQuery):
     def __init__(self, *args):
         super(FrequencyQuery, self).__init__(*args)
-        self.request_list.append(LEX_FREQ)
+        self.Session.output_fields.append(LEX_FREQ)
 
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         Lines = collections.Counter()
