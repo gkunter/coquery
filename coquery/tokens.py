@@ -109,82 +109,13 @@ use [ and ].
         self.class_specifiers = []
         self.word_specifiers = self.S.split(",")
 
+
 class COCAToken(QueryToken):
-    """ Valid token string formats:
-        entity_specifier
-        [class_specifier]
-        entity_specifier.[class_specifier]
-        
-        both specifiers are of the form:
-        spec1 | spec2 | ... | spec_n
-        
-        A token string may be preceded by a negation sign.
-    """
     bracket_open = "["
     bracket_close = "]"
     transcript_open = "/"
     transcript_close = "/"
     NegationChar = "#"
-    
-    # use the corpus to determine whether a token string like [xx] contains
-    # a part-of-speech tag:
-    check_part_of_speech = True
-    
-    def __repr__(self):
-        return self.S
-
-    def get_parse(self):
-        return self.word_specifiers, self.lemma_specifiers, self.class_specifiers, self.negated
-
-    def parse (self):
-        self.word_specifiers = []
-        self.class_specifiers = []
-        self.lemma_specifiers = []        
-        self.transcript_specifiers = []
-        
-        if self.S.startswith(self.NegationChar) and len(self.S) > 1:
-            self.negated = True
-            ConstituentList = self.S.strip(self.NegationChar).split(".")
-        else:
-            self.negated = False
-            ConstituentList = self.S.split(".")
-            
-        # Parse and process second constituent, i.e. xxx.[XXX]
-        # (if existing):
-        if len(ConstituentList) == 2:
-            S = ConstituentList[1]
-            if self.check_brackets(S):
-                self.class_specifiers = [x.strip() for x in S[1:-1].split("|")]
-                if self.check_part_of_speech:
-                    if self.lexicon.check_pos_list(self.class_specifiers) < len(self.class_specifiers):
-                        raise TokenPartOfSpeechError(self)
-        # Parse and process first constituent:
-        S = ConstituentList[0]
-        if S and self.check_brackets(S):
-            element_list = [x.strip() for x in S[1:-1].split("|")]
-            if self.check_part_of_speech:
-                # check if all elements pass as part-of-speech-tags:
-                if len(element_list) == self.lexicon.check_pos_list(element_list):
-                    # if so, interpret elements as part-of-speech tags:
-                    self.class_specifiers = element_list
-                else:
-                    # if not, interpret elements as lemmas:
-                    self.lemma_specifiers = element_list
-            else:
-                self.lemma_specifiers = element_list
-        else:
-            for current_word in S.split("|"):
-                current_word = current_word.strip()
-                if current_word:
-                    if self.check_transcript(current_word):
-                        current_word = current_word.translate(
-                            string.maketrans("", "", ), 
-                            "".join([self.transcript_open, self.transcript_close]))
-                        self.transcript_specifiers.append(current_word.strip())
-                    else:
-                        self.word_specifiers.append(current_word)
-
-class COCARegExpToken(COCAToken):
     def parse (self):
         self.word_specifiers = []
         self.class_specifiers = []
@@ -311,8 +242,6 @@ def parse_query_string(S, token_type):
     if current_word:
         tokens.append(current_word)
     return tokens
-    
-    return S.split()
 
 def preprocess_query(S):
     def preprocess_token(T):
@@ -339,7 +268,7 @@ def preprocess_query(S):
     return [" ".join(list(itertools.chain.from_iterable(x))) for x in itertools.product(*token_lists)]
 
 class TestQueryToken(unittest.TestCase):
-    token_type = QueryToken
+    token_type = COCAToken
     
     def runTest(self):
         super(TestQueryToken, self).runTest()
@@ -444,12 +373,6 @@ class TestQueryToken(unittest.TestCase):
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
 
-class TestCOCARegExpToken(TestQueryToken):
-    token_type = COCARegExpToken
-
-class TestCOCAToken(TestQueryToken):
-    token_type = COCAToken
-    
 if __name__ == '__main__':
     import timeit
     
