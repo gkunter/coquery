@@ -784,7 +784,7 @@ class SQLCorpus(BaseCorpus):
             column_list.append("{}.{} AS TokenId".format(
                 self.resource.self_join_corpus,
                 self.resource.corpus_token_id_column))
-            if CORP_SOURCE in Query.Session.output_fields or CORP_FILENAME in Query.Session.output_fields or CORP_CONTEXT in Query.Session.output_fields:
+            if any([x in Query.Session.output_files for x in [CORP_SOURCE, CORP_FILENAME, CORP_CONTEXT]]):
                 column_list.append("{}.{} AS SourceId".format(
                     self.resource.self_join_corpus,
                     self.resource.corpus_source_id_column))
@@ -794,7 +794,7 @@ class SQLCorpus(BaseCorpus):
         else:
             column_list.append("e1.{} AS TokenId".format(
                 self.resource.corpus_token_id_column))
-            if CORP_SOURCE in Query.Session.output_fields or CORP_FILENAME in Query.Session.output_fields or CORP_CONTEXT in Query.Session.output_fields:
+            if any([x in Query.Session.output_fields for x in [CORP_SOURCE, CORP_FILENAME, CORP_CONTEXT]]):
                 column_list.append("e1.{} AS SourceId".format(
                     self.resource.corpus_source_id_column))
             column_list += ["e{num}.{corpus_word} AS W{num}".format(
