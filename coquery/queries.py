@@ -150,7 +150,7 @@ class QueryResult(object):
             if options.cfg.context_sentence:
                 context = self.query.Corpus.get_context_sentence(self.data["SourceId"]) 
             else:
-                context_left, context_right = self.query.Corpus.get_context(self.data["TokenId"], self.query.number_of_tokens, True)
+                context_left, context_right = self.query.Corpus.get_context(self.data["TokenId"], self.data["SourceId"], self.query.number_of_tokens, True)
                 context = context_left + Words + context_right
             if options.cfg.context_columns:
                 L += context

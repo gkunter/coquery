@@ -41,4 +41,4 @@ class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_LEMMA, LEX_ORTH, LEX_POS]
 
 class Corpus(SQLCorpus):
-    provides = [CORP_CONTEXT, CORP_FILENAME, CORP_STATISTICS]
+    provides = [CORP_CONTEXT, CORP_FILENAME, CORP_STATISTICS, CORP_SENTENCE]

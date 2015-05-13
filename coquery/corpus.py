@@ -849,15 +849,29 @@ class SQLCorpus(BaseCorpus):
             self.sql_string_get_sentence_wordid(sentence_id))
         return [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
 
-    def sql_string_get_span_wordid(self, start, end):
-        return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} AND {end} {verbose}".format(
+    def sql_string_get_wordid_in_range(self, start, end, source_id):
+        if source_id:
+            return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} and {end} AND {corpus_source} = '{this_source}'".format(
             corpus_wordid=self.resource.corpus_word_id_column,
             corpus=self.resource.corpus_table,
+            source=self.resource.source_table,
+            source_alias=self.resource.source_table_alias,
+            corpus_source=self.resource.corpus_source_id_column,
+            source_id=self.resource.source_id_column,
             corpus_token=self.resource.corpus_token_id_column,
-            start=start, end=end,
-            verbose=" -- sql_string_get_span_wordid" if options.cfg.verbose else "")
+            start=start,
+            end=end,
+            this_source=source_id,
+            verbose=" -- sql_string_get_sentence_wordid" if options.cfg.verbose else "")
+        else:
+            return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} AND {end} {verbose}".format(
+                corpus_wordid=self.resource.corpus_word_id_column,
+                corpus=self.resource.corpus_table,
+                corpus_token=self.resource.corpus_token_id_column,
+                start=start, end=end,
+                verbose=" -- sql_string_get_wordid_in_range" if options.cfg.verbose else "")
  
-    def get_context(self, token_id, number_of_tokens, case_sensitive):
+    def get_context(self, token_id, source_id, number_of_tokens, case_sensitive):
         if options.cfg.context_sentence:
             asd
         if options.cfg.context_span:
@@ -872,16 +886,18 @@ class SQLCorpus(BaseCorpus):
                 start = token_id - span
                 
         self.resource.DB.execute(
-            self.sql_string_get_span_wordid(
+            self.sql_string_get_wordid_in_range(
                 start, 
-                token_id - 1))
+                token_id - 1, source_id))
         left_context_words = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+        left_context_words = [''] * (span - len(left_context_words)) + left_context_words
 
         self.resource.DB.execute(
-            self.sql_string_get_span_wordid(
+            self.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
-                token_id + number_of_tokens + span - 1))
+                token_id + number_of_tokens + span - 1, source_id))
         right_context_words = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+        right_context_words =  right_context_words + [''] * (span - len(right_context_words))
 
         return (left_context_words, right_context_words)
 
