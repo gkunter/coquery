@@ -61,10 +61,11 @@ class Resource(SQLResource):
     source_genre_column = "Type"
     source_oldname_column = "OldName"
     source_file_id_column = "File_id"
-    source_table = "(SELECT {sentence_table}.{sentence_id}, {text_table}.{genre}, {text_table}.{date}, {text_table}.{old_name}, {text_table}.{xml_name} FROM {sentence_table}, {text_table} WHERE {sentence_table}.{sentence_text} = {text_table}.id) AS {source_name}".format(
+    source_table = "(SELECT {sentence_table}.{sentence_id}, {text_table}.{genre}, {text_table}.{date}, {text_table}.{old_name}, {text_table}.{xml_name} FROM {sentence_table}, {text_table} WHERE {sentence_table}.{sentence_text} = {text_table}.{source_id}) AS {source_name}".format(
         sentence_table=sentence_table,
         sentence_id=sentence_id_column,
         sentence_text=sentence_text_id_column,
+        source_id=source_id_column,
         text_table=source_table_name,
         genre=source_genre_column,
         date=source_year_column,
