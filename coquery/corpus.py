@@ -479,6 +479,7 @@ class SQLLexicon(BaseLexicon):
             ", ".join(select_variable_list),
             " ".join(table_list),
             (" WHERE " + " AND ".join(where_list)) if where_list else ""))
+        print select_string
         return select_string
     
     def get_entry(self, word_id, requested):
@@ -508,7 +509,7 @@ class SQLLexicon(BaseLexicon):
             return []
         return [x[0] for x in self.resource.DB.fetch_all()]
 
-    def sql_string_get_wordid_list(self, token):
+    def sql_string_get_matching_wordids(self, token):
         where_list = [self.sql_string_get_wordid_list_where(token)]
         table_list = [self.resource.word_table]
         if token.lemma_specifiers:
@@ -540,12 +541,11 @@ class SQLLexicon(BaseLexicon):
                 where_string)
         return S
 
-    def get_wordid_list(self, token):
+    def get_matching_wordids(self, token):
         if token.S == "*":
             return []
         try:
-            S = self.sql_string_get_wordid_list(token)
-            self.resource.DB.execute(self.sql_string_get_wordid_list(token))
+            self.resource.DB.execute(self.sql_string_get_matching_wordids(token))
         except SQLOperationalError:
             return []
         query_results = self.resource.DB.fetch_all ()
@@ -596,7 +596,7 @@ class SQLCorpus(BaseCorpus):
             return []
         where_clauses = []
         if Token.word_specifiers or Token.lemma_specifiers or Token.transcript_specifiers:
-            L = self.lexicon.get_wordid_list(Token)
+            L = self.lexicon.get_matching_wordids(Token)
             if L:
                 where_clauses.append("%s IN (%s)" % (WordTarget, ", ".join (map (str, L))))
         else:
@@ -666,7 +666,7 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_table,
             self.resource.corpus_token_id_column))
         if number == 1:
-            if CORP_SOURCE in requested or CORP_FILENAME in requested or CORP_CONTEXT in requested or Query.source_filter:
+            if CORP_SOURCE in requested or CORP_FILENAME in requested or CORP_CONTEXT in requested or options.cfg.source_filter:
                 column_list.append("{}.{}".format(
                     self.resource.corpus_table,
                     self.resource.corpus_source_id_column))
