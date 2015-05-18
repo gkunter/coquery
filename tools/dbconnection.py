@@ -85,7 +85,11 @@ class DBConnection(object):
         self.execute(cur, "SELECT * FROM %s" % table_name, override=True)
         D = {}
         for current_entry in cur.fetchall():
-            D[FUN(current_entry)] = current_entry
+            try:
+                x = FUN(current_entry)
+            except UnicodeDecodeError as e:
+                x = FUN([str(x).decode("utf-8") for x in current_entry])
+            D[x] = current_entry
         return D
 
     def get_max(self, table_name, column_name):
@@ -117,12 +121,11 @@ class DBConnection(object):
     def insert(self, table_name, data):
         #assert len(data) == (len(table_description[table_name]["CREATE"]) -1 )
         cur = self.Con.cursor()
-        
-        # take care of single quotation marks:
-        if any("'" in str(x) for x in data):
-            values = ", ".join(['"%s"' % x for x in data]).encode("utf-8")
-        else:
-            values = ", ".join(["'%s'" % x for x in data]).encode("utf-8")
+
+        # take care of quote characters:
+        data = ["'%s'" % unicode(x).replace("'", "''") for x in data]
+        values = ", ".join(data)
+
         # take care of backslashes:
         values = values.replace("\\", "\\\\")
 
