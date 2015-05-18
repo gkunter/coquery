@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# FILENAME: shakespeare.py -- a corpus module for the Coquery corpus query tool
+# FILENAME: ./Sonnet_CIII.txt.py -- a corpus module for the Coquery corpus query tool
 # 
 # This module was automatically created by create_mysql_corpus.py.
 #
@@ -11,31 +11,31 @@ class Resource(SQLResource):
     db_name = "shakespeare"
 
     word_table = "word"
-    word_id = "WordId"
-    word_label = "Text"
-    word_pos_id = "Pos"
-    word_lemma_id = "LemmaId"
+    word_id_column = "WordId"
+    word_label_column = "Text"
+    word_pos_id_column = "Pos"
+    word_lemma_id_column = "LemmaId"
 
     lemma_table = "lemma"
-    lemma_id = "LemmaId"
-    lemma_label = "Text"
+    lemma_id_column = "LemmaId"
+    lemma_label_column = "Text"
 
     pos_table = "word"
-    pos_id = "Pos"
-    pos_label = "Pos"
+    pos_id_column = "Pos"
+    pos_label_column = "Pos"
     
     corpus_table = "corpus"
-    corpus_word_id = "WordId"
-    corpus_token_id = "TokenId"
-    corpus_source_id = "SourceId"
+    corpus_word_id_column = "WordId"
+    corpus_token_id_column = "TokenId"
+    corpus_source_id_column = "SourceId"
     
     file_table = "source"
-    file_id = "SourceId"
-    file_label = "Text"
+    file_id_column = "SourceId"
+    file_label_column = "Text"
 
     source_table = "source"
     source_table_alias = "source"
-    source_id = "SourceId"
+    source_id_column = "SourceId"
 
     
 class Lexicon(SQLLexicon):

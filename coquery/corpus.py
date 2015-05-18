@@ -224,10 +224,10 @@ class BaseCorpus(object):
     def get_context_headers(self, max_number_of_tokens):
         if self.provides_feature(CORP_CONTEXT):
             L = []
-            if options.cfg.context_columns:
-                L += ["LC%s" % (x+1) for x in range(options.cfg.context_columns)[::-1]]
+            if options.cfg.contexts:
+                L += ["LC%s" % (x+1) for x in range(options.cfg.contexts)[::-1]]
                 L += ["X%s" % (x+1) for x in range(max_number_of_tokens)]
-                L += ["RC%s" % (x+1) for x in range(options.cfg.context_columns)]
+                L += ["RC%s" % (x+1) for x in range(options.cfg.contexts)]
             else:
                 L.append ("Context")
             return L
@@ -312,18 +312,18 @@ class SQLLexicon(BaseLexicon):
     def sql_string_is_part_of_speech(self, pos):
         current_token = tokens.COCAToken(pos, self)
         return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-            self.resource.pos_id_column, 
+            self.resource.pos_id, 
             self.resource.pos_table, 
-            self.resource.pos_label_column,
+            self.resource.pos_label,
             self.resource.get_operator(current_token),
             pos)
 
     def sql_string_get_other_wordforms(self, match):
         return 'SELECT {word_id} FROM {word_table} WHERE {word_lemma_id} IN (SELECT {word_lemma_id} FROM {word_table} WHERE {word_label} {operator} "{match}")'.format(
-            word_id=self.resource.word_id_column,
+            word_id=self.resource.word_id,
             word_table=self.resource.word_table,
-            word_label=self.resource.word_label_column,
-            word_lemma_id=self.resource.word_lemma_id_column,
+            word_label=self.resource.word_label,
+            word_lemma_id=self.resource.word_lemma_id,
             operator=self.resource.get_operator(match),
             match=match)
     
@@ -333,7 +333,7 @@ class SQLLexicon(BaseLexicon):
         for current_pos in token.class_specifiers:
             current_token = tokens.COCAToken(current_pos, self)
             S = '{} {} "{}"'.format(
-                self.resource.pos_label_column, 
+                self.resource.pos_label, 
                 comparing_operator, 
                 current_token)
             where_clauses.append (S)
@@ -342,7 +342,7 @@ class SQLLexicon(BaseLexicon):
     def sql_string_get_posid_list(self, token):
         where_string = self.sql_string_get_posid_list_where(token)
         return "SELECT DISTINCT {} FROM {} WHERE {}".format(
-            self.resource.word_pos_id_column,
+            self.resource.word_pos_id,
             self.resource.word_table,
             where_string)
 
@@ -357,36 +357,36 @@ class SQLLexicon(BaseLexicon):
             
             specifier_list = token.lemma_specifiers
             if self.resource.lemma_table != self.resource.word_table:
-                target_column = "LEMMATABLE.{}".format(
-                    self.resource.lemma_label_column)
+                target = "LEMMATABLE.{}".format(
+                    self.resource.lemma_label)
             else:
-                target_column = "{}.{}".format(
+                target = "{}.{}".format(
                     self.resource.lemma_table,
-                    self.resource.lemma_label_column)
+                    self.resource.lemma_label)
         else:
             specifier_list = token.word_specifiers
-            target_column = "{}.{}".format(
+            target = "{}.{}".format(
                 self.resource.word_table,
-                self.resource.word_label_column)
+                self.resource.word_label)
 
         for CurrentWord in specifier_list:
             if CurrentWord != "*":
                 current_token = tokens.COCAWord(CurrentWord, self)
                 current_token.negated = token.negated
-                sub_clauses.append('%s %s "%s"' % (target_column, self.resource.get_operator(current_token), current_token))
+                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), current_token))
                 
         for current_transcript in token.transcript_specifiers:
             if current_transcript:
                 current_token = tokens.COCAWord(current_transcript, self)
                 current_token.negated = token.negated
                 if self.resource.transcript_table != self.resource.word_table:
-                    target_column = "TRANSCRIPT.{}".format(
-                        self.resource.transcript_label_column)
+                    target = "TRANSCRIPT.{}".format(
+                        self.resource.transcript_label)
                 else:
-                    target_column = "{}.{}".format(
+                    target = "{}.{}".format(
                         self.resource.transcript_table,
-                        self.resource.transcript_label_column)
-                sub_clauses.append('%s %s "%s"' % (target_column, self.resource.get_operator(current_token), current_token))
+                        self.resource.transcript_label)
+                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), current_token))
         
         where_clauses = []
         
@@ -418,68 +418,67 @@ class SQLLexicon(BaseLexicon):
         select_variable_list = []
         where_list = ["{}.{} = {}".format(
             self.resource.word_table,
-            self.resource.word_id_column,
+            self.resource.word_id,
             word_id)]
         table_list = [self.resource.word_table]
         for current_attribute in requested:
             if current_attribute == LEX_WORDID:
                 select_variable_list.append("{}.{}".format(
                     self.resource.word_table,
-                    self.resource.word_id_column))
+                    self.resource.word_id))
             
             if current_attribute == LEX_LEMMA:
                 if self.resource.lemma_table != self.resource.word_table:
                     select_variable_list.append("LEMMATABLE.{}".format(
-                        self.resource.lemma_label_column))
+                        self.resource.lemma_label))
                     table_list.append("LEFT JOIN {} AS LEMMATABLE ON {}.{} = LEMMATABLE.{}".format(
                         self.resource.lemma_table,
                         self.resource.word_table,
-                        self.resource.word_lemma_id_column,
-                        self.resource.lemma_id_column))
+                        self.resource.word_lemma_id,
+                        self.resource.lemma_id))
                 else:
                     select_variable_list.append("{}.{}".format(
                         self.resource.lemma_table,
-                    self.resource.lemma_label_column))
+                    self.resource.lemma_label))
             
             if current_attribute == LEX_ORTH:
                 select_variable_list.append("{}.{}".format(
                     self.resource.word_table,
-                    self.resource.word_label_column))
+                    self.resource.word_label))
             
             if current_attribute == LEX_POS:
                 if self.resource.pos_table != self.resource.word_table:
                     select_variable_list.append("PARTOFSPEECH.{}".format(
-                        self.resource.pos_label_column))
+                        self.resource.pos_label))
                     table_list.append("LEFT JOIN {} AS PARTOFSPEECH ON {}.{} = PARTOFSPEECH.{}".format(
                         self.resource.pos_table,
                         self.resource.word_table,
-                        self.resource.word_pos_id_column,
-                        self.resource.pos_id_column))
+                        self.resource.word_pos_id,
+                        self.resource.pos_id))
                 else:
                     select_variable_list.append("{}.{}".format(
                         self.resource.pos_table,
-                        self.resource.pos_label_column))
+                        self.resource.pos_label))
             
             if current_attribute == LEX_PHON:
                 if self.resource.transcript_table != self.resource.word_table:
                     select_variable_list.append("TRANSCRIPT.{}".format(
-                        self.resource.transcript_label_column))
+                        self.resource.transcript_label))
                     table_list.append("LEFT JOIN {} AS TRANSCRIPT ON {}.{} = TRANSCRIPT.{}".format(
                         self.resource.transcript_table,
                         self.resource.word_table,
-                        self.resource.word_transcript_id_column,
-                        self.resource.transcript_id_column))
+                        self.resource.word_transcript_id,
+                        self.resource.transcript_id))
                 else:
                     select_variable_list.append("{}.{}".format(
                         self.resource.transcript_table,
-                        self.resource.transcript_label_column))
+                        self.resource.transcript_label))
                 
         select_variables = ", ".join(select_variable_list)
         select_string = ("SELECT {0} FROM {1}{2}".format(
             ", ".join(select_variable_list),
             " ".join(table_list),
             (" WHERE " + " AND ".join(where_list)) if where_list else ""))
-        print select_string
         return select_string
     
     def get_entry(self, word_id, requested):
@@ -517,26 +516,26 @@ class SQLLexicon(BaseLexicon):
                 table_list.append("LEFT JOIN {} AS LEMMATABLE ON {}.{} = LEMMATABLE.{}".format(
                     self.resource.lemma_table,
                     self.resource.word_table,
-                    self.resource.word_lemma_id_column,
-                    self.resource.lemma_id_column))
+                    self.resource.word_lemma_id,
+                    self.resource.lemma_id))
         if token.class_specifiers:
             if self.resource.pos_table != self.resource.word_table:
                 table_list.append("LEFT JOIN {} AS POSTABLE ON {}.{} = POSTABLE.{}".format(
                     self.resource.pos_table,
                     self.resource.word_table,
-                    self.resource.word_pos_id_column,
-                    self.resource.pos_id_column))
+                    self.resource.word_pos_id,
+                    self.resource.pos_id))
         if token.transcript_specifiers:
             if self.resource.transcript_table != self.resource.word_table:
                 table_list.append("LEFT JOIN {} AS TRANSCRIPT ON {}.{} = TRANSCRIPT.{}".format(
                     self.resource.transcript_table,
                     self.resource.word_table,
-                    self.resource.word_transcript_id_column,
-                    self.resource.transcript_id_column))
+                    self.resource.word_transcript_id,
+                    self.resource.transcript_id))
         where_string = " AND ".join(where_list)
         S = "SELECT {}.{} FROM {} WHERE ({})".format(
                 self.resource.word_table,
-                self.resource.word_id_column,
+                self.resource.word_id,
                 " ".join(table_list),
                 where_string)
         return S
@@ -561,14 +560,14 @@ class SQLLexicon(BaseLexicon):
             word_table=self.resource.word_table))
         stats["lexicon_words"] = self.resource.DB.Cur.fetchone()[0]
         if LEX_POS in self.provides:
-            self.resource.DB.execute("SELECT COUNT(DISTINCT {pos_column}) FROM {pos_table}".format(
+            self.resource.DB.execute("SELECT COUNT(DISTINCT {pos}) FROM {pos_table}".format(
                 pos_table=self.resource.pos_table,
-                pos_column=self.resource.pos_id_column))
+                pos=self.resource.pos_id))
             stats["lexicon_distinct_pos"] = self.resource.DB.Cur.fetchone()[0]
         if LEX_LEMMA in self.provides:
-            self.resource.DB.execute("SELECT COUNT(DISTINCT {lemma_column}) FROM {lemma_table}".format(
+            self.resource.DB.execute("SELECT COUNT(DISTINCT {lemma}) FROM {lemma_table}".format(
                 lemma_table=self.resource.lemma_table,
-                lemma_column=self.resource.lemma_id_column))
+                lemma=self.resource.lemma_id))
             stats["lexicon_lemmas"] = self.resource.DB.Cur.fetchone()[0]
         return stats
 
@@ -579,9 +578,9 @@ class SQLCorpus(BaseCorpus):
 
     def sql_string_get_word_id_of_token(self, token_id):
         return "SELECT {} FROM {} WHERE {} = {}".format(
-            self.resource.corpus_word_id_column,
+            self.resource.corpus_word_id,
             self.resource.corpus_table,
-            self.resource.corpus_token_id_column,
+            self.resource.corpus_token_id,
             token_id)
     
     def get_word_id(self, token_id):
@@ -610,7 +609,7 @@ class SQLCorpus(BaseCorpus):
         Genres, Years, Negated = tokens.COCATextToken(Query.source_filter, self.lexicon).get_parse()
         filters = []
         genre_clauses = []
-        if "source_genre_column" in dir(self.resource):
+        if "source_genre" in dir(self.resource):
             if self_join:
                 source_table = self.resource.self_join_source_table
             else:
@@ -624,11 +623,11 @@ class SQLCorpus(BaseCorpus):
                         Operator = "="
                     genre_clauses.append("{}.{} {} '{}'".format(
                         source_table, 
-                        self.resource.source_genre_column,
+                        self.resource.source_genre,
                         Operator, current_genre))
         
         selected_years = []
-        if "source_year_column" in dir(self.resource):
+        if "source_year" in dir(self.resource):
             for current_year in Years:
                 if current_year.count ("-") == 1:
                     Low, High = current_year.split("-")
@@ -643,7 +642,7 @@ class SQLCorpus(BaseCorpus):
             filters.append(" OR ".join(genre_clauses))
         if selected_years:
             filters.append(" OR ".join(["{}.{} LIKE '%{}%'".format(
-                source_table, self.resource.source_year_column, x)
+                source_table, self.resource.source_year, x)
                 for x in selected_years]))
         
         filter_string = " AND ".join(["({})".format(x) for x in filters])
@@ -659,39 +658,39 @@ class SQLCorpus(BaseCorpus):
 
         column_list = ["{}.{}".format(
             self.resource.corpus_table, 
-            self.resource.corpus_word_id_column)]
+            self.resource.corpus_word_id)]
         table_list = [self.resource.corpus_table]
         
         column_list.append("{}.{}".format(
             self.resource.corpus_table,
-            self.resource.corpus_token_id_column))
+            self.resource.corpus_token_id))
         if number == 1:
             if CORP_SOURCE in requested or CORP_FILENAME in requested or CORP_CONTEXT in requested or options.cfg.source_filter:
                 column_list.append("{}.{}".format(
                     self.resource.corpus_table,
-                    self.resource.corpus_source_id_column))
+                    self.resource.corpus_source_id))
             
         if token.class_specifiers:
             if self.resource.word_table not in table_list:
                 where_list.append("{}.{} = {}.{}".format(
                     self.resource.corpus_table,
-                    self.resource.corpus_word_id_column,
+                    self.resource.corpus_word_id,
                     self.resource.word_table,
-                    self.resource.word_id_column))
+                    self.resource.word_id))
                 table_list.append(self.resource.word_table)
             if self.resource.pos_table is self.resource.word_table:
                 column_list.append("{}.{}".format(
                     self.resource.word_table,
-                    self.resource.pos_id_column))
+                    self.resource.pos_id))
             else:
                 column_list.append("{}.{}".format(
                     self.resource.pos_table,
-                    self.resource.pos_id_column))
+                    self.resource.pos_id))
                 where_list.append("{}.{} = {}.{}".format(
                     self.resource.word_table,
-                    self.resource.word_pos_id_column,
+                    self.resource.word_pos_id,
                     self.resource.pos_table,
-                    self.resource.pos_id_column))
+                    self.resource.pos_id))
                 table_list.append(self.resource.pos_table)
                 
         table_string = "SELECT {} FROM {}".format(
@@ -713,10 +712,10 @@ class SQLCorpus(BaseCorpus):
             corpus_table="e1"
         return "INNER JOIN {source_table} ON ({corpus_table}.{corpus_source} = {source_table_alias}.{source_id})".format(
             corpus_table=corpus_table,
-            corpus_source=self.resource.corpus_source_id_column,
+            corpus_source=self.resource.corpus_source_id,
             source_table=self.resource.source_table,
             source_table_alias=self.resource.source_table_alias,
-            source_id=self.resource.source_id_column)
+            source_id=self.resource.source_id)
     
     def sql_string_run_query_table_string(self, Query, self_join):
         table_string_list = []
@@ -732,7 +731,7 @@ class SQLCorpus(BaseCorpus):
                     if len(table_string_list) > 0:
                         table_string = "INNER JOIN {table_string} ON (e{num1}.{token_id} = e1.{token_id} + {num})".format(
                             table_string=table_string,
-                            token_id=self.resource.corpus_token_id_column,
+                            token_id=self.resource.corpus_token_id,
                             num1=i+1, num=i)
                     table_string_list.append(table_string)
         if Query.source_filter:
@@ -757,11 +756,11 @@ class SQLCorpus(BaseCorpus):
                 if current_where_clauses:
                     where_clauses.append(" AND ".join(current_where_clauses))
             else:
-                if "corpus_word_id_column" in dir(self.resource) and "word_pos_id_column" in dir(self.resource):
+                if "corpus_word_id" in dir(self.resource) and "word_pos_id" in dir(self.resource):
                     current_where_clauses = self.get_whereclauses(
                         current_token, 
-                        self.resource.corpus_word_id_column, 
-                        self.resource.word_pos_id_column)
+                        self.resource.corpus_word_id, 
+                        self.resource.word_pos_id)
                     prefixed_clauses = ["e{num}.{clause}".format(
                         num=i+1, 
                         clause=clause) for clause in current_where_clauses]
@@ -772,7 +771,7 @@ class SQLCorpus(BaseCorpus):
         else:
             return  " AND ".join(where_clauses)
 
-    def sql_string_run_query_column_string(self, Query, self_join):
+    def sql_string_run_query_string(self, Query, self_join):
         # Create a list of the columns that the query should return:
         # - a Wx column for each query token
         # - a TokenId column if context is requested
@@ -783,30 +782,30 @@ class SQLCorpus(BaseCorpus):
         if self_join:
             column_list.append("{}.{} AS TokenId".format(
                 self.resource.self_join_corpus,
-                self.resource.corpus_token_id_column))
+                self.resource.corpus_token_id))
             if any([x in Query.Session.output_files for x in [CORP_SOURCE, CORP_FILENAME, CORP_CONTEXT]]):
                 column_list.append("{}.{} AS SourceId".format(
                     self.resource.self_join_corpus,
-                    self.resource.corpus_source_id_column))
+                    self.resource.corpus_source_id))
             column_list += ["{}.W{}".format(
                 self.resource.self_join_corpus,
                 x+1) for x in non_empty_token]        
         else:
             column_list.append("e1.{} AS TokenId".format(
-                self.resource.corpus_token_id_column))
+                self.resource.corpus_token_id))
             if any([x in Query.Session.output_fields for x in [CORP_SOURCE, CORP_FILENAME, CORP_CONTEXT]]):
                 column_list.append("e1.{} AS SourceId".format(
-                    self.resource.corpus_source_id_column))
+                    self.resource.corpus_source_id))
             column_list += ["e{num}.{corpus_word} AS W{num}".format(
                 num=x+1, 
-                corpus_word=self.resource.corpus_word_id_column) for x in non_empty_token]
+                corpus_word=self.resource.corpus_word_id) for x in non_empty_token]
         if options.cfg.verbose:
             return ",\n\t".join(column_list)
         else:
             return ", ".join(column_list)
     
     def yield_query_results(self, Query, self_join=False):
-        column_string = self.sql_string_run_query_column_string(Query, self_join)
+        column_string = self.sql_string_run_query_string(Query, self_join)
         table_string = self.sql_string_run_query_table_string(Query, self_join)
         where_string = self.sql_string_run_query_where_string(Query, self_join)
 
@@ -834,13 +833,13 @@ class SQLCorpus(BaseCorpus):
 
     def sql_string_get_sentence_wordid(self,  source_id):
         return "SELECT {corpus_wordid} FROM {corpus} INNER JOIN {source} ON {corpus}.{corpus_source} = {source_alias}.{source_id} WHERE {source_alias}.{source_id} = {this_source}{verbose}".format(
-            corpus_wordid=self.resource.corpus_word_id_column,
+            corpus_wordid=self.resource.corpus_word_id,
             corpus=self.resource.corpus_table,
             source=self.resource.source_table,
             source_alias=self.resource.source_table_alias,
-            corpus_source=self.resource.corpus_source_id_column,
-            source_id=self.resource.source_id_column,
-            corpus_token=self.resource.corpus_token_id_column,
+            corpus_source=self.resource.corpus_source_id,
+            source_id=self.resource.source_id,
+            corpus_token=self.resource.corpus_token_id,
             this_source=source_id,
             verbose=" -- sql_string_get_sentence_wordid" if options.cfg.verbose else "")
 
@@ -852,22 +851,22 @@ class SQLCorpus(BaseCorpus):
     def sql_string_get_wordid_in_range(self, start, end, source_id):
         if source_id:
             return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} and {end} AND {corpus_source} = '{this_source}'".format(
-            corpus_wordid=self.resource.corpus_word_id_column,
+            corpus_wordid=self.resource.corpus_word_id,
             corpus=self.resource.corpus_table,
             source=self.resource.source_table,
             source_alias=self.resource.source_table_alias,
-            corpus_source=self.resource.corpus_source_id_column,
-            source_id=self.resource.source_id_column,
-            corpus_token=self.resource.corpus_token_id_column,
+            corpus_source=self.resource.corpus_source_id,
+            source_id=self.resource.source_id,
+            corpus_token=self.resource.corpus_token_id,
             start=start,
             end=end,
             this_source=source_id,
             verbose=" -- sql_string_get_sentence_wordid" if options.cfg.verbose else "")
         else:
             return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} AND {end} {verbose}".format(
-                corpus_wordid=self.resource.corpus_word_id_column,
+                corpus_wordid=self.resource.corpus_word_id,
                 corpus=self.resource.corpus_table,
-                corpus_token=self.resource.corpus_token_id_column,
+                corpus_token=self.resource.corpus_token_id,
                 start=start, end=end,
                 verbose=" -- sql_string_get_wordid_in_range" if options.cfg.verbose else "")
  
@@ -876,8 +875,8 @@ class SQLCorpus(BaseCorpus):
             asd
         if options.cfg.context_span:
             span = options.cfg.context_span
-        elif options.cfg.context_columns:
-            span = options.cfg.context_columns
+        elif options.cfg.contexts:
+            span = options.cfg.contexts
 
         if span:
             if span > token_id:
@@ -906,7 +905,7 @@ class SQLCorpus(BaseCorpus):
             return "SELECT * FROM {} WHERE {}.{} = {}".format(
                 self.resource.source_table, 
                 self.resource.source_table_alias, 
-                self.resource.source_id_column, source_id)
+                self.resource.source_id, source_id)
         else:
             raise ResourceIncompleteDefinitionError
 
@@ -925,12 +924,12 @@ class SQLCorpus(BaseCorpus):
 
     def get_source_info_headers(self):
         header_list = []
-        if "source_label_column" in dir(self.resource):
-            header_list.append(self.resource.source_label_column)
-        if "source_year_column" in dir(self.resource):
-            header_list.append(self.resource.source_year_column)
-        if "source_genre_column" in dir(self.resource):
-            header_list.append(self.resource.source_genre_column)
+        if "source_label" in dir(self.resource):
+            header_list.append(self.resource.source_label)
+        if "source_year" in dir(self.resource):
+            header_list.append(self.resource.source_year)
+        if "source_genre" in dir(self.resource):
+            header_list.append(self.resource.source_genre)
         return header_list
 
     def sql_string_get_time_info(self, token_id):
@@ -949,11 +948,11 @@ class SQLCorpus(BaseCorpus):
         return [query_result[x] for x in time_info_headers]
 
     def sql_string_get_file_info(self, source_id):
-        if "file_table" in dir(self.resource) and "file_id_column" in dir(self.resource) and "file_label_column" in dir(self.resource):
+        if "file_table" in dir(self.resource) and "file_id" in dir(self.resource) and "file_label" in dir(self.resource):
             return "SELECT {} as File FROM {} WHERE {} = {}".format(
-                    self.resource.file_label_column,
+                    self.resource.file_label,
                     self.resource.file_table,
-                    self.resource.file_id_column,
+                    self.resource.file_id,
                     source_id)        
         else:
             raise ResourceIncompleteDefinitionError

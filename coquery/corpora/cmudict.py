@@ -29,12 +29,12 @@ from corpus import *
 
 class Resource(SQLResource):
     word_table = "dict"
-    word_id_column = "WordId"
-    word_transcript_id_column = "Transcript"
+    word_id = "WordId"
+    word_transcript_id = "Transcript"
 
     transcript_table = "dict"
-    transcript_id_column = "Transcript"
-    transcript_label_column = "Transcript"
+    transcript_id = "Transcript"
+    transcript_label = "Transcript"
     
 class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_ORTH, LEX_PHON]

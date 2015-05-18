@@ -30,35 +30,35 @@ from corpus import *
 
 class Resource(SQLResource):
     word_table = "lexicon"
-    word_id_column = "WordId"
-    word_label_column = "WordCS"
-    word_transcript_id_column = "Word"
-    word_pos_id_column = "PoS"
-    word_lemma_id_column = "Lemma"
+    word_id = "WordId"
+    word_label = "WordCS"
+    word_transcript_id = "Word"
+    word_pos_id = "PoS"
+    word_lemma_id = "Lemma"
 
     lemma_table = "lexicon"
-    lemma_id_column = "Lemma"
-    lemma_label_column = "Lemma"
+    lemma_id = "Lemma"
+    lemma_label = "Lemma"
 
     pos_table = "lexicon"
-    pos_id_column = "PoS"
-    pos_label_column = "PoS"
+    pos_id = "PoS"
+    pos_label = "PoS"
 
     #transcript_table = "cmudict.dict"
-    #transcript_id_column = "Text"
-    #transcript_label_column = "Transcript"
+    #transcript_id = "Text"
+    #transcript_label = "Transcript"
     
     corpus_table = "corpus"
-    corpus_word_id_column = "WordId"
-    corpus_token_id_column = "TokenId"
-    corpus_source_id_column = "TextId"
+    corpus_word_id = "WordId"
+    corpus_token_id = "TokenId"
+    corpus_source_id = "TextId"
     
     source_table = "sources"
-    source_id_column = "TextId"
-    source_label_column = "Title"
+    source_id = "TextId"
+    source_label = "Title"
     source_table_alias = "sources"
-    source_year_column = "Year"
-    source_genre_column = "Genre"
+    source_year = "Year"
+    source_genre = "Genre"
     
     
 class Lexicon(SQLLexicon):

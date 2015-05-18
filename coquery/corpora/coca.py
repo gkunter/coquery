@@ -32,36 +32,36 @@ import tokens
 
 class Resource(SQLResource):
     pos_table = "pos"
-    pos_label_column = "PoS"
-    pos_clean_label_column = "PosClean"
-    pos_id_column = "PosId"
+    pos_label = "PoS"
+    pos_clean_label = "PosClean"
+    pos_id = "PosId"
 
     word_table = "lexicon"
-    word_id_column = "WordId"
-    word_label_column = "Word"
-    word_pos_id_column = "PosId"
-    word_lemma_id_column = "Lemma"
+    word_id = "WordId"
+    word_label = "Word"
+    word_pos_id = "PosId"
+    word_lemma_id = "Lemma"
     
     lemma_table = "lexicon"
-    lemma_id_column = "Lemma"
-    lemma_label_column = "Lemma"
+    lemma_id = "Lemma"
+    lemma_label = "Lemma"
 
     #transcript_table = "cmudict.dict"
-    #transcript_id_column = "Text"
-    #transcript_label_column = "Transcript"
+    #transcript_id = "Text"
+    #transcript_label = "Transcript"
 
     corpus_table = "corpus"
-    corpus_word_id_column = "WordId"
-    corpus_token_id_column = "TokenId"
-    corpus_source_id_column = "TextId"
+    corpus_word_id = "WordId"
+    corpus_token_id = "TokenId"
+    corpus_source_id = "TextId"
 
     source_table = "sources"
     source_table_alias = "sources"
-    source_id_column = "TextId"
-    source_year_column = "Year"
-    source_genre_column = "Genre"
-    source_label_column = "Source"
-    source_title_column = "Title"
+    source_id = "TextId"
+    source_year = "Year"
+    source_genre = "Genre"
+    source_label = "Source"
+    source_title = "Title"
     
     self_join_corpus = "corpusBig"
     self_join_source_table = "sources"
@@ -73,13 +73,13 @@ class Lexicon(SQLLexicon):
         super(Lexicon, self).__init__(resource)
         if options.cfg.ignore_pos_chars:
             query_string = "SELECT {} AS ID, {} AS POS FROM {}".format(
-                self.resource.pos_id_column,
-                self.resource.pos_clean_label_column, 
+                self.resource.pos_id,
+                self.resource.pos_clean_label, 
                 self.resource.pos_table)
         else:
             query_string = "SELECT {} AS ID, {} AS POS FROM {}".format(
-                self.resource.pos_id_column,
-                self.resource.pos_label_column, 
+                self.resource.pos_id,
+                self.resource.pos_label, 
                 self.resource.pos_table)
         for current_pos in self.resource.DB.execute_cursor(query_string):
             self.pos_dict[current_pos["ID"]] = current_pos["POS"]
@@ -87,10 +87,10 @@ class Lexicon(SQLLexicon):
     def sql_string_get_posid_list(self, token):
         where_string = self.sql_string_get_posid_list_where(token)
         return "SELECT DISTINCT {word_table}.{word_pos} FROM {word_table} INNER JOIN {pos_table} ON {pos_table}.{pos_id} = {word_table}.{word_pos} WHERE {where_string}".format(
-            word_pos=self.resource.word_pos_id_column,
+            word_pos=self.resource.word_pos_id,
             word_table=self.resource.word_table,
             pos_table=self.resource.pos_table,
-            pos_id=self.resource.pos_id_column,
+            pos_id=self.resource.pos_id,
             where_string=where_string)
 
 class Corpus(SQLCorpus):
@@ -104,12 +104,12 @@ class Corpus(SQLCorpus):
  
     def sql_string_get_source_info(self, source_id):
         return "SELECT {} AS Year, {} AS Genre, {} AS Source, {} AS Title FROM {} WHERE {} = {}".format(
-            self.resource.source_year_column,
-            self.resource.source_genre_column,
-            self.resource.source_label_column,
-            self.resource.source_title_column,
+            self.resource.source_year,
+            self.resource.source_genre,
+            self.resource.source_label,
+            self.resource.source_title,
             self.resource.source_table,
-            self.resource.source_id_column,
+            self.resource.source_id,
             source_id)
     
     def get_source_info_headers(self):

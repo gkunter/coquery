@@ -29,33 +29,33 @@ from corpus import *
 
 class Resource(SQLResource):
     word_table = "word"
-    word_id_column = "WordId"
-    word_label_column = "Text"
-    word_pos_id_column = "Pos"
-    word_lemma_id_column = "LemmaId"
-    word_transcript_id_column = "Transcript"
+    word_id = "WordId"
+    word_label = "Text"
+    word_pos_id = "Pos"
+    word_lemma_id = "LemmaId"
+    word_transcript_id = "Transcript"
     
     lemma_table = "lemma"
-    lemma_id_column = "LemmaId"
-    lemma_label_column = "Text"
+    lemma_id = "LemmaId"
+    lemma_label = "Text"
 
     pos_table = "word"
-    pos_id_column = "Pos"
-    pos_label_column = "Pos"
+    pos_id = "Pos"
+    pos_label = "Pos"
     
     transcript_table = "word"
-    transcript_id_column = "Text"
-    transcript_label_column = "Transcript"
+    transcript_id = "Text"
+    transcript_label = "Transcript"
 
     corpus_table = "corpus"
-    corpus_word_id_column = "WordId"
-    corpus_token_id_column = "TokenId"
-    corpus_source_id_column = "SourceId"
-    corpus_time_column = "Time"
+    corpus_word_id = "WordId"
+    corpus_token_id = "TokenId"
+    corpus_source_id = "SourceId"
+    corpus_time = "Time"
     
     file_table = "source"
-    file_id_column = "SourceId"
-    file_label_column = "Text"
+    file_id = "SourceId"
+    file_label = "Text"
     
 class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_LEMMA, LEX_ORTH, LEX_POS, LEX_PHON]
@@ -66,7 +66,7 @@ class Corpus(SQLCorpus):
     def sql_string_get_time_info(self, token_id):
         return "SELECT Time FROM {} WHERE {} = {}".format(
                 self.resource.corpus_table,
-                self.resource.corpus_token_id_column,
+                self.resource.corpus_token_id,
                 token_id)
 
     def get_time_info_headers(self):
