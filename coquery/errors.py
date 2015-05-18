@@ -110,7 +110,7 @@ class CorpusUnsupportedError(NoTraceException):
     error_message = "Corpus not supported"
 
 class SQLInitializationError(GenericException):
-    error_message = "SQL initialization error"
+    error_message = "SQL initialization error -- the MySQL server is not available.\n"
 
 class SQLOperationalError(GenericException):
     error_message = "SQL operational error"
