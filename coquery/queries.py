@@ -31,6 +31,7 @@ try:
 except NameError:
     pass
 
+import __init__
 import copy
 import string
 import collections
@@ -158,7 +159,7 @@ class QueryResult(object):
                 L += context
             else:
                 L += [collapse_context(context)]
-        return L
+        return ["%s" % x for x in L]
 
 class CorpusQuery(object):
     class ResultList(list):
@@ -177,10 +178,10 @@ class CorpusQuery(object):
                 raise StopIteration
             try:
                 return QueryResult(self.query, next(self.data))
-            except AttributeError:
+            except (AttributeError, TypeError):
                 try:
                     self.count += 1
-                    return QueryResult(self.data[self.count - 1])
+                    return QueryResult(self.query, self.data[self.count - 1])
                 except IndexError:
                     raise StopIteration
 
@@ -285,11 +286,11 @@ class DistinctQuery(CorpusQuery):
                     output_cache.append(output_list)
 
 class StatisticsQuery(CorpusQuery):
-    def __init__(self, corpus):
-        self.Results = corpus.get_statistics()
-        self.tokens = []
+    def __init__(self, corpus, session):
+        super(StatisticsQuery, self).__init__("", session, None, None)
+        self.Results = self.Session.Corpus.get_statistics()
         
-    def write_results(self, output_file, number_of_token_columns):
+    def write_results(self, output_file, number_of_token_columns, max_numbers_of_token_columns):
         output_file.writerow(["Variable", "Value"])
         
         for x in sorted(self.Results):
@@ -301,21 +302,29 @@ class FrequencyQuery(CorpusQuery):
         self.Session.output_fields.append(LEX_FREQ)
 
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
-        Lines = collections.Counter()
         results = self.get_result_list()
-        for current_result in results:
-            # current_result can be None if the query token was not in the
-            # lexicon
-            if current_result:
-                output_list = current_result.get_row(number_of_token_columns, max_number_of_token_columns)
+        # Check if the same query string has been queried in this session.
+        # If so, use the cached results:
+        if self.query_string in self.Session._results:
+            Lines = self.Session._results[self.query_string]
+        else:
+            # Collapse all identical lines in the result list:
+            Lines = collections.Counter()
+            for current_result in results:
+                # current_result can be None if the query token was not in the
+                # lexicon
+                if current_result:
+                    output_list = current_result.get_row(number_of_token_columns, max_number_of_token_columns)
+                    LineKey = "<|>".join(output_list)
+                    Lines[LineKey] += 1
+            if not Lines:
+                empty_result = QueryResult(self, {}) 
+                output_list = empty_result.get_row(number_of_token_columns, max_number_of_token_columns)
                 LineKey = "<|>".join(output_list)
-                Lines[LineKey] += 1
-        if not Lines:
-            empty_result = QueryResult(self, {}) 
-            output_list = empty_result.get_row(number_of_token_columns, max_number_of_token_columns)
-            LineKey = "<|>".join(output_list)
-            Lines[LineKey] = 0
-            
+                Lines[LineKey] = 0
+            self.Session._results[self.query_string] = Lines
+        
+        # Output the collapsed lines:
         for current_key in Lines:
             if self.InputLine:
                 output_list = copy.copy(self.InputLine)
@@ -329,7 +338,16 @@ class FrequencyQuery(CorpusQuery):
                 output_list.append(self.source_filter)
             if current_key:
                 output_list += current_key.split("<|>")
-            output_list.append(Lines[current_key])
+            try:
+                output_list.append(Lines[current_key])
+            except TypeError as e:
+                print self.query_string
+                print current_key
+                print Lines
+                raise e
             if self.ErrorInQuery:
                 output_list[-1] = -1
             output_file.writerow(output_list)
+            
+
+logger = logging.getLogger(__init__.NAME)

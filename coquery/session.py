@@ -189,6 +189,8 @@ class Session(object):
     
     def run_queries(self):
         self.expand_header()
+        self._queries = {}
+        self._results = {}
         for current_query in self.query_list:
             
             if len(current_query.query_list) > 1:
@@ -220,7 +222,7 @@ class Session(object):
                 start_time = time.time()
                 if current_query.tokens:
                     current_query.set_result_list(self.Corpus.yield_query_results(current_query))
-                logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
+                logger.info("Query executed ('%s', %.3f seconds)" % (current_query.query_string, time.time() - start_time))
 
                 if not options.cfg.dry_run:
                     if not self.output_file:
@@ -236,7 +238,7 @@ class StatisticsSession(Session):
     def __init__(self):
         super(StatisticsSession, self).__init__()
         if self.Corpus.provides_feature(CORP_STATISTICS):
-            self.query_list.append(queries.StatisticsQuery(self.Corpus))
+            self.query_list.append(queries.StatisticsQuery(self.Corpus, self))
             self.show_header = False
         else:
             raise QueryModeError(options.cfg.corpus, options.cfg.MODE)
