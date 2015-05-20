@@ -97,7 +97,7 @@ class DBConnection(object):
         self.execute(cur, 'SELECT MAX(%s) FROM %s' % (column_name, table_name), override=True)
         try:
             return int(max(0, cur.fetchall() [0] [0]))
-        except TypeError:
+        except (TypeError, ValueError):
             return None
 
     def get_number_of_rows(self, table_name):
