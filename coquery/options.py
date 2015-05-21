@@ -184,7 +184,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         self.parser.add_argument("--number-of-tokens", help="output up to NUMBER different tokens (default: all tokens)", default=0, type=int, dest="number_of_tokens", metavar="NUMBER")
         self.parser.add_argument("-l", "--lemma", help="include a lemma column for each token in the output", action="store_true", dest="show_lemma")
         self.parser.add_argument("-p", "--POS", help="include a part-of-speech column for each token in the output", action="store_true", dest="show_pos")
-        self.parser.add_argument("-t", "--text", help="include text information (e.g. Year, Genre, Source, Title) in the output", action="store_true", dest="show_text")
+        self.parser.add_argument("-s", "--source", help="include the source information column specified as an argument in the output (use ALL for all columns)", action="append", dest="source_columns")
         self.parser.add_argument("-u", "--unique-id", help="include the token id for the first token matching the output", action="store_true", dest="show_id")
         self.parser.add_argument("-P", "--include-parameters", help="include the parameter string in the output", action="store_true", dest="show_parameters")
         self.parser.add_argument("-f", "--include-filter", help="include the filter string in the output", action="store_true", dest="show_filter")
@@ -202,9 +202,11 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
             self.args, unknown = self.parser.parse_known_args()
             if unknown:
                 raise UnknownArgumentError(unknown)
-            
         except Exception as e:
             raise e
+
+        self.args.show_text = self.args.source_columns != []
+
         vars(self.args) ["program_location"] = self.base_path
         vars(self.args) ["version"] = version
         vars(self.args) ["parameter_string"] = " ".join(sys.argv [1:])

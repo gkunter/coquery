@@ -621,7 +621,7 @@ class SQLCorpus(BaseCorpus):
         Genres, Years, Negated = tokens.COCATextToken(Query.source_filter, self.lexicon).get_parse()
         filters = []
         genre_clauses = []
-        if "source_genre" in dir(self.resource):
+        if "source_info_genre" in dir(self.resource):
             if self_join:
                 source_table = self.resource.self_join_source_table
             else:
@@ -635,11 +635,11 @@ class SQLCorpus(BaseCorpus):
                         Operator = "="
                     genre_clauses.append("{}.{} {} '{}'".format(
                         source_table, 
-                        self.resource.source_genre,
+                        self.resource.source_info_genre,
                         Operator, current_genre))
         
         selected_years = []
-        if "source_year" in dir(self.resource):
+        if "source_info_year" in dir(self.resource):
             for current_year in Years:
                 if current_year.count ("-") == 1:
                     Low, High = current_year.split("-")
@@ -653,9 +653,15 @@ class SQLCorpus(BaseCorpus):
         if genre_clauses:
             filters.append(" OR ".join(genre_clauses))
         if selected_years:
-            filters.append(" OR ".join(["{}.{} LIKE '%{}%'".format(
-                source_table, self.resource.source_year, x)
-                for x in selected_years]))
+            try:
+                filters.append(" OR ".join(
+                    ["{}.{} LIKE '%{}%'".format(
+                        self.resource.source_table_alias,
+                        self.resource.source_info_year, 
+                        x)
+                        for x in selected_years]))
+            except Exception as e:
+                raise e
         
         filter_string = " AND ".join(["({})".format(x) for x in filters])
         if filter_string:
@@ -725,7 +731,7 @@ class SQLCorpus(BaseCorpus):
         return "INNER JOIN {source_table} ON ({corpus_table}.{corpus_source} = {source_table_alias}.{source_id})".format(
             corpus_table=corpus_table,
             corpus_source=self.resource.corpus_source_id,
-            source_table=self.resource.source_table,
+            source_table=self.resource.source_table_construct,
             source_table_alias=self.resource.source_table_alias,
             source_id=self.resource.source_id)
     
@@ -928,7 +934,6 @@ class SQLCorpus(BaseCorpus):
             raise ResourceIncompleteDefinitionError
 
     def get_source_info(self, source_id):
-        print("!")
         source_info_headers = self.get_source_info_headers()
         error_values = ["<na>"] * len(source_info_headers)
         if not source_id:
@@ -942,14 +947,13 @@ class SQLCorpus(BaseCorpus):
         return [query_result[x] for x in source_info_headers]
 
     def get_source_info_headers(self):
-        header_list = []
-        if "source_label" in dir(self.resource):
-            header_list.append(self.resource.source_label)
-        if "source_year" in dir(self.resource):
-            header_list.append(self.resource.source_year)
-        if "source_genre" in dir(self.resource):
-            header_list.append(self.resource.source_genre)
-        return header_list
+        potential_headers = [self.resource.__getattribute__(x) for x in dir(self.resource) if x.startswith("source_info_")]
+        if not options.cfg.source_columns:
+            return []
+        for x in options.cfg.source_columns:
+            if x.upper() == "ALL":
+                return potential_headers
+        return [x for x in options.cfg.source_columns if x in potential_headers]
 
     def sql_string_get_time_info(self, token_id):
         raise CorpusUnsupportedFunctionError

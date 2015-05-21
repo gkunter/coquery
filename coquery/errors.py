@@ -109,6 +109,9 @@ class LexiconUnprovidedError(NoTraceException):
 class CorpusUnsupportedError(NoTraceException):
     error_message = "Corpus not supported"
 
+class TextFilterError(NoTraceException):
+    error_message = "Your source filter caused an error."
+
 class SQLInitializationError(GenericException):
     error_message = "SQL initialization error -- the MySQL server is not available.\n"
 
