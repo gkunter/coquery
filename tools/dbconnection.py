@@ -1,7 +1,14 @@
 from __future__ import unicode_literals 
 
-import MySQLdb
+try:
+    import MySQLdb as mysql
+    import MySQLdb.cursors as mysql_cursors
+except ImportError:
+    import pymysql as mysql
+    import pymysql.cursors as mysql_cursors
+
 import logging
+import copy
 
 verbose = False
 name = ""
@@ -9,8 +16,7 @@ logger = None
 
 class DBConnection(object):
     def __init__(self, db_name, local_infile=0):
-        self.Con = MySQLdb.connect (host="localhost", user="mysql", passwd="mysql", db=db_name, local_infile=local_infile)
-        cur = self.Con.cursor()
+        self.Con = mysql.connect (host="localhost", user="mysql", passwd="mysql", db=db_name, local_infile=local_infile)
         self.db_name = db_name
         self.dry_run = False
 
@@ -66,7 +72,7 @@ class DBConnection(object):
             field_type = Results[1]
             if Results[2] == "NO":
                 field_type += " NOT NULL"
-            return field_type.upper()
+            return field_type
         else:
             return None
         
@@ -108,29 +114,36 @@ class DBConnection(object):
         except TypeError:
             return None        
 
-    def find(self, table_name, column_name, value):
-        cur = self.Con.cursor()
-        self.execute(cur, 'SELECT {column} FROM {table} WHERE {column} = "{value}"'.format(
-            table=table_name, column=column_name, value=value), override=True)
+    def find(self, table_name, values, additional_variables=[]):
+        """ Obtain all records from table_name that match the column-value
+        pairs given in the dict values."""
+        cur = self.Con.cursor(mysql_cursors.DictCursor)
+        variables = values.keys() + additional_variables
+        where = []
+        for column, value in values.items():
+            where.append('{} = "{}"'.format(column, unicode(value).replace('"', '""')))
+        S = "SELECT {} FROM {} WHERE {}".format(
+            ", ".join(variables), table_name, " AND ".join(where))
+        self.execute(cur, S, override=True)
         return cur.fetchall()
+
+    def insert(self, table_name, data):
+        cur = self.Con.cursor()
+
+        # take care of quote characters and backslashes:
+        new_data = copy.copy(data)
+        for x in new_data:
+            new_data[x] = "%s" % unicode(new_data[x]).replace('"', '""')
+            new_data[x] = new_data[x].replace("'", "''")
+            new_data[x] = new_data[x].replace("\\", "\\\\")
+
+        S = "INSERT INTO {}({}) VALUES({})".format(
+            table_name, ",".join(new_data.keys()), ",".join('"%s"' % x for x in new_data.values()))
+        self.execute(cur, S)
 
     def set_variable(self, variable, value):
         cur = self.Con.cursor()
         self.execute(cur, 'SET {}={}'.format(variable, value), override=True)
-
-    def insert(self, table_name, data):
-        #assert len(data) == (len(table_description[table_name]["CREATE"]) -1 )
-        cur = self.Con.cursor()
-
-        # take care of quote characters:
-        data = ["'%s'" % unicode(x).replace("'", "''") for x in data]
-        values = ", ".join(data)
-
-        # take care of backslashes:
-        values = values.replace("\\", "\\\\")
-
-        S = "INSERT INTO {table} VALUES({values})".format(table = table_name, values = values)
-        self.execute(cur, S)
         
     def commit(self):
         if not self.dry_run:

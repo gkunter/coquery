@@ -79,7 +79,7 @@ class Corpus(SQLCorpus):
         self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
         self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
         if not no_nltk:
-            self.parser.add_argument("-n", help="Use NLTK library for automatic part-of-speech tagging", action="store_true", dest="use_nltk")
+            self.parser.add_argument("-no_nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
         self.parser.add_argument("-l", help="load source files", action="store_true")
         self.parser.add_argument("-c", help="Create database tables", action="store_true")
         self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
@@ -95,6 +95,10 @@ class Corpus(SQLCorpus):
         pass
     
     def add_table_description(self, table_name, primary_key, table_description):
+        for i, x in enumerate(table_description["CREATE"]):
+            if "`{}`".format(primary_key) in x:
+                table_description["CREATE"][i] = "{} AUTO_INCREMENT".format(
+                    table_description["CREATE"][i])
         table_description["CREATE"].append("PRIMARY KEY (`{}`)".format(primary_key))
         self.table_description[table_name] = table_description
         
@@ -105,23 +109,33 @@ class Corpus(SQLCorpus):
     def table_add(self, table_name, values):
         """ Add an entry containing the values to the table. A new unique
         id is also provided, and the class counter is updated. """
-        self._id_count[table_name] += 1
-        new_entry = [self._id_count[table_name]] + values
-        self.Con.insert(table_name, new_entry)
-        key = "".join("%s" % x for x in values)
-        self._tables[table_name][key] = new_entry
-        return new_entry
+        self.Con.insert(table_name, values)
+        return 
     
-    def table_get_id(self, table_name, values):
+    def table_get(self, table_name, values):
         """ This function returns the id of the entry matching the values 
         from the table. If there is no entry matching the values in the
         table, a new entry is added to the table based on the values.
         The values have to be given in the same order as the column 
         specifications in the table description."""
-        key = "".join("%s" % x for x in values)
-        if key not in self._tables[table_name]:
-            new_entry = self.table_add(table_name, values)
-        return self._tables[table_name][key][0]
+        key= "".join(["%s" % x for x in values.values()])
+        if key in self._tables[table_name]:
+            return self._tables[table_name][key]
+        try_entry = self.Con.find(table_name, values, [self._primary_keys[table_name]])
+        if not try_entry:
+            self.Con.insert(table_name, values)
+            entry = self.Con.find(table_name, values, [self._primary_keys[table_name]])
+        else:
+            entry = try_entry
+        try:
+            self._tables[table_name][key] = entry[0]
+        except Exception as e:
+            print entry
+            print values
+            print key
+            raise e
+
+        return entry[0]
 
     def setup_logger(self):
         class TextwrapFormatter(logging.Formatter):
@@ -184,7 +198,7 @@ class Corpus(SQLCorpus):
     def process_file(self, current_file):
         with codecs.open(current_file, "rt", encoding="utf8") as input_file:
             raw_text = input_file.read()
-        if self.arguments.use_nltk and not no_nltk:
+        if self.arguments.use_nltk:
             tokens = nltk.word_tokenize(raw_text)
             pos_map = nltk.pos_tag(tokens)
         else:
@@ -196,12 +210,17 @@ class Corpus(SQLCorpus):
             if current_token in string.punctuation:
                 current_pos = "PUNCT"
                 
-            lemma_id = self.table_get_id(self.lemma_table, [current_token.lower()])
-            word_id = self.table_get_id(self.word_table, [lemma_id, current_pos, current_token])
-                
-            self._id_count[self.corpus_table] += 1
-            new_token = [self._id_count[self.corpus_table], word_id, self._id_count[self.file_table]]
-            self.Con.insert(self.corpus_table, new_token)
+            lemma_id = self.table_get(self.lemma_table, 
+                                {self.lemma_label: current_token.lower()})[self.lemma_id]
+            
+            word_id = self.table_get_id(self.word_table, 
+                                {self.word_lemma_id: lemma_id, 
+                                self.word_pos_id: current_pos, 
+                                self.word_label: current_token})[self.word_id]
+
+            self.Con.insert(self.corpus_table, 
+                {self.corpus_word_id: word_id,
+                 self.corpus_source_id: self._file_id})
 
     def load_files(self):
         files = self.get_file_list(self.arguments.path)
@@ -216,15 +235,15 @@ class Corpus(SQLCorpus):
             progress.start()
             
         for x in self.table_description:
-            self._tables[x] = self.Con.read_table(x, lambda x: "".join(["%s" % y for y in x[1:]]))
+            #self._tables[x] = self.Con.read_table(x, lambda x: "".join(["%s" % y for y in x[1:]]))
             self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         
         for file_count, file_name in enumerate(files):
-            if file_name not in self._tables[self.file_table]:
+            if not self.Con.find(self.file_table, {self.file_label: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
-                self._id_count[self.file_table] += 1
+                self._file_id = self.table_get(
+                    self.file_table, {self.file_label: file_name})[self.file_id]
                 self.process_file(file_name)
-                self.Con.insert(self.file_table, [self._id_count[self.file_table], file_name])
                 
             if show_progress:
                 progress.update(file_count)
@@ -256,7 +275,7 @@ class Corpus(SQLCorpus):
                         current_table, current_field))
                     optimal_type = self.Con.get_optimal_field_type(current_table, current_field)
                     current_type = self.Con.get_field_type(current_table, current_field)
-                    if current_type != optimal_type:
+                    if current_type.lower() != optimal_type.lower():
                         self.logger.info("Optimising column {}.{} from {} to {}".format(
                             current_table, current_field, current_type, optimal_type))
                         try:
@@ -422,6 +441,5 @@ class Corpus(SQLCorpus):
 
             self.finalize_build()
         except Exception as e:
-            self.logger.error("There was a fatal error: %s" % e)
-            sys.exit(1)
+            raise e
                 
