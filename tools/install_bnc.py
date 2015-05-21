@@ -40,7 +40,7 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
-        self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS"]
+        self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS", "CORP_SOURCE"]
         
         # add table descriptions for the tables used in this database.
         #
@@ -81,9 +81,9 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
 
         self.add_table_description(self.corpus_table, self.corpus_token_id,
             {"CREATE": [
-                "`{}` int(20) UNSIGNED NOT NULL".format(self.corpus_token_id),
+                "`{}` int(9) UNSIGNED NOT NULL".format(self.corpus_token_id),
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_word_id),
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_source_id)],
+                "`{}` SMALLINT(4) UNSIGNED NOT NULL".format(self.corpus_source_id)],
             "INDEX": [  
                 ([self.corpus_word_id], 0, "HASH"),
                 ([self.corpus_source_id], 0, "HASH")]})
@@ -211,11 +211,11 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         self.add_table_description(self.speaker_table, self.speaker_id,
             {"CREATE": [
                 "`{}` VARCHAR(8) NOT NULL".format(self.speaker_id),
-                "`{}` VARCHAR(10) NOT NULL".format(self.speaker_age),
-                "`{}` VARCHAR(10) NOT NULL".format(self.speaker_sex)],
+                "`{}` ENUM('-82+','0','1','10','10+','11','12','13','13+','14','14+','15','16','17','17+','18','19','2','20','20+','21','21+','22','23','24','25','25+','26','27','28','29','3','3+','30','30+','31','32','33','34','35','35+','36','37','38','39','4','40','40+','41','42','43','44','45','45+','46','46+','47','48','48+','49','5','50','50+','51','52','53','54','55','55+','56','57','58','59','6','60','60+','61','62','63','64','65','65+','66','67','68','69','7','70','70+','71','72','73','74','75','75+','76','77','78','79','8','80','80+','81','82','84','86','87','89','9','92','93','95','unknown')".format(self.speaker_age),
+                "`{}` ENUM('f','m','u')".format(self.speaker_sex)],
             "INDEX": [
                 ([self.speaker_age], 0, "HASH"),
-                ([self.speaker_sex], 1, "BTREE")]})
+                ([self.speaker_sex], 0, "HASH")]})
        
         # Add the sentence table. Each row in this table represents a 
         # sentence from the XML file. Each token in the corpus table is 
@@ -242,7 +242,7 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
 
         self.add_table_description(self.sentence_table, self.sentence_id,
             {"CREATE": [
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.sentence_id),
+                "`{}` SMALLINT(4) UNSIGNED NOT NULL".format(self.sentence_id),
                 "`{}` SMALLINT(4) UNSIGNED NOT NULL".format(self.sentence_source_id),
                 "`{}` VARCHAR(8)".format(self.sentence_speaker_id)],
             "INDEX": [
@@ -290,11 +290,11 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         self.source_table = "text"
         self.source_table_alias = "SOURCETABLE"
         self.source_id = "id"
-        self.source_label = "XMLName"
-        self.source_oldname = "OldName"
-        self.source_genre = "Type"
-        self.source_class = "Class"        
-        self.source_year = "Date"
+        self.source_info_label = "XMLName"
+        self.source_info_oldname = "OldName"
+        self.source_info_genre = "Type"
+        self.source_info_class = "Class"        
+        self.source_info_year = "Date"
         self.source_file_id = "File_id"
         
         # The corpus tokens do not store direct links to the source table,
@@ -310,21 +310,21 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
             sentence_text=self.sentence_source_id,
             source_id=self.source_id,
             source_table=self.source_table,
-            genre=self.source_genre,
-            source_class=self.source_class,
-            date=self.source_year,
-            old_name=self.source_oldname,
-            xml_name=self.source_label,
+            genre=self.source_info_genre,
+            source_class=self.source_info_class,
+            date=self.source_info_year,
+            old_name=self.source_info_oldname,
+            xml_name=self.source_info_label,
             source_name=self.source_table_alias)
         
         self.add_table_description(self.source_table, self.source_id,
             {"CREATE": [
                 "`{}` SMALLINT(4) UNSIGNED NOT NULL".format(self.source_id),
-                "`{}` CHAR(3) NOT NULL".format(self.source_label),
-                "`{}` CHAR(6) NOT NULL".format(self.source_oldname),
-                "`{}` ENUM('ACPROSE','CONVRSN','FICTION','NEWS','NONAC','OTHERPUB','OTHERSP','UNPUB') NOT NULL".format(self.source_genre),
-                "`{}` TINYTEXT NOT NULL".format(self.source_class),
-                "`{}` VARCHAR(21) NOT NULL".format(self.source_year),
+                "`{}` CHAR(3) NOT NULL".format(self.source_info_label),
+                "`{}` CHAR(6) NOT NULL".format(self.source_info_oldname),
+                "`{}` ENUM('ACPROSE','CONVRSN','FICTION','NEWS','NONAC','OTHERPUB','OTHERSP','UNPUB') NOT NULL".format(self.source_info_genre),
+                "`{}` ENUM('S brdcast discussn','S brdcast documentary','S brdcast news','S classroom','S consult','S conv','S courtroom','S demonstratn','S interview','S interview oral history','S lect commerce','S lect humanities arts','S lect nat science','S lect polit law edu','S lect soc science','S meeting','S parliament','S pub debate','S sermon','S speech scripted','S speech unscripted','S sportslive','S tutorial','S unclassified','W ac:humanities arts','W ac:medicine','W ac:nat science','W ac:polit law edu','W ac:soc science','W ac:tech engin','W admin','W advert','W biography','W commerce','W email','W essay school','W essay univ','W fict drama','W fict poetry','W fict prose','W hansard','W institut doc','W instructional','W letters personal','W letters prof','W misc','W news script','W newsp brdsht nat: arts','W newsp brdsht nat: commerce','W newsp brdsht nat: editorial','W newsp brdsht nat: misc','W newsp brdsht nat: report','W newsp brdsht nat: science','W newsp brdsht nat: social','W newsp brdsht nat: sports','W newsp other: arts','W newsp other: commerce','W newsp other: report','W newsp other: science','W newsp other: social','W newsp other: sports','W newsp tabloid','W nonAc: humanities arts','W nonAc: medicine','W nonAc: nat science','W nonAc: polit law edu','W nonAc: soc science','W nonAc: tech engin','W pop lore','W religion') NOT NULL".format(self.source_info_class),
+                "`{}` VARCHAR(21) NOT NULL".format(self.source_info_year),
                 "`{}` SMALLINT(4) UNSIGNED NOT NULL".format(self.source_file_id)],
             "INDEX": [
                 ([self.source_genre], 0, "HASH"),

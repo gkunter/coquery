@@ -170,7 +170,7 @@ class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
 
         self.add_table_description(self.file_table, self.file_id,
             {"CREATE": [
-                "`{}` TINYINT(3) UNSIGNED NOT NULL".format(self.file_id),
+                "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.file_id),
                 "`{}` TINYTEXT NOT NULL".format(self.file_label)]})
 
         # Any corpus that provides either CORP_CONTEXT, CORP_SOURCE or
@@ -207,9 +207,18 @@ class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
                     time, word, lemma_trans, trans, pos = current_line
         
                     if float(time) >= 0:
-                        lemma_id = self.table_get_id(self.lemma_table, [word.lower(), lemma_trans])
-                        word_id = self.table_get_id(self.word_table, [word, lemma_id, pos, trans])
-                        self.table_add(self.corpus_table, [word_id, self._id_count[self.file_table], time])
+                        lemma_id = self.table_get(self.lemma_table, 
+                            {self.lemma_label: word.lower(), 
+                             self.lemma_transcript_id: lemma_trans})[self.lemma_id]
+                        word_id = self.table_get(self.word_table, 
+                            {self.word_label: word, 
+                             self.word_lemma_id: lemma_id, 
+                             self.word_pos_id: pos,
+                             self.word_transcript_id: trans})[self.word_id]
+                        self.table_add(self.corpus_table, 
+                            {self.corpus_word_id: word_id, 
+                             self.corpus_source_id: self._file_id,
+                             self.corpus_time: time})
 
 if __name__ == "__main__":
     BuckeyeBuilder().build()
