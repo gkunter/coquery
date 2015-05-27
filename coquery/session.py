@@ -321,5 +321,35 @@ class SessionStdIn(Session):
         logger.info("Command line scanned, %s queries" % len (self.query_list))
     
 
+class SessionGUI(Session):
+    def get_arguments_from_gui(self, w):
+        """ update the values in options.cfg with those entered in the 
+        GUI wizard w."""
+        pass
+    
+    def __init__(self):
+        super(SessionStdIn, self).__init__()
+
+        app = QtGui.QApplication(sys.argv)
+        w = gui.Wizard()
+        w.set_default_gui_arguments(options.cfg)
+        w.show()
+        
+        exit_code = app.exec_()
+        if exit_code:
+            sys.exit(exit_code)
+        w.close()
+        self.get_arguments_from_gui(w)
+        
+    def run_queries(self)
+        logger.info("Using GUI, %s queries" % len (self.query_list))
+        w = gui.ProgressIndicator(super(SessionGUI, self).run_queries)
+        w.show()
+        w.onStart()
+        exit_code = app.exec_()
+        if exit_code:
+            sys.exit(exit_code)
+    
+
 logger = logging.getLogger(__init__.NAME)
 
