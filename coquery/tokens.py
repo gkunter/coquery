@@ -23,6 +23,8 @@ This module defines classes that represent tokens in a query string.
 # The method parse() is used to translate the token string into these
 # structures.
 
+from __future__ import unicode_literals
+
 import unittest
 import itertools
 import string
@@ -116,6 +118,7 @@ class COCAToken(QueryToken):
     transcript_open = "/"
     transcript_close = "/"
     NegationChar = "#"
+    check_part_of_speech = True
     def parse (self):
         self.word_specifiers = []
         self.class_specifiers = []
