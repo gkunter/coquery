@@ -27,6 +27,8 @@ THE SOFTWARE.
 """
 
 from __future__ import print_function
+from __future__ import unicode_literals
+
 import sys
 import csv
 import copy
@@ -45,23 +47,6 @@ import imp
 
 import logging
 
-
-class ConsoleCSV (object):
-    def writerow (self, Row):
-        L = []
-        for x in Row:
-            S = str (x)
-            if options.cfg.output_separator in S:
-                L.append ("'%s'" % S)
-            elif "'" in S:
-                L.append ('"%s"' % S)
-            else:
-                L.append (S)
-                
-        if options.cfg.output_separator == "\\t":
-            options.cfg.output_separator = "\t"
-        print(options.cfg.output_separator.join (L))
-
 class Session(object):
     def __init__(self):
         self.header = None
@@ -77,7 +62,6 @@ class Session(object):
         module = imp.load_source(corpus_name, current_corpus)
         current_resource = module.Resource()
         self.Corpus = module.Corpus(module.Lexicon(current_resource), current_resource)
-        #self.Corpus = module.Corpus(module.Lexicon(module.Resource), module.Resource)
 
         self.show_header = options.cfg.show_header
 
@@ -177,7 +161,7 @@ class Session(object):
         if self.output_file:
             return
         if not options.cfg.output_path:
-            self.output_file = ConsoleCSV ()
+            self.output_file = csv.writer(sys.stdout, delimiter=options.cfg.output_separator)
         else:
             if options.cfg.append:
                 FileMode = "at"
@@ -282,10 +266,7 @@ class SessionInputFile(Session):
                     else:
                         if read_lines >= options.cfg.skip_lines:
                             query_string = current_line.pop(options.cfg.query_column_number - 1)
-                            new_query = self.query_type(
-                                    query_string, self,
-                                    tokens.COCAToken,
-                                    options.cfg.source_filter)
+                            new_query = self.query_type(query_string, self, tokens.COCAToken, options.cfg.source_filter)
                             new_query.InputLine = copy.copy(current_line)
                             self.query_list.append(new_query)
                             self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
@@ -341,7 +322,7 @@ class SessionGUI(Session):
         w.close()
         self.get_arguments_from_gui(w)
         
-    def run_queries(self)
+    def run_queries(self):
         logger.info("Using GUI, %s queries" % len (self.query_list))
         w = gui.ProgressIndicator(super(SessionGUI, self).run_queries)
         w.show()
