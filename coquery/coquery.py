@@ -51,6 +51,7 @@ def set_logger():
     file_handler = logging.handlers.RotatingFileHandler(log_file_name, maxBytes=1024*1024, backupCount=10)
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
     logger.addHandler(file_handler)
+    logging.captureWarnings(True)
     return logger
 
 def main():
