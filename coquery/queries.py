@@ -26,6 +26,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+from __future__ import unicode_literals
+
 try:
     range = xrange
 except NameError:
@@ -57,6 +59,8 @@ def collapse_context (ContextList):
     open_quote ['"'] = False
     open_quote ["'"] = False
     for i, current_token in enumerate(context_list):
+        if '""""' in current_token:
+            current_token = '"'
         if current_token not in stop_words:
             if current_token not in punct and current_token not in conflate_words:
                 if i > 0 and context_list[i-1] not in '([{‘':
@@ -99,7 +103,7 @@ class QueryResult(object):
         if LEX_POS in output_fields:
             count += max_number_of_tokens
         if CORP_SOURCE in output_fields:
-            count += len(self.query.Corpus.get_source_info_header())
+            count += len(self.query.Corpus.get_source_info_headers())
         if CORP_SPEAKER in output_fields:
             count += len(self.query.Corpus.get_speaker_info_header())
         if CORP_FILENAME in output_fields:
@@ -341,9 +345,9 @@ class FrequencyQuery(CorpusQuery):
             try:
                 output_list.append(Lines[current_key])
             except TypeError as e:
-                print self.query_string
-                print current_key
-                print Lines
+                print(self.query_string)
+                print(current_key)
+                print(Lines)
                 raise e
             if self.ErrorInQuery:
                 output_list[-1] = -1
