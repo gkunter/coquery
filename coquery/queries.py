@@ -163,7 +163,7 @@ class QueryResult(object):
                 L += context
             else:
                 L += [collapse_context(context)]
-        return ["%s" % x for x in L]
+        return [str(x) for x in L]
 
 class CorpusQuery(object):
     class ResultList(list):
