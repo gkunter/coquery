@@ -211,13 +211,13 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
 
         
         try:
-            self.args.input_separator = self.args.input_separator.decode('string_escape'))
+            self.args.input_separator = self.args.input_separator.decode('string_escape')
         except AttributeError:
-            self.args.input_separator = codecs.getdecoder("unicode_escape") (self.args.input_separator) [0])
+            self.args.input_separator = codecs.getdecoder("unicode_escape") (self.args.input_separator) [0]
         try:
-            self.args.output_separator = self.args.output_separator.decode('string_escape'))
+            self.args.output_separator = self.args.output_separator.decode('string_escape')
         except AttributeError:
-            self.args.output_separator = codecs.getdecoder("unicode_escape") (self.args.output_separator) [0])
+            self.args.output_separator = codecs.getdecoder("unicode_escape") (self.args.output_separator) [0]
         self.args.show_text = self.args.source_columns != None
         vars(self.args) ["program_location"] = self.base_path
         vars(self.args) ["version"] = version
