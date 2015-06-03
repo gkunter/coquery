@@ -25,7 +25,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
-
+import glob
+import os.path
+import imp
+import sys
+import warnings
 
 # The following flags are used to indicate which fields are provided by the 
 # lexicon of a corpus, and also to access the fields of the value of 
@@ -52,3 +56,17 @@ QUERY_MODE_TOKENS = "TOKEN"
 QUERY_MODE_FREQUENCIES = "FREQ"
 QUERY_MODE_DISTINCT = "DISTINCT"
 QUERY_MODE_STATISTICS = "STATS"
+
+def get_available_resources():
+    resources = {}
+    for corpus in glob.glob(os.path.join(sys.path[0], "corpora/*.py")):
+        corpus_name, ext = os.path.splitext(os.path.basename(corpus))
+        module = imp.load_source(corpus_name, corpus)
+        try:
+            resource = module.Resource
+            resources[resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon)
+        except AttributeError:
+            warnings.warn("{} does not appear to be a valid resource.".format(corpus_name))
+    return resources
+
+available_resources = get_available_resources()
