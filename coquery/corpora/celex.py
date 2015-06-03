@@ -125,6 +125,3 @@ class Corpus(BaseCorpus):
         else:
             Query.set_result_list(L)
 
-if __name__ == "__main__":
-    print """This module is part of the Coquery corpus query tool and cannot be run on its own."""
-    sys.exit(1)

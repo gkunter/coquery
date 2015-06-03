@@ -32,6 +32,7 @@ import tokens
 
 class Resource(SQLResource):
     name = 'coca'
+    db_name = 'coca_maria'
     pos_table = "pos"
     pos_label = "PoS"
     pos_clean_label = "PosClean"
