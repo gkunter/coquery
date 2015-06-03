@@ -5,6 +5,9 @@ from options import *
 
 import csv
 
+class Resource(BaseResource):
+    name = 'celex'
+
 class Lexicon(BaseLexicon):
     provides = [LEX_WORDID, LEX_ORTH, LEX_LEMMA, LEX_POS, LEX_PHON, LEX_FREQ]    
     table_mappings = {'phono_lemma': 'epl', 

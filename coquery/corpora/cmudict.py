@@ -28,14 +28,18 @@ THE SOFTWARE.
 from corpus import *
 
 class Resource(SQLResource):
-    word_table = "dict"
-    word_id = "WordId"
-    word_transcript_id = "Transcript"
+    name = 'cmudict'
+    corpus_table = "dict"
+    corpus_token_id = "WordId"
+    corpus_word_id = corpus_token_id
 
-    transcript_table = "dict"
-    transcript_id = "Transcript"
-    transcript_label = "Transcript"
+    word_table = corpus_table
+    word_id = corpus_token_id
+    word_label = "Text"
+    word_transcript_id = "Transcript"
     
+    
+
 class Lexicon(SQLLexicon):
     provides = [LEX_WORDID, LEX_ORTH, LEX_PHON]
 

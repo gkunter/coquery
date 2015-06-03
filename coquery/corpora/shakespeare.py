@@ -8,6 +8,7 @@
 from corpus import *
 
 class Resource(SQLResource):
+    name = 'shakespeare'
     db_name = "shakespeare"
 
     word_table = "word"

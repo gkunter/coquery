@@ -29,6 +29,7 @@ THE SOFTWARE.
 from corpus import *
 
 class Resource(SQLResource):
+    name = 'coha'
     word_table = "lexicon"
     word_id = "WordId"
     word_label = "WordCS"
