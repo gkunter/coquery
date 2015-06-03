@@ -50,6 +50,10 @@ class DBConnection(object):
     def create_table(self, table_name, description, override=False):
         cur = self.Con.cursor()
         return self.execute(cur, 'CREATE TABLE {} ({})'.format(table_name, description), override=override)
+    
+    def drop_table(self, table_name):
+        cur = self.Con.cursor()
+        return self.execute(cur, 'DROP TABLE {}'.format(table_name))
 
     def has_index(self, table_name, index_name):
         cur = self.Con.cursor()
@@ -134,7 +138,6 @@ class DBConnection(object):
         new_data = copy.copy(data)
         for x in new_data:
             new_data[x] = "%s" % unicode(new_data[x]).replace('"', '""')
-            new_data[x] = new_data[x].replace("'", "''")
             new_data[x] = new_data[x].replace("\\", "\\\\")
 
         S = "INSERT INTO {}({}) VALUES({})".format(

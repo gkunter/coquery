@@ -51,6 +51,7 @@ class BaseCorpusBuilder(object):
 from corpus import *
 
 class Resource(SQLResource):
+    name = '{name}'
     db_name = '{db_name}'
 {variables}
 {resource_code}
@@ -121,7 +122,8 @@ class Corpus(SQLCorpus):
         key= "".join(["%s" % x for x in values.values()])
         if key in self._tables[table_name]:
             return self._tables[table_name][key]
-        try_entry = self.Con.find(table_name, values, [self._primary_keys[table_name]])
+        try_entry = self.Con.find(
+            table_name, values, [self._primary_keys[table_name]])
         if not try_entry:
             self.Con.insert(table_name, values)
             entry = self.Con.find(table_name, values, [self._primary_keys[table_name]])
@@ -213,7 +215,7 @@ class Corpus(SQLCorpus):
             lemma_id = self.table_get(self.lemma_table, 
                                 {self.lemma_label: current_token.lower()})[self.lemma_id]
             
-            word_id = self.table_get_id(self.word_table, 
+            word_id = self.table_get(self.word_table, 
                                 {self.word_lemma_id: lemma_id, 
                                 self.word_pos_id: current_pos, 
                                 self.word_label: current_token})[self.word_id]
@@ -241,8 +243,8 @@ class Corpus(SQLCorpus):
         for file_count, file_name in enumerate(files):
             if not self.Con.find(self.file_table, {self.file_label: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
-                self._file_id = self.table_get(
-                    self.file_table, {self.file_label: file_name})[self.file_id]
+                self._file_id = self.table_get(self.file_table, 
+                    {self.file_label: file_name})[self.file_id]
                 self.process_file(file_name)
                 
             if show_progress:
@@ -280,9 +282,9 @@ class Corpus(SQLCorpus):
                             current_table, current_field, current_type, optimal_type))
                         try:
                             self.Con.modify_field_type(current_table, current_field, optimal_type)
-                        except MySQLdb.OperationalError as e:
-                            if logger:
-                                logger.error(e)
+                        except dbconnection.mysql.OperationalError as e:
+                            if self.logger:
+                                self.logger.error(e)
                     column_count += 1
             if show_progress:
                 progress.update(column_count)
@@ -415,31 +417,28 @@ class Corpus(SQLCorpus):
         self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
 
     def build(self):
-        try:
-            self.check_arguments()
-            self.setup_logger()
-            self.setup_db()
+        self.check_arguments()
+        self.setup_logger()
+        self.setup_db()
+        
+        self.initialize_build()
+        
+        if self.arguments.c:
+            self.create_tables()
+        if self.arguments.l:
+            self.load_files()
+        if self.arguments.self_join:
+            self.self_join()
             
-            self.initialize_build()
+        for stage in self.additional_stages:
+            stage()
             
-            if self.arguments.c:
-                self.create_tables()
-            if self.arguments.l:
-                self.load_files()
-            if self.arguments.self_join:
-                self.self_join()
-                
-            for stage in self.additional_stages:
-                stage()
-                
-            if self.arguments.o:
-                self.optimize()
-            if self.arguments.i:
-                self.create_indices()
-            if self.arguments.corpus_path:
-                self.write_python_module(self.arguments.corpus_path)
+        if self.arguments.o:
+            self.optimize()
+        if self.arguments.i:
+            self.create_indices()
+        if self.arguments.corpus_path:
+            self.write_python_module(self.arguments.corpus_path)
 
-            self.finalize_build()
-        except Exception as e:
-            raise e
+        self.finalize_build()
                 
