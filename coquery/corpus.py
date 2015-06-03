@@ -300,8 +300,8 @@ class SQLResource(BaseResource):
         return Operators [False]
     
     def __init__(self):
-        self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=db_name)
-        logger.info("Connected to database %s@%s:%s."  % (db_name, options.cfg.db_host, options.cfg.db_port))
+        self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=self.db_name)
+        logger.info("Connected to database %s@%s:%s."  % (self.db_name, options.cfg.db_host, options.cfg.db_port))
         logger.info("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))
         
         # create aliases for all tables for which no alias is specified:
