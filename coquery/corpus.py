@@ -300,9 +300,6 @@ class SQLResource(BaseResource):
         return Operators [False]
     
     def __init__(self):
-        db_name = options.cfg.db_name
-        if not db_name:
-            db_name = self.db_name
         self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=db_name)
         logger.info("Connected to database %s@%s:%s."  % (db_name, options.cfg.db_host, options.cfg.db_port))
         logger.info("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))
@@ -388,7 +385,11 @@ class SQLLexicon(BaseLexicon):
             if current_transcript:
                 current_token = tokens.COCAWord(current_transcript, self)
                 current_token.negated = token.negated
-                if self.resource.transcript_table != self.resource.word_table:
+                if "transcript_table" not in dir(self.resource):
+                    target = "{}.{}".format(
+                        self.resource.word_table, 
+                        self.resource.word_transcript_id)
+                elif self.resource.transcript_table != self.resource.word_table:
                     target = "TRANSCRIPT.{}".format(
                         self.resource.transcript_label)
                 else:
@@ -678,10 +679,11 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_table, 
             self.resource.corpus_word_id)]
         table_list = [self.resource.corpus_table]
-        
-        column_list.append("{}.{}".format(
-            self.resource.corpus_table,
-            self.resource.corpus_token_id))
+
+        if CORP_CONTEXT in self.provides:
+            column_list.append("{}.{}".format(
+                self.resource.corpus_table,
+                self.resource.corpus_token_id))
         if number == 1:
             if CORP_SOURCE in requested or CORP_FILENAME in requested or CORP_CONTEXT in requested or options.cfg.source_filter:
                 column_list.append("{}.{}".format(
@@ -774,16 +776,23 @@ class SQLCorpus(BaseCorpus):
                 if current_where_clauses:
                     where_clauses.append(" AND ".join(current_where_clauses))
             else:
-                if "corpus_word_id" in dir(self.resource) and "word_pos_id" in dir(self.resource):
-                    current_where_clauses = self.get_whereclauses(
-                        current_token, 
-                        self.resource.corpus_word_id, 
-                        self.resource.word_pos_id)
-                    prefixed_clauses = ["e{num}.{clause}".format(
-                        num=i+1, 
-                        clause=clause) for clause in current_where_clauses]
-                    if prefixed_clauses:
-                        where_clauses.append (" AND ".join(prefixed_clauses))
+                try:
+                    corpus_word_id = self.resource.corpus_word_id
+                except AttributeError:
+                    corpus_word_id = None
+                try:
+                    word_pos_id = self.resource.word_pos_id
+                except AttributeError:
+                    word_pos_id = None
+                current_where_clauses = self.get_whereclauses(
+                    current_token, 
+                    corpus_word_id, 
+                    word_pos_id)
+                prefixed_clauses = ["e{num}.{clause}".format(
+                    num=i+1, 
+                    clause=clause) for clause in current_where_clauses]
+                if prefixed_clauses:
+                    where_clauses.append (" AND ".join(prefixed_clauses))
         if options.cfg.verbose:
             return  " AND\n\t".join(where_clauses)
         else:
@@ -809,14 +818,16 @@ class SQLCorpus(BaseCorpus):
                 self.resource.self_join_corpus,
                 x+1) for x in non_empty_token]        
         else:
-            column_list.append("e1.{} AS TokenId".format(
-                self.resource.corpus_token_id))
+            if CORP_CONTEXT in self.provides:
+                column_list.append("e1.{} AS TokenId".format(
+                    self.resource.corpus_token_id))
             if any([x in Query.Session.output_fields for x in [CORP_SOURCE, CORP_FILENAME, CORP_CONTEXT]]):
                 column_list.append("e1.{} AS SourceId".format(
                     self.resource.corpus_source_id))
             column_list += ["e{num}.{corpus_word} AS W{num}".format(
                 num=x+1, 
                 corpus_word=self.resource.corpus_word_id) for x in non_empty_token]
+
         if options.cfg.verbose:
             return ",\n\t".join(column_list)
         else:
@@ -828,7 +839,6 @@ class SQLCorpus(BaseCorpus):
         #if Query.query_string in Query.Session._results:
             #return
             #yield
-            
         column_string = self.sql_string_run_query_string(Query, self_join)
         table_string = self.sql_string_run_query_table_string(Query, self_join)
         where_string = self.sql_string_run_query_where_string(Query, self_join)

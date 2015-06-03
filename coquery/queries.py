@@ -77,10 +77,12 @@ class QueryResult(object):
     def get_wordid_list(self, number_of_columns):
         """ returns a list containing all word_id values stored in the word 
         columns, i.e. columns named W1, ..., Wn. """
-        start = int(self.data["TokenId"]) + 1
-        end = start + number_of_columns - 1
-        return [self.data["W1"]] + [self.query.Corpus.get_word_id(x) for x in range(start,end)]
-
+        if "TokenId" in self.data:
+            start = int(self.data["TokenId"]) + 1
+            end = start + number_of_columns - 1
+            return [self.data["W1"]] + [self.query.Corpus.get_word_id(x) for x in range(start,end)]
+        else:
+            return [self.data["W1"]]
 
     def get_lexicon_entries(self, number_of_columns):
         """ returns a list of lexicon entries representing the tokens in
@@ -180,14 +182,19 @@ class CorpusQuery(object):
         def next(self):
             if not self.data:
                 raise StopIteration
-            try:
-                return QueryResult(self.query, next(self.data))
-            except (AttributeError, TypeError):
-                try:
-                    self.count += 1
-                    return QueryResult(self.query, self.data[self.count - 1])
-                except IndexError:
-                    raise StopIteration
+            return QueryResult(self.query, next(self.data))
+            #if not self.data:
+                #raise StopIteration
+            #try:
+                #next_thing = next(self.data)
+            #except (AttributeError, TypeError):
+                #try:
+                    #self.count += 1
+                    #return QueryResult(self.query, self.data[self.count - 1])
+                #except IndexError:
+                    #raise StopIteration
+            #else:
+                #return QueryResult(self.query, next_thing)
 
         def __next__(self):
             return self.next()
