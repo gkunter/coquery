@@ -65,10 +65,10 @@ def main():
         if not available_resources:
             raise NoCorpusError
 
-        if options.args.corpus not in available_resources:
-            raise CorpusUnavailableError(options.args.corpus)
+        if options.cfg.corpus not in available_resources:
+            raise CorpusUnavailableError(options.cfg.corpus)
             
-        if not options.args.corpus:
+        if not options.cfg.corpus:
             raise NoCorpusSpecifiedError
 
     except Exception as e:

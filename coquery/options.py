@@ -200,7 +200,6 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
                 raise UnknownArgumentError(unknown)
         except Exception as e:
             raise e
-
         
         try:
             self.args.input_separator = self.args.input_separator.decode('string_escape')
@@ -214,7 +213,6 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         vars(self.args) ["program_location"] = self.base_path
         vars(self.args) ["version"] = version
         vars(self.args) ["parameter_string"] = " ".join(sys.argv [1:])
-        vars(self.args) ["corpora"] = self.corpora_dict
 
         self.read_configuration()
 

@@ -95,7 +95,7 @@ class Corpus(SQLCorpus):
         self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
         self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
         if not no_nltk:
-            self.parser.add_argument("-no_nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
+            self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
         self.parser.add_argument("-l", help="load source files", action="store_true")
         self.parser.add_argument("-c", help="Create database tables", action="store_true")
         self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)

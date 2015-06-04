@@ -34,7 +34,6 @@ import csv
 import copy
 import time
 import fileinput
-import glob
 
 import __init__
 import options
@@ -44,7 +43,6 @@ from defines import *
 
 import queries
 import tokens
-import imp
 
 import logging
 
