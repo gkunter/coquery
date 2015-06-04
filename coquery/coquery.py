@@ -29,7 +29,8 @@ THE SOFTWARE.
 """
 
 import sys
-sys.path.append("/opt/coquery")
+#sys.path.append("/opt/coquery")
+import os.path
 
 
 import logging
@@ -47,7 +48,7 @@ import __init__
 def set_logger():
     logger = logging.getLogger(__init__.NAME)
     logger.setLevel (logging.INFO)
-    log_file_name = "/home/kunter/coquery.log"
+    log_file_name = os.path.join(os.path.expanduser("~"), "coquery.log")
     file_handler = logging.handlers.RotatingFileHandler(log_file_name, maxBytes=1024*1024, backupCount=10)
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
     logger.addHandler(file_handler)
