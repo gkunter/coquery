@@ -59,11 +59,9 @@ class Session(object):
         
         # load current corpus module depending on the value of options.cfg.corpus,
         # i.e. the corpus specified as an argumment:        
-        current_corpus = options.cfg.corpora[options.cfg.corpus]
-        corpus_name, ext = os.path.splitext(os.path.basename(current_corpus))
-        module = imp.load_source(corpus_name, current_corpus)
-        current_resource = module.Resource()
-        self.Corpus = module.Corpus(module.Lexicon(current_resource), current_resource)
+        ResourceClass, CorpusClass, LexiconClass = available_resources[options.cfg.corpus]
+        current_resource = ResourceClass()
+        self.Corpus  = CorpusClass(LexiconClass(current_resource), current_resource)
 
         self.show_header = options.cfg.show_header
 
