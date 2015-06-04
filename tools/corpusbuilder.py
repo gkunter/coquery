@@ -24,6 +24,17 @@ try:
 except ImportError:
     show_progress = False
 
+class NLTKTokenizerError(Exception):
+    def __init__(self, e, logger):
+        logger.error("The NLTK tokenizer failed. This may be caused by a missing NLTK component. Please consult the 'Installing NLTK Data' guide on http://www.nltk.org/data.html for instructions on how to add the necessary components. Alternatively, you may want to use --no-nltk argument to disable the use of NLTK.")
+        logger.error(e)
+        
+class NLTKTaggerError(Exception):
+    def __init__(self, e, logger):
+        logger.error("The NLTK tagger failed. This may be caused by a missing NLTK component. Please consult the 'Installing NLTK Data' guide on http://www.nltk.org/data.html for instructions on how to add the necessary components. Alternatively, you may want to use --no-nltk argument to disable the use of NLTK.")
+        logger.error(e)
+
+
 class BaseCorpusBuilder(object):
     logger = None
     module_code = None
@@ -74,6 +85,10 @@ class Corpus(SQLCorpus):
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument("name", help="name of the corpus", type=str)
         self.parser.add_argument("path", help="location of the text files", type=str)
+        self.parser.add_argument("--db_user", help="name of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_user")
+        self.parser.add_argument("--db_pass", help="password of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_pass")
+        self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="localhost", dest="db_host")
+        self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
         self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
         self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
         self.parser.add_argument("-w", help="Actually do something; default behaviour is simulation.", action="store_false", dest="dry_run")
@@ -91,7 +106,12 @@ class Corpus(SQLCorpus):
         self.name = self.arguments.name
         if not self.arguments.db_name:
             self.arguments.db_name = self.arguments.name
-        
+        if no_nltk:
+            self.arguments.use_nltk = False
+        if not self.arguments.corpus_path:
+            self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../coquery/corpora"))
+            print(self.arguments.corpus_path)
+    
     def add_argument(self, *args):
         pass
     
@@ -200,11 +220,22 @@ class Corpus(SQLCorpus):
     def process_file(self, current_file):
         with codecs.open(current_file, "rt", encoding="utf8") as input_file:
             raw_text = input_file.read()
+        tokens = []
+        pos_map = []
         if self.arguments.use_nltk:
-            tokens = nltk.word_tokenize(raw_text)
-            pos_map = nltk.pos_tag(tokens)
-        else:
+            try:
+                tokens = nltk.word_tokenize(raw_text)
+            except LookupError as e:
+                raise NLTKTokenizerError(e, self.logger)
+            try:
+                pos_map = nltk.pos_tag(tokens)
+            except LookupError as e:
+                raise NLTKTaggerError(e, self.logger)
+        if not tokens:
             tokens = raw_text.split(" ")
+            tokens = [x.strip() for x in tokens]
+            tokens = [x for x in tokens if x]
+        if not pos_map:
             pos_map = zip(tokens, [""] * len(tokens))
         
         for current_token, current_pos in pos_map:
@@ -321,7 +352,21 @@ class Corpus(SQLCorpus):
     def get_class_variables(self):
         return dir(BaseCorpusBuilder)
 
-    def write_python_module(self, corpora_path):
+    def verify_corpus(self):
+        no_fail = True
+        if not self.Con.has_database(self.arguments.db_name):
+            no_fail = False
+            print("Database {} not found.".format(self.arguments.db_name))
+        for x in self.table_description:
+            if not self.Con.has_table(x):
+                print("Table {} not found.".format(x))
+                no_fail = False
+        return no_fail
+
+    def write_python_module(self, corpus_path):
+        if self.arguments.dry_run:
+            return
+        
         base_variables = self.get_class_variables()
         
         # all class variables that are defined in this class and which...
@@ -353,7 +398,7 @@ class Corpus(SQLCorpus):
                 lexicon_code=self.get_lexicon_code(),
                 resource_code=self.get_resource_code())
         
-        path = os.path.join(corpora_path, "{}.py".format(self.name))
+        path = os.path.join(corpus_path, "{}.py".format(self.name))
         # Handle existing versions of the corpus library
         if os.path.exists(path):
             # Read existing code as string:
@@ -386,7 +431,15 @@ class Corpus(SQLCorpus):
     def setup_db(self):
         dbconnection.verbose = self.arguments.verbose
         dbconnection.logger = self.logger
-        self.Con = dbconnection.DBConnection(self.arguments.db_name, local_infile=1)
+        self.Con = dbconnection.DBConnection(
+            db_host=self.arguments.db_host,
+            db_user=self.arguments.db_user,
+            db_pass=self.arguments.db_pass,
+            db_port=self.arguments.db_port,
+            local_infile=1)
+        if not self.Con.has_database(self.arguments.db_name):
+            self.Con.create_database(self.arguments.db_name)
+        self.Con.use_database(self.arguments.db_name)
         self.Con.dry_run = self.arguments.dry_run
         if not self.arguments.dry_run:
             self.Con.set_variable("autocommit", 0)
@@ -418,6 +471,7 @@ class Corpus(SQLCorpus):
 
     def build(self):
         self.check_arguments()
+        print(self.arguments)
         self.setup_logger()
         self.setup_db()
         
@@ -437,8 +491,8 @@ class Corpus(SQLCorpus):
             self.optimize()
         if self.arguments.i:
             self.create_indices()
-        if self.arguments.corpus_path:
+        if self.verify_corpus():
+            print(self.arguments.corpus_path)
             self.write_python_module(self.arguments.corpus_path)
-
         self.finalize_build()
                 
