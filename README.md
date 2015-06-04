@@ -7,6 +7,15 @@ Coquery is a tool that can search a number of linguistic corpora using a unified
 
 The latest release is version 0.9. 
 
+### Features ###
+* Uses MySQL database for fast searches on big corpora, much faster than processing textfiles
+* Corpora that are already stored in a database can easily be incorporated by writing a new corpus module
+* Many query strings can be stored in one input file that is processed in one go -- ideal for obtaining frequency lists
+* Frequency counts can be grouped by word, lemma, part-of-speech, text genre, ...
+* Supports the easy COCA query syntax, but is modular enough to support CQL or other query syntaxes
+* Provides a flexible framework that should allow retrieval of multi-level corpus information
+* Link data from different corpora -- for example, use the transcriptions from CMUdict to query the BNC
+
 ### Supported corpora ###
 * [British National Corpus](http://www.natcorp.ox.ac.uk/)
 * [Corpus of Contemporary American English](http://corpus.byu.edu/coca/)
@@ -14,15 +23,11 @@ The latest release is version 0.9.
 * [Buckeye Corpus](http://buckeyecorpus.osu.edu/)
 * [CELEX Lexical Database](https://catalog.ldc.upenn.edu/LDC96L14)
 
-Coquery does not provide any corpus data. You can only use these corpora if you have acquired the data files from the corpus maintainers. Coquery supplies tools that read these data files into MySQL databases that then can be queried.
+Coquery does not provide any corpus data. You can only use these corpora if you have acquired the data files from the corpus maintainers. Coquery supplies tools that read these data files into MySQL databases that then can be queried. You can also build and query your own part-of-speech-tagged corpus using Coquery: simply put your text files into a folder and run the necessary tool.
 
-You can also build and query your own corpus using Coquery: simply put your text files into a folder and run the necessary tool. Part-of-speech tagging is done using the [Natural Language Toolkit](http://www.nltk.org/).
+### Installation ###
 
-### Requirements ###
-
-* For most corpora: MySQL server 
-* Python 2.7 and Python 3.3 compatible
-* Depends on these Python modules: argparse, MySQLdb (alternativly: PyMySQL)
+See the (Installation guide)[INSTALLATION.md].
 
 ### Examples ###
 
@@ -61,4 +66,4 @@ coquery -i input.csv -o output.csv -n 3 -O -p -t
 
 ### Maintainer ###
 
-* Gero Kunter, [Universität Düsseldorf](http://www.anglistik.hhu.de/sections/anglistik-iii-english-language-and-linguistics/facultystaff/detailseite-kunter.html)
+[Gero Kunter](http://www.anglistik.hhu.de/sections/anglistik-iii-english-language-and-linguistics/facultystaff/detailseite-kunter.html)
