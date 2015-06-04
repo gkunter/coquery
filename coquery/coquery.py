@@ -62,6 +62,15 @@ def main():
 
     try:
         options.process_options()
+        if not available_resources:
+            raise NoCorpusError
+
+        if options.args.corpus not in available_resources:
+            raise CorpusUnavailableError(options.args.corpus)
+            
+        if not options.args.corpus:
+            raise NoCorpusSpecifiedError
+
     except Exception as e:
         print_exception(e)
         sys.exit(1)

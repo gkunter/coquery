@@ -62,6 +62,15 @@ class UnknownArgumentError(NoTraceException):
 class ConfigurationError(GenericException):
     error_message = "Configuration file incomplete or with errors."
 
+class NoCorpusError(NoTraceException):
+    error_message = "No corpus is available."
+
+class NoCorpusSpecifiedError(NoTraceException):
+    error_message = "No corpus name given to script."
+    
+class CorpusUnavailableError(NoTraceException):
+    error_message = "No corpus available with given name"
+
 class DependencyError(NoTraceException):
     def __init__(self, module):
         if type(module) == list:
