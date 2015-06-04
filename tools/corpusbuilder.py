@@ -35,24 +35,9 @@ class NLTKTaggerError(Exception):
         logger.error(e)
 
 
-class BaseCorpusBuilder(object):
-    logger = None
-    module_code = None
-    name = None
-    table_description = None
-    lexicon_features = None
-    corpus_features = None
-    arguments = None
-    name = None
-    additional_arguments = None
-    parser = None
-    Con = None
-    additional_stages = []
-    start_time = None
-    file_filter = None
-    
-    def __init__(self, ):
-        self.module_code = """# -*- coding: utf-8 -*-
+# module_code contains the Python skeleton code that will be used to write
+# the Python corpus module."""
+module_code = """# -*- coding: utf-8 -*-
 #
 # FILENAME: {name}.py -- a corpus module for the Coquery corpus query tool
 # 
@@ -76,12 +61,33 @@ class Corpus(SQLCorpus):
     
 {corpus_code}
 """
+
+class BaseCorpusBuilder(object):
+    logger = None
+    module_code = None
+    name = None
+    table_description = None
+    lexicon_features = None
+    corpus_features = None
+    arguments = None
+    name = None
+    additional_arguments = None
+    parser = None
+    Con = None
+    additional_stages = []
+    start_time = None
+    file_filter = None
+    
+    def __init__(self, ):
+        self.module_code = module_code
         self.table_description = {}
         self.lexicon_features = []
         self.corpus_features = []
         self._tables = {}
         self._id_count = {}
         self._primary_keys = {}
+        
+        # set up argument parser:
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument("name", help="name of the corpus", type=str)
         self.parser.add_argument("path", help="location of the text files", type=str)
@@ -102,6 +108,7 @@ class Corpus(SQLCorpus):
         self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
 
     def check_arguments(self):
+        """ Check the command line arguments. Add defaults if necessary."""
         self.arguments, unknown = self.parser.parse_known_args()
         self.name = self.arguments.name
         if not self.arguments.db_name:
@@ -113,9 +120,12 @@ class Corpus(SQLCorpus):
             print(self.arguments.corpus_path)
     
     def add_argument(self, *args):
+        """ Use this function if your corpus installer requires additional arguments."""
         pass
     
     def add_table_description(self, table_name, primary_key, table_description):
+        """ Add a primary key to the table description and the internal
+        tables."""
         for i, x in enumerate(table_description["CREATE"]):
             if "`{}`".format(primary_key) in x:
                 table_description["CREATE"][i] = "{} AUTO_INCREMENT".format(
@@ -160,6 +170,7 @@ class Corpus(SQLCorpus):
         return entry[0]
 
     def setup_logger(self):
+        """ initializes a logger."""
         class TextwrapFormatter(logging.Formatter):
             def __init__(self, fmt):
                 super(TextwrapFormatter, self).__init__(fmt=fmt)
@@ -180,6 +191,9 @@ class Corpus(SQLCorpus):
         self.logger.addHandler(stream_handler)
 
     def create_tables(self):
+        """ go through the table description and create a table in the
+        database, using the information from the "CREATE" key of the
+        table description entry."""
         if show_progress:
             progress = progressbar.ProgressBar(widgets=["Creating tables ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(self.table_description))
             progress.start()
@@ -193,6 +207,8 @@ class Corpus(SQLCorpus):
             progress.finish()
 
     def get_file_list(self, path):
+        """ returns a list of file names from the given path that match
+        the file filter from self.file_filter."""
         L = []
         for source_path, folders, files in os.walk(path):
             for current_file in files:
@@ -202,6 +218,9 @@ class Corpus(SQLCorpus):
         return L
 
     def get_corpus_code(self):
+        """ return a text string containing the Python source code from
+        the class attribute self._corpus_code. This function is needed
+        to add corpus-specifc to the Python corpus module."""
         try:
             lines = [x for x in inspect.getsourcelines(self._corpus_code)[0] if not x.strip().startswith("class")]
         except AttributeError:
@@ -209,19 +228,45 @@ class Corpus(SQLCorpus):
         return "".join(lines)
     
     def get_lexicon_code(self):
-        return ""
+        """ return a text string containing the Python source code from
+        the class attribute self._lexicon_code. This function is needed
+        to add lexicon-specific code the Python corpus module."""
+        try:
+            lines = [x for x in inspect.getsourcelines(self._lexicon_code)[0] if not x.strip().startswith("class")]
+        except AttributeError:
+            lines = []
+        return "".join(lines)
     
     def get_resource_code(self):
-        return ""
+         """ return a text string containing the Python source code from
+        the class attribute self._resource_code. This function is needed
+        to add resource-specific code the Python corpus module."""
+        try:
+            lines = [x for x in inspect.getsourcelines(self._resource_code)[0] if not x.strip().startswith("class")]
+        except AttributeError:
+            lines = []
+        return "".join(lines)
     
     def get_method_code(self, method):
         pass
 
     def process_file(self, current_file):
+        """ Process a text file.
+        First, attempt to tokenize the text, and to assign a POS tag to each
+        token (using NLTK if possible).
+        Then, if the token does not exist in the word table, add a new word
+        with its POS tag to the word table.
+        Then, try to lemmatize any new word (based very crudely on the 
+        orthography), adding new lemmas if necessary.
+        Finally, add the token with its word identifier to the corpus table."""
+        
+        # Read raw text from file:
         with codecs.open(current_file, "rt", encoding="utf8") as input_file:
             raw_text = input_file.read()
         tokens = []
         pos_map = []
+        
+        # create a list of all tokens:
         if self.arguments.use_nltk:
             try:
                 tokens = nltk.word_tokenize(raw_text)
@@ -242,20 +287,25 @@ class Corpus(SQLCorpus):
             current_token = current_token.strip()
             if current_token in string.punctuation:
                 current_pos = "PUNCT"
-                
+             
+            # get lemma id, and create new lemma if necessary:
             lemma_id = self.table_get(self.lemma_table, 
                                 {self.lemma_label: current_token.lower()})[self.lemma_id]
             
+            # get word id, and create new word if necessary:
             word_id = self.table_get(self.word_table, 
                                 {self.word_lemma_id: lemma_id, 
                                 self.word_pos_id: current_pos, 
                                 self.word_label: current_token})[self.word_id]
 
+            # store new token in corpus table:
             self.Con.insert(self.corpus_table, 
                 {self.corpus_word_id: word_id,
                  self.corpus_source_id: self._file_id})
 
     def load_files(self):
+        """ Goes through the list of suitable files, and calls process_file()
+        on each file name. File names are added to the file table.""" 
         files = self.get_file_list(self.arguments.path)
         if not files:
             self.logger.warning("No files found at %s" % self.arguments.path)
@@ -289,6 +339,8 @@ class Corpus(SQLCorpus):
         pass
     
     def optimize(self):
+        """ Optimizes the table columns so that they use a minimal amount
+        of disk space."""
         totals = 0
         for current_table in self.table_description:
             totals += len(self.table_description[current_table]["CREATE"]) - 1
@@ -324,6 +376,7 @@ class Corpus(SQLCorpus):
             progress.finish()
         
     def create_indices(self):
+        """ Creates the table indices as specified in the table description."""
         total_indices = 0
         for current_table in self.table_description:
             if "INDEX" in self.table_description[current_table]:
@@ -353,6 +406,8 @@ class Corpus(SQLCorpus):
         return dir(BaseCorpusBuilder)
 
     def verify_corpus(self):
+        """ Returns True if the database and all tables in the table
+        description exist."""
         no_fail = True
         if not self.Con.has_database(self.arguments.db_name):
             no_fail = False
@@ -364,6 +419,8 @@ class Corpus(SQLCorpus):
         return no_fail
 
     def write_python_module(self, corpus_path):
+        """ Writes a Python module with the necessary specifications to the
+        Coquery corpus module directory."""
         if self.arguments.dry_run:
             return
         
@@ -429,6 +486,8 @@ class Corpus(SQLCorpus):
             self.logger.info("Library %s written." % path)
             
     def setup_db(self):
+        """ Creates a connection to the server, and creates the database if
+        necessary."""
         dbconnection.verbose = self.arguments.verbose
         dbconnection.logger = self.logger
         self.Con = dbconnection.DBConnection(
@@ -440,6 +499,7 @@ class Corpus(SQLCorpus):
         if not self.Con.has_database(self.arguments.db_name):
             self.Con.create_database(self.arguments.db_name)
         self.Con.use_database(self.arguments.db_name)
+        # if this is a dry run, database access will only be emulated:
         self.Con.dry_run = self.arguments.dry_run
         if not self.arguments.dry_run:
             self.Con.set_variable("autocommit", 0)
@@ -447,16 +507,20 @@ class Corpus(SQLCorpus):
             self.Con.set_variable("foreign_key_checks", 0)
 
     def add_building_stage(self, stage):
+        """ The parameter stage is a function that will be executed
+        after the database tables have been created and the data data files
+        have been processed, but before the tables are optimized and
+        indexed. More than one function can be added."""
         self.additional_stages.append(stage)
 
     def get_description(self):
         return ""
 
-
     def get_speaker_data(self, *args):
         return []
 
     def initialize_build(self):
+        """ Starts logging, starts the timer."""
         self.start_time = time.time()
         if self.arguments.dry_run:
             self.logger.info("--- Starting (dry run) ---")
@@ -467,6 +531,7 @@ class Corpus(SQLCorpus):
         print("\n%s\n" % textwrap.TextWrapper(width=79).fill(self.get_description()))
 
     def finalize_build(self):
+        """ Logs duration of build. """
         self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
 
     def build(self):
