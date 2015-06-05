@@ -316,6 +316,8 @@ class SQLLexicon(BaseLexicon):
     entry_cache = {}
     
     def sql_string_is_part_of_speech(self, pos):
+        if LEX_POS not in self.provides:
+            return False
         current_token = tokens.COCAToken(pos, self)
         return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
             self.resource.pos_id, 
@@ -691,7 +693,7 @@ class SQLCorpus(BaseCorpus):
                     self.resource.corpus_source_id))
             
         if token.class_specifiers:
-            if self.resource.word_table not in table_list:
+            if self.resource.pos_table not in table_list:
                 where_list.append("{}.{} = {}.{}".format(
                     self.resource.corpus_table,
                     self.resource.corpus_word_id,
