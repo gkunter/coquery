@@ -404,7 +404,7 @@ class SQLLexicon(BaseLexicon):
         
         if sub_clauses:
             where_clauses.append("(%s)" % " OR ".join (sub_clauses))
-        if token.class_specifiers:
+        if token.class_specifiers and LEX_POS in self.provides:
             where_clauses.append(self.sql_string_get_posid_list_where(token))
         return " AND ".join(where_clauses)
             
@@ -692,7 +692,7 @@ class SQLCorpus(BaseCorpus):
                     self.resource.corpus_table,
                     self.resource.corpus_source_id))
             
-        if token.class_specifiers:
+        if token.class_specifiers and LEX_POS in self.lexicon.provides:
             if self.resource.pos_table not in table_list:
                 where_list.append("{}.{} = {}.{}".format(
                     self.resource.corpus_table,
