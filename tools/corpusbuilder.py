@@ -117,8 +117,7 @@ class BaseCorpusBuilder(object):
             self.arguments.use_nltk = False
         if not self.arguments.corpus_path:
             self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../coquery/corpora"))
-            print(self.arguments.corpus_path)
-    
+            
     def add_argument(self, *args):
         """ Use this function if your corpus installer requires additional arguments."""
         pass
@@ -547,7 +546,6 @@ class BaseCorpusBuilder(object):
 
     def build(self):
         self.check_arguments()
-        print(self.arguments)
         self.setup_logger()
         self.setup_db()
         
@@ -568,7 +566,6 @@ class BaseCorpusBuilder(object):
         if self.arguments.i:
             self.create_indices()
         if self.verify_corpus():
-            print(self.arguments.corpus_path)
             self.write_python_module(self.arguments.corpus_path)
         self.finalize_build()
                 
