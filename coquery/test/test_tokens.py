@@ -112,6 +112,15 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.transcript_specifiers, ["trans1/", "/trans2"])
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
+        
+    def test_wildcards(self):
+        token = self.token_type("*", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["*"])
+        
 
 #class TestQueryTokenCQL(unittest.TestCase):
     #token_type = tokens.CQLToken
