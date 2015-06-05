@@ -28,16 +28,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import sys
-#sys.path.append("/opt/coquery")
-import os.path
+from __future__ import unicode_literals
 
+import sys
+import os.path
 
 import logging
 import logging.handlers
 
 import options
 from session import *
+from gui_session import *
 from errors import *
 
 import cProfile
@@ -62,6 +63,11 @@ def main():
 
     try:
         options.process_options()
+        if options.cfg.gui:
+            from pyqt_compat import QtCore, QtGui
+            app = QtGui.QApplication(sys.argv)
+            Wizard = CoqueryWizard()
+            Wizard.getWizardArguments()
         if not available_resources:
             raise NoCorpusError
 

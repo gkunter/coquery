@@ -134,7 +134,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         
         self.parser.add_argument("--corpus", help="specify the corpus to use", choices=available_resources.keys(), type=str)
         self.parser.add_argument ("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS), default=QUERY_MODE_DISTINCT, type=str, nargs="?")
-        
+        self.parser.add_argument("--gui", help="Use a graphical user interface (requires Qt)", action="store_true")
         # General options:
         self.parser.add_argument("-o", "--outputfile", help="print results to OUTPUTFILE (default: print to console)", type=str, dest="output_path")
         group = self.parser.add_mutually_exclusive_group()
