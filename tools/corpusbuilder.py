@@ -238,7 +238,7 @@ class BaseCorpusBuilder(object):
         return "".join(lines)
     
     def get_resource_code(self):
-         """ return a text string containing the Python source code from
+        """ return a text string containing the Python source code from
         the class attribute self._resource_code. This function is needed
         to add resource-specific code the Python corpus module."""
         try:
@@ -282,6 +282,8 @@ class BaseCorpusBuilder(object):
             tokens = [x for x in tokens if x]
         if not pos_map:
             pos_map = zip(tokens, [""] * len(tokens))
+            if "LEX_POS" in self.lexicon_features:
+                self.lexicon_features.remove("LEX_POS")
         
         for current_token, current_pos in pos_map:
             current_token = current_token.strip()
@@ -293,10 +295,19 @@ class BaseCorpusBuilder(object):
                                 {self.lemma_label: current_token.lower()})[self.lemma_id]
             
             # get word id, and create new word if necessary:
-            word_id = self.table_get(self.word_table, 
-                                {self.word_lemma_id: lemma_id, 
-                                self.word_pos_id: current_pos, 
-                                self.word_label: current_token})[self.word_id]
+            word_dict = {self.word_lemma_id: lemma_id, 
+                        self.word_label: current_token}
+            if current_pos and "word_pos_id" in dir(self):
+                try:
+                    word_dict[self.word_pos_id] = current_pos 
+                except AttributeError as e:
+                    print(self.arguments.use_nltk)
+                    print(current_pos)
+                    print(self.lexicon.provides)
+                    raise e
+
+            word_id = self.table_get(self.word_table, word_dict)[self.word_id]
+
 
             # store new token in corpus table:
             self.Con.insert(self.corpus_table, 
