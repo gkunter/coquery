@@ -1,10 +1,10 @@
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+#from pyqt_compat import QtCore, QtGui
+from pyqt_compat import QtGui, QtCore
 import csv
-import csvoptionsui
+import csvOptionsUi
 import sys
 
-class MyTableModel(QAbstractTableModel):
+class MyTableModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, header, data, skip, *args):
         super(MyTableModel, self).__init__(parent, *args)
         if not data:
@@ -24,9 +24,9 @@ class MyTableModel(QAbstractTableModel):
     def data(self, index, role):
         if not index.isValid():
             return None
-        elif role == Qt.BackgroundRole and index.row() < self.skip_lines:
-            return QBrush(Qt.lightGray)        
-        elif role != Qt.DisplayRole:
+        elif role == QtCore.Qt.BackgroundRole and index.row() < self.skip_lines:
+            return QtGui.QBrush(QtCore.Qt.lightGray)        
+        elif role != QtCore.Qt.DisplayRole:
             return None
 
         row = index.row()
@@ -38,21 +38,21 @@ class MyTableModel(QAbstractTableModel):
 
     def headerData(self, col, orientation, role):
         if not self.header or col > len(self.header):
-            return QVariant(None)
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return QtCore.QVariant(None)
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
             try:
-                return QVariant(self.header[col])
+                return QtCore.QVariant(self.header[col])
             except IndexError:
-                return QVariant(None)
-        return QVariant(None)
+                return QtCore.QVariant(None)
+        return QtCore.QVariant(None)
 
-class CSVOptions(QDialog):
+class CSVOptions(QtGui.QDialog):
     def __init__(self, filename, default=None, parent=None):
         super(CSVOptions, self).__init__(parent)
         
         self.file_content = None
         
-        self.ui = csv_options_ui.Ui_FileOptions()
+        self.ui = csvOptionsUi.Ui_FileOptions()
         self.ui.setupUi(self)
         self.ui.query_column.setValue(1)
 
@@ -70,7 +70,9 @@ class CSVOptions(QDialog):
             self.ui.query_column.setValue(col)
             self.ui.file_has_headers.setChecked(head)
             self.ui.ignore_lines.setValue(skip)
-
+        else:
+            self.separator = ","
+            
         self.ui.query_column.valueChanged.connect(self.set_query_column)
         self.ui.ignore_lines.valueChanged.connect(self.set_new_skip)
         self.ui.separate_char.editTextChanged.connect(self.set_new_separator)
@@ -89,7 +91,7 @@ class CSVOptions(QDialog):
     def getOptions(path, default=None, parent=None):
         dialog = CSVOptions(path, default, parent)
         result = dialog.exec_()
-        if result == QDialog.Accepted:
+        if result == QtGui.QDialog.Accepted:
             return (str(dialog.ui.separate_char.currentText()),
                  dialog.ui.query_column.value(),
                  dialog.ui.file_has_headers.isChecked(),
@@ -127,7 +129,7 @@ class CSVOptions(QDialog):
     def split_file_content(self):
         self.file_table = []
         self.max_columns = 0
-        for x in csv.reader(self.file_content, delimiter=str(self.ui.separate_char.currentText())):
+        for x in csv.reader(self.file_content, delimiter=str(self.separator)):
             self.file_table.append(x)
             self.max_columns = max(self.max_columns, len(x))
         for i, x in enumerate(self.file_table):
@@ -140,12 +142,14 @@ class CSVOptions(QDialog):
         if not sep:
             return
         if sep == "{space}":
-            sep = " "
+            self.separator = " "
         elif sep == "{tab}":
-            sep = "\t"
-        if len(sep) > 1:
-            sep = sep[0]
+            self.separator = "\t"
+        elif len(sep) > 1:
+            self.separator = self.separator[0]
             self.ui.separate_char.setEditText(sep)
+        else:
+            self.separator = sep
         self.split_file_content()
         
         if self.ui.file_has_headers.isChecked():
@@ -180,7 +184,7 @@ class CSVOptions(QDialog):
         
     def keyPressEvent(self, e):
         
-        if e.key() == Qt.Key_Escape:
+        if e.key() == QtCore.Qt.Key_Escape:
             self.close()
             
 def main():
