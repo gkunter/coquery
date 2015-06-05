@@ -55,6 +55,9 @@ corpus-specific.
         self.transcript = False
         self.parse()
         
+        if LEX_POS not in self.lexicon.provides:
+            self.check_part_of_speech = False
+        
     def __eq__(self, S):
         return self.S == S
     
@@ -117,7 +120,11 @@ class COCAToken(QueryToken):
     transcript_open = "/"
     transcript_close = "/"
     NegationChar = "#"
-    check_part_of_speech = True
+    
+    def __init__(self, *args):
+        self.check_part_of_speech = True
+        super(COCAToken, self).__init__(*args)
+    
     def parse (self):
         self.word_specifiers = []
         self.class_specifiers = []
@@ -146,7 +153,7 @@ class COCAToken(QueryToken):
             self.class_specifiers = [x.strip() for x in class_specification.split("|") if x.strip()]
         
         if lemma_specification and not class_specification:
-            if self.check_part_of_speech:
+            if self.check_part_of_speech and LEX_POS in self.lexicon.provides:
                 # check if all elements pass as part-of-speech-tags:
                 if len(self.lemma_specifiers) == self.lexicon.check_pos_list(self.lemma_specifiers):
                     # if so, interpret elements as part-of-speech tags:
