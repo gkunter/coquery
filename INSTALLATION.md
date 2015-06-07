@@ -168,3 +168,9 @@ Instaling NLTK using pip (you still need to install the NLTK data packages):
 #!bash
 pip install ntlk 
 ```
+
+Note that NLTK may depend on other Python packages, such as the numpy package. If you receive an error during corpus compilation that seems to refer to 'numpy', try this:
+```
+#!bash
+pip install numpy
+```
