@@ -78,9 +78,11 @@ class QueryResult(object):
         """ returns a list containing all word_id values stored in the word 
         columns, i.e. columns named W1, ..., Wn. """
         if "TokenId" in self.data:
-            start = int(self.data["TokenId"]) + 1
-            end = start + number_of_columns - 1
-            return [self.data["W1"]] + [self.query.Corpus.get_word_id(x) for x in range(start,end)]
+            
+            # Don't look up the word_id for those words that are already
+            # in the query result:
+            start = int(self.data["TokenId"])
+            return [self.data.get("W{}".format(x - start + 1), self.query.Corpus.get_word_id(x)) for x in range(start, start + number_of_columns)]
         else:
             return [self.data["W1"]]
 
