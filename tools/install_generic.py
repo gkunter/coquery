@@ -8,6 +8,10 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
         self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS"]
+
+        self.check_arguments()
+        if not self.arguments.use_nltk:
+            self.lexicon_features.remove("LEX_POS")
         
         # add table descriptions for the tables used in this database.
         #
@@ -75,6 +79,8 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
         # A text value containing the orthographic representation of this
         # word-form.
         #
+        # Additionally, if NLTK is used to tag part-of-speech:
+        #
         # Pos
         # A text value containing the part-of-speech label of this 
         # word-form.
@@ -83,19 +89,21 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
         self.word_id = "WordId"
         self.word_lemma_id = "LemmaId"
         self.word_label = "Text"
-        self.word_pos_id = "Pos"
         
-        self.add_table_description(self.word_table, self.word_id,
-            {"CREATE": [
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_id),
+        create_columns = ["`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_id),
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_lemma_id),
-                "`{}` VARCHAR(12) NOT NULL".format(self.word_pos_id),
-                "`{}` VARCHAR(40) NOT NULL".format(self.word_label)],
-            "INDEX": [
-                ([self.word_lemma_id], 0, "HASH"),
-                ([self.word_pos_id], 0, "BTREE"),
-                ([self.word_label], 0, "BTREE")]})
+                "`{}` VARCHAR(40) NOT NULL".format(self.word_label)]
+        index_columns = [([self.word_lemma_id], 0, "HASH"),
+                ([self.word_label], 0, "BTREE")]
 
+        if self.arguments.use_nltk:
+            self.word_pos_id = "Pos"
+            create_columns.append("`{}` VARCHAR(12) NOT NULL".format(self.word_pos_id))
+            index_columns.append(([self.word_pos_id], 0, "BTREE"))
+
+        self.add_table_description(self.word_table, self.word_id,
+            {"CREATE": create_columns,
+            "INDEX": index_columns})
         # Add the lemma table. Each row in this table represents a lemma in
         # the lexicon. Each word-form from the lexicon table is linked to
         # exactly one lemma from this table, and more than one word-form
@@ -162,6 +170,8 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
     def get_description(self):
         return "This script creates the corpus '{}' by reading data from the files in {} to populate the MySQL database '{}' so that the database can be queried by Coquery.".format(self.name, self.arguments.path, self.arguments.db_name)
 
-if __name__ == "__main__":
+def main():
     GenericCorpusBuilder().build()
     
+if __name__ == "__main__":
+    main()

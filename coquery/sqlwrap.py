@@ -37,11 +37,14 @@ from errors import *
 import options
 
 try:
-    import MySQLdb as mysql
-    import MySQLdb.cursors as mysql_cursors
+    try:
+        import MySQLdb as mysql
+        import MySQLdb.cursors as mysql_cursors
+    except ImportError:
+        import pymysql as mysql
+        import pymysql.cursors as mysql_cursors
 except ImportError:
-    import pymysql as mysql
-    import pymysql.cursors as mysql_cursors
+    raise DependencyError(["MySQLdb", "pymysql"])
 
 ExecutedLastCommand = False
 

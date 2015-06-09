@@ -15,15 +15,32 @@ name = ""
 logger = None
 
 class DBConnection(object):
-    def __init__(self, db_name, local_infile=0):
-        self.Con = mysql.connect (host="localhost", user="mysql", passwd="mysql", db=db_name, local_infile=local_infile)
-        self.db_name = db_name
+    def __init__(self, db_user="mysql", db_host="localhost", db_port=3306, db_pass="mysql", local_infile=0):
+        self.Con = mysql.connect (host=db_host, user=db_user, passwd=db_pass, local_infile=local_infile)
         self.dry_run = False
 
         self.set_variable("autocommit", 0)
         self.set_variable("unique_checks", 0)
         self.set_variable("foreign_key_checks", 0)
         self.Con.commit()
+
+    def has_database(self, database_name):
+        cur = self.Con.cursor()
+        self.execute(cur, "SHOW DATABASES")
+        for x in cur:
+            if x[0] == database_name.split()[0]:
+                return database_name
+        return False
+
+    def create_database(self, database_name):
+        cur = self.Con.cursor()
+        self.execute(cur, "CREATE DATABASE {}".format(database_name.split()[0]))
+        return
+
+    def use_database(self, database_name):
+        cur = self.Con.cursor()
+        self.execute(cur, "USE {}".format(database_name.split()[0]))
+        self.db_name = database_name
 
     def execute(self, cursor, command, override=False):
         if verbose:

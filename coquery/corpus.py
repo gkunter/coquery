@@ -316,6 +316,8 @@ class SQLLexicon(BaseLexicon):
     entry_cache = {}
     
     def sql_string_is_part_of_speech(self, pos):
+        if LEX_POS not in self.provides:
+            return False
         current_token = tokens.COCAToken(pos, self)
         if "pos_table" in dir(self.resource):
             return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
@@ -414,7 +416,7 @@ class SQLLexicon(BaseLexicon):
         
         if sub_clauses:
             where_clauses.append("(%s)" % " OR ".join (sub_clauses))
-        if token.class_specifiers:
+        if token.class_specifiers and LEX_POS in self.provides:
             where_clauses.append(self.sql_string_get_posid_list_where(token))
         return " AND ".join(where_clauses)
             
@@ -702,8 +704,8 @@ class SQLCorpus(BaseCorpus):
                     self.resource.corpus_table,
                     self.resource.corpus_source_id))
             
-        if token.class_specifiers:
-            if self.resource.word_table not in table_list:
+        if token.class_specifiers and LEX_POS in self.lexicon.provides:
+            if self.resource.pos_table not in table_list:
                 where_list.append("{}.{} = {}.{}".format(
                     self.resource.corpus_table,
                     self.resource.corpus_word_id,

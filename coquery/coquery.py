@@ -28,15 +28,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import sys
-sys.path.append("/opt/coquery")
+from __future__ import unicode_literals
 
+import sys
+import os.path
 
 import logging
 import logging.handlers
 
 import options
 from session import *
+from gui_session import *
 from errors import *
 
 import cProfile
@@ -47,7 +49,7 @@ import __init__
 def set_logger():
     logger = logging.getLogger(__init__.NAME)
     logger.setLevel (logging.INFO)
-    log_file_name = "/home/kunter/coquery.log"
+    log_file_name = os.path.join(os.path.expanduser("~"), "coquery.log")
     file_handler = logging.handlers.RotatingFileHandler(log_file_name, maxBytes=1024*1024, backupCount=10)
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
     logger.addHandler(file_handler)
@@ -61,6 +63,20 @@ def main():
 
     try:
         options.process_options()
+        if options.cfg.gui:
+            from pyqt_compat import QtCore, QtGui
+            app = QtGui.QApplication(sys.argv)
+            Wizard = CoqueryWizard()
+            Wizard.getWizardArguments()
+        if not available_resources:
+            raise NoCorpusError
+
+        if options.cfg.corpus not in available_resources:
+            raise CorpusUnavailableError(options.cfg.corpus)
+            
+        if not options.cfg.corpus:
+            raise NoCorpusSpecifiedError
+
     except Exception as e:
         print_exception(e)
         sys.exit(1)

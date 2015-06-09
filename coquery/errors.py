@@ -59,6 +59,27 @@ class NoArgumentsError(NoTraceException):
 class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
 
+class ConfigurationError(GenericException):
+    error_message = "Configuration file incomplete or with errors."
+
+class NoCorpusError(NoTraceException):
+    error_message = "No corpus is available."
+
+class NoCorpusSpecifiedError(NoTraceException):
+    error_message = "No corpus name given to script."
+    
+class CorpusUnavailableError(NoTraceException):
+    error_message = "No corpus available with given name"
+
+class DependencyError(NoTraceException):
+    def __init__(self, module):
+        if type(module) == list:
+            self.error_message = "Missing one of the following Python modules"
+            self.par = "{} or {}".format(", ".join(module[:-1]), module[-1])
+        else:
+            self.error_message = "Missing the following Python module"
+            self.par = "{}".format(module)
+
 class QueryModeError(NoTraceException):
     error_message = "Query mode {mode} not supported by corpus {corpus}."
     def __init__(self, Corpus, Mode):

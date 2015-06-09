@@ -25,7 +25,6 @@ This module defines classes that represent tokens in a query string.
 
 from __future__ import unicode_literals
 
-import unittest
 import itertools
 import string
 import re
@@ -55,6 +54,9 @@ corpus-specific.
         self.negated = False
         self.transcript = False
         self.parse()
+        
+        if LEX_POS not in self.lexicon.provides:
+            self.check_part_of_speech = False
         
     def __eq__(self, S):
         return self.S == S
@@ -118,7 +120,11 @@ class COCAToken(QueryToken):
     transcript_open = "/"
     transcript_close = "/"
     NegationChar = "#"
-    check_part_of_speech = True
+    
+    def __init__(self, *args):
+        self.check_part_of_speech = True
+        super(COCAToken, self).__init__(*args)
+    
     def parse (self):
         self.word_specifiers = []
         self.class_specifiers = []
@@ -147,7 +153,7 @@ class COCAToken(QueryToken):
             self.class_specifiers = [x.strip() for x in class_specification.split("|") if x.strip()]
         
         if lemma_specification and not class_specification:
-            if self.check_part_of_speech:
+            if self.check_part_of_speech and LEX_POS in self.lexicon.provides:
                 # check if all elements pass as part-of-speech-tags:
                 if len(self.lemma_specifiers) == self.lexicon.check_pos_list(self.lemma_specifiers):
                     # if so, interpret elements as part-of-speech tags:
@@ -270,142 +276,3 @@ def preprocess_query(S):
     
     return [" ".join(list(itertools.chain.from_iterable(x))) for x in itertools.product(*token_lists)]
 
-class TestQueryToken(unittest.TestCase):
-    token_type = COCAToken
-    
-    def runTest(self):
-        super(TestQueryToken, self).runTest()
-    
-    def setUp(self):
-        import corpus
-        self.lexicon = corpus.TestLexicon(corpus.BaseResource())
-    
-    def test_word_only(self):
-        token = self.token_type("word", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, [])
-        self.assertEqual(token.class_specifiers, [])
-        self.assertEqual(token.word_specifiers, ["word"])
-
-    def test_several_words(self):
-        token = self.token_type("word1|word2", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, [])
-        self.assertEqual(token.class_specifiers, [])
-        self.assertEqual(token.word_specifiers, ["word1", "word2"])
-
-    def test_lemma_only(self):
-        token = self.token_type("[lemma]", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, ["lemma"])
-        self.assertEqual(token.transcript_specifiers, [])
-        self.assertEqual(token.class_specifiers, [])
-        self.assertEqual(token.word_specifiers, [])
-
-    def test_several_lemmas(self):
-        token = self.token_type("[lemma1|lemma2]", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, ["lemma1", "lemma2"])
-        self.assertEqual(token.transcript_specifiers, [])
-        self.assertEqual(token.class_specifiers, [])
-        self.assertEqual(token.word_specifiers, [])
-
-    def test_words_and_pos(self):
-        token = self.token_type("word1|word2.[N]", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, [])
-        self.assertEqual(token.class_specifiers, ["N"])
-        self.assertEqual(token.word_specifiers, ["word1", "word2"])
-        
-    def test_words_and_several_pos(self):
-        token = self.token_type("word1|word2.[N|V]", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, [])
-        self.assertEqual(token.class_specifiers, ["N", "V"])
-        self.assertEqual(token.word_specifiers, ["word1", "word2"])
-
-    def test_lemmas_and_pos(self):
-        token = self.token_type("[lemma1|lemma2].[N]", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, ["lemma1", "lemma2"])
-        self.assertEqual(token.transcript_specifiers, [])
-        self.assertEqual(token.class_specifiers, ["N"])
-        self.assertEqual(token.word_specifiers, [])
-        
-    def test_lemmas_and_several_pos(self):
-        token = self.token_type("[lemma1|lemma2].[N|V]", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, ["lemma1", "lemma2"])
-        self.assertEqual(token.transcript_specifiers, [])
-        self.assertEqual(token.class_specifiers, ["N", "V"])
-        self.assertEqual(token.word_specifiers, [])
-        
-    def test_only_pos(self):
-        token = self.token_type("[N|V]", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, [])
-        self.assertEqual(token.class_specifiers, ["N", "V"])
-        self.assertEqual(token.word_specifiers, [])        
-        
-    def test_transcripts(self):
-        token = self.token_type("/trans1|trans2/", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, ["trans1", "trans2"])
-        self.assertEqual(token.class_specifiers, [])
-        self.assertEqual(token.word_specifiers, [])
-
-    def test_transcripts_and_several_pos(self):
-        token = self.token_type("/trans1|trans2/.[N|V]", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, ["trans1", "trans2"])
-        self.assertEqual(token.class_specifiers, ["N", "V"])
-        self.assertEqual(token.word_specifiers, [])
-
-    def test_transcripts_multiple_slashes(self):
-        token = self.token_type("/trans1/|/trans2/", self.lexicon)
-        token.parse()
-        self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, ["trans1/", "/trans2"])
-        self.assertEqual(token.class_specifiers, [])
-        self.assertEqual(token.word_specifiers, [])
-
-if __name__ == '__main__':
-    import timeit
-    
-    #t1 = timeit.Timer("""
-        #import unittest
-        #from tokens import *
-        #import corpus
-        #lexicon = corpus.TestLexicon(corpus.BaseResource())
-        #test = COCARegExpToken("[lemma1|lemma2].[N|V]", lexicon)
-        #test.parse()
-        #test = COCARegExpToken("[N|V]", lexicon)
-        #test.parse()
-        #""")
-    #t2 = timeit.Timer("""
-        #import unittest
-        #import corpus
-        #from tokens import *
-        #lexicon = corpus.TestLexicon(corpus.BaseResource())
-        #test = COCAToken("[lemma1|lemma2].[N|V]", lexicon)
-        #test.parse()
-        #test = COCAToken("[N|V]", lexicon)
-        #test.parse()
-        #""")
-    
-    #print(t1.timeit(10000))
-    #print(t2.timeit(10000))
-
-    
-    
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestCOCAToken),
-        unittest.TestLoader().loadTestsFromTestCase(TestCOCARegExpToken)])
-    unittest.TextTestRunner().run(suite)

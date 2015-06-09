@@ -68,13 +68,6 @@ class Options(object):
         
         default_config_path = os.path.join(self.base_path, config_name)
         
-        self.corpora_dict = {}
-
-        for corpus in glob.glob(os.path.join(self.base_path, "corpora/*.py")):
-            corpus_name, ext = os.path.splitext(os.path.basename(corpus))
-            #module = imp.load_source(corpus_name, corpus)
-            self.corpora_dict [corpus_name.upper()] = corpus
-            
         self.parser = argparse.ArgumentParser(prog=prog_name, description=
 """This program provides an interface to linguistic corpora (currently only 
 COCA). A query can either be specified at the command line using the -q 
@@ -139,9 +132,9 @@ Examples of valid text filters:
 """, 
 formatter_class=argparse.RawDescriptionHelpFormatter)
         
-        self.parser.add_argument("--corpus", help="specify the corpus to use (default: COCA)", choices=self.corpora_dict.keys(), type=str)
+        self.parser.add_argument("--corpus", help="specify the corpus to use", choices=available_resources.keys(), type=str)
         self.parser.add_argument ("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS), default=QUERY_MODE_DISTINCT, type=str, nargs="?")
-        
+        self.parser.add_argument("--gui", help="Use a graphical user interface (requires Qt)", action="store_true")
         # General options:
         self.parser.add_argument("-o", "--outputfile", help="print results to OUTPUTFILE (default: print to console)", type=str, dest="output_path")
         group = self.parser.add_mutually_exclusive_group()
@@ -149,7 +142,6 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         group.add_argument("-q", "--query", help="use QUERY for search, ignoring any INPUTFILE", dest="query_list")
         self.parser.add_argument("-F", "--filter", help="use FILTER to query only a selection of texts", type=str, default="", dest="source_filter")
         self.parser.add_argument("--configuration", help="use CONF_FILE as the configuration file (default: use config file in the same location as program file, i.e. %s)" % default_config_path, default=default_config_path, dest="config_path")
-        self.parser.add_argument("--db-name", help="use DB_NAME as the SQL database", type=str, dest="db_name")
 
         # File options:
         self.parser.add_argument("-a", "--append", help="append output to OUTPUTFILE, if specified (default: overwrite)", action="store_true")
@@ -208,7 +200,6 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
                 raise UnknownArgumentError(unknown)
         except Exception as e:
             raise e
-
         
         try:
             self.args.input_separator = self.args.input_separator.decode('string_escape')
@@ -222,7 +213,6 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         vars(self.args) ["program_location"] = self.base_path
         vars(self.args) ["version"] = version
         vars(self.args) ["parameter_string"] = " ".join(sys.argv [1:])
-        vars(self.args) ["corpora"] = self.corpora_dict
 
         self.read_configuration()
 
@@ -238,7 +228,6 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
 
     def read_configuration(self):
         # defaults:
-        db_name = None
         db_user = "mysql"
         db_password = "mysql"
         db_port = 3306
@@ -275,19 +264,9 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
                 except configparser.NoOptionError:
                     pass
 
-            current_corpus = self.args.corpus.lower()
-            if current_corpus not in config_file.sections():
-                logger.warning("No [%s] section found in config file." % self.args.corpus)
-            else:
-                try:
-                    db_name = config_file.get(current_corpus, "db_name")
-                except configparser.NoOptionError:
-                    logger.warning("Option 'db_name' not found in section %s of config file. Using default." % current_corpus)
         else:
             logger.warning("Configuration file %s not found, using defaults." % self.args.config_path)
 
-        if db_name:
-            vars(self.args) ["db_name"] = db_name
         vars(self.args) ["db_user"] = db_user
         vars(self.args) ["db_password"] = db_password
         vars(self.args) ["db_port"] = db_port
