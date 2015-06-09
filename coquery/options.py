@@ -209,7 +209,13 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
             self.args.output_separator = self.args.output_separator.decode('string_escape')
         except AttributeError:
             self.args.output_separator = codecs.getdecoder("unicode_escape") (self.args.output_separator) [0]
-        self.args.show_text = self.args.source_columns != None
+        
+        if self.args.source_columns == None:
+            self.args.show_source = False
+            self.args.source_columns = []
+        else:
+            self.args.show_source = True
+        
         vars(self.args) ["program_location"] = self.base_path
         vars(self.args) ["version"] = version
         vars(self.args) ["parameter_string"] = " ".join(sys.argv [1:])
@@ -224,7 +230,6 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
                     vars(self.args) ["query_list"] = [vars(self.args) ["query_list"]]
 
         logger.info("Command line parameters: " + self.args.parameter_string)
-        
 
     def read_configuration(self):
         # defaults:
