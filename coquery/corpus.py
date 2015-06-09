@@ -317,12 +317,20 @@ class SQLLexicon(BaseLexicon):
     
     def sql_string_is_part_of_speech(self, pos):
         current_token = tokens.COCAToken(pos, self)
-        return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-            self.resource.pos_id, 
-            self.resource.pos_table, 
-            self.resource.pos_label,
-            self.resource.get_operator(current_token),
-            pos)
+        if "pos_table" in dir(self.resource):
+            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+                self.resource.pos_id, 
+                self.resource.pos_table, 
+                self.resource.pos_label,
+                self.resource.get_operator(current_token),
+                pos)
+        else:
+            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+                self.resource.word_pos_id,
+                self.resource.word_table,
+                self.resource.word_pos_id,
+                self.resource.get_operator(current_token),
+                pos)
 
     def sql_string_get_other_wordforms(self, match):
         return 'SELECT {word_id} FROM {word_table} WHERE {word_lemma_id} IN (SELECT {word_lemma_id} FROM {word_table} WHERE {word_label} {operator} "{match}")'.format(
@@ -338,8 +346,12 @@ class SQLLexicon(BaseLexicon):
         where_clauses = []
         for current_pos in token.class_specifiers:
             current_token = tokens.COCAToken(current_pos, self)
+            if "pos_label" in dir(self.resource):
+                pos_label = self.resource.pos_label
+            else:
+                pos_label = self.resource.word_pos_id
             S = '{} {} "{}"'.format(
-                self.resource.pos_label, 
+                pos_label,
                 comparing_operator, 
                 current_token)
             where_clauses.append (S)
@@ -698,10 +710,10 @@ class SQLCorpus(BaseCorpus):
                     self.resource.word_table,
                     self.resource.word_id))
                 table_list.append(self.resource.word_table)
-            if self.resource.pos_table is self.resource.word_table:
+            if "pos_table" not in dir(self.resource):
                 column_list.append("{}.{}".format(
                     self.resource.word_table,
-                    self.resource.pos_id))
+                    self.resource.word_pos_id))
             else:
                 column_list.append("{}.{}".format(
                     self.resource.pos_table,
