@@ -101,7 +101,6 @@ class CoqueryWizard(QtGui.QWizard):
 
     def setup_wizard(self):
         # add available resources to corpus dropdown box:
-        print(available_resources)
         corpora = [x.upper() for x in sorted(available_resources.keys())]
         self.ui.combo_corpus.addItems(corpora)
         # add logo:
