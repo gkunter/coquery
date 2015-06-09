@@ -182,19 +182,19 @@ class CorpusQuery(object):
         def next(self):
             if not self.data:
                 raise StopIteration
-            return QueryResult(self.query, next(self.data))
-            #if not self.data:
-                #raise StopIteration
-            #try:
-                #next_thing = next(self.data)
-            #except (AttributeError, TypeError):
-                #try:
-                    #self.count += 1
-                    #return QueryResult(self.query, self.data[self.count - 1])
-                #except IndexError:
-                    #raise StopIteration
-            #else:
-                #return QueryResult(self.query, next_thing)
+            #return QueryResult(self.query, next(self.data))
+            if not self.data:
+                raise StopIteration
+            try:
+                next_thing = next(self.data)
+            except (AttributeError, TypeError):
+                try:
+                    self.count += 1
+                    return QueryResult(self.query, self.data[self.count - 1])
+                except IndexError:
+                    raise StopIteration
+            else:
+                return QueryResult(self.query, next_thing)
 
         def __next__(self):
             return self.next()
