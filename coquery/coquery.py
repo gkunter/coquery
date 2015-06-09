@@ -38,7 +38,6 @@ import logging.handlers
 
 import options
 from session import *
-from gui_session import *
 from errors import *
 
 import cProfile
@@ -64,6 +63,7 @@ def main():
     try:
         options.process_options()
         if options.cfg.gui:
+            from gui_session import CoqueryWizard
             from pyqt_compat import QtCore, QtGui
             app = QtGui.QApplication(sys.argv)
             Wizard = CoqueryWizard()
