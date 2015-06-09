@@ -327,8 +327,8 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
                 "`{}` VARCHAR(21) NOT NULL".format(self.source_info_year),
                 "`{}` SMALLINT(4) UNSIGNED NOT NULL".format(self.source_file_id)],
             "INDEX": [
-                ([self.source_genre], 0, "HASH"),
-                ([self.source_year], 0, "BTREE")]})
+                ([self.source_info_genre], 0, "HASH"),
+                ([self.source_info_year], 0, "BTREE")]})
     
         # Specify that the corpus-specific code is contained in the dummy
         # class 'corpus_code' defined above:
@@ -475,7 +475,7 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
              self.source_type: source_type, 
              self.source_info_class: source_class, 
              self.source_info_year: source_date, 
-             self.source_file_id: self._id_count[self.file_table]])
+             self.source_file_id: self._id_count[self.file_table]})
         
         # Find all speakers, and if there are some, make sure that they are
         # stored in the speaker table:

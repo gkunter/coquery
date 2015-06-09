@@ -82,7 +82,7 @@ class Session(object):
             self.requested_fields.append(LEX_POS)
         if options.cfg.show_phon:
             self.requested_fields.append(LEX_PHON)
-        if options.cfg.show_text:
+        if options.cfg.show_source:
             self.requested_fields.append(CORP_SOURCE)
         if options.cfg.show_filename:
             self.requested_fields.append(CORP_FILENAME)
@@ -138,7 +138,7 @@ class Session(object):
         if options.cfg.show_pos and self.Corpus.provides_feature(LEX_POS):
             self.header += ["PoS%s" % (x + 1) for x in range(self.max_number_of_tokens)]
         
-        if options.cfg.show_text and self.Corpus.provides_feature(CORP_SOURCE):
+        if options.cfg.show_source and self.Corpus.provides_feature(CORP_SOURCE):
             self.header += self.Corpus.get_source_info_headers()
         if options.cfg.show_speaker and self.Corpus.provides_feature(CORP_SPEAKER):
             self.header += self.Corpus.get_speaker_info_headers()
