@@ -32,6 +32,7 @@ from __future__ import unicode_literals
 
 import sys
 import os.path
+import tempfile
 
 import logging
 import logging.handlers
@@ -48,8 +49,7 @@ import __init__
 def set_logger():
     logger = logging.getLogger(__init__.NAME)
     logger.setLevel (logging.INFO)
-    log_file_name = os.path.join(os.path.expanduser("~"), "coquery.log")
-    file_handler = logging.handlers.RotatingFileHandler(log_file_name, maxBytes=1024*1024, backupCount=10)
+    file_handler = logging.handlers.RotatingFileHandler(os.path.join(os.path.expanduser("~"), "coquery.log"), maxBytes=1024*1024, backupCount=10)
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
     logger.addHandler(file_handler)
     logging.captureWarnings(True)
@@ -62,52 +62,104 @@ def main():
 
     try:
         options.process_options()
-        if options.cfg.gui:
-            from gui_session import CoqueryWizard
-            from pyqt_compat import QtCore, QtGui
-            app = QtGui.QApplication(sys.argv)
-            Wizard = CoqueryWizard()
-            Wizard.getWizardArguments()
-        if not available_resources:
-            raise NoCorpusError
+        options.cfg.log_file_path = os.path.join(os.path.expanduser("~"), "coquery.log")
 
-        if options.cfg.corpus not in available_resources:
-            raise CorpusUnavailableError(options.cfg.corpus)
+        # Check if a valid corpus was specified, but only if no GUI is
+        # requested (the GUI wizard will handle corpus selection later):
+        if not options.cfg.gui:
+            if not available_resources:
+                raise NoCorpusError
+
+            if not options.cfg.corpus:
+                raise NoCorpusSpecifiedError
+
+            if options.cfg.corpus not in available_resources:
+                raise CorpusUnavailableError(options.cfg.corpus)
             
-        if not options.cfg.corpus:
-            raise NoCorpusSpecifiedError
-
     except Exception as e:
         print_exception(e)
         sys.exit(1)
-    
+
+    # In verbose mode, debugging messages will be printed as well. Also, all
+    # logging messages will be printed to the console, and not only to the 
+    # log file.
     if options.cfg.verbose:
         logger.setLevel(logging.DEBUG)
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
         logger.addHandler(stream_handler)
-
-    try:
-        if options.cfg.MODE == QUERY_MODE_STATISTICS:
-            Session = StatisticsSession()
-        else:
-            if options.cfg.input_path:
-                Session = SessionInputFile()
-            elif options.cfg.query_list:
-                Session = SessionCommandLine()
+    
+    if options.cfg.gui:
+        sys.path.append(os.path.join(sys.path[0], "gui"))
+        from pyqt_compat import QtCore, QtGui
+        from wizard import CoqueryWizard
+        from QtProgress import ProgressIndicator
+        from results import ResultsViewer
+        options.cfg.app = QtGui.QApplication(sys.argv)
+        Wizard = CoqueryWizard()
+        Wizard.setWizardDefaults()
+        options.cfg.icon = QtGui.QIcon()
+        options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_small.png".format(sys.path[0])))
+        Wizard.setWindowIcon(options.cfg.icon)
+        
+    finish = False
+    while not finish:
+        # catch all exceptions, but only if a gui is used:
+        try:
+            if options.cfg.gui:
+                # Get arguments from GUI wizard:
+                if not Wizard.getWizardArguments():
+                    finish = True
+                    break
+                # Get a temporary file name:
+                with tempfile.NamedTemporaryFile() as temp_file:
+                    options.cfg.output_path = temp_file.name
+            
+            # Choose the appropriate Session type instance:
+            if options.cfg.MODE == QUERY_MODE_STATISTICS:
+                Session = StatisticsSession()
             else:
-                Session = SessionStdIn()
+                if options.cfg.input_path:
+                    Session = SessionInputFile()
+                elif options.cfg.query_list:
+                    Session = SessionCommandLine()
+                else:
+                    Session = SessionStdIn()
+            
+            # Catch keyboard interruptions:
+            try:
+                # Check if profiling is requested. If to wrap the profiler 
+                # around the query execution:
+                if options.cfg.profile:
+                    cProfile.runctx("Session.run_queries()", globals(), locals())
 
-        if options.cfg.profile:
-            cProfile.runctx("Session.run_queries()", globals(), locals())
-        else:
-            Session.run_queries()
-    except KeyboardInterrupt:
-        logger.error("Execution interrupted, exiting.")
-    except Exception as e:
-        print_exception(e)
+                # Check if GUI is requested. If so, wrap query execution into a
+                # separate thread with graphical progress indicator:
+                elif options.cfg.gui:
+                    ProgressIndicator.RunThread(Session.run_queries, "Querying...")
+                    Session.output_file_object.close()
+                    # Display results (which are stored in the temporary file) in a
+                    # dialog, with the option to save it to a file:
+                    finish = ResultsViewer(Session).exec_()
+                    Wizard.restart()
+                    Wizard.next()
+
+                # Otherwise, run queries normally:
+                else:
+                    Session.run_queries()
+                    finish = True
+            except KeyboardInterrupt:
+                logger.error("Execution interrupted, exiting.")
+                if options.cfg.gui:
+                    QtGui.QMessageBox.critical(None, "Coquery – Error", "Execution interrupted by the user.")
+                else:
+                    finish = True
+        except ImportError:
+            pass
+
     logger.info("--- Done (after %.3f seconds) ---" % (time.time() - start_time))
 
 if __name__ == "__main__":
     main()
+
     
