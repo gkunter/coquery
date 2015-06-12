@@ -117,59 +117,71 @@ class QueryResult(object):
         if CORP_TIMING in output_fields:
             count += len(self.query.Corpus.get_time_info_header())
         if CORP_CONTEXT in output_fields:
-            count += len(self.query.Corpus.get_context_header())
+            count += len(self.query.Corpus.get_context_header(max_number_of_tokens))
         return count
     
-    def get_row(self, number_of_token_columns, max_number_of_tokens):
+    def get_row(self, number_of_token_columns, max_number_of_tokens, row_length=None):
         output_fields = self.query.Session.output_fields
-        L = []
+        output_row = ["<NA>"] * (row_length)
         entry_list = self.get_lexicon_entries(number_of_token_columns)
         if not self.data or not entry_list:
-            return tuple(["<NA>"] * self.get_expected_length(max_number_of_tokens))
-        Words = []
-        Lemmas = []
-        POSs = []
-        Phon = []
-        for current_entry in entry_list:
-            if options.cfg.case_sensitive:
-                Words.append(current_entry.orth)
-            else:
-                Words.append(current_entry.orth.upper())
-            if LEX_LEMMA in output_fields:
-                Lemmas.append(current_entry.lemma)
-            if LEX_POS in output_fields:
-                POSs.append(current_entry.pos)
-            if LEX_PHON in output_fields:
-                Phon.append(current_entry.phon)
+            return tuple(output_row)
+        index = 0
+
         if options.cfg.show_id:
-            L += [self.data["TokenId"]]
+            output_row[index] = [self.data["TokenId"]]
+            index += 1
         if LEX_ORTH in output_fields:
-            L += expand_list(Words, max_number_of_tokens)
+            if options.cfg.case_sensitive:
+                words = [x.orth for x in entry_list]
+            else:
+                words = [x.orth.upper() for x in entry_list]
+            output_row[index:(index+number_of_token_columns)] = words
+            index += max_number_of_tokens
+
         if LEX_PHON in output_fields:
-            L += expand_list(Phon, max_number_of_tokens)
+            output_row[index:(index+number_of_token_columns)] = [x.phon for x in entry_list]
+            index += max_number_of_tokens
+
         if LEX_LEMMA in output_fields:
-            L += expand_list(Lemmas, max_number_of_tokens)
+            output_row[index:(index+number_of_token_columns)] = [x.lemma for x in entry_list]
+            index += max_number_of_tokens
+
         if LEX_POS in output_fields:
-            L += expand_list(POSs, max_number_of_tokens)
+            output_row[index:(index+number_of_token_columns)] = [x.pos for x in entry_list]
+            index += max_number_of_tokens
+
         if CORP_SOURCE in output_fields:
-            L += self.query.Corpus.get_source_info(self.data["SourceId"])
+            source_info = self.query.Corpus.get_source_info(self.data["SourceId"])
+            output_row[index:(index+len(source_info))] = source_info
+            index += len(source_info)
+            
         if CORP_SPEAKER in output_fields:
-            L += self.query.Corpus.get_speaker_info(self.data["SpeakerId"])
+            speaker_info = self.query.Corpus.get_speaker_info(self.data["SpeakerId"])
+            output_row[index:(index+len(speaker_info))] = speaker_info
+            index += len(speaker_info)
+
         if CORP_FILENAME in output_fields:
-            L += self.query.Corpus.get_file_info(self.data["SourceId"])
+            file_info = self.query.Corpus.get_file_info(self.data["SourceId"])
+            output_row[index:(index+len(file_info))] = file_info
+            index += len(file_info)
+
         if CORP_TIMING in output_fields:
-            L += self.query.Corpus.get_time_info(self.data["TokenId"])
+            time_info = self.query.Corpus.get_time_info(self.data["TokenId"])
+            output_row[index:(index+len(time_info))] = time_info
+            index += len(time_info)
+
         if CORP_CONTEXT in output_fields:
             if options.cfg.context_sentence:
                 context = self.query.Corpus.get_context_sentence(self.data["SourceId"]) 
             else:
                 context_left, context_right = self.query.Corpus.get_context(self.data["TokenId"], self.data["SourceId"], self.query.number_of_tokens, True)
-                context = context_left + Words + context_right
+                context = context_left + words + context_right
             if options.cfg.context_columns:
-                L += context
+                output_row[index:] = context
             else:
-                L += [collapse_context(context)]
-        return tuple(L)
+                output_row[index] = collapse_context(context)
+        return tuple(output_row)
 
 class CorpusQuery(object):
     class ResultList(list):
@@ -197,9 +209,7 @@ class CorpusQuery(object):
                     return QueryResult(self.query, self.data[self.count - 1])
                 except IndexError:
                     raise StopIteration
-            except Exception as e:
-                raise e
-                return QueryResult(self.query, next_thing)
+            return QueryResult(self.query, next_thing)
 
         def __next__(self):
             return self.next()
@@ -264,6 +274,7 @@ class CorpusQuery(object):
 
 class TokenQuery(CorpusQuery):
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
+        result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
         for current_result in self.get_result_list():
             if self.InputLine:
                 output_list = copy.copy(self.InputLine)
@@ -276,13 +287,15 @@ class TokenQuery(CorpusQuery):
                     output_list.append(options.cfg.parameter_string)
                 if options.cfg.show_filter:
                     output_list.append(self.source_filter)
-                output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns)
+                output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)
                 
                 output_file.writerow(output_list)
 
 class DistinctQuery(CorpusQuery):
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         output_cache = []
+        result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
+
         for current_result in self.get_result_list():
             if self.InputLine:
                 output_list = copy.copy(self.InputLine)
@@ -295,7 +308,7 @@ class DistinctQuery(CorpusQuery):
                     output_list.append(options.cfg.parameter_string)
                 if options.cfg.show_filter:
                     output_list.append(self.source_filter)
-                output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns)
+                output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)
                 if output_list not in output_cache:
                     output_file.writerow(output_list)
                     output_cache.append(output_list)
@@ -305,7 +318,7 @@ class StatisticsQuery(CorpusQuery):
         super(StatisticsQuery, self).__init__("", session, None, None)
         self.Results = self.Session.Corpus.get_statistics()
         
-    def write_results(self, output_file, number_of_token_columns, max_numbers_of_token_columns):
+    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         output_file.writerow(["Variable", "Value"])
         
         for x in sorted(self.Results):
@@ -325,14 +338,15 @@ class FrequencyQuery(CorpusQuery):
         else:
             # Collapse all identical lines in the result list:
             Lines = collections.Counter()
+            result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
             for current_result in self.Results:
                 # current_result can be None if the query token was not in the
                 # lexicon
                 if current_result:
-                    Lines[current_result.get_row(number_of_token_columns, max_number_of_token_columns)] += 1
+                    Lines[current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)] += 1
             if not Lines:
                 empty_result = QueryResult(self, {}) 
-                Lines[empty_result.get_row(number_of_token_columns, max_number_of_token_columns)] = 0
+                Lines[empty_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)] = 0
             self.Session._results[self.query_string] = Lines
         
         # Output the collapsed lines:
