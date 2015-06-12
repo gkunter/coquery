@@ -30,9 +30,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import sys
-import csv
+import csv, cStringIO, codecs
 import copy
-import time
+import time, datetime
 import fileinput
 
 import __init__
@@ -46,6 +46,66 @@ import tokens
 
 import logging
 
+
+# from https://docs.python.org/2.7/library/csv.html#csv-examples
+class UTF8Recoder:
+    """
+    Iterator that reads an encoded stream and reencodes the input to UTF-8
+    """
+    def __init__(self, f, encoding):
+        self.reader = codecs.getreader(encoding)(f)
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        return self.reader.next().encode("utf-8")
+
+class UnicodeReader:
+    """
+    A CSV reader which will iterate over lines in the CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, encoding="utf-8", **kwds):
+        f = UTF8Recoder(f, encoding)
+        self.reader = csv.reader(f, dialect=dialect, **kwds)
+
+    def next(self):
+        row = self.reader.next()
+        return [unicode(s, "utf-8") for s in row]
+
+    def __iter__(self):
+        return self
+
+class UnicodeWriter:
+    """
+    A CSV writer which will write rows to CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, encoding="utf-8", **kwds):
+        # Redirect output to a queue
+        self.queue = cStringIO.StringIO()
+        self.writer = csv.writer(self.queue, **kwds)
+        self.stream = f
+        self.encoder = codecs.getincrementalencoder(encoding)()
+
+    def writerow(self, row):
+        self.writer.writerow([s.encode("utf-8") for s in row])
+        # Fetch UTF-8 output from the queue ...
+        data = self.queue.getvalue()
+        data = data.decode("utf-8")
+        # ... and reencode it into the target encoding
+        data = self.encoder.encode(data)
+        # write to the target stream
+        self.stream.write(data)
+        # empty queue
+        self.queue.truncate(0)
+
+    def writerows(self, rows):
+        for row in rows:
+            self.writerow(row)
 
 class Session(object):
     def __init__(self):
@@ -159,22 +219,26 @@ class Session(object):
         if self.output_file:
             return
         if not options.cfg.output_path:
-            self.output_file = csv.writer(sys.stdout, delimiter=options.cfg.output_separator)
+            self.output_file = UnicodeWriter(sys.stdout, delimiter=options.cfg.output_separator)
         else:
             if options.cfg.append:
                 FileMode = "at"
             else:
                 FileMode = "wt"
-            self.output_file = csv.writer(open(options.cfg.output_path, FileMode), delimiter=options.cfg.output_separator)
+            self.output_file_object = open(options.cfg.output_path, FileMode)
+            self.output_file = UnicodeWriter(self.output_file_object, delimiter=options.cfg.output_separator)
         if not options.cfg.append and self.show_header:
             self.output_file.writerow (self.header)
     
     def run_queries(self):
+        
         self.expand_header()
         self._queries = {}
         self._results = {}
+
+        self.start_time = datetime.datetime.now()
+        self.end_time = None
         for current_query in self.query_list:
-            
             if len(current_query.query_list) > 1:
                 start_time = time.time()
                 any_result = False
@@ -204,7 +268,8 @@ class Session(object):
                 start_time = time.time()
                 if current_query.tokens:
                     current_query.set_result_list(self.Corpus.yield_query_results(current_query))
-                logger.info("Query executed ('%s', %.3f seconds)" % (current_query.query_string, time.time() - start_time))
+                logger.info("Query executed ('{}', {} seconds)".format(
+                    current_query.query_string, time.time() - start_time))
 
                 if not options.cfg.dry_run:
                     if not self.output_file:
@@ -214,7 +279,9 @@ class Session(object):
                         self.output_file, 
                         current_query.number_of_tokens,
                         self.max_number_of_tokens)
+                    
                     logger.info("Results written (%.3f seconds)" % (time.time() - start_time))
+        self.end_time = datetime.datetime.now()
 
 class StatisticsSession(Session):
     def __init__(self):
@@ -253,7 +320,7 @@ class SessionInputFile(Session):
             
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
-            for current_line in csv.reader(InputFile, delimiter=options.cfg.input_separator):
+            for current_line in UnicodeReader(InputFile, delimiter=options.cfg.input_separator):
                 if current_line:
                     if options.cfg.query_column_number > len(current_line):
                         raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)

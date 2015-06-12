@@ -194,12 +194,9 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         self.parser.add_argument("-@", "--use-pos-diacritics", help="use undocumented characters '@' and '%%' in queries using part-of-speech tags (default: be COCA-compatible and ignore these characters in part-of-speech tags)", action="store_true", dest="ignore_pos_chars")
  
  
-        try:
-            self.args, unknown = self.parser.parse_known_args()
-            if unknown:
-                raise UnknownArgumentError(unknown)
-        except Exception as e:
-            raise e
+        self.args, unknown = self.parser.parse_known_args()
+        if unknown:
+            raise UnknownArgumentError(unknown)
         
         try:
             self.args.input_separator = self.args.input_separator.decode('string_escape')
@@ -218,19 +215,19 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         
         vars(self.args) ["program_location"] = self.base_path
         vars(self.args) ["version"] = version
-        vars(self.args) ["parameter_string"] = " ".join(sys.argv [1:])
+        vars(self.args) ["parameter_string"] = " ".join([x.decode("utf8") for x in
+ sys.argv [1:]])
 
         self.read_configuration()
 
         # make sure that a command query consisting of one string is still
         # stored as a list:
         if "query_list" in vars(self.args):
-            if type(vars(self.args) ["query_list"]) is not list:
-                if vars(self.args)["query_list"]:
-                    vars(self.args) ["query_list"] = [vars(self.args) ["query_list"]]
-
+            if type(self.args.query_list) is not list:
+                self.args.query_list = [self.args.query_list]
+            self.args.query_list = [x.decode("utf8") for x in self.args.query_list]
         logger.info("Command line parameters: " + self.args.parameter_string)
-
+        
     def read_configuration(self):
         # defaults:
         db_user = "mysql"
