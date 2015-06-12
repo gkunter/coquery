@@ -102,14 +102,13 @@ def main():
         options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_small.png".format(sys.path[0])))
         Wizard.setWindowIcon(options.cfg.icon)
         
-    finish = False
-    while not finish:
+
+    while True:
         # catch all exceptions, but only if a gui is used:
         try:
             if options.cfg.gui:
                 # Get arguments from GUI wizard:
                 if not Wizard.getWizardArguments():
-                    finish = True
                     break
                 # Get a temporary file name:
                 with tempfile.NamedTemporaryFile() as temp_file:
@@ -132,12 +131,16 @@ def main():
                 # around the query execution:
                 if options.cfg.profile:
                     cProfile.runctx("Session.run_queries()", globals(), locals())
+                    break
 
                 # Check if GUI is requested. If so, wrap query execution into a
                 # separate thread with graphical progress indicator:
                 elif options.cfg.gui:
                     ProgressIndicator.RunThread(Session.run_queries, "Querying...")
-                    Session.output_file_object.close()
+                    try:
+                        Session.output_file_object.close()
+                    except AttributeError:
+                        pass
                     # Display results (which are stored in the temporary file) in a
                     # dialog, with the option to save it to a file:
                     finish = ResultsViewer(Session).exec_()
@@ -147,13 +150,13 @@ def main():
                 # Otherwise, run queries normally:
                 else:
                     Session.run_queries()
-                    finish = True
+                    break
             except KeyboardInterrupt:
                 logger.error("Execution interrupted, exiting.")
                 if options.cfg.gui:
                     QtGui.QMessageBox.critical(None, "Coquery – Error", "Execution interrupted by the user.")
                 else:
-                    finish = True
+                    break
         except ImportError:
             pass
 
