@@ -604,7 +604,7 @@ class SQLCorpus(BaseCorpus):
         self.query_results = None
 
     def sql_string_get_word_id_of_token(self, token_id):
-        return "SELECT {} FROM {} WHERE {} = {}".format(
+        return "SELECT {} FROM {} WHERE {} = {} LIMIT 1".format(
             self.resource.corpus_word_id,
             self.resource.corpus_table,
             self.resource.corpus_token_id,

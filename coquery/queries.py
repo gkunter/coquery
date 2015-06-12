@@ -77,8 +77,7 @@ class QueryResult(object):
     def get_wordid_list(self, number_of_columns):
         """ returns a list containing all word_id values stored in the word 
         columns, i.e. columns named W1, ..., Wn. """
-        if "TokenId" in self.data:
-            
+        if number_of_columns > 1:
             # Don't look up the word_id for those words that are already
             # in the query result:
             start = int(self.data["TokenId"])
@@ -91,7 +90,10 @@ class QueryResult(object):
         the current row matching the query."""
         if not self.data:
             return []
-        return [self.query.Corpus.lexicon.get_entry(x, self.query.Session.output_fields) for x in self.get_wordid_list(number_of_columns)]
+        if number_of_columns > 1:
+            return [self.query.Corpus.lexicon.get_entry(x, self.query.Session.output_fields) for x in self.get_wordid_list(number_of_columns)]
+        else:
+            return [self.query.Corpus.lexicon.get_entry(self.data["W1"], self.query.Session.output_fields)]
      
     def get_expected_length(self, max_number_of_tokens):
         output_fields = self.query.Session.output_fields
@@ -123,7 +125,7 @@ class QueryResult(object):
         L = []
         entry_list = self.get_lexicon_entries(number_of_token_columns)
         if not self.data or not entry_list:
-            return ["<NA>"] * self.get_expected_length(max_number_of_tokens)
+            return tuple(["<NA>"] * self.get_expected_length(max_number_of_tokens))
         Words = []
         Lemmas = []
         POSs = []
@@ -167,7 +169,7 @@ class QueryResult(object):
                 L += context
             else:
                 L += [collapse_context(context)]
-        return [str(x) for x in L]
+        return tuple(L)
 
 class CorpusQuery(object):
     class ResultList(list):
@@ -195,7 +197,8 @@ class CorpusQuery(object):
                     return QueryResult(self.query, self.data[self.count - 1])
                 except IndexError:
                     raise StopIteration
-            else:
+            except Exception as e:
+                raise e
                 return QueryResult(self.query, next_thing)
 
         def __next__(self):
@@ -251,7 +254,6 @@ class CorpusQuery(object):
 
     def set_result_list(self, data):
         self.Results = self.ResultList(self, data)
-        return
 
     def get_result_list(self):
         return self.Results
@@ -315,26 +317,22 @@ class FrequencyQuery(CorpusQuery):
         self.Session.output_fields.append(LEX_FREQ)
 
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
-        results = self.get_result_list()
         # Check if the same query string has been queried in this session.
         # If so, use the cached results:
+        
         if self.query_string in self.Session._results:
             Lines = self.Session._results[self.query_string]
         else:
             # Collapse all identical lines in the result list:
             Lines = collections.Counter()
-            for current_result in results:
+            for current_result in self.Results:
                 # current_result can be None if the query token was not in the
                 # lexicon
                 if current_result:
-                    output_list = current_result.get_row(number_of_token_columns, max_number_of_token_columns)
-                    LineKey = "<|>".join(output_list)
-                    Lines[LineKey] += 1
+                    Lines[current_result.get_row(number_of_token_columns, max_number_of_token_columns)] += 1
             if not Lines:
                 empty_result = QueryResult(self, {}) 
-                output_list = empty_result.get_row(number_of_token_columns, max_number_of_token_columns)
-                LineKey = "<|>".join(output_list)
-                Lines[LineKey] = 0
+                Lines[empty_result.get_row(number_of_token_columns, max_number_of_token_columns)] = 0
             self.Session._results[self.query_string] = Lines
         
         # Output the collapsed lines:
@@ -350,17 +348,12 @@ class FrequencyQuery(CorpusQuery):
             if options.cfg.show_filter:
                 output_list.append(self.source_filter)
             if current_key:
-                output_list += current_key.split("<|>")
-            try:
-                output_list.append(Lines[current_key])
-            except TypeError as e:
-                print(self.query_string)
-                print(current_key)
-                print(Lines)
-                raise e
+                output_list.extend(list(current_key))
+            output_list.append(Lines[current_key])
             if self.ErrorInQuery:
                 output_list[-1] = -1
-            output_file.writerow(output_list)
+
+            output_file.writerow(["{}".format(x) for x in output_list])
             
 
 logger = logging.getLogger(__init__.NAME)
