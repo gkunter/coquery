@@ -3,7 +3,12 @@ from __future__ import unicode_literals
 from session import *
 from defines import *
 from pyqt_compat import QtCore, QtGui
-import wizardUi
+try:
+    print("x")
+    import wizardUi
+except:
+    asdasdasd
+print(dir(wizardUi))
 import csvOptions
 import QtProgress
 
@@ -30,7 +35,7 @@ class CoqueryWizard(QtGui.QWizard):
     def validateCurrentPage(self):
         page = self.currentPage()
         # validate corpus selection and query mode:
-        if self.currentId() == 1:
+        if self.currentId() == 0:
             combo = page.findChild(QtGui.QComboBox, "combo_corpus")
             if options.cfg:
                 Resource, Corpus, Lexicon = available_resources[str(combo.currentText()).lower()]
@@ -176,6 +181,7 @@ class CoqueryWizard(QtGui.QWizard):
         
         self.file_content = None
         
+        print(dir(wizardUi))
         self.ui = wizardUi.Ui_Wizard()
         self.ui.setupUi(self)
 
