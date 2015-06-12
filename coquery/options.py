@@ -222,7 +222,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
 
         # make sure that a command query consisting of one string is still
         # stored as a list:
-        if "query_list" in vars(self.args):
+        if self.args.query_list:
             if type(self.args.query_list) is not list:
                 self.args.query_list = [self.args.query_list]
             self.args.query_list = [x.decode("utf8") for x in self.args.query_list]

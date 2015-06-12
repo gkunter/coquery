@@ -676,15 +676,12 @@ class SQLCorpus(BaseCorpus):
         if genre_clauses:
             filters.append(" OR ".join(genre_clauses))
         if selected_years:
-            try:
-                filters.append(" OR ".join(
-                    ["{}.{} LIKE '%{}%'".format(
-                        self.resource.source_table_alias,
-                        self.resource.source_info_year, 
-                        x)
-                        for x in selected_years]))
-            except Exception as e:
-                raise e
+            filters.append(" OR ".join(
+                ["{}.{} LIKE '%{}%'".format(
+                    self.resource.source_table_alias,
+                    self.resource.source_info_year, 
+                    x)
+                    for x in selected_years]))
         
         filter_string = " AND ".join(["({})".format(x) for x in filters])
         if filter_string:
