@@ -33,7 +33,6 @@ import sys
 import traceback
 import os
 import logging
-
 import __init__
 
 class GenericException(Exception):
@@ -146,23 +145,25 @@ class SQLProgrammingError(GenericException):
 class SQLNoConnectorError(GenericException):
     error_message = "Could not load a MySQL connector module for your Python configuration.\nPlease install such a module on your system.\nCurrently supported are: MySQLdb, pymysql."
 
+def get_error_repr(exc_info):
+    exc_type, exc_obj, exc_tb = exc_info
+    Trace = traceback.extract_tb(exc_tb)
+    trace_string = ""
+    Indent = ""
+    for FileName, LineNo, FunctionName, Text in Trace:
+        ModuleName = os.path.split(FileName) [1]
+        trace_string += "%s %s, line %s: %s\n" % (Indent, ModuleName, LineNo, FunctionName)
+        Indent += "  "
+    if Text:
+        trace_string += "%s> %s\n" % (Indent[:-1], Text)
+    return (exc_type, exc_obj, trace_string)
+
 def print_exception(e):
-    exc_type, exc_obj, exc_tb = sys.exc_info()
     error_string = ""
     if not isinstance(e, NoTraceException):
-        Trace = traceback.extract_tb(exc_tb)
-        error_string += "TRACE: "
-        Indent = ""
-        for FileName, LineNo, FunctionName, Text in Trace:
-            ModuleName = os.path.split(FileName) [1]
-            error_string += "%s %s, line %s: %s\n" % (Indent, ModuleName, LineNo, FunctionName)
-            if not Indent:
-                Indent = "       "
-            Indent += "  "
-        if Text:
-            error_string += "%s> %s\n" % (Indent[:-1], Text)
+        _, _, error_string = get_error_repr(sys.exc_info())
+        error_string = "TRACE:\n" + error_string
     error_string += "ERROR %s: %s\n" % (type(e).__name__, e)
-    #logger.error(error_string)
     print(error_string, file=sys.stderr)
     
 logger = logging.getLogger(__init__.NAME)
