@@ -3,12 +3,7 @@ from __future__ import unicode_literals
 from session import *
 from defines import *
 from pyqt_compat import QtCore, QtGui
-try:
-    print("x")
-    import wizardUi
-except:
-    asdasdasd
-print(dir(wizardUi))
+import wizardUi
 import csvOptions
 import QtProgress
 
@@ -40,7 +35,7 @@ class CoqueryWizard(QtGui.QWizard):
             if options.cfg:
                 Resource, Corpus, Lexicon = available_resources[str(combo.currentText()).lower()]
             
-                feature_page = self.page(3)
+                feature_page = self.page(2)
                 
                 hide_list = []
                 show_list = []

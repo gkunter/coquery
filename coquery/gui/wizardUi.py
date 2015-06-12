@@ -7,8 +7,6 @@
 # WARNING! All changes made in this file will be lost!
 
 
-print("?")
-
 from PyQt4 import QtCore, QtGui
 
 try:
