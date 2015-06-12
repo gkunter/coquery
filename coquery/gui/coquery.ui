@@ -34,7 +34,7 @@
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_7">
        <property name="spacing">
-        <number>10</number>
+        <number>20</number>
        </property>
        <item>
         <widget class="QWidget" name="general_settings" native="true">
@@ -506,6 +506,12 @@
        </item>
        <item>
         <widget class="QFrame" name="frame">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>3</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
          </property>
@@ -546,7 +552,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Use query string:</string>
+               <string>Enter query strings:</string>
               </property>
              </widget>
             </item>
@@ -674,8 +680,8 @@
        <item>
         <widget class="QFrame" name="options_setting">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-           <horstretch>0</horstretch>
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>2</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
@@ -705,7 +711,7 @@
               <item>
                <widget class="QLabel" name="label_9">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -720,7 +726,7 @@
             <item>
              <widget class="QScrollArea" name="scrollArea">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
