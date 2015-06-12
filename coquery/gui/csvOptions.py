@@ -47,7 +47,7 @@ class MyTableModel(QtCore.QAbstractTableModel):
         return QtCore.QVariant(None)
 
 class CSVOptions(QtGui.QDialog):
-    def __init__(self, filename, default=None, parent=None):
+    def __init__(self, filename, default=None, parent=None, icon=None):
         super(CSVOptions, self).__init__(parent)
         
         self.file_content = None
@@ -88,8 +88,8 @@ class CSVOptions(QtGui.QDialog):
         self.set_query_column()
         
     @staticmethod
-    def getOptions(path, default=None, parent=None):
-        dialog = CSVOptions(path, default, parent)
+    def getOptions(path, default=None, parent=None, icon=None):
+        dialog = CSVOptions(path, default, parent, icon)
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             return (str(dialog.ui.separate_char.currentText()),
@@ -183,7 +183,6 @@ class CSVOptions(QtGui.QDialog):
         self.ui.FilePreviewArea.resizeColumnsToContents()
         
     def keyPressEvent(self, e):
-        
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
             

@@ -11,140 +11,253 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Coquery – Results</string>
   </property>
-  <widget class="QTableView" name="data_preview">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>781</width>
-     <height>491</height>
-    </rect>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>10</number>
    </property>
-   <property name="locale">
-    <locale language="English" country="UnitedStates"/>
+   <property name="leftMargin">
+    <number>10</number>
    </property>
-   <property name="editTriggers">
-    <set>QAbstractItemView::SelectedClicked</set>
+   <property name="topMargin">
+    <number>4</number>
    </property>
-   <property name="alternatingRowColors">
-    <bool>true</bool>
+   <property name="rightMargin">
+    <number>10</number>
    </property>
-   <property name="selectionBehavior">
-    <enum>QAbstractItemView::SelectColumns</enum>
+   <property name="bottomMargin">
+    <number>4</number>
    </property>
-   <property name="textElideMode">
-    <enum>Qt::ElideMiddle</enum>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_12">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>518</y>
-     <width>68</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Save to file: </string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="button_browse">
-   <property name="geometry">
-    <rect>
-     <x>710</x>
-     <y>514</y>
-     <width>80</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Browse...</string>
-   </property>
-  </widget>
-  <widget class="QPlainTextEdit" name="file_name">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>90</x>
-     <y>510</y>
-     <width>611</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="readOnly">
-    <bool>true</bool>
-   </property>
-  </widget>
-  <widget class="Line" name="line">
-   <property name="geometry">
-    <rect>
-     <x>7</x>
-     <y>540</y>
-     <width>781</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="button_quit">
-   <property name="geometry">
-    <rect>
-     <x>580</x>
-     <y>560</y>
-     <width>95</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Quit</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="button_restart">
-   <property name="geometry">
-    <rect>
-     <x>690</x>
-     <y>560</y>
-     <width>95</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Start again</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>563</y>
-     <width>101</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Execution time:</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_time">
-   <property name="geometry">
-    <rect>
-     <x>110</x>
-     <y>563</y>
-     <width>71</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>hh:mm:ss</string>
-   </property>
-  </widget>
+   <item>
+    <widget class="QTableView" name="data_preview">
+     <property name="locale">
+      <locale language="English" country="UnitedStates"/>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::SelectedClicked</set>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::NoSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectItems</enum>
+     </property>
+     <property name="textElideMode">
+      <enum>Qt::ElideMiddle</enum>
+     </property>
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Number of rows:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="row_numbers">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+         <property name="textInteractionFlags">
+          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <property name="leftMargin">
+        <number>10</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>File size:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="file_size">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+         <property name="textInteractionFlags">
+          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="button_browse">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Save</string>
+       </property>
+       <property name="icon">
+        <iconset theme="document-save">
+         <normaloff/>
+        </iconset>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <property name="margin">
+      <number>0</number>
+     </property>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Query duration:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_time">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>hh:mm:ss</string>
+         </property>
+         <property name="textInteractionFlags">
+          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QPushButton" name="button_logfile">
+       <property name="text">
+        <string>View log...</string>
+       </property>
+       <property name="icon">
+        <iconset theme="dialog-information">
+         <normaloff/>
+        </iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="button_quit">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Quit</string>
+       </property>
+       <property name="icon">
+        <iconset theme="application-exit">
+         <normaloff/>
+        </iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="button_restart">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Start again</string>
+       </property>
+       <property name="icon">
+        <iconset theme="document-revert">
+         <normaloff/>
+        </iconset>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>
