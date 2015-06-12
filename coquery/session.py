@@ -199,18 +199,18 @@ class Session(object):
             self.header += ["PoS%s" % (x + 1) for x in range(self.max_number_of_tokens)]
         
         if options.cfg.show_source and self.Corpus.provides_feature(CORP_SOURCE):
-            self.header += self.Corpus.get_source_info_headers()
+            self.header += self.Corpus.get_source_info_header()
         if options.cfg.show_speaker and self.Corpus.provides_feature(CORP_SPEAKER):
-            self.header += self.Corpus.get_speaker_info_headers()
+            self.header += self.Corpus.get_speaker_info_header()
         if options.cfg.show_filename and self.Corpus.provides_feature(CORP_FILENAME):
-            self.header += self.Corpus.get_file_info_headers()
+            self.header += self.Corpus.get_file_info_header()
         if options.cfg.show_time and self.Corpus.provides_feature(CORP_TIMING):
-            self.header += self.Corpus.get_time_info_headers()
+            self.header += self.Corpus.get_time_info_header()
             
         if (options.cfg.context_span or options.cfg.context_columns) and self.Corpus.provides_feature(CORP_CONTEXT):
-            self.header += self.Corpus.get_context_headers(self.max_number_of_tokens)
+            self.header += self.Corpus.get_context_header(self.max_number_of_tokens)
         if options.cfg.context_sentence and self.Corpus.provides_feature(CORP_CONTEXT):
-            self.header += self.Corpus.get_context_sentence_headers()
+            self.header += self.Corpus.get_context_sentence_header()
 
         if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             self.header.append (options.cfg.freq_label)

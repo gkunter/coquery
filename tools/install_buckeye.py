@@ -17,7 +17,7 @@ class corpus_code():
                 self.resource.corpus_token_id,
                 token_id)
 
-    def get_time_info_headers(self):
+    def get_time_info_header(self):
         return ["Time"]
 
 class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):

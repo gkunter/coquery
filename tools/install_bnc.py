@@ -5,7 +5,7 @@ import xml.etree
 import re
 
 class corpus_code():
-    def get_source_info_headers(self):
+    def get_source_info_header(self):
         return [
             self.resource.source_genre,
             self.resource.source_year,
@@ -25,7 +25,7 @@ class corpus_code():
             text_file_id=self.resource.source_file_id,
             file_id=self.resource.file_id)
         
-    def get_file_info_headers(self):
+    def get_file_info_header(self):
         return [
             self.resource.source_label,
             self.resource.file_label]
