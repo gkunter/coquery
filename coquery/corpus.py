@@ -32,7 +32,6 @@ import tokens
 import options
 import sqlwrap
 import time
-import copy
 from defines import *
 
 class BaseLexicon(object):
@@ -222,7 +221,7 @@ class BaseCorpus(object):
         """ returns the context of the token specified by token_id. """
         raise CorpusUnsupportedFunctionError
     
-    def get_context_headers(self, max_number_of_tokens):
+    def get_context_header(self, max_number_of_tokens):
         if self.provides_feature(CORP_CONTEXT):
             L = []
             if options.cfg.context_columns:
@@ -235,7 +234,7 @@ class BaseCorpus(object):
         else:
             raise CorpusUnsupportedFunctionError
         
-    def get_context_sentence_headers(self):
+    def get_context_sentence_header(self):
         return ["Sentence"]
         
     def get_source_info(self, source_id):
@@ -244,7 +243,7 @@ class BaseCorpus(object):
         for failed queries. """
         raise CorpusUnsupportedFunctionError
     
-    def get_source_info_headers(self):
+    def get_source_info_header(self):
         raise CorpusUnsupportedFunctionError
 
     def get_speaker_info(self, speaker_id):
@@ -252,7 +251,7 @@ class BaseCorpus(object):
         with the speaker specified by speaker_id. """
         raise CorpusUnsupportedFunctionError
 
-    def get_speaker_info_headers(self):
+    def get_speaker_info_header(self):
         raise CorpusUnsupportedFunctionError
 
     def get_time_info(self, token_id):
@@ -260,7 +259,7 @@ class BaseCorpus(object):
         with the token_id. """
         raise CorpusUnsupportedFunctionError
 
-    def get_time_info_headers(self):
+    def get_time_info_header(self):
         raise CorpusUnsupportedFunctionError
 
     def get_file_info(self, source_id):
@@ -268,7 +267,7 @@ class BaseCorpus(object):
         with the source_id. """
         raise CorpusUnsupportedFunctionError
 
-    def get_file_info_headers(self):
+    def get_file_info_header(self):
         raise CorpusUnsupportedFunctionError
 
     def provides_feature(self, x):
@@ -506,11 +505,18 @@ class SQLLexicon(BaseLexicon):
         return select_string
     
     def get_entry(self, word_id, requested):
+        # check if there is an entry in the cache for the word_id with the
+        # requested features:
+        if not tuple(requested) in self.entry_cache:
+            self.entry_cache[tuple(requested)] = {}
+        try:
+            return self.entry_cache[tuple(requested)][word_id]
+        except:
+            pass
+
         # an entry has to provide at least LEX_ORTH:
-        if word_id in self.entry_cache:
-            return self.entry_cache[word_id]
         provide_fields = set(self.provides) & set(requested) | set([LEX_ORTH])
-        error_value = [word_id] + ["<na>"] * (len(self.provides) - 1)
+        error_value = ["<NA>"] * (len(self.provides) - 1)
         entry = self.Entry(provide_fields)
         try:
             S = self.sql_string_get_entry(word_id, provide_fields)
@@ -522,7 +528,9 @@ class SQLLexicon(BaseLexicon):
                 entry.set_values(error_value)
         except (SQLOperationalError):
             entry.set_values(error_value)
-        self.entry_cache[word_id] = copy.copy(entry)
+            
+        # add entry to cache:
+        self.entry_cache[tuple(requested)][word_id] = entry
         return entry
 
     def get_posid_list(self, token):
@@ -958,8 +966,8 @@ class SQLCorpus(BaseCorpus):
             raise ResourceIncompleteDefinitionError
 
     def get_source_info(self, source_id):
-        source_info_headers = self.get_source_info_headers()
-        error_values = ["<na>"] * len(source_info_headers)
+        source_info_header = self.get_source_info_header()
+        error_values = ["<na>"] * len(source_info_header)
         if not source_id:
             return error_values
         try:
@@ -968,23 +976,23 @@ class SQLCorpus(BaseCorpus):
             query_result = cursor.fetchone()
         except SQLOperationalError:
             return error_values
-        return [query_result[x] for x in source_info_headers]
+        return [query_result[x] for x in source_info_header]
 
-    def get_source_info_headers(self):
-        potential_headers = [self.resource.__getattribute__(x) for x in dir(self.resource) if x.startswith("source_info_")]
+    def get_source_info_header(self):
+        potential_header = [self.resource.__getattribute__(x) for x in dir(self.resource) if x.startswith("source_info_")]
         if not options.cfg.source_columns:
             return []
         for x in options.cfg.source_columns:
             if x.upper() == "ALL":
-                return potential_headers
-        return [x for x in options.cfg.source_columns if x in potential_headers]
+                return potential_header
+        return [x for x in options.cfg.source_columns if x in potential_header]
 
     def sql_string_get_time_info(self, token_id):
         raise CorpusUnsupportedFunctionError
 
     def get_time_info(self, token_id):
-        time_info_headers = self.get_time_info_headers()
-        error_values = ["<na>"] * len(time_info_headers)
+        time_info_header = self.get_time_info_header()
+        error_values = ["<na>"] * len(time_info_header)
         if not token_id:
             return error_values
         try:
@@ -992,7 +1000,7 @@ class SQLCorpus(BaseCorpus):
             query_result = cursor.fetchone()
         except SQLOperationalError:
             return error_values
-        return [query_result[x] for x in time_info_headers]
+        return [query_result[x] for x in time_info_header]
 
     def sql_string_get_file_info(self, source_id):
         if "file_table" in dir(self.resource) and "file_id" in dir(self.resource) and "file_label" in dir(self.resource):
@@ -1005,8 +1013,8 @@ class SQLCorpus(BaseCorpus):
             raise ResourceIncompleteDefinitionError
     
     def get_file_info(self, source_id):
-        file_info_headers = self.get_file_info_headers()
-        error_values = ["<na>"] * len(file_info_headers)
+        file_info_header = self.get_file_info_header()
+        error_values = ["<na>"] * len(file_info_header)
         if not source_id:
             return error_values
         try:
@@ -1014,9 +1022,9 @@ class SQLCorpus(BaseCorpus):
             query_result = cursor.fetchone()
         except SQLOperationalError:
             return error_values
-        return [query_result[x] for x in file_info_headers]
+        return [query_result[x] for x in file_info_header]
     
-    def get_file_info_headers(self):
+    def get_file_info_header(self):
         return ["File"]
 
     def get_statistics(self):
