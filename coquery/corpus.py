@@ -697,7 +697,7 @@ class SQLCorpus(BaseCorpus):
         column_list = ["{}.{}".format(
             self.resource.corpus_table, 
             self.resource.corpus_word_id)]
-        table_list = [self.resource.corpus_table]
+        table_list = set([self.resource.corpus_table])
 
         if CORP_CONTEXT in self.provides:
             column_list.append("{}.{}".format(
@@ -710,18 +710,22 @@ class SQLCorpus(BaseCorpus):
                     self.resource.corpus_source_id))
             
         if token.class_specifiers and LEX_POS in self.lexicon.provides:
-            if self.resource.pos_table not in table_list:
+            if "pos_table" not in dir(self.resource):
+                # CASE 1:
+                # No separate pos_table, POS is stored as a column in
+                # word_table:
+                column_list.append("{}.{}".format(
+                    self.resource.word_table,
+                    self.resource.word_pos_id))
                 where_list.append("{}.{} = {}.{}".format(
                     self.resource.corpus_table,
                     self.resource.corpus_word_id,
                     self.resource.word_table,
                     self.resource.word_id))
-                table_list.append(self.resource.word_table)
-            if "pos_table" not in dir(self.resource):
-                column_list.append("{}.{}".format(
-                    self.resource.word_table,
-                    self.resource.word_pos_id))
+                table_list.add(self.resource.word_table)
             else:
+                # CASE 2:
+                # POS stored in pos_table indexed by pos_id
                 column_list.append("{}.{}".format(
                     self.resource.pos_table,
                     self.resource.pos_id))
@@ -730,7 +734,7 @@ class SQLCorpus(BaseCorpus):
                     self.resource.word_pos_id,
                     self.resource.pos_table,
                     self.resource.pos_id))
-                table_list.append(self.resource.pos_table)
+                table_list.add(self.resource.pos_table)
                 
         table_string = "SELECT {} FROM {}".format(
                 ", ".join (column_list),
