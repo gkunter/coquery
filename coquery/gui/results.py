@@ -2,6 +2,7 @@ from __future__ import division
 
 from pyqt_compat import QtCore, QtGui
 import os.path
+from defines import *
 import options
 import csv
 import resultsUi
@@ -80,9 +81,18 @@ class ResultsViewer(QtGui.QDialog):
         self.ui.button_logfile.clicked.connect(self.view_logfile)
 
         # Fill results view:
-        self.file_content = [x for x in csv.reader(open(options.cfg.output_path, "rt"))]
+        types = [unicode] * len(Session.header)
+        if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
+            types[-1] = int
+        
+        self.file_content = [x for x in UnicodeReader(open(options.cfg.output_path, "rt"), types=types)]
         self.table_model = MyTableModel(self, self.file_content[0], self.file_content[1:])
-        self.ui.data_preview.setModel(self.table_model)
+        self.proxy_model = QtGui.QSortFilterProxyModel()
+        self.proxy_model.setSourceModel(self.table_model)
+        
+        #self.ui.data_preview.setModel(self.table_model)
+        self.ui.data_preview.setModel(self.proxy_model)
+        
         self.ui.data_preview.resizeColumnsToContents()
         
         
