@@ -33,6 +33,7 @@ import os.path
 import imp
 import sys
 import warnings
+import csv, cStringIO, codecs
 
 # The following flags are used to indicate which fields are provided by the 
 # lexicon of a corpus, and also to access the fields of the value of 
@@ -71,5 +72,74 @@ def get_available_resources():
         except AttributeError:
             warnings.warn("{} does not appear to be a valid resource.".format(corpus_name))
     return resources
+
+# from https://docs.python.org/2.7/library/csv.html#csv-examples
+class UTF8Recoder:
+    """
+    Iterator that reads an encoded stream and reencodes the input to UTF-8
+    """
+    def __init__(self, f, encoding):
+        self.reader = codecs.getreader(encoding)(f)
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        return self.reader.next().encode("utf-8")
+
+class UnicodeReader:
+    """
+    A CSV reader which will iterate over lines in the CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, encoding="utf-8", types=None, **kwds):
+        f = UTF8Recoder(f, encoding)
+        self.reader = csv.reader(f, **kwds)
+        self.types = types
+        self.encoding = encoding
+
+    def next(self):
+        row = self.reader.next()
+        if not self.types:
+            return [unicode(s, self.encoding) for s in row]
+        else:
+            try:
+                return [unicode(x, self.encoding) if var_type is unicode else var_type(x) for x, var_type in zip(row, self.types)]
+            except ValueError:
+                return [unicode(s, self.encoding) for s in row]
+    def __iter__(self):
+        return self
+
+class UnicodeWriter:
+    """
+    A CSV writer which will write rows to CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, encoding="utf-8", **kwds):
+        # Redirect output to a queue
+        self.queue = cStringIO.StringIO()
+        self.writer = csv.writer(self.queue, **kwds)
+        self.stream = f
+        self.encoding = encoding
+        self.encoder = codecs.getincrementalencoder(encoding)()
+
+    def writerow(self, row):
+        self.writer.writerow(["{}".format(s).encode(self.encoding) for s in row])
+        # Fetch UTF-8 output from the queue ...
+        data = self.queue.getvalue()
+        data = data.decode("utf-8")
+        # ... and reencode it into the target encoding
+        data = self.encoder.encode(data)
+        # write to the target stream
+        self.stream.write(data)
+        # empty queue
+        self.queue.truncate(0)
+
+    def writerows(self, rows):
+        for row in rows:
+            self.writerow(row)
+
 
 available_resources = get_available_resources()
