@@ -93,7 +93,11 @@ class QueryResult(object):
         if number_of_columns > 1:
             return [self.query.Corpus.lexicon.get_entry(x, self.query.Session.output_fields) for x in self.get_wordid_list(number_of_columns)]
         else:
-            return [self.query.Corpus.lexicon.get_entry(self.data["W1"], self.query.Session.output_fields)]
+            if "W1" in self.data:
+                return [self.query.Corpus.lexicon.get_entry(self.data["W1"], self.query.Session.output_fields)]
+            else:
+                return [self.query.Corpus.lexicon.get_entry(
+                    self.query.Corpus.get_word_id(self.data["TokenId"]), self.query.Session.output_fields)]
      
     def get_expected_length(self, max_number_of_tokens):
         output_fields = self.query.Session.output_fields
@@ -131,13 +135,14 @@ class QueryResult(object):
         if options.cfg.show_id:
             output_row[index] = [self.data["TokenId"]]
             index += 1
-        if LEX_ORTH in output_fields:
+        if LEX_ORTH in output_fields or CORP_CONTEXT in output_fields:
             if options.cfg.case_sensitive:
                 words = [x.orth for x in entry_list]
             else:
                 words = [x.orth.upper() for x in entry_list]
-            output_row[index:(index+number_of_token_columns)] = words
-            index += max_number_of_tokens
+            if LEX_ORTH in output_fields:
+                output_row[index:(index+number_of_token_columns)] = words
+                index += max_number_of_tokens
 
         if LEX_PHON in output_fields:
             output_row[index:(index+number_of_token_columns)] = [x.phon for x in entry_list]
