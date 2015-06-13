@@ -165,6 +165,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         self.parser.add_argument("-r", "--regexp", help="use regular expressions", action="store_true", dest="regexp")
 
         # Output options:
+        self.parser.add_argument("--no-sort", help="do not sort the results in a frequency query (default: sort by frequency)", action="store_false", dest="order_frequency")
         self.parser.add_argument("--suppress-header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
         self.parser.add_argument("-Q", "--show-query", help="include query string in the output", action="store_true", dest="show_query")
         self.parser.add_argument("-O", "--orth", help="include orthographic word in the output", action="store_true", dest="show_orth")
