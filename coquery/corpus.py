@@ -817,7 +817,7 @@ class SQLCorpus(BaseCorpus):
         else:
             return  " AND ".join(where_clauses)
 
-    def sql_string_run_query_string(self, Query, self_join):
+    def sql_string_run_query_column_string(self, Query, self_join):
         # Create a list of the columns that the query should return:
         # - a Wx column for each query token
         # - a TokenId column if context is requested
@@ -858,7 +858,7 @@ class SQLCorpus(BaseCorpus):
         #if Query.query_string in Query.Session._results:
             #return
             #yield
-        column_string = self.sql_string_run_query_string(Query, self_join)
+        column_string = self.sql_string_run_query_column_string(Query, self_join)
         table_string = self.sql_string_run_query_table_string(Query, self_join)
         where_string = self.sql_string_run_query_where_string(Query, self_join)
 
@@ -880,6 +880,7 @@ class SQLCorpus(BaseCorpus):
             query_string = query_string.replace("FROM ", "\nFROM \n\t")
             query_string = query_string.replace("WHERE ", "\nWHERE \n\t")
 
+        # Run the MySQL query:
         cursor = self.resource.DB.execute_cursor(query_string)
         for current_result in cursor:
             yield current_result
