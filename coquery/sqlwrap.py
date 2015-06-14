@@ -53,7 +53,7 @@ ModifyingCommands = ["ALTER", "CREATE", "DELETE", "DROP", "INSERT",
 NonModifyingCommands = ["SELECT", "SHOW", "DESCRIBE", "SET", "RESET"]
 
 class SqlDB (object):
-    def __init__(self, Host, Port, User, Password, Database):
+    def __init__(self, Host, Port, User, Password, Database=None):
         self.Con = None
         self.Cur = None
         self.Host = Host
@@ -64,16 +64,28 @@ class SqlDB (object):
         self.LastQuery = None
         
         try:
-            self.Con = mysql.connect(
-                host=Host, 
-                port=Port, 
-                user=User, 
-                passwd=Password, 
-                db=Database)
+            if Database:
+                self.Con = mysql.connect(
+                    host=Host, 
+                    port=Port, 
+                    user=User, 
+                    passwd=Password, 
+                    db=Database)
+            else:
+                self.Con = mysql.connect(
+                    host=Host, 
+                    port=Port, 
+                    user=User, 
+                    passwd=Password)
+
         except Exception as e:
              raise SQLInitializationError(e)
         
         self.Cur = self.Con.cursor()
+
+    def close(self):
+        self.Cur.close()
+        self.Con.close()
 
     def explain(self, S):
         """
@@ -112,7 +124,7 @@ Value       no return value
             log_rows.append(line_string)
             logger.debug("\n".join(log_rows))
 
-    def execute_cursor(self, S):
+    def execute_cursor(self, S, server_side=False):
         S = S.strip()
         if options.cfg.explain_queries:
             self.explain(S)
@@ -121,7 +133,11 @@ Value       no return value
         if options.cfg.dry_run:
             cursor = []
         else:
-            cursor = self.Con.cursor(mysql_cursors.DictCursor)
+            if server_side:
+                cursor = self.Con.cursor(mysql_cursors.SSDictCursor)
+            
+            else:
+                cursor = self.Con.cursor(mysql_cursors.DictCursor)
             cursor.execute(S)
         return cursor
     
