@@ -94,7 +94,6 @@ class CoqueryWizard(QtGui.QWizard):
             
             for widget in hide_list:
                 if widget:
-                    print(widget.objectName())
                     widget.setVisible(False)
             for widget in show_list:
                 if widget:
@@ -176,7 +175,6 @@ class CoqueryWizard(QtGui.QWizard):
         
         self.file_content = None
         
-        print(dir(wizardUi))
         self.ui = wizardUi.Ui_Wizard()
         self.ui.setupUi(self)
 
@@ -191,7 +189,7 @@ class CoqueryWizard(QtGui.QWizard):
             return None
 
         if options.cfg:
-            options.cfg.corpus = str(self.ui.combo_corpus.currentText()).lower()
+            options.cfg.corpus = unicode(self.ui.combo_corpus.currentText()).lower()
             if self.ui.radio_mode_context.isChecked():
                 options.cfg.MODE = QUERY_MODE_DISTINCT
                 
@@ -205,9 +203,9 @@ class CoqueryWizard(QtGui.QWizard):
                 options.cfg.MODE = QUERY_MODE_TOKENS
                 
             if self.ui.radio_query_string.isChecked():
-                options.cfg.query_list = [str(self.ui.edit_query_string.text())]
+                options.cfg.query_list = [unicode(self.ui.edit_query_string.text())]
             elif self.ui.radio_query_file.isChecked():
-                options.cfg.input_path = str(self.ui.edit_file_name.text())
+                options.cfg.input_path = unicode(self.ui.edit_file_name.text())
             # FIXME: the GUI allows more fine-grained selection of 
             # output options than the command line, and this selection
             # is not evaluated fully by write_results().
@@ -223,13 +221,13 @@ class CoqueryWizard(QtGui.QWizard):
             # options.cfg.show_lemma_pos = self.ui.lemma_data_pos.checkState()
             
             if self.ui.source_id.checkState():
-                options.cfg.source_columns.append(str(self.ui.source_id.text()))
+                options.cfg.source_columns.append(unicode(self.ui.source_id.text()))
             if self.ui.source_data_year.checkState():
-                options.cfg.source_columns.append(str(self.ui.source_data_year.text()))
+                options.cfg.source_columns.append(unicode(self.ui.source_data_year.text()))
             if self.ui.source_data_genre.checkState():
-                options.cfg.source_columns.append(str(self.ui.source_data_genre.text()))
+                options.cfg.source_columns.append(unicode(self.ui.source_data_genre.text()))
             if self.ui.source_data_title.checkState():
-                options.cfg.source_columns.append(str(self.ui.source_data_title.text()))
+                options.cfg.source_columns.append(unicode(self.ui.source_data_title.text()))
             
             options.cfg.show_filename = self.ui.file_data_name.checkState() or self.ui.file_data_path.checkState()
             options.cfg.show_time = self.ui.time_data_dur.checkState() or self.ui.time_data_end.checkState() or self.ui.time_data_start.checkState()
