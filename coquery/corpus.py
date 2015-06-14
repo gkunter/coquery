@@ -778,7 +778,7 @@ class SQLCorpus(BaseCorpus):
                         self.resource.word_transcript_id))
                     table_list.add(self.resource.word_table)
 
-            if LEX_POS in requested:
+            if LEX_POS in requested or token.class_specifiers:
                 if "pos_table" in dir(self.resource):
                     table_list.add(self.resource.pos_table)
                     column_list.add("{0}.{1} AS {0}_{1}".format(
@@ -788,7 +788,7 @@ class SQLCorpus(BaseCorpus):
                         self.resource.pos_table,
                         self.resource.pos_id,
                         self.resource.word_table,
-                        self.resource.word_transcript_id))
+                        self.resource.word_pos_id))
                 else:
                     column_list.add("{}.{}".format(
                         self.resource.word_table,

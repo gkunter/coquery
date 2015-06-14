@@ -377,12 +377,14 @@ class DistinctQuery(CorpusQuery):
                 if options.cfg.experimental:
                     output_list.extend(self.get_row(current_result, number_of_token_columns, max_number_of_token_columns, result_columns))
                 else:
-                    output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)
-                
-                if options.cfg.gui:
-                    self.Session.output_storage.append(output_list)
-                else:
-                    output_file.writerow(output_list)
+                    output_list.extend(current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns))
+                if output_list not in output_cache:
+                    if options.cfg.gui:
+                        self.Session.output_storage.append(output_list)
+                    else:
+                        output_file.writerow(output_list)
+            if output_list not in output_cache:
+                output_cache.append(output_list)
 
 class StatisticsQuery(CorpusQuery):
     def __init__(self, corpus, session):
