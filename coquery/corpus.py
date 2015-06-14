@@ -890,6 +890,39 @@ class SQLCorpus(BaseCorpus):
                         num1=i+1, num=i)
                 table_string_list.append(table_string)
 
+        if options.cfg.experimental:
+            for i in range(options.cfg.context_span):
+                table_string_list.append(
+                    "INNER JOIN (SELECT {corpus}.{token_id}, {word}.{label} AS RC{num} FROM {corpus}, {word} WHERE {corpus}.{corpus_word_id} = {word}.{word_id}) AS cr{num} ON (cr{num}.{token_id} = e{last}.{token_id} + {num})".format(
+                        num=i + 1,
+                        corpus=self.resource.corpus_table,
+                        token_id=self.resource.corpus_token_id,
+                        corpus_word_id=self.resource.corpus_word_id,
+                        word=self.resource.word_table,
+                        word_id=self.resource.word_id,
+                        label=self.resource.word_label,
+                        last=len(Query.tokens)))
+                table_string_list.append(
+                    "INNER JOIN (SELECT {corpus}.{token_id}, {word}.{label} AS LC{num} FROM {corpus}, {word} WHERE {corpus}.{corpus_word_id} = {word}.{word_id}) AS cl{num} ON (cl{num}.{token_id} = e1.{token_id} - {num})".format(
+                        num=i + 1,
+                        corpus=self.resource.corpus_table,
+                        token_id=self.resource.corpus_token_id,
+                        corpus_word_id=self.resource.corpus_word_id,
+                        word=self.resource.word_table,
+                        word_id=self.resource.word_id,
+                        label=self.resource.word_label,
+                        last=len(Query.tokens)))
+                        
+            #INNER JOIN (SELECT
+                    #corpus.TokenId,
+                    #word.Text as LC1
+                #FROM
+                    #corpus, word
+                #WHERE
+                    #corpus.WordId = word.WordId) AS cl1
+            #ON
+                #(cl1.TokenId = e1.TokenId - 1)
+
         if Query.source_filter:
             if self.resource.source_table_alias != self.resource.corpus_table:
                 table_string_list.append(self.sql_string_run_query_source_table_string(Query, self_join))
@@ -971,7 +1004,7 @@ class SQLCorpus(BaseCorpus):
                     column_list.add("e1.{} AS TokenId".format(
                             self.resource.corpus_token_id))
                 # add source_id if needed:
-                if options.cfg.context_span or options.cfg.context_columns or options.cfg.show_filename or options.cfg.show_source:
+                if options.cfg.show_filename or options.cfg.show_source:
                     column_list.add("e1.{} AS SourceId".format(
                         self.resource.corpus_source_id))
                     
@@ -995,9 +1028,11 @@ class SQLCorpus(BaseCorpus):
                     column_list.update(["e{num}.{pos} AS W{num}_pos".format(
                     num=x+1, 
                     pos=self.resource.word_pos_id) for x in range(Query.number_of_tokens)])
-                if CORP_CONTEXT in self.provides:
-                        column_list.add("e1.{} AS TokenId".format(
-                            self.resource.corpus_token_id))
+                    
+                if options.cfg.context_span or options.cfg.context_columns:
+                    context = max(options.cfg.context_span, options.cfg.context_columns)
+                    column_list.update(["cl{num}.LC{num}".format(num=x+1) for x in range(context)])
+                    column_list.update(["cr{num}.RC{num}".format(num=x+1) for x in range(context)])
             # stable version:
             else:
                 if CORP_CONTEXT in self.provides:
@@ -1041,7 +1076,6 @@ class SQLCorpus(BaseCorpus):
             query_string = query_string.replace("FROM ", "\nFROM \n\t")
             query_string = query_string.replace("WHERE ", "\nWHERE \n\t")
 
-        
         # Run the MySQL query:
         cursor = self.resource.DB.execute_cursor(query_string)
         for current_result in cursor:

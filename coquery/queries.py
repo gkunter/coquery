@@ -105,7 +105,6 @@ class QueryResult(object):
         if not self.data:
             return tuple(output_row)
         output_fields = self.query.Session.output_fields
-
         # create a list of lexicon entries for each word W1, ..., Wn in 
         # the results row:
     
@@ -267,7 +266,6 @@ class CorpusQuery(object):
         output_row = [""] * (row_length)
         if not query_result:
             return tuple(output_row)
-        
         output_fields = self.Session.output_fields
         index = 0
         if options.cfg.show_id:
@@ -315,11 +313,11 @@ class CorpusQuery(object):
             index += len(time_info)
 
         if CORP_CONTEXT in output_fields:
-            if options.cfg.context_sentence:
-                context = self.Corpus.get_context_sentence(query_result["SourceId"]) 
-            else:
-                context_left, context_right = self.Corpus.get_context(query_result["TokenId"], query_result["SourceId"], self.number_of_tokens, True)
-                context = context_left + words + context_right
+            context_width = max(options.cfg.context_span, options.cfg.context_columns)
+            L = list(range(context_width))
+            context_left = [query_result["LC{}".format(x + 1)] for x in L[::-1]]
+            context_right = [query_result["RC{}".format(x + 1)] for x in L]
+            context = context_left + words + context_right
             if options.cfg.context_columns:
                 output_row[index:] = context
             else:
