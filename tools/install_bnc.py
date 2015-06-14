@@ -399,7 +399,7 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         person = args[0]
         if person.tag == "person":
             sex = person.attrib.get("sex", "unknown")
-            if person.find("age") is not None:
+            if person.find("age") != None:
                 age = person.find("age").text.strip()
             else:
                 age = person.attrib.get("age", "unknown")
@@ -441,7 +441,7 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         # Get the date:
         creation = profile_desc.find("creation")
         date_element = creation.find("date")
-        if date_element is not None:
+        if date_element != None:
             source_date = get_year(date_element.text.strip())
         else:
             source_date = get_year(creation.attrib.get("date", "0000"))
@@ -455,9 +455,9 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         
         # Get the body:
         body = e.find("wtext")
-        if body is None:
+        if body == None:
             body = e.find("stext")
-        if body is None:
+        if body == None:
             logger.warning("Neither <wtext> nor <stext> found in file, not processed.")
             return
         
@@ -480,7 +480,7 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         # Find all speakers, and if there are some, make sure that they are
         # stored in the speaker table:
         participant_desc = profile_desc.find("particDesc")
-        if participant_desc is not None:
+        if participant_desc != None:
             for person in participant_desc.findall("person"):
                 speaker = self.get_speaker_data(person)
                 if speaker[0] not in self._tables[self.speaker_table]:
