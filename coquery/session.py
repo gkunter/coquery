@@ -156,7 +156,10 @@ class Session(object):
     def open_output_file(self):
         if self.output_file:
             return
-        if not options.cfg.output_path:
+        if options.cfg.gui:
+            self.output_storage = []
+            return
+        elif not options.cfg.output_path:
             self.output_file = UnicodeWriter(sys.stdout, delimiter=options.cfg.output_separator)
         else:
             if options.cfg.append:
