@@ -74,31 +74,6 @@ class QueryResult(object):
         self.data = args
         self.query = query
         
-    def get_wordid_list(self, number_of_columns):
-        """ returns a list containing all word_id values stored in the word 
-        columns, i.e. columns named W1, ..., Wn. """
-        if number_of_columns > 1:
-            # Don't look up the word_id for those words that are already
-            # in the query result:
-            start = int(self.data["TokenId"])
-            return [self.data.get("W{}".format(x - start + 1), self.query.Corpus.get_word_id(x)) for x in range(start, start + number_of_columns)]
-        else:
-            return [self.data["W1"]]
-
-    def get_lexicon_entries(self, number_of_columns):
-        """ returns a list of lexicon entries representing the tokens in
-        the current row matching the query."""
-        if not self.data:
-            return []
-        if number_of_columns > 1:
-            return [self.query.Corpus.lexicon.get_entry(x, self.query.Session.output_fields) for x in self.get_wordid_list(number_of_columns)]
-        else:
-            if "W1" in self.data:
-                return [self.query.Corpus.lexicon.get_entry(self.data["W1"], self.query.Session.output_fields)]
-            else:
-                return [self.query.Corpus.lexicon.get_entry(
-                    self.query.Corpus.get_word_id(self.data["TokenId"]), self.query.Session.output_fields)]
-     
     def get_expected_length(self, max_number_of_tokens):
         output_fields = self.query.Session.output_fields
         count = 0
@@ -125,11 +100,18 @@ class QueryResult(object):
         return count
     
     def get_row(self, number_of_token_columns, max_number_of_tokens, row_length=None):
-        output_fields = self.query.Session.output_fields
-        output_row = ["<NA>"] * (row_length)
-        entry_list = self.get_lexicon_entries(number_of_token_columns)
-        if not self.data or not entry_list:
+        
+        output_row = [""] * (row_length)
+        if not self.data:
             return tuple(output_row)
+        output_fields = self.query.Session.output_fields
+
+        # create a list of lexicon entries for each word W1, ..., Wn in 
+        # the results row:
+    
+        entry_list = [self.query.Corpus.lexicon.get_entry(
+            x, self.query.Session.output_fields) for x in [self.data["W{}".format(x)] for x in range(1, number_of_token_columns + 1)]]
+
         index = 0
 
         if options.cfg.show_id:
@@ -268,7 +250,10 @@ class CorpusQuery(object):
         return len(self.tokens)
 
     def set_result_list(self, data):
-        self.Results = self.ResultList(self, data)
+        if options.cfg.experimental:
+            self.Results = data
+        else:
+            self.Results = self.ResultList(self, data)
 
     def get_result_list(self):
         return self.Results
@@ -276,6 +261,71 @@ class CorpusQuery(object):
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         for CurrentLine in self.get_result_list():
             output_file.writerow(CurrentLine)
+            
+    def get_row(self, query_result, number_of_token_columns, max_number_of_tokens, row_length=None):
+        
+        output_row = [""] * (row_length)
+        if not query_result:
+            return tuple(output_row)
+        
+        output_fields = self.Session.output_fields
+        index = 0
+        if options.cfg.show_id:
+            output_row[index] = [query_result["TokenId"]]
+            index += 1
+        if LEX_ORTH in output_fields or CORP_CONTEXT in output_fields:
+            if options.cfg.case_sensitive:
+                words = [query_result["W{}_orth".format(x)] for x in range(1, number_of_token_columns + 1)]
+            else:
+                words = [query_result["W{}_orth".format(x)].upper() for x in range(1, number_of_token_columns + 1)]
+            if LEX_ORTH in output_fields:
+                output_row[index:(index+number_of_token_columns)] = words
+                index += max_number_of_tokens
+
+        if LEX_PHON in output_fields:
+            output_row[index:(index+number_of_token_columns)] = [query_result["W{}_phon".format(x)] for x in range(1, number_of_token_columns + 1)]
+            index += max_number_of_tokens
+
+        if LEX_LEMMA in output_fields:
+            output_row[index:(index+number_of_token_columns)] = [query_result["L{}_orth".format(x)] for x in range(1, number_of_token_columns + 1)]
+            index += max_number_of_tokens
+
+        if LEX_POS in output_fields:
+            output_row[index:(index+number_of_token_columns)] = [query_result["W{}_pos".format(x)] for x in range(1, number_of_token_columns + 1)]
+            index += max_number_of_tokens
+
+        if CORP_SOURCE in output_fields:
+            source_info = self.Corpus.get_source_info(query_result["SourceId"])
+            output_row[index:(index+len(source_info))] = source_info
+            index += len(source_info)
+            
+        if CORP_SPEAKER in output_fields:
+            speaker_info = self.Corpus.get_speaker_info(query_result["SpeakerId"])
+            output_row[index:(index+len(speaker_info))] = speaker_info
+            index += len(speaker_info)
+
+        if CORP_FILENAME in output_fields:
+            file_info = self.Corpus.get_file_info(query_result["SourceId"])
+            output_row[index:(index+len(file_info))] = file_info
+            index += len(file_info)
+
+        if CORP_TIMING in output_fields:
+            time_info = self.Corpus.get_time_info(query_result["TokenId"])
+            output_row[index:(index+len(time_info))] = time_info
+            index += len(time_info)
+
+        if CORP_CONTEXT in output_fields:
+            if options.cfg.context_sentence:
+                context = self.Corpus.get_context_sentence(query_result["SourceId"]) 
+            else:
+                context_left, context_right = self.Corpus.get_context(query_result["TokenId"], query_result["SourceId"], self.number_of_tokens, True)
+                context = context_left + words + context_right
+            if options.cfg.context_columns:
+                output_row[index:] = context
+            else:
+                output_row[index] = collapse_context(context)
+        return tuple(output_row)
+
 
 class TokenQuery(CorpusQuery):
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
@@ -294,40 +344,62 @@ class TokenQuery(CorpusQuery):
                     output_list.append(self.source_filter)
                 output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)
                 
-                output_file.writerow(output_list)
+                if options.cfg.gui:
+                    self.Session.output_storage.append(output_list)
+                else:
+                    output_file.writerow(output_list)
 
 class DistinctQuery(CorpusQuery):
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         output_cache = []
         result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
 
-        for current_result in self.get_result_list():
-            if self.InputLine:
-                output_list = copy.copy(self.InputLine)
+        # construct that part of output lines that stays constant in all
+        # lines:
+        if self.InputLine:
+            constant_line = copy.copy(self.InputLine)
+        else:
+            constant_line = []
+        if options.cfg.show_query:
+            constant_line.insert(options.cfg.query_column_number - 1, self.query_string)
+        if options.cfg.show_parameters:
+            constant_line.append(options.cfg.parameter_string)
+        if options.cfg.show_filter:
+            constant_line.append(self.source_filter)
+
+        for current_result in self.Results:
+            if constant_line:
+                output_list = copy.copy(constant_line)
             else:
                 output_list = []
-            if options.cfg.show_query:
-                output_list.insert(options.cfg.query_column_number - 1, self.query_string)
+
             if current_result != None:
-                if options.cfg.show_parameters:
-                    output_list.append(options.cfg.parameter_string)
-                if options.cfg.show_filter:
-                    output_list.append(self.source_filter)
-                output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)
-                if output_list not in output_cache:
+                if options.cfg.experimental:
+                    output_list.extend(self.get_row(current_result, number_of_token_columns, max_number_of_token_columns, result_columns))
+                else:
+                    output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)
+                
+                if options.cfg.gui:
+                    self.Session.output_storage.append(output_list)
+                else:
                     output_file.writerow(output_list)
-                    output_cache.append(output_list)
 
 class StatisticsQuery(CorpusQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session, None, None)
         self.Results = self.Session.Corpus.get_statistics()
         
+        # convert all values to strings (the Unicode writer needs that):
+        self.Results = {key: str(self.Results[key]) for key in self.Results}
+    
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         output_file.writerow(["Variable", "Value"])
         
         for x in sorted(self.Results):
-            output_file.writerow([x, self.Results[x]])
+            if options.cfg.gui:
+                self.Session.output_storage.append([x, self.Results[x]])
+            else:
+                output_file.writerow([x, self.Results[x]])
 
 class FrequencyQuery(CorpusQuery):
     def __init__(self, *args):
@@ -345,34 +417,54 @@ class FrequencyQuery(CorpusQuery):
             Lines = collections.Counter()
             result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
             for current_result in self.Results:
-                # current_result can be None if the query token was not in the
-                # lexicon
-                if current_result:
-                    Lines[current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)] += 1
+                if options.cfg.experimental:
+                    if current_result:
+                        Lines[self.get_row(current_result, number_of_token_columns, max_number_of_token_columns, result_columns)] += 1
+                else:
+                    # current_result can be None if the query token was not in the
+                    # lexicon
+                    if current_result:
+                        Lines[current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)] += 1
             if not Lines:
                 empty_result = QueryResult(self, {}) 
                 Lines[empty_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)] = 0
             self.Session._results[self.query_string] = Lines
         
+        if options.cfg.order_frequency:
+            data = Lines.most_common()
+            get_key = lambda x: x[0]
+        else:
+            data = Lines
+            get_key = lambda x: x
+        
+        # construct that part of output lines that stays constant in all
+        # lines:
+        if self.InputLine:
+            constant_line = copy.copy(self.InputLine)
+        else:
+            constant_line = []
+        if options.cfg.show_query:
+            constant_line.insert(options.cfg.query_column_number - 1, self.query_string)
+        if options.cfg.show_parameters:
+            constant_line.append(options.cfg.parameter_string)
+        if options.cfg.show_filter:
+            constant_line.append(self.source_filter)
+
         # Output the collapsed lines:
-        for current_key in Lines:
-            if self.InputLine:
-                output_list = copy.copy(self.InputLine)
+        for current_line in data:
+            key = get_key(current_line)
+            # copy constant part of output
+            if constant_line:
+                output_list = copy.copy(constant_line)
             else:
                 output_list = []
-            if options.cfg.show_query:
-                output_list.insert(options.cfg.query_column_number - 1, self.query_string)
-            if options.cfg.show_parameters:
-                output_list.append(options.cfg.parameter_string)
-            if options.cfg.show_filter:
-                output_list.append(self.source_filter)
-            if current_key:
-                output_list.extend(list(current_key))
-            output_list.append(Lines[current_key])
-            if self.ErrorInQuery:
-                output_list[-1] = -1
-
-            output_file.writerow(["{}".format(x) for x in output_list])
-            
+            # add data:
+            output_list.extend(list(key))
+            # add frequency:
+            output_list.append(Lines[key])
+            if options.cfg.gui:
+                self.Session.output_storage.append(output_list)
+            else:
+                output_file.writerow(output_list)
 
 logger = logging.getLogger(__init__.NAME)
