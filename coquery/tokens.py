@@ -130,6 +130,10 @@ class COCAToken(QueryToken):
         self.class_specifiers = []
         self.lemma_specifiers = []        
         self.transcript_specifiers = []
+        
+        while self.S.startswith(self.NegationChar):
+            self.negated = not self.negated
+            self.S = self.S[1:]
 
         match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", self.S)
         if not match:
@@ -211,7 +215,6 @@ def parse_query_string(S, token_type):
     t2 = []
     
     for current_char in S:
-            
         if state == ST_NORMAL:
             if current_char == " ":
                 if current_word:
@@ -225,8 +228,6 @@ def parse_query_string(S, token_type):
                 state = ST_IN_TRANSCRIPT
             elif current_char == token_type.bracket_open:
                 state = ST_IN_BRACKET
-            elif current_char == token_type.NegationChar:
-                negated = not negated
                     
         elif state == ST_IN_BRACKET:
             if current_char == token_type.bracket_close:

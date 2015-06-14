@@ -630,10 +630,11 @@ class SQLCorpus(BaseCorpus):
             raise CorpusConsistencyError
         except TypeError:
             return None
-        z
+        
     def get_whereclauses(self, Token, WordTarget, PosTarget):
         if not Token:
             return []
+
         where_clauses = []
         if Token.word_specifiers or Token.lemma_specifiers or Token.transcript_specifiers:
             L = self.lexicon.get_matching_wordids(Token)
@@ -909,7 +910,11 @@ class SQLCorpus(BaseCorpus):
                     "W{}".format(i+1),
                     "P{}".format(i+1))
                 if current_where_clauses:
-                    where_clauses.append(" AND ".join(current_where_clauses))
+                    if not current_token.negated:
+                        where_clauses.append(" AND ".join(current_where_clauses))
+                    else:
+                        where_clauses.append("NOT ({})".format(
+                            " AND ".join(current_where_clauses)))
             else:
                 if options.cfg.experimental:
                     corpus_word_id = "{}_{}".format(
@@ -929,7 +934,11 @@ class SQLCorpus(BaseCorpus):
                     num=i+1, 
                     clause=clause) for clause in current_where_clauses]
                 if prefixed_clauses:
-                    where_clauses.append (" AND ".join(prefixed_clauses))
+                    if not current_token.negated:
+                        where_clauses.append(" AND ".join(prefixed_clauses))
+                    else:
+                        where_clauses.append("NOT ({})".format(" AND ".join(prefixed_clauses)))
+
         if options.cfg.verbose:
             return  " AND\n\t".join(where_clauses)
         else:
