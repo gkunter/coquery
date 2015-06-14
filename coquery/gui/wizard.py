@@ -264,7 +264,7 @@ class CoqueryWizard(QtGui.QWizard):
             self.ui.radio_mode_statistics.setChecked(True)
             
         elif options.cfg.MODE == QUERY_MODE_TOKENS:
-            selfui.radio_mode_tokens.setChecked(True)
+            self.ui.radio_mode_tokens.setChecked(True)
 
         if options.cfg.query_list:
             self.ui.radio_query_string.setChecked(True)
