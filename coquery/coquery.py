@@ -127,23 +127,21 @@ def main():
             
             # Catch keyboard interruptions:
             try:
-                # Check if profiling is requested. If to wrap the profiler 
+                # Check if profiling is requested. If so, wrap the profiler 
                 # around the query execution:
                 if options.cfg.profile:
                     cProfile.runctx("Session.run_queries()", globals(), locals())
                     break
-
+                
                 # Check if GUI is requested. If so, wrap query execution into a
                 # separate thread with graphical progress indicator:
                 elif options.cfg.gui:
                     ProgressIndicator.RunThread(Session.run_queries, "Querying...")
-                    try:
-                        Session.output_file_object.close()
-                    except AttributeError:
-                        pass
-                    # Display results (which are stored in the temporary file) in a
-                    # dialog, with the option to save it to a file:
+                    # Display results (which are stored in a memory file)
+                    # in a dialog, with the option to save it to a file:
                     finish = ResultsViewer(Session).exec_()
+                    if finish:
+                        break
                     Wizard.restart()
                     Wizard.next()
 
@@ -163,6 +161,12 @@ def main():
     logger.info("--- Done (after %.3f seconds) ---" % (time.time() - start_time))
 
 if __name__ == "__main__":
+    for x in sys.argv[1:]:
+        if x == "--benchmark":
+            import timeit
+            benchmark_time = timeit.timeit("main()", setup="from __main__ import main", number=10)
+            print("Execution time (25 times): {}".format(benchmark_time))
+            sys.exit(0)
     main()
 
     
