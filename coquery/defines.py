@@ -105,7 +105,7 @@ class UnicodeReader:
             return [unicode(s, self.encoding) for s in row]
         else:
             try:
-                return [unicode(x, self.encoding) if var_type is unicode else var_type(x) for x, var_type in zip(row, self.types)]
+                return [unicode(x, self.encoding) if var_type == unicode else var_type(x) for x, var_type in zip(row, self.types)]
             except ValueError:
                 return [unicode(s, self.encoding) for s in row]
     def __iter__(self):
@@ -126,7 +126,7 @@ class UnicodeWriter:
         self.encoder = codecs.getincrementalencoder(encoding)()
 
     def writerow(self, row):
-        self.writer.writerow(["{}".format(s).encode(self.encoding) for s in row])
+        self.writer.writerow([unicode(s).encode(self.encoding) for s in row])
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
         data = data.decode("utf-8")
