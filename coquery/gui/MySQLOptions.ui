@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>480</height>
+    <height>512</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,7 +21,7 @@
     <number>10</number>
    </property>
    <item>
-    <widget class="QFrame" name="">
+    <widget class="QFrame" name="frame">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -48,9 +48,12 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioButton">
+         <widget class="QRadioButton" name="radio_local">
           <property name="text">
            <string>Local server on this computer</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -60,7 +63,7 @@
            <enum>QFormLayout::ExpandingFieldsGrow</enum>
           </property>
           <item row="0" column="0" colspan="2">
-           <widget class="QRadioButton" name="radioButton_2">
+           <widget class="QRadioButton" name="radio_remote">
             <property name="text">
              <string>Remote server via the network</string>
             </property>
@@ -74,12 +77,12 @@
             <item>
              <widget class="QLabel" name="label_3">
               <property name="text">
-               <string>Host address:</string>
+               <string>Host: </string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="lineEdit_3">
+             <widget class="QLineEdit" name="hostname">
               <property name="inputMask">
                <string/>
               </property>
@@ -87,7 +90,7 @@
                <string/>
               </property>
               <property name="placeholderText">
-               <string/>
+               <string>(URL or IP address)</string>
               </property>
               <property name="cursorMoveStyle">
                <enum>Qt::LogicalMoveStyle</enum>
@@ -104,7 +107,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="">
+    <widget class="QFrame" name="frame">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -138,7 +141,11 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="lineEdit"/>
+         <widget class="QLineEdit" name="user">
+          <property name="text">
+           <string>coquery</string>
+          </property>
+         </widget>
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_2">
@@ -146,9 +153,6 @@
            <string>Password:</string>
           </property>
          </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QLineEdit" name="lineEdit_2"/>
         </item>
         <item row="2" column="0">
          <widget class="QLabel" name="label_4">
@@ -158,7 +162,27 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QSpinBox" name="spinBox"/>
+         <widget class="QSpinBox" name="port">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>65535</number>
+          </property>
+          <property name="value">
+           <number>3306</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="password">
+          <property name="text">
+           <string>coquery</string>
+          </property>
+          <property name="echoMode">
+           <enum>QLineEdit::PasswordEchoOnEdit</enum>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -179,7 +203,7 @@
     </spacer>
    </item>
    <item>
-    <widget class="QFrame" name="">
+    <widget class="QFrame" name="frame">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -194,7 +218,7 @@
        <number>10</number>
       </property>
       <item>
-       <widget class="QLabel" name="label_5">
+       <widget class="QLabel" name="label_connection">
         <property name="text">
          <string>Connection status:</string>
         </property>
@@ -214,7 +238,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QLabel" name="label_6">
+       <widget class="QLabel" name="label_status">
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
