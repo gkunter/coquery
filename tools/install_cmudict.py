@@ -52,7 +52,7 @@ class CMUdictBuilder(corpusbuilder.BaseCorpusBuilder):
 
         
         self.corpus_table = "dict"
-        self.corpus_token_id = "WordId"
+        self.corpus_id = "WordId"
         self.corpus_word_id = "WordId"
         self.word_table = "dict"
         self.word_id = "WordId"
