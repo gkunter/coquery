@@ -26,7 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-from __future__ import unicode_literals
+#from __future__ import unicode_literals
 
 import glob
 import os.path
@@ -126,7 +126,11 @@ class UnicodeWriter:
         self.encoder = codecs.getincrementalencoder(encoding)()
 
     def writerow(self, row):
-        self.writer.writerow([unicode(s).encode(self.encoding) for s in row])
+        try:
+            self.writer.writerow([s.encode("utf-8") if type(s) in (unicode, str) else s for s in row])
+        except UnicodeDecodeError:
+            self.writer.writerow([s for s in row])
+
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
         data = data.decode("utf-8")
