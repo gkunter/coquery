@@ -44,6 +44,7 @@ IndicesStage = {
     "corpus": {
         #"TokenId": (["TokenId"], 0, "HASH"),
         "WordId": (["WordId"], 0, "HASH"),
+        "TextId": (["TextId"], 0, "HASH"),
         "PosId": (["PosId"], 0, "HASH")
     },
 
@@ -158,7 +159,7 @@ TableDescription = {
         `TextId` MEDIUMINT(7) UNSIGNED NOT NULL,
         `Genre` ENUM('ACAD','FIC','MAG','NEWS','SPOK') NOT NULL,
         `Year` ENUM('1990','1991','1992','1993','1994','1995','1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012') NOT NULL,
-        `W1` MEDIUMINT UNSIGNED NOT NULL,
+        `W1` MEDIUMINT(7) UNSIGNED NOT NULL,
         `P1` SMALLINT UNSIGNED NOT NULL,
         `W2` MEDIUMINT UNSIGNED NOT NULL,
         `P2` SMALLINT UNSIGNED NOT NULL,
@@ -174,6 +175,28 @@ TableDescription = {
         `P7` SMALLINT UNSIGNED NOT NULL,
         PRIMARY KEY (`TokenId`)""" }
     }
+
+
+## create lexicon with pos as string:
+
+#SET autocommit=0;
+#SET unique_checks=0;
+#SET foreign_key_checks=0;
+
+#CREATE TABLE `lex` (
+    #`WordId` MEDIUMINT(8) UNSIGNED NOT NULL,
+    #`Word` VARCHAR(43) NOT NULL,
+    #`Lemma` TINYTEXT NOT NULL,
+    #`PoS` TINYTEXT NOT NULL,
+    #PRIMARY KEY (`WordId`)
+    #);
+
+#LOAD DATA LOCAL INFILE '/usr/local/share/COCA/db/data/lexicon.txt' INTO TABLE lex CHARACTER SET 'latin1' LINES TERMINATED BY '\r\n' IGNORE 2 LINES;
+
+#CREATE INDEX Word ON lex(Word(20));
+#CREATE INDEX Lemma ON lex(Lemma(18));
+#CREATE INDEX PoS ON lex(PoS(15));
+
 
 if EXPERIMENTAL:
     TableDescription["corpusBig2"] = {
