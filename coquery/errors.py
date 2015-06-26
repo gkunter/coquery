@@ -36,8 +36,8 @@ import logging
 import __init__
 
 class GenericException(Exception):
-    def __init__(self, par=""):
-        self.par = par
+    def __init__(self, *par):
+        self.par = ", ".join(par)
 
     def __str__(self):
         if self.par:
@@ -126,6 +126,9 @@ class LexiconUnprovidedError(NoTraceException):
     error_message = "Lexicon feature not provided by current lexicon"
     #def __init__(self, S):
         #self.par = S
+
+class SourceFeatureUnavailableError(NoTraceException):
+    error_message = "Requested source feature not provided by corpus"
 
 class CorpusUnsupportedError(NoTraceException):
     error_message = "Corpus not supported"
