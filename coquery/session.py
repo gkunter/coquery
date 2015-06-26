@@ -52,6 +52,8 @@ class Session(object):
         self.max_number_of_tokens = 0
         self.query_list = []
         self.query_column_number = 0
+        self.requested_fields = []
+            
         
         # load current corpus module depending on the value of options.cfg.corpus,
         # i.e. the corpus specified as an argumment:        
@@ -69,8 +71,6 @@ class Session(object):
             self.query_type = queries.TokenQuery
         elif options.cfg.MODE == QUERY_MODE_DISTINCT:
             self.query_type = queries.DistinctQuery
-            
-        self.requested_fields = []
             
         if options.cfg.show_orth:
             self.requested_fields.append(LEX_ORTH)        
@@ -91,7 +91,7 @@ class Session(object):
         if options.cfg.context_span or options.cfg.context_columns or options.cfg.context_sentence:
             self.requested_fields.append(CORP_CONTEXT)
             
-        self.output_fields = [x for x in self.requested_fields if self.Corpus.provides_feature(x)]
+        self.output_fields = set([x for x in self.requested_fields if self.Corpus.provides_feature(x)])
         
         logger.info("Using corpus %s" % options.cfg.corpus)
         self.output_file = None
@@ -207,10 +207,9 @@ class Session(object):
                 
             else:
                 start_time = time.time()
+                logger.info("Querying {}...".format(current_query))
                 if current_query.tokens:
                     current_query.set_result_list(self.Corpus.yield_query_results(current_query))
-                logger.info("Query executed ('{}', {} seconds)".format(
-                    current_query.query_string, time.time() - start_time))
 
                 if not options.cfg.dry_run:
                     if not self.output_file:
@@ -221,7 +220,7 @@ class Session(object):
                         current_query.number_of_tokens,
                         self.max_number_of_tokens)
                     
-                    logger.info("Results written (%.3f seconds)" % (time.time() - start_time))
+                    logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
         self.end_time = datetime.datetime.now()
 
 class StatisticsSession(Session):
