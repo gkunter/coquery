@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import unicode_literals
 import codecs
 
@@ -10,6 +12,7 @@ try:
     no_nltk = False
 except ImportError:
     no_nltk = True    
+
 import dbconnection
 import argparse
 import re
@@ -106,6 +109,8 @@ class BaseCorpusBuilder(object):
         self.parser.add_argument("-c", help="Create database tables", action="store_true")
         self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
         self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
+        self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
+        self.additional_arguments()
 
     def check_arguments(self):
         """ Check the command line arguments. Add defaults if necessary."""
@@ -118,7 +123,7 @@ class BaseCorpusBuilder(object):
         if not self.arguments.corpus_path:
             self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../coquery/corpora"))
             
-    def add_argument(self, *args):
+    def additional_arguments(self):
         """ Use this function if your corpus installer requires additional arguments."""
         pass
     
@@ -148,7 +153,8 @@ class BaseCorpusBuilder(object):
         table, a new entry is added to the table based on the values.
         The values have to be given in the same order as the column 
         specifications in the table description."""
-        key= "".join(["%s" % x for x in values.values()])
+
+        key = tuple(values.values())
         if key in self._tables[table_name]:
             return self._tables[table_name][key]
         try_entry = self.Con.find(
@@ -249,7 +255,11 @@ class BaseCorpusBuilder(object):
     def get_method_code(self, method):
         pass
 
-    def process_file(self, current_file):
+    def store_file_name(self, current_file):
+        self._file_id = self.table_get(self.file_table, 
+            {self.file_label: current_file})[self.file_id]
+
+    def process_text_file(self, current_file):
         """ Process a text file.
         First, attempt to tokenize the text, and to assign a POS tag to each
         token (using NLTK if possible).
@@ -260,7 +270,7 @@ class BaseCorpusBuilder(object):
         Finally, add the token with its word identifier to the corpus table."""
         
         # Read raw text from file:
-        with codecs.open(current_file, "rt", encoding="utf8") as input_file:
+        with codecs.open(current_file, "rt", encoding=self.arguments.encoding) as input_file:
             raw_text = input_file.read()
         tokens = []
         pos_map = []
@@ -285,7 +295,6 @@ class BaseCorpusBuilder(object):
                 self.lexicon_features.remove("LEX_POS")
         
         for current_token, current_pos in pos_map:
-            current_token = current_token.strip()
             if current_token in string.punctuation:
                 current_pos = "PUNCT"
              
@@ -313,6 +322,14 @@ class BaseCorpusBuilder(object):
                 {self.corpus_word_id: word_id,
                  self.corpus_source_id: self._file_id})
 
+    def process_file(self, current_file):
+        """ process_file(current_file) reads the content from current_file,
+        parses the information relevant for the corpus from the file, and
+        stores the information to the database. The default implementation
+        simply calls process_text_file() on current_file, assuming that
+        the file is a plain text file. """
+        self.process_text_file(current_file)
+
     def load_files(self):
         """ Goes through the list of suitable files, and calls process_file()
         on each file name. File names are added to the file table.""" 
@@ -328,14 +345,12 @@ class BaseCorpusBuilder(object):
             progress.start()
             
         for x in self.table_description:
-            #self._tables[x] = self.Con.read_table(x, lambda x: "".join(["%s" % y for y in x[1:]]))
             self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         
         for file_count, file_name in enumerate(files):
             if not self.Con.find(self.file_table, {self.file_label: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
-                self._file_id = self.table_get(self.file_table, 
-                    {self.file_label: file_name})[self.file_id]
+                self.store_file_name(file_name)
                 self.process_file(file_name)
                 
             if show_progress:
@@ -371,6 +386,7 @@ class BaseCorpusBuilder(object):
                     optimal_type = self.Con.get_optimal_field_type(current_table, current_field)
                     current_type = self.Con.get_field_type(current_table, current_field)
                     if current_type.lower() != optimal_type.lower():
+                        optimal_type = optimal_type.decode("utf-8")
                         self.logger.info("Optimising column {}.{} from {} to {}".format(
                             current_table, current_field, current_type, optimal_type))
                         try:
@@ -469,7 +485,7 @@ class BaseCorpusBuilder(object):
         # Handle existing versions of the corpus library
         if os.path.exists(path):
             # Read existing code as string:
-            with open(path, "rt") as input_file:
+            with codecs.open(path, "rt") as input_file:
                 existing_code = input_file.read()
             # Keep if existing code is the same as the new code:
             if existing_code == output_code:
@@ -491,7 +507,7 @@ class BaseCorpusBuilder(object):
                         self.logger.warning("Overwriting library.")
                     break
         # write library code:
-        with open(path, "wt") as output_file:
+        with codecs.open(path, "wt") as output_file:
             output_file.write(output_code)
             self.logger.info("Library %s written." % path)
             

@@ -88,19 +88,19 @@ class DBConnection(object):
     def get_field_type(self, table_name, column_name):
         cur = self.Con.cursor()
         self.execute(cur, "SHOW FIELDS FROM %s WHERE Field = '%s'" % (table_name, column_name), override=True)
-        Results = cur.fetchone()
+        Results = unicode(cur.fetchone())
         if Results:
             field_type = Results[1]
             if Results[2] == "NO":
                 field_type += " NOT NULL"
-            return field_type
+            return unicode(field_type)
         else:
             return None
         
     def get_optimal_field_type(self, table_name, column_name):
         cur = self.Con.cursor()
         self.execute(cur, "SELECT %s FROM %s PROCEDURE ANALYSE()" % (column_name, table_name), override=True)
-        return cur.fetchone()[-1]
+        return str(cur.fetchone()[-1])
         
     def modify_field_type(self, table_name, column_name, new_type):
         cur = self.Con.cursor()
@@ -145,6 +145,7 @@ class DBConnection(object):
             where.append('{} = "{}"'.format(column, unicode(value).replace('"', '""')))
         S = "SELECT {} FROM {} WHERE {}".format(
             ", ".join(variables), table_name, " AND ".join(where))
+        S = S.replace("\\", "\\\\")
         self.execute(cur, S, override=True)
         return cur.fetchall()
 
@@ -160,6 +161,7 @@ class DBConnection(object):
         S = "INSERT INTO {}({}) VALUES({})".format(
             table_name, ",".join(new_data.keys()), ",".join('"%s"' % x for x in new_data.values()))
         self.execute(cur, S)
+        return
 
     def set_variable(self, variable, value):
         cur = self.Con.cursor()
