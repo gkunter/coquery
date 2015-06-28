@@ -37,7 +37,7 @@ import __init__
 
 class GenericException(Exception):
     def __init__(self, *par):
-        self.par = ", ".join(par)
+        self.par = ", ".join([str(x) for x in par])
 
     def __str__(self):
         if self.par:
