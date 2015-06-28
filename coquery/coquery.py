@@ -89,6 +89,9 @@ def main():
         stream_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
         logger.addHandler(stream_handler)
     
+    if options.cfg.comment:
+        logger.info(options.cfg.comment)
+    
     if options.cfg.gui:
         sys.path.append(os.path.join(sys.path[0], "gui"))
         from pyqt_compat import QtCore, QtGui

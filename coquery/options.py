@@ -159,6 +159,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         self.parser.add_argument("--benchmark", help="benchmarking of Coquery", action="store_true")
         self.parser.add_argument("--profile", help="deterministic profiling of Coquery", action="store_true")
         self.parser.add_argument("--experimental", help="use experimental features (may be buggy)", action="store_true")
+        self.parser.add_argument("--comment", help="a comment that is printed in the log file", type=str)
 
         # Query options:
         self.parser.add_argument("-C", "--case", help="be case-sensitive (default: be COCA-compatible and ignore case)", action="store_true", dest="case_sensitive")
@@ -213,6 +214,17 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
             self.args.show_source = False
             self.args.source_columns = []
         else:
+            potential_labels = [x[len("source_info_"):] for x in dir(available_resources[self.args.corpus][0]) if x.startswith("source_info_")]
+            
+            #for x in self.args.source_columns:
+                #if x.lower() == "all":
+                    #self.args.source_columns = potential_labels
+                    #break
+            
+            for x in self.args.source_columns:
+                if x.upper() != "ALL":
+                    if x.lower() not in potential_labels:
+                        raise SourceFeatureUnavailableError(x, "(possible: {})".format(", ".join(potential_labels)))
             self.args.show_source = True
         
         vars(self.args) ["program_location"] = self.base_path

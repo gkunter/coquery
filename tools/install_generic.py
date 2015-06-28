@@ -52,13 +52,13 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
         # that contains this token.
         
         self.corpus_table = "corpus"
-        self.corpus_token_id = "TokenId"
+        self.corpus_id = "TokenId"
         self.corpus_word_id = "WordId"
         self.corpus_source_id = "FileId"
         
-        self.add_table_description(self.corpus_table, self.corpus_token_id,
+        self.add_table_description(self.corpus_table, self.corpus_id,
             {"CREATE": [
-                "`{}` BIGINT(20) UNSIGNED NOT NULL".format(self.corpus_token_id),
+                "`{}` BIGINT(20) UNSIGNED NOT NULL".format(self.corpus_id),
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_word_id),
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_source_id)],
             "INDEX": [

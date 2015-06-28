@@ -65,7 +65,10 @@ corpus-specific.
         return self.S != S
     
     def __repr__(self):
-        return self.S
+        if self.negated:
+            return "NOT({})".format(self.S)
+        else:
+            return self.S
     
     def replace_wildcards(self):
         """

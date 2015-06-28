@@ -75,13 +75,13 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         # that contains this token.
         
         self.corpus_table = "element"
-        self.corpus_token_id = "id"
+        self.corpus_id = "id"
         self.corpus_word_id = "Entity_id"
         self.corpus_source_id = "Sentence_id"
 
-        self.add_table_description(self.corpus_table, self.corpus_token_id,
+        self.add_table_description(self.corpus_table, self.corpus_id,
             {"CREATE": [
-                "`{}` int(9) UNSIGNED NOT NULL".format(self.corpus_token_id),
+                "`{}` int(9) UNSIGNED NOT NULL".format(self.corpus_id),
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_word_id),
                 "`{}` SMALLINT(4) UNSIGNED NOT NULL".format(self.corpus_source_id)],
             "INDEX": [  
