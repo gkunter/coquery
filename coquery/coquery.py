@@ -66,7 +66,7 @@ def main():
 
         # Check if a valid corpus was specified, but only if no GUI is
         # requested (the GUI wizard will handle corpus selection later):
-        if not options.cfg.gui:
+        if not (options.cfg.gui or options.cfg.wizard):
             if not available_resources:
                 raise NoCorpusError
 
@@ -93,37 +93,35 @@ def main():
         logger.info(options.cfg.comment)
     
     if options.cfg.gui:
-        #if options.cfg.experimental:
-            # use application gui:
-            sys.path.append(os.path.join(sys.path[0], "gui"))
-            from pyqt_compat import QtCore, QtGui
-            from app import CoqueryApp
+        sys.path.append(os.path.join(sys.path[0], "gui"))
+        from pyqt_compat import QtCore, QtGui
+        from app import CoqueryApp
 
-            options.cfg.app = QtGui.QApplication(sys.argv)
-            #ui = Ui_MainWindow()
-            #ui.setupUi()
-            Coq = CoqueryApp()
-            Coq.show()
-            Coq.setWizardDefaults()
-            options.cfg.icon = QtGui.QIcon()
-            options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_small.png".format(sys.path[0])))
-            Coq.setWindowIcon(options.cfg.icon)
-            options.cfg.app.exec_()
-        #else:
-            ## use wizard gui:
-            #sys.path.append(os.path.join(sys.path[0], "gui"))
-            #from pyqt_compat import QtCore, QtGui
-            #from wizard import CoqueryWizard
-            #from QtProgress import ProgressIndicator
-            #from results import ResultsViewer
-            #options.cfg.app = QtGui.QApplication(sys.argv)
-            #Wizard = CoqueryWizard()
-            #Wizard.setWizardDefaults()
-            #options.cfg.icon = QtGui.QIcon()
-            #options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_small.png".format(sys.path[0])))
-            #Wizard.setWindowIcon(options.cfg.icon)
-            sys.exit(0)
-        
+        options.cfg.app = QtGui.QApplication(sys.argv)
+        Coq = CoqueryApp()
+        Coq.show()
+        Coq.setWizardDefaults()
+        options.cfg.icon = QtGui.QIcon()
+        options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_small.png".format(sys.path[0])))
+        Coq.setWindowIcon(options.cfg.icon)
+        options.cfg.app.exec_()
+        logger.info("--- Finished program (after %.3f seconds) ---" % (time.time() - start_time))
+        sys.exit(0)
+
+    if options.cfg.wizard:
+        options.cfg.gui = True
+        # use wizard gui:
+        sys.path.append(os.path.join(sys.path[0], "gui"))
+        from pyqt_compat import QtCore, QtGui
+        from wizard import CoqueryWizard
+        from QtProgress import ProgressIndicator
+        from results import ResultsViewer
+        options.cfg.app = QtGui.QApplication(sys.argv)
+        Wizard = CoqueryWizard()
+        Wizard.setWizardDefaults()
+        options.cfg.icon = QtGui.QIcon()
+        options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_small.png".format(sys.path[0])))
+        Wizard.setWindowIcon(options.cfg.icon)
     while True:
         # catch all exceptions, but only if a gui is used:
         try:
