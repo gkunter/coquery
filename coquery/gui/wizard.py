@@ -187,7 +187,11 @@ class CoqueryWizard(QtGui.QWizard):
         result = self.exec_()
         if result != QtGui.QDialog.Accepted:
             return None
+        else:
+            self.getGuiValues()
+            return True
 
+    def getGuiValues(self):
         if options.cfg:
             options.cfg.corpus = unicode(self.ui.combo_corpus.currentText()).lower()
             if self.ui.radio_mode_context.isChecked():
@@ -203,7 +207,10 @@ class CoqueryWizard(QtGui.QWizard):
                 options.cfg.MODE = QUERY_MODE_TOKENS
                 
             if self.ui.radio_query_string.isChecked():
-                options.cfg.query_list = [unicode(self.ui.edit_query_string.text())]
+                if type(self.ui.edit_query_string) == QtGui.QLineEdit:
+                    options.cfg.query_list = [unicode(self.ui.edit_query_string.text())]
+                else:
+                    options.cfg.query_list = [unicode(self.ui.edit_query_string.toPlainText())]
             elif self.ui.radio_query_file.isChecked():
                 options.cfg.input_path = unicode(self.ui.edit_file_name.text())
             # FIXME: the GUI allows more fine-grained selection of 
