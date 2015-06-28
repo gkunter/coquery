@@ -156,8 +156,9 @@ class Session(object):
     def open_output_file(self):
         if self.output_file:
             return
-        if options.cfg.gui:
+        if options.cfg.gui and not self.storage_created:
             self.output_storage = []
+            self.storage_created = True
             return
         elif not options.cfg.output_path:
             self.output_file = UnicodeWriter(sys.stdout, delimiter=options.cfg.output_separator)
@@ -179,6 +180,8 @@ class Session(object):
 
         self.start_time = datetime.datetime.now()
         self.end_time = None
+        if options.cfg.gui:
+            self.storage_created = False
         for current_query in self.query_list:
             if len(current_query.query_list) > 1:
                 start_time = time.time()
