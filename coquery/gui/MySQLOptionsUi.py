@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'MySQLOptions.ui'
 #
-# Created: Sun Jun 14 02:48:15 2015
+# Created: Sun Jun 28 20:28:44 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -124,12 +124,17 @@ class Ui_Dialog(object):
         self.horizontalLayout.addWidget(self.label_connection)
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem1)
-        self.label_status = QtGui.QLabel(self.frame2)
-        self.label_status.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.label_status.setFrameShadow(QtGui.QFrame.Raised)
-        self.label_status.setText(_fromUtf8(""))
-        self.label_status.setObjectName(_fromUtf8("label_status"))
-        self.horizontalLayout.addWidget(self.label_status)
+        self.button_status = QtGui.QPushButton(self.frame2)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.button_status.sizePolicy().hasHeightForWidth())
+        self.button_status.setSizePolicy(sizePolicy)
+        self.button_status.setText(_fromUtf8(""))
+        self.button_status.setAutoDefault(True)
+        self.button_status.setFlat(False)
+        self.button_status.setObjectName(_fromUtf8("button_status"))
+        self.horizontalLayout.addWidget(self.button_status)
         self.verticalLayout_4.addWidget(self.frame2)
         self.buttonBox = QtGui.QDialogButtonBox(Dialog)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)

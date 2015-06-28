@@ -17,12 +17,6 @@ class MySQLOptions(QtGui.QDialog):
         
         self.ui = MySQLOptionsUi.Ui_Dialog()
         self.ui.setupUi(self)
-        #self.setWindowIcon(options.cfg.icon)
-        
-        ## Fill results view:
-        #with open(path, "rt") as input_file:
-            #content = input_file.read()
-        #self.ui.viewing_area.setPlainText(content)
         self.ui.hostname.setText(host)
         self.ui.user.setText(user)
         self.ui.password.setText(password)
@@ -35,11 +29,14 @@ class MySQLOptions(QtGui.QDialog):
         self.ui.port.valueChanged.connect(self.check_connection)
         self.ui.radio_local.clicked.connect(self.check_connection)
         self.ui.radio_remote.clicked.connect(self.check_connection)
-        
+
     def check_connection(self):
+        #self.ui.update()
         if self.ui.radio_local.isChecked():
             hostname = "localhost"
+            self.ui.hostname.setDisabled(True)
         else:
+            self.ui.hostname.setDisabled(False)
             hostname = self.ui.hostname.text()
         try:
             DB = sqlwrap.SqlDB(
@@ -47,14 +44,15 @@ class MySQLOptions(QtGui.QDialog):
                 self.ui.port.value(),
                 self.ui.user.text(),
                 self.ui.password.text())
-            #DB.Cur.execute("SELECT VERSION()")
-            DB.Cur.execute("SELECT CONNECTION_ID()")
+            DB.Cur.execute("SELECT VERSION()")
             x = DB.Cur.fetchone()
             DB.close()
         except SQLInitializationError:
             self.ui.label_connection.setText("Not connected")
+            self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
         else:
-            self.ui.label_connection.setText("Connected (MySQL server version {})".format(x[0]))
+            self.ui.button_status.setStyleSheet('QPushButton {background-color: green; color: green;}')
+            self.ui.label_connection.setText("Connected ({})".format(x[0]))
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
