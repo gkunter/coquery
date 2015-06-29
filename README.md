@@ -22,6 +22,7 @@ The latest release is version 0.9.
 * [Corpus of Historical American English](http://corpus.byu.edu/coha/)
 * [Buckeye Corpus](http://buckeyecorpus.osu.edu/)
 * [CELEX Lexical Database](https://catalog.ldc.upenn.edu/LDC96L14)
+* [ICE-Nigeria](http://sourceforge.net/projects/ice-nigeria/)
 
 Coquery does not provide any corpus data. You can only use these corpora if you have acquired the data files from the corpus maintainers. Coquery supplies tools that read these data files into MySQL databases that then can be queried. You can also build and query your own part-of-speech-tagged corpus using Coquery: simply put your text files into a folder and run the necessary tool.
 
