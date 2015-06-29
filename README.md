@@ -17,6 +17,7 @@ The latest release is version 0.9.
 * Link data from different corpora -- for example, use the transcriptions from CMUdict to query the BNC
 
 ### Supported corpora ###
+* [Bostom University Radio Speech Corpus](https://catalog.ldc.upenn.edu/LDC96S36)
 * [British National Corpus](http://www.natcorp.ox.ac.uk/)
 * [Corpus of Contemporary American English](http://corpus.byu.edu/coca/)
 * [Corpus of Historical American English](http://corpus.byu.edu/coha/)
