@@ -578,9 +578,14 @@ class SQLLexicon(BaseLexicon):
                     self.resource.word_pos_id, self.resource.word_table))
             stats["lexicon_distinct_pos"] = self.resource.DB.Cur.fetchone()[0]
         if LEX_LEMMA in self.provides:
-            self.resource.DB.execute("SELECT COUNT(DISTINCT {lemma}) FROM {lemma_table}".format(
-                lemma_table=self.resource.lemma_table,
-                lemma=self.resource.lemma_id))
+            if "lemma_table" in dir(self.resource):
+                lemma_table = self.resource.lemma_table
+                lemma_label = self.resource.lemma_label
+            else:
+                lemma_table = self.resource.word_table
+                lemma_label = self.resource.word_lemma_id
+            self.resource.DB.execute("SELECT COUNT(DISTINCT {}) FROM {}".format(
+                lemma_label, lemma_table))
             stats["lexicon_lemmas"] = self.resource.DB.Cur.fetchone()[0]
         return stats
 
