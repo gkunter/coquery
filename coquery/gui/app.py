@@ -31,43 +31,38 @@ class clickFilter(QtCore.QObject):
 
 class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     """ Coquery as standalone application. """
+    
+    def setup_menu_actions(self):
+        self.ui.action_save_results.triggered.connect(self.save_results)
+    
     def setup_app(self):
         """ initializes all widgets with suitable data """
         # add available resources to corpus dropdown box:
         corpora = [x.upper() for x in sorted(available_resources.keys())]
         self.ui.combo_corpus.addItems(corpora)
+        
+        self.setup_hooks()
+        self.setup_menu_actions()
+        
+        self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
+        self.enable_output_option()
         # add logo:
         #logo = QtGui.QPixmap("{}/logo/logo.png".format(sys.path[0]))
         #self.ui.Logo.setPixmap(logo.scaledToHeight(200))
         
-        # hook file browser button:
-        self.ui.button_browse_file.clicked.connect(self.select_file)
-        # hook file options button:
-        self.ui.button_file_options.clicked.connect(self.file_options)
-
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)
         
-        # hook run query button:
+        # hook run statistucs button:
         self.ui.button_show_statistics.clicked.connect(self.run_statistics)
         
-        # hook up events so that the radio buttons are set correctly
-        # between either query from file or query from string:
-        self.focus_to_file = clickFilter()
-        self.ui.edit_file_name.installEventFilter(self.focus_to_file)
-        self.focus_to_file.clicked.connect(self.select_file)
-        self.ui.edit_file_name.textChanged.connect(self.switch_to_file)
-        
-        self.focus_to_query = focusFilter()
-        self.focus_to_query.focus.connect(self.switch_to_query)
-        self.ui.edit_query_string.installEventFilter(self.focus_to_query)
         self.ui.log_file_path.setText(options.cfg.log_file_path)
         self.last_logfile_date = None
         
         self.ui.tabbed_views.currentChanged.connect(self.change_tab)
  
     def __init__(self, parent=None):
-        super(CoqueryApp, self).__init__(None)
+        QtGui.QMainWindow.__init__(self, parent)
         
         self.file_content = None
         
@@ -76,6 +71,10 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
 
         self.setup_app()
         self.csv_options = None
+        self.query_thread = None
+
+    def change_corpus(self, *args):
+        self.change_corpus_features(str(self.ui.combo_corpus.currentText()).lower())
 
     def change_tab(self, i):
         if i == 1:
@@ -112,6 +111,17 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.ui.label_time.setText("{}.{} s".format(duration, str(diff.microseconds)[:3]))
         self.ui.row_numbers.setText("{}".format(len(self.Session.output_storage)))
 
+    def save_results(self):
+        name = QtGui.QFileDialog.getSaveFileName(directory="~")
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            with open(name, "wt") as output_file:
+                writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
+                writer.writerow(self.Session.header)
+                for y in range(self.proxy_model.rowCount()):
+                    writer.writerow([self.proxy_model.index(y, x).data() for x in range(self.proxy_model.columnCount())])
+    
     def exception_during_query(self):
         error_box.ErrorBox.show(self.exc_info)
 
@@ -153,11 +163,22 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.Session = SessionInputFile()
         
         self.ui.progress_bar.setRange(0, 0)
+        
+        if self.query_thread:
+            print(self.query_thread)
+            msg_query_running = "Do you really want to interrupt the previous query?"
+            response = QtGui.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+            if response == QtGui.QMessageBox.Yes:
+                logger.warning("Previous query cancelled.")
+                self.query_thread.quit()
+                self.Session.Corpus.resource.DB.kill_connection()
+            else:
+                return
 
-        self.thread = QtProgress.ProgressThread(self.Session.run_queries, self)
-        self.thread.taskFinished.connect(self.query_finished)
-        self.thread.taskException.connect(self.exception_during_query)
-        self.thread.start()
+        self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
+        self.query_thread.taskFinished.connect(self.query_finished)
+        self.query_thread.taskException.connect(self.exception_during_query)
+        self.query_thread.start()
         
     def run_statistics(self):
         return

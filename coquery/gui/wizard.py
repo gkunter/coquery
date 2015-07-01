@@ -7,6 +7,21 @@ import wizardUi
 import csvOptions
 import QtProgress
 
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
+
+
 class focusFilter(QtCore.QObject):
     focus = QtCore.Signal()
     
@@ -26,79 +41,149 @@ class clickFilter(QtCore.QObject):
         return super(clickFilter, self).eventFilter(obj, event)
 
 class CoqueryWizard(QtGui.QWizard):
+    checked_buttons = set([])
+
+    def get_new_label(self, s, name, parent):
+        """ Add a new label to the parent widget. Used for creating the 
+        output option list dynamically. """
+        new_label = QtGui.QLabel(parent)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(new_label.sizePolicy().hasHeightForWidth())
+        new_label.setSizePolicy(sizePolicy)
+        new_label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTop|QtCore.Qt.AlignTrailing)
+        new_label.setObjectName(_fromUtf8(name))
+        new_label.setText(_translate("Wizard", s, None))
+        return new_label
+
+    def get_new_box(self, s, name, parent):
+        """ Add a new checkbox to the parent widget. Used for creating the 
+        output option list dynamically. """
+        new_box = QtGui.QCheckBox(parent)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(new_box.sizePolicy().hasHeightForWidth())
+        new_box.setTristate(False)
+        new_box.setSizePolicy(sizePolicy)
+        new_box.setObjectName(_fromUtf8(name))
+        new_box.setText(_translate("Wizard", s, None))
+        new_box.setChecked(_fromUtf8(name) in self.checked_buttons)
+        return new_box
+
+    def get_new_separator(self, name, parent):
+        """ Add a new separator to the parent widget. Used for creating the 
+        output option list dynamically. """
+        new_separator = QtGui.QFrame(parent)
+        new_separator.setFrameShape(QtGui.QFrame.HLine)
+        new_separator.setFrameShadow(QtGui.QFrame.Sunken)
+        new_separator.setObjectName(_fromUtf8(name))
+        return new_separator
+    
+    def clear_layout(self, layout):
+        """ Remove all children from the layout. Used for creating the 
+        output option list dynamically."""
+        for i in reversed(range(layout.count())):
+            item = layout.itemAt(i)
+            if isinstance(item, QtGui.QWidgetItem):
+                item.widget().close()
+            elif isinstance(item, QtGui.QSpacerItem):
+                pass
+            else:
+                self.clear_layout(item.layout())
+            layout.removeItem(item)   
+    
+    def change_corpus_features(self, corpus_label, prefix="", suffix=""):
+        """ Construct a new output option list depending on the features
+        provided by the corpus given in 'corpus_label."""
+        
+        Resource, Corpus, Lexicon = available_resources[corpus_label]
+        
+        # Find the widget containing the output options and the associated
+        # layout:
+        options_scroll_content = self.findChild(QtGui.QWidget, "options_scroll_content")
+        options_list = self.findChild(QtGui.QGridLayout, "options_list")
+
+        # remember all clicked checkboxes so that the selection can be 
+        # carried over to the new corpus:        
+        for current_box in options_scroll_content.findChildren(QtGui.QCheckBox):
+            if current_box.checkState():
+                self.checked_buttons.add(_fromUtf8(current_box.objectName()))
+            else:
+                try:
+                    self.checked_buttons.remove(_fromUtf8(current_box.objectName()))
+                except KeyError:
+                    pass
+                
+        # start with an empty layout for the option list:
+        self.clear_layout(options_list)
+        
+        # get a list of all tables in the resource:
+        table_list = [x[:x.index("_table")] for x in dir(Resource) if x.endswith("_table")]
+
+        # Rearrange table list so that they occur in a sensible order:
+        for x in reversed(["word", "lemma", "corpus", "source", "file", "speaker"]):
+            if x in table_list:
+                table_list.remove(x)
+                table_list.insert(0, x)
+        
+        layout_dict = {}
+        block_count = 0       
+
+        # Add options for each content variable in the table description. For 
+        # each table, a separate list of checkboxes is added.
+        for i, table in enumerate(table_list):
+            # create new layout for the table:
+            table_layout = QtGui.QVBoxLayout()
+            table_layout.setObjectName(_fromUtf8("{}_layout".format(table)))
+            layout_dict[table] = table_layout
+            
+            # look for content variables in the resource:
+            for var in dir(Resource):
+                # variables of the form x_id, x_y_table, and x_y_id are 
+                # internal variables used to link different tables. They
+                # do not occur as checkboxes:
+                if var.startswith(table) and not var.startswith("{}_table".format(table)) and not var.endswith("_id"):
+                    layout_dict[table].addWidget(
+                        self.get_new_box(Resource.__dict__[var], var, options_scroll_content))
+            # if there is a list of checkboxes for the current table, add it
+            # to the option list:
+            if layout_dict[table]:
+                options_list.addWidget(
+                    self.get_new_label(
+                        " ".join([prefix, table, suffix]).strip().capitalize(), 
+                        "{}_label".format(table), 
+                        options_scroll_content), block_count, 0, 1, 1)
+                options_list.addLayout(layout_dict[table], block_count, 1, 1, 1)
+                block_count += 1
+                # add visual separator:
+                options_list.addWidget(self.get_new_separator("{}_separator".format(table), options_scroll_content), block_count, 0, 1, 1)
+                block_count += 1
+
+        # Add general output options:
+        general_layout = QtGui.QVBoxLayout()
+        general_layout.setObjectName(_fromUtf8("coquery_layout"))
+        general_layout.addWidget(
+            self.get_new_box("Query string", "coquery_query_string", options_scroll_content))
+        general_layout.addWidget(
+            self.get_new_box("Name of input file", "coquery_input_file", options_scroll_content))
+        options_list.addWidget(
+            self.get_new_label("General", "coquery_label", options_scroll_content), block_count, 0, 1, 1)
+        options_list.addLayout(general_layout, block_count, 1, 1, 1)
+        block_count += 1
+        
+        # add a spacer so that the layout is compact:
+        options_list.addItem(QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding), block_count, 0, 1, 1)
+        
+        self.enable_output_option()
     
     def validateCurrentPage(self):
         page = self.currentPage()
         # validate corpus selection and query mode:
         if self.currentId() == 0:
             combo = page.findChild(QtGui.QComboBox, "combo_corpus")
-            if options.cfg:
-                Resource, Corpus, Lexicon = available_resources[str(combo.currentText()).lower()]
-            
-                feature_page = self.page(2)
-                
-                hide_list = []
-                show_list = []
-                
-                if CORP_FILENAME not in Corpus.provides:
-                    set_vis_list = hide_list
-                else:
-                    set_vis_list = show_list
-                set_vis_list.append(feature_page.findChild(QtGui.QLabel, "file_label"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "file_data_name"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "file_data_path"))
-                set_vis_list.append(feature_page.findChild(QtGui.QFrame, "file_separator"))
-
-                if CORP_SPEAKER not in Corpus.provides:
-                    set_vis_list = hide_list
-                else:
-                    set_vis_list = show_list
-                set_vis_list.append(feature_page.findChild(QtGui.QLabel, "speaker_label"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "speaker_data_id"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "speaker_data_age"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "speaker_data_sex"))
-                set_vis_list.append(feature_page.findChild(QtGui.QFrame, "speaker_separator"))
-                
-                if CORP_SOURCE not in Corpus.provides:
-                    set_vis_list = hide_list
-                else:
-                    set_vis_list = show_list
-                set_vis_list.append(feature_page.findChild(QtGui.QLabel, "source_label"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "source_id"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "source_data_year"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "source_data_genre"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "source_data_title"))
-                set_vis_list.append(feature_page.findChild(QtGui.QFrame, "source_separator"))
-                
-                if CORP_TIMING not in Corpus.provides:
-                    set_vis_list = hide_list
-                else:
-                    set_vis_list = show_list
-                set_vis_list.append(feature_page.findChild(QtGui.QLabel, "time_label"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "time_data_dur"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "time_data_start"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "time_data_end"))
-                set_vis_list.append(feature_page.findChild(QtGui.QFrame, "time_separator"))
-                
-                if CORP_CONTEXT not in Corpus.provides:
-                    set_vis_list = hide_list
-                else:
-                    set_vis_list = show_list
-                set_vis_list.append(feature_page.findChild(QtGui.QLabel, "context_label"))
-                set_vis_list.append(feature_page.findChild(QtGui.QLabel, "context_left_span_label"))
-                set_vis_list.append(feature_page.findChild(QtGui.QSpinBox, "context_left_span"))
-                set_vis_list.append(feature_page.findChild(QtGui.QLabel, "context_right_span_label"))
-                set_vis_list.append(feature_page.findChild(QtGui.QSpinBox, "context_right_span"))
-                set_vis_list.append(feature_page.findChild(QtGui.QCheckBox, "context_words_as_columns"))
-                set_vis_list.append(feature_page.findChild(QtGui.QFrame, "context_separator"))
-            
-            for widget in hide_list:
-                if widget:
-                    widget.setVisible(False)
-            for widget in show_list:
-                if widget:
-                    widget.show()
-            #feature_page.findChild(QtGui.QGridLayout, "selection_layout").update()
+            self.change_corpus_features(str(combo.currentText()).lower(), suffix = "features")
         
             return True
         ## validate input page:
@@ -107,26 +192,16 @@ class CoqueryWizard(QtGui.QWizard):
             #or page.field("edit_file_name")
         return True
 
-    def setup_wizard(self):
-        # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(available_resources.keys())]
-        self.ui.combo_corpus.addItems(corpora)
-        # add logo:
-        logo = QtGui.QPixmap("{}/logo/logo.png".format(sys.path[0]))
-        self.ui.Logo.setPixmap(logo.scaledToHeight(200))
-        
-        self.button(QtGui.QWizard.NextButton).setIcon(QtGui.QIcon.fromTheme("go-next"))
-        self.setButtonText(QtGui.QWizard.NextButton, "&Next")
-        self.button(QtGui.QWizard.BackButton).setIcon(QtGui.QIcon.fromTheme("go-previous"))
-        self.setButtonText(QtGui.QWizard.BackButton, "&Back")
-        self.button(QtGui.QWizard.CancelButton).setIcon(QtGui.QIcon.fromTheme("application-exit"))
-        self.button(QtGui.QWizard.FinishButton).setIcon(QtGui.QIcon.fromTheme("media-playback-start"))
-        self.setButtonText(QtGui.QWizard.FinishButton, "&Run query")
-        
+    def setup_hooks(self):
         # hook file browser button:
         self.ui.button_browse_file.clicked.connect(self.select_file)
         # hook file options button:
         self.ui.button_file_options.clicked.connect(self.file_options)
+
+        # set up hooks so that the general option to output the file name
+        # is available only if an input file is actually used:
+        self.ui.radio_query_string.toggled.connect(self.enable_output_option)
+        self.ui.radio_query_file.toggled.connect(self.enable_output_option)
 
         # hook up events so that the radio buttons are set correctly
         # between either query from file or query from string:
@@ -138,6 +213,32 @@ class CoqueryWizard(QtGui.QWizard):
         self.focus_to_query = focusFilter()
         self.focus_to_query.focus.connect(self.switch_to_query)
         self.ui.edit_query_string.installEventFilter(self.focus_to_query)
+
+    def setup_wizard(self):
+        logo = QtGui.QPixmap("{}/logo/logo.png".format(sys.path[0]))
+        self.ui.Logo.setPixmap(logo.scaledToHeight(200))
+        
+        self.button(QtGui.QWizard.NextButton).setIcon(QtGui.QIcon.fromTheme("go-next"))
+        self.setButtonText(QtGui.QWizard.NextButton, "&Next")
+        self.button(QtGui.QWizard.BackButton).setIcon(QtGui.QIcon.fromTheme("go-previous"))
+        self.setButtonText(QtGui.QWizard.BackButton, "&Back")
+        self.button(QtGui.QWizard.CancelButton).setIcon(QtGui.QIcon.fromTheme("application-exit"))
+        self.button(QtGui.QWizard.FinishButton).setIcon(QtGui.QIcon.fromTheme("media-playback-start"))
+        self.setButtonText(QtGui.QWizard.FinishButton, "&Run query")
+        
+        # add available resources to corpus dropdown box:
+        corpora = [x.upper() for x in sorted(available_resources.keys())]
+        self.ui.combo_corpus.addItems(corpora)
+        
+        self.setup_hooks()
+
+    def enable_output_option(self):
+        checkbox = self.findChild(QtGui.QCheckBox, "coquery_input_file")
+        if checkbox:
+            if self.ui.radio_query_file.isChecked():
+                checkbox.setDisabled(False)
+            else:
+                checkbox.setEnabled(False)
 
     def switch_to_file(self):
         self.ui.radio_query_file.setFocus()
@@ -174,7 +275,6 @@ class CoqueryWizard(QtGui.QWizard):
         super(CoqueryWizard, self).__init__(parent)
         
         self.file_content = None
-        
         self.ui = wizardUi.Ui_Wizard()
         self.ui.setupUi(self)
 

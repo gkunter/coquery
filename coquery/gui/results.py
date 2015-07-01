@@ -172,6 +172,7 @@ class ResultsViewer(QtGui.QDialog):
                 writer.writerow(self.Session.header)
                 for y in range(self.proxy_model.rowCount()):
                     writer.writerow([self.proxy_model.index(y, x).data() for x in range(self.proxy_model.columnCount())])
+                    
     def view_logfile(self):
         logfile.LogfileViewer.view(options.cfg.log_file_path)        
 
