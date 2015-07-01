@@ -305,18 +305,23 @@ class SQLLexicon(BaseLexicon):
                 pos)
         else:
             return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                self.resource.word_pos_id,
+                self.resource.word_pos,
                 self.resource.word_table,
-                self.resource.word_pos_id,
+                self.resource.word_pos,
                 self.resource.get_operator(current_token),
                 pos)
 
     def sql_string_get_other_wordforms(self, match):
+        if "lemma_table" not in dir(self.resource):
+            word_lemma_column = self.resource.word_lemma
+        else:
+            word_lemma_column = self.resource.word_lemma_id
+            
         return 'SELECT {word_id} FROM {word_table} WHERE {word_lemma_id} IN (SELECT {word_lemma_id} FROM {word_table} WHERE {word_label} {operator} "{match}")'.format(
             word_id=self.resource.word_id,
             word_table=self.resource.word_table,
             word_label=self.resource.word_label,
-            word_lemma_id=self.resource.word_lemma_id,
+            word_lemma_id=word_lemma_column,
             operator=self.resource.get_operator(match),
             match=match)
     
@@ -328,7 +333,7 @@ class SQLLexicon(BaseLexicon):
             if "pos_label" in dir(self.resource):
                 pos_label = self.resource.pos_label
             else:
-                pos_label = self.resource.word_pos_id
+                pos_label = self.resource.word_pos
             S = '{} {} "{}"'.format(
                 pos_label,
                 comparing_operator, 
@@ -336,12 +341,21 @@ class SQLLexicon(BaseLexicon):
             where_clauses.append (S)
         return "(%s)" % "OR ".join (where_clauses)
     
+    
+    
     def sql_string_get_posid_list(self, token):
         where_string = self.sql_string_get_posid_list_where(token)
-        return "SELECT DISTINCT {} FROM {} WHERE {}".format(
-            self.resource.word_pos_id,
-            self.resource.word_table,
-            where_string)
+
+        if "pos_table" in dir(self.resource):
+            return "SELECT DISTINCT {word_table}.{word_pos} FROM {word_table} INNER JOIN {pos_table} ON {pos_table}.{pos_id} = {word_table}.{word_pos} WHERE {where_string}".format(
+                word_pos=self.resource.word_pos_id,
+                word_table=self.resource.word_table,
+                pos_table=self.resource.pos_table,
+                pos_id=self.resource.pos_id,
+                where_string=where_string)
+        else:
+            return "SELECT DISTINCT {} FROM {} WHERE {}".format(
+                self.resource.word_pos, self.resource.word_table, where_string)
 
     def sql_string_get_wordid_list_where(self, token):
         # TODO: fix cfg.lemmatize
@@ -353,13 +367,13 @@ class SQLLexicon(BaseLexicon):
                 raise LexiconUnsupportedFunctionError
             
             specifier_list = token.lemma_specifiers
-            if "lemma_table" in dir(self.resource) and self.resource.lemma_table != self.resource.word_table:
-                target = "LEMMATABLE.{}".format(
+            if "lemma_table" in dir(self.resource):
+                target = "COQ_LEMMA_TABLE.{}".format(
                     self.resource.lemma_label)
             else:
                 target = "{}.{}".format(
                     self.resource.word_table,
-                    self.resource.word_lemma_id)
+                    self.resource.word_lemma)
         else:
             specifier_list = token.word_specifiers
             target = "{}.{}".format(
@@ -379,7 +393,7 @@ class SQLLexicon(BaseLexicon):
                 if "transcript_table" not in dir(self.resource):
                     target = "{}.{}".format(
                         self.resource.word_table, 
-                        self.resource.word_transcript_id)
+                        self.resource.word_transcript)
                 elif self.resource.transcript_table != self.resource.word_table:
                     target = "TRANSCRIPT.{}".format(
                         self.resource.transcript_label)
@@ -434,9 +448,9 @@ class SQLLexicon(BaseLexicon):
             
             if current_attribute == LEX_LEMMA:
                 if "lemma_table" in dir(self.resource):
-                    select_variable_list.append("LEMMATABLE.{}".format(
+                    select_variable_list.append("COQ_LEMMA_TABLE.{}".format(
                         self.resource.lemma_label))
-                    self.table_list.append("LEFT JOIN {} AS LEMMATABLE ON {}.{} = LEMMATABLE.{}".format(
+                    self.table_list.append("LEFT JOIN {} AS COQ_LEMMA_TABLE ON {}.{} = COQ_LEMMA_TABLE.{}".format(
                         self.resource.lemma_table,
                         self.resource.word_table,
                         self.resource.word_lemma_id,
@@ -444,7 +458,7 @@ class SQLLexicon(BaseLexicon):
                 else:
                     select_variable_list.append("{}.{}".format(
                         self.resource.word_table,
-                        self.resource.word_lemma_id))
+                        self.resource.word_lemma))
             
             if current_attribute == LEX_ORTH:
                 select_variable_list.append("{}.{}".format(
@@ -463,7 +477,7 @@ class SQLLexicon(BaseLexicon):
                 else:
                     select_variable_list.append("{}.{}".format(
                         self.resource.word_table,
-                        self.resource.word_pos_id))
+                        self.resource.word_pos))
             
             if current_attribute == LEX_PHON:
                 if "transcript_table" in dir(self.resource):
@@ -477,7 +491,7 @@ class SQLLexicon(BaseLexicon):
                 else:
                     select_variable_list.append("{}.{}".format(
                         self.resource.word_table,
-                        self.resource.word_transcript_id))
+                        self.resource.word_transcript))
                 
         select_variables = ", ".join(select_variable_list)
         select_string = ("SELECT {0} FROM {1}{2}".format(
@@ -525,20 +539,20 @@ class SQLLexicon(BaseLexicon):
         self.where_list = [self.sql_string_get_wordid_list_where(token)]
         self.table_list = [self.resource.word_table]
         if token.lemma_specifiers:
-            if "lemma_table" in dir(self.resource) and self.resource.lemma_table != self.resource.word_table:
+            if "lemma_table" in dir(self.resource):
                 self.table_list.append("LEFT JOIN {} AS COQ_LEMMA_TABLE ON {}.{} = COQ_LEMMA_TABLE.{}".format(
                     self.resource.lemma_table,
                     self.resource.word_table,
                     self.resource.word_lemma_id,
                     self.resource.lemma_id))
         if token.class_specifiers:
-            if "pos_table" in dir(self.resource) and self.resource.pos_table != self.resource.word_table:
+            if "pos_table" in dir(self.resource):
                 self.table_list.append("LEFT JOIN {} AS COQ_POS_TABLE ON {}.{} = COQ_POS_TABLE.{}".format(
                     self.resource.pos_table,
                     self.resource.word_table,
                     self.resource.word_pos_id,
                     self.resource.pos_id))
-        if token.transcript_specifiers  and self.resource.transcript_table != self.resource.word_table:
+        if token.transcript_specifiers:
             if "transcript_table" in dir(self.resource):
                 self.table_list.append("LEFT JOIN {} AS COQ_TRANSCRIPT_TABLE ON {}.{} = COQ_TRANSCRIPT_TABLE.{}".format(
                     self.resource.transcript_table,
@@ -575,7 +589,7 @@ class SQLLexicon(BaseLexicon):
                     self.resource.pos_id, self.resource.pos_table))
             else:
                 self.resource.DB.execute("SELECT COUNT(DISTINCT {}) FROM {}".format(
-                    self.resource.word_pos_id, self.resource.word_table))
+                    self.resource.word_pos, self.resource.word_table))
             stats["lexicon_distinct_pos"] = self.resource.DB.Cur.fetchone()[0]
         if LEX_LEMMA in self.provides:
             if "lemma_table" in dir(self.resource):
@@ -583,7 +597,7 @@ class SQLLexicon(BaseLexicon):
                 lemma_label = self.resource.lemma_label
             else:
                 lemma_table = self.resource.word_table
-                lemma_label = self.resource.word_lemma_id
+                lemma_label = self.resource.word_lemma
             self.resource.DB.execute("SELECT COUNT(DISTINCT {}) FROM {}".format(
                 lemma_label, lemma_table))
             stats["lexicon_lemmas"] = self.resource.DB.Cur.fetchone()[0]
@@ -751,7 +765,7 @@ class SQLCorpus(BaseCorpus):
                     lemma_label = self.resource.lemma_id
                 else:
                     lemma_table = self.resource.word_table
-                    lemma_label = self.resource.word_lemma_id
+                    lemma_label = self.resource.word_lemma
                 self.table_list.add(lemma_table)
             if LEX_LEMMA in requested:
                 self.column_list.add("{}.{} AS COQ_LEMMA_LABEL".format(
@@ -770,7 +784,7 @@ class SQLCorpus(BaseCorpus):
                     transcript_label = self.resource.transcript_id
                 else:
                     transcript_table = self.resource.word_table
-                    transcript_label = self.resource.word_transcript_id
+                    transcript_label = self.resource.word_transcript
                 self.table_list.add(transcript_table)
             if LEX_PHON in requested:
                 self.column_list.add("{}.{} AS COQ_PHON_LABEL".format(
@@ -789,7 +803,7 @@ class SQLCorpus(BaseCorpus):
                     pos_label = self.resource.pos_label
                 else:
                     pos_table = self.resource.word_table
-                    pos_label = self.resource.word_pos_id
+                    pos_label = self.resource.word_pos
                 self.table_list.add(pos_table)
             if LEX_POS in requested:
                 self.column_list.add("{}.{} AS COQ_POS_LABEL".format(
@@ -832,24 +846,37 @@ class SQLCorpus(BaseCorpus):
                         self.resource.corpus_source_id))
 
             if (token.class_specifiers and LEX_POS in self.lexicon.provides):
-                self.column_list.add("{}.{}".format(
-                    self.resource.word_table,
-                    self.resource.word_pos_id))
                 self.table_list.add(self.resource.word_table)
                 self.where_list.add("{}.{} = {}.{}".format(
-                    self.resource.corpus_table,
-                    self.resource.corpus_word_id,
-                    self.resource.word_table,
-                    self.resource.word_id))
+                self.resource.corpus_table,
+                self.resource.corpus_word_id,
+                self.resource.word_table,
+                self.resource.word_id))
                 if "pos_table" not in dir(self.resource):
                     # CASE 1:
                     # No separate pos_table, POS is stored as a column in
                     # word_table:
-                    self.where_list.add("{}.{} = {}.{}".format(
-                        self.resource.corpus_table,
-                        self.resource.corpus_word_id,
+                    self.column_list.add("{}.{}".format(
                         self.resource.word_table,
-                        self.resource.word_id))
+                        self.resource.word_pos))
+                #self.column_list.add("{}.{}".format(
+                    #self.resource.word_table,
+                    #self.resource.word_pos_id))
+                #self.table_list.add(self.resource.word_table)
+                #self.where_list.add("{}.{} = {}.{}".format(
+                    #self.resource.corpus_table,
+                    #self.resource.corpus_word_id,
+                    #self.resource.word_table,
+                    #self.resource.word_id))
+                #if "pos_table" not in dir(self.resource):
+                    ## CASE 1:
+                    ## No separate pos_table, POS is stored as a column in
+                    ## word_table:
+                    #self.where_list.add("{}.{} = {}.{}".format(
+                        #self.resource.corpus_table,
+                        #self.resource.corpus_word_id,
+                        #self.resource.word_table,
+                        #self.resource.word_id))
                 else:
                     # CASE 2:
                     # POS stored in pos_table indexed by pos_id
@@ -1032,11 +1059,14 @@ class SQLCorpus(BaseCorpus):
                             " AND ".join(current_where_clauses)))
             else:
                 corpus_word_id = self.resource.corpus_word_id
-                word_pos_id = self.resource.word_pos_id
+                if "pos_table" not in dir(self.resource):
+                    word_pos_column = self.resource.word_pos
+                else:
+                    word_pos_column = self.resource.word_pos_id
                 current_where_clauses = self.get_whereclauses(
                     current_token, 
                     corpus_word_id, 
-                    word_pos_id)
+                    word_pos_column)
                 prefixed_clauses = ["e{num}.{clause}".format(
                     num=i+1, 
                     clause=clause) for clause in current_where_clauses]
@@ -1062,7 +1092,7 @@ class SQLCorpus(BaseCorpus):
         
         # make the experimental query mode the default for frequency queries 
         # with exactly one token, but optional otherwise:
-        if options.cfg.experimental or (options.cfg.MODE == QUERY_MODE_FREQUENCIES and len(Query.Session.output_fields) == 1 and not only_names):
+        if options.cfg.experimental or (options.cfg.MODE == QUERY_MODE_FREQUENCIES and (len(Query.Session.output_fields) == 1) and not only_names):
             # add token_id if needed:
             if options.cfg.context_span or options.cfg.context_columns:
                 if self_joined:
@@ -1146,7 +1176,7 @@ class SQLCorpus(BaseCorpus):
 
         # make the experimental query mode the default for frequency queries 
         # with exactly one token, but optional otherwise:
-        if options.cfg.experimental or (options.cfg.MODE == QUERY_MODE_FREQUENCIES and len(Query.Session.output_fields) == 1):
+        if options.cfg.experimental or (options.cfg.MODE == QUERY_MODE_FREQUENCIES and (len(Query.Session.output_fields) == 1)):
             query_string = "SELECT {} FROM {}".format(
                 column_string, table_string)
 
