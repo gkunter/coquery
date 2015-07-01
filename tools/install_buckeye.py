@@ -106,21 +106,21 @@ class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
         self.word_id = "WordId"
         self.word_label = "Text"
         self.word_lemma_id = "LemmaId"
-        self.word_pos_id = "Pos"
-        self.word_transcript_id = "Transcript"
+        self.word_pos = "Pos"
+        self.word_transcript = "Transcript"
         
         self.add_table_description(self.word_table, self.word_id,
             {"CREATE": [
                 "`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.word_id),
                 "`{}` TEXT NOT NULL".format(self.word_label),
                 "`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.word_lemma_id),
-                "`{}` VARCHAR(7) NOT NULL".format(self.word_pos_id),
-                "`{}` TINYTEXT NOT NULL".format(self.word_transcript_id)],
+                "`{}` VARCHAR(7) NOT NULL".format(self.word_pos),
+                "`{}` TINYTEXT NOT NULL".format(self.word_transcript)],
             "INDEX": [
                 ([self.word_lemma_id], 0, "HASH"),
-                ([self.word_pos_id], 0, "BTREE"),
+                ([self.word_pos], 0, "BTREE"),
                 ([self.word_label], 4, "BTREE"),
-                ([self.word_transcript_id], 4, "BTREE")]})
+                ([self.word_transcript], 4, "BTREE")]})
 
         # Add the lemma table. Each row in this table represents a lemma in
         # the lexicon. Each word-form from the lexicon table is linked to
@@ -142,13 +142,13 @@ class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
         self.lemma_table = "lemma"
         self.lemma_id = "LemmaId"
         self.lemma_label = "Text"
-        self.lemma_transcript_id = "Transcript"
+        self.lemma_transcript = "Transcript"
         
         self.add_table_description(self.lemma_table, self.lemma_id,
             {"CREATE": [
                 "`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.lemma_id),
                 "`{}` TEXT NOT NULL".format(self.lemma_label),
-                "`{}` VARCHAR(41) NOT NULL".format(self.lemma_transcript_id)],
+                "`{}` VARCHAR(41) NOT NULL".format(self.lemma_transcript)],
             "INDEX": [
                 ([self.lemma_label], 4, "BTREE")]})
 
@@ -209,12 +209,12 @@ class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
                     if float(time) >= 0:
                         lemma_id = self.table_get(self.lemma_table, 
                             {self.lemma_label: word.lower(), 
-                             self.lemma_transcript_id: lemma_trans})[self.lemma_id]
+                             self.lemma_transcript: lemma_trans})[self.lemma_id]
                         word_id = self.table_get(self.word_table, 
                             {self.word_label: word, 
                              self.word_lemma_id: lemma_id, 
-                             self.word_pos_id: pos,
-                             self.word_transcript_id: trans})[self.word_id]
+                             self.word_pos: pos,
+                             self.word_transcript: trans})[self.word_id]
                         self.table_add(self.corpus_table, 
                             {self.corpus_word_id: word_id, 
                              self.corpus_source_id: self._file_id,

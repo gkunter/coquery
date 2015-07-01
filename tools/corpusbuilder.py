@@ -259,6 +259,111 @@ class BaseCorpusBuilder(object):
         self._file_id = self.table_get(self.file_table, 
             {self.file_label: current_file})[self.file_id]
 
+    def get_lemma(self, word):
+        """ Return a lemma for the word. By default, this is simply the
+        word in lower case, but this method can be overloaded with methods
+        that use e.g. lemma dictionaries. 
+        The method is used by the default file processing methods. If your
+        corpus implements a specific file processing method, get_lemma() may
+        be obsolete. """
+        return word.lower()
+    
+    def get_lemma_id(self, word):
+        """ Return a lemma identifier for the word. If there is a separate 
+        lemma table, the identifier is an index to that table. Otherwise, 
+        the identifier is the lemma label."""
+        
+        if "lemma_table" in self.table_description:
+            return self.table_get(self.lemma_table, 
+                {self.lemma_label: self.get_lemma(word)})[self.lemma_id]
+        else:
+            return self.get_lemma(word)
+    
+    def get_pos(self, word):
+        """ Return the part-of-speech for the word. By default, an empty
+        string is returned, but this method may be overloaded with methods
+        that use for example a pos-tagged dictionary.
+        The method is used by the default file processing methods. If your
+        corpus implements a specific file processing method, get_lemma() may
+        be obsolete. """
+        return ""
+    
+    def get_pos_id(self, word):
+        """ Return a part-of-speech identifier for the word. If there is a 
+        separate part-of-speech table, the identifier is an index to that 
+        table. Otherwise, the identifier is the part-of-speech label."""
+        
+        if "pos_table" in self.table_description:
+            return self.table_get(self.pos_table, 
+                {self.pos_label: self.get_pos(word)})[self.pos_id]
+        else:
+            return self.get_pos(word)        
+
+    def get_transcript(self, word):
+        """ Return the phonemic transcript for the word. By default, an 
+        empty string is returned, but this method may be overloaded with 
+        methods that use for example a pronunciation dictionary.
+        The method is used by the default file processing methods. If your
+        corpus implements a specific file processing method, get_lemma() may
+        be obsolete. """
+        return ""
+    
+    def get_transcript_id(self, word):
+        """ Return a transcription identifier for the word. If there is a 
+        separate transcription table, the identifier is an index to that 
+        table. Otherwise, the identifier is the transcript label."""
+        
+        if "transcript_table" in self.table_description:
+            return self.table_get(self.transcript_table, 
+                {self.transcript_label: self.get_transcript(word)})[self.transcript_id]
+        else:
+            return self.get_transcript(word)        
+
+    def process_xlabel_file(self, current_file):
+        """ Process an xlabel file.
+        xlabel files are used by ESPS/waves+ to store phonetic 
+        annotations. Some spoken corpora are provided in this format.
+        A description can be found here:
+        http://staffhome.ecm.uwa.edu.au/~00014742/research/speech/local/entropic/ESPSDoc/waves/manual/xlabel.pdf
+        """
+        
+        # xlabel files consist of a header and a file body, separated by a
+        # row containing only the hash mark '#'. Everything preceding this 
+        # mark is ignored:
+        file_body = False
+        with codecs.open(current_file, "rt", encoding=self.arguments.encoding) as input_file:
+            for row in input_file:
+                # only process the lines after the hash mark:
+                if row.strip() == "#":
+                    file_body = True
+                elif file_body:
+                    try:
+                        time, color, word = row.split()
+                    # in xlabel files, rows can contain only the time tag,
+                    # but no other labels. In this case, the row is ignored:
+                    except ValueError:
+                        continue
+                    
+                    # create a dictionary containing the word label, plus
+                    # additional labels if provided by the lexicon:
+                    word_dict = {}
+                    word_dict[self.word_label] = word
+                    if "LEX_LEMMA" in self.lexicon_features:
+                        word_dict[self.word_lemma_id] = self.get_lemma_id(word)
+                    if "LEX_POS" in self.lexicon_features:
+                        word_dict[self.word_pos_id] = self.get_pos_id(word)
+                    if "LEX_PHON" in self.lexicon_features:
+                        word_dict[self.word_transcript_id] = self.get_transcript_id(word)
+
+                    # get a word id for the current word:
+                    word_id = self.table_get(self.word_table, word_dict)[self.word_id]
+                    
+                    # add the word as a new token to the corpus:
+                    self.table_add(self.corpus_table, 
+                        {self.corpus_word_id: word_id, 
+                            self.corpus_source_id: self._file_id,
+                            self.corpus_time: time})
+                
     def process_text_file(self, current_file):
         """ Process a text file.
         First, attempt to tokenize the text, and to assign a POS tag to each

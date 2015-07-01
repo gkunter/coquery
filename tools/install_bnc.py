@@ -113,7 +113,7 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         self.word_id = "id"
         self.word_label = "Text"
         self.word_lemma_id = "Lemma_id"
-        self.word_pos_id = "C5"
+        self.word_pos = "C5"
         self.word_type = "Type"
 
         self.add_table_description(self.word_table, self.word_id,
@@ -121,12 +121,12 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_id),
                 "`{}` VARCHAR(133) NOT NULL".format(self.word_label),
                 "`{}` MEDIUMINT(6) UNSIGNED".format(self.word_lemma_id),
-                "`{}` ENUM('AJ0','AJ0-AV0','AJ0-NN1','AJ0-VVD','AJ0-VVG','AJ0-VVN','AJC','AJS','AT0','AV0','AV0-AJ0','AVP','AVP-PRP','AVQ','AVQ-CJS','CJC','CJS','CJS-AVQ','CJS-PRP','CJT','CJT-DT0','CRD','CRD-PNI','DPS','DT0','DT0-CJT','DTQ','EX0','ITJ','NN0','NN1','NN1-AJ0','NN1-NP0','NN1-VVB','NN1-VVG','NN2','NN2-VVZ','None','NP0','NP0-NN1','ORD','PNI','PNI-CRD','PNP','PNQ','PNX','POS','PRF','PRP','PRP-AVP','PRP-CJS','PUL','PUN','PUQ','PUR','TO0','UNC','VBB','VBD','VBG','VBI','VBN','VBZ','VDB','VDD','VDG','VDI','VDN','VDZ','VHB','VHD','VHG','VHI','VHN','VHZ','VM0','VVB','VVB-NN1','VVD','VVD-AJ0','VVD-VVN','VVG','VVG-AJ0','VVG-NN1','VVI','VVN','VVN-AJ0','VVN-VVD','VVZ','VVZ-NN2','XX0','ZZ0')".format(self.word_pos_id),
+                "`{}` ENUM('AJ0','AJ0-AV0','AJ0-NN1','AJ0-VVD','AJ0-VVG','AJ0-VVN','AJC','AJS','AT0','AV0','AV0-AJ0','AVP','AVP-PRP','AVQ','AVQ-CJS','CJC','CJS','CJS-AVQ','CJS-PRP','CJT','CJT-DT0','CRD','CRD-PNI','DPS','DT0','DT0-CJT','DTQ','EX0','ITJ','NN0','NN1','NN1-AJ0','NN1-NP0','NN1-VVB','NN1-VVG','NN2','NN2-VVZ','None','NP0','NP0-NN1','ORD','PNI','PNI-CRD','PNP','PNQ','PNX','POS','PRF','PRP','PRP-AVP','PRP-CJS','PUL','PUN','PUQ','PUR','TO0','UNC','VBB','VBD','VBG','VBI','VBN','VBZ','VDB','VDD','VDG','VDI','VDN','VDZ','VHB','VHD','VHG','VHI','VHN','VHZ','VM0','VVB','VVB-NN1','VVD','VVD-AJ0','VVD-VVN','VVG','VVG-AJ0','VVG-NN1','VVI','VVN','VVN-AJ0','VVN-VVD','VVZ','VVZ-NN2','XX0','ZZ0')".format(self.word_pos),
                 "`{}` ENUM('c','gap','pause','vocal','w')".format(self.word_type)],
              "INDEX": [
                 ([self.word_lemma_id], 0, "HASH"),
                 ([self.word_label], 0, "BTREE"),
-                ([self.word_pos_id], 0, "BTREE")]})
+                ([self.word_pos], 0, "BTREE")]})
 
         # Add the lemma table. Each row in this table represents a lemma in
         # the lexicon. Each word-form from the lexicon table is linked to
@@ -149,13 +149,13 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         self.lemma_table = "lemma"
         self.lemma_id = "id"
         self.lemma_label = "Text"
-        self.lemma_pos_id = "Pos"
+        self.lemma_pos = "Pos"
         
         self.add_table_description(self.lemma_table, self.lemma_id,
             {"CREATE": [
                 "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.lemma_id),
                 "`{}` VARCHAR(131) NOT NULL".format(self.lemma_label),
-                "`{}` ENUM('ADJ','ADV','ART','CONJ','INTERJ','PREP','PRON','SUBST','UNC','VERB', 'PUNCT')".format(self.lemma_pos_id)],
+                "`{}` ENUM('ADJ','ADV','ART','CONJ','INTERJ','PREP','PRON','SUBST','UNC','VERB', 'PUNCT')".format(self.lemma_pos)],
             "INDEX": [
                 ([self.lemma_label], 0, "BTREE")]})
 
@@ -378,14 +378,14 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
             if tag in ("w", "c"):
                 lemma_id = self.table_get(self.lemma_table, 
                     {self.lemma_label: lemma_text, 
-                     self.lemma_pos_id: lemma_pos})
+                     self.lemma_pos: lemma_pos})
             else:
                 lemma_id = 0
                 word_pos = "UNC"
             word_id = self.table_get(self.word_table, 
                 {self.word_label: word_text, 
                  self.word_lemma_id: lemma_id, 
-                 self.word_pos_id: word_pos, 
+                 self.word_pos: word_pos, 
                  self.word_type: tag})
                 
             

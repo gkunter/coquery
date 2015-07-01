@@ -127,16 +127,16 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         
         self.word_table = "word"
         self.word_id = "WordId"
-        self.word_lemma_id = "Lemma"
+        self.word_lemma = "Lemma"
         self.word_label = "Text"
-        self.word_pos_id = "Pos"
+        self.word_pos = "Pos"
         
         create_columns = ["`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.word_id),
                 "`{}` VARCHAR(32) NOT NULL".format(self.word_label),
-                "`{}` VARCHAR(32) NOT NULL".format(self.word_lemma_id),
-                "`{}` VARCHAR(12) NOT NULL".format(self.word_pos_id)]
-        index_columns = [([self.word_lemma_id], 0, "HASH"),
-                ([self.word_pos_id], 0, "BTREE"),
+                "`{}` VARCHAR(32) NOT NULL".format(self.word_lemma),
+                "`{}` VARCHAR(12) NOT NULL".format(self.word_pos)]
+        index_columns = [([self.word_lemma], 0, "HASH"),
+                ([self.word_pos], 0, "BTREE"),
                 ([self.word_label], 0, "BTREE")]
 
         self.add_table_description(self.word_table, self.word_id,
@@ -248,8 +248,8 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                         
                     self._word_id = self.table_get(self.word_table, 
                         {self.word_label: word_text, 
-                        self.word_lemma_id: lemma_text, 
-                        self.word_pos_id: word_pos})[self.word_id]
+                        self.word_lemma: lemma_text, 
+                        self.word_pos: word_pos})[self.word_id]
                         
                     self.table_add(self.corpus_table,
                         {self.corpus_word_id: self._word_id,

@@ -57,17 +57,17 @@ class CMUdictBuilder(corpusbuilder.BaseCorpusBuilder):
         self.word_table = "dict"
         self.word_id = "WordId"
         self.word_label = "Text"
-        self.word_transcript_id = "Transcript"
+        self.word_transcript = "Transcript"
         
         
         self.add_table_description(self.word_table, self.word_id,
             {"CREATE": [
                 "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.word_id),
                 "`{}` VARCHAR(33) NOT NULL".format(self.word_label),
-                "`{}` VARCHAR(93) NOT NULL".format(self.word_transcript_id)],
+                "`{}` VARCHAR(93) NOT NULL".format(self.word_transcript)],
             "INDEX": [
                 ([self.word_label], 0, "HASH"),
-                ([self.word_transcript_id], 0, "HASH")]})
+                ([self.word_transcript], 0, "HASH")]})
 
     def create_tables(self):
         for i, current_table in enumerate(self.table_description):
@@ -84,7 +84,7 @@ class CMUdictBuilder(corpusbuilder.BaseCorpusBuilder):
                     self.table_add(self.word_table, 
                         {self.word_id: word_id,
                          self.word_label: word, 
-                         self.word_transcript_id: transcript})
+                         self.word_transcript: transcript})
         self.Con.commit()
                     
     def get_description(self):
