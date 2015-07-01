@@ -27,9 +27,20 @@ class DBConnection(object):
     def has_database(self, database_name):
         cur = self.Con.cursor()
         self.execute(cur, "SHOW DATABASES")
-        for x in cur:
-            if x[0] == database_name.split()[0]:
-                return database_name
+        try:
+            for x in cur:
+                if x[0] == database_name.split()[0]:
+                    return database_name
+        except mysql.ProgrammingError as ex:
+            if cur:
+                print(cur.messages)
+                # You can show only the last error like this.
+                # print cursor.messages[-1]
+            else:
+                print(self.Con.messages)
+                # Same here you can also do.
+                # print self.db.messages[-1]
+            print("123")
         return False
 
     def create_database(self, database_name):
