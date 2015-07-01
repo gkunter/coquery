@@ -403,7 +403,7 @@
   <widget class="QWizardPage" name="wizardPage">
    <layout class="QVBoxLayout" name="verticalLayout_7">
     <item>
-     <widget class="QFrame" name="frame_3">
+     <widget class="QFrame" name="options_setting">
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
       </property>
@@ -425,19 +425,19 @@
         </widget>
        </item>
        <item>
-        <widget class="QScrollArea" name="scrollArea">
+        <widget class="QScrollArea" name="Scroll_area">
          <property name="frameShadow">
           <enum>QFrame::Sunken</enum>
          </property>
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents">
+         <widget class="QWidget" name="options_scroll_content">
           <property name="geometry">
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>353</width>
+            <width>737</width>
             <height>670</height>
            </rect>
           </property>
@@ -446,7 +446,7 @@
             <number>10</number>
            </property>
            <item>
-            <layout class="QGridLayout" name="gridLayout_4" columnstretch="0,1">
+            <layout class="QGridLayout" name="options_list" columnstretch="0,1">
              <property name="leftMargin">
               <number>20</number>
              </property>

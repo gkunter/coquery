@@ -777,13 +777,13 @@
               <property name="widgetResizable">
                <bool>true</bool>
               </property>
-              <widget class="QWidget" name="scrollAreaWidgetContents">
+              <widget class="QWidget" name="options_scroll_content">
                <property name="geometry">
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>344</width>
-                 <height>713</height>
+                 <width>314</width>
+                 <height>573</height>
                 </rect>
                </property>
                <property name="sizePolicy">
@@ -803,7 +803,7 @@
                  <number>10</number>
                 </property>
                 <item>
-                 <layout class="QGridLayout" name="gridLayout_4" columnstretch="0,0">
+                 <layout class="QGridLayout" name="options_list" columnstretch="0,0">
                   <property name="sizeConstraint">
                    <enum>QLayout::SetDefaultConstraint</enum>
                   </property>
@@ -1514,54 +1514,54 @@
      <x>0</x>
      <y>0</y>
      <width>1173</width>
-     <height>34</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="action_Open_input_file"/>
-    <addaction name="actionSave_results"/>
+    <addaction name="action_open_input_file"/>
+    <addaction name="action_save_results"/>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
+    <addaction name="action_quit"/>
    </widget>
    <widget class="QMenu" name="menuHilfe">
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionHelop"/>
+    <addaction name="action_help"/>
     <addaction name="separator"/>
-    <addaction name="actionAbout_Coquery"/>
+    <addaction name="action_about_coquery"/>
    </widget>
    <widget class="QMenu" name="menuCorpus">
     <property name="title">
      <string>Corpus</string>
     </property>
-    <widget class="QMenu" name="menuChoose_corpus">
+    <widget class="QMenu" name="menu_choose_corpus">
      <property name="title">
       <string>Choose corpus...</string>
      </property>
      <addaction name="actionDummy"/>
     </widget>
-    <widget class="QMenu" name="menuQuery_mode">
+    <widget class="QMenu" name="menu_query_mode">
      <property name="title">
       <string>Query mode</string>
      </property>
-     <addaction name="actionDistinct_tokens"/>
-     <addaction name="actionFrequency"/>
-     <addaction name="actionAll_tokens"/>
+     <addaction name="action_distinct_tokens"/>
+     <addaction name="action_frequency"/>
+     <addaction name="action_all_tokens"/>
     </widget>
-    <addaction name="menuChoose_corpus"/>
-    <addaction name="menuQuery_mode"/>
-    <addaction name="actionStatistics_2"/>
+    <addaction name="menu_choose_corpus"/>
+    <addaction name="menu_query_mode"/>
+    <addaction name="action_statistics"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
      <string>Settings</string>
     </property>
-    <addaction name="actionMySQL_settings"/>
-    <addaction name="actionOptions"/>
+    <addaction name="action_mySQL_settings"/>
+    <addaction name="action_options"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1569,12 +1569,12 @@
    <addaction name="menuHilfe"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="action_Open_input_file">
+  <action name="action_open_input_file">
    <property name="text">
     <string>&amp;Open input file...</string>
    </property>
   </action>
-  <action name="actionSave_results">
+  <action name="action_save_results">
    <property name="text">
     <string>Save results...</string>
    </property>
@@ -1584,17 +1584,17 @@
     <string>&amp;Quit</string>
    </property>
   </action>
-  <action name="actionQuit">
+  <action name="action_quit">
    <property name="text">
     <string>Quit</string>
    </property>
   </action>
-  <action name="actionHelop">
+  <action name="action_help">
    <property name="text">
     <string>Help</string>
    </property>
   </action>
-  <action name="actionAbout_Coquery">
+  <action name="action_about_coquery">
    <property name="text">
     <string>About Coquery</string>
    </property>
@@ -1604,17 +1604,17 @@
     <string>Dummy</string>
    </property>
   </action>
-  <action name="actionDistinct_tokens">
+  <action name="action_distinct_tokens">
    <property name="text">
     <string>Distinct tokens</string>
    </property>
   </action>
-  <action name="actionFrequency">
+  <action name="action_frequency">
    <property name="text">
     <string>Frequency</string>
    </property>
   </action>
-  <action name="actionAll_tokens">
+  <action name="action_all_tokens">
    <property name="text">
     <string>All tokens</string>
    </property>
@@ -1624,17 +1624,17 @@
     <string>Statistics</string>
    </property>
   </action>
-  <action name="actionStatistics_2">
+  <action name="action_statistics">
    <property name="text">
     <string>Statistics</string>
    </property>
   </action>
-  <action name="actionMySQL_settings">
+  <action name="action_mySQL_settings">
    <property name="text">
     <string>MySQL settings...</string>
    </property>
   </action>
-  <action name="actionOptions">
+  <action name="action_options">
    <property name="text">
     <string>Options...</string>
    </property>
