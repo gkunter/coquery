@@ -255,7 +255,8 @@ class BaseCorpusBuilder(object):
     def get_method_code(self, method):
         pass
 
-    def store_file_name(self, current_file):
+    def store_filename(self, current_file):
+        self._file_name = current_file
         self._file_id = self.table_get(self.file_table, 
             {self.file_label: current_file})[self.file_id]
 
@@ -331,38 +332,44 @@ class BaseCorpusBuilder(object):
         # row containing only the hash mark '#'. Everything preceding this 
         # mark is ignored:
         file_body = False
-        with codecs.open(current_file, "rt", encoding=self.arguments.encoding) as input_file:
-            for row in input_file:
-                # only process the lines after the hash mark:
-                if row.strip() == "#":
-                    file_body = True
-                elif file_body:
-                    try:
-                        time, color, word = row.split()
-                    # in xlabel files, rows can contain only the time tag,
-                    # but no other labels. In this case, the row is ignored:
-                    except ValueError:
-                        continue
-                    
-                    # create a dictionary containing the word label, plus
-                    # additional labels if provided by the lexicon:
-                    word_dict = {}
-                    word_dict[self.word_label] = word
-                    if "LEX_LEMMA" in self.lexicon_features:
-                        word_dict[self.word_lemma_id] = self.get_lemma_id(word)
-                    if "LEX_POS" in self.lexicon_features:
-                        word_dict[self.word_pos_id] = self.get_pos_id(word)
-                    if "LEX_PHON" in self.lexicon_features:
-                        word_dict[self.word_transcript_id] = self.get_transcript_id(word)
+        try:
+            with codecs.open(current_file, "rt", encoding=self.arguments.encoding) as input_file:
+                input_data = input_file.read()
+        except UnicodeDecodeError:
+            with codecs.open(current_file, "rt", encoding="ISO-8859-1") as input_file:
+                input_data = input_file.read()
+        input_data = input_data.splitlines()
+        for row in input_data:
+            # only process the lines after the hash mark:
+            if row.strip() == "#":
+                file_body = True
+            elif file_body:
+                try:
+                    time, color, word = row.split()
+                # in xlabel files, rows can contain only the time tag,
+                # but no other labels. In this case, the row is ignored:
+                except ValueError:
+                    continue
+                
+                # create a dictionary containing the word label, plus
+                # additional labels if provided by the lexicon:
+                word_dict = {}
+                word_dict[self.word_label] = word
+                if "LEX_LEMMA" in self.lexicon_features:
+                    word_dict[self.word_lemma_id] = self.get_lemma_id(word)
+                if "LEX_POS" in self.lexicon_features:
+                    word_dict[self.word_pos_id] = self.get_pos_id(word)
+                if "LEX_PHON" in self.lexicon_features:
+                    word_dict[self.word_transcript_id] = self.get_transcript_id(word)
 
-                    # get a word id for the current word:
-                    word_id = self.table_get(self.word_table, word_dict)[self.word_id]
-                    
-                    # add the word as a new token to the corpus:
-                    self.table_add(self.corpus_table, 
-                        {self.corpus_word_id: word_id, 
-                            self.corpus_source_id: self._file_id,
-                            self.corpus_time: time})
+                # get a word id for the current word:
+                word_id = self.table_get(self.word_table, word_dict)[self.word_id]
+                
+                # add the word as a new token to the corpus:
+                self.table_add(self.corpus_table, 
+                    {self.corpus_word_id: word_id, 
+                        self.corpus_source_id: self._file_id,
+                        self.corpus_time: time})
                 
     def process_text_file(self, current_file):
         """ Process a text file.
@@ -375,8 +382,13 @@ class BaseCorpusBuilder(object):
         Finally, add the token with its word identifier to the corpus table."""
         
         # Read raw text from file:
-        with codecs.open(current_file, "rt", encoding=self.arguments.encoding) as input_file:
-            raw_text = input_file.read()
+        try:
+            with codecs.open(current_file, "rt", encoding=self.arguments.encoding) as input_file:
+                raw_text = input_file.read()
+        except UnicodeDecodeError:
+            with codecs.open(current_file, "rt", encoding="ISO-8859-1") as input_file:
+                raw_text = input_file.read()
+            
         tokens = []
         pos_map = []
         
@@ -455,7 +467,7 @@ class BaseCorpusBuilder(object):
         for file_count, file_name in enumerate(files):
             if not self.Con.find(self.file_table, {self.file_label: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
-                self.store_file_name(file_name)
+                self.store_filename(file_name)
                 self.process_file(file_name)
                 
             if show_progress:
