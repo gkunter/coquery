@@ -83,6 +83,13 @@ class SqlDB (object):
         
         self.Cur = self.Con.cursor()
 
+    def kill_connection(self):
+        try:
+            self.Con.kill(self.Con.thread_id())
+        except mysql.OperationalError:
+            pass
+        
+
     def close(self):
         self.Cur.close()
         self.Con.close()
