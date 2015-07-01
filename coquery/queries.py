@@ -106,7 +106,7 @@ class QueryResult(object):
         return count
     
     def get_row(self, number_of_token_columns, max_number_of_tokens, row_length=None):
-        
+        """ get_row() from QueryResult """
         output_row = [""] * (row_length)
         if not self.data:
             return tuple(output_row)
@@ -269,8 +269,18 @@ class CorpusQuery(object):
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         for CurrentLine in self.get_result_list():
             output_file.writerow(CurrentLine)
-            
+    
+    def use_flat_query(self):
+        """ Return True if a flat query should be used, or False otherwise.
+        A flat query is a query that uses only a single SQL statement that
+        retrieves the content of all columns in the result table. """
+        if len(self.Session.output_fields) == 1:
+            return True
+        else:
+            return False
+    
     def get_row(self, query_result, number_of_token_columns, max_number_of_tokens, row_length=None):
+        """ get_row() from CorpusQuery."""
         output_row = [""] * (row_length)
         if not query_result:
             return tuple(output_row)
@@ -330,9 +340,9 @@ class CorpusQuery(object):
                 output_row[index:] = context
             else:
                 output_row[index] = collapse_context(context)
-        if options.cfg.experimental or len(self.Session.output_fields) == 1:
+        if options.cfg.experimental or len(self.Session.output_fields) == 1 or self.number_of_queries == 1:
             if LEX_FREQ in output_fields:
-                output_row[index] = query_result[options.cfg.freq_label]
+                output_row[index] = query_result.data[options.cfg.freq_label]
                 index += 1
         return tuple(output_row)
 
