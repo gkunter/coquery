@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1173</width>
-    <height>764</height>
+    <width>853</width>
+    <height>670</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -957,7 +957,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1173</width>
+     <width>853</width>
      <height>21</height>
     </rect>
    </property>
@@ -1018,11 +1018,17 @@
    </property>
   </widget>
   <action name="action_open_input_file">
+   <property name="icon">
+    <iconset theme="document-open"/>
+   </property>
    <property name="text">
     <string>&amp;Open input file...</string>
    </property>
   </action>
   <action name="action_save_results">
+   <property name="icon">
+    <iconset theme="document-save"/>
+   </property>
    <property name="text">
     <string>Save results...</string>
    </property>
@@ -1033,11 +1039,17 @@
    </property>
   </action>
   <action name="action_quit">
+   <property name="icon">
+    <iconset theme="application-exit"/>
+   </property>
    <property name="text">
     <string>Quit</string>
    </property>
   </action>
   <action name="action_help">
+   <property name="icon">
+    <iconset theme="help-contents"/>
+   </property>
    <property name="text">
     <string>Help</string>
    </property>
