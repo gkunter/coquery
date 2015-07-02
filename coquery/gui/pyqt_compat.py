@@ -7,6 +7,8 @@ try:
     pyside = True
 except ImportError:
     try:
+        import sip
+        sip.setapi('QVariant', 2)        
         import PyQt4.QtCore as QtCore
         import PyQt4.QtGui as QtGui
         pyqt = True
