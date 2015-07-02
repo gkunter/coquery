@@ -52,8 +52,14 @@ class ProgressThread(QtCore.QThread):
         super(ProgressThread, self).__init__()
         self.parent = window
         self.FUN = FUN
+        self.exiting = False
+    
+    def __del__(self):
+        self.exiting = True
+        self.wait()
     
     def run(self):
+        self.exiting = False
         try:
             self.FUN()
         except Exception as e:
