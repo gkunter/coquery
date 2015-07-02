@@ -50,7 +50,7 @@ class MySortProxyModel(QtGui.QSortFilterProxyModel):
         # row names:
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
-                return QtCore.QVariant(self.sourceModel().rownames[index])
+                return self.sourceModel().rownames[index]
             else:
                 return None
 
@@ -62,7 +62,7 @@ class MySortProxyModel(QtGui.QSortFilterProxyModel):
         if role == QtCore.Qt.DisplayRole:
             # Return normal header if not a sort column:
             if index not in self.sort_columns:
-                return QtCore.QVariant(header[index])
+                return header[index]
             
             tag_list = []
             if len(self.sort_columns) > 1:
@@ -70,9 +70,9 @@ class MySortProxyModel(QtGui.QSortFilterProxyModel):
             if self.sort_state[index] in [SORT_REV_DEC, SORT_REV_INC]:
                 tag_list.append("Rev")
             
-            return QtCore.QVariant("{}{}".format(
+            return "{}{}".format(
                     header[index], 
-                    ["", " ({}) ".format(", ".join(tag_list))][bool(tag_list)]))
+                    ["", " ({}) ".format(", ".join(tag_list))][bool(tag_list)])
 
         elif role == QtCore.Qt.DecorationRole:
             # add arrows as sort order indicators if necessary:
@@ -84,8 +84,7 @@ class MySortProxyModel(QtGui.QSortFilterProxyModel):
                 return None
         else:
             return None
-
-
+        
 class MyTableModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, header, data, *args):
         super(MyTableModel, self).__init__(parent, *args)
@@ -171,7 +170,7 @@ class ResultsViewer(QtGui.QDialog):
                 writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
                 writer.writerow(self.Session.header)
                 for y in range(self.proxy_model.rowCount()):
-                    writer.writerow([self.proxy_model.index(y, x).data() for x in range(self.proxy_model.columnCount())])
+                    writer.writerow([QtCore.QString(self.proxy_model.index(y, x).data()) for x in range(self.proxy_model.columnCount())])
                     
     def view_logfile(self):
         logfile.LogfileViewer.view(options.cfg.log_file_path)        
@@ -189,7 +188,7 @@ class ResultsViewer(QtGui.QDialog):
         
         probe_index = self.table_model.createIndex(0, index)
         probe_cell = probe_index.data()
-        if type(probe_cell) in [unicode, str]:
+        if type(probe_cell) in [unicode, str, QtCore.QString]:
             max_state = SORT_REV_DEC
         else:
             max_state = SORT_DEC
@@ -205,7 +204,6 @@ class ResultsViewer(QtGui.QDialog):
         old_sort_columns = copy.copy(self.proxy_model.sort_columns)
         self.proxy_model.sort_state = [SORT_REV_DEC] * len(self.table_model.header)
         self.proxy_model.sort_columns = range(len(self.table_model.header))
-        #self.ui.data_preview.resizeColumnsToContents()
         self.proxy_model.sort_state = old_sort_state
         self.proxy_model.sort_columns = old_sort_columns
 
