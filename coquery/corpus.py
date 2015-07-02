@@ -278,8 +278,8 @@ class SQLResource(BaseResource):
     
     def __init__(self):
         self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=self.db_name)
-        logger.info("Connected to database %s@%s:%s."  % (self.db_name, options.cfg.db_host, options.cfg.db_port))
-        logger.info("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))
+        logger.debug("Connected to database %s@%s:%s."  % (self.db_name, options.cfg.db_host, options.cfg.db_port))
+        logger.debug("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))
         
         # create aliases for all tables for which no alias is specified:
         for x in dir(self):
@@ -625,7 +625,7 @@ class SQLCorpus(BaseCorpus):
         genre_clauses = []
         if any(x.count("source_info_genre") for x in dir(self.resource)):
             if self_join:
-                source_table = self.resource.corpus_denorm
+                source_table = self.resource.corpus_denorm_table
                 try:
                     source_genre = self.resource.corpus_denorm_source_info_genre
                 except AttributeError as e:
@@ -903,7 +903,7 @@ class SQLCorpus(BaseCorpus):
     
     def sql_string_run_query_source_table_string(self, Query, self_joined):
         if self_joined:
-            corpus_table = self.resource.corpus_denorm
+            corpus_table = self.resource.corpus_denorm_table
         else:
             corpus_table = "e1"
             
@@ -935,19 +935,19 @@ class SQLCorpus(BaseCorpus):
         if self_joined:
             if options.cfg.experimental:
                 # self_joined, experimental
-                table_string_list.append(self.resource.corpus_denorm)
-                corpus_table=self.resource.corpus_denorm
+                table_string_list.append(self.resource.corpus_denorm_table)
+                corpus_table = self.resource.corpus_denorm_table
                 
                 for i, current_token in enumerate(Query.tokens):
                     table_string_list.append(
                         "INNER JOIN {table} ON (e{num}.COQ_WORD_ID = {corpus}.W{num})".format(
                             table = self.sql_string_table_for_token(Query, i+1, current_token, Query.Session.output_fields, self_joined),
                             num = i + 1,
-                            corpus = self.resource.corpus_denorm))
+                            corpus = self.resource.corpus_denorm_table))
             else:
                 # self_joined, old:
-                table_string_list.append(self.resource.corpus_denorm)
-                corpus_table=self.resource.corpus_denorm
+                table_string_list.append(self.resource.corpus_denorm_table)
+                corpus_table = self.resource.corpus_denorm_table
         else:
             # not self_joined, both
             if options.cfg.source_filter:
@@ -973,7 +973,7 @@ class SQLCorpus(BaseCorpus):
                             corpus_word_id=self.resource.corpus_word_id,
                             word=self.resource.word_table,
                             word_id=self.resource.word_id,
-                            corpusBig=self.resource.corpus_denorm,
+                            corpusBig=self.resource.corpus_denorm_table,
                             offset=i + Query.number_of_tokens,
                             label=self.resource.word_label))
                     table_string_list.append(
@@ -984,7 +984,7 @@ class SQLCorpus(BaseCorpus):
                             corpus_word_id=self.resource.corpus_word_id,
                             word=self.resource.word_table,
                             word_id=self.resource.word_id,
-                            corpusBig=self.resource.corpus_denorm,
+                            corpusBig=self.resource.corpus_denorm_table,
                             label=self.resource.word_label))
             else:
                 for i in range(options.cfg.context_span):
@@ -1096,7 +1096,7 @@ class SQLCorpus(BaseCorpus):
             # add token_id if needed:
             if options.cfg.context_span or options.cfg.context_columns:
                 if self_joined:
-                    corpus_table = self.resource.corpus_denorm
+                    corpus_table = self.resource.corpus_denorm_table
                 else:
                     corpus_table = self.resource.corpus_table
                 self.column_list.add("{}.{} AS TokenId".format(
@@ -1130,7 +1130,7 @@ class SQLCorpus(BaseCorpus):
                 
             if self_joined and not options.cfg.experimental and len(Query.Session.output_fields) > 1:
                 self.column_list.update(["{}.W{}".format(
-                    self.resource.corpus_denorm,
+                    self.resource.corpus_denorm_table,
                     x+1) for x in range(Query.number_of_tokens)])        
                 
 
@@ -1140,14 +1140,14 @@ class SQLCorpus(BaseCorpus):
                 #non_empty_token = [x for x in range(Query.number_of_tokens) if Query.tokens[x] != "*"]
                 non_empty_token = range(Query.number_of_tokens)
                 self.column_list.add("{}.{} AS TokenId".format(
-                    self.resource.corpus_denorm,
+                    self.resource.corpus_denorm_table,
                     self.resource.corpus_id))
                 if any([x in Query.Session.output_fields for x in [CORP_SOURCE, CORP_FILENAME, CORP_CONTEXT]]):
                     self.column_list.add("{}.{} AS SourceId".format(
-                        self.resource.corpus_denorm,
+                        self.resource.corpus_denorm_table,
                         self.resource.corpus_source_id))
                 self.column_list.update(["{}.W{}".format(
-                    self.resource.corpus_denorm,
+                    self.resource.corpus_denorm_table,
                     x+1) for x in non_empty_token])        
             else:
                 if CORP_CONTEXT in self.provides:
