@@ -93,7 +93,7 @@ class Session(object):
             
         self.output_fields = set([x for x in self.requested_fields if self.Corpus.provides_feature(x)])
         
-        logger.info("Using corpus %s" % options.cfg.corpus)
+        logger.info("Corpus: %s" % options.cfg.corpus)
         self.output_file = None
 
     def expand_header(self):
@@ -210,7 +210,7 @@ class Session(object):
                 
             else:
                 start_time = time.time()
-                logger.info("Querying {}...".format(current_query))
+                logger.info("Start query: '{}'".format(current_query))
                 if current_query.tokens:
                     current_query.set_result_list(self.Corpus.yield_query_results(current_query))
 
@@ -238,11 +238,7 @@ class StatisticsSession(Session):
 class SessionCommandLine(Session):
     def __init__(self):
         super(SessionCommandLine, self).__init__()
-        if len(options.cfg.query_list) == 1:
-            S = "Query"
-        else:
-            S = "%s queries" % len(options.cfg.query_list)
-        logger.info("%s provided at command line (%s)" % (S, ", ".join(options.cfg.query_list)))
+        logger.info("{} queries".format(len(options.cfg.query_list)) if len(options.cfg.query_list) > 1 else "Single query")
         for query_string in options.cfg.query_list:
             if self.query_type:
                 new_query = self.query_type(query_string, self, tokens.COCAToken, options.cfg.source_filter)
@@ -256,11 +252,6 @@ class SessionCommandLine(Session):
 class SessionInputFile(Session):
     def __init__(self):
         super(SessionInputFile, self).__init__()
-
-        if options.cfg.skip_lines:
-            S = "query" if options.cfg.skip_lines == 1 else "queries"
-            logger.info("Skipping first %s %s." % (options.cfg.skip_lines, S))
-            
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
             for current_line in UnicodeReader(InputFile, delimiter=options.cfg.input_separator):
@@ -280,16 +271,15 @@ class SessionInputFile(Session):
                             self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
                     self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
                 read_lines += 1
-        logger.info("Input file scanned, %s queries" % len (self.query_list))
+        logger.info("Input file: {} ({} {})".format(options.cfg.input_file, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
+        if options.cfg.skip_lines:
+            logger.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
+            
 
 class SessionStdIn(Session):
     def __init__(self):
         super(SessionStdIn, self).__init__()
 
-        if options.cfg.skip_lines:
-            S = "query" if options.cfg.skip_lines == 1 else "queries"
-            logger.info("Skipping first %s %s." % (options.cfg.skip_lines, S))
-            
         for current_string in fileinput.input("-"):
             read_lines = 0
             current_line = [x.strip() for x in current_string.split(options.cfg.input_separator)]
@@ -307,7 +297,9 @@ class SessionStdIn(Session):
                         self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
                 self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
             read_lines += 1
-        logger.info("Command line scanned, %s queries" % len (self.query_list))
+        logger.info("Reading standard input ({} {})".format(len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))            
+        if options.cfg.skip_lines:
+            logger.info("Skipping first %s %s." % (options.cfg.skip_lines, "query" if options.cfg.skip_lines == 1 else "queries"))
     
 logger = logging.getLogger(__init__.NAME)
     
