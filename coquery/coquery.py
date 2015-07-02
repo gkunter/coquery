@@ -96,9 +96,15 @@ def main():
         sys.path.append(os.path.join(sys.path[0], "gui"))
         from pyqt_compat import QtCore, QtGui
         from app import CoqueryApp
+        from app import GuiHandler
+
+        options.cfg.gui_logger = GuiHandler()
+        options.cfg.gui_logger.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
+        logger.addHandler(options.cfg.gui_logger)
 
         options.cfg.app = QtGui.QApplication(sys.argv)
         Coq = CoqueryApp()
+        options.cfg.gui_logger.setGui(Coq)
         Coq.show()
         Coq.setWizardDefaults()
         options.cfg.icon = QtGui.QIcon()
