@@ -57,7 +57,7 @@ class Session(object):
         
         # load current corpus module depending on the value of options.cfg.corpus,
         # i.e. the corpus specified as an argumment:        
-        ResourceClass, CorpusClass, LexiconClass = available_resources[options.cfg.corpus]
+        ResourceClass, CorpusClass, LexiconClass, Path = resource_list.get_available_resources()[options.cfg.corpus]
         current_resource = ResourceClass()
         self.Corpus  = CorpusClass(LexiconClass(current_resource), current_resource)
 
@@ -173,7 +173,9 @@ class Session(object):
             self.output_file.writerow (self.header)
     
     def run_queries(self):
-        
+        """ Process all queries. For each query, go through the entries in 
+        query_list() and yield the results for that subquery. Then, write
+        all results to the output file. """
         self.expand_header()
         self._queries = {}
         self._results = {}
@@ -231,9 +233,11 @@ class StatisticsSession(Session):
         super(StatisticsSession, self).__init__()
         if self.Corpus.provides_feature(CORP_STATISTICS):
             self.query_list.append(queries.StatisticsQuery(self.Corpus, self))
-            self.show_header = False
         else:
             raise QueryModeError(options.cfg.corpus, options.cfg.MODE)
+    
+    def expand_header(self):
+        self.header = ["Variable", "Value"]
 
 class SessionCommandLine(Session):
     def __init__(self):

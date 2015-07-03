@@ -88,7 +88,6 @@ class SqlDB (object):
             self.Con.kill(self.Con.thread_id())
         except mysql.OperationalError:
             pass
-        
 
     def close(self):
         self.Cur.close()
