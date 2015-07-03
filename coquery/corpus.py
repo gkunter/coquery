@@ -277,18 +277,19 @@ class SQLResource(BaseResource):
         return Operators [False]
     
     def __init__(self):
+        super(SQLResource, self).__init__()
         self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=self.db_name)
         logger.debug("Connected to database %s@%s:%s."  % (self.db_name, options.cfg.db_host, options.cfg.db_port))
         logger.debug("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))
         
-        # create aliases for all tables for which no alias is specified:
+        #create aliases for all tables for which no alias is specified:
         for x in dir(self):
             if x.endswith("_table"):
                 if "{}_alias".format(x) not in dir(self):
                     self.__setattr__("{}_alias".format(x), self.__getattribute__(x))
                 if "{}_construct".format(x) not in dir(self):
                     self.__setattr__("{}_construct".format(x), self.__getattribute__(x))
-
+                    
 class SQLLexicon(BaseLexicon):
     entry_cache = {}
     
@@ -1353,22 +1354,41 @@ class SQLCorpus(BaseCorpus):
         return ["File"]
 
     def get_statistics(self):
-        stats = self.lexicon.get_statistics()
-        stats["corpus_features"] = " ".join(self.provides)
-        if CORP_CONTEXT in self.provides:
-            self.resource.DB.execute("SELECT COUNT(*) FROM {corpus_table}".format(
-                corpus_table=self.resource.corpus_table))
-            stats["corpus_tokens"] = self.resource.DB.Cur.fetchone()[0]
-        if CORP_SOURCE in self.provides:
-            self.resource.DB.execute("SELECT COUNT(*) FROM {source_table}".format(
-                source_table=self.resource.source_table))
-            stats["corpus_sources"] = self.resource.DB.Cur.fetchone()[0]
-        if CORP_FILENAME in self.provides:
-            self.resource.DB.execute("SELECT COUNT(*) FROM {}".format(
-                self.resource.file_table))
-            stats["corpus_files"] = self.resource.DB.Cur.fetchone()[0]
-        
+        stats = {}
+        for table in [x for x in dir(self.resource) if not x.startswith("_")]:
+            if table.endswith("_table"):
+                tab, _, _ = table.partition("_table")
+                S = "SELECT COUNT(*) FROM {}".format(getattr(self.resource, table))
+                self.resource.DB.execute(S)
+                if tab == TABLE_CORPUS:
+                    var_name = "{}_tokens".format(tab)
+                else:
+                    var_name = "{}_entries".format(tab)
+                stats[var_name] = self.resource.DB.Cur.fetchone()[0]
+                for variable in [x for x in dir(self.resource) if x.startswith(tab) and not x.startswith(table)]:
+                    if not variable.endswith("_id"):
+                        S = "SELECT COUNT(DISTINCT {}) FROM {}".format(getattr(self.resource, variable), getattr(self.resource, table))
+                        self.resource.DB.execute(S)
+                        stats["{}_distinct".format(variable)] = self.resource.DB.Cur.fetchone()[0]
         return stats
+        
+        
+        #stats = self.lexicon.get_statistics()
+        #stats["corpus_features"] = " ".join(self.provides)
+        #if CORP_CONTEXT in self.provides:
+            #self.resource.DB.execute("SELECT COUNT(*) FROM {corpus_table}".format(
+                #corpus_table=self.resource.corpus_table))
+            #stats["corpus_tokens"] = self.resource.DB.Cur.fetchone()[0]
+        #if CORP_SOURCE in self.provides:
+            #self.resource.DB.execute("SELECT COUNT(*) FROM {source_table}".format(
+                #source_table=self.resource.source_table))
+            #stats["corpus_sources"] = self.resource.DB.Cur.fetchone()[0]
+        #if CORP_FILENAME in self.provides:
+            #self.resource.DB.execute("SELECT COUNT(*) FROM {}".format(
+                #self.resource.file_table))
+            #stats["corpus_files"] = self.resource.DB.Cur.fetchone()[0]
+        
+        #return stats
 
 class TestLexicon(BaseLexicon):
     def is_part_of_speech(self, pos):

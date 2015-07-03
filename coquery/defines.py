@@ -61,17 +61,12 @@ QUERY_MODE_FREQUENCIES = "FREQ"
 QUERY_MODE_DISTINCT = "DISTINCT"
 QUERY_MODE_STATISTICS = "STATS"
 
-def get_available_resources():
-    resources = {}
-    for corpus in glob.glob(os.path.join(sys.path[0], "corpora/*.py")):
-        corpus_name, ext = os.path.splitext(os.path.basename(corpus))
-        module = imp.load_source(corpus_name, corpus)
-        try:
-            resource = module.Resource
-            resources[resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon)
-        except AttributeError:
-            warnings.warn("{} does not appear to be a valid resource.".format(corpus_name))
-    return resources
+TABLE_CORPUS = "corpus"
+TABLE_WORD = "word"
+TABLE_LEMMA = "lemma"
+TABLE_SOURCE = "source"
+TABLE_FILE = "file"
+TABLE_SPEAKER = "speaker"
 
 # from https://docs.python.org/2.7/library/csv.html#csv-examples
 class UTF8Recoder:
@@ -146,4 +141,21 @@ class UnicodeWriter:
             self.writerow(row)
 
 
-available_resources = get_available_resources()
+class ResourceList(object):
+    def __init__(self):
+        self.available_resources = self.get_available_resources()
+
+    def get_available_resources(self):
+        self.available_resources = {}
+        for corpus in glob.glob(os.path.join(sys.path[0], "corpora/*.py")):
+            corpus_name, ext = os.path.splitext(os.path.basename(corpus))
+            try:
+                module = imp.load_source(corpus_name, corpus)
+                resource = module.Resource
+                self.available_resources[resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
+            except AttributeError, ImportError:
+                warnings.warn("{} does not appear to be a valid corpus library.".format(corpus_name))
+        return self.available_resources
+
+resource_list = ResourceList()
+

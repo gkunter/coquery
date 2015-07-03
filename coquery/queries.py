@@ -347,26 +347,60 @@ class CorpusQuery(object):
         return tuple(output_row)
 
 class TokenQuery(CorpusQuery):
+    #def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
+        #result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
+        #for current_result in self.get_result_list():
+            #if self.InputLine:
+                #output_list = copy.copy(self.InputLine)
+            #else:
+                #output_list = []
+            #if options.cfg.show_query:
+                #output_list.insert(options.cfg.query_column_number - 1, self.query_string)
+            #if current_result != None:
+                #if options.cfg.show_parameters:
+                    #output_list.append(options.cfg.parameter_string)
+                #if options.cfg.show_filter:
+                    #output_list.append(self.source_filter)
+                #output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)
+                
+                #if options.cfg.gui:
+                    #self.Session.output_storage.append(output_list)
+                #else:
+                    #output_file.writerow(output_list)
+                    
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
-        for current_result in self.get_result_list():
-            if self.InputLine:
-                output_list = copy.copy(self.InputLine)
+
+        # construct that part of output lines that stays constant in all
+        # lines:
+        if self.InputLine:
+            constant_line = copy.copy(self.InputLine)
+        else:
+            constant_line = []
+        if options.cfg.show_query:
+            constant_line.insert(options.cfg.query_column_number - 1, self.query_string)
+        if options.cfg.show_parameters:
+            constant_line.append(options.cfg.parameter_string)
+        if options.cfg.show_filter:
+            constant_line.append(self.source_filter)
+
+        for current_result in self.Results:
+            if constant_line:
+                output_list = copy.copy(constant_line)
             else:
                 output_list = []
-            if options.cfg.show_query:
-                output_list.insert(options.cfg.query_column_number - 1, self.query_string)
+
             if current_result != None:
-                if options.cfg.show_parameters:
-                    output_list.append(options.cfg.parameter_string)
-                if options.cfg.show_filter:
-                    output_list.append(self.source_filter)
-                output_list += current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)
-                
+                if options.cfg.experimental:
+                    output_list.extend(self.get_row(current_result, number_of_token_columns, max_number_of_token_columns, result_columns))
+                else:
+                    output_list.extend(current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns))
                 if options.cfg.gui:
                     self.Session.output_storage.append(output_list)
                 else:
                     output_file.writerow(output_list)
+
+
 
 class DistinctQuery(CorpusQuery):
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
@@ -414,8 +448,6 @@ class StatisticsQuery(CorpusQuery):
         self.Results = {key: str(self.Results[key]) for key in self.Results}
     
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
-        output_file.writerow(["Variable", "Value"])
-        
         for x in sorted(self.Results):
             if options.cfg.gui:
                 self.Session.output_storage.append([x, self.Results[x]])

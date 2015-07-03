@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_ErrorDialog(object):
     def setupUi(self, ErrorDialog):
         ErrorDialog.setObjectName(_fromUtf8("ErrorDialog"))
-        ErrorDialog.resize(640, 480)
+        ErrorDialog.resize(400, 300)
         self.verticalLayout = QtGui.QVBoxLayout(ErrorDialog)
         self.verticalLayout.setSpacing(10)
         self.verticalLayout.setContentsMargins(10, -1, 10, -1)
@@ -64,7 +64,7 @@ class Ui_ErrorDialog(object):
         QtCore.QMetaObject.connectSlotsByName(ErrorDialog)
 
     def retranslateUi(self, ErrorDialog):
-        ErrorDialog.setWindowTitle(_translate("ErrorDialog", "Coquery – Error", None))
+        ErrorDialog.setWindowTitle(_translate("ErrorDialog", "Error – Coquery", None))
         self.icon_label.setText(_translate("ErrorDialog", "TextLabel", None))
         self.label.setText(_translate("ErrorDialog", "<b>An error has occurred.</b>", None))
 

@@ -7,11 +7,6 @@ import logging
 import collections
 import os, os.path
 import string
-try:
-    import nltk
-    no_nltk = False
-except ImportError:
-    no_nltk = True    
 
 import dbconnection
 import argparse
@@ -21,6 +16,22 @@ import sys
 import textwrap
 import fnmatch
 import inspect
+
+try:
+    from pyqt_compat import QtCore, QtGui
+    import options
+    import corpusBuilderUi
+    import error_box
+except ImportError:
+    print("Import error.")
+    pass
+
+try:
+    import nltk
+except ImportError:
+    raise ImportError
+
+
 try:
     import progressbar
     show_progress = True
@@ -81,7 +92,7 @@ class BaseCorpusBuilder(object):
     start_time = None
     file_filter = None
     
-    def __init__(self, ):
+    def __init__(self, gui=False):
         self.module_code = module_code
         self.table_description = {}
         self.lexicon_features = []
@@ -90,38 +101,42 @@ class BaseCorpusBuilder(object):
         self._id_count = {}
         self._primary_keys = {}
         
-        # set up argument parser:
-        self.parser = argparse.ArgumentParser()
-        self.parser.add_argument("name", help="name of the corpus", type=str)
-        self.parser.add_argument("path", help="location of the text files", type=str)
-        self.parser.add_argument("--db_user", help="name of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_user")
-        self.parser.add_argument("--db_pass", help="password of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_pass")
-        self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="localhost", dest="db_host")
-        self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
-        self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
-        self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
-        self.parser.add_argument("-w", help="Actually do something; default behaviour is simulation.", action="store_false", dest="dry_run")
-        self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
-        self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
-        if not no_nltk:
-            self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
-        self.parser.add_argument("-l", help="load source files", action="store_true")
-        self.parser.add_argument("-c", help="Create database tables", action="store_true")
-        self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
-        self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
-        self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
-        self.additional_arguments()
+        self._widget = gui
+        
+        if not gui:        
+            # set up argument parser:
+            self.parser = argparse.ArgumentParser()
+            self.parser.add_argument("name", help="name of the corpus", type=str)
+            self.parser.add_argument("path", help="location of the text files", type=str)
+            self.parser.add_argument("--db_user", help="name of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_user")
+            self.parser.add_argument("--db_password", help="password of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_password")
+            self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="localhost", dest="db_host")
+            self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
+            self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
+            self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
+            self.parser.add_argument("-w", help="Actually do something; default behaviour is simulation.", action="store_false", dest="dry_run")
+            self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
+            self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
+            if not no_nltk:
+                self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
+            self.parser.add_argument("-l", help="load source files", action="store_true")
+            self.parser.add_argument("-c", help="Create database tables", action="store_true")
+            self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
+            self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
+            self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
+            self.additional_arguments()
 
     def check_arguments(self):
         """ Check the command line arguments. Add defaults if necessary."""
-        self.arguments, unknown = self.parser.parse_known_args()
-        self.name = self.arguments.name
-        if not self.arguments.db_name:
-            self.arguments.db_name = self.arguments.name
-        if no_nltk:
-            self.arguments.use_nltk = False
-        if not self.arguments.corpus_path:
-            self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../coquery/corpora"))
+        if not self._widget:
+            self.arguments, unknown = self.parser.parse_known_args()
+            if no_nltk:
+                self.arguments.use_nltk = False
+            if not self.arguments.db_name:
+                self.arguments.db_name = self.arguments.name
+            if not self.arguments.corpus_path:
+                self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../coquery/corpora"))
+            self.name = self.arguments.name
             
     def additional_arguments(self):
         """ Use this function if your corpus installer requires additional arguments."""
@@ -199,16 +214,22 @@ class BaseCorpusBuilder(object):
         """ go through the table description and create a table in the
         database, using the information from the "CREATE" key of the
         table description entry."""
-        if show_progress:
+        if self._widget:
+            self._widget.ui.progress_bar.setFormat("Creating tables... (%v of %m)")
+            self._widget.ui.progress_bar.setMaximum(len(self.table_description))
+            self._widget.ui.progress_bar.setValue(0)
+        elif show_progress:
             progress = progressbar.ProgressBar(widgets=["Creating tables ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(self.table_description))
             progress.start()
         for i, current_table in enumerate(self.table_description):
             if not self.Con.has_table(current_table):
                 self.Con.create_table(current_table, ", ".join(self.table_description[current_table]["CREATE"]), override=True)
-            if show_progress:
+            if self._widget:
+                self._widget.ui.progress_bar.setValue(i)
+            elif show_progress:
                 progress.update(i)
-        self.Con.commit()    
-        if show_progress:
+        self.Con.commit()
+        if show_progress and not self._widget:
             progress.finish()
 
     def get_file_list(self, path):
@@ -358,7 +379,7 @@ class BaseCorpusBuilder(object):
                 if "LEX_LEMMA" in self.lexicon_features:
                     word_dict[self.word_lemma_id] = self.get_lemma_id(word)
                 if "LEX_POS" in self.lexicon_features:
-                    word_dict[self.word_pos_id] = self.get_pos_id(word)
+                    word_dict[self.word_pos] = self.get_pos_id(word)
                 if "LEX_PHON" in self.lexicon_features:
                     word_dict[self.word_transcript_id] = self.get_transcript_id(word)
 
@@ -422,14 +443,8 @@ class BaseCorpusBuilder(object):
             # get word id, and create new word if necessary:
             word_dict = {self.word_lemma_id: lemma_id, 
                         self.word_label: current_token}
-            if current_pos and "word_pos_id" in dir(self):
-                try:
-                    word_dict[self.word_pos_id] = current_pos 
-                except AttributeError as e:
-                    print(self.arguments.use_nltk)
-                    print(current_pos)
-                    print(self.lexicon.provides)
-                    raise e
+            if current_pos and "word_pos" in dir(self):
+                word_dict[self.word_pos] = current_pos 
 
             word_id = self.table_get(self.word_table, word_dict)[self.word_id]
 
@@ -454,27 +469,33 @@ class BaseCorpusBuilder(object):
         if not files:
             self.logger.warning("No files found at %s" % self.arguments.path)
             return
-        if no_nltk:
+        if not self._widget and no_nltk:
             self.logger.warning("This script can use the NLTK library for automatic part-of-speech tagging. However, this library is not installed on this computer. Follow the steps from http://www.nltk.org/install.html to install this library.")
         
-        if show_progress:
-            progress = progressbar.ProgressBar(widgets=["Loading data files ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(files))
+        if self._widget:
+            self._widget.ui.progress_bar.setFormat("Reading text files... (%v of %m)")
+            self._widget.ui.progress_bar.setMaximum(len(files))
+            self._widget.ui.progress_bar.setValue(0)
+        elif show_progress:
+            progress = progressbar.ProgressBar(widgets=["Reading data files ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(files))
             progress.start()
             
         for x in self.table_description:
             self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         
-        for file_count, file_name in enumerate(files):
+        for i, file_name in enumerate(files):
             if not self.Con.find(self.file_table, {self.file_label: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
                 self.process_file(file_name)
                 
-            if show_progress:
-                progress.update(file_count)
+            if self._widget:
+                self._widget.ui.progress_bar.setValue(i)
+            elif show_progress:
+                progress.update(i)
 
             self.Con.commit()
-        if show_progress:
+        if show_progress and not self._widget:
             progress.finish()
     
     def create_joined_table(self):
@@ -487,8 +508,12 @@ class BaseCorpusBuilder(object):
         for current_table in self.table_description:
             totals += len(self.table_description[current_table]["CREATE"]) - 1
         
-        if show_progress:
-            progress = progressbar.ProgressBar(widgets=["Optimizing field type ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=totals)
+        if self._widget:
+            self._widget.ui.progress_bar.setFormat("Optimizing table columns... (%v of %m)")
+            self._widget.ui.progress_bar.setMaximum(totals)
+            self._widget.ui.progress_bar.setValue(0)
+        elif show_progress:
+            progress = progressbar.ProgressBar(widgets=["Optimizing table columns ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=totals)
             progress.start()
             
         column_count = 0
@@ -511,11 +536,13 @@ class BaseCorpusBuilder(object):
                         except dbconnection.mysql.OperationalError as e:
                             if self.logger:
                                 self.logger.error(e)
-                    column_count += 1
-            if show_progress:
+                column_count += 1
+            if self._widget:
+                self._widget.ui.progress_bar.setValue(column_count)
+            elif show_progress:
                 progress.update(column_count)
             self.Con.commit()
-        if show_progress:
+        if show_progress and not self._widget:
             progress.finish()
         
     def create_indices(self):
@@ -525,11 +552,15 @@ class BaseCorpusBuilder(object):
             if "INDEX" in self.table_description[current_table]:
                 total_indices += len(self.table_description[current_table]["INDEX"])
         
-        if show_progress:
+        if self._widget:
+            self._widget.ui.progress_bar.setFormat("Creating indices... (%v of %m)")
+            self._widget.ui.progress_bar.setMaximum(total_indices)
+            self._widget.ui.progress_bar.setValue(0)
+        elif show_progress:
             progress = progressbar.ProgressBar(widgets=["Indexing ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=total_indices)
             progress.start()
         index_count = 0
-        for current_table in self.table_description:
+        for i, current_table in enumerate(self.table_description):
             description = self.table_description[current_table]
             if "INDEX" in description:
                 for variables, length, index_type in description["INDEX"]:
@@ -539,10 +570,12 @@ class BaseCorpusBuilder(object):
                             current_index, current_table))
                         self.Con.create_index(current_table, current_index, variables, index_type, length)
                     index_count += 1
-            if show_progress:
-                progress.update(index_count)
+                    if self._widget:
+                        self._widget.ui.progress_bar.setValue(i)
+                    elif show_progress:
+                        progress.update(index_count)
             self.Con.commit()
-        if show_progress:
+        if show_progress and not self._widget:
             progress.finish()
     
     def get_class_variables(self):
@@ -554,13 +587,29 @@ class BaseCorpusBuilder(object):
         no_fail = True
         if not self.Con.has_database(self.arguments.db_name):
             no_fail = False
-            print("Database {} not found.".format(self.arguments.db_name))
+            self.logger.warning("Database {} not found.".format(self.arguments.db_name))
         for x in self.table_description:
             if not self.Con.has_table(x):
-                print("Table {} not found.".format(x))
+                self.logger.warning("Table {} not found.".format(x))
                 no_fail = False
         return no_fail
-
+    
+    def ask_overwrite(self, warning_msg):
+        if not self._widget:
+            print("Enter Y to overwrite the existing version.")
+            print("Enter N to keep the existing version.")
+            try:
+                response = raw_input("Overwrite? [Y or N] ")
+            except NameError:
+                response = input("Overwrite? [Y or N] ")
+            return response.upper() == "Y"
+                    
+            return 
+        else:
+            warning_msg = "<p>{}</p><p>Do you really want to overwrite the existing version?</p>".format(warning_msg)
+            print(type(self._widget))
+            return QtGui.QMessageBox.question(self._widget, "Library exists.", warning_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
+                
     def write_python_module(self, corpus_path):
         """ Writes a Python module with the necessary specifications to the
         Coquery corpus module directory."""
@@ -575,6 +624,7 @@ class BaseCorpusBuilder(object):
         # - are not class methods
         # are considered to be part of the database specification and will
         # be included with their value in the Python code:
+        
         variable_names = [x for x in dir(self) 
                           if x not in base_variables 
                           and not x.startswith("_")
@@ -610,19 +660,12 @@ class BaseCorpusBuilder(object):
                 return
             # Ask if the existing code should be overwritten:
             else:
-                self.logger.warning("A different version of the corpus library already exists in %s." % path)
-                print("Enter Y to overwrite the existing version.")
-                print("Enter N to keep the existing version.")
-                while True:
-                    try:
-                        input = raw_input("Overwrite? [Y or N] ")
-                    except NameError:
-                        input = input("Overwrite? [Y or N] ")
-                    if input.upper() != "Y":
-                        return
-                    else:
-                        self.logger.warning("Overwriting library.")
-                    break
+                warning_text = "A different version of the corpus library already exists in %s." % path
+                self.logger.warning(warning_text)
+                if self.ask_overwrite(warning_text):
+                    self.logger.warning("Overwriting existing corpus library.")
+                else:
+                    return
         # write library code:
         with codecs.open(path, "wt") as output_file:
             output_file.write(output_code)
@@ -636,7 +679,7 @@ class BaseCorpusBuilder(object):
         self.Con = dbconnection.DBConnection(
             db_host=self.arguments.db_host,
             db_user=self.arguments.db_user,
-            db_pass=self.arguments.db_pass,
+            db_pass=self.arguments.db_password,
             db_port=self.arguments.db_port,
             local_infile=1)
         if not self.Con.has_database(self.arguments.db_name):
@@ -671,7 +714,8 @@ class BaseCorpusBuilder(object):
             self.logger.info("--- Starting ---")
         self.logger.info("Building corpus %s" % self.name)
         self.logger.info("Command line arguments: %s" % " ".join(sys.argv[1:]))
-        print("\n%s\n" % textwrap.TextWrapper(width=79).fill(self.get_description()))
+        if not self._widget:
+            print("\n%s\n" % textwrap.TextWrapper(width=79).fill(self.get_description()))
 
     def finalize_build(self):
         """ Logs duration of build. """
@@ -679,7 +723,9 @@ class BaseCorpusBuilder(object):
 
     def build(self):
         self.check_arguments()
-        self.setup_logger()
+        if not self._widget:
+            self.setup_logger()
+            
         self.setup_db()
         
         self.initialize_build()
@@ -702,3 +748,78 @@ class BaseCorpusBuilder(object):
             self.write_python_module(self.arguments.corpus_path)
         self.finalize_build()
                 
+                
+class BuilderGui(QtGui.QDialog):
+    def __init__(self, builder_class, parent=None):
+        super(BuilderGui, self).__init__(parent)
+
+        import __init__
+        self.logger = logging.getLogger(__init__.NAME)        
+        
+        self.ui = corpusBuilderUi.Ui_CorpusBuilder()
+        self.ui.setupUi(self)
+        self.ui.button_input_path.clicked.connect(self.select_path)
+        self.ui.button_lemma_path.clicked.connect(self.select_file)
+        self.accepted = False
+        self.builder_class = builder_class
+        self.show()
+
+        self.exec_()
+
+    def select_path(self):
+        name = QtGui.QFileDialog.getExistingDirectory()
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            self.ui.input_path.setText(name)
+
+    def select_file(self):
+        name = QtGui.QFileDialog.getOpenFileName()
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            self.ui.lemma_path.setText(name)
+        
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.reject()
+            
+    def accept(self):
+        self.accepted = True
+        self.builder = self.builder_class(gui = self)
+        self.builder.logger = self.logger
+        self.builder.arguments = self.get_arguments_from_gui()
+        self.builder.name = self.builder.arguments.name
+        try:
+            self.builder.build()
+        except Exception as e:
+            error_box.ErrorBox.show(sys.exc_info(), self)
+        else:
+            self.parent().ui.statusbar.showMessage("Finished building new corpus.")
+        super(BuilderGui, self).accept()
+
+    def get_arguments_from_gui(self):
+        namespace = argparse.Namespace()
+        namespace.dry_run = False
+        namespace.verbose = False
+        namespace.o = True
+        namespace.i = True
+        namespace.no_nltk = True
+        namespace.l = True
+        namespace.c = True
+        namespace.self_join = False
+
+        namespace.encoding = "utf-8"
+        
+        namespace.name = str(self.ui.corpus_name.text())
+        namespace.path = str(self.ui.input_path.text())
+        namespace.use_nltk = self.ui.use_pos_tagging.checkState()
+        namespace.corpus_path = os.path.join(sys.path[0], "corpora/")
+        namespace.db_name = str(self.ui.corpus_name.text())
+        namespace.db_host = options.cfg.db_host
+        namespace.db_user = options.cfg.db_user
+        namespace.db_password = options.cfg.db_password
+        namespace.db_port = options.cfg.db_port
+        
+        
+        return namespace

@@ -132,7 +132,7 @@ Examples of valid text filters:
 """, 
 formatter_class=argparse.RawDescriptionHelpFormatter)
         
-        self.parser.add_argument("--corpus", help="specify the corpus to use", choices=available_resources.keys(), type=str)
+        self.parser.add_argument("--corpus", help="specify the corpus to use", choices=resource_list.get_available_resources().keys(), type=str)
         self.parser.add_argument ("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS), default=QUERY_MODE_DISTINCT, type=str, nargs="?")
         group = self.parser.add_mutually_exclusive_group()
         group.add_argument("--gui", help="Use a graphical user interface (requires Qt)", action="store_true")
@@ -216,7 +216,7 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
             self.args.show_source = False
             self.args.source_columns = []
         else:
-            potential_labels = [x[len("source_info_"):] for x in dir(available_resources[self.args.corpus][0]) if x.startswith("source_info_")]
+            potential_labels = [x[len("source_info_"):] for x in dir(resource_list.get_available_resources()[self.args.corpus][0]) if x.startswith("source_info_")]
             
             #for x in self.args.source_columns:
                 #if x.lower() == "all":

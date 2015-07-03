@@ -22,16 +22,17 @@ class ProgressIndicator(QtGui.QDialog):
         self.setGeometry(300, 300, 300, 50)
         self.progress_bar.setRange(0, 1)
         
-        self.thread = ProgressThread(FUN, self)
-        self.thread.taskFinished.connect(self.onFinished)
-        self.thread.taskException.connect(self.onException)
-        
         self.show()
-        self.progress_bar.setRange(0,0)
-        self.thread.start()
+        if FUN:
+            self.thread = ProgressThread(FUN, self)
+            self.thread.taskFinished.connect(self.onFinished)
+            self.thread.taskException.connect(self.onException)
+            
+            self.progress_bar.setRange(0,0)
+            self.thread.start()
         
     def onException(self):
-        ErrorBox.show(self.exc_info)
+        ErrorBox.show(self.exc_info, self.exception)
         
     def onFinished(self):
         # Stop the pulsation
