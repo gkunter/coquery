@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>853</width>
-    <height>670</height>
+    <width>871</width>
+    <height>671</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -790,7 +790,7 @@
                  <x>0</x>
                  <y>0</y>
                  <width>254</width>
-                 <height>360</height>
+                 <height>223</height>
                 </rect>
                </property>
                <property name="sizePolicy">
@@ -810,7 +810,7 @@
                  <number>10</number>
                 </property>
                 <item>
-                 <layout class="QGridLayout" name="options_list" columnstretch="0,0,0">
+                 <layout class="QGridLayout" name="options_list" columnstretch="0,0">
                   <property name="sizeConstraint">
                    <enum>QLayout::SetDefaultConstraint</enum>
                   </property>
@@ -888,6 +888,11 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
+       <attribute name="icon">
+        <iconset theme="table">
+         <normaloff/>
+        </iconset>
+       </attribute>
        <attribute name="title">
         <string>Query result</string>
        </attribute>
@@ -926,6 +931,11 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
+       <attribute name="icon">
+        <iconset theme="utilities-log-viewer">
+         <normaloff/>
+        </iconset>
+       </attribute>
        <attribute name="title">
         <string>Query log</string>
        </attribute>
@@ -957,7 +967,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>853</width>
+     <width>871</width>
      <height>21</height>
     </rect>
    </property>
@@ -982,22 +992,10 @@
     <property name="title">
      <string>Corpus</string>
     </property>
-    <widget class="QMenu" name="menu_choose_corpus">
-     <property name="title">
-      <string>Choose corpus...</string>
-     </property>
-     <addaction name="actionDummy"/>
-    </widget>
-    <widget class="QMenu" name="menu_query_mode">
-     <property name="title">
-      <string>Query mode</string>
-     </property>
-     <addaction name="action_distinct_tokens"/>
-     <addaction name="action_frequency"/>
-     <addaction name="action_all_tokens"/>
-    </widget>
-    <addaction name="menu_choose_corpus"/>
-    <addaction name="menu_query_mode"/>
+    <addaction name="action_build_corpus"/>
+    <addaction name="action_install_corpus"/>
+    <addaction name="action_remove_corpus"/>
+    <addaction name="separator"/>
     <addaction name="action_statistics"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
@@ -1019,39 +1017,41 @@
   </widget>
   <action name="action_open_input_file">
    <property name="icon">
-    <iconset theme="document-open"/>
+    <iconset theme="document-open">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>&amp;Open input file...</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
   </action>
   <action name="action_save_results">
    <property name="icon">
-    <iconset theme="document-save"/>
+    <iconset theme="document-save">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
-    <string>Save results...</string>
+    <string>&amp;Save results...</string>
    </property>
-  </action>
-  <action name="action_Quit">
-   <property name="text">
-    <string>&amp;Quit</string>
-   </property>
-  </action>
-  <action name="action_quit">
-   <property name="icon">
-    <iconset theme="application-exit"/>
-   </property>
-   <property name="text">
-    <string>Quit</string>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
   <action name="action_help">
    <property name="icon">
-    <iconset theme="help-contents"/>
+    <iconset theme="help-contents">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Help</string>
+   </property>
+   <property name="shortcut">
+    <string>F1</string>
    </property>
   </action>
   <action name="action_about_coquery">
@@ -1079,24 +1079,86 @@
     <string>All tokens</string>
    </property>
   </action>
-  <action name="actionStatistics">
-   <property name="text">
-    <string>Statistics</string>
-   </property>
-  </action>
   <action name="action_statistics">
+   <property name="icon">
+    <iconset theme="view-statistics">
+     <normaloff/>
+    </iconset>
+   </property>
    <property name="text">
-    <string>Statistics</string>
+    <string>Corpus statistics</string>
    </property>
   </action>
   <action name="action_mySQL_settings">
+   <property name="icon">
+    <iconset theme="server-database">
+     <normaloff/>
+    </iconset>
+   </property>
    <property name="text">
     <string>MySQL settings...</string>
    </property>
   </action>
   <action name="action_options">
+   <property name="icon">
+    <iconset theme="configure">
+     <normaloff/>
+    </iconset>
+   </property>
    <property name="text">
     <string>Options...</string>
+   </property>
+  </action>
+  <action name="action_quit">
+   <property name="icon">
+    <iconset theme="application-exit">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="action_build_corpus">
+   <property name="icon">
+    <iconset theme="document-new">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Build corpus...</string>
+   </property>
+   <property name="toolTip">
+    <string>Build a new corpus from text files in a folder</string>
+   </property>
+  </action>
+  <action name="action_remove_corpus">
+   <property name="icon">
+    <iconset theme="edit-delete">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Remove corpus...</string>
+   </property>
+   <property name="toolTip">
+    <string>Permanently and irrevocably remove corpus database</string>
+   </property>
+  </action>
+  <action name="action_install_corpus">
+   <property name="icon">
+    <iconset theme="server-database">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Install corpus...</string>
+   </property>
+   <property name="toolTip">
+    <string>Install a corpus into a MySQL database</string>
    </property>
   </action>
  </widget>

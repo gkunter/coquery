@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 from session import *
 from defines import *
 from pyqt_compat import QtCore, QtGui
+import __init__
 import coqueryUi
 import csvOptions
 import QtProgress
@@ -13,6 +14,7 @@ import results
 import error_box
 import codecs
 import logging
+import sqlwrap
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -97,10 +99,12 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     
     def setup_menu_actions(self):
         self.ui.action_save_results.triggered.connect(self.save_results)
+        self.ui.action_quit.triggered.connect(self.save_results)
+        self.ui.action_build_corpus.triggered.connect(self.build_corpus)
+        self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
     
     def setup_hooks(self):
         super(CoqueryApp, self).setup_hooks()
-        self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)
         # hook run statistics button:
@@ -109,7 +113,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     def setup_app(self):
         """ initializes all widgets with suitable data """
         # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(available_resources.keys())]
+        corpora = [x.upper() for x in sorted(resource_list.get_available_resources().keys())]
         self.ui.combo_corpus.addItems(corpora)
 
         self.setup_hooks()
@@ -135,10 +139,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.setup_app()
         self.csv_options = None
         self.query_thread = None
-
-    def change_corpus(self, *args):
-        self.change_corpus_features(str(self.ui.combo_corpus.currentText()).lower())
-
+        self.last_results_saved = True
+        
     def display_results(self):
         self.table_model = results.MyTableModel(self, self.Session.header, self.Session.output_storage)
 
@@ -150,6 +152,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.data_preview.horizontalHeader().sectionClicked.connect(self.header_sorting)
         self.ui.data_preview.setModel(self.proxy_model)
         self.ui.data_preview.setSortingEnabled(False)
+        self.last_results_saved = False
 
     def save_results(self):
         name = QtGui.QFileDialog.getSaveFileName(directory="~")
@@ -157,36 +160,38 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             name = name[0]
         if name:
             try:
-                raise IOError
                 with codecs.open(name, "wt") as output_file:
                     writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
                     writer.writerow(self.Session.header)
                     for y in range(self.proxy_model.rowCount()):
                         writer.writerow([self.proxy_model.index(y, x).data() for x in range(self.proxy_model.columnCount())])
             except IOError as e:
-                QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. Results are not saved.")
+                QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. The results have not been saved.")
+            else:
+                self.last_results_saved = True
     
     def exception_during_query(self):
-        error_box.ErrorBox.show(self.exc_info)
+        error_box.ErrorBox.show(self.exc_info, self.exception)
 
     def query_finished(self):
         self.set_query_button()
         # Stop the progress indicator:
-        self.ui.progress_bar.setRange(0,1)
+        self.ui.progress_bar.setRange(0, 1)
         # show results:
         self.display_results()
         self.query_thread = None
         try:
             diff = (self.Session.end_time - self.Session.start_time)
         except TypeError:
-            duration = 0
-        duration = diff.seconds
-        if duration > 3600:
-            duration_str = "{} hrs, {}, min, {} s".format(duration // 3600, duration % 3600 // 60, duration % 60)
-        elif duration > 60:
-            duration_str = "{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3])
+            duration_str = "NA"
         else:
-            duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
+            duration = diff.seconds
+            if duration > 3600:
+                duration_str = "{} hrs, {}, min, {} s".format(duration // 3600, duration % 3600 // 60, duration % 60)
+            elif duration > 60:
+                duration_str = "{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3])
+            else:
+                duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
         
         self.ui.statusbar.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
             len(self.Session.output_storage), duration_str))        
@@ -226,7 +231,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-stop")))
     
     def stop_query(self):
-        msg_query_running = "Do you really want to interrupt the previous query?"
+        msg_query_running = "<p>The last query has not finished yet. If you interrupt it, the results that have been retrieved so far will be discarded.</p><p>Do you really want to interrupt this query?</p>"
         response = QtGui.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
         if response == QtGui.QMessageBox.Yes:
             logger.warning("Last query is incomplete.")
@@ -253,17 +258,65 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.Session = SessionInputFile()
         
         self.ui.progress_bar.setRange(0, 0)
-
         self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
         self.query_thread.taskFinished.connect(self.query_finished)
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
         
-        
     def run_statistics(self):
-        return
         self.getGuiValues()
-        Session = SessionStatistics()
-        ProgressIndicator.RunThread(Session.run_queries, "Querying...")
-        finish = ResultsViewer(Session).exec_()
+        self.Session = StatisticsSession()
+        self.ui.statusbar.showMessage("Gathering corpus statistics...")
+        self.ui.progress_bar.setRange(0, 0)
+        self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
+        self.query_thread.taskFinished.connect(self.query_finished)
+        self.query_thread.taskException.connect(self.exception_during_query)
+        self.query_thread.start()
         
+    def save_configuration(self):
+        pass
+        
+    def remove_corpus(self):
+        if self.ui.combo_corpus.isEnabled():
+            current_corpus = str(self.ui.combo_corpus.currentText())
+            resource, _, _, module = resource_list.get_available_resources()[current_corpus.lower()]
+            database = resource.db_name
+            msg_corpus_remove = "<p><b>You have requested to remove the corpus '{}'.</b></p><p>This step cannot be reverted. If you proceed, the corpus will not be available for further queries before you install it again.</p><p>Removing this corpus will free approximately {} of disk memory.</p><p><p>Do you really want to remove the corpus?</p>".format(current_corpus, database, "xxx")
+            
+            response = QtGui.QMessageBox.warning(
+                self, "Remove corpus", msg_corpus_remove, QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+            
+            if response == QtGui.QMessageBox.Yes:
+                DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password)
+                self.ui.progress_bar.setRange(0, 1)
+                self.ui.progress_bar.setFormat("Removing corpus '{}'".format(current_corpus))
+                DB.execute("DROP DATABASE {}".format(database))
+                os.remove(module)
+                
+                self.ui.progress_bar.setRange(0, 0)
+                self.ui.progress_bar.setFormat("Idle.")
+                self.fill_combo_corpus()
+                logger.warning("Removed corpus {}.".format(current_corpus))
+    
+    def build_corpus(self):
+        sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../tools")))
+        import install_generic
+        import corpusbuilder        
+        corpusbuilder.BuilderGui(install_generic.GenericCorpusBuilder, self)
+        self.fill_combo_corpus()
+            
+    def closeEvent(self, event):
+        if not self.last_results_saved:
+            msg_query_running = "<p>The last query results have not been saved. If you quit now, they will be lost.</p><p>Do you really want to quit?</p>"
+            response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+            if response == QtGui.QMessageBox.Yes:
+                event.accept()
+                self.save_configuration()
+            else:
+                event.ignore()
+        else:
+            event.accept()
+            self.save_configuration()
+            
+            
+logger = logging.getLogger(__init__.NAME)

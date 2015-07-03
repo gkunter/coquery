@@ -101,12 +101,16 @@ class CoqueryWizard(QtGui.QWizard):
             else:
                 self.clear_layout(item.layout())
             layout.removeItem(item)   
+
+    def change_corpus(self, *args):
+        if self.ui.combo_corpus.isEnabled():
+            self.change_corpus_features(str(self.ui.combo_corpus.currentText()).lower())
     
     def change_corpus_features(self, corpus_label, prefix="", suffix=""):
         """ Construct a new output option list depending on the features
         provided by the corpus given in 'corpus_label."""
         
-        Resource, Corpus, Lexicon = available_resources[corpus_label]
+        Resource, Corpus, Lexicon, Path = resource_list.get_available_resources()[corpus_label]
         
         # Find the widget containing the output options and the associated
         # layout:
@@ -177,19 +181,19 @@ class CoqueryWizard(QtGui.QWizard):
         
         self.enable_output_option()
     
-    def validateCurrentPage(self):
-        page = self.currentPage()
-        # validate corpus selection and query mode:
-        if self.currentId() == 0:
-            combo = page.findChild(QtGui.QComboBox, "combo_corpus")
-            self.change_corpus_features(str(combo.currentText()).lower(), suffix = "features")
+    #def validateCurrentPage(self):
+        #page = self.currentPage()
+        ## validate corpus selection and query mode:
+        #if self.currentId() == 0:
+            #combo = page.findChild(QtGui.QComboBox, "combo_corpus")
+            #self.change_corpus_features(str(combo.currentText()).lower(), suffix = "features")
         
-            return True
-        ## validate input page:
-        #elif self.currendId() == 2:
-            #if page.field("edit_query_string")
-            #or page.field("edit_file_name")
-        return True
+            #return True
+        ### validate input page:
+        ##elif self.currendId() == 2:
+            ##if page.field("edit_query_string")
+            ##or page.field("edit_file_name")
+        #return True
 
     def setup_hooks(self):
         # hook file browser button:
@@ -213,6 +217,8 @@ class CoqueryWizard(QtGui.QWizard):
         self.focus_to_query.focus.connect(self.switch_to_query)
         self.ui.edit_query_string.installEventFilter(self.focus_to_query)
 
+        self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
+
     def setup_wizard(self):
         logo = QtGui.QPixmap("{}/logo/logo.png".format(sys.path[0]))
         self.ui.Logo.setPixmap(logo.scaledToHeight(200))
@@ -225,11 +231,23 @@ class CoqueryWizard(QtGui.QWizard):
         self.button(QtGui.QWizard.FinishButton).setIcon(QtGui.QIcon.fromTheme("media-playback-start"))
         self.setButtonText(QtGui.QWizard.FinishButton, "&Run query")
         
-        # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(available_resources.keys())]
-        self.ui.combo_corpus.addItems(corpora)
+        self.fill_combo_corpus()
         
         self.setup_hooks()
+        
+    def fill_combo_corpus(self):
+        print("refill!")
+        self.ui.combo_corpus.currentIndexChanged.disconnect()
+        last_corpus = self.ui.combo_corpus.currentText()
+        self.ui.combo_corpus.clear()
+        for x in sorted(resource_list.get_available_resources().keys()):
+            self.ui.combo_corpus.addItem(x.upper())
+        new_index = self.ui.combo_corpus.findText(last_corpus)
+        if new_index == -1:
+            new_index = 0
+        self.ui.combo_corpus.setCurrentIndex(new_index)
+        self.ui.combo_corpus.setEnabled(True)
+        self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
 
     def enable_output_option(self):
         checkbox = self.findChild(QtGui.QCheckBox, "coquery_input_file")
@@ -296,13 +314,16 @@ class CoqueryWizard(QtGui.QWizard):
             if self.ui.radio_mode_context.isChecked():
                 options.cfg.MODE = QUERY_MODE_DISTINCT
                 
-            elif self.ui.radio_mode_frequency.isChecked():
+            if self.ui.radio_mode_frequency.isChecked():
                 options.cfg.MODE = QUERY_MODE_FREQUENCIES
                 
-            elif self.ui.radio_mode_statistics.isChecked():
-                options.cfg.MODE = QUERY_MODE_STATISTICS
+            try:
+                if self.ui.radio_mode_statistics.isChecked():
+                    options.cfg.MODE = QUERY_MODE_STATISTICS
+            except AttributeError:
+                pass
                 
-            elif self.ui.radio_mode_tokens.isChecked():
+            if self.ui.radio_mode_tokens.isChecked():
                 options.cfg.MODE = QUERY_MODE_TOKENS
                 
             if self.ui.radio_query_string.isChecked():
@@ -419,7 +440,7 @@ class CoqueryWizard(QtGui.QWizard):
 
         if options.cfg.corpus:
             self.ui.combo_corpus.setCurrentIndex(
-                sorted(available_resources.keys()).index(options.cfg.corpus))
+                sorted(resource_list.get_available_resources().keys()).index(options.cfg.corpus))
 
         if options.cfg.MODE == QUERY_MODE_DISTINCT:
             self.ui.radio_mode_context.setChecked(True)
