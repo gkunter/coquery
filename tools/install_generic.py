@@ -1,18 +1,16 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import corpusbuilder
 
 class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
-    def __init__(self):
+    def __init__(self, gui=False):
         # all corpus builders have to call the inherited __init__ function:
-        super(GenericCorpusBuilder, self).__init__()
+        super(GenericCorpusBuilder, self).__init__(gui)
         
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
         self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS"]
 
-        self.check_arguments()
-        if not self.arguments.use_nltk:
-            self.lexicon_features.remove("LEX_POS")
-        
         # add table descriptions for the tables used in this database.
         #
         # Every table has a primary key that uniquely identifies each entry
@@ -89,17 +87,15 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
         self.word_id = "WordId"
         self.word_lemma_id = "LemmaId"
         self.word_label = "Text"
+        self.word_pos = "Pos"
         
         create_columns = ["`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_id),
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_lemma_id),
+                "`{}` VARCHAR(12) NOT NULL".format(self.word_pos),
                 "`{}` VARCHAR(40) NOT NULL".format(self.word_label)]
         index_columns = [([self.word_lemma_id], 0, "HASH"),
+                ([self.word_pos], 0, "BTREE"),
                 ([self.word_label], 0, "BTREE")]
-
-        if self.arguments.use_nltk:
-            self.word_pos_id = "Pos"
-            create_columns.append("`{}` VARCHAR(12) NOT NULL".format(self.word_pos_id))
-            index_columns.append(([self.word_pos_id], 0, "BTREE"))
 
         self.add_table_description(self.word_table, self.word_id,
             {"CREATE": create_columns,
