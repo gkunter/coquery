@@ -17,65 +17,96 @@ SORT_DEC = 2
 SORT_REV_INC = 3
 SORT_REV_DEC = 4
 
-class MySortProxyModel(QtGui.QSortFilterProxyModel):
+class CoqSortProxyModel(QtGui.QSortFilterProxyModel):
+    """ Define a QSortFilterProxyModel class that is used as am abstraction
+    layer for the sortable results view. """
+    
     def __init__(self, *args):
-        super(MySortProxyModel, self).__init__(*args)
+        super(CoqSortProxyModel, self).__init__(*args)
         self.sort_columns = []
         self.descending_order = []
         self.reverse_sort = []
         
     def setSourceModel(self, *args):
-        super(MySortProxyModel, self).setSourceModel(*args)
+        super(CoqSortProxyModel, self).setSourceModel(*args)
         self.sort_state = [SORT_NONE] * len(self.sourceModel().header)
         
-    def lessThan(self, left, right):
+    def lessThan(self, first, second):
+        """ Compare the content of the first row to the content of the
+        second. Return True if the first row should be placed above the 
+        second row if all sorting columns are considered. """
+        
+        # if no sorting rows are set, the row with the lower row number
+        # should come first:
         if not self.sort_columns:
-            return left.row() < right.row()
-        for x in self.sort_columns:
-            state = self.sort_state[x]
-            
-            this_left = self.sourceModel().createIndex(left.row(), x).data(QtCore.Qt.DisplayRole)
-            this_right = self.sourceModel().createIndex(right.row(), x).data(QtCore.Qt.DisplayRole)
+            return first.row() < second.row()
 
+        # Go through the sorting columns, and compare the two rows in each
+        # column. If a comparison already resolves the sorting order, the 
+        # following columns are not considered anymore.
+        for col in self.sort_columns:
+            state = self.sort_state[col]
+            
+            # get cell content of first and second row in current column:
+            data_first = self.sourceModel().createIndex(first.row(), col).data(QtCore.Qt.DisplayRole)
+            data_second = self.sourceModel().createIndex(second.row(), col).data(QtCore.Qt.DisplayRole)
+
+            # reverse the contents if backward sorting is set for the column:
             if state in [SORT_REV_DEC, SORT_REV_INC]:
-                this_left = this_left[::-1]
-                this_right = this_right[::-1]
-            if this_left < this_right:
+                data_first = data_first[::-1]
+                data_second = data_second[::-1]
+
+            # compare the rows, and return an appropriate value if one of the
+            # two has a lower value than the other:
+            if data_first < data_second:
                 return True or state in [SORT_DEC, SORT_REV_DEC]
-            if this_left > this_right:
+            if data_first > data_second:
                 return False or state in [SORT_DEC, SORT_REV_DEC]
+        
+        # The first row has not been found to have lower values than the
+        # second:
         return False
 
     def headerData(self, index, orientation, role):
-        # row names:
+        """ Return the header at the given index, taking the sorting settings
+        into account. """
+        
+        # Return row names?
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
                 return self.sourceModel().rownames[index]
             else:
                 return None
 
-        # column names:
+        # Return column names:
         header = self.sourceModel().header
         if not header or index > len(header):
             return None
         
+        # Get header string?
         if role == QtCore.Qt.DisplayRole:
             # Return normal header if not a sort column:
             if index not in self.sort_columns:
                 return header[index]
             
             tag_list = []
+            
+            # Add sorting order number if more than one sorting columns have
+            # been selected:
             if len(self.sort_columns) > 1:
                 tag_list.append(str(self.sort_columns.index(index)+1))
+            
+            # Add a "rev" tag if reverse sorting is requested for the column
             if self.sort_state[index] in [SORT_REV_DEC, SORT_REV_INC]:
-                tag_list.append("Rev")
+                tag_list.append("rev")
             
             return "{}{}".format(
                     header[index], 
                     ["", " ({}) ".format(", ".join(tag_list))][bool(tag_list)])
 
+        # Get header decoration (i.e. the sorting arrows)?
         elif role == QtCore.Qt.DecorationRole:
-            # add arrows as sort order indicators if necessary:
+            # add arrows as sorting direction indicators if necessary:
             if self.sort_state[index] in [SORT_DEC, SORT_REV_DEC]:
                 return QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_ArrowDown)
             elif self.sort_state[index] in [SORT_INC, SORT_REV_INC]:
@@ -85,9 +116,12 @@ class MySortProxyModel(QtGui.QSortFilterProxyModel):
         else:
             return None
         
-class MyTableModel(QtCore.QAbstractTableModel):
+class CoqTableModel(QtCore.QAbstractTableModel):
+    """ Define a QAbstractTableModel class that stores the query results so
+    that they can be shown in the results view. """
+    
     def __init__(self, parent, header, data, *args):
-        super(MyTableModel, self).__init__(parent, *args)
+        super(CoqTableModel, self).__init__(parent, *args)
         self.content = data
         self.header = header
         self.rownames = range(1, len(data) + 1)
@@ -110,6 +144,8 @@ class MyTableModel(QtCore.QAbstractTableModel):
         return len(self.header)
 
 class ResultsViewer(QtGui.QDialog):
+    """ Defines a QDialog class that can be used to display the results from
+    a query session. """
     def __init__(self, Session, parent=None):
         def format_file_size(size):
             if size > 1024**4:
@@ -137,14 +173,14 @@ class ResultsViewer(QtGui.QDialog):
         self.ui.button_restart.clicked.connect(self.reject)
         self.ui.button_logfile.clicked.connect(self.view_logfile)
 
-        self.table_model = MyTableModel(self, Session.header, Session.output_storage)
+        self.table_model = CoqTableModel(self, Session.header, Session.output_storage)
 
-        self.proxy_model = MySortProxyModel()
+        self.proxy_model = CoqSortProxyModel()
         self.proxy_model.setSourceModel(self.table_model)
         self.proxy_model.sortCaseSensitivity = False
 
         # make horizontal headers sortable in a special way:
-        self.ui.data_preview.horizontalHeader().sectionClicked.connect(self.header)
+        self.ui.data_preview.horizontalHeader().sectionClicked.connect(self.change_sorting)
         self.ui.data_preview.setModel(self.proxy_model)
         self.ui.data_preview.setSortingEnabled(False)
         #self.adjust_header_width()
@@ -179,7 +215,7 @@ class ResultsViewer(QtGui.QDialog):
         if e.key() == QtCore.Qt.Key_Escape:
             self.accept()
             
-    def header(self, index):
+    def change_sorting(self, index):
         header = self.ui.data_preview.horizontalHeader()
 
         if not self.proxy_model.sort_state[index]:
