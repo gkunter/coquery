@@ -68,6 +68,10 @@ TABLE_SOURCE = "source"
 TABLE_FILE = "file"
 TABLE_SPEAKER = "speaker"
 
+CONTEXT_KWIC = "KWIC"
+CONTEXT_STRING = "String"
+CONTEXT_COLUMNS = "Columns"
+
 # from https://docs.python.org/2.7/library/csv.html#csv-examples
 class UTF8Recoder:
     """
