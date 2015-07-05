@@ -92,6 +92,7 @@ def main():
     if options.cfg.comment:
         logger.info(options.cfg.comment)
     
+    # Run the Application GUI?
     if options.cfg.gui:
         sys.path.append(os.path.join(sys.path[0], "gui"))
         from pyqt_compat import QtCore, QtGui
@@ -112,9 +113,9 @@ def main():
         Coq.setWindowIcon(options.cfg.icon)
         options.cfg.app.exec_()
         logger.info("--- Finished program (after %.3f seconds) ---" % (time.time() - start_time))
-        sys.exit(0)
 
-    if options.cfg.wizard:
+    # Otherwise, run the Wizard GUI?
+    elif options.cfg.wizard:
         options.cfg.gui = True
         # use wizard gui:
         sys.path.append(os.path.join(sys.path[0], "gui"))
@@ -128,62 +129,57 @@ def main():
         options.cfg.icon = QtGui.QIcon()
         options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_small.png".format(sys.path[0])))
         Wizard.setWindowIcon(options.cfg.icon)
-    while True:
-        # catch all exceptions, but only if a gui is used:
-        try:
-            if options.cfg.gui:
-                # Get arguments from GUI wizard:
-                if not Wizard.getWizardArguments():
-                    break
-                # Get a temporary file name:
+    
+        while True:
+            if Wizard.getWizardArguments():
                 with tempfile.NamedTemporaryFile() as temp_file:
                     options.cfg.output_path = temp_file.name
-            
-            # Choose the appropriate Session type instance:
-            if options.cfg.MODE == QUERY_MODE_STATISTICS:
-                Session = StatisticsSession()
+                if options.cfg.MODE == QUERY_MODE_STATISTICS:
+                    Session = StatisticsSession()
+                else:
+                    if options.cfg.input_path:
+                        Session = SessionInputFile()
+                    elif options.cfg.query_list:
+                        Session = SessionCommandLine()
+                    else:
+                        Session = SessionStdIn()
+                ProgressIndicator.RunThread(Session.run_queries, "Querying...")
+                # Display results (which are stored in a memory file)
+                # in a dialog, with the option to save it to a file:
+                finish = ResultsViewer(Session).exec_()
+                if finish:
+                    logger.info("--- Finished program (after %.3f seconds) ---" % (time.time() - start_time))
+                    break
+                Wizard.restart()
+                Wizard.next()
             else:
-                if options.cfg.input_path:
-                    Session = SessionInputFile()
-                elif options.cfg.query_list:
-                    Session = SessionCommandLine()
-                else:
-                    Session = SessionStdIn()
+                break
             
-            # Catch keyboard interruptions:
-            try:
-                # Check if profiling is requested. If so, wrap the profiler 
-                # around the query execution:
-                if options.cfg.profile:
-                    cProfile.runctx("Session.run_queries()", globals(), locals())
-                    break
-                
-                # Check if GUI is requested. If so, wrap query execution into a
-                # separate thread with graphical progress indicator:
-                elif options.cfg.gui:
-                    ProgressIndicator.RunThread(Session.run_queries, "Querying...")
-                    # Display results (which are stored in a memory file)
-                    # in a dialog, with the option to save it to a file:
-                    finish = ResultsViewer(Session).exec_()
-                    if finish:
-                        break
-                    Wizard.restart()
-                    Wizard.next()
-
-                # Otherwise, run queries normally:
-                else:
-                    Session.run_queries()
-                    break
-            except KeyboardInterrupt:
-                logger.error("Execution interrupted, exiting.")
-                if options.cfg.gui:
-                    QtGui.QMessageBox.critical(None, "Coquery – Error", "Execution interrupted by the user.")
-                else:
-                    break
-        except ImportError:
-            pass
-
-    logger.info("--- Done (after %.3f seconds) ---" % (time.time() - start_time))
+    # Otherwise, run program as a command-line tool:
+    else:
+        # Choose the appropriate Session type instance:
+        if options.cfg.MODE == QUERY_MODE_STATISTICS:
+            Session = StatisticsSession()
+        else:
+            if options.cfg.input_path:
+                Session = SessionInputFile()
+            elif options.cfg.query_list:
+                Session = SessionCommandLine()
+            else:
+                Session = SessionStdIn()
+        
+        # Catch keyboard interruptions:
+        try:
+            # Check if profiling is requested. If so, wrap the profiler 
+            # around the query execution:
+            if options.cfg.profile:
+                cProfile.runctx("Session.run_queries()", globals(), locals())
+            # Otherwise, run queries normally:
+            else:
+                Session.run_queries()
+        except KeyboardInterrupt:
+            logger.error("Execution interrupted, exiting.")
+        logger.info("--- Done (after %.3f seconds) ---" % (time.time() - start_time))
 
 if __name__ == "__main__":
     for x in sys.argv[1:]:
