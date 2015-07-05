@@ -181,7 +181,30 @@ class BaseLexicon(object):
     
 class BaseResource(object):
     wildcards = ["*", "?"]
-    pass
+    
+    # Add internal table that can be used to access system information:
+    coquery_query_string = "Query string"
+    coquery_query_file = "Input file"
+    coquery_current_date = "Current date"
+    coquery_current_time = "Current time"
+    coquery_version = "Version"
+    coquery_os = "Operating system"
+    
+    def get_table_dict(self):
+        """ Return a dictionary with the table names specified in this
+        resource as keys. The values of the dictionary are the table 
+        columns. """
+        table_dict = {}
+        for x in dir(self):
+            if "_" in x and not x.startswith("_"):
+                table, _, _ = x.partition("_")
+                if table not in table_dict:
+                    table_dict[table] = []
+                table_dict[table].append(x)
+        for x in table_dict.keys():
+            if x != "coquery" and not "{}_table".format(x) in table_dict[x]:
+                table_dict.pop(x)
+        return table_dict
 
 class BaseCorpus(object):
     provides = []
