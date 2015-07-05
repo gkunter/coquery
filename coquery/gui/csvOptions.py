@@ -170,14 +170,7 @@ class CSVOptions(QtGui.QDialog):
         self.ui.query_column.setValue(index.column()+1)
 
     def update_tableview(self):
-        if not self.file_table:
-            pass
-            #self.FilePreviewArea.setColumnCount(0)
-            #self.FilePreviewArea.setRowCount(0)
-        else:
-            #self.FilePreviewArea.setColumnCount(len(self.file_table[0]))
-            #self.FilePreviewArea.setRowCount(len(self.file_table))
-            
+        if self.file_table:
             self.ui.query_column.setMaximum(len(self.file_table[0]))
         
         self.ui.FilePreviewArea.resizeColumnsToContents()
@@ -187,8 +180,8 @@ class CSVOptions(QtGui.QDialog):
             self.close()
             
 def main():
-    app = QApplication(sys.argv)
-    print(CSVOptions.getOptions("~/tmp/tmp2.csv"))
+    app = QtGui.QApplication(sys.argv)
+    print(CSVOptions.getOptions()
     
 if __name__ == "__main__":
     main()
