@@ -174,7 +174,6 @@ class CoqueryWizard(QtGui.QWizard):
             try:
                 self.filter_variable_model.setStringList(options.cfg.output_variable_names)
             except AttributeError:
-                print(2)
                 pass
     
     def change_corpus_features(self, corpus_label, prefix="", suffix=""):
