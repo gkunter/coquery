@@ -13,33 +13,17 @@ import wizard
 import results 
 import error_box
 import codecs
+import random
 import logging
 import sqlwrap
+import MySQLOptions
+from queryfilter import *
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
     def _fromUtf8(s):
         return s
-
-class GuiHandler(logging.StreamHandler):
-    def __init__(self, *args):
-        super(GuiHandler, self).__init__(*args)
-        self.log_data = []
-        self.app = None
-        
-    def setGui(self, app):
-        self.app = app
-        
-    def emit(self, record):
-        try:
-            self.log_data.append(record)
-            if len(self.log_data) == 1:
-                self.app.ui.log_table.horizontalHeader().setStretchLastSection(True)
-                
-            self.app.log_table.layoutChanged.emit()
-        except:
-            self.handleError(record)
 
 class LogTableModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, *args):
@@ -93,41 +77,172 @@ class LogProxyModel(QtGui.QSortFilterProxyModel):
         
         if role == QtCore.Qt.DisplayRole:
             return header[index]
+
+class CoqTextEdit(QtGui.QLineEdit):
+    def __init__(self, *args):
+        super(CoqTextEdit, self).__init__(*args)
+        self.setAcceptDrops(True)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+        self.setAcceptDrops(True)
         
+    def dragEnterEvent(self, e):
+        e.acceptProposedAction()
+
+    def dragMoveEvent(self, e):
+        e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        # get the relative position from the mime data
+        mime = e.mimeData().text()
+        print(mime)
+        
+        print(e.mimeData().data("text/plain"))
+        if "application/x-qabstractitemmodeldatalist" in e.mimeData().formats():
+            print(1)
+            print(e.mimeData().data("application/x-qabstractitemmodeldatalist"))
+            label = e.mimeData().text()
+            print(label)
+            if label == "word_label":
+                self.insertPlainText("*")
+                e.setDropAction(QtCore.Qt.CopyAction)
+                e.accept()
+            elif label == "word_pos":
+                self.insertPlainText(".[*]")
+                e.setDropAction(QtCore.Qt.CopyAction)
+                e.accept()
+            elif label == "lemma_label":
+                self.insertPlainText("[*]")
+                e.setDropAction(QtCore.Qt.CopyAction)
+                e.accept()
+            elif label == "lemma_transcript":
+                self.insertPlainText("[/*/]")
+                e.setDropAction(QtCore.Qt.CopyAction)
+                e.accept()
+            elif label == "word_transcript":
+                self.insertPlainText("/*/")
+                e.setDropAction(QtCore.Qt.CopyAction)
+                e.accept()
+        elif e.mimeData().hasText():
+            self.insertPlainText(e.mimeData().text())
+            e.setDropAction(QtCore.Qt.CopyAction)
+            e.accept()
+        #x, y = map(int, mime.split(','))
+
+        #if e.keyboardModifiers() & QtCore.Qt.ShiftModifier:
+            ## copy
+            ## so create a new button
+            #button = Button('Button', self)
+            ## move it to the position adjusted with the cursor position at drag
+            #button.move(e.pos()-QtCore.QPoint(x, y))
+            ## show it
+            #button.show()
+            ## store it
+            #self.buttons.append(button)
+            ## set the drop action as Copy
+            #e.setDropAction(QtCore.Qt.CopyAction)
+        #else:
+            ## move
+            ## so move the dragged button (i.e. event.source())
+            #e.source().move(e.pos()-QtCore.QPoint(x, y))
+            ## set the drop action as Move
+            #e.setDropAction(QtCore.Qt.MoveAction)
+        # tell the QDrag we accepted it
+        e.accept()
+
+    def setAcceptDrops(self, *args):
+        print(args, "!")
+        super(CoqTextEdit, self).setAcceptDrops(*args)
+        print(self.acceptDrops())
+        
+class GuiHandler(logging.StreamHandler):
+    def __init__(self, *args):
+        super(GuiHandler, self).__init__(*args)
+        self.log_data = []
+        self.app = None
+        
+    def setGui(self, app):
+        self.app = app
+        
+    def emit(self, record):
+        try:
+            self.log_data.append(record)
+            if len(self.log_data) == 1:
+                self.app.ui.log_table.horizontalHeader().setStretchLastSection(True)
+                
+            self.app.log_table.layoutChanged.emit()
+        except:
+            self.handleError(record)
+
 class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     """ Coquery as standalone application. """
     
     def setup_menu_actions(self):
         self.ui.action_save_results.triggered.connect(self.save_results)
-        self.ui.action_quit.triggered.connect(self.save_results)
+        self.ui.action_quit.triggered.connect(self.close)
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
         self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
+        self.ui.action_mySQL_settings.triggered.connect(self.mysql_settings)
+        self.ui.action_statistics.triggered.connect(self.run_statistics)
     
     def setup_hooks(self):
         super(CoqueryApp, self).setup_hooks()
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)
-        # hook run statistics button:
-        self.ui.button_show_statistics.clicked.connect(self.run_statistics)
-    
+        #self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
+        #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
+        
     def setup_app(self):
         """ initializes all widgets with suitable data """
         # add available resources to corpus dropdown box:
         corpora = [x.upper() for x in sorted(resource_list.get_available_resources().keys())]
+
         self.ui.combo_corpus.addItems(corpora)
+        
+        # chamge the default query string edit to the sublassed edit class:
+        self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
+        self.ui.edit_query_string.close()        
+        edit_query_string = CoqTextEdit(self)
+        edit_query_string.setObjectName(coqueryUi._fromUtf8("edit_query_string"))
+        self.ui.gridLayout_2.addWidget(edit_query_string, 2, 1, 1, 1)
+        self.ui.edit_query_string = edit_query_string
+        
+        self.ui.filter_box = CoqTagBox(self)
+        self.ui.filter_box.setTagType(CoqFilterTag)
+        #self.ui.filter_box.cloud_area.setSpacing(2)
+        
+        self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
+        self.ui.tag_cloud.close()
+        self.ui.horizontalLayout.removeWidget(self.ui.edit_query_filter)
+        self.ui.horizontalLayout.removeWidget(self.ui.label_4)
+        self.ui.edit_query_filter.close()
+        self.ui.label_4.close()
+
+        self.ui.verticalLayout_5.addWidget(self.ui.filter_box)
+
+        self.filter_variable_model = QtGui.QStringListModel()
+
+        self.completer = QtGui.QCompleter()
+        self.completer.setModel(self.filter_variable_model)
+        self.completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
+        self.completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        
+        self.ui.filter_box.edit_tag.setCompleter(self.completer)
 
         self.setup_hooks()
         self.setup_menu_actions()
         
         self.change_corpus()
-        self.enable_output_option()
 
         self.log_table = LogTableModel(self)
         self.log_proxy = LogProxyModel()
         self.log_proxy.setSourceModel(self.log_table)
         self.log_proxy.sortCaseSensitivity = False
         self.ui.log_table.setModel(self.log_proxy)
- 
+
     def __init__(self, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
         
@@ -136,15 +251,19 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
 
+        QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
+        self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
+        self.filter_list = []
+
         self.setup_app()
         self.csv_options = None
         self.query_thread = None
         self.last_results_saved = True
         
     def display_results(self):
-        self.table_model = results.MyTableModel(self, self.Session.header, self.Session.output_storage)
+        self.table_model = results.CoqTableModel(self, self.Session.header, self.Session.output_storage)
 
-        self.proxy_model = results.MySortProxyModel()
+        self.proxy_model = results.CoqSortProxyModel()
         self.proxy_model.setSourceModel(self.table_model)
         self.proxy_model.sortCaseSensitivity = False
 
@@ -220,14 +339,18 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         """ Set the action button to start queries. """
         self.ui.button_run_query.clicked.disconnect()
         self.ui.button_run_query.clicked.connect(self.run_query)
+        old_width = self.ui.button_run_query.width()
         self.ui.button_run_query.setText("Query")
+        self.ui.button_run_query.setFixedWidth(max(old_width, self.ui.button_run_query.width()))
         self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-start")))
         
     def set_stop_button(self):
         """ Set the action button to stop queries. """
         self.ui.button_run_query.clicked.disconnect()
         self.ui.button_run_query.clicked.connect(self.stop_query)
+        old_width = self.ui.button_run_query.width()
         self.ui.button_run_query.setText("Stop")
+        self.ui.button_run_query.setFixedWidth(max(old_width, self.ui.button_run_query.width()))
         self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-stop")))
     
     def stop_query(self):
@@ -238,10 +361,14 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.ui.button_run_query.setEnabled(False)
             self.ui.button_run_query.setText("Wait...")
             self.ui.statusbar.showMessage("Terminating query...")
-            self.query_thread.terminate()
-            self.query_thread.wait()
+            if self.query_thread:
+                self.query_thread.terminate()
+                self.query_thread.wait()
             self.ui.statusbar.showMessage("Last query interrupted.")
-            self.Session.Corpus.resource.DB.kill_connection()
+            try:
+                self.Session.Corpus.resource.DB.kill_connection()
+            except AttributeError:
+                pass
             self.ui.button_run_query.setEnabled(True)
             self.ui.progress_bar.setRange(0, 1)
             self.set_query_button()
@@ -288,12 +415,12 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             
             if response == QtGui.QMessageBox.Yes:
                 DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password)
-                self.ui.progress_bar.setRange(0, 1)
+                self.ui.progress_bar.setRange(0, 0)
                 self.ui.progress_bar.setFormat("Removing corpus '{}'".format(current_corpus))
                 DB.execute("DROP DATABASE {}".format(database))
                 os.remove(module)
                 
-                self.ui.progress_bar.setRange(0, 0)
+                self.ui.progress_bar.setRange(0, 1)
                 self.ui.progress_bar.setFormat("Idle.")
                 self.fill_combo_corpus()
                 logger.warning("Removed corpus {}.".format(current_corpus))
@@ -311,12 +438,18 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
                 event.accept()
-                self.save_configuration()
             else:
-                event.ignore()
+                event.ignore()            
         else:
             event.accept()
-            self.save_configuration()
-            
-            
+        
+    def mysql_settings(self):
+        settings = MySQLOptions.MySQLOptions.set(self)
+        if settings:
+            options.cfg.db_host = settings.db_host
+            options.cfg.db_port = settings.db_port
+            options.cfg.db_user = settings.db_user
+            options.cfg.db_password = settings.db_password
+        
+    
 logger = logging.getLogger(__init__.NAME)
