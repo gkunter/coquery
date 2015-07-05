@@ -2,11 +2,12 @@
 
 # Form implementation generated from reading ui file 'corpusBuilder.ui'
 #
-# Created by: PyQt4 UI code generator 4.10.3
+# Created: Fri Jul  3 22:06:40 2015
+#      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt4 import QtCore, QtGui
+from pyqt_compat import QtCore, QtGui
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -25,7 +26,7 @@ except AttributeError:
 class Ui_CorpusBuilder(object):
     def setupUi(self, CorpusBuilder):
         CorpusBuilder.setObjectName(_fromUtf8("CorpusBuilder"))
-        CorpusBuilder.resize(640, 283)
+        CorpusBuilder.resize(640, 376)
         CorpusBuilder.setModal(True)
         self.verticalLayout = QtGui.QVBoxLayout(CorpusBuilder)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
@@ -36,6 +37,11 @@ class Ui_CorpusBuilder(object):
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
         self.formFrame = QtGui.QFrame(CorpusBuilder)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.formFrame.sizePolicy().hasHeightForWidth())
+        self.formFrame.setSizePolicy(sizePolicy)
         self.formFrame.setFrameShape(QtGui.QFrame.StyledPanel)
         self.formFrame.setFrameShadow(QtGui.QFrame.Raised)
         self.formFrame.setObjectName(_fromUtf8("formFrame"))
@@ -47,6 +53,11 @@ class Ui_CorpusBuilder(object):
         self.horizontalLayout_3 = QtGui.QHBoxLayout()
         self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
         self.corpus_name = QtGui.QLineEdit(self.formFrame)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.corpus_name.sizePolicy().hasHeightForWidth())
+        self.corpus_name.setSizePolicy(sizePolicy)
         self.corpus_name.setMaxLength(32)
         self.corpus_name.setObjectName(_fromUtf8("corpus_name"))
         self.horizontalLayout_3.addWidget(self.corpus_name)
@@ -61,7 +72,7 @@ class Ui_CorpusBuilder(object):
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         self.input_path = QtGui.QLineEdit(self.formFrame)
         self.input_path.setEnabled(True)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.input_path.sizePolicy().hasHeightForWidth())
@@ -83,6 +94,11 @@ class Ui_CorpusBuilder(object):
         self.label_3.setObjectName(_fromUtf8("label_3"))
         self.formLayout.setWidget(3, QtGui.QFormLayout.LabelRole, self.label_3)
         self.use_pos_tagging = QtGui.QCheckBox(self.formFrame)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.use_pos_tagging.sizePolicy().hasHeightForWidth())
+        self.use_pos_tagging.setSizePolicy(sizePolicy)
         self.use_pos_tagging.setText(_fromUtf8(""))
         self.use_pos_tagging.setObjectName(_fromUtf8("use_pos_tagging"))
         self.formLayout.setWidget(3, QtGui.QFormLayout.FieldRole, self.use_pos_tagging)
@@ -106,7 +122,7 @@ class Ui_CorpusBuilder(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.button_lemma_path.sizePolicy().hasHeightForWidth())
         self.button_lemma_path.setSizePolicy(sizePolicy)
-        icon = QtGui.QIcon.fromTheme(_fromUtf8("document"))
+        icon = QtGui.QIcon.fromTheme(_fromUtf8("folder"))
         self.button_lemma_path.setIcon(icon)
         self.button_lemma_path.setObjectName(_fromUtf8("button_lemma_path"))
         self.horizontalLayout_2.addWidget(self.button_lemma_path)
@@ -115,7 +131,7 @@ class Ui_CorpusBuilder(object):
         spacerItem2 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem2)
         self.progress_bar = QtGui.QProgressBar(CorpusBuilder)
-        self.progress_bar.setProperty("value", 24)
+        self.progress_bar.setProperty("value", 0)
         self.progress_bar.setObjectName(_fromUtf8("progress_bar"))
         self.verticalLayout.addWidget(self.progress_bar)
         self.buttonBox = QtGui.QDialogButtonBox(CorpusBuilder)
