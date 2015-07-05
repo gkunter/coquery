@@ -98,14 +98,9 @@ class CoqTextEdit(QtGui.QLineEdit):
     def dropEvent(self, e):
         # get the relative position from the mime data
         mime = e.mimeData().text()
-        print(mime)
         
-        print(e.mimeData().data("text/plain"))
         if "application/x-qabstractitemmodeldatalist" in e.mimeData().formats():
-            print(1)
-            print(e.mimeData().data("application/x-qabstractitemmodeldatalist"))
             label = e.mimeData().text()
-            print(label)
             if label == "word_label":
                 self.insertPlainText("*")
                 e.setDropAction(QtCore.Qt.CopyAction)
@@ -154,9 +149,7 @@ class CoqTextEdit(QtGui.QLineEdit):
         e.accept()
 
     def setAcceptDrops(self, *args):
-        print(args, "!")
         super(CoqTextEdit, self).setAcceptDrops(*args)
-        print(self.acceptDrops())
         
 class GuiHandler(logging.StreamHandler):
     def __init__(self, *args):

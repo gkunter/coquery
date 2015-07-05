@@ -181,7 +181,7 @@ class CSVOptions(QtGui.QDialog):
             
 def main():
     app = QtGui.QApplication(sys.argv)
-    print(CSVOptions.getOptions()
+    print(CSVOptions.getOptions())
     
 if __name__ == "__main__":
     main()
