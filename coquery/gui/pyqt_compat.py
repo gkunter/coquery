@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 pyside = False
 pyqt = False
 
@@ -27,6 +28,7 @@ else:
     QtCore.pyqtSlot = QtCore.Slot
     QtCore.pyqtProperty = QtCore.Property
     QtCore.QVariant = lambda x: x   
+    QtCore.QString = str
     if "setMargin" not in dir(QtGui.QHBoxLayout):
         QtGui.QHBoxLayout.setMargin = lambda x, y: True
     if "setMargin" not in dir(QtGui.QVBoxLayout):
