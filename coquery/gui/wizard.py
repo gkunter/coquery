@@ -7,21 +7,9 @@ import wizardUi
 import csvOptions
 import QtProgress
 
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
-
 class focusFilter(QtCore.QObject):
+    """ Define an event filter that reacts to focus events. This filter is
+    used to toggle the query selection radio buttons. """
     focus = QtCore.Signal()
     
     def eventFilter(self, obj, event):
@@ -31,6 +19,8 @@ class focusFilter(QtCore.QObject):
         return super(focusFilter, self).eventFilter(obj, event)
 
 class clickFilter(QtCore.QObject):
+    """ Define an event filter that reacts to click events. This filter is
+    used to toggle the query selection radio buttons. """
     clicked = QtCore.Signal()
     
     def eventFilter(self, obj, event):
@@ -39,172 +29,96 @@ class clickFilter(QtCore.QObject):
             return super(clickFilter, self).eventFilter(obj, event)
         return super(clickFilter, self).eventFilter(obj, event)
 
-class CoqueryWizard(QtGui.QWizard):
-    checked_buttons = set([])
-
-    def get_new_label(self, s, name, parent):
-        """ Add a new label to the parent widget. Used for creating the 
-        output option list dynamically. """
-        new_label = QtGui.QLabel(parent)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(new_label.sizePolicy().hasHeightForWidth())
-        new_label.setSizePolicy(sizePolicy)
-        new_label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
-        new_label.setObjectName(_fromUtf8(name))
-        new_label.setText(_translate("Wizard", s, None))
-        return new_label
-
-    def get_new_box(self, s, name, parent):
-        """ Add a new checkbox to the parent widget. Used for creating the 
-        output option list dynamically. """
-        new_box = QtGui.QCheckBox(parent)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(new_box.sizePolicy().hasHeightForWidth())
-        new_box.setTristate(False)
-        new_box.setSizePolicy(sizePolicy)
-        new_box.setObjectName(_fromUtf8(name))
-        new_box.setText(_translate("Wizard", s, None))
-        new_box.setChecked(_fromUtf8(name) in self.checked_buttons)
-        return new_box
-
-    def get_new_separator(self, name, parent):
-        """ Add a new separator to the parent widget. Used for creating the 
-        output option list dynamically. """
-        new_separator = QtGui.QFrame(parent)
-        new_separator.setFrameShape(QtGui.QFrame.HLine)
-        new_separator.setFrameShadow(QtGui.QFrame.Sunken)
-        new_separator.setObjectName(_fromUtf8(name))
-        return new_separator
+class CoqTreeItem(QtGui.QTreeWidgetItem):
+    """ Define a tree element class that stores the output column options in
+    the options tree. """
     
-    def clear_layout(self, layout):
-        """ Remove all children from the layout. Used for creating the 
-        output option list dynamically."""
-        for i in reversed(range(layout.count())):
-            item = layout.itemAt(i)
-            if isinstance(item, QtGui.QWidgetItem):
-                widget = item.widget()
-                if isinstance(widget, QtGui.QCheckBox):
-                    if widget.checkState():
-                        self.checked_buttons.add(_fromUtf8(widget.objectName()))
-                    else:
-                        try:
-                            self.checked_buttons.remove(_fromUtf8(widget.objectName()))
-                        except KeyError:
-                            pass
-                widget.close()
-            elif isinstance(item, QtGui.QSpacerItem):
-                pass
+    def __init__(self, *args):
+        super(CoqTreeItem, self).__init__(*args)
+        self._objectName = ""
+        
+    def setObjectName(self, name):
+        """ Store resource variable name as object name. """
+        self._objectName = name
+
+    def objectName(self):
+        """ Retrieve resource variable name from object name. """
+        return self._objectName
+
+    def check_children(self, column=0):
+        """ Compare the check state of the item to that of all children.
+        Returns True all children have the same check state, False if at 
+        # least one child has a different check state than another. """
+
+        child_states = set([])
+        for child in [self.child(i) for i in range(self.childCount())]:
+            child_states.add(child.checkState(column))
+        return len(child_states) == 1
+
+    def update_checkboxes(self, column, expand=False):
+        """ Propagate the check state of the item to its children. Also, 
+        adjust the check state of the parent accordingly. If the argument 
+        'expand' is True, the parents of items with checked children will be 
+        expanded. """
+        check_state = self.checkState(column)
+        if check_state == QtCore.Qt.PartiallyChecked:
+            # do not propagate a partially checked state
+            return
+        
+        # propagate check state to children:
+        for child in [self.child(i) for i in range(self.childCount())]:
+            child.setCheckState(column, check_state)
+        # adjust check state of parent:
+        if self.parent():
+            if not self.parent().check_children():
+                self.parent().setCheckState(column, QtCore.Qt.PartiallyChecked)
             else:
-                self.clear_layout(item.layout())
-            layout.removeItem(item)   
+                self.parent().setCheckState(column, check_state)
+            if expand:
+                if self.parent().checkState(column) in (QtCore.Qt.PartiallyChecked, QtCore.Qt.Checked):
+                    self.parent().setExpanded(True)
 
-    def change_corpus(self, *args):
-        if self.ui.combo_corpus.isEnabled():
-            self.change_corpus_features(str(self.ui.combo_corpus.currentText()).lower())
-    
-    def change_corpus_features(self, corpus_label, prefix="", suffix=""):
-        """ Construct a new output option list depending on the features
-        provided by the corpus given in 'corpus_label."""
-        
-        Resource, Corpus, Lexicon, Path = resource_list.get_available_resources()[corpus_label]
-        
-        # Find the widget containing the output options and the associated
-        # layout:
-        options_scroll_content = self.findChild(QtGui.QWidget, "options_scroll_content")
-        options_list = self.findChild(QtGui.QGridLayout, "options_list")
-
-        # start with an empty layout for the option list:
-        self.clear_layout(options_list)
-        
-        # get a list of all tables in the resource, except those that contain
-        # _denorm_ (these are denormalized tables of existing tables and
-        # should be have feature-parity with them)
-        table_list = [x[:x.index("_table")] for x in dir(Resource) if x.endswith("_table") and not x.count("_denorm_")]
-
-        # Rearrange table list so that they occur in a sensible order:
-        for x in reversed(["word", "lemma", "corpus", "source", "file", "speaker"]):
-            if x in table_list:
-                table_list.remove(x)
-                table_list.insert(0, x)
-        
-        layout_dict = {}
-        block_count = 0       
-
-        # Add options for each content variable in the table description. For 
-        # each table, a separate list of checkboxes is added.
-        for i, table in enumerate(table_list):
-            # create new layout for the table:
-            table_layout = QtGui.QVBoxLayout()
-            table_layout.setObjectName(_fromUtf8("{}_layout".format(table)))
-            layout_dict[table] = table_layout
+class CoqTreeWidget(QtGui.QTreeWidget):
+    """ Define a tree widget that stores the available output columns in a 
+    tree with check boxes for each variable. """
+    def __init__(self, *args):
+        super(CoqTreeWidget, self).__init__(*args)
+        self.itemChanged.connect(self.update)
+        self.setDragEnabled(True)
             
-            # look for content variables in the resource:
-            for var in dir(Resource):
-                # variables of the form x_id, x_y_table, and x_y_id are 
-                # internal variables used to link different tables. They
-                # do not occur as checkboxes:
-                if var.startswith(table) and not var.endswith("_table") and not var.endswith("_id") and not var.startswith("{}_table".format(table)):
-                    layout_dict[table].addWidget(
-                        self.get_new_box(Resource.__dict__[var], var, options_scroll_content))
-            # if there is a list of checkboxes for the current table, add it
-            # to the option list:
-            if layout_dict[table]:
-                options_list.addWidget(
-                    self.get_new_label(
-                        " ".join([prefix, table, suffix]).strip().capitalize(), 
-                        "{}_label".format(table), 
-                        options_scroll_content), block_count, 0, 1, 1)
-                options_list.addLayout(layout_dict[table], block_count, 1, 1, 1)
-                block_count += 1
-                # add visual separator:
-                options_list.addWidget(self.get_new_separator("{}_separator".format(table), options_scroll_content), block_count, 0, 1, 1)
-                block_count += 1
-
-        # Add general output options:
-        general_layout = QtGui.QVBoxLayout()
-        general_layout.setObjectName(_fromUtf8("coquery_layout"))
-        general_layout.addWidget(
-            self.get_new_box("Query string", "coquery_query_string", options_scroll_content))
-        general_layout.addWidget(
-            self.get_new_box("Name of input file     ", "coquery_input_file", options_scroll_content))
-        options_list.addWidget(
-            self.get_new_label("General", "coquery_label", options_scroll_content), block_count, 0, 1, 1)
-        options_list.addLayout(general_layout, block_count, 1, 1, 1)
-        block_count += 1
+    def update(self, item, column):
+        """ Update the checkboxes of parent and child items whenever an
+        item has been changed. """
+        item.update_checkboxes(column)
         
-        # add a spacer so that the layout is compact:
-        options_list.addItem(QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding), block_count, 0, 1, 1)
+    def mimeData(self, *args):
+        """ Add the resource variable name to the MIME data (for drag and 
+        drop). """
+        value = super(CoqTreeWidget, self).mimeData(*args)
+        value.setText(", ".join([x.objectName() for x in args[0]]))
+        return value
         
-        self.enable_output_option()
+class CoqueryWizard(QtGui.QWizard):
+    """ Define a QWizard class for Coquery. """
+    checked_buttons = set([])
     
-    #def validateCurrentPage(self):
-        #page = self.currentPage()
-        ## validate corpus selection and query mode:
-        #if self.currentId() == 0:
-            #combo = page.findChild(QtGui.QComboBox, "combo_corpus")
-            #self.change_corpus_features(str(combo.currentText()).lower(), suffix = "features")
+    def __init__(self, parent=None):
+        super(CoqueryWizard, self).__init__(parent)
         
-            #return True
-        ### validate input page:
-        ##elif self.currendId() == 2:
-            ##if page.field("edit_query_string")
-            ##or page.field("edit_file_name")
-        #return True
+        self.file_content = None
+        self.ui = wizardUi.Ui_Wizard()
+        self.ui.setupUi(self)
 
+        self.setup_wizard()
+        self.csv_options = None
+        
     def setup_hooks(self):
+        """ Hook up signals so that the GUI can adequately react to user 
+        input. """
         # hook file browser button:
         self.ui.button_browse_file.clicked.connect(self.select_file)
         # hook file options button:
         self.ui.button_file_options.clicked.connect(self.file_options)
-
-        # set up hooks so that the general option to output the file name
-        # is available only if an input file is actually used:
-        self.ui.radio_query_string.toggled.connect(self.enable_output_option)
-        self.ui.radio_query_file.toggled.connect(self.enable_output_option)
 
         # hook up events so that the radio buttons are set correctly
         # between either query from file or query from string:
@@ -212,7 +126,6 @@ class CoqueryWizard(QtGui.QWizard):
         self.ui.edit_file_name.installEventFilter(self.focus_to_file)
         self.focus_to_file.clicked.connect(self.select_file)
         self.ui.edit_file_name.textChanged.connect(self.switch_to_file)
-        
         self.focus_to_query = focusFilter()
         self.focus_to_query.focus.connect(self.switch_to_query)
         self.ui.edit_query_string.installEventFilter(self.focus_to_query)
@@ -232,53 +145,130 @@ class CoqueryWizard(QtGui.QWizard):
         self.setButtonText(QtGui.QWizard.FinishButton, "&Run query")
         
         self.fill_combo_corpus()
-        
         self.setup_hooks()
         
-    def fill_combo_corpus(self):
-        print("refill!")
-        self.ui.combo_corpus.currentIndexChanged.disconnect()
-        last_corpus = self.ui.combo_corpus.currentText()
-        self.ui.combo_corpus.clear()
-        for x in sorted(resource_list.get_available_resources().keys()):
-            self.ui.combo_corpus.addItem(x.upper())
-        new_index = self.ui.combo_corpus.findText(last_corpus)
-        if new_index == -1:
-            new_index = 0
-        self.ui.combo_corpus.setCurrentIndex(new_index)
-        self.ui.combo_corpus.setEnabled(True)
-        self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
-
-    def enable_output_option(self):
-        checkbox = self.findChild(QtGui.QCheckBox, "coquery_input_file")
-        if checkbox:
-            if self.ui.radio_query_file.isChecked():
-                checkbox.setDisabled(False)
-            else:
-                checkbox.setEnabled(False)
-
     def switch_to_file(self):
+        """ Toggle to query file input. """
         self.ui.radio_query_file.setFocus()
         self.ui.radio_query_file.setChecked(True)
 
     def switch_to_query(self):
+        """ Toggle to query string input. """
         self.ui.radio_query_string.setChecked(True)
 
-    def set_gui_defaults(self):
-        """ evaulates options.cfg, and set the default values of the wizard
-        accordingly."""
-        pass
+    def getWizardArguments(self, parent=None):
+        """ Run the wizard. If it is successfully completed, get the values 
+        from the GUI and store them in options.cfg.*."""
+        result = self.exec_()
+        if result != QtGui.QDialog.Accepted:
+            return None
+        else:
+            self.getGuiValues()
+            return True
+
+    def change_corpus(self, *args):
+        """ Update output option tree whenever the corpus selection has
+        changed. """
+        if self.ui.combo_corpus.count():
+            self.change_corpus_features(str(self.ui.combo_corpus.currentText()).lower())
+            try:
+                self.filter_variable_model.setStringList(options.cfg.output_variable_names)
+            except AttributeError:
+                print(2)
+                pass
     
+    def change_corpus_features(self, corpus_label, prefix="", suffix=""):
+        """ Construct a new output option tree depending on the features
+        provided by the corpus given in 'corpus_label."""
+        
+        Resource, Corpus, Lexicon, Path = resource_list.get_available_resources()[corpus_label]
+        
+        table_dict = Resource().get_table_dict()
+        # Ignore denormalized tables:
+        tables = [x for x in table_dict.keys() if not "_denorm_" in x]
+        
+        # ignore internal  variables of the form {table}_id, {table}_table,
+        # {table}_table_{other}
+        for table in tables:
+            for var in list(table_dict[table]):
+                if var.endswith("_table") or var.endswith("_id") or var.startswith("{}_table".format(table)):
+                    table_dict[table].remove(var)
+                    
+        # Rearrange table names so that they occur in a sensible order:
+        for x in reversed(["word", "lemma", "corpus", "source", "file", "speaker"]):
+            if x in tables:
+                tables.remove(x)
+                tables.insert(0, x)
+
+        # replace old tree widget by a new, still empty tree:
+        tree = CoqTreeWidget()
+        tree.setColumnCount(1)
+        tree.setHeaderHidden(True)
+        tree.setRootIsDecorated(True)
+        self.ui.options_list.removeWidget(tree)
+        self.ui.options_tree.close()
+        self.ui.options_list.addWidget(tree)
+        self.ui.options_tree = tree
+
+        options.cfg.output_variable_names = []
+
+        # populate the tree with a root for each table:
+        for table in table_dict:
+            root = CoqTreeItem()
+            root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable   | QtCore.Qt.ItemIsSelectable)
+            root.setText(0, table.capitalize())
+            root.setObjectName(wizardUi._fromUtf8("{}_root".format(table)))
+            root.setCheckState(0, QtCore.Qt.Unchecked)
+            if table_dict[table]:
+                tree.addTopLevelItem(root)
+            
+            # add a leaf for each table variable:
+            for var in table_dict[table]:
+                leaf = CoqTreeItem()
+                root.addChild(leaf)
+                label = Resource().__getattribute__(var).capitalize()
+                leaf.setText(0, label)
+                leaf.setObjectName(wizardUi._fromUtf8(var))
+                leaf.setCheckState(0, QtCore.Qt.CheckState(wizardUi._fromUtf8(var) in self.checked_buttons))
+                leaf.update_checkboxes(0, expand=True)
+                options.cfg.output_variable_names.append(label.lower())
+                
+    def fill_combo_corpus(self):
+        """ Add the available corpus names to the corpus selection combo 
+        box. """
+        self.ui.combo_corpus.currentIndexChanged.disconnect()
+
+        # remember last corpus name:
+        last_corpus = self.ui.combo_corpus.currentText()
+
+        # add corpus names:
+        self.ui.combo_corpus.clear()
+        self.ui.combo_corpus.addItems([x.upper() for x in resource_list.get_available_resources()])
+
+        # try to return to last corpus name:
+        new_index = self.ui.combo_corpus.findText(last_corpus)
+        if new_index == -1:
+            new_index = 0
+            
+        self.ui.combo_corpus.setCurrentIndex(new_index)
+        self.ui.combo_corpus.setEnabled(True)
+        self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
+
     def select_file(self):
+        """ Call a file selector, and add file name to query file input. """
         name = QtGui.QFileDialog.getOpenFileName(directory="~")
+        
+        # getOpenFileName() returns different types in PyQt and PySide, fix:
         if type(name) == tuple:
             name = name[0]
+        
         if name:
             self.ui.edit_file_name.setText(name)
             self.ui.button_file_options.setEnabled(True)
             self.switch_to_file()
             
     def file_options(self):
+        """ Get CSV file options for current query input file. """
         results = csvOptions.CSVOptions.getOptions(
             self.ui.edit_file_name.text(), 
             self.csv_options, 
@@ -288,44 +278,32 @@ class CoqueryWizard(QtGui.QWizard):
             self.csv_options = results
             self.switch_to_file()
     
-    def __init__(self, parent=None):
-        super(CoqueryWizard, self).__init__(parent)
-        
-        self.file_content = None
-        self.ui = wizardUi.Ui_Wizard()
-        self.ui.setupUi(self)
-
-        self.setup_wizard()
-        self.csv_options = None
-        
-    def getWizardArguments(self, parent=None):
-        """ update the values in options.cfg with those entered in the 
-        GUI wizard w."""
-        result = self.exec_()
-        if result != QtGui.QDialog.Accepted:
-            return None
-        else:
-            self.getGuiValues()
-            return True
-
+    def set_gui_defaults(self):
+        """ evaulates options.cfg.*, and set the default values of the wizard
+        accordingly."""
+        pass
+    
     def getGuiValues(self):
+        """ Set the values in options.cfg.* depending on the current values
+        in the GUI. """
+        
         if options.cfg:
             options.cfg.corpus = unicode(self.ui.combo_corpus.currentText()).lower()
+        
+            # determine query mode:
             if self.ui.radio_mode_context.isChecked():
                 options.cfg.MODE = QUERY_MODE_DISTINCT
-                
+            if self.ui.radio_mode_tokens.isChecked():
+                options.cfg.MODE = QUERY_MODE_TOKENS
             if self.ui.radio_mode_frequency.isChecked():
                 options.cfg.MODE = QUERY_MODE_FREQUENCIES
-                
             try:
                 if self.ui.radio_mode_statistics.isChecked():
                     options.cfg.MODE = QUERY_MODE_STATISTICS
             except AttributeError:
                 pass
                 
-            if self.ui.radio_mode_tokens.isChecked():
-                options.cfg.MODE = QUERY_MODE_TOKENS
-                
+            # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
                 if type(self.ui.edit_query_string) == QtGui.QLineEdit:
                     options.cfg.query_list = [unicode(self.ui.edit_query_string.text())]
@@ -334,6 +312,7 @@ class CoqueryWizard(QtGui.QWizard):
             elif self.ui.radio_query_file.isChecked():
                 options.cfg.input_path = unicode(self.ui.edit_file_name.text())
 
+            # retrieve the CSV options for the current input file:
             if self.csv_options:
                 sep, col, head, skip = self.csv_options
                 options.cfg.input_separator = sep
@@ -341,119 +320,93 @@ class CoqueryWizard(QtGui.QWizard):
                 options.cfg.file_has_headers = head
                 options.cfg.skip_lines = skip
 
-            if self.ui.context_words_as_columns.checkState():
-                options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-            else:
-                options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+            # get context options:
+            try:
+                if self.ui.context_words_as_columns.checkState():
+                    options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+                else:
+                    options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+            except AttributeError:
+                if self.ui.context_mode.currentText() == CONTEXT_KWIC:
+                    options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+                elif self.ui.context_mode.currentText() == CONTEXT_COLUMNS:
+                   options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+                else:
+                    options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             
-            # new evaluation of check boxes, making use of the 
-            # corpus-specific flexible output column selection:
+            # get text filters:
+            options.cfg.filter_list = []
+            try:
+                # check for valid, but not submitted filters:
+                current_filter_text = self.ui.edit_query_filter.text().strip()
+                if CoqFilterTag.check_valid(current_filter_text, options.cfg.output_variable_names):
+                    options.cfg.filter_list.append(CoqFilterTag.format_content(current_filter_text))
+            except AttributeError:
+                pass
             
-            options_list = self.findChild(QtGui.QGridLayout, "options_list")
-            options_scroll_content = self.findChild(QtGui.QWidget, "options_scroll_content")
-
-            # remember all clicked checkboxes so that the selection can be 
-            # carried over to the new corpus:
-            options.cfg.selected_feature_list = []
-            for current_box in options_scroll_content.findChildren(QtGui.QCheckBox):
-                feature = str(current_box.objectName())
-                if current_box.checkState():
-                    options.cfg.selected_feature_list.append(feature)
-                table, _, variable = feature.partition("_")
-                
-                if table == "coquery":
-                    if variable == "query_string":
-                        options.cfg.show_query = current_box.checkState()
-                    if variable == "input_file":
-                        pass
-                        # options.cfg.show_input_file = current_box.checkState()
-                if table == "word":
-                    if variable == "label":
-                        options.cfg.show_orth = current_box.checkState()
-                    if variable == "pos":
-                        options.cfg.show_pos = current_box.checkState()
-                    if variable == "transcript":
-                        options.cfg.show_phon = current_box.checkState()
-                if table == "lemma":
-                    if variable == "label":
-                        options.cfg.show_lemma = current_box.checkState()
-                    if variable == "pos":
-                        pass
-                        #options.cfg.show_lemma_pos = current_box.checkState()
-                    if variable == "transcript":
-                        pass
-                        #options.cfg.show_lemma_phon = current_box.checkState()
-                if table == "source":
-                    options.cfg.source_columns.append(current_box.text())
-                if table == "file":
-                    if variable == "label":
-                        options.cfg.show_filename = current_box.checkState()
-                if table == "speaker":
-                    options.cfg.show_speaker = options.cfg.show_speaker | current_box.checkState()
-                if table == "corpus":
-                    if variable == "time":
-                        options.cfg.show_time = current_box.checkState()
-                
+            
+            options.cfg.selected_features = []
+            
+            # Go throw options tree widget to get all checked output columns:
+            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
+                for child in [root.child(i) for i in range(root.childCount())]:
+                    if child.checkState(0) == QtCore.Qt.Checked:
+                        options.cfg.selected_features.append(child.objectName())
                         
-            
+                    table, _, variable = child.objectName().partition("_")
+                    
+                    if table == "coquery":
+                        if variable == "query_string":
+                            options.cfg.show_query = True
+                        if variable == "input_file":
+                            pass
+                            # options.cfg.show_input_file = child.checkState(0)
+                    if table == "word":
+                        if variable == "label":
+                            options.cfg.show_orth = child.checkState(0)
+                        if variable == "pos":
+                            options.cfg.show_pos = child.checkState(0)
+                        if variable == "transcript":
+                            options.cfg.show_phon = child.checkState(0)
+                    if table == "lemma":
+                        if variable == "label":
+                            options.cfg.show_lemma = child.checkState(0)
+                        if variable == "pos":
+                            pass
+                            #options.cfg.show_lemma_pos = child.checkState(0)
+                        if variable == "transcript":
+                            pass
+                            #options.cfg.show_lemma_phon = child.checkState(0)
+                    if table == "source":
+                        options.cfg.source_columns.append(child.text())
+                    if table == "file":
+                        if variable == "label":
+                            options.cfg.show_filename = child.checkState(0)
+                    if table == "speaker":
+                        options.cfg.show_speaker = options.cfg.show_speaker | child.checkState(0)
+                    if table == "corpus":
+                        if variable == "time":
+                            options.cfg.show_time = child.checkState(0)
             return True
-            
-                
-            # FIXME: the GUI allows more fine-grained selection of 
-            # output options than the command line, and this selection
-            # is not evaluated fully by write_results().
-            options.cfg.show_query = self.ui.coquery_query_string.checkState()
-            options.cfg.show_parameters = self.ui.coquery_parameters.checkState()
-            options.cfg.show_orth = self.ui.word_data_orth.checkState()
-            options.cfg.show_phon = self.ui.word_data_phon.checkState()
-            options.cfg.show_pos = self.ui.word_data_pos.checkState()
-
-            options.cfg.show_lemma = self.ui.lemma_data_orth.checkState()
-            # unsupported:
-            # options.cfg.show_lemma_phon = self.ui.lemma_data_phon.checkState()
-            # options.cfg.show_lemma_pos = self.ui.lemma_data_pos.checkState()
-            
-            if self.ui.source_id.checkState():
-                options.cfg.source_columns.append(unicode(self.ui.source_id.text()))
-            if self.ui.source_data_year.checkState():
-                options.cfg.source_columns.append(unicode(self.ui.source_data_year.text()))
-            if self.ui.source_data_genre.checkState():
-                options.cfg.source_columns.append(unicode(self.ui.source_data_genre.text()))
-            if self.ui.source_data_title.checkState():
-                options.cfg.source_columns.append(unicode(self.ui.source_data_title.text()))
-            
-            options.cfg.show_filename = self.ui.file_data_name.checkState() or self.ui.file_data_path.checkState()
-            options.cfg.show_time = self.ui.time_data_dur.checkState() or self.ui.time_data_end.checkState() or self.ui.time_data_start.checkState()
-            options.cfg.show_speaker = self.ui.speaker_data_id.checkState() or self.ui.speaker_data_sex.checkState() or self.ui.speaker_data_age.checkState()
-            
-            if self.ui.context_words_as_columns.checkState():
-                options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-            else:
-                options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-            
-        return True
 
     def setWizardDefaults(self):
-        return
-        """ update the values in options.cfg with those entered in the 
-        GUI wizard w."""
+        """ Set up the gui values based on the values in options.cfg.* """
 
+        # set corpus combo box to current corpus:
         if options.cfg.corpus:
-            self.ui.combo_corpus.setCurrentIndex(
-                sorted(resource_list.get_available_resources().keys()).index(options.cfg.corpus))
+            index = self.ui.combo_corpus.findText(options.cfg.corpus)
+            if index > -1:
+                self.ui.combo_corpus.setCurrentIndex(index)
 
+        # set query mode:
         if options.cfg.MODE == QUERY_MODE_DISTINCT:
             self.ui.radio_mode_context.setChecked(True)
-            
         elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             self.ui.radio_mode_frequency.setChecked(True)
-            
-        elif options.cfg.MODE == QUERY_MODE_STATISTICS:
-            self.ui.radio_mode_statistics.setChecked(True)
-            
         elif options.cfg.MODE == QUERY_MODE_TOKENS:
             self.ui.radio_mode_tokens.setChecked(True)
 
+        # either fill query string or query file input:
         if options.cfg.query_list:
             self.ui.radio_query_string.setChecked(True)
             self.ui.edit_query_string.setText(options.cfg.query_list[0])
@@ -465,11 +418,11 @@ class CoqueryWizard(QtGui.QWizard):
         ## output options than the command line, and this selection
         ## is not evaluated fully by write_results().
         
-        self.ui.coquery_query_string.setChecked(options.cfg.show_query)
-        self.ui.coquery_parameters.setChecked(options.cfg.show_parameters)
-        self.ui.word_data_orth.setChecked(options.cfg.show_orth)
-        self.ui.word_data_phon.setChecked(options.cfg.show_phon)
-        self.ui.word_data_pos.setChecked(options.cfg.show_pos)
+        #self.ui.coquery_query_string.setChecked(options.cfg.show_query)
+        #self.ui.coquery_parameters.setChecked(options.cfg.show_parameters)
+        #self.ui.word_data_orth.setChecked(options.cfg.show_orth)
+        #self.ui.word_data_phon.setChecked(options.cfg.show_phon)
+        #self.ui.word_data_pos.setChecked(options.cfg.show_pos)
 
         #options.cfg.show_lemma = self.ui.lemma_data_orth.checkState()
         ## unsupported:
