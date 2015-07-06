@@ -221,7 +221,7 @@ class CoqTagEdit(QtGui.QLineEdit):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.setSizePolicy(sizePolicy)
-        self.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; }'))
+        #self.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; }'))
         self.setObjectName(_fromUtf8("edit_source_filter"))
         self.setPlaceholderText("e.g. {}".format(random.sample(self.filter_examples, 1)[0]))
 
