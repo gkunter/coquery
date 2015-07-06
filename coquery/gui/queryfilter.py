@@ -34,7 +34,7 @@ class CoqTextTag(QtGui.QFrame):
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.setSizePolicy(sizePolicy)
         self.horizontalLayout = QtGui.QHBoxLayout(self)
-        self.horizontalLayout.setMargin(0)
+        self.horizontalLayout.setContentsMargins(2, 1, 2, 1)
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         self.label = QtGui.QLabel(self)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
@@ -57,8 +57,8 @@ class CoqTextTag(QtGui.QFrame):
 
         icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DockWidgetCloseButton)
         
-        size = self.geometry()
-        new_height = int(size.height() * 0.55)
+        height = self.fontMetrics().height()
+        new_height = int(height * 0.75)
         self._style_font = "font-size: {}px".format(new_height)
         self._style_border_radius = "border-radius: {}px".format(int(new_height / 3))
         self.setBackground("rgb(255, 255, 192)")
@@ -133,7 +133,7 @@ class CoqFilterTag(CoqTextTag):
 
     @staticmethod
     def format_content(text):
-        var, op, value_list, value_range = CoqFilterTag.parse_tag(text.strip())
+        var, op, value_list, value_range = CoqFilterTag.parse_tag(str(text).strip())
         if value_list:
             return "{} {} {}".format(var.capitalize(), op.lower(), ", ".join(sorted(value_list)))
         elif value_range:
@@ -161,7 +161,7 @@ class CoqFilterTag(CoqTextTag):
         text = text.replace("<", " < ")
         text = text.replace(">", " > ")
         
-        fields = text.split()
+        fields = str(text).split()
         try:
             var = fields[0]
         except:
@@ -169,8 +169,7 @@ class CoqFilterTag(CoqTextTag):
         try:
             operator = fields[1]
         except:
-            return error_value
-            
+            return error_value            
         try:
             values = fields[2:]
         except:

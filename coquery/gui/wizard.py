@@ -353,7 +353,7 @@ class CoqueryWizard(QtGui.QWizard):
                     if child.checkState(0) == QtCore.Qt.Checked:
                         options.cfg.selected_features.append(child.objectName())
                         
-                    table, _, variable = child.objectName().partition("_")
+                    table, _, variable = str(child.objectName()).partition("_")
                     
                     if table == "coquery":
                         if variable == "query_string":
@@ -378,7 +378,7 @@ class CoqueryWizard(QtGui.QWizard):
                             pass
                             #options.cfg.show_lemma_phon = child.checkState(0)
                     if table == "source":
-                        options.cfg.source_columns.append(child.text())
+                        options.cfg.source_columns.append(str(child.text()))
                     if table == "file":
                         if variable == "label":
                             options.cfg.show_filename = child.checkState(0)
