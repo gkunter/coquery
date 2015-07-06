@@ -59,6 +59,7 @@ class Session(object):
         # i.e. the corpus specified as an argumment:        
         ResourceClass, CorpusClass, LexiconClass, Path = resource_list.get_available_resources()[options.cfg.corpus]
         current_resource = ResourceClass()
+        current_resource.connect_to_database()
         self.Corpus  = CorpusClass(LexiconClass(current_resource), current_resource)
 
         self.show_header = options.cfg.show_header

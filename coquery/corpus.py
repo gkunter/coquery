@@ -301,6 +301,8 @@ class SQLResource(BaseResource):
     
     def __init__(self):
         super(SQLResource, self).__init__()
+        
+    def connect_to_database(self):
         self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=self.db_name)
         logger.debug("Connected to database %s@%s:%s."  % (self.db_name, options.cfg.db_host, options.cfg.db_port))
         logger.debug("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))
