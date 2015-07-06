@@ -78,7 +78,7 @@ class LogProxyModel(QtGui.QSortFilterProxyModel):
         if role == QtCore.Qt.DisplayRole:
             return header[index]
 
-class CoqTextEdit(QtGui.QLineEdit):
+class CoqTextEdit(QtGui.QTextEdit):
     def __init__(self, *args):
         super(CoqTextEdit, self).__init__(*args)
         self.setAcceptDrops(True)

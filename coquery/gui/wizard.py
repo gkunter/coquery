@@ -6,6 +6,7 @@ from pyqt_compat import QtCore, QtGui
 import wizardUi
 import csvOptions
 import QtProgress
+import queryfilter
 
 class focusFilter(QtCore.QObject):
     """ Define an event filter that reacts to focus events. This filter is
@@ -334,14 +335,14 @@ class CoqueryWizard(QtGui.QWizard):
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             
             # get text filters:
-            options.cfg.filter_list = []
-            try:
-                # check for valid, but not submitted filters:
-                current_filter_text = self.ui.edit_query_filter.text().strip()
-                if CoqFilterTag.check_valid(current_filter_text, options.cfg.output_variable_names):
-                    options.cfg.filter_list.append(CoqFilterTag.format_content(current_filter_text))
-            except AttributeError:
-                pass
+            #options.cfg.filter_list = []
+            #try:
+                ## check for valid, but not submitted filters:
+                #current_filter_text = self.ui.edit_query_filter.text().strip()
+                #if CoqFilterTag.check_valid(current_filter_text, options.cfg.output_variable_names):
+                    #options.cfg.filter_list.append(CoqFilterTag.format_content(current_filter_text))
+            #except AttributeError:
+                #pass
             
             
             options.cfg.selected_features = []
