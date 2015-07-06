@@ -91,7 +91,27 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         """ Update the checkboxes of parent and child items whenever an
         item has been changed. """
         item.update_checkboxes(column)
-        
+
+    def setCheckState(self, object_name, state, column=0):
+        """ Set the checkstate of the item that matches the object_name. If
+        the state is Checked, also expand the parent of the item. """
+        if type(state) != QtCore.Qt.CheckState:
+            if state:
+                state = QtCore.Qt.Checked
+            else:
+                state = QtCore.Qt.Unchecked
+        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
+            if root.objectName() == object_name:
+                root.setChecked(column, state)
+                self.update(root, column)
+            for child in [root.child(i) for i in range(root.childCount())]:
+                if child.objectName() == object_name:
+                    child.setCheckState(column, state)
+                    if state == QtCore.Qt.Checked:
+                        root.setExpanded(True)
+                    self.update(child, column)
+                    return
+                
     def mimeData(self, *args):
         """ Add the resource variable name to the MIME data (for drag and 
         drop). """
@@ -357,10 +377,9 @@ class CoqueryWizard(QtGui.QWizard):
                     
                     if table == "coquery":
                         if variable == "query_string":
-                            options.cfg.show_query = True
+                            options.cfg.show_query = child.checkState(0)
                         if variable == "input_file":
-                            pass
-                            # options.cfg.show_input_file = child.checkState(0)
+                            options.cfg.show_input_file = child.checkState(0)
                     if table == "word":
                         if variable == "label":
                             options.cfg.show_orth = child.checkState(0)
@@ -372,11 +391,9 @@ class CoqueryWizard(QtGui.QWizard):
                         if variable == "label":
                             options.cfg.show_lemma = child.checkState(0)
                         if variable == "pos":
-                            pass
-                            #options.cfg.show_lemma_pos = child.checkState(0)
+                            options.cfg.show_lemma_pos = child.checkState(0)
                         if variable == "transcript":
-                            pass
-                            #options.cfg.show_lemma_phon = child.checkState(0)
+                            options.cfg.show_lemma_phon = child.checkState(0)
                     if table == "source":
                         options.cfg.source_columns.append(str(child.text()))
                     if table == "file":
@@ -387,6 +404,7 @@ class CoqueryWizard(QtGui.QWizard):
                     if table == "corpus":
                         if variable == "time":
                             options.cfg.show_time = child.checkState(0)
+            print(options.cfg.selected_features)
             return True
 
     def setWizardDefaults(self):
@@ -418,16 +436,29 @@ class CoqueryWizard(QtGui.QWizard):
         ## output options than the command line, and this selection
         ## is not evaluated fully by write_results().
         
-        #self.ui.coquery_query_string.setChecked(options.cfg.show_query)
-        #self.ui.coquery_parameters.setChecked(options.cfg.show_parameters)
-        #self.ui.word_data_orth.setChecked(options.cfg.show_orth)
-        #self.ui.word_data_phon.setChecked(options.cfg.show_phon)
-        #self.ui.word_data_pos.setChecked(options.cfg.show_pos)
-
-        #options.cfg.show_lemma = self.ui.lemma_data_orth.checkState()
-        ## unsupported:
-        ## options.cfg.show_lemma_phon = self.ui.lemma_data_phon.checkState()
-        ## options.cfg.show_lemma_pos = self.ui.lemma_data_pos.checkState()
+        self.ui.options_tree.setCheckState("word_label", options.cfg.show_orth)
+        self.ui.options_tree.setCheckState("word_pos", options.cfg.show_pos)
+        self.ui.options_tree.setCheckState("word_transcript", options.cfg.show_phon)
+        
+        self.ui.options_tree.setCheckState("lemma_label", options.cfg.show_lemma)
+        
+        self.ui.options_tree.setCheckState("file_label", options.cfg.show_filename)
+        
+        self.ui.options_tree.setCheckState("corpus_time", options.cfg.show_time)
+        
+        self.ui.options_tree.setCheckState("speaker_table", options.cfg.show_speaker)
+        
+        self.ui.options_tree.setCheckState("coquery_parameters", options.cfg.show_parameters)
+        self.ui.options_tree.setCheckState("coquery_query_string", options.cfg.show_query)
+        
+        #if options.cfg.context_columns:
+            #self.ui.context_mode.setEditText(CONTEXT_COLUMNS)
+        #if options.cfg.context_span:
+            #self.ui.context_mode.setEditText(CONTEXT_STRING)
+            
+        ### unsupported:
+        ### options.cfg.show_lemma_phon = self.ui.lemma_data_phon.checkState()
+        ### options.cfg.show_lemma_pos = self.ui.lemma_data_pos.checkState()
         
         #if self.ui.source_id.checkState():
             #options.cfg.source_columns.append(str(self.ui.source_id.text()))
@@ -438,19 +469,9 @@ class CoqueryWizard(QtGui.QWizard):
         #if self.ui.source_data_title.checkState():
             #options.cfg.source_columns.append(str(self.ui.source_data_title.text()))
         
-        #options.cfg.show_filename = self.ui.file_data_name.checkState() or self.ui.file_data_path.checkState()
-        #options.cfg.show_time = self.ui.time_data_dur.checkState() or self.ui.time_data_end.checkState() or self.ui.time_data_start.checkState()
-        #options.cfg.show_speaker = self.ui.speaker_data_id.checkState() or self.ui.speaker_data_sex.checkState() or self.ui.speaker_data_age.checkState()
+        ##options.cfg.show_filename = self.ui.file_data_name.checkState() or self.ui.file_data_path.checkState()
+        ##options.cfg.show_speaker = self.ui.speaker_data_id.checkState() or self.ui.speaker_data_sex.checkState() or self.ui.speaker_data_age.checkState()
         
-        #if self.ui.context_words_as_columns.checkState():
-            #options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-        #else:
-            #options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+        self.csv_options = (options.cfg.input_separator, options.cfg.query_column_number, options.cfg.file_has_headers, options.cfg.skip_lines)
         
-        #if self.csv_options:
-            #sep, col, head, skip = self.csv_options
-            #options.cfg.input_separator = sep
-            #options.cfg.query_column_number = col
-            #options.cfg.file_has_headers = head
-            #options.cfg.skip_lines = skip
-        #return True
+        return True
