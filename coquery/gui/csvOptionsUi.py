@@ -2,7 +2,8 @@
 
 # Form implementation generated from reading ui file 'csvOptions.ui'
 #
-# Created by: PyQt4 UI code generator 4.10.3
+# Created: Mon Jul  6 23:53:42 2015
+#      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -28,7 +29,7 @@ class Ui_FileOptions(object):
         FileOptions.resize(640, 480)
         FileOptions.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
         self.verticalLayout_2 = QtGui.QVBoxLayout(FileOptions)
-        self.verticalLayout_2.setContentsMargins(10, -1, 10, -1)
+        self.verticalLayout_2.setContentsMargins(4, -1, 4, -1)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.FilePreviewArea = QtGui.QTableView(FileOptions)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
@@ -44,8 +45,11 @@ class Ui_FileOptions(object):
         self.FilePreviewArea.setObjectName(_fromUtf8("FilePreviewArea"))
         self.verticalLayout_2.addWidget(self.FilePreviewArea)
         self.OptionsBox = QtGui.QFrame(FileOptions)
+        self.OptionsBox.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.OptionsBox.setFrameShadow(QtGui.QFrame.Raised)
         self.OptionsBox.setObjectName(_fromUtf8("OptionsBox"))
         self.verticalLayout = QtGui.QVBoxLayout(self.OptionsBox)
+        self.verticalLayout.setMargin(10)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.gridLayout = QtGui.QGridLayout()
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
