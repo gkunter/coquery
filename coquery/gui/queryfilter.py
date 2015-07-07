@@ -133,7 +133,8 @@ class CoqFilterTag(CoqTextTag):
 
     @staticmethod
     def format_content(text):
-        var, op, value_list, value_range = CoqFilterTag.parse_tag(str(text).strip())
+        text = str(text)
+        var, op, value_list, value_range = CoqFilterTag.parse_tag(text.strip())
         if value_list:
             return "{} {} {}".format(var.capitalize(), op.lower(), ", ".join(sorted(value_list)))
         elif value_range:
@@ -281,7 +282,7 @@ class CoqTagBox(QtGui.QWidget):
             e.pos() + self.drag.pixmap().rect().bottomRight() - self.drag.hotSpot())
         
         for i, tag in enumerate(self.cloud_area.itemList):
-            if tag.geometry().contains(current_rect.topLeft()) or             tag.geometry().contains(current_rect.bottomLeft()):
+            if tag.geometry().contains(current_rect.topLeft()) or             tag.geometry().contains(current_rect.bottomLeft()) and abs(i - self.ghost_index) == 1:
                 self.cloud_area.removeWidget(self.ghost_tag)
                 self.cloud_area.insertWidget(i, self.ghost_tag)
                 self.ghost_tag.show()
