@@ -231,6 +231,13 @@ class CoqueryWizard(QtGui.QWizard):
         self.ui.options_tree = tree
 
         options.cfg.output_variable_names = []
+        try:
+                
+            print(options.cfg.output_variable_names)
+            print(self.checked_buttons)
+            print(options.cfg.selected_features)
+        except AttributeError:
+            pass
 
         # populate the tree with a root for each table:
         for table in table_dict:
@@ -371,7 +378,7 @@ class CoqueryWizard(QtGui.QWizard):
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
                 for child in [root.child(i) for i in range(root.childCount())]:
                     if child.checkState(0) == QtCore.Qt.Checked:
-                        options.cfg.selected_features.append(child.objectName())
+                        options.cfg.selected_features.append(str(child.objectName()))
                         
                     table, _, variable = str(child.objectName()).partition("_")
                     
@@ -395,7 +402,7 @@ class CoqueryWizard(QtGui.QWizard):
                         if variable == "transcript":
                             options.cfg.show_lemma_phon = child.checkState(0)
                     if table == "source":
-                        options.cfg.source_columns.append(str(child.text()))
+                        options.cfg.source_columns.append(str(child.objectName()))
                     if table == "file":
                         if variable == "label":
                             options.cfg.show_filename = child.checkState(0)
@@ -412,7 +419,7 @@ class CoqueryWizard(QtGui.QWizard):
 
         # set corpus combo box to current corpus:
         if options.cfg.corpus:
-            index = self.ui.combo_corpus.findText(options.cfg.corpus)
+            index = self.ui.combo_corpus.findText(options.cfg.corpus.upper())
             if index > -1:
                 self.ui.combo_corpus.setCurrentIndex(index)
 
