@@ -234,6 +234,7 @@ class CoqTagBox(QtGui.QWidget):
         self.setupUi()
         self.edit_tag.returnPressed.connect(self.addTag)
         self.edit_tag.textEdited.connect(self.editTagText)
+        # self._tagList stores the 
         self._tagList = []
         self._filterList = []
         self._tagType = CoqTextTag
@@ -299,23 +300,17 @@ class CoqTagBox(QtGui.QWidget):
     def dropEvent(self, e):
         e.acceptProposedAction()
 
-    def addTag(self, *args):
+    def addTag(self, s):
         """ Add the current text as a query filter. """
-        #if args:
-        #if type(f) == int:
-            #filt = self.edit_tag.text()
-        #else:
-            #filt = f
-        filt = self.edit_tag.text()
-        filter_tag = self._tagType(self)
-        filter_tag.setContent(filt)
-        if not filter_tag.validate():
-            self.edit_tag.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; background-color: rgb(255, 255, 192); }'))
-            return
+        if not s:
+            s = str(self.edit_tag.text())
+        tag = self._tagType(self)
+        tag.setContent(s)
+        #if self.edit_tag.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; background-color: rgb(255, 255, 192); }'))
+            #return
 
-        self._filterList.append(filt)
-        
-        self.cloud_area.addWidget(filter_tag)
+        self._filterList.append(tag)
+        self.cloud_area.addWidget(tag)
         self.edit_tag.setText("")
         self.editTagText("")
 
