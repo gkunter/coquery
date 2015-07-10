@@ -71,6 +71,135 @@ def collapse_context (ContextList):
             token_list.append(unicode(current_token.decode("utf-8")))
     return "".join(token_list)
 
+class QueryFilter(object):
+    """ Define a class that stores a query filter. 
+    
+    Query filters are text strings that follow a very simple syntax. Valid
+    filter strings are:
+    
+    variable operator value
+    variable operator value value ...
+    variable operator value, value, ...
+    variable operator value-value
+    
+    'variable' contains the display name of a table column. If the display
+    name is ambiguous, i.e. if two or more tables contain a name with the
+    same column, the name is disambiguated by preceding it with the table
+    name, linked by a '.'.
+
+    """
+    
+    operators = (">", "<", "IN", "IS", "=", "LIKE")
+
+    def __init__(self, text = ""):
+        """ Initialize the filter. """
+        self._text = text
+        self._table = ""
+        self._resource = None
+        
+    @property
+    def resource(self):
+        return self._resource
+    
+    @resource.setter
+    def resource(self, resource_class):
+        self._resource = resource_class
+    
+    @property
+    def text(self):
+        return self._text
+    
+    @text.setter
+    def text(self, s):
+        if self.validate(s):
+            self._text = s
+            self._variable, self._op, self._value_list, self._value_range = self.parse_filter(s)
+        else:
+            raise InvalidFilterError
+    def __repr__(self):
+        return "QueryFilter('{}', {})".format(self.text, self.resource)
+    
+    def __str__(self):
+        l = [name for  _, name in self.resource.get_corpus_variables() if name.lower == self._variable.lower()]        
+        if l:
+            variable_name = l[0]
+        else:
+            variable_name = self._variable
+        
+        if self._value_list:
+            return "{} {} {}".format(variable_name.capitalize(), self._op.lower(), ", ".join(sorted(self._value_list)))
+        elif self._value_range:
+            return "{} {} {}-{}".format(variable_name.capitalize(), self.op.lower(), min(self._value_range), max(self._value_range))
+        else:
+            return self._text.strip()
+            
+    def parse_filter(self, text):
+        """ Parse the text and return a tuple with the query filter 
+        components.  The tuple contains the components (in order) variable, 
+        operator, value_list, value_range.
+        
+        The component value_list is a list of all specified values. The 
+        componment value_range is a tuple with the lower and the upper limit
+        of the range specified in the text. Only one of the two components 
+        value_list and value_range contains valid values, the other is None.
+        
+        If the text is not a valid filter text, the tuple None, None, None, 
+        None is returned."""
+        
+        error_value = None, None, None, None
+        
+        text = text.replace("=", " = ")
+        text = text.replace("<", " < ")
+        text = text.replace(">", " > ")
+        
+        fields = str(text).split()
+        try:
+            var = fields[0]
+        except:
+            return error_value
+        try:
+            operator = fields[1]
+        except:
+            return error_value            
+        try:
+            values = fields[2:]
+        except:
+            return error_value
+        
+        if not values:
+            return error_value
+        
+        # check for range:
+        collapsed_values = "".join(fields[2:])
+        if collapsed_values.count("-") == 1:
+            value_list = None
+            value_range = tuple(collapsed_values.split("-"))
+        else:
+            value_range = None
+            value_list = sorted([x.strip("(),").strip() for x in values])
+
+        if (value_range or len(value_list) > 1) and operator.lower() in ("is", "="):
+            operator = "in"
+
+        return var, operator, value_list, value_range
+            
+    def validate(self, s):
+        """ Check if the text contains a valid filter. A filter is valid if
+        it has the form 'x OP y', where x is a resource variable name, OP is
+        a comparison operator, and value is either a string, a number or a 
+        list. """
+        var, op, value_range, value_list = self.parse_filter(s)
+        if not var:
+            return False
+        variable_names = [name.lower() for  _, name in self.resource.get_corpus_variables()]
+        if var.lower() not in variable_names:
+            return False
+        if variable_names.count(var.lower()) > 1:
+            print("ambiguous!")
+        if op.lower() not in [x.lower() for x in self.operators]:
+            return False
+        return True
+
 class QueryResult(object):
     """ A little class that represents a single row of results from a query."""
     def __init__(self, query, args):
