@@ -99,8 +99,8 @@ class TokenParseError(NoTraceException):
 class TokenUnsupportedTranscriptError(NoTraceException):
     error_message = "Lexicon does not support phonetic transcriptions"
 
-class TextfilterError(NoTraceException):
-    error_message = "Illegal text filter specification"
+class InvalidFilterError(NoTraceException):
+    error_message = "Invalid query filter specification"
 
 class CorpusUnavailableQueryTypeError(GenericException):
     error_message = "Query type %s not available for corpus %s"
@@ -168,5 +168,8 @@ def print_exception(e):
         error_string = "TRACE:\n" + error_string
     error_string += "ERROR %s: %s\n" % (type(e).__name__, e)
     print(error_string, file=sys.stderr)
-    
-logger = logging.getLogger(__init__.NAME)
+
+try:
+    logger = logging.getLogger(__init__.NAME)
+except AttributeError:
+    pass
