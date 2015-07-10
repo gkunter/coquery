@@ -109,7 +109,7 @@ def main():
         Coq.show()
         Coq.setWizardDefaults()
         options.cfg.icon = QtGui.QIcon()
-        options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_small.png".format(sys.path[0])))
+        options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_tiny.png".format(sys.path[0])))
         Coq.setWindowIcon(options.cfg.icon)
         options.cfg.app.exec_()
         logger.info("--- Finished program (after %.3f seconds) ---" % (time.time() - start_time))
