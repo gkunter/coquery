@@ -1548,8 +1548,6 @@ class SQLCorpus(BaseCorpus):
             if x in join_strings:
                 L.append(join_strings[x])
         
-        #return select_list, L
-    
         return "SELECT {} FROM {}".format(", ".join(select_list + [self.resource.corpus_id]), " ".join(L)), select_list, L
         
     
