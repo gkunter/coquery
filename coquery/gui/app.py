@@ -264,7 +264,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.data_preview.horizontalHeader().sectionClicked.connect(self.header_sorting)
         self.ui.data_preview.setModel(self.proxy_model)
         self.ui.data_preview.setSortingEnabled(False)
-        self.last_results_saved = False
+        if self.table_model.rowCount(self):
+            self.last_results_saved = False
 
     def save_results(self):
         name = QtGui.QFileDialog.getSaveFileName(directory="~")
