@@ -191,19 +191,22 @@ class CoqueryWizard(QtGui.QWizard):
         """ Update output option tree whenever the corpus selection has
         changed. """
         if self.ui.combo_corpus.count():
-            self.change_corpus_features(str(self.ui.combo_corpus.currentText()).lower())
+            corpus_name = str(self.ui.combo_corpus.currentText()).lower()
+            self.resource, self.corpus, self.lexicon, self.path = resource_list.get_available_resources()[corpus_name]
+            self.ui.filter_box.resource = self.resource
+                
+            
+            self.change_corpus_features()
             try:
                 self.filter_variable_model.setStringList(options.cfg.output_variable_names)
             except AttributeError:
                 pass
     
-    def change_corpus_features(self, corpus_label, prefix="", suffix=""):
+    def change_corpus_features(self, prefix="", suffix=""):
         """ Construct a new output option tree depending on the features
         provided by the corpus given in 'corpus_label."""
         
-        Resource, Corpus, Lexicon, Path = resource_list.get_available_resources()[corpus_label]
-        
-        table_dict = Resource().get_table_dict()
+        table_dict = self.resource.get_table_dict()
         # Ignore denormalized tables:
         tables = [x for x in table_dict.keys() if not "_denorm_" in x]
         
@@ -215,10 +218,12 @@ class CoqueryWizard(QtGui.QWizard):
                     table_dict[table].remove(var)
                     
         # Rearrange table names so that they occur in a sensible order:
-        for x in reversed(["word", "lemma", "corpus", "source", "file", "speaker"]):
+        for x in reversed(["word", "lemma", "corpus", "speaker", "source", "file"]):
             if x in tables:
                 tables.remove(x)
                 tables.insert(0, x)
+        tables.remove("coquery")
+        tables.append("coquery")
 
         # replace old tree widget by a new, still empty tree:
         tree = CoqTreeWidget()
@@ -240,7 +245,7 @@ class CoqueryWizard(QtGui.QWizard):
             pass
 
         # populate the tree with a root for each table:
-        for table in table_dict:
+        for table in tables:
             root = CoqTreeItem()
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable   | QtCore.Qt.ItemIsSelectable)
             root.setText(0, table.capitalize())
@@ -253,7 +258,7 @@ class CoqueryWizard(QtGui.QWizard):
             for var in table_dict[table]:
                 leaf = CoqTreeItem()
                 root.addChild(leaf)
-                label = Resource().__getattribute__(var).capitalize()
+                label = type(self.resource).__getattribute__(self.resource, var).capitalize()
                 leaf.setText(0, label)
                 leaf.setObjectName(wizardUi._fromUtf8(var))
                 leaf.setCheckState(0, QtCore.Qt.CheckState(wizardUi._fromUtf8(var) in self.checked_buttons))
@@ -349,6 +354,8 @@ class CoqueryWizard(QtGui.QWizard):
 
             # get context options:
             try:
+                options.cfg.context_left = self.ui.context_left_span.value()
+                options.cfg.context_right = self.ui.context_right_span.value()
                 if self.ui.context_words_as_columns.checkState():
                     options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
                 else:
@@ -361,16 +368,12 @@ class CoqueryWizard(QtGui.QWizard):
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             
-            # get text filters:
-            #options.cfg.filter_list = []
-            #try:
-                ## check for valid, but not submitted filters:
-                #current_filter_text = self.ui.edit_query_filter.text().strip()
-                #if CoqFilterTag.check_valid(current_filter_text, options.cfg.output_variable_names):
-                    #options.cfg.filter_list.append(CoqFilterTag.format_content(current_filter_text))
-            #except AttributeError:
-                #pass
-            
+            ## check for valid, but not submitted filters:
+            #current_filter_text = str(self.ui.edit_query_filter.text()).strip()
+            #if queryfilter.CoqFilterTag.validate(current_filter_text, options.cfg.output_variable_names):
+                #options.cfg.filter_list.append(CoqFilterTag.format_content(current_filter_text))
+
+            print("filter_list: ", options.cfg.filter_list)
             
             options.cfg.selected_features = []
             
@@ -384,33 +387,33 @@ class CoqueryWizard(QtGui.QWizard):
                     
                     if table == "coquery":
                         if variable == "query_string":
-                            options.cfg.show_query = child.checkState(0)
+                            options.cfg.show_query = bool(child.checkState(0))
                         if variable == "input_file":
-                            options.cfg.show_input_file = child.checkState(0)
+                            options.cfg.show_input_file = bool(child.checkState(0))
                     if table == "word":
                         if variable == "label":
-                            options.cfg.show_orth = child.checkState(0)
+                            options.cfg.show_orth = bool(child.checkState(0))
                         if variable == "pos":
-                            options.cfg.show_pos = child.checkState(0)
+                            options.cfg.show_pos = bool(child.checkState(0))
                         if variable == "transcript":
-                            options.cfg.show_phon = child.checkState(0)
+                            options.cfg.show_phon = bool(child.checkState(0))
                     if table == "lemma":
                         if variable == "label":
-                            options.cfg.show_lemma = child.checkState(0)
+                            options.cfg.show_lemma = bool(child.checkState(0))
                         if variable == "pos":
-                            options.cfg.show_lemma_pos = child.checkState(0)
+                            options.cfg.show_lemma_pos = bool(child.checkState(0))
                         if variable == "transcript":
-                            options.cfg.show_lemma_phon = child.checkState(0)
+                            options.cfg.show_lemma_phon = bool(child.checkState(0))
                     if table == "source":
                         options.cfg.source_columns.append(str(child.objectName()))
                     if table == "file":
                         if variable == "label":
-                            options.cfg.show_filename = child.checkState(0)
+                            options.cfg.show_filename = bool(child.checkState(0))
                     if table == "speaker":
                         options.cfg.show_speaker = options.cfg.show_speaker | child.checkState(0)
                     if table == "corpus":
                         if variable == "time":
-                            options.cfg.show_time = child.checkState(0)
+                            options.cfg.show_time = bool(child.checkState(0))
             print(options.cfg.selected_features)
             return True
 
@@ -457,6 +460,10 @@ class CoqueryWizard(QtGui.QWizard):
         
         self.ui.options_tree.setCheckState("coquery_parameters", options.cfg.show_parameters)
         self.ui.options_tree.setCheckState("coquery_query_string", options.cfg.show_query)
+        
+        self.ui.options_tree.setCheckState("word_table", True)
+        self.ui.options_tree.setCheckState("source_table", True)
+        
         
         #if options.cfg.context_columns:
             #self.ui.context_mode.setEditText(CONTEXT_COLUMNS)

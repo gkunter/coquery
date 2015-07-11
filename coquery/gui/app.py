@@ -17,6 +17,7 @@ import random
 import logging
 import sqlwrap
 import MySQLOptions
+import queries
 from queryfilter import *
 
 try:
@@ -170,6 +171,25 @@ class GuiHandler(logging.StreamHandler):
         except:
             self.handleError(record)
 
+class QueryFilterBox(CoqTagBox):
+    def destroyTag(self, tag):
+        """ Remove the tag from the tag cloud as well as the filter from 
+        the global filter list. """
+        options.cfg.filter_list = [x for x in options.cfg.filter_list if x.text != str(tag.text())]
+        super(QueryFilterBox, self).destroyTag(tag)
+    
+    def addTag(self, *args):
+        """ Add the tag to the tag cloud and the global filter list. """
+        filt = queries.QueryFilter()
+        filt.resource = self.resource
+        try:
+            filt.text = str(self.edit_tag.text())
+        except InvalidFilterError:
+            self.edit_tag.setStyleSheet('CoqTagEdit {background-color: rgb(255, 255, 192); }')
+        else:
+            super(QueryFilterBox, self).addTag(filt.text)
+            options.cfg.filter_list.append(filt)
+
 class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     """ Coquery as standalone application. """
     
@@ -203,8 +223,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.gridLayout_2.addWidget(edit_query_string, 2, 1, 1, 1)
         self.ui.edit_query_string = edit_query_string
         
-        self.ui.filter_box = CoqTagBox(self)
-        self.ui.filter_box.setTagType(CoqFilterTag)
+        self.ui.filter_box = QueryFilterBox(self)
+        #self.ui.filter_box.setTagType(CoqFilterTag)
         #self.ui.filter_box.cloud_area.setSpacing(2)
         
         self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
@@ -229,6 +249,10 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.setup_menu_actions()
         
         self.change_corpus()
+        
+        print(self.resource.get_table_path("corpus", "lemma"))
+        print(self.resource.get_table_path("corpus", "file"))
+              
 
         self.log_table = LogTableModel(self)
         self.log_proxy = LogProxyModel()
@@ -246,7 +270,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
 
         QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
         self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
-        self.filter_list = []
 
         self.setup_app()
         self.csv_options = None

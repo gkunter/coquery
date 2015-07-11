@@ -30,8 +30,10 @@ import __init__
 
 import logging
 
-logger = logging.getLogger(__init__.NAME)
-
+try:
+    logger = logging.getLogger(__init__.NAME)
+except AttributeError:
+    pass
 
 from errors import *
 import options

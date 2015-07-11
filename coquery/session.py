@@ -191,8 +191,13 @@ class Session(object):
                 any_result = False
                 for sub_query in current_query.query_list:
                     query_results = []
-                    for current_result in self.Corpus.yield_query_results(sub_query):
-                        query_results.append(current_result)
+                    if options.cfg.experimental:
+                        for current_result in self.Corpus.yield_query_results_new(sub_query):
+                            query_results.append(current_result)
+                    else:
+                        for current_result in self.Corpus.yield_query_results(sub_query):
+                            query_results.append(current_result)
+                        
                     sub_query.set_result_list(query_results)
                     if query_results:
                         any_result = True
@@ -215,7 +220,10 @@ class Session(object):
                 start_time = time.time()
                 logger.info("Start query: '{}'".format(current_query))
                 if current_query.tokens:
-                    current_query.set_result_list(self.Corpus.yield_query_results(current_query))
+                    if options.cfg.experimental:
+                        current_query.set_result_list(self.Corpus.yield_query_results_new(current_query))
+                    else:
+                        current_query.set_result_list(self.Corpus.yield_query_results(current_query))
 
                 if not options.cfg.dry_run:
                     if not self.output_file:
@@ -276,7 +284,7 @@ class SessionInputFile(Session):
                             self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
                     self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
                 read_lines += 1
-        logger.info("Input file: {} ({} {})".format(options.cfg.input_file, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
+        logger.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
             logger.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
             
