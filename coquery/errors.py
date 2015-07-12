@@ -137,7 +137,7 @@ class TextFilterError(NoTraceException):
     error_message = "Your source filter caused an error."
 
 class SQLInitializationError(GenericException):
-    error_message = "SQL initialization error -- the MySQL server is not available.\n"
+    error_message = "SQL initialization error"
 
 class SQLOperationalError(GenericException):
     error_message = "SQL operational error"
