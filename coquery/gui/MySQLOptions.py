@@ -55,7 +55,7 @@ def check_valid_host(s):
     return False
 
 class MySQLOptions(QtGui.QDialog):
-    def __init__(self, host="localhost", user="coquery", password="coquery", port=3306, parent=None):
+    def __init__(self, host="localhost", port=3306, user="mysql", password="mysql", parent=None):
         
         super(MySQLOptions, self).__init__(parent)
         
@@ -129,8 +129,8 @@ class MySQLOptions(QtGui.QDialog):
             self.accept()
             
     @staticmethod
-    def set(parent=None):
-        dialog = MySQLOptions(parent=parent)
+    def set(db_host, db_port, db_user, db_password, parent=None):
+        dialog = MySQLOptions(db_host, db_port, db_user, db_password, parent=parent)
         result = dialog.exec_()
         if result:
             namespace = argparse.Namespace()

@@ -8,7 +8,7 @@ from errors import *
 import sys
 
 class ErrorBox(QtGui.QDialog):
-    def __init__(self, exc_info, exception, parent=None):
+    def __init__(self, exc_info, exception, message="", parent=None):
         
         super(ErrorBox, self).__init__(parent)
         
@@ -20,6 +20,8 @@ class ErrorBox(QtGui.QDialog):
         exc_type, exc_message, exc_trace = get_error_repr(exc_info)
         exc_type = type(exception).__name__
         
+        if message:
+            exc_message = "<p>{}</p><p>{}</p>".format(exc_message, message)
         error_text = "<table><tr><td>Type</td><td><b>{}</b></td></tr><tr><td>Message</td><td><b>{}</b></td></tr></table><p>{}</p>".format(
             exc_type, exc_message, exc_trace.replace("\n", "<br>").replace(" ", "&nbsp;"))
         self.ui.trace_area.setText(error_text)

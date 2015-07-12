@@ -485,13 +485,16 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                 self.ui.progress_bar.setFormat("Idle.")
                 self.fill_combo_corpus()
                 logger.warning("Removed corpus {}.".format(current_corpus))
+        self.change_corpus()
+
     
     def build_corpus(self):
         sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../tools")))
         import install_generic
-        import corpusbuilder        
+        import corpusbuilder
         corpusbuilder.BuilderGui(install_generic.GenericCorpusBuilder, self)
         self.fill_combo_corpus()
+        self.change_corpus()
             
     def closeEvent(self, event):
         if not self.last_results_saved:
@@ -505,7 +508,11 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             event.accept()
         
     def mysql_settings(self):
-        settings = MySQLOptions.MySQLOptions.set(self)
+        settings = MySQLOptions.MySQLOptions.set(
+            options.cfg.db_host, 
+            options.cfg.db_port,
+            options.cfg.db_user,
+            options.cfg.db_password)
         if settings:
             options.cfg.db_host = settings.db_host
             options.cfg.db_port = settings.db_port
