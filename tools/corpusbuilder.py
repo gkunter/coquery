@@ -661,24 +661,24 @@ class BaseCorpusBuilder(object):
                 resource_code=self.get_resource_code())
         
         path = os.path.join(corpus_path, "{}.py".format(self.name))
-        # Handle existing versions of the corpus library
+        # Handle existing versions of the corpus module
         if os.path.exists(path):
             # Read existing code as string:
             with codecs.open(path, "rt") as input_file:
                 existing_code = input_file.read()
             # Keep if existing code is the same as the new code:
             if existing_code == output_code:
-                self.logger.info("Identical corpus library %s already exists." % path)
+                self.logger.info("Identical corpus module %s already exists." % path)
                 return
             # Ask if the existing code should be overwritten:
             else:
-                warning_text = "A different version of the corpus library already exists in %s." % path
+                msq_module_exists = "A different version of the corpus module already exists in %s." % path
                 self.logger.warning(warning_text)
                 if self.ask_overwrite(warning_text):
-                    self.logger.warning("Overwriting existing corpus library.")
+                    self.logger.warning("Overwriting existing corpus module.")
                 else:
                     return
-        # write library code:
+        # write module code:
         with codecs.open(path, "wt") as output_file:
             output_file.write(output_code)
             self.logger.info("Library %s written." % path)
