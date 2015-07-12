@@ -61,7 +61,11 @@ class MySQLOptions(QtGui.QDialog):
         
         self.ui = MySQLOptionsUi.Ui_Dialog()
         self.ui.setupUi(self)
-        self.ui.hostname.setText(host)
+        if host == "localhost" or host == "127.0.0.1":
+            self.ui.radio_local.setChecked(True)
+        else:
+            self.ui.radio_remote.setChecked(True)
+            self.ui.hostname.setText(host)
         self.ui.user.setText(user)
         self.ui.password.setText(password)
         self.ui.port.setValue(port)
@@ -136,7 +140,10 @@ class MySQLOptions(QtGui.QDialog):
             namespace = argparse.Namespace()
             namespace.db_user = dialog.ui.user.text()
             namespace.db_password = dialog.ui.password.text()
-            namespace.db_host = dialog.ui.hostname.text()
+            if dialog.ui.radio_remote.isChecked():
+                namespace.db_host = dialog.ui.hostname.text()
+            else:
+                namespace.db_host = "localhost"
             namespace.db_port = dialog.ui.port.value()
             return namespace
         else:

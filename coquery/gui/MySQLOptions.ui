@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>515</height>
+    <height>527</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -239,7 +239,7 @@
          <string/>
         </property>
         <property name="autoDefault">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
         <property name="flat">
          <bool>false</bool>

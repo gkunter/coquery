@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'MySQLOptions.ui'
 #
-# Created: Sat Jul  4 01:45:13 2015
+# Created: Sun Jul 12 18:13:18 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName(_fromUtf8("Dialog"))
-        Dialog.resize(640, 515)
+        Dialog.resize(640, 527)
         self.verticalLayout_4 = QtGui.QVBoxLayout(Dialog)
         self.verticalLayout_4.setSpacing(20)
         self.verticalLayout_4.setMargin(10)
@@ -127,8 +127,7 @@ class Ui_Dialog(object):
         sizePolicy.setHeightForWidth(self.button_status.sizePolicy().hasHeightForWidth())
         self.button_status.setSizePolicy(sizePolicy)
         self.button_status.setText(_fromUtf8(""))
-        self.button_status.setAutoDefault(True)
-        self.button_status.setFlat(False)
+        self.button_status.setAutoDefault(False)
         self.button_status.setObjectName(_fromUtf8("button_status"))
         self.horizontalLayout.addWidget(self.button_status)
         self.verticalLayout_4.addWidget(self.connection_indicator)
