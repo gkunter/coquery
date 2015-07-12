@@ -731,6 +731,7 @@ class BaseCorpusBuilder(object):
 
     def finalize_build(self):
         """ Logs duration of build. """
+        self.Con.close()
         self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
 
     def build(self):
@@ -772,6 +773,9 @@ class BuilderGui(QtGui.QDialog):
         self.ui.setupUi(self)
         self.ui.button_input_path.clicked.connect(self.select_path)
         self.ui.button_lemma_path.clicked.connect(self.select_file)
+        self.ui.radio_build_corpus.toggled.connect(self.changed_radio)
+        self.ui.radio_only_module.toggled.connect(self.changed_radio)
+        
         self.accepted = False
         self.builder_class = builder_class
         if not nltk_available:
@@ -796,6 +800,13 @@ class BuilderGui(QtGui.QDialog):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
+            
+    def changed_radio(self):
+        if self.ui.radio_build_corpus.isChecked():
+            self.ui.box_build_options.setEnabled(True)
+        else:
+            self.ui.box_build_options.setEnabled(False)
+            
             
     def accept(self):
         self.accepted = True
