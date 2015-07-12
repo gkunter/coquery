@@ -231,7 +231,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QFrame" name="box_corpus_settings">
+           <widget class="QFrame" name="box_context_settings">
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -481,7 +481,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QFrame" name="input_settings">
+        <widget class="QFrame" name="box_input_settings">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
            <horstretch>3</horstretch>
