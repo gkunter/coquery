@@ -450,7 +450,10 @@ class CorpusQuery(object):
             index += len(speaker_info)
 
         if CORP_FILENAME in output_fields:
-            file_info = self.Corpus.get_file_info(query_result["SourceId"])
+            if options.cfg.experimental:
+                file_info = [query_result[self.Corpus.resource.file_label]]
+            else:
+                file_info = self.Corpus.get_file_info(query_result["SourceId"])
             output_row[index:(index+len(file_info))] = file_info
             index += len(file_info)
 
@@ -471,7 +474,10 @@ class CorpusQuery(object):
                 output_row[index] = collapse_context(context)
         if options.cfg.experimental or len(self.Session.output_fields) == 1 or self.number_of_queries == 1:
             if LEX_FREQ in output_fields:
-                output_row[index] = query_result.data[options.cfg.freq_label]
+                try:
+                    output_row[index] = query_result.data[options.cfg.freq_label]
+                except AttributeError:
+                    output_row[index] = query_result[options.cfg.freq_label]
                 index += 1
         return tuple(output_row)
 
@@ -528,8 +534,6 @@ class TokenQuery(CorpusQuery):
                     self.Session.output_storage.append(output_list)
                 else:
                     output_file.writerow(output_list)
-
-
 
 class DistinctQuery(CorpusQuery):
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
