@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
+from __future__ import print_function
 import codecs
 
 import logging
@@ -29,8 +30,14 @@ except ImportError:
 try:
     import nltk
 except ImportError:
-    raise ImportError
-
+    print("NLTK module not available.")
+    try:
+        QtGui.QMessageBox.warning("No NLTK module – Coquery", "The NLTK module could not be loaded. Automatic part-of-speech tagging will not be available.", QtGui.QMessageBox.Ok)
+    except:        
+        pass
+    nltk_available = False
+else:
+    nltk_available = True
 
 try:
     import progressbar
@@ -117,7 +124,7 @@ class BaseCorpusBuilder(object):
             self.parser.add_argument("-w", help="Actually do something; default behaviour is simulation.", action="store_false", dest="dry_run")
             self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
             self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
-            if not no_nltk:
+            if nltk_available:
                 self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
             self.parser.add_argument("-l", help="load source files", action="store_true")
             self.parser.add_argument("-c", help="Create database tables", action="store_true")
@@ -130,7 +137,7 @@ class BaseCorpusBuilder(object):
         """ Check the command line arguments. Add defaults if necessary."""
         if not self._widget:
             self.arguments, unknown = self.parser.parse_known_args()
-            if no_nltk:
+            if not nltk_available:
                 self.arguments.use_nltk = False
             if not self.arguments.db_name:
                 self.arguments.db_name = self.arguments.name
@@ -182,9 +189,9 @@ class BaseCorpusBuilder(object):
         try:
             self._tables[table_name][key] = entry[0]
         except Exception as e:
-            print entry
-            print values
-            print key
+            print(entry)
+            print(values)
+            print(key)
             raise e
 
         return entry[0]
@@ -469,7 +476,7 @@ class BaseCorpusBuilder(object):
         if not files:
             self.logger.warning("No files found at %s" % self.arguments.path)
             return
-        if not self._widget and no_nltk:
+        if not self._widget and not nltk_available:
             self.logger.warning("This script can use the NLTK library for automatic part-of-speech tagging. However, this library is not installed on this computer. Follow the steps from http://www.nltk.org/install.html to install this library.")
         
         if self._widget:
@@ -762,8 +769,9 @@ class BuilderGui(QtGui.QDialog):
         self.ui.button_lemma_path.clicked.connect(self.select_file)
         self.accepted = False
         self.builder_class = builder_class
-        self.show()
-
+        if not nltk_available:
+            self.ui.use_pos_tagging.setEnabled(False)
+            self.ui.label_3.setEnabled(False)
         self.exec_()
 
     def select_path(self):
