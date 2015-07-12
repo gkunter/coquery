@@ -1392,43 +1392,6 @@ class SQLCorpus(BaseCorpus):
             L.append(s)
         return L
     
-    #def get_linked_table_select(self, rc_table, rc_where_constraints, rc_parent):
-        #if rc_table in rc_where_constraints and rc_where_constraints[rc_table]:
-            #where_string = " WHERE {}".format(" AND ".join(rc_where_constraints[rc_table]))
-        #else:
-            #where_string = ""
-
-        #table = self.resource.__getattribute__(rc_table)
-        #table_id = self.resource.__getattribute__("{}_id".format(rc_table.split("_")[0]))
-        #alias = "COQ_{}".format(rc_table.upper())
-        
-        #table_list = [table]
-
-        #columns = [self.resource.__getattribute__(x) for x in rc_table_columns[rc_table]]
-
-        #for rc_feature in self.rc_table_columns[rc_table]:
-            ## look for a linking index:
-            #if rc_feature.endswith("_id") and rc_feature.count("_") == 2:
-                #_, rc_linked_table, _ = rc_feature.split("_")
-                #table_list.append("{}_table".format(self.get_linked_table_select(rc_linked_table, rc_where_constraints, rc_table)))
-                #rc_table_columns[rc_linked_table].add("{}_id".format(rc_linked_table))
-        
-        #try:
-            #parent = self.resource.__getattribute__(rc_parent)
-            #link = "{}.{} = {}.{}".format(
-                #parent, self.resource.__getattribute__("{}_{}_id".format(corpus, rc_table.split("_")[0])), alias, table_id)
-            
-            #table_set.add("INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {link}".format(
-                #columns = ", ".join(columns),
-                #table = table,
-                #where = where_string,
-                #alias = alias,
-                #link = link))
-            #linked_tables[table] = alias
-        #except AttributeError:
-            #pass
-        
-    
     def get_sub_query_string(self, current_token, number, self_joined=False):
         try:
             if self_joined:
@@ -1448,7 +1411,7 @@ class SQLCorpus(BaseCorpus):
         required_tables = {}
         for rc_feature in requested_features:
             rc_table = "{}_table".format(rc_feature.split("_")[0])
-            if rc_table not in required_tables and rc_table != "corpus_table":
+            if rc_table not in required_tables and rc_table != corpus:
                 tree = self.resource.get_table_structure(rc_table, options.cfg.selected_features)
                 parent = tree["parent"]
                 if parent:
@@ -1459,8 +1422,8 @@ class SQLCorpus(BaseCorpus):
                     requested_features.append(parent_id)
                 
         join_strings = {}
-        join_strings["corpus_table"] = "corpus AS COQ_CORPUS_TABLE"
-        full_tree = self.resource.get_table_structure("corpus_table", requested_features)
+        join_strings[corpus] = "{} AS COQ_CORPUS_TABLE".format(corpus)
+        full_tree = self.resource.get_table_structure(cirozs, requested_features)
 
         try:
             if "pos_table" not in dir(self.resource):
@@ -1512,12 +1475,11 @@ class SQLCorpus(BaseCorpus):
                 
             columns = ", ".join(column_list)
             
-            if rc_table == "word_table":
+            where_string = ""
+            if rc_table == "word_table" and where_constraints:
                 where_string = "WHERE {}".format(" AND ".join(list(where_constraints)))
-            else:
-                where_string = ""
             
-            if rc_parent == "corpus_table":
+            if rc_parent == corpus:
                 parent_id = self.resource.__getattribute__("{}_{}_id".format(rc_parent.split("_")[0], rc_table.split("_")[0]))
             else:
                 parent_id = "{}{}".format(
