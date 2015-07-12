@@ -185,3 +185,6 @@ class DBConnection(object):
     def rollback(self):
         if not self.dry_run:
             self.Con.commit()
+
+    def close(self):
+        self.Con.close()

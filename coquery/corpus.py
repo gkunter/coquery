@@ -257,6 +257,7 @@ class BaseResource(object):
         D = {}
         D["parent"] = None
         rc_tab = rc_table.split("_")[0]
+        assert rc_tab != rc_table, "\n{} == {}".format(rc_tab, rc_table)
         
         available_features = []
         requested_features = []
@@ -285,6 +286,7 @@ class BaseResource(object):
     
     @classmethod
     def get_sub_tree(cls, rc_table, tree_structure):
+        print("get_sub_tree\t{}\n\t{}".format(rc_table, tree_structure))
         if tree_structure["rc_table_name"] == rc_table:
             return tree_structure
         else:
@@ -459,6 +461,9 @@ class SQLResource(BaseResource):
     
     def __init__(self):
         super(SQLResource, self).__init__()
+
+    def __del__(self):
+        print("close resource")
 
     def connect_to_database(self):
         self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=self.db_name)
@@ -1423,7 +1428,7 @@ class SQLCorpus(BaseCorpus):
                 
         join_strings = {}
         join_strings[corpus] = "{} AS COQ_CORPUS_TABLE".format(corpus)
-        full_tree = self.resource.get_table_structure(cirozs, requested_features)
+        full_tree = self.resource.get_table_structure("corpus_table", requested_features)
 
         try:
             if "pos_table" not in dir(self.resource):
@@ -1445,8 +1450,9 @@ class SQLCorpus(BaseCorpus):
             sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
             parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree)
             table = self.resource.__getattribute__(rc_table)
-            rc_parent = parent_tree["rc_table_name"]
-            
+            if parent_tree:
+                rc_parent = parent_tree["rc_table_name"]
+
             column_list = []
             for rc_feature in sub_tree["rc_requested_features"]:
                 if rc_feature == "word_label":
@@ -1486,7 +1492,6 @@ class SQLCorpus(BaseCorpus):
                     self.resource.__getattribute__("{}_{}_id".format(
                         rc_parent.split("_")[0], rc_table.split("_")[0])),
                     number + 1)
-                
             
             join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {parent}.{parent_id} = {alias}.{table_id}{number}".format(
                 columns = columns, 
@@ -1497,7 +1502,7 @@ class SQLCorpus(BaseCorpus):
                 number = number+1,
                 parent_id = parent_id,
                 table_id = self.resource.__getattribute__("{}_id".format(table)))
-        
+
         output_columns = []
         for x in options.cfg.selected_features:
             rc_table = "{}_table".format(x.split("_")[0])
@@ -1686,6 +1691,7 @@ class SQLCorpus(BaseCorpus):
         cursor = self.resource.DB.execute_cursor(query_string)
         for current_result in cursor:
             yield current_result
+        self.resource.DB.close()
 
     def yield_query_results(self, Query, self_joined=False):
         """ Run the corpus query specified in the Query object on the corpus
@@ -1745,6 +1751,7 @@ class SQLCorpus(BaseCorpus):
         cursor = self.resource.DB.execute_cursor(query_string)
         for current_result in cursor:
             yield current_result
+        self.resource.DB.close()
 
     def sql_string_get_sentence_wordid(self,  source_id):
         return "SELECT {corpus_wordid} FROM {corpus} INNER JOIN {source} ON {corpus}.{corpus_source} = {source_alias}.{source_id} WHERE {source_alias}.{source_id} = {this_source}{verbose}".format(
