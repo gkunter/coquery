@@ -23,8 +23,10 @@ try:
     import options
     import corpusBuilderUi
     import error_box
+    use_gui = True
 except ImportError:
     print("Import error.")
+    use_gui = False
     pass
 
 try:
@@ -49,11 +51,15 @@ class NLTKTokenizerError(Exception):
     def __init__(self, e, logger):
         logger.error("The NLTK tokenizer failed. This may be caused by a missing NLTK component. Please consult the 'Installing NLTK Data' guide on http://www.nltk.org/data.html for instructions on how to add the necessary components. Alternatively, you may want to use --no-nltk argument to disable the use of NLTK.")
         logger.error(e)
+        if use_gui:
+            error_box.ErrorBox.show(sys.exc_info(), self)
         
 class NLTKTaggerError(Exception):
     def __init__(self, e, logger):
         logger.error("The NLTK tagger failed. This may be caused by a missing NLTK component. Please consult the 'Installing NLTK Data' guide on http://www.nltk.org/data.html for instructions on how to add the necessary components. Alternatively, you may want to use --no-nltk argument to disable the use of NLTK.")
         logger.error(e)
+        if use_gui:
+            error_box.ErrorBox.show(sys.exc_info(), self)
 
 
 # module_code contains the Python skeleton code that will be used to write
@@ -614,7 +620,6 @@ class BaseCorpusBuilder(object):
             return 
         else:
             warning_msg = "<p>{}</p><p>Do you really want to overwrite the existing version?</p>".format(warning_msg)
-            print(type(self._widget))
             return QtGui.QMessageBox.question(self._widget, "Library exists.", warning_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
                 
     def write_python_module(self, corpus_path):
