@@ -352,7 +352,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     
     def exception_during_query(self):
         error_box.ErrorBox.show(self.exc_info, self.exception)
-
+        
     def query_finished(self):
         self.set_query_button()
         # Stop the progress indicator:
@@ -375,14 +375,14 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         
         self.ui.statusbar.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
             len(self.Session.output_storage), duration_str))        
-
+        
     def header_sorting(self, index):
         header = self.ui.data_preview.horizontalHeader()
 
         if not self.proxy_model.sort_state[index]:
             self.proxy_model.sort_columns.append(index)
         self.proxy_model.sort_state[index] += 1
-        
+  
         probe_index = self.table_model.createIndex(0, index)
         probe_cell = probe_index.data()
         if type(probe_cell) in [unicode, str, QtCore.QString]:
@@ -435,22 +435,34 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.set_query_button()
         
     def run_query(self):
-        self.set_stop_button()
-        self.ui.statusbar.showMessage("Running query...")
-        
         self.getGuiValues()
-        if self.ui.radio_query_string.isChecked():
-            options.cfg.query_list = options.cfg.query_list[0].splitlines()
-            self.Session = SessionCommandLine()
+        try:
+            if self.ui.radio_query_string.isChecked():
+                options.cfg.query_list = options.cfg.query_list[0].splitlines()
+                self.Session = SessionCommandLine()
+            else:
+                self.Session = SessionInputFile()
+        except SQLInitializationError as e:
+            msg_initialization_error = """<p>An error occurred while
+            initializing the database:</p><p>{}</p>
+            <p>Possible reasons include:
+            <ul><li>The database server is not running.</li>
+            <li>The host name or the server port are incorrect.</li>
+            <li>The user name or password are incorrect, or the user has insufficient privileges.</li>
+            <li>You are trying to access a local database on a remote server, or vice versa.</li>
+            </ul></p>
+            <p>Open <b>MySQL settings</b> in the Settings menu to check whether
+            the connection to the database server is working, and if the settings are correct.</p>""".format(e)
+            QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         else:
-            self.Session = SessionInputFile()
-        
-        self.ui.progress_bar.setRange(0, 0)
-        self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
-        self.query_thread.taskFinished.connect(self.query_finished)
-        self.query_thread.taskException.connect(self.exception_during_query)
-        self.query_thread.start()
-        
+            self.set_stop_button()
+            self.ui.statusbar.showMessage("Running query...")
+            self.ui.progress_bar.setRange(0, 0)
+            self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
+            self.query_thread.taskFinished.connect(self.query_finished)
+            self.query_thread.taskException.connect(self.exception_during_query)
+            self.query_thread.start()
+
     def run_statistics(self):
         self.getGuiValues()
         self.Session = StatisticsSession()
@@ -462,7 +474,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.query_thread.start()
         
     def save_configuration(self):
-        pass
+        options.save_configuration()
         
     def remove_corpus(self):
         if self.ui.combo_corpus.isEnabled():
@@ -478,9 +490,16 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                 DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password)
                 self.ui.progress_bar.setRange(0, 0)
                 self.ui.progress_bar.setFormat("Removing corpus '{}'".format(current_corpus))
-                DB.execute("DROP DATABASE {}".format(database))
-                os.remove(module)
-                
+                try:
+                    DB.execute("DROP DATABASE {}".format(database))
+                except sqlwrap.mysql.OperationalError as e:
+                    QtGui.QMessageBox.critical(self, "Database error – Coquery", "<p>There was an error while deleting the corpus databases:</p><p>{}</p>".format(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                finally:
+                    DB.close()
+                try:
+                    os.remove(module)
+                except IOError:
+                    QtGui.QMessageBox.critical(self, "Storage error – Coquery", "<p>There was an error while deleting the corpus module.</p>", QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                 self.ui.progress_bar.setRange(0, 1)
                 self.ui.progress_bar.setFormat("Idle.")
                 self.fill_combo_corpus()
@@ -501,10 +520,12 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             msg_query_running = "<p>The last query results have not been saved. If you quit now, they will be lost.</p><p>Do you really want to quit?</p>"
             response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
+                self.save_configuration()
                 event.accept()
             else:
                 event.ignore()            
         else:
+            self.save_configuration()
             event.accept()
         
     def mysql_settings(self):
