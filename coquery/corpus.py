@@ -257,12 +257,10 @@ class BaseResource(object):
         D = {}
         D["parent"] = None
         rc_tab = rc_table.split("_")[0]
-        assert rc_tab != rc_table, "\n{} == {}".format(rc_tab, rc_table)
         
         available_features = []
         requested_features = []
         children = []
-        
         for rc_feature in cls.get_resource_features():
             if rc_feature.endswith("{}_id".format(rc_tab)) and not rc_feature.startswith(rc_tab):
                 D["parent"] = "{}_table".format(rc_feature.split("_")[0])
@@ -272,7 +270,6 @@ class BaseResource(object):
                     if rc_feature in rc_feature_list:
                         requested_features.append(rc_feature)
                 if rc_feature.endswith("_id") and rc_feature.count("_") == 2:
-                    print(rc_feature)
                     children.append(
                         cls.get_table_structure(
                             "{}_table".format(rc_feature.split("_")[1]),
@@ -286,7 +283,6 @@ class BaseResource(object):
     
     @classmethod
     def get_sub_tree(cls, rc_table, tree_structure):
-        print("get_sub_tree\t{}\n\t{}".format(rc_table, tree_structure))
         if tree_structure["rc_table_name"] == rc_table:
             return tree_structure
         else:
@@ -461,9 +457,6 @@ class SQLResource(BaseResource):
     
     def __init__(self):
         super(SQLResource, self).__init__()
-
-    def __del__(self):
-        print("close resource")
 
     def connect_to_database(self):
         self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=self.db_name)
@@ -917,7 +910,6 @@ class SQLCorpus(BaseCorpus):
                 self.table_list.add(self.resource.corpus_table)
                 if token != "*" or LEX_ORTH in requested:
                     add_word_table(self.resource.corpus_table, self.resource.corpus_word_id)
-                print(1)
                 if options.cfg.source_filter and number == 1:
                     self.table_list.add(self.resource.corpus_table)
                     if "source_table" in dir(self.resource):
@@ -1037,11 +1029,9 @@ class SQLCorpus(BaseCorpus):
                     for filt in filters:
                         display_column, corpus_feature, table, operator, value_list, value_range = filt
                         table_name = corpus_feature.partition("_")[0]
-                        print(filt)
                         table_path = self.resource.get_table_path("corpus", table_name)
                         if table_path:
                             for x in table_path[1:]:
-                                print(x)
                                 real_table_name = self.resource.__getattribute__("{}_table".format(x))
                                 real_id_name = self.resource.__getattribute__("{0}_id".format(x))
                                 
@@ -1396,8 +1386,19 @@ class SQLCorpus(BaseCorpus):
                     s = "{}.{} = '{}'".format(table, column, value_list[0]) 
             L.append(s)
         return L
+
+    def sort_output_columns(self, output_columns, expected_columns):
+        """ Return a list of output columns for the corpus query. The 
+        returned list has the order and number of columns as expected so that
+        the results from the database query can be directly used as output in
+        the results table."""
+        # FIXME: This is not working yet.
+        return output_columns
     
     def get_sub_query_string(self, current_token, number, self_joined=False):
+        """ Return a MySQL string that selects a table matching the current
+        token, and which includes all columns that are requested, or which
+        are required to join the tables. """
         try:
             if self_joined:
                 corpus = self.resource.corpus_denorm_table
@@ -1409,8 +1410,48 @@ class SQLCorpus(BaseCorpus):
             corpus = self.resource.corpus_table
             corpus_id = self.resource.corpus_id
             
-        requested_features = [x for x in options.cfg.selected_features]
-        
+        # corpus variables will only be included in the subquery string if 
+        # this is the first subquery.
+        corpus_variables = [x for x, _ in self.resource.get_corpus_variables()]
+        if number == 0:
+            requested_features = [x for x in options.cfg.selected_features]
+        else:
+            requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
+
+        # add all features that are required for the query filters:
+        rc_where_constraints = {}
+        if number == 0:
+            for filt in self.resource.translate_filters(options.cfg.filter_list):
+                variable, rc_feature, table_name, op, value_list, _value_range = filt
+                if rc_feature not in requested_features:
+                    requested_features.append(rc_feature)
+                rc_table = "{}_table".format(rc_feature.partition("_")[0])
+                if rc_table not in rc_where_constraints:
+                    rc_where_constraints[rc_table] = set([])
+                rc_where_constraints[rc_table].add(
+                    '{} {} "{}"'.format(
+                        self.resource.__getattribute__(rc_feature), op, value_list[0]))
+
+        # add reqiested features depending on the token specifications:
+        if current_token.word_specifiers:
+            if "word_label" in dir(self.resource):
+                requested_features.append("word_label")
+        if current_token.transcript_specifiers:
+            if "transcript_label" in dir(self.resource):
+                requested_features.append("word_transcript")
+            elif "transcript_label" in dir(self.resource):
+                requested_features.append("transcript_label")
+        if current_token.class_specifiers:
+            if "word_pos" in dir(self.resource):
+                requested_features.append("word_pos")
+            elif "pos_label" in dir(self.resource):
+                requested_features.append("pos_label")
+        if current_token.lemma_specifiers:
+            if "word_lemma" in dir(self.resource):
+                requested_features.append("word_lemma")
+            elif "lemma_label" in dir(self.resource):
+                requested_features.append("lemma_label")
+
         # get a list of all tables that are required to query the requested
         # features:
         required_tables = {}
@@ -1419,13 +1460,31 @@ class SQLCorpus(BaseCorpus):
             if rc_table not in required_tables and rc_table != corpus:
                 tree = self.resource.get_table_structure(rc_table, options.cfg.selected_features)
                 parent = tree["parent"]
+                table_id = "{}_id".format(rc_feature.split("_")[0])
+                required_tables[rc_table] = tree
+                requested_features.append(table_id)
                 if parent:
-                    table_id = "{}_id".format(rc_feature.split("_")[0])
                     parent_id = "{}_{}".format(parent.split("_")[0], table_id)
-                    required_tables[rc_table] = tree
-                    requested_features.append(table_id)
                     requested_features.append(parent_id)
-                
+        
+        ## rc_where_constraints contains the filters (both query filters and
+        ## token filters):
+        #rc_where_constraints = {}
+        #if i == 0:
+            #for filt in self.resource.translate_filters(options.cfg.filter_list):
+                #variable, rc_feature, table_name, op, value_list, _value_range = filt
+                #rc_table = "{}_table".format(rc_feature.partition("_")[0])
+                #if rc_table not in rc_table_columns:
+                    #rc_table_columns[rc_table] = set([])
+                #rc_table_columns[rc_table].add(rc_feature)
+                #if rc_table not in rc_where_constraints:
+                    #rc_where_constraints[rc_table] = set([])
+                #rc_where_constraints[rc_table].add(
+                    #'{} {}"{}"'.format(
+                        #self.resource.__getattribute__(rc_feature), op, value_list[0]))
+
+        
+        
         join_strings = {}
         join_strings[corpus] = "{} AS COQ_CORPUS_TABLE".format(corpus)
         full_tree = self.resource.get_table_structure("corpus_table", requested_features)
@@ -1437,21 +1496,27 @@ class SQLCorpus(BaseCorpus):
                 word_pos_column = self.resource.word_pos_id
         except AttributeError:
             word_pos_column = None
-        where_constraints = set([])
+        
+        #where_constraints = set([])
         for x in self.get_whereclauses(current_token, self.resource.corpus_word_id, word_pos_column):
             if "-1" in x:
                 return None
             if x: 
-                where_constraints.add(x)
+                if "word_table" not in rc_where_constraints:
+                    rc_where_constraints["word_table"] = set([])
+                rc_where_constraints["word_table"].add(x)
 
         select_list = []
 
         for rc_table in required_tables:
+            rc_tab = rc_table.split("_")[0]
             sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
             parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree)
             table = self.resource.__getattribute__(rc_table)
             if parent_tree:
                 rc_parent = parent_tree["rc_table_name"]
+            else:
+                rc_parent = None
 
             column_list = []
             for rc_feature in sub_tree["rc_requested_features"]:
@@ -1470,8 +1535,10 @@ class SQLCorpus(BaseCorpus):
                 elif rc_feature == "lemma_pos":
                     name = "L{}_pos".format(number+1)
                 else:
-                    name = "{}{}".format(self.resource.__getattribute__(rc_feature),
-                        number+1)
+                    if rc_feature in corpus_variables:
+                        name = self.resource.__getattribute__(rc_feature)
+                    else:
+                        name = "{}{}".format(self.resource.__getattribute__(rc_feature),                         number+1)
                 variable_string = "{} AS {}".format(
                     self.resource.__getattribute__(rc_feature),
                     name)
@@ -1482,40 +1549,51 @@ class SQLCorpus(BaseCorpus):
             columns = ", ".join(column_list)
             
             where_string = ""
-            if rc_table == "word_table" and where_constraints:
-                where_string = "WHERE {}".format(" AND ".join(list(where_constraints)))
+            if rc_table in rc_where_constraints:
+            #if rc_table == "word_table" and where_constraints:
+                where_string = "WHERE {}".format(" AND ".join(list(rc_where_constraints[rc_table])))
+
+            if rc_parent:
+                if rc_parent == corpus:
+                    parent_id = self.resource.__getattribute__("{}_{}_id".format(rc_parent.split("_")[0], rc_table.split("_")[0]))
+                else:
+                    parent_id = "{}{}".format(
+                        self.resource.__getattribute__("{}_{}_id".format(
+                            rc_parent.split("_")[0], rc_table.split("_")[0])),
+                        number + 1)
             
-            if rc_parent == corpus:
-                parent_id = self.resource.__getattribute__("{}_{}_id".format(rc_parent.split("_")[0], rc_table.split("_")[0]))
+                join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {parent}.{parent_id} = {alias}.{table_id}{number}".format(
+                    columns = columns, 
+                    table = table,
+                    alias = sub_tree["alias"],
+                    parent = parent_tree["alias"],
+                    where = where_string,
+                    number = number+1,
+                    parent_id = parent_id,
+                    table_id = self.resource.__getattribute__("{}_id".format(rc_tab)))
             else:
-                parent_id = "{}{}".format(
-                    self.resource.__getattribute__("{}_{}_id".format(
-                        rc_parent.split("_")[0], rc_table.split("_")[0])),
-                    number + 1)
-            
-            join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {parent}.{parent_id} = {alias}.{table_id}{number}".format(
-                columns = columns, 
-                table = table,
-                alias = sub_tree["alias"],
-                parent = parent_tree["alias"],
-                where = where_string,
-                number = number+1,
-                parent_id = parent_id,
-                table_id = self.resource.__getattribute__("{}_id".format(table)))
+                join_strings[rc_table] = "(SELECT {columns} FROM {table} {where}) AS {alias}".format(
+                    columns = columns, 
+                    table = table,
+                    alias = sub_tree["alias"],
+                    where = where_string)
 
         output_columns = []
         for x in options.cfg.selected_features:
+            if x in corpus_variables and number > 0:
+                break
             rc_table = "{}_table".format(x.split("_")[0])
             tree = required_tables[rc_table]
             output_columns.append("{}.{}{}".format(tree["alias"], self.resource.__getattribute__(x), number + 1))
-
+        
         table_order = self.resource.get_table_order(full_tree)
         L = []
         for x in table_order:
             if x in join_strings:
                 L.append(join_strings[x])
-        
-        return "SELECT {} FROM {}".format(", ".join(select_list + [self.resource.corpus_id]), " ".join(L)), select_list, L
+        if not select_list:
+            return "", None, None
+        return "SELECT {} FROM {}".format(", ".join(select_list + ["{}{}".format(self.resource.corpus_id, number+1)]), " ".join(L)), select_list, L
         
     
     def yield_query_results_new(self, Query, self_joined=False):
@@ -1527,152 +1605,24 @@ class SQLCorpus(BaseCorpus):
             if i == 0:
                 outer_list = join_list
                 final_select = select_list
-                query_string_part = ["SELECT * FROM ({}) AS e1".format(s)]
+                query_string_part = ["SELECT COQ_OUTPUT_FIELDS FROM ({}) AS e1".format(s)]
             else:
-                final_select += select_list
-                query_string_part.append(
-                    "INNER JOIN ({s}) AS e{i1} ON e{i1}.{token} = e1.{token} + {i}".format(s = s, i=i, i1=i+1, token=self.resource.corpus_id))
+                if s:
+                    final_select += select_list
+                    query_string_part.append(
+                        "INNER JOIN ({s}) AS e{i1} ON e{i1}.{token}{i1} = e1.{token}1 + {i}".format(s = s, i=i, i1=i+1, token=self.resource.corpus_id))
         
-        query_string = " ".join(query_string_part).replace("*", ", ".join(final_select))
-        
-        #token_table_list = []
-        #required_tables = []
-        #for i, current_query in enumerate(Query.tokens):
-            #table_set = set([])
+
+        final_select = self.sort_output_columns(final_select, Query.Session.header)
+
+        query_string = " ".join(query_string_part)
+
+        if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
+            query_string = "{} GROUP BY {}".format(query_string, ", ".join(final_select))
+            query_string = query_string.replace("COQ_OUTPUT_FIELDS", "COUNT(*) AS {}, {}".format(
+                options.cfg.freq_label, ", ".join(final_select)))
             
-            #linked_tables = {}
-
-            ## rc_table_columns contains all columns that are selected from the
-            ## linked tables
-            #rc_table_columns = {}
-            #for rc_feature in options.cfg.selected_features:
-                #if i > 0 and rc_feature not in rc_lexicon_features:
-                    #break
-                #rc_table = "{}_table".format(rc_feature.partition("_")[0])            
-                #if rc_table not in rc_table_columns:
-                    #rc_table_columns[rc_table] = set([])
-                #rc_table_columns[rc_table].add(rc_feature)
-
-            ## rc_where_constraints contaisn the filters (both query filters and
-            ## token filters):
-            #rc_where_constraints = {}
-            #if i == 0:
-                #for filt in self.resource.translate_filters(options.cfg.filter_list):
-                    #variable, rc_feature, table_name, op, value_list, _value_range = filt
-                    #rc_table = "{}_table".format(rc_feature.partition("_")[0])
-                    #if rc_table not in rc_table_columns:
-                        #rc_table_columns[rc_table] = set([])
-                    #rc_table_columns[rc_table].add(rc_feature)
-                    #if rc_table not in rc_where_constraints:
-                        #rc_where_constraints[rc_table] = set([])
-                    #rc_where_constraints[rc_table].add(
-                        #'{} {}"{}"'.format(
-                            #self.resource.__getattribute__(rc_feature), op, value_list[0]))
-                    
-            #corpus_word_id = self.resource.corpus_word_id
-            #try:
-                #if "pos_table" not in dir(self.resource):
-                    #word_pos_column = self.resource.word_pos
-                #else:
-                    #word_pos_column = self.resource.word_pos_id
-            #except AttributeError:
-                #word_pos_column = None
-
-            #if "word_table" not in rc_where_constraints:
-                #rc_where_constraints["word_table"] = set([])
-            #word_constraints = self.get_whereclauses(current_query, corpus_word_id, word_pos_column)
-            #for x in word_constraints:
-                #if "-1" in x:
-                    #yield
-                    #return
-                #if x: 
-                    #rc_where_constraints["word_table"].add(x)
-
-            ## build list of INNER JOINs for all linked tables:
-            #for rc_table in rc_table_columns:
-                #if rc_table in rc_where_constraints and rc_where_constraints[rc_table]:
-                    #where_string = " WHERE {}".format(" AND ".join(rc_where_constraints[rc_table]))
-                #else:
-                    #where_string = ""
-
-                #table = self.resource.__getattribute__(rc_table)
-                #table_id = self.resource.__getattribute__("{}_id".format(rc_table.split("_")[0]))
-                #alias = "COQ_{}".format(rc_table.upper())
-                
-                #columns = [self.resource.__getattribute__(x) for x in rc_table_columns[rc_table]]
-                #columns.append(table_id)
-                
-                #path = self.resource.get_table_path("corpus", table)[::-1]
-                #print(path)
-                
-                #for k, table in enumerate(path):
-                    #if k == len(path) - 1 or k == 0:
-                        #break
-                    #rc_table = "{}_table".format(table)
-                    #if rc_table not in linked_tables:
-                        #rc_previous_table = "{}_table".format(path[k + 1])
-                        #previous_table = self.resource.__getattribute__(rc_previous_table)
-                        #previous_alias = "COQ_{}".format(rc_previous_table.upper())
-                        #table = self.resource.__getattribute__(rc_table)
-                        #table_alias = "COQ_{}".format(rc_table.upper())
-                        #table_id = self.resource.__getattribute__("{}_id".format(table))
-                        #previous_id = self.resource.__getattribute__("{}_{}_id".format(previous_table, table))
-                        #rc_table_columns[rc_previous].add(previous_id)
-                #try:
-                    #link = "{}.{} = {}.{}".format(
-                        #corpus, self.resource.__getattribute__("{}_{}_id".format(corpus, rc_table.split("_")[0])), alias, table_id)
-                    
-                    #table_set.add("INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {link}".format(
-                        #columns = ", ".join(columns),
-                        #table = table,
-                        #where = where_string,
-                        #alias = alias,
-                        #link = link))
-                    #linked_tables[table] = alias
-                #except AttributeError:
-                    #pass
-
-            #select_columns = []
-
-            #for rc_table in rc_table_columns:
-                #for rc_feature in rc_table_columns[rc_table]:
-                    #if rc_feature in rc_lexicon_features:
-                        #if rc_feature == "word_label":
-                            #name = "W{}_orth".format(i+1)
-                        #elif rc_feature == "word_pos":
-                            #name = "W{}_pos".format(i+1)
-                        #elif rc_feature == "word_lemma":
-                            #name = "L{}_orth".format(i+1)
-                        #elif rc_feature == "word_transcript":
-                            #name = "W{}_phon".format(i+1)
-                        #else:
-                            #name = "{}{}".format(
-                                #self.resource.__getattribute__(rc_feature)[0],
-                                #i+1)
-                        #variable_string = "{} AS {}".format(
-                            #self.resource.__getattribute__(rc_feature),
-                            #name)
-                    #else:
-                        #variable_string = self.resource.__getattribute__(rc_feature)
-                    #select_columns.append("COQ_{}.{}".format(rc_table.upper(), variable_string))
-            #select_columns.append(self.resource.corpus_id)
-            #query_string = "SELECT {} FROM {}".format(
-                #", ".join(select_columns),
-                #" ".join(["corpus"] + list(table_set)))
-
-            #token_table_list.append(query_string)
-
-        #query_string_part = []
-        #for i, s in enumerate(token_table_list):
-            #if i == 0:
-                #query_string_part = ["SELECT * FROM ({}) AS e0".format(s)]
-            #else:
-                #query_string_part.append(
-                    #"INNER JOIN ({s}) AS e{i} ON e{i}.{token} = e0.{token} + {i}".format(s = s, i=i, token=self.resource.corpus_id))
-        #query_string = " ".join(query_string_part)
-                        
-        
-        #return
+        query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(final_select))
         
         # add LIMIT clause if necessary:
         if options.cfg.number_of_tokens:
@@ -1688,7 +1638,9 @@ class SQLCorpus(BaseCorpus):
         #print(query_string)
         
         #sys.exit(0)
+
         cursor = self.resource.DB.execute_cursor(query_string)
+        #Query.Session.header = [x[0] for x in cursor.description]
         for current_result in cursor:
             yield current_result
         self.resource.DB.close()
