@@ -17,15 +17,14 @@ def check_valid_host(s):
     def is_valid_ipv4_address(address):
         try:
             socket.inet_pton(socket.AF_INET, address)
-        except AttributeError:  # no inet_pton here, sorry
+        except AttributeError: 
             try:
                 socket.inet_aton(address)
             except socket.error:
                 return False
             return address.count('.') == 3
-        except socket.error:  # not a valid address
+        except socket.error:
             return False
-
         return True
 
     def is_valid_ipv6_address(address):
@@ -35,21 +34,24 @@ def check_valid_host(s):
             return False
         return True
 
-    def is_valid_hostname(hostname):
-        if len(hostname) > 255:
+    def is_valid_hostname(s):
+        if len(s) > 255:
             return False
-        if hostname[-1] == ".":
-            hostname = hostname[:-1] # strip exactly one dot from the right, if present
+        # strings must contain at least one letter, otherwise they should be
+        # considered ip addresses
+        if not any([x in string.letters for x in s]):
+            return
+        if s.endswith("."):
+            s= s[:-1] # strip exactly one dot from the right, if present
         allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
-        return all(allowed.match(x) for x in hostname.split("."))
+        return all(allowed.match(x) for x in s.split("."))
 
     if is_valid_ipv6_address(s):
         return True
     if is_valid_ipv4_address(s):
         return True
-    if any([x in string.letters for x in s]):
-        if is_valid_hostname(s):
-            return True
+    if is_valid_hostname(s):
+        return True
     return False
 
 class MySQLOptions(QtGui.QDialog):
