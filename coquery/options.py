@@ -67,7 +67,6 @@ class Options(object):
             version = ""
         
         default_config_path = os.path.join(self.base_path, config_name)
-        
         self.parser = argparse.ArgumentParser(prog=prog_name, description=
 """This program provides an interface to linguistic corpora (currently only 
 COCA). A query can either be specified at the command line using the -q 
@@ -287,7 +286,6 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
                     db_host = config_file.get("sql", "db_host")
                 except configparser.NoOptionError:
                     pass
-
         else:
             logger.warning("Configuration file %s not found, using defaults." % self.args.config_path)
 
@@ -295,8 +293,69 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         vars(self.args) ["db_password"] = db_password
         vars(self.args) ["db_port"] = db_port
         vars(self.args) ["db_host"] = db_host
+
+    def save_configuration(self):
+        # defaults:
+        config_file = configparsser.ConfigParser()
+        if os.path.exists(self.args.config_path):
+            config_file.read(self.args.config_path)
+        
+        if not "main" in config_file.sesisons():
+            config_file.add_section("main")
+        config_file.set("main", "default_corpus", self.args.corpus)
+        
+        if not "sql" in config_file.sessions():
+            config_file.add_section("sql")
+        config_file.set("sql", "db_user", self.args.db_user)
+        config_file.set("sql", "db_password", self.args.db_password)
+        config_file.set("sql", "db_port", self.args.db_port)
+        config_file.set("sql", "db_host", self.args.db_host)
+        
+        config_file.write(self.args.config_path)
     
 cfg = None
+
+class UnicodeConfigParser(configparser.RawConfigParser):
+       
+    def write(self, fp):
+        """Fixed for Unicode output"""
+        if self._defaults:
+            fp.write("[%s]\n" % DEFAULTSECT)
+            for (key, value) in self._defaults.items():
+                fp.write("%s = %s\n" % (key, unicode(value).replace('\n', '\n\t')))
+            fp.write("\n")
+        for section in self._sections:
+            fp.write("[%s]\n" % section)
+            for (key, value) in self._sections[section].items():
+                if key != "__name__":
+                    fp.write("%s = %s\n" %
+                             (key, unicode(value).replace('\n','\n\t')))
+            fp.write("\n")
+
+    # This function is needed to override default lower-case conversion
+    # of the parameter's names. They will be saved 'as is'.
+    def optionxform(self, strOut):
+        return strOut
+
+def save_configuration():
+    config = UnicodeConfigParser()
+    if os.path.exists(cfg.config_path):
+        with codecs.open(cfg.config_path, "rt", "utf-8") as input_file:
+            config.read(input_file)
+    
+    if not "main" in config.sections():
+        config.add_section("main")
+    config.set("main", "default_corpus", cfg.corpus)
+    
+    if not "sql" in config.sections():
+        config.add_section("sql")
+    config.set("sql", "db_user", cfg.db_user)
+    config.set("sql", "db_password", cfg.db_password)
+    config.set("sql", "db_port", cfg.db_port)
+    config.set("sql", "db_host", cfg.db_host)
+    
+    with codecs.open(cfg.config_path, "wt", "utf-8") as output_file:
+        config.write(output_file)
 
 def process_options():
     global cfg
