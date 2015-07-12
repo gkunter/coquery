@@ -224,8 +224,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.edit_query_string = edit_query_string
         
         self.ui.filter_box = QueryFilterBox(self)
-        #self.ui.filter_box.setTagType(CoqFilterTag)
-        #self.ui.filter_box.cloud_area.setSpacing(2)
         
         self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
         self.ui.tag_cloud.close()
@@ -250,15 +248,34 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         
         self.change_corpus()
         
-        print(self.resource.get_table_path("corpus", "lemma"))
-        print(self.resource.get_table_path("corpus", "file"))
-              
-
         self.log_table = LogTableModel(self)
         self.log_proxy = LogProxyModel()
         self.log_proxy.setSourceModel(self.log_table)
         self.log_proxy.sortCaseSensitivity = False
         self.ui.log_table.setModel(self.log_proxy)
+
+    def change_corpus(self):
+        """ Change the output options list depending on the features available
+        in the current corpus. If no corpus is avaiable, disable the options
+        area and some menu entries. If any corpus is available, these widgets
+        are enabled again."""
+        if not resource_list.get_available_resources():
+            self.disable_corpus_widgets()
+        else:
+            self.enable_corpus_widgets()
+        super(CoqueryApp, self).change_corpus(self)   
+
+    def enable_corpus_widgets(self):
+        """ Enable all widgets that assume that a corpus is available."""
+        self.ui.centralwidget.setEnabled(True)
+        self.ui.action_statistics.setEnabled(True)
+        self.ui.action_remove_corpus.setEnabled(True)
+    
+    def disable_corpus_widgets(self):
+        """ Disable any widget that assumes that a corpus is available."""
+        self.ui.centralwidget.setEnabled(False)
+        self.ui.action_statistics.setEnabled(False)
+        self.ui.action_remove_corpus.setEnabled(False)
 
     def __init__(self, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
@@ -267,6 +284,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         
         self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
+        
+        self.create_output_options_tree()
 
         QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
         self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
@@ -275,6 +294,15 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.csv_options = None
         self.query_thread = None
         self.last_results_saved = True
+        
+        if not resource_list.get_available_resources():
+            msg_no_corpus = """<p>Coquery could not find a corpus module. 
+            Without a corpus module, you cannot run any query.</p>
+            <p>To build a new corpus module from a selection of text files, select <b>Build corpus...</b> from the Corpus menu.</p>
+            <p>To install the corpus module for one of the corpora that are
+            supported by Coquery, select <b>Install corpus...</b> from the Corpus menu.</p>"""
+ 
+            response = QtGui.QMessageBox.warning(self, "No corpus available", msg_no_corpus, QtGui.QMessageBox.Ok)
         
     def display_results(self):
         self.table_model = results.CoqTableModel(self, self.Session.header, self.Session.output_storage)

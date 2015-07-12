@@ -130,6 +130,8 @@ class CoqueryWizard(QtGui.QWizard):
         self.ui = wizardUi.Ui_Wizard()
         self.ui.setupUi(self)
 
+        self.create_output_options_tree()
+
         self.setup_wizard()
         self.csv_options = None
         
@@ -194,13 +196,26 @@ class CoqueryWizard(QtGui.QWizard):
             corpus_name = str(self.ui.combo_corpus.currentText()).lower()
             self.resource, self.corpus, self.lexicon, self.path = resource_list.get_available_resources()[corpus_name]
             self.ui.filter_box.resource = self.resource
-                
-            
+                            
             self.change_corpus_features()
             try:
                 self.filter_variable_model.setStringList(options.cfg.output_variable_names)
             except AttributeError:
                 pass
+
+    def create_output_options_tree(self):
+        """ Remove any existing tree widget for the output options, create a
+        new, empty tree, add it to the layout, and return it. """
+        # replace old tree widget by a new, still empty tree:
+        tree = CoqTreeWidget()
+        tree.setColumnCount(1)
+        tree.setHeaderHidden(True)
+        tree.setRootIsDecorated(True)
+        self.ui.options_list.removeWidget(tree)
+        self.ui.options_tree.close()
+        self.ui.options_list.addWidget(tree)
+        self.ui.options_tree = tree
+        return tree
     
     def change_corpus_features(self, prefix="", suffix=""):
         """ Construct a new output option tree depending on the features
@@ -225,15 +240,7 @@ class CoqueryWizard(QtGui.QWizard):
         tables.remove("coquery")
         tables.append("coquery")
 
-        # replace old tree widget by a new, still empty tree:
-        tree = CoqTreeWidget()
-        tree.setColumnCount(1)
-        tree.setHeaderHidden(True)
-        tree.setRootIsDecorated(True)
-        self.ui.options_list.removeWidget(tree)
-        self.ui.options_tree.close()
-        self.ui.options_list.addWidget(tree)
-        self.ui.options_tree = tree
+        tree = self.create_output_options_tree()
 
         options.cfg.output_variable_names = []
         try:
@@ -373,7 +380,6 @@ class CoqueryWizard(QtGui.QWizard):
             #if queryfilter.CoqFilterTag.validate(current_filter_text, options.cfg.output_variable_names):
                 #options.cfg.filter_list.append(CoqFilterTag.format_content(current_filter_text))
 
-            print("filter_list: ", options.cfg.filter_list)
             
             options.cfg.selected_features = []
             
@@ -414,7 +420,6 @@ class CoqueryWizard(QtGui.QWizard):
                     if table == "corpus":
                         if variable == "time":
                             options.cfg.show_time = bool(child.checkState(0))
-            print(options.cfg.selected_features)
             return True
 
     def setWizardDefaults(self):

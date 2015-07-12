@@ -151,14 +151,17 @@ class ResourceList(object):
 
     def get_available_resources(self):
         self.available_resources = {}
-        for corpus in glob.glob(os.path.join(sys.path[0], "corpora/*.py")):
+        corpus_path = os.path.join(sys.path[0], "corpora")
+        if not os.path.exists(corpus_path):
+            os.makedirs(corpus_path)
+        for corpus in glob.glob(os.path.join(corpus_path, "*.py")):
             corpus_name, ext = os.path.splitext(os.path.basename(corpus))
             try:
                 module = imp.load_source(corpus_name, corpus)
                 resource = module.Resource
                 self.available_resources[resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
             except AttributeError, ImportError:
-                warnings.warn("{} does not appear to be a valid corpus library.".format(corpus_name))
+                warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
         return self.available_resources
 
 resource_list = ResourceList()
