@@ -263,6 +263,10 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.disable_corpus_widgets()
         else:
             self.enable_corpus_widgets()
+            try:
+                self.msg_box_no_corpus.close()
+            except AttributeError:
+                pass
         super(CoqueryApp, self).change_corpus(self)   
 
     def enable_corpus_widgets(self):
@@ -277,6 +281,24 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.action_statistics.setEnabled(False)
         self.ui.action_remove_corpus.setEnabled(False)
 
+    def show_no_corpus_message(self):
+        """ Show a non-modal message box informing the user that no corpus
+        module is available. This message box will be automatically closed 
+        if a corpus resource is available."""
+        msg_no_corpus = "Coquery could not find a corpus module. Without a corpus module, you cannot run any query."
+        msg_details = """<p>To build a new corpus module from a selection of text files, select <b>Build corpus...</b> from the Corpus menu.</p>
+            <p>To install the corpus module for one of the corpora that are
+            supported by Coquery, select <b>Install corpus...</b> from the Corpus menu.</p>"""
+        self.msg_box_no_corpus = QtGui.QMessageBox(self)
+        self.msg_box_no_corpus.setWindowTitle("No corpus available – Coquery")
+        self.msg_box_no_corpus.setText(msg_no_corpus)
+        self.msg_box_no_corpus.setInformativeText(msg_details)
+        self.msg_box_no_corpus.setStandardButtons(QtGui.QMessageBox.Ok)
+        self.msg_box_no_corpus.setDefaultButton(QtGui.QMessageBox.Ok)
+        self.msg_box_no_corpus.setWindowModality(QtCore.Qt.NonModal)
+        self.msg_box_no_corpus.setIcon(QtGui.QMessageBox.Warning)
+        self.msg_box_no_corpus.show()
+        
     def __init__(self, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
         
@@ -296,13 +318,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.last_results_saved = True
         
         if not resource_list.get_available_resources():
-            msg_no_corpus = """<p>Coquery could not find a corpus module. 
-            Without a corpus module, you cannot run any query.</p>
-            <p>To build a new corpus module from a selection of text files, select <b>Build corpus...</b> from the Corpus menu.</p>
-            <p>To install the corpus module for one of the corpora that are
-            supported by Coquery, select <b>Install corpus...</b> from the Corpus menu.</p>"""
- 
-            response = QtGui.QMessageBox.warning(self, "No corpus available", msg_no_corpus, QtGui.QMessageBox.Ok)
+            self.show_no_corpus_message()
         
     def display_results(self):
         self.table_model = results.CoqTableModel(self, self.Session.header, self.Session.output_storage)
