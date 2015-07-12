@@ -9,7 +9,48 @@ import sys
 sys.path.append("/home/kunibert/Dev/coquery/coquery")
 import sqlwrap
 from errors import *
+import socket
+import re
+import string
 
+def check_valid_host(s):
+    def is_valid_ipv4_address(address):
+        try:
+            socket.inet_pton(socket.AF_INET, address)
+        except AttributeError:  # no inet_pton here, sorry
+            try:
+                socket.inet_aton(address)
+            except socket.error:
+                return False
+            return address.count('.') == 3
+        except socket.error:  # not a valid address
+            return False
+
+        return True
+
+    def is_valid_ipv6_address(address):
+        try:
+            socket.inet_pton(socket.AF_INET6, address)
+        except socket.error:  # not a valid address
+            return False
+        return True
+
+    def is_valid_hostname(hostname):
+        if len(hostname) > 255:
+            return False
+        if hostname[-1] == ".":
+            hostname = hostname[:-1] # strip exactly one dot from the right, if present
+        allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+        return all(allowed.match(x) for x in hostname.split("."))
+
+    if is_valid_ipv6_address(s):
+        return True
+    if is_valid_ipv4_address(s):
+        return True
+    if any([x in string.letters for x in s]):
+        if is_valid_hostname(s):
+            return True
+    return False
 
 class MySQLOptions(QtGui.QDialog):
     def __init__(self, host="localhost", user="coquery", password="coquery", port=3306, parent=None):
@@ -34,32 +75,48 @@ class MySQLOptions(QtGui.QDialog):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setText("MySQL server guide...")
 
     def check_connection(self):
-        #self.ui.update()
+        """ Check if a connection to a MySQL server can be established using
+        the settings from the GUI. Return True if a connection can be
+        established, or True if not. Also, set up the connection indicator
+        accordingly."""
+        def indicate_no_connection(self):
+            self.ui.label_connection.setText("Not connected")
+            self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(True)
+        
+        def indicate_connection(self):
+            self.ui.button_status.setStyleSheet('QPushButton {background-color: green; color: green;}')
+            self.ui.label_connection.setText("Connected ({})".format(x[0]))
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(False)
+        
         if self.ui.radio_local.isChecked():
             hostname = "localhost"
             self.ui.hostname.setDisabled(True)
         else:
             self.ui.hostname.setDisabled(False)
             hostname = self.ui.hostname.text()
-        try:
-            DB = sqlwrap.SqlDB(
-                hostname,
-                self.ui.port.value(),
-                self.ui.user.text(),
-                self.ui.password.text())
-            DB.Cur.execute("SELECT VERSION()")
-            x = DB.Cur.fetchone()
-            DB.close()
-        except SQLInitializationError:
-            self.ui.label_connection.setText("Not connected")
-            self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(True)
+
+        if check_valid_host(hostname):
+            try:
+                DB = sqlwrap.SqlDB(
+                    hostname,
+                    self.ui.port.value(),
+                    self.ui.user.text(),
+                    self.ui.password.text())
+                DB.Cur.execute("SELECT VERSION()")
+                x = DB.Cur.fetchone()
+                DB.close()
+            except SQLInitializationError:
+                indicate_no_connection(self)
+                return False
+            else:
+                indicate_connection(self)
+                return True
         else:
-            self.ui.button_status.setStyleSheet('QPushButton {background-color: green; color: green;}')
-            self.ui.label_connection.setText("Connected ({})".format(x[0]))
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(False)
+            indicate_no_connection(self)
+            return False
         
     def start_mysql_guide(self):
         mysql_guide.MySqlGuide(self)
