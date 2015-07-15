@@ -318,7 +318,7 @@ class CoqueryWizard(QtGui.QWizard):
             self.switch_to_file()
     
     def set_gui_defaults(self):
-        """ evaulates options.cfg.*, and set the default values of the wizard
+        """ evaluates options.cfg.*, and set the default values of the wizard
         accordingly."""
         pass
     
