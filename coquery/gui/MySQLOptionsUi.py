@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'MySQLOptions.ui'
 #
-# Created: Sun Jul 12 18:13:18 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -61,10 +60,6 @@ class Ui_Dialog(object):
         self.hostname.setObjectName(_fromUtf8("hostname"))
         self.horizontalLayout_5.addWidget(self.hostname)
         self.verticalLayout.addLayout(self.horizontalLayout_5)
-        self.formLayout_2 = QtGui.QFormLayout()
-        self.formLayout_2.setFieldGrowthPolicy(QtGui.QFormLayout.ExpandingFieldsGrow)
-        self.formLayout_2.setObjectName(_fromUtf8("formLayout_2"))
-        self.verticalLayout.addLayout(self.formLayout_2)
         self.verticalLayout_3.addLayout(self.verticalLayout)
         self.verticalLayout_4.addWidget(self.frame)
         self.frame1 = QtGui.QFrame(Dialog)
@@ -108,6 +103,11 @@ class Ui_Dialog(object):
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_4.addItem(spacerItem)
         self.connection_indicator = QtGui.QFrame(Dialog)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.connection_indicator.sizePolicy().hasHeightForWidth())
+        self.connection_indicator.setSizePolicy(sizePolicy)
         self.connection_indicator.setFrameShape(QtGui.QFrame.StyledPanel)
         self.connection_indicator.setFrameShadow(QtGui.QFrame.Sunken)
         self.connection_indicator.setObjectName(_fromUtf8("connection_indicator"))
@@ -116,6 +116,12 @@ class Ui_Dialog(object):
         self.horizontalLayout.setMargin(10)
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         self.label_connection = QtGui.QLabel(self.connection_indicator)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_connection.sizePolicy().hasHeightForWidth())
+        self.label_connection.setSizePolicy(sizePolicy)
+        self.label_connection.setWordWrap(True)
         self.label_connection.setObjectName(_fromUtf8("label_connection"))
         self.horizontalLayout.addWidget(self.label_connection)
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
@@ -128,6 +134,7 @@ class Ui_Dialog(object):
         self.button_status.setSizePolicy(sizePolicy)
         self.button_status.setText(_fromUtf8(""))
         self.button_status.setAutoDefault(False)
+        self.button_status.setFlat(False)
         self.button_status.setObjectName(_fromUtf8("button_status"))
         self.horizontalLayout.addWidget(self.button_status)
         self.verticalLayout_4.addWidget(self.connection_indicator)

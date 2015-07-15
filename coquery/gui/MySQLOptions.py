@@ -85,8 +85,8 @@ class MySQLOptions(QtGui.QDialog):
         the settings from the GUI. Return True if a connection can be
         established, or True if not. Also, set up the connection indicator
         accordingly."""
-        def indicate_no_connection(self):
-            self.ui.label_connection.setText("Not connected")
+        def indicate_no_connection(self, s):
+            self.ui.label_connection.setText("Not connected: {}".format(e))
             self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(True)
@@ -102,26 +102,26 @@ class MySQLOptions(QtGui.QDialog):
             self.ui.hostname.setDisabled(True)
         else:
             self.ui.hostname.setDisabled(False)
-            hostname = self.ui.hostname.text()
+            hostname = str(self.ui.hostname.text())
 
         if check_valid_host(hostname):
             try:
                 DB = sqlwrap.SqlDB(
                     hostname,
                     self.ui.port.value(),
-                    self.ui.user.text(),
-                    self.ui.password.text())
+                    str(self.ui.user.text()),
+                    str(self.ui.password.text()))
                 DB.Cur.execute("SELECT VERSION()")
                 x = DB.Cur.fetchone()
                 DB.close()
-            except SQLInitializationError:
-                indicate_no_connection(self)
+            except SQLInitializationError as e:
+                indicate_no_connection(self, e)
                 return False
             else:
                 indicate_connection(self)
                 return True
         else:
-            indicate_no_connection(self)
+            indicate_no_connection(self, "Invalid hostname or invalid IP address")
             return False
         
     def start_mysql_guide(self):
