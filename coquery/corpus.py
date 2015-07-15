@@ -307,7 +307,7 @@ class BaseResource(object):
         return table_order        
 
     @classmethod
-    def get_corpus_variables(cls):
+    def get_corpus_features(cls):
         """ Return a list of tuples. Each tuple consists of a resource 
         variable name and the display name of that variable. Only those 
         variables are returned that all resource variable names that are 
@@ -325,7 +325,7 @@ class BaseResource(object):
         return corpus_variables
     
     @classmethod
-    def get_lexicon_variables(cls):
+    def get_lexicon_features(cls):
         """ Return a list of tuples. Each tuple consists of a resource 
         variable name and the display name of that variable. Only those 
         variables are returned that all resource variable names that are 
@@ -344,7 +344,7 @@ class BaseResource(object):
     def translate_filters(cls, filters):
         """ Return a translation list that contains the corpus feature names
         of the variables used in the filter texts. """
-        corpus_variables = cls.get_corpus_variables()
+        corpus_variables = cls.get_corpus_features()
         filter_list = []
         for filt in filters:
             variable = filt._variable
@@ -762,7 +762,7 @@ class SQLLexicon(BaseLexicon):
     def get_statistics(self):
         stats = {}
         stats["lexicon_features"] = " ".join(self.provides)
-        stats["lexicon_variables"] = " ".join([x for x, _ in self.resource.get_lexicon_variables()])
+        stats["lexicon_variables"] = " ".join([x for x, _ in self.resource.get_lexicon_features()])
         self.resource.DB.execute("SELECT COUNT(*) FROM {word_table}".format(
             word_table=self.resource.word_table))
         stats["lexicon_words"] = self.resource.DB.Cur.fetchone()[0]
@@ -1412,7 +1412,7 @@ class SQLCorpus(BaseCorpus):
             
         # corpus variables will only be included in the subquery string if 
         # this is the first subquery.
-        corpus_variables = [x for x, _ in self.resource.get_corpus_variables()]
+        corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
         if number == 0:
             requested_features = [x for x in options.cfg.selected_features]
         else:
@@ -1467,24 +1467,6 @@ class SQLCorpus(BaseCorpus):
                     parent_id = "{}_{}".format(parent.split("_")[0], table_id)
                     requested_features.append(parent_id)
         
-        ## rc_where_constraints contains the filters (both query filters and
-        ## token filters):
-        #rc_where_constraints = {}
-        #if i == 0:
-            #for filt in self.resource.translate_filters(options.cfg.filter_list):
-                #variable, rc_feature, table_name, op, value_list, _value_range = filt
-                #rc_table = "{}_table".format(rc_feature.partition("_")[0])
-                #if rc_table not in rc_table_columns:
-                    #rc_table_columns[rc_table] = set([])
-                #rc_table_columns[rc_table].add(rc_feature)
-                #if rc_table not in rc_where_constraints:
-                    #rc_where_constraints[rc_table] = set([])
-                #rc_where_constraints[rc_table].add(
-                    #'{} {}"{}"'.format(
-                        #self.resource.__getattribute__(rc_feature), op, value_list[0]))
-
-        
-        
         join_strings = {}
         join_strings[corpus] = "{} AS COQ_CORPUS_TABLE".format(corpus)
         full_tree = self.resource.get_table_structure("corpus_table", requested_features)
@@ -1536,7 +1518,7 @@ class SQLCorpus(BaseCorpus):
                     name = "L{}_pos".format(number+1)
                 else:
                     if rc_feature in corpus_variables:
-                        name = self.resource.__getattribute__(rc_feature)
+                        name = "COQ_{}_{}".format(rc_tab.upper(), self.resource.__getattribute__(rc_feature))
                     else:
                         name = "{}{}".format(self.resource.__getattribute__(rc_feature),                         number+1)
                 variable_string = "{} AS {}".format(
@@ -1639,7 +1621,7 @@ class SQLCorpus(BaseCorpus):
         
         #sys.exit(0)
 
-        cursor = self.resource.DB.execute_cursor(query_string)
+        cursor = self.resource.DB.execute_cursor(query_string, server_side=True)
         #Query.Session.header = [x[0] for x in cursor.description]
         for current_result in cursor:
             yield current_result
@@ -1838,7 +1820,7 @@ class SQLCorpus(BaseCorpus):
 
     def get_statistics(self):
         stats = self.lexicon.get_statistics()
-        stats["corpus_variables"] = " ".join([x for x, _ in self.resource.get_corpus_variables()])
+        stats["corpus_variables"] = " ".join([x for x, _ in self.resource.get_corpus_features()])
         for table in [x for x in dir(self.resource) if not x.startswith("_")]:
             if table.endswith("_table"):
                 tab, _, _ = table.partition("_table")
