@@ -25,7 +25,7 @@ try:
     import error_box
     use_gui = True
 except ImportError:
-    print("Import error.")
+    print("Import error; GUI will not be available.")
     use_gui = False
     pass
 
@@ -35,7 +35,7 @@ except ImportError:
     print("NLTK module not available.")
     try:
         QtGui.QMessageBox.warning("No NLTK module – Coquery", "The NLTK module could not be loaded. Automatic part-of-speech tagging will not be available.", QtGui.QMessageBox.Ok)
-    except:        
+    except NameError:        
         pass
     nltk_available = False
 else:
@@ -519,7 +519,8 @@ class BaseCorpusBuilder(object):
         of disk space."""
         totals = 0
         for current_table in self.table_description:
-            totals += len(self.table_description[current_table]["CREATE"]) - 1
+            totals += len(self.table_description[current_table]["CREATE"])
+        totals -= 1
         
         if self._widget:
             self._widget.ui.progress_bar.setFormat("Optimizing table columns... (%v of %m)")
@@ -550,10 +551,10 @@ class BaseCorpusBuilder(object):
                             if self.logger:
                                 self.logger.error(e)
                 column_count += 1
-            if self._widget:
-                self._widget.ui.progress_bar.setValue(column_count)
-            elif show_progress:
-                progress.update(column_count)
+                if self._widget:
+                    self._widget.ui.progress_bar.setValue(column_count)
+                elif show_progress:
+                    progress.update(column_count - 1)
             self.Con.commit()
         if show_progress and not self._widget:
             progress.finish()
@@ -761,89 +762,90 @@ class BaseCorpusBuilder(object):
             self.write_python_module(self.arguments.corpus_path)
         self.finalize_build()
                 
+if use_gui:
+        
+    class BuilderGui(QtGui.QDialog):
+        def __init__(self, builder_class, parent=None):
+            super(BuilderGui, self).__init__(parent)
+
+            import __init__
+            self.logger = logging.getLogger(__init__.NAME)        
+            
+            self.ui = corpusBuilderUi.Ui_CorpusBuilder()
+            self.ui.setupUi(self)
+            self.ui.button_input_path.clicked.connect(self.select_path)
+            self.ui.button_lemma_path.clicked.connect(self.select_file)
+            self.ui.radio_build_corpus.toggled.connect(self.changed_radio)
+            self.ui.radio_only_module.toggled.connect(self.changed_radio)
+            
+            self.accepted = False
+            self.builder_class = builder_class
+            if not nltk_available:
+                self.ui.use_pos_tagging.setEnabled(False)
+                self.ui.label_3.setEnabled(False)
+            self.exec_()
+
+        def select_path(self):
+            name = QtGui.QFileDialog.getExistingDirectory()
+            if type(name) == tuple:
+                name = name[0]
+            if name:
+                self.ui.input_path.setText(name)
+
+        def select_file(self):
+            name = QtGui.QFileDialog.getOpenFileName()
+            if type(name) == tuple:
+                name = name[0]
+            if name:
+                self.ui.lemma_path.setText(name)
+            
+        def keyPressEvent(self, e):
+            if e.key() == QtCore.Qt.Key_Escape:
+                self.reject()
                 
-class BuilderGui(QtGui.QDialog):
-    def __init__(self, builder_class, parent=None):
-        super(BuilderGui, self).__init__(parent)
+        def changed_radio(self):
+            if self.ui.radio_build_corpus.isChecked():
+                self.ui.box_build_options.setEnabled(True)
+            else:
+                self.ui.box_build_options.setEnabled(False)
+                
+                
+        def accept(self):
+            self.accepted = True
+            self.builder = self.builder_class(gui = self)
+            self.builder.logger = self.logger
+            self.builder.arguments = self.get_arguments_from_gui()
+            self.builder.name = self.builder.arguments.name
+            try:
+                self.builder.build()
+            except Exception as e:
+                error_box.ErrorBox.show(sys.exc_info(), self)
+            else:
+                self.parent().ui.statusbar.showMessage("Finished building new corpus.")
+            super(BuilderGui, self).accept()
 
-        import __init__
-        self.logger = logging.getLogger(__init__.NAME)        
-        
-        self.ui = corpusBuilderUi.Ui_CorpusBuilder()
-        self.ui.setupUi(self)
-        self.ui.button_input_path.clicked.connect(self.select_path)
-        self.ui.button_lemma_path.clicked.connect(self.select_file)
-        self.ui.radio_build_corpus.toggled.connect(self.changed_radio)
-        self.ui.radio_only_module.toggled.connect(self.changed_radio)
-        
-        self.accepted = False
-        self.builder_class = builder_class
-        if not nltk_available:
-            self.ui.use_pos_tagging.setEnabled(False)
-            self.ui.label_3.setEnabled(False)
-        self.exec_()
+        def get_arguments_from_gui(self):
+            namespace = argparse.Namespace()
+            namespace.dry_run = False
+            namespace.verbose = False
+            namespace.o = True
+            namespace.i = True
+            namespace.no_nltk = True
+            namespace.l = True
+            namespace.c = True
+            namespace.self_join = False
 
-    def select_path(self):
-        name = QtGui.QFileDialog.getExistingDirectory()
-        if type(name) == tuple:
-            name = name[0]
-        if name:
-            self.ui.input_path.setText(name)
-
-    def select_file(self):
-        name = QtGui.QFileDialog.getOpenFileName()
-        if type(name) == tuple:
-            name = name[0]
-        if name:
-            self.ui.lemma_path.setText(name)
-        
-    def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Escape:
-            self.reject()
+            namespace.encoding = "utf-8"
             
-    def changed_radio(self):
-        if self.ui.radio_build_corpus.isChecked():
-            self.ui.box_build_options.setEnabled(True)
-        else:
-            self.ui.box_build_options.setEnabled(False)
+            namespace.name = str(self.ui.corpus_name.text())
+            namespace.path = str(self.ui.input_path.text())
+            namespace.use_nltk = self.ui.use_pos_tagging.checkState()
+            namespace.corpus_path = os.path.join(sys.path[0], "corpora/")
+            namespace.db_name = str(self.ui.corpus_name.text())
+            namespace.db_host = options.cfg.db_host
+            namespace.db_user = options.cfg.db_user
+            namespace.db_password = options.cfg.db_password
+            namespace.db_port = options.cfg.db_port
             
             
-    def accept(self):
-        self.accepted = True
-        self.builder = self.builder_class(gui = self)
-        self.builder.logger = self.logger
-        self.builder.arguments = self.get_arguments_from_gui()
-        self.builder.name = self.builder.arguments.name
-        try:
-            self.builder.build()
-        except Exception as e:
-            error_box.ErrorBox.show(sys.exc_info(), self)
-        else:
-            self.parent().ui.statusbar.showMessage("Finished building new corpus.")
-        super(BuilderGui, self).accept()
-
-    def get_arguments_from_gui(self):
-        namespace = argparse.Namespace()
-        namespace.dry_run = False
-        namespace.verbose = False
-        namespace.o = True
-        namespace.i = True
-        namespace.no_nltk = True
-        namespace.l = True
-        namespace.c = True
-        namespace.self_join = False
-
-        namespace.encoding = "utf-8"
-        
-        namespace.name = str(self.ui.corpus_name.text())
-        namespace.path = str(self.ui.input_path.text())
-        namespace.use_nltk = self.ui.use_pos_tagging.checkState()
-        namespace.corpus_path = os.path.join(sys.path[0], "corpora/")
-        namespace.db_name = str(self.ui.corpus_name.text())
-        namespace.db_host = options.cfg.db_host
-        namespace.db_user = options.cfg.db_user
-        namespace.db_password = options.cfg.db_password
-        namespace.db_port = options.cfg.db_port
-        
-        
-        return namespace
+            return namespace
