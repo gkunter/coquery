@@ -234,10 +234,10 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
             self.args.context_right = max(self.args.context_span, self.args.context_columns)
             
         
-        vars(self.args) ["program_location"] = self.base_path
-        vars(self.args) ["version"] = version
-        vars(self.args) ["parameter_string"] = " ".join([x.decode("utf8") for x in
- sys.argv [1:]])
+        vars(self.args)["program_location"] = self.base_path
+        vars(self.args)["version"] = version
+        vars(self.args)["parameter_string"] = " ".join([x.decode("utf8") for x in sys.argv [1:]])
+        vars(self.args)["selected_features"] = []
 
         self.read_configuration()
 
@@ -286,6 +286,11 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
                     db_host = config_file.get("sql", "db_host")
                 except configparser.NoOptionError:
                     pass
+                
+            if "output" in config_file.sections():
+                for variable, value in config_file.items("output"):
+                    if value:
+                        vars(self.args)["selected_features"].append(variable)
         else:
             logger.warning("Configuration file %s not found, using defaults." % self.args.config_path)
 
@@ -294,24 +299,24 @@ formatter_class=argparse.RawDescriptionHelpFormatter)
         vars(self.args) ["db_port"] = db_port
         vars(self.args) ["db_host"] = db_host
 
-    def save_configuration(self):
-        # defaults:
-        config_file = configparsser.ConfigParser()
-        if os.path.exists(self.args.config_path):
-            config_file.read(self.args.config_path)
+    #def save_configuration(self):
+        ## defaults:
+        #config_file = configparsser.ConfigParser()
+        #if os.path.exists(self.args.config_path):
+            #config_file.read(self.args.config_path)
         
-        if not "main" in config_file.sesisons():
-            config_file.add_section("main")
-        config_file.set("main", "default_corpus", self.args.corpus)
+        #if not "main" in config_file.sesisons():
+            #config_file.add_section("main")
+        #config_file.set("main", "default_corpus", self.args.corpus)
         
-        if not "sql" in config_file.sessions():
-            config_file.add_section("sql")
-        config_file.set("sql", "db_user", self.args.db_user)
-        config_file.set("sql", "db_password", self.args.db_password)
-        config_file.set("sql", "db_port", self.args.db_port)
-        config_file.set("sql", "db_host", self.args.db_host)
+        #if not "sql" in config_file.sessions():
+            #config_file.add_section("sql")
+        #config_file.set("sql", "db_user", self.args.db_user)
+        #config_file.set("sql", "db_password", self.args.db_password)
+        #config_file.set("sql", "db_port", self.args.db_port)
+        #config_file.set("sql", "db_host", self.args.db_host)
         
-        config_file.write(self.args.config_path)
+        #config_file.write(self.args.config_path)
     
 cfg = None
 
@@ -346,6 +351,11 @@ def save_configuration():
     if not "main" in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
+    config.set("main", "query_mode", cfg.MODE)
+    if cfg.query_list:
+        config.set("main", "last_query_string", ",".join(['"{}"'.format(x) for x in cfg.query_list]))
+    if cfg.input_path:
+        config.set("main", "last_query_file", cfg.input_path)
     
     if not "sql" in config.sections():
         config.add_section("sql")
@@ -353,6 +363,28 @@ def save_configuration():
     config.set("sql", "db_password", cfg.db_password)
     config.set("sql", "db_port", cfg.db_port)
     config.set("sql", "db_host", cfg.db_host)
+    
+    if cfg.selected_features:
+        if not "output" in config.sections():
+            config.add_section("output")
+        for feature in cfg.selected_features:
+            config.set("output", feature, True)
+    
+    if cfg.filter_list:
+        if not "filter" in config.sections():
+            config.add_section("filter")
+        for filt in cfg.filter_list:
+            config.add("filter", x, True)
+        
+    if cfg.context_left or cfg.context_right:
+        if not "context" in config.selections():
+            config.add_section("context")
+        config.set("context", "words_left", cfg.context_left)
+        config.set("context", "words_right", cfg.context_right)
+        if cfg.context_columns:
+            config.set("context", "mode", "Columns")
+        elif cfg.context_span:
+            config.set("context", "mode", "KWIC")
     
     with codecs.open(cfg.config_path, "wt", "utf-8") as output_file:
         config.write(output_file)
