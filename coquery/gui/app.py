@@ -183,7 +183,10 @@ class QueryFilterBox(CoqTagBox):
         filt = queries.QueryFilter()
         filt.resource = self.resource
         try:
-            filt.text = str(self.edit_tag.text())
+            if args:
+                filt.text = args[0]
+            else:
+                filt.text = str(self.edit_tag.text())
         except InvalidFilterError:
             self.edit_tag.setStyleSheet('CoqTagEdit {background-color: rgb(255, 255, 192); }')
         else:
@@ -224,6 +227,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.edit_query_string = edit_query_string
         
         self.ui.filter_box = QueryFilterBox(self)
+        
         
         self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
         self.ui.tag_cloud.close()
@@ -454,6 +458,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             <p>Open <b>MySQL settings</b> in the Settings menu to check whether
             the connection to the database server is working, and if the settings are correct.</p>""".format(e)
             QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        except Exception as e:
+            error_box.ErrorBox.show(sys.exc_info())
         else:
             self.set_stop_button()
             self.ui.statusbar.showMessage("Running query...")
@@ -474,6 +480,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.query_thread.start()
         
     def save_configuration(self):
+        self.getGuiValues()
         options.save_configuration()
         
     def remove_corpus(self):
