@@ -224,12 +224,11 @@ class CoqueryWizard(QtGui.QWizard):
         table_dict = self.resource.get_table_dict()
         # Ignore denormalized tables:
         tables = [x for x in table_dict.keys() if not "_denorm_" in x]
-        
         # ignore internal  variables of the form {table}_id, {table}_table,
         # {table}_table_{other}
         for table in tables:
             for var in list(table_dict[table]):
-                if var.endswith("_table") or var.endswith("_id") or var.startswith("{}_table".format(table)):
+                if (var.endswith("_table") or var.endswith("_id") or var.startswith("{}_table".format(table))) or "_denorm_" in var:
                     table_dict[table].remove(var)
                     
         # Rearrange table names so that they occur in a sensible order:
@@ -243,13 +242,6 @@ class CoqueryWizard(QtGui.QWizard):
         tree = self.create_output_options_tree()
 
         options.cfg.output_variable_names = []
-        try:
-                
-            print(options.cfg.output_variable_names)
-            print(self.checked_buttons)
-            print(options.cfg.selected_features)
-        except AttributeError:
-            pass
 
         # populate the tree with a root for each table:
         for table in tables:
@@ -410,8 +402,11 @@ class CoqueryWizard(QtGui.QWizard):
                             options.cfg.show_lemma_pos = bool(child.checkState(0))
                         if variable == "transcript":
                             options.cfg.show_lemma_phon = bool(child.checkState(0))
-                    if table == "source":
-                        options.cfg.source_columns.append(str(child.objectName()))
+                    try:
+                        if table == "source":
+                            options.cfg.source_columns.append(str(child.objectName()))
+                    except AttributeError:
+                        pass
                     if table == "file":
                         if variable == "label":
                             options.cfg.show_filename = bool(child.checkState(0))
@@ -432,6 +427,7 @@ class CoqueryWizard(QtGui.QWizard):
                 self.ui.combo_corpus.setCurrentIndex(index)
 
         # set query mode:
+        print("MODE", options.cfg.MODE)
         if options.cfg.MODE == QUERY_MODE_DISTINCT:
             self.ui.radio_mode_context.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
@@ -447,50 +443,19 @@ class CoqueryWizard(QtGui.QWizard):
             self.ui.radio_query_file.setChecked(True)
             self.ui.edit_file_name.setText(options.cfg.input_path)
             
-        ## FIXME: the GUI allows more fine-grained selection of 
-        ## output options than the command line, and this selection
-        ## is not evaluated fully by write_results().
+        for rc_feature in options.cfg.selected_features:
+            self.ui.options_tree.setCheckState(rc_feature, True)
         
-        self.ui.options_tree.setCheckState("word_label", options.cfg.show_orth)
-        self.ui.options_tree.setCheckState("word_pos", options.cfg.show_pos)
-        self.ui.options_tree.setCheckState("word_transcript", options.cfg.show_phon)
-        
-        self.ui.options_tree.setCheckState("lemma_label", options.cfg.show_lemma)
-        
-        self.ui.options_tree.setCheckState("file_label", options.cfg.show_filename)
-        
-        self.ui.options_tree.setCheckState("corpus_time", options.cfg.show_time)
-        
-        self.ui.options_tree.setCheckState("speaker_table", options.cfg.show_speaker)
-        
-        self.ui.options_tree.setCheckState("coquery_parameters", options.cfg.show_parameters)
-        self.ui.options_tree.setCheckState("coquery_query_string", options.cfg.show_query)
-        
-        self.ui.options_tree.setCheckState("word_table", True)
-        self.ui.options_tree.setCheckState("source_table", True)
-        
-        
-        #if options.cfg.context_columns:
-            #self.ui.context_mode.setEditText(CONTEXT_COLUMNS)
-        #if options.cfg.context_span:
-            #self.ui.context_mode.setEditText(CONTEXT_STRING)
+        if options.cfg.context_columns:
+            self.ui.context_mode.setEditText(CONTEXT_COLUMNS)
+        if options.cfg.context_span:
+            self.ui.context_mode.setEditText(CONTEXT_KWIC)
             
-        ### unsupported:
-        ### options.cfg.show_lemma_phon = self.ui.lemma_data_phon.checkState()
-        ### options.cfg.show_lemma_pos = self.ui.lemma_data_pos.checkState()
-        
-        #if self.ui.source_id.checkState():
-            #options.cfg.source_columns.append(str(self.ui.source_id.text()))
-        #if self.ui.source_data_year.checkState():
-            #options.cfg.source_columns.append(str(self.ui.source_data_year.text()))
-        #if self.ui.source_data_genre.checkState():
-            #options.cfg.source_columns.append(str(self.ui.source_data_genre.text()))
-        #if self.ui.source_data_title.checkState():
-            #options.cfg.source_columns.append(str(self.ui.source_data_title.text()))
-        
-        ##options.cfg.show_filename = self.ui.file_data_name.checkState() or self.ui.file_data_path.checkState()
-        ##options.cfg.show_speaker = self.ui.speaker_data_id.checkState() or self.ui.speaker_data_sex.checkState() or self.ui.speaker_data_age.checkState()
-        
         self.csv_options = (options.cfg.input_separator, options.cfg.query_column_number, options.cfg.file_has_headers, options.cfg.skip_lines)
+        
+        for filt in list(options.cfg.filter_list):
+            self.ui.filter_box.addTag(filt)
+            options.cfg.filter_list.remove(filt)
+
         
         return True
