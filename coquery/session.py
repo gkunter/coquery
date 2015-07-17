@@ -79,8 +79,11 @@ class Session(object):
             self.requested_fields.append(LEX_LEMMA)
         if options.cfg.show_pos:
             self.requested_fields.append(LEX_POS)
-        if options.cfg.show_phon:
-            self.requested_fields.append(LEX_PHON)
+        try:
+            if options.cfg.show_phon:
+                self.requested_fields.append(LEX_PHON)
+        except AttributeError:
+            pass
         if options.cfg.show_source:
             self.requested_fields.append(CORP_SOURCE)
         if options.cfg.show_filename:
@@ -93,7 +96,7 @@ class Session(object):
             self.requested_fields.append(CORP_CONTEXT)
             
         self.output_fields = set([x for x in self.requested_fields if self.Corpus.provides_feature(x)])
-        
+
         logger.info("Corpus: %s" % options.cfg.corpus)
         self.output_file = None
 
@@ -153,6 +156,46 @@ class Session(object):
 
         if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             self.header.append (options.cfg.freq_label)
+        
+        if options.cfg.experimental:
+            corpus_features = [x for x, _ in self.Corpus.resource.get_corpus_features() if x in options.cfg.selected_features]
+            lexicon_features = [x for x, _ in self.Corpus.resource.get_lexicon_features() if x in options.cfg.selected_features]
+            corpus_names = [x for _, x in self.Corpus.resource.get_corpus_features() if _ in options.cfg.selected_features]
+            lexicon_names = [x for _, x in self.Corpus.resource.get_lexicon_features() if _ in options.cfg.selected_features]
+            h = []
+            for rc_feature in self.Corpus.resource.get_preferred_output_order():
+                if rc_feature in options.cfg.selected_features and rc_feature in lexicon_features:
+                    h += ["{}{}".format(lexicon_names[lexicon_features.index(rc_feature)], i+1) for i in range(self.max_number_of_tokens)]
+            for rc_feature in self.Corpus.resource.get_preferred_output_order():
+                if rc_feature in options.cfg.selected_features and rc_feature in corpus_features:
+                    h += [corpus_names[corpus_features.index(rc_feature)]]
+            self.header = h
+            if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
+                self.header.append (options.cfg.freq_label)
+            if options.cfg.context_left:
+                self.header.append("Left_context")
+            if options.cfg.context_right:
+                self.header.append("Right_context")
+
+    def get_expected_column_number(self, max_number_of_tokens):
+        """ Return the expected number of columns, based on the maximum 
+        number of tokens in all query strings from the current session. The 
+        number is calculated by multiplying the maximum number of tokens by 
+        the number of lexicon features that were selected, and adding the 
+        number of selected corpus features."""
+        corpus_features = [x for x, _ in self.Corpus.resource.get_corpus_features() if x in options.cfg.selected_features]
+        lexicon_features = [x for x, _ in self.Corpus.resource.get_lexicon_features() if x in options.cfg.selected_features]
+        length = len(corpus_features) + max_number_of_tokens * len(lexicon_features)
+        if options.cfg.context_columns:
+            length += options.cfg.context_left
+            length += options.cfg.context_right
+            length += max_number_of_tokens
+        elif options.cfg.context_span:
+            length += 1
+        if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
+            length += 1
+        print("expected_length", length)
+        return length
 
     def open_output_file(self):
         if self.output_file:
@@ -172,6 +215,7 @@ class Session(object):
             self.output_file = UnicodeWriter(self.output_file_object, delimiter=options.cfg.output_separator)
         if not options.cfg.append and self.show_header:
             self.output_file.writerow (self.header)
+            
     
     def run_queries(self):
         """ Process all queries. For each query, go through the entries in 
@@ -219,23 +263,34 @@ class Session(object):
             else:
                 start_time = time.time()
                 logger.info("Start query: '{}'".format(current_query))
+
                 if current_query.tokens:
                     if options.cfg.experimental:
                         current_query.set_result_list(self.Corpus.yield_query_results_new(current_query))
+
+                        if not options.cfg.dry_run:
+                            if not self.output_file:
+                                self.open_output_file()
+                        start_time = time.time()
+                        current_query.write_results(
+                            self.output_file, 
+                            current_query.number_of_tokens,
+                            self.max_number_of_tokens)
+                        logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
+                        self.end_time = datetime.datetime.now()
                     else:
                         current_query.set_result_list(self.Corpus.yield_query_results(current_query))
-
-                if not options.cfg.dry_run:
-                    if not self.output_file:
-                        self.open_output_file()
-                    start_time = time.time()
-                    current_query.write_results(
-                        self.output_file, 
-                        current_query.number_of_tokens,
-                        self.max_number_of_tokens)
-                    
-                    logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
+                        if not options.cfg.dry_run:
+                            if not self.output_file:
+                                self.open_output_file()
+                            start_time = time.time()
+                            current_query.write_results(
+                                self.output_file, 
+                                current_query.number_of_tokens,
+                                self.max_number_of_tokens)
+                            logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
         self.end_time = datetime.datetime.now()
+        self.Corpus.resource.DB.close()
 
 class StatisticsSession(Session):
     def __init__(self):

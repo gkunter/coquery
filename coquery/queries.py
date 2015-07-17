@@ -89,7 +89,7 @@ class QueryFilter(object):
 
     """
     
-    operators = (">", "<", "IN", "IS", "=", "LIKE")
+    operators = (">", "<", "<>", "IN", "IS", "=", "LIKE")
 
     def __init__(self, text = ""):
         """ Initialize the filter. """
@@ -120,7 +120,7 @@ class QueryFilter(object):
         return "QueryFilter('{}', {})".format(self.text, self.resource)
     
     def __str__(self):
-        l = [name for  _, name in self.resource.get_corpus_variables() if name.lower == self._variable.lower()]        
+        l = [name for  _, name in self.resource.get_corpus_features() if name.lower == self._variable.lower()]        
         if l:
             variable_name = l[0]
         else:
@@ -148,9 +148,14 @@ class QueryFilter(object):
         
         error_value = None, None, None, None
         
-        text = text.replace("=", " = ")
-        text = text.replace("<", " < ")
-        text = text.replace(">", " > ")
+        if "<>" in text:
+            text.replace("<>", " <> ")
+        elif "=" in text:
+            text = text.replace("=", " = ")
+        elif "<" in text:
+            text = text.replace("<", " < ")
+        elif ">" in text:
+            text = text.replace(">", " > ")
         
         fields = str(text).split()
         try:
@@ -181,6 +186,10 @@ class QueryFilter(object):
         if (value_range or len(value_list) > 1) and operator.lower() in ("is", "="):
             operator = "in"
 
+        if operator == "LIKE":
+            if value_range or len(value_list) > 1:
+                return error_value
+
         return var, operator, value_list, value_range
             
     def validate(self, s):
@@ -191,7 +200,7 @@ class QueryFilter(object):
         var, op, value_range, value_list = self.parse_filter(s)
         if not var:
             return False
-        variable_names = [name.lower() for  _, name in self.resource.get_corpus_variables()]
+        variable_names = [name.lower() for  _, name in self.resource.get_corpus_features()]
         if var.lower() not in variable_names:
             return False
         if variable_names.count(var.lower()) > 1:
@@ -206,33 +215,33 @@ class QueryResult(object):
         self.data = args
         self.query = query
         
-    def get_expected_length(self, max_number_of_tokens):
-        output_fields = self.query.Session.output_fields
-        count = 0
-        if options.cfg.show_id:
-            count += 1
-        if LEX_ORTH in output_fields:
-            count += max_number_of_tokens
-        if LEX_PHON in output_fields:
-            count += max_number_of_tokens
-        if LEX_LEMMA in output_fields:
-            count += max_number_of_tokens
-        if LEX_POS in output_fields:
-            count += max_number_of_tokens
-        if CORP_SOURCE in output_fields:
-            count += len(self.query.Corpus.get_source_info_header())
-        if CORP_SPEAKER in output_fields:
-            count += len(self.query.Corpus.get_speaker_info_header())
-        if CORP_FILENAME in output_fields:
-            count += len(self.query.Corpus.get_file_info_header())
-        if CORP_TIMING in output_fields:
-            count += len(self.query.Corpus.get_time_info_header())
-        if CORP_CONTEXT in output_fields:
-            count += len(self.query.Corpus.get_context_header(max_number_of_tokens))
-        if options.cfg.experimental or len(self.query.Session.output_fields) == 1:
-            if LEX_FREQ in output_fields:
-                count += 1
-        return count
+    #def get_expected_length(self, max_number_of_tokens):
+        #output_fields = self.query.Session.output_fields
+        #count = 0
+        #if options.cfg.show_id:
+            #count += 1
+        #if LEX_ORTH in output_fields:
+            #count += max_number_of_tokens
+        #if LEX_PHON in output_fields:
+            #count += max_number_of_tokens
+        #if LEX_LEMMA in output_fields:
+            #count += max_number_of_tokens
+        #if LEX_POS in output_fields:
+            #count += max_number_of_tokens
+        #if CORP_SOURCE in output_fields:
+            #count += len(self.query.Corpus.get_source_info_header())
+        #if CORP_SPEAKER in output_fields:
+            #count += len(self.query.Corpus.get_speaker_info_header())
+        #if CORP_FILENAME in output_fields:
+            #count += len(self.query.Corpus.get_file_info_header())
+        #if CORP_TIMING in output_fields:
+            #count += len(self.query.Corpus.get_time_info_header())
+        #if CORP_CONTEXT in output_fields:
+            #count += len(self.query.Corpus.get_context_header(max_number_of_tokens))
+        #if options.cfg.experimental or len(self.query.Session.output_fields) == 1:
+            #if LEX_FREQ in output_fields:
+                #count += 1
+        #return count
     
     def get_row(self, number_of_token_columns, max_number_of_tokens, row_length=None):
         """ get_row() from QueryResult """
@@ -390,7 +399,6 @@ class CorpusQuery(object):
             self.Results = data
         else:
             self.Results = self.ResultList(self, data)
-            #self.Results = data
 
     def get_result_list(self):
         return self.Results
@@ -413,6 +421,8 @@ class CorpusQuery(object):
         output_row = [""] * (row_length)
         if not query_result:
             return tuple(output_row)
+        else:
+            return [query_result[x] for x in self.Session.output_order]
         output_fields = self.Session.output_fields
         index = 0
         if options.cfg.show_id:
@@ -439,39 +449,48 @@ class CorpusQuery(object):
             output_row[index:(index+number_of_token_columns)] = [query_result["W{}_pos".format(x)] for x in range(1, number_of_token_columns + 1)]
             index += max_number_of_tokens
 
-        if CORP_SOURCE in output_fields:
-            source_info = self.Corpus.get_source_info(query_result["SourceId"])
-            output_row[index:(index+len(source_info))] = source_info
-            index += len(source_info)
-            
-        if CORP_SPEAKER in output_fields:
-            speaker_info = self.Corpus.get_speaker_info(query_result["SpeakerId"])
-            output_row[index:(index+len(speaker_info))] = speaker_info
-            index += len(speaker_info)
-
-        if CORP_FILENAME in output_fields:
+        if options.cfg.experimental:
+            print("###")
             if options.cfg.experimental:
-                file_info = [query_result[self.Corpus.resource.file_label]]
-            else:
-                file_info = self.Corpus.get_file_info(query_result["SourceId"])
-            output_row[index:(index+len(file_info))] = file_info
-            index += len(file_info)
+                print("info", self.Corpus.get_source_info_header())
+                source_info = self.Corpus.get_source_info(query_result["SourceId"])
+        else:
+            if CORP_SOURCE in output_fields:
+                source_info = self.Corpus.get_source_info(query_result["SourceId"])
+                output_row[index:(index+len(source_info))] = source_info
+                index += len(source_info)
+                
+            if CORP_SPEAKER in output_fields:
+                speaker_info = self.Corpus.get_speaker_info(query_result["SpeakerId"])
+                output_row[index:(index+len(speaker_info))] = speaker_info
+                index += len(speaker_info)
 
-        if CORP_TIMING in output_fields:
-            time_info = self.Corpus.get_time_info(query_result["TokenId"])
-            output_row[index:(index+len(time_info))] = time_info
-            index += len(time_info)
+            if CORP_FILENAME in output_fields:
+                if options.cfg.experimental:
+                    file_info = [query_result[self.Corpus.resource.file_label]]
+                else:
+                    file_info = self.Corpus.get_file_info(query_result["SourceId"])
+                output_row[index:(index+len(file_info))] = file_info
+                index += len(file_info)
 
-        if CORP_CONTEXT in output_fields:
-            context_width = max(options.cfg.context_span, options.cfg.context_columns)
-            L = list(range(context_width))
-            context_left = [query_result["LC{}".format(x + 1)] for x in L[::-1]]
-            context_right = [query_result["RC{}".format(x + 1)] for x in L]
-            context = context_left + words + context_right
-            if options.cfg.context_columns:
-                output_row[index:] = context
-            else:
-                output_row[index] = collapse_context(context)
+            if CORP_TIMING in output_fields:
+                if options.cfg.experimental:
+                    time_info = [query_result[self.Corpus.resource.corpus_time]]
+                else:
+                    time_info = self.Corpus.get_time_info(query_result["TokenId"])
+                output_row[index:(index+len(time_info))] = time_info
+                index += len(time_info)
+
+            if CORP_CONTEXT in output_fields:
+                context_width = max(options.cfg.context_span, options.cfg.context_columns)
+                L = list(range(context_width))
+                context_left = [query_result["LC{}".format(x + 1)] for x in L[::-1]]
+                context_right = [query_result["RC{}".format(x + 1)] for x in L]
+                context = context_left + words + context_right
+                if options.cfg.context_columns:
+                    output_row[index:] = context
+                else:
+                    output_row[index] = collapse_context(context)
         if options.cfg.experimental or len(self.Session.output_fields) == 1 or self.number_of_queries == 1:
             if LEX_FREQ in output_fields:
                 try:
@@ -504,7 +523,9 @@ class TokenQuery(CorpusQuery):
                     #output_file.writerow(output_list)
                     
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
-        result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
+        result_columns = self.Session.get_expected_column_number(max_number_of_token_column)
+        
+        #result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
 
         # construct that part of output lines that stays constant in all
         # lines:
@@ -527,6 +548,7 @@ class TokenQuery(CorpusQuery):
 
             if current_result != None:
                 if options.cfg.experimental:
+                    
                     output_list.extend(self.get_row(current_result, number_of_token_columns, max_number_of_token_columns, result_columns))
                 else:
                     output_list.extend(current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns))
@@ -536,9 +558,10 @@ class TokenQuery(CorpusQuery):
                     output_file.writerow(output_list)
 
 class DistinctQuery(CorpusQuery):
-    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
+    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
         output_cache = []
-        result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
+        #result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
+        result_columns = self.Session.get_expected_column_number(max_number_of_token_columns)
 
         # construct that part of output lines that stays constant in all
         # lines:
@@ -553,22 +576,44 @@ class DistinctQuery(CorpusQuery):
         if options.cfg.show_filter:
             constant_line.append(self.source_filter)
 
-        for current_result in self.Results:
-            if constant_line:
-                output_list = copy.copy(constant_line)
-            else:
-                output_list = []
-
-            if current_result != None:
-                if options.cfg.experimental:
-                    output_list.extend(self.get_row(current_result, number_of_token_columns, max_number_of_token_columns, result_columns))
+        if options.cfg.experimental:
+            for current_result in self.Results:
+                if constant_line:
+                    output_list = copy.copy(constant_line)
                 else:
-                    output_list.extend(current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns))
-                if output_list not in output_cache:
-                    if options.cfg.gui:
-                        self.Session.output_storage.append(output_list)
+                    output_list = []
+
+                if current_result != None:
+                    if options.cfg.experimental:
+                        #output_list.extend(self.get_row(current_result, number_of_token_columns, max_number_of_token_columns, result_columns))
+                        row = [current_result[x] for x in self.Session.output_order]
+                        output_list.extend(row)
                     else:
-                        output_file.writerow(output_list)
+                        output_list.extend(current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns))
+                    if output_list not in output_cache:
+                        if options.cfg.gui:
+                            self.Session.output_storage.append(output_list)
+                        else:
+                            output_file.writerow(output_list)
+            
+        else:
+            
+            for current_result in self.Results:
+                if constant_line:
+                    output_list = copy.copy(constant_line)
+                else:
+                    output_list = []
+
+                if current_result != None:
+                    if options.cfg.experimental:
+                        output_list.extend(self.get_row(current_result, number_of_token_columns, max_number_of_token_columns, result_columns))
+                    else:
+                        output_list.extend(current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns))
+                    if output_list not in output_cache:
+                        if options.cfg.gui:
+                            self.Session.output_storage.append(output_list)
+                        else:
+                            output_file.writerow(output_list)
             if output_list not in output_cache:
                 output_cache.append(output_list)
 
@@ -592,13 +637,14 @@ class FrequencyQuery(CorpusQuery):
         super(FrequencyQuery, self).__init__(*args)
         self.Session.output_fields.add(LEX_FREQ)
         
-    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
+    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
         
         # make the experimental query mode the default if there is exactly
         # one query token, but optional otherwise:
         if options.cfg.experimental or len(self.Session.output_fields) == 1:
             output_cache = []
-            result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
+            result_columns = self.Session.get_expected_column_number(max_number_of_token_columns)
+            #result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
 
             # construct that part of output lines that stays constant in all
             # lines:
@@ -613,14 +659,15 @@ class FrequencyQuery(CorpusQuery):
             if options.cfg.show_filter:
                 constant_line.append(self.source_filter)
 
-            for current_result in self.Results:
+            for current_result in data:
                 if constant_line:
                     output_list = copy.copy(constant_line)
                 else:
                     output_list = []
 
                 if current_result != None:
-                    output_list.extend(self.get_row(current_result, number_of_token_columns, max_number_of_token_columns, result_columns))
+                    row = [current_result[x] for x in self.Session.output_order]
+                    output_list.extend(row)
                     if output_list not in output_cache:
                         if options.cfg.gui:
                             self.Session.output_storage.append(output_list)
@@ -632,13 +679,16 @@ class FrequencyQuery(CorpusQuery):
         
         # Check if the same query string has been queried in this session.
         # If so, use the cached results:
+        print(1)
         
         if self.query_string in self.Session._results:
             Lines = self.Session._results[self.query_string]
         else:
             # Collapse all identical lines in the result list:
             Lines = collections.Counter()
-            result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
+            result_columns = self.Session.get_expected_column_number(max_number_of_token_columns)
+            print(result_columns)
+            #result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
             for current_result in self.Results:
                 if options.cfg.experimental:
                     if current_result:
