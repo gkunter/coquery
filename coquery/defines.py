@@ -69,7 +69,7 @@ TABLE_FILE = "file"
 TABLE_SPEAKER = "speaker"
 
 CONTEXT_KWIC = "KWIC"
-CONTEXT_STRING = "String"
+CONTEXT_STRINGS = "Strings"
 CONTEXT_COLUMNS = "Columns"
 
 # from https://docs.python.org/2.7/library/csv.html#csv-examples
@@ -148,6 +148,14 @@ class UnicodeWriter:
 class ResourceList(object):
     def __init__(self):
         self.available_resources = self.get_available_resources()
+        
+    @property
+    def available(self):
+        """ Return a list that represents all available corpus modules. Each
+        entry in the list is a tuple containing the Resource() class, 
+        Corpus() class, Lexicon() class, and the corpus module filename as
+        a string."""
+        return self.get_available_resources()
 
     def get_available_resources(self):
         self.available_resources = {}
