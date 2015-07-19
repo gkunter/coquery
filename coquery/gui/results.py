@@ -29,8 +29,15 @@ class CoqSortProxyModel(QtGui.QSortFilterProxyModel):
         
     def setSourceModel(self, *args):
         super(CoqSortProxyModel, self).setSourceModel(*args)
-        self.sort_state = [SORT_NONE] * len(self.sourceModel().header)
+        if self.sourceModel().header:
+            self.sort_state = [SORT_NONE] * len(self.sourceModel().header)
         
+    def data(self, index, role):
+        if role == QtCore.Qt.TextAlignmentRole:
+            if self.sort_state[index.column()] in [SORT_REV_DEC, SORT_REV_INC]:
+                return QtCore.Qt.AlignRight
+        return super(CoqSortProxyModel, self).data(index, role)
+
     def lessThan(self, first, second):
         """ Compare the content of the first row to the content of the
         second. Return True if the first row should be placed above the 
@@ -48,20 +55,35 @@ class CoqSortProxyModel(QtGui.QSortFilterProxyModel):
             state = self.sort_state[col]
             
             # get cell content of first and second row in current column:
-            data_first = self.sourceModel().createIndex(first.row(), col).data(QtCore.Qt.DisplayRole)
-            data_second = self.sourceModel().createIndex(second.row(), col).data(QtCore.Qt.DisplayRole)
+            try:
+                data_first = self.sourceModel().createIndex(first.row(), col).data(QtCore.Qt.DisplayRole).lower()
+                data_second = self.sourceModel().createIndex(second.row(), col).data(QtCore.Qt.DisplayRole).lower()
+            except AttributeError:
+                data_first = self.sourceModel().createIndex(first.row(), col).data(QtCore.Qt.DisplayRole)
+                data_second = self.sourceModel().createIndex(second.row(), col).data(QtCore.Qt.DisplayRole)
 
             # reverse the contents if backward sorting is set for the column:
             if state in [SORT_REV_DEC, SORT_REV_INC]:
                 data_first = data_first[::-1]
                 data_second = data_second[::-1]
 
-            # compare the rows, and return an appropriate value if one of the
-            # two has a lower value than the other:
-            if data_first < data_second:
-                return True or state in [SORT_DEC, SORT_REV_DEC]
-            if data_first > data_second:
-                return False or state in [SORT_DEC, SORT_REV_DEC]
+            ## compare the rows, and return an appropriate value if one of the
+            ## two has a lower value than the other:
+            #if data_first < data_second:
+                #return True or state in [SORT_DEC, SORT_REV_DEC]
+            #if data_first > data_second:
+                #return False or state in [SORT_DEC, SORT_REV_DEC]
+
+            if state in (SORT_DEC, SORT_REV_DEC):
+                if data_first > data_second:
+                    return True
+                if data_first < data_second:
+                    return False
+            elif state in (SORT_INC, SORT_REV_INC):
+                if data_first < data_second:
+                    return True
+                if data_first > data_second:
+                    return False
         
         # The first row has not been found to have lower values than the
         # second:
@@ -124,7 +146,23 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         super(CoqTableModel, self).__init__(parent, *args)
         self.content = data
         self.header = header
-        self.rownames = range(1, len(data) + 1)
+        if data:
+            self.rownames = range(1, len(data) + 1)
+        else:
+            self.rownames = None
+        
+    def set_header(self, header):
+        self.header = header
+        for i, x in enumerate(header):
+            self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
+        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(header))
+        
+    def set_data(self, data):
+        self.content = data
+        if data:
+            self.rownames = range(1, len(data) + 1)
+        else:
+            self.rownames = None
         
     def data(self, index, role):
         if not index.isValid():
@@ -133,15 +171,37 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         column = index.column()
         
         if role == QtCore.Qt.DisplayRole:
-            return self.content[row] [column]
+            try:
+                if options.cfg.experimental:
+                    return self.content[row][self.header[column]]
+                else:
+                    return self.content[row] [column]
+            except (IndexError, KeyError):
+                return None
+        elif role == QtCore.Qt.ForegroundRole:
+            header = self.header[column]
+            try:
+                col = options.cfg.column_color[header.lower()]
+            except KeyError:
+                return None
+            return QtGui.QColor(col)
+        elif role == QtCore.Qt.TextAlignmentRole:
+            if self.header[column] == "coq_context_left":
+                return QtCore.Qt.AlignRight
         else:
             return None
         
     def rowCount(self, parent):
-        return len(self.content)
-
+        if self.content:
+            return len(self.content)
+        else:
+            return None
+        
     def columnCount(self, parent):
-        return len(self.header)
+        if self.header:
+            return len(self.header)
+        else:
+            return None
 
 class ResultsViewer(QtGui.QDialog):
     """ Defines a QDialog class that can be used to display the results from
