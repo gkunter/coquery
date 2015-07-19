@@ -169,6 +169,10 @@ class Session(object):
             for rc_feature in self.Corpus.resource.get_preferred_output_order():
                 if rc_feature in options.cfg.selected_features and rc_feature in corpus_features:
                     h += [corpus_names[corpus_features.index(rc_feature)]]
+            for rc_feature in options.cfg.selected_features:
+                if rc_feature.startswith("coquery"):
+                    name = self.Corpus.resource.__getattribute__(rc_feature)
+                    h.append(name)
             self.header = h
             if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
                 self.header.append (options.cfg.freq_label)
@@ -176,6 +180,13 @@ class Session(object):
                 self.header.append("Left_context")
             if options.cfg.context_right:
                 self.header.append("Right_context")
+            # if a GUI is used, include source features so the entries in the
+            # result table can be made clickable to show the context:
+            if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.gui or options.cfg.wizard):
+                self.header.append("coq_invisible_token_id")
+                self.header.append("coq_invisible_source_id")
+                self.header.append("coq_invisible_number_of_tokens")
+
 
     def get_expected_column_number(self, max_number_of_tokens):
         """ Return the expected number of columns, based on the maximum 
@@ -194,7 +205,13 @@ class Session(object):
             length += 1
         if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             length += 1
-        print("expected_length", length)
+        for rc_feature in options.cfg.selected_features:
+            if rc_feature.startswith("coquery"):
+                length += 1
+        # if a GUI is used, include source features so the entries in the
+        # result table can be made clickable to show the context:
+        if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.gui or options.cfg.wizard):
+            length += 3
         return length
 
     def open_output_file(self):
@@ -215,7 +232,6 @@ class Session(object):
             self.output_file = UnicodeWriter(self.output_file_object, delimiter=options.cfg.output_separator)
         if not options.cfg.append and self.show_header:
             self.output_file.writerow (self.header)
-            
     
     def run_queries(self):
         """ Process all queries. For each query, go through the entries in 
@@ -290,7 +306,6 @@ class Session(object):
                                 self.max_number_of_tokens)
                             logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
         self.end_time = datetime.datetime.now()
-        self.Corpus.resource.DB.close()
 
 class StatisticsSession(Session):
     def __init__(self):
