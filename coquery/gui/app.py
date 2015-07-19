@@ -18,6 +18,7 @@ import logging
 import sqlwrap
 import MySQLOptions
 import queries
+import contextview
 from queryfilter import *
 
 try:
@@ -213,6 +214,12 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         
     def setup_app(self):
         """ initializes all widgets with suitable data """
+
+        self.create_output_options_tree()
+        
+        QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
+        self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
+
         # add available resources to corpus dropdown box:
         corpora = [x.upper() for x in sorted(resource_list.get_available_resources().keys())]
 
@@ -257,6 +264,33 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.log_proxy.setSourceModel(self.log_table)
         self.log_proxy.sortCaseSensitivity = False
         self.ui.log_table.setModel(self.log_proxy)
+
+        self.table_model = results.CoqTableModel(self, None, None)
+
+        header = self.ui.data_preview.horizontalHeader()
+        header.sectionClicked.connect(self.header_sorting)
+        header.sectionResized.connect(self.result_column_resize)
+        header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.show_header_menu)
+
+        self.ui.data_preview.setStyleSheet('::item:hover { color: blue; text-decoration: underline }')
+        self.ui.data_preview.clicked.connect(self.result_cell_clicked)
+        self.ui.data_preview.horizontalHeader().setMovable(True)
+        self.ui.data_preview.horizontalHeader().setMovable(True)
+        self.ui.data_preview.setSortingEnabled(False)
+    
+    def result_column_resize(self, index, old, new):
+        header = self.table_model.header[index].lower()
+        options.cfg.column_width[header] = new
+
+    def result_cell_clicked(self, index):
+        model_index = self.proxy_model.mapToSource(index)
+        row = model_index.row()
+        data = self.table_model.content[row]
+        token_id = data["coquery_invisible_corpus_id"]
+        origin_id = data["coquery_invisible_origin_id"]
+        token_width = data["coquery_invisible_number_of_tokens"]
+        contextview.ContextView.display(self.Session.Corpus, token_id, origin_id, token_width, self)
 
     def change_corpus(self):
         """ Change the output options list depending on the features available
@@ -304,6 +338,9 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.msg_box_no_corpus.show()
         
     def __init__(self, parent=None):
+        """ Initialize the main window. This sets up any widget that needs
+        spetial care, and also sets up some special attributes that relate
+        to the GUI, including default appearances of the columns."""
         QtGui.QMainWindow.__init__(self, parent)
         
         self.file_content = None
@@ -311,30 +348,66 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
         
-        self.create_output_options_tree()
-
-        QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
-        self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
-
         self.setup_app()
         self.csv_options = None
         self.query_thread = None
         self.last_results_saved = True
         
+        # the dictionaries column_width and column_color store default
+        # attributes of the columns by display name. This means that problems
+        # may arise if several columns have the same name!
+        # FIXME: Make sure that the columns are identified correctly.
+        self.column_width = {}
+        self.column_color = {}
+        
+        # A non-modal dialog is shown if no corpus resource is available.
+        # The dialog contains some assistance on how to build a new corpus.
         if not resource_list.get_available_resources():
             self.show_no_corpus_message()
         
-    def display_results(self):
-        self.table_model = results.CoqTableModel(self, self.Session.header, self.Session.output_storage)
+        options.cfg.main_window = self
 
+        # Resize the window if a previous size is available
+        if options.cfg.height and options.cfg.width:
+            self.resize(options.cfg.width, options.cfg.height)
+        
+    def display_results(self):
+        try:
+            self.proxy_model.close()
+        except AttributeError:
+            pass
+
+        self.table_model.set_data(self.Session.output_storage)
+        if options.cfg.experimental:
+            self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
+        else:
+            self.table_model.set_header(self.Session.header)
+            
         self.proxy_model = results.CoqSortProxyModel()
         self.proxy_model.setSourceModel(self.table_model)
-        self.proxy_model.sortCaseSensitivity = False
 
-        # make horizontal headers sortable in a special way:
-        self.ui.data_preview.horizontalHeader().sectionClicked.connect(self.header_sorting)
         self.ui.data_preview.setModel(self.proxy_model)
-        self.ui.data_preview.setSortingEnabled(False)
+
+        headers = self.ui.data_preview.horizontalHeader()
+
+        #for i, _ in enumerate(self.table_model.header):
+            #column_title = headers.model().headerData(
+                #i, QtCore.Qt.Horizontal, QtCore.Qt.DisplayRole)
+            #if column_title.startswith("coq_invisible"):
+                #self.ui.data_preview.setColumnHidden(i, True)
+        #hide all columns in the table the name of which starts with
+        #'coq_invisible':
+        #for i, column in enumerate(self.table_model.header):
+            #if column.startswith("coquery_invisible"):
+                #self.ui.data_preview.setColumnHidden(i, True)
+            #else:
+                #self.ui.data_preview.setColumnHidden(i, False)
+            
+        # set column widths and colors:
+        for i, column in enumerate(self.table_model.header):
+            if column.lower() in options.cfg.column_width:
+                self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower()])
+        
         if self.table_model.rowCount(self):
             self.last_results_saved = False
 
@@ -380,16 +453,96 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.statusbar.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
             len(self.Session.output_storage), duration_str))        
         
-    def header_sorting(self, index):
+    def show_header_menu(self, point ):
         header = self.ui.data_preview.horizontalHeader()
+        header.customContextMenuRequested.disconnect(self.show_header_menu)
+        column = header.logicalIndexAt(point.x())
+        # show self.menu about the column
+        self.menu = QtGui.QMenu("Column options", self)
+        
+        if self.table_model.header[column].lower() in options.cfg.column_color:
+            action = QtGui.QAction("Reset color", self)
+            action.triggered.connect(lambda: self.reset_color(column))
+            self.menu.addAction(action)
+ 
+        action = QtGui.QAction("Change color...", self)
+        action.triggered.connect(lambda: self.change_color(column))
+        self.menu.addAction(action)
+        self.menu.addSeparator()
 
+        group = QtGui.QActionGroup(self, exclusive=True)
+        action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
+        action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
+        if self.proxy_model.sort_state[column] == results.SORT_NONE:
+            action.setChecked(True)
+        self.menu.addAction(action)
+        
+        action = group.addAction(QtGui.QAction("Ascending", self, checkable=True))
+        action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_INC))
+        if self.proxy_model.sort_state[column] == results.SORT_INC:
+            action.setChecked(True)
+        self.menu.addAction(action)
+        action = group.addAction(QtGui.QAction("Descending", self, checkable=True))
+        action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_DEC))
+        if self.proxy_model.sort_state[column] == results.SORT_DEC:
+            action.setChecked(True)
+        self.menu.addAction(action)
+                                 
+        
+        probe_index = self.table_model.createIndex(0, column)
+        probe_cell = probe_index.data()
+        if type(probe_cell) in [unicode, str, QtCore.QString]:
+            action = group.addAction(QtGui.QAction("Ascending, reverse", self, checkable=True))
+            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
+            if self.proxy_model.sort_state[column] == results.SORT_REV_INC:
+                action.setChecked(True)
+
+            self.menu.addAction(action)
+            action = group.addAction(QtGui.QAction("Descending, reverse", self, checkable=True))
+            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_DEC))
+            if self.proxy_model.sort_state[column] == results.SORT_REV_DEC:
+                action.setChecked(True)
+            self.menu.addAction(action)
+        
+        self.menu.popup(header.mapToGlobal(point))
+        header.customContextMenuRequested.connect(self.show_header_menu)
+
+    def reset_color(self, column):
+        header = self.table_model.header[column].lower()
+        try:
+            options.cfg.column_color.pop(header)
+            self.table_model.layoutChanged.emit()
+        except KeyError:
+            pass
+
+    def change_color(self, column):
+        col = QtGui.QColorDialog.getColor()
+        header = self.table_model.header[column].lower()
+        if col.isValid():
+            options.cfg.column_color[header] = col.name()
+            #self.table_model.layoutChanged.emit()
+        
+    def change_sorting_order(self, index, mode):
+        self.menu.close()
+        if not mode:
+            try:
+                self.proxy_model.sort_columns.remove(index)
+            except IndexError:
+                pass
+        elif index not in self.proxy_model.sort_columns:
+            self.proxy_model.sort_columns.append(index)
+        self.proxy_model.sort_state[index] = mode
+        self.proxy_model.sort(0, QtCore.Qt.AscendingOrder)
+        
+    def header_sorting(self, index):
+        return
         if not self.proxy_model.sort_state[index]:
             self.proxy_model.sort_columns.append(index)
         self.proxy_model.sort_state[index] += 1
   
         probe_index = self.table_model.createIndex(0, index)
         probe_cell = probe_index.data()
-        if type(probe_cell) in [unicode, str, QtCore.QString]:
+        if isinstance(probe_cell, (unicode, str, QtCore.QString)):
             max_state = results.SORT_REV_DEC
         else:
             max_state = results.SORT_DEC
@@ -440,7 +593,13 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         
     def run_query(self):
         self.getGuiValues()
+        # Lazily close an existing database connection:
         try:
+            self.Session.Corpus.resource.DB.close()
+        except AttributeError as e:
+            pass
+        try:
+            
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = options.cfg.query_list[0].splitlines()
                 self.Session = SessionCommandLine()
@@ -513,7 +672,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                 logger.warning("Removed corpus {}.".format(current_corpus))
         self.change_corpus()
 
-    
     def build_corpus(self):
         sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../tools")))
         import install_generic
