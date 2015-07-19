@@ -26,14 +26,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-#from __future__ import unicode_literals
-
 import glob
 import os.path
 import imp
 import sys
 import warnings
-import csv, cStringIO, codecs
+import csv, codecs
 
 # The following flags are used to indicate which fields are provided by the 
 # lexicon of a corpus, and also to access the fields of the value of 
@@ -110,40 +108,28 @@ class UnicodeReader:
     def __iter__(self):
         return self
 
-class UnicodeWriter:
-    """
-    A CSV writer which will write rows to CSV file "f",
-    which is encoded in the given encoding.
-    """
-
+class UnicodeWriter(object):
+    """ Define a class that substitutes the csv writer object in order to
+    be friendly to Unicode strings."""
+    
     def __init__(self, f, encoding="utf-8", **kwds):
-        # Redirect output to a queue
-        self.queue = cStringIO.StringIO()
-        self.writer = csv.writer(self.queue, **kwds)
-        self.stream = f
+        self.writer = csv.writer(f, **kwds)
         self.encoding = encoding
-        self.encoder = codecs.getincrementalencoder(encoding)()
 
     def writerow(self, row):
-        try:
-            self.writer.writerow([s.encode("utf-8") if type(s) in (unicode, str) else s for s in row])
-        except UnicodeDecodeError:
-            self.writer.writerow([s for s in row])
-
-        # Fetch UTF-8 output from the queue ...
-        data = self.queue.getvalue()
-        data = data.decode("utf-8")
-        # ... and reencode it into the target encoding
-        data = self.encoder.encode(data)
-        # write to the target stream
-        self.stream.write(data)
-        # empty queue
-        self.queue.truncate(0)
+        def encode_string(s):
+            if isinstance(s, unicode):
+                return s.encode(self.encoding)
+            elif isinstance(s, (int, float, long, complex)):
+                return s
+            elif not isinstance(s, str):
+                return str(s)
+            return s
+        return self.writer.writerow([encode_string(x) for x in row])
 
     def writerows(self, rows):
         for row in rows:
             self.writerow(row)
-
 
 class ResourceList(object):
     def __init__(self):
@@ -172,5 +158,29 @@ class ResourceList(object):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
         return self.available_resources
 
+def collapse_words(word_list):
+    """ Concatenate the words in the word list, taking clitics, punctuation
+    and some other stop words into account."""
+    stop_words = ["<p>", "<P>"]
+    conflate_words = ["n't", "'s", "'ve"]
+    token_list = []
+    punct = '!\'),-./:;?^_`}’'
+    quote_list = ['"', "'"]
+    context_list = [x.strip() for x in word_list]
+    open_quote = {}
+    open_quote ['"'] = False
+    open_quote ["'"] = False
+    for i, current_token in enumerate(context_list):
+        try:
+            if '""""' in current_token:
+                current_token = '"'
+            if current_token not in stop_words:
+                if current_token not in punct and current_token not in conflate_words:
+                    if i > 0 and context_list[i-1] not in '([{‘':
+                        token_list.append(" ")
+                token_list.append(current_token)
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            token_list.append(unicode(current_token.decode("utf-8")))
+    return "".join(token_list)
 resource_list = ResourceList()
 
