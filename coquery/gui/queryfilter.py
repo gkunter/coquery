@@ -61,7 +61,7 @@ class CoqTextTag(QtGui.QFrame):
         new_height = int(height * 0.75)
         self._style_font = "font-size: {}px".format(new_height)
         self._style_border_radius = "border-radius: {}px".format(int(new_height / 3))
-        self.setBackground("rgb(255, 255, 192)")
+        self.setBackground("rgb(255, 192, 255)")
         self.close_button.setIcon(icon)
         self.close_button.setIconSize(QtCore.QSize(new_height, new_height))
         self.adjustSize()
@@ -69,7 +69,6 @@ class CoqTextTag(QtGui.QFrame):
     def setBackground(self, color):
         self._style_background = "background-color: {}".format(color)
         s = " ".join(["{};".format(x) for x in [self._style_background, self._style_border_radius, self._style_font]])
-        print(s)
         self.setStyleSheet(s)
 
     def content(self):
@@ -140,6 +139,7 @@ class CoqTagBox(QtGui.QWidget):
         self._tagList = []
         self._filterList = []
         self._tagType = CoqTextTag
+        self.edit_tag.setStyleSheet(_fromUtf8("CoqTagEdit { border-radius: 5px; font: condensed; }"))
         
     def setTagType(self, tagType):
         self._tagType = tagType
