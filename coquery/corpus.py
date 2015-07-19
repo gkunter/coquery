@@ -26,12 +26,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 from __future__ import unicode_literals
+from __future__ import print_function
 
 from errors import *
 import tokens
 import options
 import sqlwrap
 import time
+import datetime
 from defines import *
 
 class BaseLexicon(object):
@@ -183,7 +185,38 @@ class BaseLexicon(object):
     
     def get_statistics(self):
         raise CorpusUnsupportedFunctionError
+
+#class ResFeature(str):
+    #""" Define a feature class that acts like a string, but has some class
+    #properties that makes using features somewhat easier."""
+    #def __init__(self, s, *args):
+        #if "_" not in s:
+            #raise ValueError
+        #super(ResFeature, self).__imit__(s, args)
+        #self._s = s
+        
+    #@property
+    #def table(self):
+        #""" Return the resource table to which the feature belongs."""
+        #return "{}_table".format(self._s.split("_")[0])
     
+    #@property
+    #def table_id(self):
+        #""" Return the id resource feature for the table the feature belongs
+        #to. """
+        #return "{}_id".format(self._s.split("_")[0])
+
+    #def link_id(self, table):
+        #""" Return the link resource feature that links the feature's table
+        #to the specified table. """
+        #return "{}_{}_id".format(self._s.split("_")[0], table)
+    
+    #def is_id(self):
+        #""" Return True if the resource feature is an identifier, i.e. ends
+        #in "_id", or False otherwise."""
+        #return _s.endswith("_id")
+
+
 class BaseResource(object):
     wildcards = ["*", "?"]
     
@@ -192,8 +225,6 @@ class BaseResource(object):
     coquery_query_file = "Input file"
     coquery_current_date = "Current date"
     coquery_current_time = "Current time"
-    coquery_version = "Version"
-    coquery_os = "Operating system"
     
     def __init__(self, *args):
         self.table_dict = type(self).get_table_dict()
@@ -506,7 +537,106 @@ class SQLResource(BaseResource):
                     self.__setattr__("{}_alias".format(x), self.__getattribute__(x))
                 if "{}_construct".format(x) not in dir(self):
                     self.__setattr__("{}_construct".format(x), self.__getattribute__(x))
-                    
+                  
+    #@classmethod
+    #def get_select_list(cls, base, rc_features):
+        #""" Return a list of strings that contain all joins that are needed
+        #to query the features in the list rc_features."""
+
+        ## get a list of all tables that are required to query the requested
+        ## features:
+        #required_tables = {}
+        #for rc_feature in [ResFeature(x) for x in rc_features]:
+            #if rc_feature.table == "coquery_table":
+                #continue
+            #if rc_table not in required_tables and rc_table != corpus:
+                #tree = cls.resource.get_table_structure(rc_table, options.cfg.selected_features)
+                #parent = tree["parent"]
+                #table_id = "{}_id".format(rc_feature.split("_")[0])
+                #required_tables[rc_table] = tree
+                #requested_features.append(table_id)
+                #if parent:
+                    #parent_id = "{}_{}".format(parent.split("_")[0], table_id)
+                    #requested_features.append(parent_id)
+        
+        #join_strings = {}
+        #join_strings[corpus] = "{} AS COQ_CORPUS_TABLE".format(corpus)
+        #full_tree = cls.resource.get_table_structure("corpus_table", requested_features)
+        #select_list = []
+        #for rc_table in required_tables:
+            #rc_tab = rc_table.split("_")[0]
+            #sub_tree = cls.resource.get_sub_tree(rc_table, full_tree)
+            #parent_tree = cls.resource.get_sub_tree(sub_tree["parent"], full_tree)
+            #table = cls.resource.__getattribute__(rc_table)
+            #if parent_tree:
+                #rc_parent = parent_tree["rc_table_name"]
+            #else:
+                #rc_parent = None
+
+            #column_list = []
+            #for rc_feature in sub_tree["rc_requested_features"]:
+                #name = "coq_{}_{}".format(
+                    #rc_feature,
+                    #number+1)
+                #variable_string = "{} AS {}".format(
+                    #cls.resource.__getattribute__(rc_feature),
+                    #name)
+                #column_list.append(variable_string)
+                #if not rc_feature.endswith("_id"):
+                    #select_list.append(name)
+                
+            #columns = ", ".join(column_list)
+            
+            #where_string = ""
+            #if rc_table in rc_where_constraints:
+            ##if rc_table == "word_table" and where_constraints:
+                #where_string = "WHERE {}".format(" AND ".join(list(rc_where_constraints[rc_table])))
+
+            #if rc_parent:
+                #parent_id = "coq_{}_{}_id_{}".format(
+                    #rc_parent.split("_")[0], 
+                    #rc_table.split("_")[0],
+                    #number+1)
+                #child_id = "coq_{}_id_{}".format(
+                    #rc_table.split("_")[0],
+                    #number+1)
+                
+                #join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {parent_id} = {child_id}".format(
+                    #columns = columns, 
+                    #table = table,
+                    #alias = sub_tree["alias"],
+                    #parent = parent_tree["alias"],
+                    #where = where_string,
+                    #number = number+1,
+                    #parent_id = parent_id,
+                    #child_id = child_id)
+            #else:
+                #join_strings[rc_table] = "(SELECT {columns} FROM {table} {where}) AS {alias}".format(
+                    #columns = columns, 
+                    #table = table,
+                    #alias = sub_tree["alias"],
+                    #where = where_string)
+
+        #output_columns = []
+        #for x in options.cfg.selected_features:
+            #if x in corpus_variables and number > 0:
+                #break
+            #rc_table = "{}_table".format(x.split("_")[0])
+            #if rc_table == "coquery_table":
+                #continue
+            #tree = required_tables[rc_table]
+            #output_columns.append("{}.{}{}".format(tree["alias"], cls.resource.__getattribute__(x), number + 1))
+        
+        #table_order = cls.resource.get_table_order(full_tree)
+        #L = []
+        #for x in table_order:
+            #if x in join_strings:
+                #if join_strings[x] not in L:
+                    #L.append(join_strings[x])
+        
+        #if not select_list:
+            #return "", None, None
+
 class SQLLexicon(BaseLexicon):
     entry_cache = {}
     
@@ -1082,9 +1212,13 @@ class SQLCorpus(BaseCorpus):
                 
                 if CORP_SOURCE in requested or CORP_FILENAME in requested or CORP_CONTEXT in requested or options.cfg.source_filter:
                     self.table_list.add(self.resource.corpus_table)
+                    if "corpus_source_id" in dir(self.resource):
+                        source = self.resource.corpus_source_id
+                    else:
+                        source = self.resource.corpus_file_id
                     self.column_list.add("{}.{}".format(
                         self.resource.corpus_table,
-                        self.resource.corpus_source_id))
+                        source))
 
             if (token.class_specifiers and LEX_POS in self.lexicon.provides):
                 self.table_list.add(self.resource.word_table)
@@ -1398,9 +1532,12 @@ class SQLCorpus(BaseCorpus):
                 if CORP_CONTEXT in self.provides:
                     self.column_list.add("e1.{} AS TokenId".format(
                         self.resource.corpus_id))
-                if any([x in Query.Session.output_fields for x in [CORP_SOURCE, CORP_FILENAME, CORP_CONTEXT]]):
-                    self.column_list.add("e1.{} AS SourceId".format(
-                        self.resource.corpus_source_id))
+                if any([x in Query.Session.output_fields for x in [CORP_SOURCE, CORP_CONTEXT]]):
+                    if "corpus_source_id" in dir(self.resource):
+                        source = self.resource.corpus_source_id
+                    else:
+                        source = self.resource.corpus_file_id
+                    self.column_list.add("e1.{} AS SourceId".format(source))
                 self.column_list.update(["e{num}.{corpus_word} AS W{num}".format(num=x+1, corpus_word=self.resource.corpus_word_id) for x in range(Query.number_of_tokens)])
                
         if only_names:
@@ -1441,22 +1578,22 @@ class SQLCorpus(BaseCorpus):
         """ Return a MySQL string that selects a table matching the current
         token, and which includes all columns that are requested, or which
         are required to join the tables. """
-        try:
-            if self_joined:
-                corpus = self.resource.corpus_denorm_table
-                corpus_id = self.resource.corpus_denorm_table_id
-            else:
-                corpus = self.resource.corpus_table
-                corpus_id = self.resource.corpus_id
-        except AttributeError:
-            corpus = self.resource.corpus_table
-            corpus_id = self.resource.corpus_id
             
         # corpus variables will only be included in the subquery string if 
         # this is the first subquery.
         corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
         if number == 0:
             requested_features = [x for x in options.cfg.selected_features]
+            
+            # if a GUI is used, include source features so the entries in the
+            # result table can be made clickable to show the context:
+            if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
+                if "source_id" in dir(self.resource):
+                    requested_features.append("source_id")
+                    options.cfg.context_source_id = "source_id"
+                elif "file_id" in dir(self.resource):
+                    requested_features.append("file_id")
+                    options.cfg.context_source_id = "file_id"
         else:
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
@@ -1505,7 +1642,9 @@ class SQLCorpus(BaseCorpus):
         required_tables = {}
         for rc_feature in requested_features:
             rc_table = "{}_table".format(rc_feature.split("_")[0])
-            if rc_table not in required_tables and rc_table != corpus:
+            if rc_table == "coquery_table":
+                continue
+            if rc_table not in required_tables and rc_table != self.resource.corpus_table:
                 tree = self.resource.get_table_structure(rc_table, options.cfg.selected_features)
                 parent = tree["parent"]
                 table_id = "{}_id".format(rc_feature.split("_")[0])
@@ -1516,7 +1655,7 @@ class SQLCorpus(BaseCorpus):
                     requested_features.append(parent_id)
         
         join_strings = {}
-        join_strings[corpus] = "{} AS COQ_CORPUS_TABLE".format(corpus)
+        join_strings[self.resource.corpus_table] = "{} AS COQ_CORPUS_TABLE".format(self.resource.corpus_table)
         full_tree = self.resource.get_table_structure("corpus_table", requested_features)
 
         try:
@@ -1528,18 +1667,24 @@ class SQLCorpus(BaseCorpus):
             word_pos_column = None
         
         #where_constraints = set([])
+        sub_list = set([])
         for x in self.get_whereclauses(current_token, self.resource.word_id, word_pos_column):
             if x: 
-                if "word_table" not in rc_where_constraints:
-                    rc_where_constraints["word_table"] = set([])
-                rc_where_constraints["word_table"].add(x)
+                sub_list.add(x)
+        if sub_list:
+            if current_token.negated:
+                s = "NOT ({})".format(" AND ".join(sub_list))
+            else:
+                s = " AND ".join(sub_list)
+            if "word_table" not in rc_where_constraints:
+                rc_where_constraints["word_table"] = set([])
+            rc_where_constraints["word_table"].add(s)
 
         select_list = []
-
         for rc_table in required_tables:
             rc_tab = rc_table.split("_")[0]
             sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
-            parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree)
+            parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree) 
             table = self.resource.__getattribute__(rc_table)
             if parent_tree:
                 rc_parent = parent_tree["rc_table_name"]
@@ -1590,34 +1735,13 @@ class SQLCorpus(BaseCorpus):
                     alias = sub_tree["alias"],
                     where = where_string)
 
-        #for i in range(options.cfg.context_left):
-            #table_string_list.append(
-                #"INNER JOIN (SELECT {corpus}.{token_id}, {word}.{label} AS RC{num} FROM {corpus}, {word} WHERE {corpus}.{corpus_word_id} = {word}.{word_id}) AS cr{num} ON (cr{num}.{token_id} = {corpus}.{token_id} + {num})".format(
-                    #num=i + 1,
-                    #corpus=self.resource.corpus_table,
-                    #token_id=self.resource.corpus_id,
-                    #corpus_word_id=self.resource.corpus_word_id,
-                    #word=self.resource.word_table,
-                    #word_id=self.resource.word_id,
-                    #label=self.resource.word_label))
-        #for i in range(options.cfg.context_right):
-            #table_string_list.append(
-                #"INNER JOIN (SELECT {corpus}.{token_id}, {word}.{label} AS LC{num} FROM {corpus}, {word} WHERE {corpus}.{corpus_word_id} = {word}.{word_id}) AS cl{num} ON (cl{num}.{token_id} = {corpus}.{token_id} - {num})".format(
-                    #num=i + 1,
-                    #corpus=self.resource.corpus_table,
-                    #token_id=self.resource.corpus_id,
-                    #corpus_word_id=self.resource.corpus_word_id,
-                    #word=self.resource.word_table,
-                    #word_id=self.resource.word_id,
-                    #label=self.resource.word_label))
-
-
-
         output_columns = []
         for x in options.cfg.selected_features:
             if x in corpus_variables and number > 0:
                 break
             rc_table = "{}_table".format(x.split("_")[0])
+            if rc_table == "coquery_table":
+                continue
             tree = required_tables[rc_table]
             output_columns.append("{}.{}{}".format(tree["alias"], self.resource.__getattribute__(x), number + 1))
         
@@ -1629,51 +1753,25 @@ class SQLCorpus(BaseCorpus):
                     L.append(join_strings[x])
         if not select_list:
             return "", None, None
+
+        # add the variable storing the source_id or file_id to the selected
+        # columns so that they can be used to retrieve the context:
+        if number == 0 and options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
+            select_list.append("coq_corpus_{}_1".format(options.cfg.context_source_id))
+        
         return "SELECT {} FROM {}".format(
             ", ".join(select_list + ["coq_corpus_id_{}".format(number+1)]), 
             " ".join(L)), select_list, L
-        #return "SELECT {} FROM {}".format(", ".join(select_list + ["{}{}".format(self.resource.corpus_id, number+1)]), " ".join(L)), select_list, L
-        
-    def sql_string_context(self, Query, self_joined):
-        L = []
-        for x in range(options.cfg.context_left):
-            s1 = """INNER JOIN 
-                (SELECT {token_id} AS lc_token_id_{i}, {corpus_word_id} as lc_corpus_word_id_{i}
-                FROM {corpus}) AS lc_{i} ON lc_token_id_{i} = coq_corpus_id_1 - {offset}""".format(
-                    corpus = self.resource.corpus_table,
-                    token_id = self.resource.corpus_id,
-                    corpus_word_id = self.resource.corpus_word_id,
-                    i=x+1,
-                    offset=1+abs(x - options.cfg.context_right +1))
-
-            s2 = """INNER JOIN
-                (SELECT {word_label} as lc_word_label_{i}, {word_id} AS lc_word_id_{i} FROM entity) as lc_lex_{i} ON lc_word_id_{i} = lc_corpus_word_id_{i}""".format(
-                    word_id = self.resource.word_id,
-                    word_label = self.resource.word_label,
-                    corpus_word_id = self.resource.corpus_word_id,
-                    i=x+1)
-            L.append(s1)
-            L.append(s2)
-        for x in range(options.cfg.context_right):
-            s1 = """INNER JOIN 
-                (SELECT {token_id} AS rc_token_id_{i}, {corpus_word_id} as rc_corpus_word_id_{i}
-                FROM {corpus}) AS rc_{i} ON rc_token_id_{i} = coq_corpus_id_1 + {i}""".format(
-                    corpus = self.resource.corpus_table,
-                    token_id = self.resource.corpus_id,
-                    corpus_word_id = self.resource.corpus_word_id,
-                    i=x+1)
-
-            s2 = """INNER JOIN
-                (SELECT {word_label} as rc_word_label_{i}, {word_id} AS rc_word_id_{i} FROM entity) as rc_lex_{i} ON rc_word_id_{i} = rc_corpus_word_id_{i}""".format(
-                    word_id = self.resource.word_id,
-                    word_label = self.resource.word_label,
-                    corpus_word_id = self.resource.corpus_word_id,
-                    i=x+1)
-            L.append(s1)
-            L.append(s2)            
-        return L
         
     def sql_string_query_new(self, Query, self_joined):
+        """ Return a string that is sufficient to run the query on the
+        MySQL database. """
+
+        # the next variable is set in get_sub_query_string() to store the 
+        # name of that resource feature which that keeps track of the source 
+        # of the first token of the query. 
+        options.cfg.context_source_id = None
+
         for i, current_token in enumerate(Query.tokens):
             s, select_list, join_list = self.get_sub_query_string(current_token, i, self_joined)
             if i == 0:
@@ -1688,52 +1786,63 @@ class SQLCorpus(BaseCorpus):
 
         corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
         lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
-
+        
         # change the order of the output column so that output columns 
         # showing the same lexicon feature for different tokens are grouped
         # together, followed by all corpus features.
         # The overall order is specified in resource.get_preferred_output_order()
-        new_final_select = []        
+        final_select = []        
         for rc_feature in self.resource.get_preferred_output_order():
             if rc_feature in options.cfg.selected_features:
                 if rc_feature in [x for x, _ in lexicon_features]:
-                    new_final_select += ["coq_{}_{}".format(rc_feature, i+1) for i in range(Query.number_of_tokens)]
+                    for i in range(Query.Session.max_number_of_tokens):
+                        if i < Query.number_of_tokens:
+                            final_select.append("coq_{}_{}".format(rc_feature, i+1))
+                        else:
+                            final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
+        
+        # add the corpus features in the preferred order:
         for rc_feature in self.resource.get_preferred_output_order():
             if rc_feature in options.cfg.selected_features:
                 if rc_feature in [x for x, _ in corpus_features]:
-                    new_final_select.append("coq_{}_1".format(rc_feature))
-        for rc_feature in options.cfg.selected_features:
-            if "coq_{}_1".format(rc_feature) not in new_final_select:
-                new_final_select.append("coq_{}_1".format(rc_feature))
-
-        if options.cfg.context_left or options.cfg.context_right:
-            query_string_part += self.sql_string_context(Query, self_joined)
-                
-            context_left_columns = ["lc_word_label_{}".format(i+1) for i in range(options.cfg.context_left)]
-            context_right_columns = ["rc_word_label_{}".format(i+1) for i in range(options.cfg.context_right)]
-            
-            if options.cfg.context_span:
-                if options.cfg.context_left:
-                    new_final_select.append('CONCAT_WS(" ", {}) AS COQ_CONTEXT_LEFT'.format(", ".join(context_left_columns)))
-                if options.cfg.context_right:
-                    new_final_select.append('CONCAT_WS(" ", {}) AS COQ_CONTEXT_RIGHT'.format(", ".join(context_right_columns)))
-            else:
-                new_final_select += context_left_columns
-                new_final_select += context_left_columns
+                    final_select.append("coq_{}_1".format(rc_feature))
         
-        Query.Session.output_order = [x.split(" AS ")[-1] for x in new_final_select]
-        final_select = new_final_select
+        # Add any feature that is selected that is neither a corpus feature,
+        # a lexicon feature nor a Coquery feature:
+        for rc_feature in options.cfg.selected_features:
+            if not rc_feature.startswith("coquery_") and "coq_{}_1".format(rc_feature) not in final_select:
+                final_select.append("coq_{}_1".format(rc_feature))
+
+        if options.cfg.context_right or options.cfg.context_left:
+            if options.cfg.context_left:
+                final_select.append('NULL AS coq_context_left')
+            if options.cfg.context_right:
+                final_select.append('NULL AS coq_context_right')
+        
+        # Add NULL values for all Coquery features; they are supplied not
+        # by the SQL query, but by the Python script in yield_query_results().
+        for x in options.cfg.selected_features:
+            if x.startswith("coquery_"):
+                final_select.append("NULL AS {}".format(x))
+
+        # construct the query string from the sub-query parts:
         query_string = " ".join(query_string_part)
 
+        # For Frequeny queries, add a COUNT() column named 'coq_frequency' as
+        # well as a GROUP BY clause:
         if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             if final_select:
-                query_string = "{} GROUP BY {}".format(query_string, ", ".join(final_select))
-            query_string = query_string.replace(
-                "COQ_OUTPUT_FIELDS", 
-                "{}".format(
-                    ", ".join(final_select + ["COUNT(*) AS COQ_FREQUENCY"])))
-            Query.Session.output_order.append("COQ_FREQUENCY")
-        
+                query_string = "{} GROUP BY {}".format(query_string, ", ".join([x.split(" AS ")[-1] for x in final_select]))
+            if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
+                final_select.append("COUNT(*) AS coq_frequency")
+
+        # include variables that are required to make entries in the result
+        # table clickable, but only if a GUI is used:
+        if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
+            final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
+            final_select.append("coq_corpus_{}_1 AS coquery_invisible_origin_id".format(options.cfg.context_source_id))
+            final_select.append("{} AS coquery_invisible_number_of_tokens".format(Query.number_of_tokens))
+
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(final_select))
         
         # add LIMIT clause if necessary:
@@ -1746,11 +1855,13 @@ class SQLCorpus(BaseCorpus):
             query_string = query_string.replace("SELECT ", "SELECT \n\t")
             query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
+
+        Query.Session.output_order = [x.split(" AS ")[-1] for x in final_select]
+
         if Query.Session.output_order:
             return query_string
         else:
             return ""
-        
         
     def yield_query_results_new(self, Query, self_joined=False):
         """ Run the corpus query specified in the Query object on the corpus
@@ -1758,9 +1869,43 @@ class SQLCorpus(BaseCorpus):
         
         query_string = self.sql_string_query_new(Query, self_joined)
         
+        D = {}
+        show_day = False
+        show_time = False
+        for x in options.cfg.selected_features:
+            if x.startswith("coquery_"):
+                D[x] = ""
+                if x == "coquery_query_string":
+                    try:
+                        D[x] = Query.query_string
+                    except AttributeError:
+                        pass
+                elif x == "coquery_query_file":
+                    try:
+                        D[x] = options.cfg.input_path
+                    except AttributeError:
+                        pass
+                elif x == "coquery_current_date":
+                    show_day = True
+                elif x == "coquery_current_time":
+                    show_time = True
         cursor = self.resource.DB.execute_cursor(query_string)
-        #return(cursor)
         for current_result in cursor:
+            now = datetime.datetime.now()
+            if show_day:
+                current_result["coquery_current_date"] = now.strftime("%Y-%m-%d")
+            if show_time: 
+                current_result["coquery_current_time"] = now.strftime("%H:%M:%S")
+            current_result.update(D)
+            if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
+                left, right = self.get_context(
+                    current_result["coquery_invisible_corpus_id"], 
+                    current_result["coquery_invisible_origin_id"], 
+                    Query.number_of_tokens, True)
+                if options.cfg.context_left:
+                    current_result["coq_context_left"] = collapse_words(left)
+                if options.cfg.context_right:
+                    current_result["coq_context_right"] = collapse_words(right)
             yield current_result
 
     def yield_query_results(self, Query, self_joined=False):
@@ -1809,7 +1954,7 @@ class SQLCorpus(BaseCorpus):
             query_string = "{} LIMIT {}".format(
                 query_string, options.cfg.number_of_tokens)
 
-        if options.cfg.verbose:
+
             query_string = query_string.replace("SELECT ", "SELECT \n\t")
             query_string = query_string.replace("FROM ", "\nFROM \n\t")
             query_string = query_string.replace("WHERE ", "\nWHERE \n\t")
@@ -1841,7 +1986,26 @@ class SQLCorpus(BaseCorpus):
         return [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
 
     def sql_string_get_wordid_in_range(self, start, end, source_id):
-        if source_id:
+        if options.cfg.experimental:
+            if options.cfg.context_source_id and source_id:
+                return "SELECT {corpus_wordid} from {corpus} WHERE {token_id} BETWEEN {start} AND {end} AND {corpus_source} = {this_source}".format(
+                    corpus_wordid=self.resource.corpus_word_id,
+                    corpus=self.resource.corpus_table,
+                    token_id=self.resource.corpus_id,
+                    start=start, end=end,
+                    corpus_source=self.resource.__getattribute__("corpus_{}".format(options.cfg.context_source_id)),
+                    this_source=source_id)
+            else:
+                # if no source id is specified, simply return the tokens in
+                # the corpus that are within the specified range.
+                return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} AND {end} {verbose}".format(
+                    corpus_wordid=self.resource.corpus_word_id,
+                    corpus=self.resource.corpus_table,
+                    corpus_token=self.resource.corpus_id,
+                    start=start, end=end,
+                    verbose=" -- sql_string_get_wordid_in_range" if options.cfg.verbose else "")
+
+        if False and source_id:
             return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} and {end} AND {corpus_source} = '{this_source}'".format(
             corpus_wordid=self.resource.corpus_word_id,
             corpus=self.resource.corpus_table,
@@ -1870,6 +2034,9 @@ class SQLCorpus(BaseCorpus):
         #elif options.cfg.context_columns:
             #span = options.cfg.context_columns
 
+        old_verbose = options.cfg.verbose
+        options.cfg.verbose = False
+
         left_span = options.cfg.context_left
         if left_span > token_id:
             start = 1
@@ -1890,19 +2057,29 @@ class SQLCorpus(BaseCorpus):
         right_context_words = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
         right_context_words =  right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
+        options.cfg.verbose = old_verbose
+
         return (left_context_words, right_context_words)
 
     def sql_string_get_source_info(self, source_id):
+        if options.cfg.experimental:
+            return "SELECT * FROM {} WHERE {} = {} LIMIT 1".format(
+                self.resource.source_table,
+                self.resource.source_id, source_id)
+        
         if "source_table" in dir(self.resource) and "source_table_alias" in dir(self.resource):
-            return "SELECT * FROM {} WHERE {}.{} = {}".format(
+            return "SELECT * FROM {} WHERE {}.{} = {} LIMIT 1".format(
                 self.resource.source_table_construct, 
                 self.resource.source_table_alias, 
                 self.resource.source_id, source_id)
         else:
             raise ResourceIncompleteDefinitionError
 
-    def get_source_info(self, source_id):
-        source_info_header = self.get_source_info_header()
+    def get_source_info(self, source_id, header=None):
+        if not header:
+            source_info_header = self.get_source_info_header()
+        else:
+            source_info_header = header
         error_values = ["<na>"] * len(source_info_header)
         if not source_id:
             return error_values
@@ -1934,7 +2111,7 @@ class SQLCorpus(BaseCorpus):
 
     def sql_string_get_file_info(self, source_id):
         if "file_table" in dir(self.resource) and "file_id" in dir(self.resource) and "file_label" in dir(self.resource):
-            return "SELECT {} as File FROM {} WHERE {} = {}".format(
+            return "SELECT {} as File FROM {} WHERE {} = {} LIMIT 1".format(
                     self.resource.file_label,
                     self.resource.file_table,
                     self.resource.file_id,
@@ -1973,6 +2150,48 @@ class SQLCorpus(BaseCorpus):
                         self.resource.DB.execute(S)
                         stats["{}_distinct".format(variable)] = self.resource.DB.Cur.fetchone()[0]
         return stats
+
+    def render_context(self, token_id, source_id, token_width, context_width, widget):
+        """ Return a visual representation of the context around the 
+        specified token. The result is shown in an instance of the 
+        ContextView class.
+        
+        The most simple visual representation of the context is a plain text
+        display, but in principle, a corpus might implement a more elaborate
+        renderer. For example, a corpus may contain information about the
+        page layout, and the renderer could use that information to create a
+        facsimile of the original page.
+        
+        The renderer can interact with the widget in which the context will
+        be displayed. The area in which the context is shown is a QLabel
+        named widget.ui.context_area. """
+
+        start = max(0, token_id - context_width)
+        end = token_id + token_width + context_width - 1
+        
+        self.resource.DB.execute(
+            self.sql_string_get_wordid_in_range(
+                start, 
+                token_id - 1, source_id))
+        left = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+        
+        self.resource.DB.execute(
+            self.sql_string_get_wordid_in_range(
+                token_id, 
+                token_id + token_width - 1, source_id))
+        token = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+
+        self.resource.DB.execute(
+            self.sql_string_get_wordid_in_range(
+                token_id + token_width, 
+                end,
+                source_id))
+        right = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+
+        context = "{} <b>{}</b> {}".format(
+            collapse_words(left), collapse_words(token), collapse_words(right))
+        widget.ui.context_area.setText(context)
+
         
 class TestLexicon(BaseLexicon):
     def is_part_of_speech(self, pos):
