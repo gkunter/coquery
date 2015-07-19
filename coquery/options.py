@@ -77,6 +77,12 @@ class Options(object):
         self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
         self.args.selected_features= []
         
+        self.args.context_left = 0
+        self.args.context_right = 0
+        
+        # these attributes are used only in the GUI:
+        self.args.column_width = {}
+        self.args.column_color = {}
 
     @property
     def cfg(self):
@@ -164,7 +170,7 @@ class Options(object):
         
         # if no corpus is selected and no GUI is requested, display the help
         # and exit.
-        if not self.args.corpus and not (args.gui or args.wizard):
+        if "corpus" not in dir(self.args) and not (args.gui or args.wizard):
             self.parser.print_help()
             sys.exit(1)
         
@@ -438,7 +444,6 @@ class Options(object):
                         vars(self.args) ["corpus"] = default_corpus
                         try:
                             mode = config_file.get("main", "query_mode")
-                            print(mode)
                             vars(self.args)["MODE"] = mode
                         except configparser.NoOptionError:
                             default_corpus = QUERY_MODE_DISTINCT
@@ -452,19 +457,49 @@ class Options(object):
 
                     elif section == "context":
                         try:
-                            vars(self.args)["context_left"] = config_file.get("context", "words_left")
-                        except configparser.NoOptionError:
+                            vars(self.args)["context_left"] = int(config_file.get("context", "words_left"))
+                        except (configparser.NoOptionError, ValueError):
                             pass
                         try:
-                            vars(self.args)["context_right"] = config_file.get("context", "words_right")
-                        except configparser.NoOptionError:
+                            vars(self.args)["context_right"] = int(config_file.get("context", "words_right"))
+                        except (configparser.NoOptionError, ValueError):
                             pass
-                        #if cfg.context_columns:
-                            #config.set("context", "mode", "Columns")
-                        #elif cfg.context_span:
-                            #config.set("context", "mode", "KWIC")
-                            
+
+                    elif section == "gui":
+                        try:
+                            vars(self.args)["width"] = int(config_file.get("gui", "width"))
+                        except (configparser.NoOptionError, ValueError):
+                            vars(self.args)["width"] = None
+                        try:
+                            vars(self.args)["height"] = int(config_file.get("gui", "height"))
+                        except (configparser.NoOptionError, ValueError):
+                            vars(self.args)["height"] = None
                         
+                        context_dict = {}
+                        # get column defaults:
+                        for name, value in config_file.items("gui"):
+                            if name.startswith("column_"):
+                                col = name.partition("_")[2]
+                                column, _, attribute = col.rpartition("_")
+                                if not column.startswith("coquery_invisible"):
+                                    try:
+                                        if attribute == "color":
+                                            if "column_color" not in vars(self.args):
+                                                self.args.column_color = {}
+                                            self.args.column_color[column] = value
+                                        elif attribute == "width":
+                                            if "column_width" not in vars(self.args):
+                                                self.args.column_width = {}
+                                            if int(value):
+                                                self.args.column_width[column] = int(value)
+                                    except ValueError:
+                                        pass
+                            if name.startswith("context_view_") or name.startswith("error_box_"):
+                                try:
+                                    vars(self.args)[name] = int(value)
+                                except ValueError:
+                                    pass
+                            
         vars(self.args) ["db_user"] = db_user
         vars(self.args) ["db_password"] = db_password
         vars(self.args) ["db_port"] = db_port
@@ -537,9 +572,51 @@ def save_configuration():
             config.set("context", "mode", "Columns")
         elif cfg.context_span:
             config.set("context", "mode", "KWIC")
-    
+
+    if cfg.gui or cfg.wizard:
+        if not "gui" in config.sections():
+            config.add_section("gui")
+        window_size = cfg.main_window.size()
+        config.set("gui", "height", window_size.height())
+        config.set("gui", "width", window_size.width())
+
+        for x in cfg.column_width:
+            if not x.startswith("coquery_invisible") and cfg.column_width[x]:
+                config.set("gui", 
+                        "column_{}_width".format(x), 
+                        cfg.column_width[x])
+        for x in cfg.column_color:
+            config.set("gui", 
+                       "column_{}_color".format(x), 
+                       cfg.column_color[x])
+
+        try:
+            config.set("gui", "context_view_width", cfg.context_view_width)
+        except AttributeError:
+            pass
+        try:
+            config.set("gui", "context_view_height", cfg.context_view_height)
+        except AttributeError:
+            pass
+        try:
+            config.set("gui", "context_view_words", cfg.context_view_words)
+        except AttributeError:
+            pass
+        
+        try:
+            config.set("gui", "error_box_width", cfg.error_box_width)
+        except AttributeError:
+            pass
+        try:
+            config.set("gui", "error_box_height", cfg.error_box_height)
+        except AttributeError:
+            pass
+
+
     with codecs.open(cfg.config_path, "wt", "utf-8") as output_file:
         config.write(output_file)
+
+
 
 def process_options():
     global cfg
