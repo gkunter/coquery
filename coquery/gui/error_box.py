@@ -33,9 +33,22 @@ class ErrorBox(QtGui.QDialog):
     @staticmethod
     def show(exc_info, parent=None):
         dialog = ErrorBox(exc_info, parent)
+        try:
+            dialog.resize(dialog.width(), options.cfg.error_box_height)
+        except AttributeError:
+            pass
+        try:
+            dialog.resize(options.cfg.error_box_width, dialog.height())
+        except AttributeError:
+            pass
         result = dialog.exec_()
         return None
-    
+
+    def done(self, *args):
+        options.cfg.error_box_height = self.height()
+        options.cfg.error_box_width = self.width()
+        super(ErrorBox, self).done(*args)
+
             
 def main():
     app = QtGui.QApplication(sys.argv)
