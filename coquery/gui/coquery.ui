@@ -442,8 +442,7 @@
               </property>
               <property name="icon">
                <iconset theme="media-playback-start">
-                <normaloff/>
-               </iconset>
+                <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
               </property>
              </widget>
             </item>
@@ -619,8 +618,7 @@
               </property>
               <property name="icon">
                <iconset theme="document-properties">
-                <normaloff/>
-               </iconset>
+                <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
               </property>
               <property name="shortcut">
                <string>Alt+B</string>
@@ -640,8 +638,7 @@
               </property>
               <property name="icon">
                <iconset theme="document-open">
-                <normaloff/>
-               </iconset>
+                <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
               </property>
               <property name="shortcut">
                <string>Alt+B</string>
@@ -786,8 +783,7 @@
        </property>
        <attribute name="icon">
         <iconset theme="table">
-         <normaloff/>
-        </iconset>
+         <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
        </attribute>
        <attribute name="title">
         <string>Query result</string>
@@ -805,13 +801,16 @@
            <bool>true</bool>
           </property>
           <property name="selectionMode">
-           <enum>QAbstractItemView::NoSelection</enum>
+           <enum>QAbstractItemView::ExtendedSelection</enum>
           </property>
           <property name="selectionBehavior">
-           <enum>QAbstractItemView::SelectItems</enum>
+           <enum>QAbstractItemView::SelectRows</enum>
           </property>
           <property name="textElideMode">
-           <enum>Qt::ElideMiddle</enum>
+           <enum>Qt::ElideRight</enum>
+          </property>
+          <property name="verticalScrollMode">
+           <enum>QAbstractItemView::ScrollPerPixel</enum>
           </property>
           <property name="sortingEnabled">
            <bool>true</bool>
@@ -829,8 +828,7 @@
        </property>
        <attribute name="icon">
         <iconset theme="utilities-log-viewer">
-         <normaloff/>
-        </iconset>
+         <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
        </attribute>
        <attribute name="title">
         <string>Query log</string>
@@ -914,8 +912,7 @@
   <action name="action_open_input_file">
    <property name="icon">
     <iconset theme="document-open">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Open input file...</string>
@@ -927,8 +924,7 @@
   <action name="action_save_results">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Save results...</string>
@@ -940,8 +936,7 @@
   <action name="action_help">
    <property name="icon">
     <iconset theme="help-contents">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Help</string>
@@ -978,8 +973,7 @@
   <action name="action_statistics">
    <property name="icon">
     <iconset theme="view-statistics">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Corpus statistics</string>
@@ -988,8 +982,7 @@
   <action name="action_mySQL_settings">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;MySQL settings...</string>
@@ -998,8 +991,7 @@
   <action name="action_options">
    <property name="icon">
     <iconset theme="configure">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Options...</string>
@@ -1008,8 +1000,7 @@
   <action name="action_quit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -1021,8 +1012,7 @@
   <action name="action_build_corpus">
    <property name="icon">
     <iconset theme="document-new">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Build corpus...</string>
@@ -1034,8 +1024,7 @@
   <action name="action_remove_corpus">
    <property name="icon">
     <iconset theme="edit-delete">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Remove corpus...</string>
@@ -1047,8 +1036,7 @@
   <action name="action_install_corpus">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Install corpus...</string>

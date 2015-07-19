@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Mon Jul 13 00:17:31 2015
+# Created: Mon Jul 20 00:38:37 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -420,9 +420,10 @@ class Ui_MainWindow(object):
         self.data_preview.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
         self.data_preview.setEditTriggers(QtGui.QAbstractItemView.SelectedClicked)
         self.data_preview.setAlternatingRowColors(True)
-        self.data_preview.setSelectionMode(QtGui.QAbstractItemView.NoSelection)
-        self.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
-        self.data_preview.setTextElideMode(QtCore.Qt.ElideMiddle)
+        self.data_preview.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        self.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        self.data_preview.setTextElideMode(QtCore.Qt.ElideRight)
+        self.data_preview.setVerticalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
         self.data_preview.setSortingEnabled(True)
         self.data_preview.setObjectName(_fromUtf8("data_preview"))
         self.verticalLayout_9.addWidget(self.data_preview)
