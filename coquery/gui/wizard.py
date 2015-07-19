@@ -427,7 +427,6 @@ class CoqueryWizard(QtGui.QWizard):
                 self.ui.combo_corpus.setCurrentIndex(index)
 
         # set query mode:
-        print("MODE", options.cfg.MODE)
         if options.cfg.MODE == QUERY_MODE_DISTINCT:
             self.ui.radio_mode_context.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
@@ -446,6 +445,8 @@ class CoqueryWizard(QtGui.QWizard):
         for rc_feature in options.cfg.selected_features:
             self.ui.options_tree.setCheckState(rc_feature, True)
         
+        self.ui.context_left_span.setValue(options.cfg.context_left)
+        self.ui.context_right_span.setValue(options.cfg.context_right)
         if options.cfg.context_columns:
             self.ui.context_mode.setEditText(CONTEXT_COLUMNS)
         if options.cfg.context_span:
@@ -456,6 +457,5 @@ class CoqueryWizard(QtGui.QWizard):
         for filt in list(options.cfg.filter_list):
             self.ui.filter_box.addTag(filt)
             options.cfg.filter_list.remove(filt)
-
         
         return True
