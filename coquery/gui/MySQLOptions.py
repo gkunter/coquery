@@ -6,7 +6,6 @@ import argparse
 import MySQLOptionsUi
 import mysql_guide
 import sys
-sys.path.append("/home/kunibert/Dev/coquery/coquery")
 import sqlwrap
 from errors import *
 import socket
