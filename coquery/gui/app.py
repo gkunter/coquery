@@ -368,8 +368,11 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         options.cfg.main_window = self
 
         # Resize the window if a previous size is available
-        if options.cfg.height and options.cfg.width:
-            self.resize(options.cfg.width, options.cfg.height)
+        try:
+            if options.cfg.height and options.cfg.width:
+                self.resize(options.cfg.width, options.cfg.height)
+        except AttributeError:
+            pass
         
     def display_results(self):
         try:
