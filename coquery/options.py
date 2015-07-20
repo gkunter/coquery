@@ -74,7 +74,11 @@ class Options(object):
         self.args.filter_list = []
         self.args.program_location = self.base_path
         self.args.version = self.version
-        self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
+        try:
+            self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
+        except AttributeError:
+            self.args.parameter_string = " ".join([x for x in sys.argv [1:]])
+
         self.args.selected_features= []
         
         self.args.context_left = 0
@@ -400,7 +404,10 @@ class Options(object):
         if self.args.query_list:
             if type(self.args.query_list) != list:
                 self.args.query_list = [self.args.query_list]
-            self.args.query_list = [x.decode("utf8") for x in self.args.query_list]
+            try:
+                self.args.query_list = [x.decode("utf8") for x in self.args.query_list]
+            except AttributeError:
+                pass
         logger.info("Command line parameters: " + self.args.parameter_string)
         
     def read_configuration(self):

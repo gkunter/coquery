@@ -70,6 +70,13 @@ CONTEXT_KWIC = "KWIC"
 CONTEXT_STRINGS = "Strings"
 CONTEXT_COLUMNS = "Columns"
 
+# for Python 3 compatibility:
+try:
+    unicode()
+except NameError:
+    unicode = str
+    long = int
+
 # from https://docs.python.org/2.7/library/csv.html#csv-examples
 class UTF8Recoder:
     """
@@ -154,7 +161,7 @@ class ResourceList(object):
                 module = imp.load_source(corpus_name, corpus)
                 resource = module.Resource
                 self.available_resources[resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
-            except AttributeError, ImportError:
+            except (AttributeError, ImportError):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
         return self.available_resources
 

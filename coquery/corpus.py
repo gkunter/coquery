@@ -262,7 +262,7 @@ class BaseResource(object):
                 if table not in table_dict:
                     table_dict[table] = []
                 table_dict[table].append(x)
-        for x in table_dict.keys():
+        for x in list(table_dict.keys()):
             if x != "coquery" and not "{}_table".format(x) in table_dict[x]:
                 table_dict.pop(x)
         return table_dict
