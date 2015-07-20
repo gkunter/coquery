@@ -499,8 +499,16 @@ class DistinctQuery(CorpusQuery):
                     output_list = copy.copy(constant_line)
                 else:
                     output_list = []
-                row = [current_result[x] for x in self.Session.output_order if not x.startswith("coquery_invisible_")]
-                output_list.extend(row)
+
+                if not options.cfg.case_sensitive:
+                    for x in current_result:
+                        try:
+                            current_result[x] = current_result[x].lower()
+                        except AttributeError:
+                            pass
+
+                # store values from visible columns into output_list:
+                output_list.extend([current_result[x] for x in self.Session.output_order if not x.startswith("coquery_invisible_")])
                 output_list = tuple(output_list)
 
                 if self.collapse_identical:
@@ -512,7 +520,7 @@ class DistinctQuery(CorpusQuery):
                         output_cache.add(output_list)
                 else:
                     if options.cfg.gui:
-                        self.Session.output_storage.append(output_list)
+                        self.Session.output_storage.append(current_result)
                     else:
                         output_file.writerow(output_list)
         else:
@@ -521,7 +529,7 @@ class DistinctQuery(CorpusQuery):
                     output_list = copy.copy(constant_line)
                 else:
                     output_list = []
-
+                    
                 if current_result != None:
                     output_list.extend(current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns))
                     output_list = tuple(output_list)
@@ -577,6 +585,12 @@ class FrequencyQuery(CorpusQuery):
                 constant_line = []
 
             for current_result in self.Results:
+                if not options.cfg.case_sensitive:
+                    for x in current_result:
+                        try:
+                            current_result[x] = current_result[x].lower()
+                        except AttributeError:
+                            pass
                 if constant_line:
                     output_list = copy.copy(constant_line)
                 else:
