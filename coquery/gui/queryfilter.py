@@ -61,7 +61,7 @@ class CoqTextTag(QtGui.QFrame):
         new_height = int(height * 0.75)
         self._style_font = "font-size: {}px".format(new_height)
         self._style_border_radius = "border-radius: {}px".format(int(new_height / 3))
-        self.setBackground("rgb(255, 192, 255)")
+        self.setBackground("lavender")
         self.close_button.setIcon(icon)
         self.close_button.setIconSize(QtCore.QSize(new_height, new_height))
         self.adjustSize()
