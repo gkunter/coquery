@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Mon Jul 20 00:38:37 2015
+# Created: Mon Jul 20 22:43:51 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -460,6 +460,8 @@ class Ui_MainWindow(object):
         self.menuCorpus.setObjectName(_fromUtf8("menuCorpus"))
         self.menuSettings = QtGui.QMenu(self.menubar)
         self.menuSettings.setObjectName(_fromUtf8("menuSettings"))
+        self.menuAnalyse = QtGui.QMenu(self.menubar)
+        self.menuAnalyse.setObjectName(_fromUtf8("menuAnalyse"))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtGui.QStatusBar(MainWindow)
         self.statusbar.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
@@ -515,6 +517,12 @@ class Ui_MainWindow(object):
         icon = QtGui.QIcon.fromTheme(_fromUtf8("server-database"))
         self.action_install_corpus.setIcon(icon)
         self.action_install_corpus.setObjectName(_fromUtf8("action_install_corpus"))
+        self.action_tree_map = QtGui.QAction(MainWindow)
+        self.action_tree_map.setObjectName(_fromUtf8("action_tree_map"))
+        self.action_heat_map = QtGui.QAction(MainWindow)
+        self.action_heat_map.setObjectName(_fromUtf8("action_heat_map"))
+        self.action_word_cloud = QtGui.QAction(MainWindow)
+        self.action_word_cloud.setObjectName(_fromUtf8("action_word_cloud"))
         self.menuFile.addAction(self.action_open_input_file)
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addSeparator()
@@ -529,8 +537,12 @@ class Ui_MainWindow(object):
         self.menuCorpus.addAction(self.action_statistics)
         self.menuSettings.addAction(self.action_mySQL_settings)
         self.menuSettings.addAction(self.action_options)
+        self.menuAnalyse.addAction(self.action_tree_map)
+        self.menuAnalyse.addAction(self.action_heat_map)
+        self.menuAnalyse.addAction(self.action_word_cloud)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuCorpus.menuAction())
+        self.menubar.addAction(self.menuAnalyse.menuAction())
         self.menubar.addAction(self.menuSettings.menuAction())
         self.menubar.addAction(self.menuHilfe.menuAction())
         self.label_5.setBuddy(self.general_settings)
@@ -574,6 +586,7 @@ class Ui_MainWindow(object):
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help", None))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus", None))
         self.menuSettings.setTitle(_translate("MainWindow", "&Settings", None))
+        self.menuAnalyse.setTitle(_translate("MainWindow", "Analysis", None))
         self.action_open_input_file.setText(_translate("MainWindow", "&Open input file...", None))
         self.action_open_input_file.setShortcut(_translate("MainWindow", "Ctrl+O", None))
         self.action_save_results.setText(_translate("MainWindow", "&Save results...", None))
@@ -596,4 +609,7 @@ class Ui_MainWindow(object):
         self.action_remove_corpus.setToolTip(_translate("MainWindow", "Permanently and irrevocably remove corpus database", None))
         self.action_install_corpus.setText(_translate("MainWindow", "&Install corpus...", None))
         self.action_install_corpus.setToolTip(_translate("MainWindow", "Install a corpus into a MySQL database", None))
+        self.action_tree_map.setText(_translate("MainWindow", "Tree map", None))
+        self.action_heat_map.setText(_translate("MainWindow", "Heat map", None))
+        self.action_word_cloud.setText(_translate("MainWindow", "Word cloud", None))
 

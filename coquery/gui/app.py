@@ -19,7 +19,12 @@ import sqlwrap
 import MySQLOptions
 import queries
 import contextview
+import os
+
 from queryfilter import *
+
+sys.path.append(os.path.join(sys.path[0], "visualizations"))
+import treemap
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -204,6 +209,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
         self.ui.action_mySQL_settings.triggered.connect(self.mysql_settings)
         self.ui.action_statistics.triggered.connect(self.run_statistics)
+        
+        self.ui.action_tree_map.triggered.connect(self.show_tree_map)
     
     def setup_hooks(self):
         super(CoqueryApp, self).setup_hooks()
@@ -594,6 +601,12 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.ui.progress_bar.setRange(0, 1)
             self.set_query_button()
         
+    def show_tree_map(self):
+        table = []
+        for row in self.table_model.content:
+            table.append([row[x] for x in self.table_model.header])
+        treemap.TreeMapVisualizer.MosaicPlot(table, self)
+
     def run_query(self):
         self.getGuiValues()
         # Lazily close an existing database connection:

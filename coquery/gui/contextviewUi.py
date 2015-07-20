@@ -2,12 +2,12 @@
 
 # Form implementation generated from reading ui file 'contextview.ui'
 #
-# Created: Sun Jul 19 13:02:45 2015
+# Created: Mon Jul 20 23:29:51 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -109,7 +109,7 @@ class Ui_ContextView(object):
         QtCore.QMetaObject.connectSlotsByName(ContextView)
 
     def retranslateUi(self, ContextView):
-        ContextView.setWindowTitle(_translate("ContextView", "Dialog", None))
+        ContextView.setWindowTitle(_translate("ContextView", "Context view – Coquery", None))
         self.label_3.setText(_translate("ContextView", "Context size:", None))
         self.spin_context_width.setSpecialValueText(_translate("ContextView", "none", None))
         self.spin_context_width.setSuffix(_translate("ContextView", " words", None))

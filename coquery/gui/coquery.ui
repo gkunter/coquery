@@ -899,8 +899,17 @@
     <addaction name="action_mySQL_settings"/>
     <addaction name="action_options"/>
    </widget>
+   <widget class="QMenu" name="menuAnalyse">
+    <property name="title">
+     <string>Analysis</string>
+    </property>
+    <addaction name="action_tree_map"/>
+    <addaction name="action_heat_map"/>
+    <addaction name="action_word_cloud"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
+   <addaction name="menuAnalyse"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHilfe"/>
   </widget>
@@ -1043,6 +1052,21 @@
    </property>
    <property name="toolTip">
     <string>Install a corpus into a MySQL database</string>
+   </property>
+  </action>
+  <action name="action_tree_map">
+   <property name="text">
+    <string>Tree map</string>
+   </property>
+  </action>
+  <action name="action_heat_map">
+   <property name="text">
+    <string>Heat map</string>
+   </property>
+  </action>
+  <action name="action_word_cloud">
+   <property name="text">
+    <string>Word cloud</string>
    </property>
   </action>
  </widget>

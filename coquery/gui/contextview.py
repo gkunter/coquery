@@ -111,7 +111,7 @@ class ContextView(QtGui.QDialog):
         except AttributeError:
             pass
 
-        result = dialog.show()
+        return dialog.show()
 
 def main():
     app = QtGui.QApplication(sys.argv)
