@@ -6,7 +6,7 @@ from errors import *
 from error_box import ErrorBox 
 
 class ProgressIndicator(QtGui.QDialog):
-    def __init__(self, FUN, label="", parent=None):
+    def __init__(self, FUN, label="", parent=None, *args):
         super(ProgressIndicator, self).__init__(parent)
  
         vbox = QtGui.QVBoxLayout()
@@ -24,7 +24,7 @@ class ProgressIndicator(QtGui.QDialog):
         
         self.show()
         if FUN:
-            self.thread = ProgressThread(FUN, self)
+            self.thread = ProgressThread(FUN, self, *args)
             self.thread.taskFinished.connect(self.onFinished)
             self.thread.taskException.connect(self.onException)
             
@@ -49,11 +49,12 @@ class ProgressThread(QtCore.QThread):
     taskFinished = QtCore.Signal()
     taskException = QtCore.Signal()
     
-    def __init__(self, FUN, window):
+    def __init__(self, FUN, window, *args):
         super(ProgressThread, self).__init__()
         self.parent = window
         self.FUN = FUN
         self.exiting = False
+        self.args = args
     
     def __del__(self):
         self.exiting = True
@@ -62,7 +63,7 @@ class ProgressThread(QtCore.QThread):
     def run(self):
         self.exiting = False
         try:
-            self.FUN()
+            self.FUN(*self.args)
         except Exception as e:
             self.parent.exc_info = sys.exc_info()
             self.parent.exception = e
