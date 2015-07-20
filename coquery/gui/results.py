@@ -10,6 +10,7 @@ import resultsUi
 import logfile
 import sys
 import copy
+import QtProgress
 
 SORT_NONE = 0
 SORT_INC = 1
@@ -137,6 +138,24 @@ class CoqSortProxyModel(QtGui.QSortFilterProxyModel):
                 return None
         else:
             return None
+        
+    def sort(self, *args):
+        options.cfg.main_window.ui.statusbar.showMessage("Sorting results...")
+        options.cfg.main_window.ui.progress_bar.setRange(0, 0)
+        self_sort_thread = QtProgress.ProgressThread(
+            super(CoqSortProxyModel, self).sort, self, *args)
+        self_sort_thread.taskFinished.connect(self.sort_finished)
+        self_sort_thread.taskException.connect(self.exception_during_sort)
+        self_sort_thread.start()
+        
+    def sort_finished(self):
+        # Stop the progress indicator:
+        options.cfg.main_window.ui.progress_bar.setRange(0, 1)
+        options.cfg.main_window.ui.statusbar.showMessage("Results are now sorted.")
+
+    def exception_during_sort(self):
+        error_box.ErrorBox.show(self.exc_info, self.exception)
+
         
 class CoqTableModel(QtCore.QAbstractTableModel):
     """ Define a QAbstractTableModel class that stores the query results so
