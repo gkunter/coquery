@@ -2,6 +2,7 @@
 from __future__ import division
 from __future__ import print_function
 
+from decimal import Decimal
 import unittest
 import sys
 import os
@@ -17,9 +18,11 @@ def table_to_tree(table, label="count"):
     second column the second tree level, and so on. The last column gives
     the values of the terminal nodes."""
     tree = {}
+    
+    # go through each table entry:
     for path in table:
         parent = tree
-        for i, child in enumerate(sorted(path[:-1])):
+        for i, child in enumerate(path[:-1]):
             if i == len(path[:-1]) - 1:
                 parent = parent.setdefault(child, {label: path[-1]})
             else:
@@ -100,37 +103,47 @@ class TreeMap(QtGui.QWidget):
         #self.ui.setupUi(self)
         #self.setWindowIcon(options.cfg.icon)
 
-        
+    def refresh_plot(self):
+        print("refreshing")
+
     def paintEvent(self, e):
         self.qp = QtGui.QPainter()
         self.qp.begin(self)
         size = self.size()
-        self.tree_map(self.tree, [0, 0], [size.width(), size.height()], 0, None, None)
+        self.tree_map(self.tree, [0, 0], [size.width() - 1, size.height() - 1], 0, None, None)
         self.qp.end()
 
-    def paint_rectangle(self, p, q, color_name, name):
+    def paint_rectangle(self, p, q, name, weight=None):
         self.qp.setPen(QtGui.QColor("black"))
-        factor_level = color_name.rpartition("\t")[2]
-        self.qp.setBrush(self.get_color(factor_level))
-        self.qp.drawRect(p[0], p[1], q[0] - p[0], q[1] - p[1])
+        if name:
+            factor_level = name.split("\t")[-1]
+            self.qp.setBrush(self.get_color(factor_level, weight))
+        else:
+            self.qp.setBrush(QtGui.QColor("white"))
+        self.qp.drawRect(round(p[0]), round(p[1]), round(q[0] - p[0]), round(q[1] - p[1]))
         
-        name_metrics = self.qp.fontMetrics().boundingRect(name)
-        rect = QtCore.QRect(p[0], p[1], q[0] - p[0], q[1] - p[1])
-        #self.qp.drawText(rect, QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop, name)
-        #if name_metrics.width() > q[0] - p[0]:
-            #self.qp.rotate(-45)
-        self.qp.drawText(rect, QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop, name.replace("\t", ":"))
-        #self.qp.drawText(rect, QtCore.Qt.AlignRight|QtCore.Qt.AlignBottom, name)
-        #if name_metrics.width() > q[0] - p[0]:
-            #self.qp.rotate(45)
+        if name:
+            name_metrics = self.qp.fontMetrics().boundingRect(name)
+            rect = QtCore.QRect(p[0] + 1, p[1] + 1, q[0] - p[0], q[1] - p[1])
+            self.qp.drawText(rect, QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop, name.replace("\t", ":"))
+            self.qp.drawText(rect, QtCore.Qt.AlignCenter, str(weight))
+        
 
-    def get_color(self, value):
+    def get_color(self, value, weight=None):
         if not value:
             return
-        col = color_categories[self.factor.index(value) % len(color_categories)]
+        try:
+            col = color_categories[self.factor.index(value) % len(color_categories)]
+        except ValueError:
+            #print(value, self.factor)
+            return QtGui.QColor()
         # transform stylesheet color spec to r, g, b:
         r, g, b = [int(x) for x in col.strip("rgb(").strip(")").split(",")] 
-        return QtGui.QColor(r, g, b)
+        if weight:
+            alpha = 255 * (weight / self.max_weight)
+        else:
+            alpha = 255
+        return QtGui.QColor(r, g, b, alpha)
     
     def set_factor(self, levels):
         self.factor = levels
@@ -139,13 +152,15 @@ class TreeMap(QtGui.QWidget):
         """ P and Q are the upper right and lower left corners of the display. 
         By setting the axis argument to zero the initial partitions are made
         vertically."""
+        #if not name:
+            #self.paint_rectangle(p, q, name, 0)
         width = q[axis] - p[axis]
         if label in root:
-            self.paint_rectangle(p, q, name, name)
+            self.paint_rectangle(p, q, name, tree_weight(root))
         for i, child_name in enumerate(root):
             if child_name != label:
                 child = root[child_name]
-                q[axis] = p[axis] + (tree_weight(child) / tree_weight(root)) * width
+                q[axis] = Decimal(p[axis]) + Decimal(tree_weight(child) / tree_weight(root)) * Decimal(width)
                 if name:
                     new_name = "{}\t{}".format(name, child_name)
                 else:
@@ -154,12 +169,14 @@ class TreeMap(QtGui.QWidget):
                 p[axis] = q[axis]
 
 class TreeMapVisualizer(QtGui.QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, visualizer, parent=None):
         super(TreeMapVisualizer, self).__init__(parent)
         
         self.ui = visualizerUi.Ui_visualizer()
         self.ui.setupUi(self)
         self.setWindowIcon(options.cfg.icon)
+        self.visualizer = visualizer
+        options.cfg.main_window.table_model.dataChanged.connect(self.visualizer.refresh_plot)
 
     @staticmethod
     def MosaicPlot(table, parent=None):
@@ -169,12 +186,18 @@ class TreeMapVisualizer(QtGui.QDialog):
         levels = set([])
         for row in table:
             levels.add(row[-2])
-        levels = list(levels) 
         tree = table_to_tree(table)
-        dialog = TreeMapVisualizer(parent)
+        print(1)
         tm = TreeMap(tree, parent)
-        tm.set_factor(levels)
-        dialog.ui.verticalLayout.addWidget(tm)
+        print(2)
+        tm.set_factor(list(levels))
+        tm.max_weight = tree_weight(tree)
+        print(3)
+
+        dialog = TreeMapVisualizer(tm, parent)
+        print(4)
+        dialog.ui.visualization_layout.addWidget(tm)
+        print(5)
         return dialog.show()
 
     def keyPressEvent(self, e):
