@@ -428,7 +428,31 @@ class BaseResource(object):
                 table_name = type(cls).__getattribute__(cls, table)
                 filter_list.append((variable, column_name, table_name, filt._op, filt._value_list, filt._value_range))
         return filter_list
-
+    
+    @classmethod
+    def translate_header(cls, header):
+        """ Return a string that contains the display name for the header 
+        string. Translation removes the 'coq_' prefix and any numerical 
+        suffix, determines the resource feature from the remaining string,
+        translates it to its display name, and returns the display name
+        together with the numerical suffix attached."""
+        
+        if header in COLUMN_NAMES:
+            return COLUMN_NAMES[header]
+        
+        if header.startswith("coq_"):
+            header = header.partition("coq_")[2]
+        header_fields = header.split("_")
+        if len(header_fields) == 1:
+            try:
+                return COLUMN_NAMES[header_fields[0]]
+            except KeyError:
+                return header_fields[0].capitalize()
+        if "_".join(header_fields[:-1]) in cls.get_resource_features():
+            rc_feature = "_".join(header_fields[:-1])
+            return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
+        return header
+    
 class BaseCorpus(object):
     provides = []
     

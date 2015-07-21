@@ -70,6 +70,13 @@ CONTEXT_KWIC = "KWIC"
 CONTEXT_STRINGS = "Strings"
 CONTEXT_COLUMNS = "Columns"
 
+COLUMN_NAMES = {
+    "coq_frequency": "Frequency", 
+    "coq_freq_per_milion": "Frequency (pmw)",
+    "coq_context_left": "Left context",
+    "coq_context_right": "Right context",
+    "coq_context_string": "Context"}
+
 # for Python 3 compatibility:
 try:
     unicode()

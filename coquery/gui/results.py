@@ -105,13 +105,23 @@ class CoqSortProxyModel(QtGui.QSortFilterProxyModel):
         header = self.sourceModel().header
         if not header or index > len(header):
             return None
+
+        #rc_feature_split = header[index].strip("coq_").split("_")
+        #if len(rc_feature_split) == 3:
+            #print(rc_feature_split)
+            #rc_feature = "_".join(rc_feature_split[0:2])
+            #column_name = options.cfg.main_window.Session.Corpus.resource.__getattribute__(rc_feature)
+            #column_name = "{}{}".format(column_name, rc_feature_split[-1])
+        #else:
+            #column_name = rc_feature_split[0]
+
+        column_name = options.cfg.main_window.Session.Corpus.resource.translate_header(header[index])
         
         # Get header string?
         if role == QtCore.Qt.DisplayRole:
             # Return normal header if not a sort column:
             if index not in self.sort_columns:
-                return header[index]
-            
+                return column_name
             tag_list = []
             
             # Add sorting order number if more than one sorting columns have
