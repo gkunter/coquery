@@ -73,6 +73,7 @@ class QueryFilter(object):
         self._text = text
         self._table = ""
         self._resource = None
+        self._parsed = False
         
     @property
     def resource(self):
@@ -136,11 +137,11 @@ class QueryFilter(object):
         
         fields = str(text).split()
         try:
-            var = fields[0]
+            self.var = fields[0]
         except:
             return error_value
         try:
-            operator = fields[1]
+            self.operator = fields[1]
         except:
             return error_value            
         try:
@@ -154,20 +155,21 @@ class QueryFilter(object):
         # check for range:
         collapsed_values = "".join(fields[2:])
         if collapsed_values.count("-") == 1:
-            value_list = None
-            value_range = tuple(collapsed_values.split("-"))
+            self.value_list = None
+            self.value_range = tuple(collapsed_values.split("-"))
         else:
-            value_range = None
-            value_list = sorted([x.strip("(),").strip() for x in values])
+            self.value_range = None
+            self.value_list = sorted([x.strip("(),").strip() for x in values])
 
-        if (value_range or len(value_list) > 1) and operator.lower() in ("is", "="):
-            operator = "in"
+        if (self.value_range or len(self.value_list) > 1) and self.operator.lower() in ("is", "="):
+            self.operator = "in"
 
-        if operator == "LIKE":
-            if value_range or len(value_list) > 1:
+        if self.operator == "LIKE":
+            if self.value_range or len(self.value_list) > 1:
                 return error_value
 
-        return var, operator, value_list, value_range
+        self._parsed = True
+        return self.var, self.operator, self.value_list, self.value_range
             
     def validate(self, s):
         """ Check if the text contains a valid filter. A filter is valid if
@@ -177,7 +179,7 @@ class QueryFilter(object):
         var, op, value_range, value_list = self.parse_filter(s)
         if not var:
             return False
-        variable_names = [name.lower() for  _, name in self.resource.get_corpus_features()]
+        variable_names = [name.lower() for  _, name in self.resource.get_corpus_features() + [("coq_frequency", "freq")]]
         if var.lower() not in variable_names:
             return False
         if variable_names.count(var.lower()) > 1:
@@ -185,6 +187,27 @@ class QueryFilter(object):
         if op.lower() not in [x.lower() for x in self.operators]:
             return False
         return True
+    
+    def check_number(self, n):
+        """ Return true if the number n is not filtered by this filter, or
+        false otherwise."""
+        if not self._parsed:
+            self.parse_filter(self._text)
+            
+        try:
+            n = float(n)
+            if self.operator in ("=", "IS", "LIKE"):
+                return n == float(self.value_list[0])
+            elif self.operator == ">":
+                return n > float(self.value_list[0])
+            elif self.operator == "<":
+                return n < float(self.value_list[0])
+            elif self.operator == "<>":
+                return n <> float(self.value_list[0])
+            elif self.operator == "IN":
+                return n >= float(self.value_range[0]) and n <= float(self.value_range[1])
+        except ValueError:
+            return False
 
 class QueryResult(object):
     """ A little class that represents a single row of results from a query."""
@@ -584,24 +607,36 @@ class FrequencyQuery(CorpusQuery):
             else:
                 constant_line = []
 
+            frequency_filters = []
+            for x in options.cfg.filter_list:
+                parse = x.parse_filter(x.text)
+                if x.var.lower() == options.cfg.freq_label.lower():
+                    frequency_filters.append(x)
+
             for current_result in self.Results:
-                if not options.cfg.case_sensitive:
-                    for x in current_result:
-                        try:
-                            current_result[x] = current_result[x].lower()
-                        except AttributeError:
-                            pass
-                if constant_line:
-                    output_list = copy.copy(constant_line)
-                else:
-                    output_list = []
+                freq = current_result["coq_frequency"]
+                fail = False
+                for filt in frequency_filters:
+                    if not filt.check_number(freq):
+                        fail = True
+                if not fail:
+                    if not options.cfg.case_sensitive:
+                        for x in current_result:
+                            try:
+                                current_result[x] = current_result[x].lower()
+                            except AttributeError:
+                                pass
+                    if constant_line:
+                        output_list = copy.copy(constant_line)
+                    else:
+                        output_list = []
 
-                output_list.extend([current_result[x] for x in self.Session.output_order])
+                    output_list.extend([current_result[x] for x in self.Session.output_order])
 
-                if options.cfg.gui:
-                    self.Session.output_storage.append(current_result)
-                else:
-                    output_file.writerow(output_list)
+                    if options.cfg.gui:
+                        self.Session.output_storage.append(current_result)
+                    else:
+                        output_file.writerow(output_list)
             return
         
         # Check if the same query string has been queried in this session.
