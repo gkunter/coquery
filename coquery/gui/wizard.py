@@ -196,10 +196,13 @@ class CoqueryWizard(QtGui.QWizard):
             corpus_name = str(self.ui.combo_corpus.currentText()).lower()
             self.resource, self.corpus, self.lexicon, self.path = resource_list.get_available_resources()[corpus_name]
             self.ui.filter_box.resource = self.resource
-                            
+            
+            corpus_variables = [x for _, x in self.resource.get_corpus_features()]
+            corpus_variables.append("Freq")
+            corpus_variables.append("Freq.pmw")
             self.change_corpus_features()
             try:
-                self.filter_variable_model.setStringList(options.cfg.output_variable_names)
+                self.filter_variable_model.setStringList(corpus_variables)
             except AttributeError:
                 pass
 
@@ -241,8 +244,6 @@ class CoqueryWizard(QtGui.QWizard):
 
         tree = self.create_output_options_tree()
 
-        options.cfg.output_variable_names = []
-
         # populate the tree with a root for each table:
         for table in tables:
             root = CoqTreeItem()
@@ -262,7 +263,6 @@ class CoqueryWizard(QtGui.QWizard):
                 leaf.setObjectName(wizardUi._fromUtf8(var))
                 leaf.setCheckState(0, QtCore.Qt.CheckState(wizardUi._fromUtf8(var) in self.checked_buttons))
                 leaf.update_checkboxes(0, expand=True)
-                options.cfg.output_variable_names.append(label.lower())
                 
     def fill_combo_corpus(self):
         """ Add the available corpus names to the corpus selection combo 
@@ -366,12 +366,6 @@ class CoqueryWizard(QtGui.QWizard):
                    options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-            
-            ## check for valid, but not submitted filters:
-            #current_filter_text = str(self.ui.edit_query_filter.text()).strip()
-            #if queryfilter.CoqFilterTag.validate(current_filter_text, options.cfg.output_variable_names):
-                #options.cfg.filter_list.append(CoqFilterTag.format_content(current_filter_text))
-
             
             options.cfg.selected_features = []
             
