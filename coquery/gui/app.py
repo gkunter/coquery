@@ -194,7 +194,7 @@ class QueryFilterBox(CoqTagBox):
             else:
                 filt.text = str(self.edit_tag.text())
         except InvalidFilterError:
-            self.edit_tag.setStyleSheet('CoqTagEdit {background-color: rgb(255, 255, 192); }')
+            self.edit_tag.setStyleSheet('CoqTagEdit { border-radius: 5px; font: condensed;background-color: rgb(255, 255, 192); }')
         else:
             super(QueryFilterBox, self).addTag(filt.text)
             options.cfg.filter_list.append(filt)
