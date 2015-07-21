@@ -1641,25 +1641,27 @@ class SQLCorpus(BaseCorpus):
                     '{} {} "{}"'.format(
                         self.resource.__getattribute__(rc_feature), op, value_list[0]))
 
-        # add requested features depending on the token specifications:
-        if current_token.word_specifiers:
-            if "word_label" in dir(self.resource):
-                requested_features.append("word_label")
-        if current_token.transcript_specifiers:
-            if "transcript_label" in dir(self.resource):
-                requested_features.append("word_transcript")
-            elif "transcript_label" in dir(self.resource):
-                requested_features.append("transcript_label")
-        if current_token.class_specifiers:
-            if "word_pos" in dir(self.resource):
-                requested_features.append("word_pos")
-            elif "pos_label" in dir(self.resource):
-                requested_features.append("pos_label")
-        if current_token.lemma_specifiers:
-            if "word_lemma" in dir(self.resource):
-                requested_features.append("word_lemma")
-            elif "lemma_label" in dir(self.resource):
-                requested_features.append("lemma_label")
+        if current_token.word_specifiers or current_token.transcript_specifiers or current_token.class_specifiers:
+            requested_features.append("corpus_word_id")
+        ## add requested features depending on the token specifications:
+        #if current_token.word_specifiers:
+            #if "word_label" in dir(self.resource):
+                #requested_features.append("word_label")
+        #if current_token.transcript_specifiers:
+            #if "transcript_label" in dir(self.resource):
+                #requested_features.append("word_transcript")
+            #elif "transcript_label" in dir(self.resource):
+                #requested_features.append("transcript_label")
+        #if current_token.class_specifiers:
+            #if "word_pos" in dir(self.resource):
+                #requested_features.append("word_pos")
+            #elif "pos_label" in dir(self.resource):
+                #requested_features.append("pos_label")
+        #if current_token.lemma_specifiers:
+            #if "word_lemma" in dir(self.resource):
+                #requested_features.append("word_lemma")
+            #elif "lemma_label" in dir(self.resource):
+                #requested_features.append("lemma_label")
 
         # get a list of all tables that are required to query the requested
         # features:
@@ -1668,7 +1670,8 @@ class SQLCorpus(BaseCorpus):
             rc_table = "{}_table".format(rc_feature.split("_")[0])
             if rc_table == "coquery_table":
                 continue
-            if rc_table not in required_tables and rc_table != self.resource.corpus_table:
+            print(rc_table)
+            if rc_table not in required_tables:
                 tree = self.resource.get_table_structure(rc_table, options.cfg.selected_features)
                 parent = tree["parent"]
                 table_id = "{}_id".format(rc_feature.split("_")[0])
@@ -1692,7 +1695,7 @@ class SQLCorpus(BaseCorpus):
         
         #where_constraints = set([])
         sub_list = set([])
-        for x in self.get_whereclauses(current_token, self.resource.word_id, word_pos_column):
+        for x in self.get_whereclauses(current_token, self.resource.corpus_word_id, word_pos_column):
             if x: 
                 sub_list.add(x)
         if sub_list:
@@ -1700,12 +1703,19 @@ class SQLCorpus(BaseCorpus):
                 s = "NOT ({})".format(" AND ".join(sub_list))
             else:
                 s = " AND ".join(sub_list)
-            if "word_table" not in rc_where_constraints:
-                rc_where_constraints["word_table"] = set([])
-            rc_where_constraints["word_table"].add(s)
+            #if "word_table" not in rc_where_constraints:
+                #rc_where_constraints["word_table"] = set([])
+            #rc_where_constraints["word_table"].add(s)
+            if "corpus_table" not in rc_where_constraints:
+                rc_where_constraints["corpus_table"] = set([])
+            rc_where_constraints["corpus_table"].add(s)
+            
+        print(rc_where_constraints)
+        #print(required_tables)
 
-        select_list = []
+        select_list = set([])
         for rc_table in required_tables:
+            print(rc_table)
             rc_tab = rc_table.split("_")[0]
             sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
             parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree) 
@@ -1724,15 +1734,16 @@ class SQLCorpus(BaseCorpus):
                     self.resource.__getattribute__(rc_feature),
                     name)
                 column_list.append(variable_string)
-                if not rc_feature.endswith("_id"):
-                    select_list.append(name)
+                #if not rc_feature.endswith("_id"):
+                select_list.add(name)
                 
             columns = ", ".join(column_list)
-            
+            print("columns", columns)
+            print("select", select_list)
             where_string = ""
             if rc_table in rc_where_constraints:
-            #if rc_table == "word_table" and where_constraints:
                 where_string = "WHERE {}".format(" AND ".join(list(rc_where_constraints[rc_table])))
+                print(where_string)
 
             if rc_parent:
                 parent_id = "coq_{}_{}_id_{}".format(
@@ -1781,10 +1792,12 @@ class SQLCorpus(BaseCorpus):
         # add the variable storing the source_id or file_id to the selected
         # columns so that they can be used to retrieve the context:
         if number == 0 and options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
-            select_list.append("coq_corpus_{}_1".format(options.cfg.context_source_id))
-        
+            select_list.add("coq_corpus_{}_1".format(options.cfg.context_source_id))
+
+        select_list.add("coq_corpus_id_{}".format(number+1))
+
         return "SELECT {} FROM {}".format(
-            ", ".join(select_list + ["coq_corpus_id_{}".format(number+1)]), 
+            ", ".join(select_list), 
             " ".join(L)), select_list, L
         
     def sql_string_query_new(self, Query, self_joined):
@@ -1879,6 +1892,9 @@ class SQLCorpus(BaseCorpus):
             query_string = query_string.replace("SELECT ", "SELECT \n\t")
             query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
+
+        print(query_string)
+        #sys.exit(0)
 
         Query.Session.output_order = [x.split(" AS ")[-1] for x in final_select]
 
@@ -2221,3 +2237,52 @@ class TestLexicon(BaseLexicon):
     def is_part_of_speech(self, pos):
         return pos in ["N", "V"]
     
+""" Revised query for self-joins?
+
+
+
+SELECT coq_corpus_id_1, coq_word_label_1, coq_word_label_2, coq_word_label_3, coq_frequency, coq_source_genre_1, coq_source_genre_1 FROM 
+
+(SELECT 
+    TokenId AS coq_corpus_id_1, TextId AS coq_corpus_source_id_1, W1 AS coq_corpus_word_id_1, W2 AS coq_corpus_word_id_2, W3 AS coq_corpus_word_id_3, COUNT(*) AS coq_frequency 
+FROM 
+    corpusBig
+WHERE 
+    W1 IN 
+        (4454405, 306695, 286733, 22, 354855, 28201, 4618797, 1313838, 6704, 3405879, 3866688, 1305014, 458310, 72775, 309326, 745039, 46674, 1081615, 4574812, 463967, 113254, 1420920, 22141, 640, 641158, 802442, 161932, 20113, 551570, 4071070, 41643, 267951, 176, 689, 3262, 830655, 9937, 119507, 166625, 3756771, 309493, 5370, 540420, 614666, 40718, 389391, 4312852, 2609953, 608573, 447809, 2844997, 919373, 1411402, 16205, 19278, 73551, 5465, 355, 3943, 52073, 85866, 126866, 1378159, 429713, 551811, 745348, 42889, 4770192, 19858, 320405, 138665, 68522, 4616775, 152492, 438, 33730, 76739, 67532, 843726, 2511, 1055703, 3046, 2958316, 195154, 2491375, 358388, 555004, 1312255) 
+    AND
+    W2 IN 
+        (15012, 13542, 1959, 1540457, 214411, 23468, 155823, 43892, 125174, 4617, 5000760, 101564, 4249533) 
+    AND 
+    W3 IN 
+        (24, 1345)
+
+GROUP BY 
+    coq_corpus_word_id_1, coq_corpus_word_id_2, coq_corpus_word_id_3
+) AS coq_master
+
+INNER JOIN 
+    (SELECT Word as coq_word_label_1, WordId AS coq_word_id_1 FROM lex) AS e1
+    ON coq_word_id_1 = coq_corpus_word_id_1
+
+INNER JOIN 
+    (SELECT Word as coq_word_label_2, WordId AS coq_word_id_2 FROM lex) AS e2
+    ON coq_word_id_2 = coq_corpus_word_id_2
+
+INNER JOIN
+    (SELECT Word as coq_word_label_3, WordId AS coq_word_id_3 FROM lex) AS e3
+    ON coq_word_id_3 = coq_corpus_word_id_3
+
+INNER JOIN
+    (SELECT TextId AS coq_source_id_1, Genre AS coq_source_genre_1, Year AS coq_source_year_1 FROM sources) AS coq_source_table
+    ON coq_corpus_source_id_1 = coq_source_id_1
+    
+OLD :
+
+
+SELECT corpusBig.TokenId AS TokenId,
+        corpusBig.W1,
+        corpusBig.W3,
+        corpusBig.W2 FROM corpusBig WHERE W1 IN (4454405, 306695, 286733, 22, 354855, 28201, 4618797, 1313838, 6704, 3405879, 3866688, 1305014, 458310, 72775, 309326, 745039, 46674, 1081615, 4574812, 463967, 113254, 1420920, 22141, 640, 641158, 802442, 161932, 20113, 551570, 4071070, 41643, 267951, 176, 689, 3262, 830655, 9937, 119507, 166625, 3756771, 309493, 5370, 540420, 614666, 40718, 389391, 4312852, 2609953, 608573, 447809, 2844997, 919373, 1411402, 16205, 19278, 73551, 5465, 355, 3943, 52073, 85866, 126866, 1378159, 429713, 551811, 745348, 42889, 4770192, 19858, 320405, 138665, 68522, 4616775, 152492, 438, 33730, 76739, 67532, 843726, 2511, 1055703, 3046, 2958316, 195154, 2491375, 358388, 555004, 1312255) AND
+        W2 IN (15012, 13542, 1959, 1540457, 214411, 23468, 155823, 43892, 125174, 4617, 5000760, 101564, 4249533) AND
+        W3 IN (17408, 771, 8581, 1545478, 28481, 32392, 56331, 372876, 2551949, 84878, 126352, 1400387, 407, 24, 398617, 979354, 706715, 418972, 14493, 1316383, 146208, 33, 23074, 283, 700319, 783833, 4521, 341639, 40620, 557, 260189, 72992, 343841, 753864, 2357301, 487862, 3632312, 73204, 2875066, 573791, 857916, 276543, 1345, 103875, 89412, 2923719, 15176, 622220, 6346, 1941964, 3704738, 54048, 3325520, 2162971, 51026, 440547, 68308, 20666, 3775320, 133977, 40026, 3429616, 223644, 148575, 482016, 1783163, 474855, 738792, 8553, 806123, 884205, 71022, 3364891, 41164, 208114, 262739, 1017204, 52086, 204137, 2485371, 382, 196735) """
