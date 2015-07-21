@@ -1,4 +1,10 @@
-""" Tree mapping based on http://hcil.cs.umd.edu/trs/91-03/91-03.html."""
+""" Tree mapping based on http://hcil.cs.umd.edu/trs/91-03/91-03.html.
+
+Another Python implementation is given here:
+
+http://wiki.scipy.org/Cookbook/Matplotlib/TreeMap
+
+"""
 from __future__ import division
 from __future__ import print_function
 
@@ -187,17 +193,12 @@ class TreeMapVisualizer(QtGui.QDialog):
         for row in table:
             levels.add(row[-2])
         tree = table_to_tree(table)
-        print(1)
         tm = TreeMap(tree, parent)
-        print(2)
         tm.set_factor(list(levels))
         tm.max_weight = tree_weight(tree)
-        print(3)
 
         dialog = TreeMapVisualizer(tm, parent)
-        print(4)
         dialog.ui.visualization_layout.addWidget(tm)
-        print(5)
         return dialog.show()
 
     def keyPressEvent(self, e):
