@@ -1,19 +1,4 @@
-""" Tree mapping based on http://hcil.cs.umd.edu/trs/91-03/91-03.html: 
-
-root : a pointer to the root of the tree or subtree
-
-P, Q : arrays of length 2 with (x,y) coordinate pairs of opposite corners of the current rectangle (assume that Q contains the higher coordinates and P the lower coordinates, but this does not affect the correctness of the algorithm, only the order in which rectangles are drawn)
-
-axis : varies between 0 and 1 to indicate cuts to be made vertically and horizontally
-
-color: indicates the color to be used for the current rectangle.
-
-In addition we need:
-
-Paint_rectangle : a procedure that paints within the rectangle using a given color, and resets the color variable.
-
-Size : a function that returns the number of bytes in the node pointed to by the argument. Alternatively, the size could be pre-computed and stored in each node. """
-
+""" Tree mapping based on http://hcil.cs.umd.edu/trs/91-03/91-03.html."""
 from __future__ import division
 from __future__ import print_function
 
@@ -25,53 +10,6 @@ import options
 sys.path.append(os.path.join(sys.path[0], "../gui/"))
 import visualizerUi
 from pyqt_compat import QtGui, QtCore
-
-class Point(object):
-    def __init__(self, x=None, y=None):
-        self._x = x
-        self._y = y
-        
-    @property
-    def x(self):
-        return self._x
-    
-    @x.setter
-    def x(self, value):
-        self._x = value
-    
-    @property
-    def y(self):
-        return self._y
-
-    @y.setter
-    def y(self, value):
-        self._y = value
-
-
-def paint_rectangle(p, q, color, name):
-    """ p and q are the upper right and lower left corner of the rectangle."""
-    print("\tPainting '{}' from {}/{} to {}/{}".format(name, p[0], p[1], q[0], q[1]))
-
-def tree_map(root, p, q, axis, color, name=None, label="count"):
-    """ P and Q are the upper right and lower left corners of the display. 
-    By setting the axis argument to zero the initial partitions are made
-    vertically. It is assumed that arguments P and Q are passed by value
-    (since P, Q are modified within):
-
-    tree_map(root, p[0..1], q[0..1], axis, color)"""
-    #print("root '{}'".format(name))
-    #print("\t", root)
-    width = q[axis] - p[axis]
-    if label in root:
-        paint_rectangle(p, q, color, name)
-        #print("\tWidth of rectangle: ", width)
-    for i, child_name in enumerate(root):
-        if child_name != label:
-            child = root[child_name]
-            #print("\t\tWeight child '{}' {}, parent {}".format(child_name, tree_weight(child), tree_weight(root)))
-            q[axis] = p[axis] + (tree_weight(child) / tree_weight(root)) * width
-            tree_map(child, list(p), list(q), 1 - axis, color, child_name)
-            p[axis] = q[axis]
 
 def table_to_tree(table, label="count"):
     """ Return a tree that contains a tree representation of the table. It
