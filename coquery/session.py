@@ -51,7 +51,6 @@ class Session(object):
         self.max_number_of_input_columns = 0
         self.max_number_of_tokens = 0
         self.query_list = []
-        self.query_column_number = 0
         self.requested_fields = []
             
         
@@ -330,7 +329,6 @@ class SessionCommandLine(Session):
             self.query_list.append(new_query)
             self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
         self.max_number_of_input_columns = 0
-        self.query_column_number = 1
 
 class SessionInputFile(Session):
     def __init__(self):
