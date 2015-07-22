@@ -38,13 +38,13 @@ class MyTableModel(QtCore.QAbstractTableModel):
 
     def headerData(self, col, orientation, role):
         if not self.header or col > len(self.header):
-            return QtCore.QVariant(None)
+            return None
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
             try:
-                return QtCore.QVariant(self.header[col])
+                return self.header[col]
             except IndexError:
-                return QtCore.QVariant(None)
-        return QtCore.QVariant(None)
+                return None
+        return None
 
 class CSVOptions(QtGui.QDialog):
     def __init__(self, filename, default=None, parent=None, icon=None):
