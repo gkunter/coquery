@@ -166,12 +166,14 @@ class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
         
         self.file_table = "file"
         self.file_id = "FileId"
-        self.file_label = "Path"
+        self.file_label = "Name"
+        self.file_path = "Path"
 
         self.add_table_description(self.file_table, self.file_id,
             {"CREATE": [
                 "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.file_id),
-                "`{}` TINYTEXT NOT NULL".format(self.file_label)]})
+                "`{}` TINYTEXT NOT NULL".format(self.file_label),
+                "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
 
         # Any corpus that provides either CORP_CONTEXT, CORP_SOURCE or
         # CORP_FILENAME also needs to specify a source table. Each row in
