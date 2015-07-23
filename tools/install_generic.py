@@ -52,16 +52,16 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
         self.corpus_table = "corpus"
         self.corpus_id = "TokenId"
         self.corpus_word_id = "WordId"
-        self.corpus_source_id = "FileId"
+        self.corpus_file_id = "FileId"
         
         self.add_table_description(self.corpus_table, self.corpus_id,
             {"CREATE": [
                 "`{}` BIGINT(20) UNSIGNED NOT NULL".format(self.corpus_id),
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_word_id),
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_source_id)],
+                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_file_id)],
             "INDEX": [
                 ([self.corpus_word_id], 0, "HASH"),
-                ([self.corpus_source_id], 0, "HASH")]})
+                ([self.corpus_file_id], 0, "HASH")]})
         
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
@@ -138,12 +138,14 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
         
         self.file_table = "file"
         self.file_id = "FileId"
-        self.file_label = "Path"
+        self.file_name = "File"
+        self.file_path = "Path"
         
         self.add_table_description(self.file_table, self.file_id,
             {"CREATE": [
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
-                "`{}` TINYTEXT NOT NULL".format(self.file_label)]})
+                "`{}` TINYTEXT NOT NULL".format(self.file_name),
+                "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
 
         # The following is obsolete for the experimental query method.
         ## Any corpus that provides either CORP_CONTEXT, CORP_SOURCE or
