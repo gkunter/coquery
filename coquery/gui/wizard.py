@@ -62,9 +62,13 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         'expand' is True, the parents of items with checked children will be 
         expanded. """
         check_state = self.checkState(column)
+
         if check_state == QtCore.Qt.PartiallyChecked:
             # do not propagate a partially checked state
             return
+        
+        if str(self._objectName).endswith("_root") and check_state:
+            self.setExpanded(True)
         
         # propagate check state to children:
         for child in [self.child(i) for i in range(self.childCount())]:
@@ -118,10 +122,17 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         value = super(CoqTreeWidget, self).mimeData(*args)
         value.setText(", ".join([x.objectName() for x in args[0]]))
         return value
+    
+    def get_checked(self, column = 0):
+        check_list = []
+        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
+            for child in [root.child(i) for i in range(root.childCount())]:
+                if child.checkState(column) == QtCore.Qt.Checked:
+                    check_list.append(str(child._objectName))
+        return check_list
         
 class CoqueryWizard(QtGui.QWizard):
     """ Define a QWizard class for Coquery. """
-    checked_buttons = set([])
     
     def __init__(self, parent=None):
         super(CoqueryWizard, self).__init__(parent)
@@ -242,12 +253,15 @@ class CoqueryWizard(QtGui.QWizard):
         tables.remove("coquery")
         tables.append("coquery")
 
+
+        last_checked = self.ui.options_tree.get_checked()
+
         tree = self.create_output_options_tree()
 
         # populate the tree with a root for each table:
         for table in tables:
             root = CoqTreeItem()
-            root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable   | QtCore.Qt.ItemIsSelectable)
+            root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
             root.setText(0, table.capitalize())
             root.setObjectName(wizardUi._fromUtf8("{}_root".format(table)))
             root.setCheckState(0, QtCore.Qt.Unchecked)
@@ -261,7 +275,10 @@ class CoqueryWizard(QtGui.QWizard):
                 label = type(self.resource).__getattribute__(self.resource, var).capitalize()
                 leaf.setText(0, label)
                 leaf.setObjectName(wizardUi._fromUtf8(var))
-                leaf.setCheckState(0, QtCore.Qt.CheckState(wizardUi._fromUtf8(var) in self.checked_buttons))
+                if var in last_checked: 
+                    leaf.setCheckState(0, QtCore.Qt.Checked)
+                else:
+                    leaf.setCheckState(0, QtCore.Qt.Unchecked)
                 leaf.update_checkboxes(0, expand=True)
                 
     def fill_combo_corpus(self):
