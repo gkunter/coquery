@@ -192,6 +192,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             self.rownames = range(1, len(data) + 1)
         else:
             self.rownames = None
+        p = self.createIndex(0, 0)
+        q = self.createIndex(len(self.content), len(self.content[0]))
+        self.dataChanged.emit(p, q)
         
     def data(self, index, role):
         if not index.isValid():
