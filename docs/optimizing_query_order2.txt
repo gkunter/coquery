@@ -1,0 +1,99 @@
+SELECT 
+    coq_word_label_1, coq_word_label_2, coq_word_label_3, COUNT(*) AS coq_frequency 
+FROM 
+
+(SELECT coq_word_label_1, coq_corpus_word_id_1, coq_corpus_id_1, coq_word_id_1 FROM (SELECT id AS coq_corpus_id_1, Entity_id AS coq_corpus_word_id_1 FROM element WHERE Entity_id IN (87360, 85825, 2402, 17253, 51400, 85931, 655522, 65105, 412114, 612224, 3476, 1428, 132768)) AS COQ_CORPUS_TABLE INNER JOIN (SELECT id AS coq_word_id_1, Text AS coq_word_label_1 FROM entity ) AS COQ_WORD_TABLE ON coq_corpus_word_id_1 = coq_word_id_1) AS e1 
+
+INNER JOIN 
+
+    (SELECT coq_corpus_word_id_2, coq_word_id_2, coq_word_label_2, coq_corpus_id_2 FROM (SELECT id AS coq_corpus_id_2, Entity_id AS coq_corpus_word_id_2 FROM element WHERE Entity_id IN (809088, 29441, 898, 85639, 81037, 608398, 179856, 622610, 718744, 8477, 672, 164, 178727, 5596, 295111, 486328, 979130, 467774, 247359, 3265, 6596, 329542, 247367, 389833, 150730, 5196, 8654, 8655, 42836, 36, 11739, 20060, 94, 221584, 42729, 13675, 988, 68590, 3956, 88438, 5370)) AS COQ_CORPUS_TABLE INNER JOIN (SELECT id AS coq_word_id_2, Text AS coq_word_label_2 FROM entity ) AS COQ_WORD_TABLE ON coq_corpus_word_id_2 = coq_word_id_2) AS e2 
+
+ON coq_corpus_id_2 = coq_corpus_id_1 + 1 
+
+INNER JOIN 
+
+    (SELECT coq_corpus_word_id_3, coq_word_label_3, coq_word_id_3, coq_corpus_id_3 FROM (SELECT id AS coq_corpus_id_3, Entity_id AS coq_corpus_word_id_3 FROM element WHERE Entity_id IN (228198, 33006, 126703, 285140, 25678, 71769, 2522, 468637)) AS COQ_CORPUS_TABLE INNER JOIN (SELECT id AS coq_word_id_3, Text AS coq_word_label_3 FROM entity ) AS COQ_WORD_TABLE ON coq_corpus_word_id_3 = coq_word_id_3) AS e3 
+
+ON coq_corpus_id_3 = coq_corpus_id_1 + 2 
+
+GROUP BY coq_word_label_1, coq_word_label_2, coq_word_label_3
+
++------------------+------------------+------------------+---------------+
+| coq_word_label_1 | coq_word_label_2 | coq_word_label_3 | coq_frequency |
++------------------+------------------+------------------+---------------+
+| I                | had              | doubts           |             3 |
+| I                | have             | doubts           |             3 |
++------------------+------------------+------------------+---------------+
+2 rows in set (31,89 sec)
+
+--
+
+-- GET FREQUENCY OF e1
+SELECT COUNT(*) FROM element WHERE Entity_id IN (87360, 85825, 2402, 17253, 51400, 85931, 655522, 65105, 412114, 612224, 3476, 1428, 132768)
++----------+
+| COUNT(*) |
++----------+
+|   868909 |
++----------+
+1 row in set (0,51 sec)
+
+
+-- GET FREQUENCY OF e2
+SELECT COUNT(*) FROM element WHERE Entity_id IN (809088, 29441, 898, 85639, 81037, 608398, 179856, 622610, 718744, 8477, 672, 164, 178727, 5596, 295111, 486328, 979130, 467774, 247359, 3265, 6596, 329542, 247367, 389833, 150730, 5196, 8654, 8655, 42836, 36, 11739, 20060, 94, 221584, 42729, 13675, 988, 68590, 3956, 88438, 5370)
++----------+
+| COUNT(*) |
++----------+
+|  1317166 |
++----------+
+1 row in set (0,87 sec)
+
+-- GET FREQUENCY OF e3
+SELECT COUNT(*) FROM element WHERE Entity_id IN (228198, 33006, 126703, 285140, 25678, 71769, 2522, 468637)
++----------+
+| COUNT(*) |
++----------+
+|     2032 |
++----------+
+1 row in set (0,05 sec)
+
+-- ORDER: e3, e1, e2
+
+
+SELECT 
+    coq_word_label_1, coq_word_label_2, coq_word_label_3, COUNT(*) AS coq_frequency 
+FROM 
+
+(SELECT coq_corpus_word_id_3, coq_word_label_3, coq_word_id_3, coq_corpus_id_3 FROM (SELECT id AS coq_corpus_id_3, Entity_id AS coq_corpus_word_id_3 FROM element WHERE Entity_id IN (228198, 33006, 126703, 285140, 25678, 71769, 2522, 468637)) AS COQ_CORPUS_TABLE INNER JOIN (SELECT id AS coq_word_id_3, Text AS coq_word_label_3 FROM entity ) AS COQ_WORD_TABLE ON coq_corpus_word_id_3 = coq_word_id_3) AS e3 
+
+INNER JOIN
+    (SELECT coq_word_label_1, coq_corpus_word_id_1, coq_corpus_id_1, coq_word_id_1 FROM (SELECT id AS coq_corpus_id_1, Entity_id AS coq_corpus_word_id_1 FROM element WHERE Entity_id IN (87360, 85825, 2402, 17253, 51400, 85931, 655522, 65105, 412114, 612224, 3476, 1428, 132768)) AS COQ_CORPUS_TABLE INNER JOIN (SELECT id AS coq_word_id_1, Text AS coq_word_label_1 FROM entity ) AS COQ_WORD_TABLE ON coq_corpus_word_id_1 = coq_word_id_1) AS e1 
+ON coq_corpus_id_1 = coq_corpus_id_3 - 2 
+
+INNER JOIN 
+    (SELECT coq_corpus_word_id_2, coq_word_id_2, coq_word_label_2, coq_corpus_id_2 FROM (SELECT id AS coq_corpus_id_2, Entity_id AS coq_corpus_word_id_2 FROM element WHERE Entity_id IN (809088, 29441, 898, 85639, 81037, 608398, 179856, 622610, 718744, 8477, 672, 164, 178727, 5596, 295111, 486328, 979130, 467774, 247359, 3265, 6596, 329542, 247367, 389833, 150730, 5196, 8654, 8655, 42836, 36, 11739, 20060, 94, 221584, 42729, 13675, 988, 68590, 3956, 88438, 5370)) AS COQ_CORPUS_TABLE INNER JOIN (SELECT id AS coq_word_id_2, Text AS coq_word_label_2 FROM entity ) AS COQ_WORD_TABLE ON coq_corpus_word_id_2 = coq_word_id_2) AS e2 
+ON coq_corpus_id_2 = coq_corpus_id_3 - 1 
+
+GROUP BY coq_word_label_1, coq_word_label_2, coq_word_label_3
+
++------------------+------------------+------------------+---------------+
+| coq_word_label_1 | coq_word_label_2 | coq_word_label_3 | coq_frequency |
++------------------+------------------+------------------+---------------+
+| I                | had              | doubts           |             3 |
+| I                | have             | doubts           |             3 |
++------------------+------------------+------------------+---------------+
+2 rows in set (8,06 sec)
+
+
+-- EXPLAIN:
++------+-------------+---------+--------+-------------------+-----------+---------+-----------------------+------+----------------------------------------------+
+| id   | select_type | table   | type   | possible_keys     | key       | key_len | ref                   | rows | Extra                                        |
++------+-------------+---------+--------+-------------------+-----------+---------+-----------------------+------+----------------------------------------------+
+|    1 | SIMPLE      | entity  | range  | PRIMARY           | PRIMARY   | 3       | NULL                  |   13 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE      | element | ref    | Entity_id         | Entity_id | 3       | bnc.entity.id         | 2598 | Using index                                  |
+|    1 | SIMPLE      | element | eq_ref | PRIMARY,Entity_id | PRIMARY   | 4       | func                  |    1 | Using where                                  |
+|    1 | SIMPLE      | entity  | eq_ref | PRIMARY           | PRIMARY   | 3       | bnc.element.Entity_id |    1 |                                              |
+|    1 | SIMPLE      | element | eq_ref | PRIMARY,Entity_id | PRIMARY   | 4       | func                  |    1 | Using where                                  |
+|    1 | SIMPLE      | entity  | eq_ref | PRIMARY           | PRIMARY   | 3       | bnc.element.Entity_id |    1 |                                              |
++------+-------------+---------+--------+-------------------+-----------+---------+-----------------------+------+----------------------------------------------+
+
+
