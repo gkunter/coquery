@@ -136,6 +136,7 @@ class TreeMap(QtGui.QWidget):
         super(TreeMap, self).__init__(parent, *args)
         self.model = None
         self.plotting = False
+        self.threading = False
             
     def setModel(self, model):
         self.model = model
@@ -163,13 +164,15 @@ class TreeMap(QtGui.QWidget):
         self.qp = QtGui.QPainter()
         self.qp.begin(self)
         size = self.size()
-        #if not self.plotting:
-            #self.plotting = True
-            #self.thread = VisualizerThread(self.tree_map, self, self.tree, [0, 0], [size.width() - 1, size.height() - 1], 0, None, None)
-            #self.thread.taskFinished.connect(self.onFinished)
-            #self.thread.start()
-        self.tree_map(self.tree, [0, 0], [size.width() - 1, size.height() - 1], 0, None, None)
-        self.qp.end()
+        if self.threading:
+            if not self.plotting:
+                self.plotting = True
+                self.thread = VisualizerThread(self.tree_map, self, self.tree, [0, 0], [size.width() - 1, size.height() - 1], 0, None, None)
+                self.thread.taskFinished.connect(self.onFinished)
+                self.thread.start()
+        else:
+            self.tree_map(self.tree, [0, 0], [size.width() - 1, size.height() - 1], 0, None, None)
+            self.qp.end()
 
     def onFinished(self):
         self.qp.end()
