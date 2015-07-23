@@ -715,20 +715,6 @@ class SQLLexicon(BaseLexicon):
     
     
     
-    def sql_string_get_posid_list(self, token):
-        where_string = self.sql_string_get_posid_list_where(token)
-
-        if "pos_table" in dir(self.resource):
-            return "SELECT DISTINCT {word_table}.{word_pos} FROM {word_table} INNER JOIN {pos_table} ON {pos_table}.{pos_id} = {word_table}.{word_pos} WHERE {where_string}".format(
-                word_pos=self.resource.word_pos_id,
-                word_table=self.resource.word_table,
-                pos_table=self.resource.pos_table,
-                pos_id=self.resource.pos_id,
-                where_string=where_string)
-        else:
-            return "SELECT DISTINCT {} FROM {} WHERE {}".format(
-                self.resource.word_pos, self.resource.word_table, where_string)
-
     def sql_string_get_wordid_list_where(self, token):
         # TODO: fix cfg.lemmatize
         # FIXME: this needs to be revised. 
@@ -898,7 +884,22 @@ class SQLLexicon(BaseLexicon):
         self.entry_cache[tuple(requested)][word_id] = entry
         return entry
 
+    def sql_string_get_posid_list(self, token):
+        where_string = self.sql_string_get_posid_list_where(token)
+
+        if "pos_table" in dir(self.resource):
+            return "SELECT DISTINCT {word_table}.{word_pos} FROM {word_table} INNER JOIN {pos_table} ON {pos_table}.{pos_id} = {word_table}.{word_pos} WHERE {where_string}".format(
+                word_pos=self.resource.word_pos_id,
+                word_table=self.resource.word_table,
+                pos_table=self.resource.pos_table,
+                pos_id=self.resource.pos_id,
+                where_string=where_string)
+        else:
+            return "SELECT DISTINCT {} FROM {} WHERE {}".format(
+                self.resource.word_pos, self.resource.word_table, where_string)
+
     def get_posid_list(self, token):
+        print(1)
         S = self.sql_string_get_posid_list(token)
         self.resource.DB.execute(S)
         return [x[0] for x in self.resource.DB.fetch_all()]
@@ -1417,12 +1418,17 @@ class SQLCorpus(BaseCorpus):
         else:
             return " ".join(table_string_list)
 
+    def get_frequency(self, token):
+        """ Return a longint that gives the corpus frequency of the token,
+        taking the filter list from options.cfg.filter_list into account."""
+        pass
+
     def get_whereclauses(self, Token, WordTarget, PosTarget):
         if not Token:
             return []
 
         where_clauses = []
-        if self.resource.name == "coca" and self.resource.word_table == "lex":
+        if self.resource.name == "coca":
             L = set(self.lexicon.get_matching_wordids(Token))
             if L:
                 where_clauses = ["{} IN ({})".format(
@@ -1643,25 +1649,25 @@ class SQLCorpus(BaseCorpus):
 
         if current_token.word_specifiers or current_token.transcript_specifiers or current_token.class_specifiers:
             requested_features.append("corpus_word_id")
-        ## add requested features depending on the token specifications:
-        #if current_token.word_specifiers:
-            #if "word_label" in dir(self.resource):
-                #requested_features.append("word_label")
-        #if current_token.transcript_specifiers:
-            #if "transcript_label" in dir(self.resource):
-                #requested_features.append("word_transcript")
-            #elif "transcript_label" in dir(self.resource):
-                #requested_features.append("transcript_label")
-        #if current_token.class_specifiers:
-            #if "word_pos" in dir(self.resource):
-                #requested_features.append("word_pos")
-            #elif "pos_label" in dir(self.resource):
-                #requested_features.append("pos_label")
-        #if current_token.lemma_specifiers:
-            #if "word_lemma" in dir(self.resource):
-                #requested_features.append("word_lemma")
-            #elif "lemma_label" in dir(self.resource):
-                #requested_features.append("lemma_label")
+        # add requested features depending on the token specifications:
+        if current_token.word_specifiers:
+            if "word_label" in dir(self.resource):
+                requested_features.append("word_label")
+        if current_token.transcript_specifiers:
+            if "transcript_label" in dir(self.resource):
+                requested_features.append("word_transcript")
+            elif "transcript_label" in dir(self.resource):
+                requested_features.append("transcript_label")
+        if current_token.class_specifiers:
+            if "word_pos" in dir(self.resource):
+                requested_features.append("word_pos")
+            elif "pos_label" in dir(self.resource):
+                requested_features.append("pos_label")
+        if current_token.lemma_specifiers:
+            if "word_lemma" in dir(self.resource):
+                requested_features.append("word_lemma")
+            elif "lemma_label" in dir(self.resource):
+                requested_features.append("lemma_label")
 
         # get a list of all tables that are required to query the requested
         # features:
@@ -1695,7 +1701,7 @@ class SQLCorpus(BaseCorpus):
         
         #where_constraints = set([])
         sub_list = set([])
-        for x in self.get_whereclauses(current_token, self.resource.corpus_word_id, word_pos_column):
+        for x in self.get_whereclauses(current_token, self.resource.word_id, word_pos_column):
             if x: 
                 sub_list.add(x)
         if sub_list:
@@ -1703,12 +1709,12 @@ class SQLCorpus(BaseCorpus):
                 s = "NOT ({})".format(" AND ".join(sub_list))
             else:
                 s = " AND ".join(sub_list)
-            #if "word_table" not in rc_where_constraints:
-                #rc_where_constraints["word_table"] = set([])
-            #rc_where_constraints["word_table"].add(s)
-            if "corpus_table" not in rc_where_constraints:
-                rc_where_constraints["corpus_table"] = set([])
-            rc_where_constraints["corpus_table"].add(s)
+            if "word_table" not in rc_where_constraints:
+                rc_where_constraints["word_table"] = set([])
+            rc_where_constraints["word_table"].add(s)
+            #if "corpus_table" not in rc_where_constraints:
+                #rc_where_constraints["corpus_table"] = set([])
+            #rc_where_constraints["corpus_table"].add(s)
             
         print(rc_where_constraints)
         #print(required_tables)
