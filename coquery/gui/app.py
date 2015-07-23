@@ -589,14 +589,14 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.ui.button_run_query.setEnabled(False)
             self.ui.button_run_query.setText("Wait...")
             self.ui.statusbar.showMessage("Terminating query...")
-            if self.query_thread:
-                self.query_thread.terminate()
-                self.query_thread.wait()
-            self.ui.statusbar.showMessage("Last query interrupted.")
             try:
                 self.Session.Corpus.resource.DB.kill_connection()
             except AttributeError:
                 pass
+            if self.query_thread:
+                self.query_thread.terminate()
+                self.query_thread.wait()
+            self.ui.statusbar.showMessage("Last query interrupted.")
             self.ui.button_run_query.setEnabled(True)
             self.ui.progress_bar.setRange(0, 1)
             self.set_query_button()
