@@ -1617,13 +1617,25 @@ class SQLCorpus(BaseCorpus):
             
             # if a GUI is used, include source features so the entries in the
             # result table can be made clickable to show the context:
-            if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
-                if "source_id" in dir(self.resource):
-                    requested_features.append("source_id")
-                    options.cfg.context_source_id = "source_id"
-                elif "file_id" in dir(self.resource):
-                    requested_features.append("file_id")
-                    options.cfg.context_source_id = "file_id"
+            
+            # in order to make this not depend on a fixed database layout 
+            # (here: 'source' and 'file' tables), we should check for any
+            # table that corpus_table is linked to except for word_table
+            # (and all child tables).            
+            if "source_id" in dir(self.resource):
+                requested_features.append("source_id")
+                options.cfg.context_source_id = "source_id"
+            elif "file_id" in dir(self.resource):
+                requested_features.append("file_id")
+                options.cfg.context_source_id = "file_id"
+
+            #if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
+                #if "source_id" in dir(self.resource):
+                    #requested_features.append("source_id")
+                    #options.cfg.context_source_id = "source_id"
+                #elif "file_id" in dir(self.resource):
+                    #requested_features.append("file_id")
+                    #options.cfg.context_source_id = "file_id"
         else:
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
@@ -1649,6 +1661,7 @@ class SQLCorpus(BaseCorpus):
 
         if current_token.word_specifiers or current_token.transcript_specifiers or current_token.class_specifiers:
             requested_features.append("corpus_word_id")
+
         # add requested features depending on the token specifications:
         if current_token.word_specifiers:
             if "word_label" in dir(self.resource):
@@ -1676,7 +1689,6 @@ class SQLCorpus(BaseCorpus):
             rc_table = "{}_table".format(rc_feature.split("_")[0])
             if rc_table == "coquery_table":
                 continue
-            print(rc_table)
             if rc_table not in required_tables:
                 tree = self.resource.get_table_structure(rc_table, options.cfg.selected_features)
                 parent = tree["parent"]
@@ -1716,12 +1728,12 @@ class SQLCorpus(BaseCorpus):
                 #rc_where_constraints["corpus_table"] = set([])
             #rc_where_constraints["corpus_table"].add(s)
             
-        print(rc_where_constraints)
+        #print(rc_where_constraints)
         #print(required_tables)
 
         select_list = set([])
         for rc_table in required_tables:
-            print(rc_table)
+            #print(rc_table)
             rc_tab = rc_table.split("_")[0]
             sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
             parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree) 
@@ -1744,12 +1756,12 @@ class SQLCorpus(BaseCorpus):
                 select_list.add(name)
                 
             columns = ", ".join(column_list)
-            print("columns", columns)
-            print("select", select_list)
+            #print("columns", columns)
+            #print("select", select_list)
             where_string = ""
             if rc_table in rc_where_constraints:
                 where_string = "WHERE {}".format(" AND ".join(list(rc_where_constraints[rc_table])))
-                print(where_string)
+                #print(where_string)
 
             if rc_parent:
                 parent_id = "coq_{}_{}_id_{}".format(
@@ -1797,7 +1809,8 @@ class SQLCorpus(BaseCorpus):
 
         # add the variable storing the source_id or file_id to the selected
         # columns so that they can be used to retrieve the context:
-        if number == 0 and options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
+        if number == 0:
+        #if number == 0 and options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
             select_list.add("coq_corpus_{}_1".format(options.cfg.context_source_id))
 
         select_list.add("coq_corpus_id_{}".format(number+1))
@@ -1881,7 +1894,8 @@ class SQLCorpus(BaseCorpus):
 
         # include variables that are required to make entries in the result
         # table clickable, but only if a GUI is used:
-        if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
+        if options.cfg.context_source_id:
+        #if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
             final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
             final_select.append("coq_corpus_{}_1 AS coquery_invisible_origin_id".format(options.cfg.context_source_id))
             final_select.append("{} AS coquery_invisible_number_of_tokens".format(Query.number_of_tokens))
@@ -1899,7 +1913,7 @@ class SQLCorpus(BaseCorpus):
             query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
 
-        print(query_string)
+        #print(query_string)
         #sys.exit(0)
 
         Query.Session.output_order = [x.split(" AS ")[-1] for x in final_select]
@@ -1943,7 +1957,9 @@ class SQLCorpus(BaseCorpus):
             if show_time: 
                 current_result["coquery_current_time"] = now.strftime("%H:%M:%S")
             current_result.update(D)
-            if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
+
+            #if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
+            if (options.cfg.context_left or options.cfg.context_right):
                 left, right = self.get_context(
                     current_result["coquery_invisible_corpus_id"], 
                     current_result["coquery_invisible_origin_id"], 

@@ -12,10 +12,10 @@ from decimal import Decimal
 import unittest
 import sys
 import os
-
 import options
 sys.path.append(os.path.join(sys.path[0], "../gui/"))
 import visualizerUi
+import QtProgress
 from pyqt_compat import QtGui, QtCore
 
 def table_to_tree(table, label="count"):
@@ -35,44 +35,53 @@ def table_to_tree(table, label="count"):
                 parent = parent.setdefault(child, {})
     return tree
 
+class hashabledict(dict):
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
+
+tree_cache = {}
 def tree_weight(tree, label="count"):
     """ Return the summed values of all terminal nodes in the tree."""
     i = 0
+    #hash_tree = hashabledict(tree)
+    #if hash_tree in tree_cache:
+        #return tree_cache[hash_tree]
     for node in tree:
-        if node == label:
+        if isinstance(tree[node], (int, float, long)):
             i += tree[node]
         else:
             i += tree_weight(tree[node])
+    #tree_cache[hash_tree] = i
     return i
 
-table = [
-    ["WIS", "male", "young", 3],
-    ["WIS", "male", "middle", 1],
-    ["WIS", "male", "old", 7],
-    ["WIS", "female", "young", 2],
-    ["WIS", "female", "middle", 3],
-    ["WIS", "female", "old", 5],
-    ["NC", "male", "young", 12],
-    ["NC", "male", "old", 8],
-    ["NC", "female", "young", 11],
-    ["NC", "female", "old", 2]]
+#table = [
+    #["WIS", "male", "young", 3],
+    #["WIS", "male", "middle", 1],
+    #["WIS", "male", "old", 7],
+    #["WIS", "female", "young", 2],
+    #["WIS", "female", "middle", 3],
+    #["WIS", "female", "old", 5],
+    #["NC", "male", "young", 12],
+    #["NC", "male", "old", 8],
+    #["NC", "female", "young", 11],
+    #["NC", "female", "old", 2]]
 
 
-tree = {
-    "WIS": {
-        "male": {
-            "young": {"count": 3}, 
-            "old": {"count": 7}},
-        "female": {
-            "young": {"count": 2}, 
-            "old": {"count": 5}}},
-    "NC": {
-        "male": {
-            "young": {"count": 12}, 
-            "old": {"count": 8}},
-        "female": {
-            "young": {"count": 11}, 
-            "old": {"count": 2}}}}
+#tree = {
+    #"WIS": {
+        #"male": {
+            #"young": {"count": 3}, 
+            #"old": {"count": 7}},
+        #"female": {
+            #"young": {"count": 2}, 
+            #"old": {"count": 5}}},
+    #"NC": {
+        #"male": {
+            #"young": {"count": 12}, 
+            #"old": {"count": 8}},
+        #"female": {
+            #"young": {"count": 11}, 
+            #"old": {"count": 2}}}}
 
 color_map = {"young": "DarkOrange", "middle": "Red", "old": "RoyalBlue"}
 
@@ -101,23 +110,70 @@ class TestTreeMethods(unittest.TestCase):
         self.assertEqual(tree_weight(tree["NC"]["female"]), 13)
         self.assertEqual(tree_weight(tree["NC"]["female"]["young"]), 11)
 
+class VisualizerThread(QtCore.QThread):
+    taskFinished = QtCore.Signal()
+    
+    def __init__(self, FUN, window, *args):
+        super(VisualizerThread, self).__init__()
+        self.parent = window
+        self.FUN = FUN
+        self.args = args
+    
+    def __del__(self):
+        self.wait()
+    
+    def run(self):
+        print("go")
+        try:
+            self.FUN(*self.args)
+        except Exception as e:
+            print(e)
+        self.taskFinished.emit()
+
+
 class TreeMap(QtGui.QWidget):
-    def __init__(self, tree, parent=None, *args):
+    def __init__(self, parent=None, *args):
         super(TreeMap, self).__init__(parent, *args)
-        self.tree = tree
-        #self.ui = visualizerUi.Ui_visualizer()
-        #self.ui.setupUi(self)
-        #self.setWindowIcon(options.cfg.icon)
+        self.model = None
+        self.plotting = False
+            
+    def setModel(self, model):
+        self.model = model
+        self.set_data(self.model.content)
+        
+    def set_data(self, content):
+        table = []
+        for row in content:
+            table.append([row[x] for x in self.model.header])
+
+        self.tree = table_to_tree(table)
+        self.max_weight = tree_weight(self.tree)
+        levels = set([])
+        for row in table:
+            levels.add(row[-2])
+        self.set_factor(list(levels))
 
     def refresh_plot(self):
-        print("refreshing")
+        self.set_data(self.model.content)
+        self.update()
 
     def paintEvent(self, e):
+        if not self.model:
+            return
         self.qp = QtGui.QPainter()
         self.qp.begin(self)
         size = self.size()
+        #if not self.plotting:
+            #self.plotting = True
+            #self.thread = VisualizerThread(self.tree_map, self, self.tree, [0, 0], [size.width() - 1, size.height() - 1], 0, None, None)
+            #self.thread.taskFinished.connect(self.onFinished)
+            #self.thread.start()
         self.tree_map(self.tree, [0, 0], [size.width() - 1, size.height() - 1], 0, None, None)
         self.qp.end()
+
+    def onFinished(self):
+        self.qp.end()
+        self.plotting = False
 
     def paint_rectangle(self, p, q, name, weight=None):
         self.qp.setPen(QtGui.QColor("black"))
@@ -126,15 +182,15 @@ class TreeMap(QtGui.QWidget):
             self.qp.setBrush(self.get_color(factor_level, weight))
         else:
             self.qp.setBrush(QtGui.QColor("white"))
+
         self.qp.drawRect(round(p[0]), round(p[1]), round(q[0] - p[0]), round(q[1] - p[1]))
-        
+
         if name:
             name_metrics = self.qp.fontMetrics().boundingRect(name)
             rect = QtCore.QRect(p[0] + 1, p[1] + 1, q[0] - p[0], q[1] - p[1])
             self.qp.drawText(rect, QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop, name.replace("\t", ":"))
             self.qp.drawText(rect, QtCore.Qt.AlignCenter, str(weight))
         
-
     def get_color(self, value, weight=None):
         if not value:
             return
@@ -183,19 +239,23 @@ class TreeMapVisualizer(QtGui.QDialog):
         self.setWindowIcon(options.cfg.icon)
         self.visualizer = visualizer
         options.cfg.main_window.table_model.dataChanged.connect(self.visualizer.refresh_plot)
+        self.ui.check_freeze.stateChanged.connect(self.toggle_freeze)
+        self.frozen = False
+        
+    def toggle_freeze(self):
+        self.frozen = not self.frozen
+        if self.frozen:
+            options.cfg.main_window.table_model.dataChanged.disconnect(self.visualizer.refresh_plot)
+        else:
+            options.cfg.main_window.table_model.dataChanged.connect(self.visualizer.refresh_plot)
 
     @staticmethod
-    def MosaicPlot(table, parent=None):
+    def MosaicPlot(model, parent=None):
         """ Plot a mosaic plot for the data provided in 'table'. The last
         column of 'table' contains the frequency/weight of the row. The 
         other rows are a hierarchical set of factors."""
-        levels = set([])
-        for row in table:
-            levels.add(row[-2])
-        tree = table_to_tree(table)
-        tm = TreeMap(tree, parent)
-        tm.set_factor(list(levels))
-        tm.max_weight = tree_weight(tree)
+        tm = TreeMap(parent)
+        tm.setModel(model)
 
         dialog = TreeMapVisualizer(tm, parent)
         dialog.ui.visualization_layout.addWidget(tm)

@@ -292,7 +292,10 @@ class BaseCorpusBuilder(object):
     def store_filename(self, current_file):
         self._file_name = current_file
         self._file_id = self.table_get(self.file_table, 
-            {self.file_label: current_file})[self.file_id]
+            {self.file_path: current_file,
+             self.file_name: 
+                 os.path.splitext(os.path.basename(current_file))[0]
+                 })[self.file_id]
 
     def get_lemma(self, word):
         """ Return a lemma for the word. By default, this is simply the
@@ -402,7 +405,7 @@ class BaseCorpusBuilder(object):
                 # add the word as a new token to the corpus:
                 self.table_add(self.corpus_table, 
                     {self.corpus_word_id: word_id, 
-                        self.corpus_source_id: self._file_id,
+                        self.corpus_file_id: self._file_id,
                         self.corpus_time: time})
                 
     def process_text_file(self, current_file):
@@ -465,7 +468,7 @@ class BaseCorpusBuilder(object):
             # store new token in corpus table:
             self.Con.insert(self.corpus_table, 
                 {self.corpus_word_id: word_id,
-                 self.corpus_source_id: self._file_id})
+                 self.corpus_file_id: self._file_id})
 
     def process_file(self, current_file):
         """ process_file(current_file) reads the content from current_file,
@@ -497,7 +500,7 @@ class BaseCorpusBuilder(object):
             self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         
         for i, file_name in enumerate(files):
-            if not self.Con.find(self.file_table, {self.file_label: file_name}):
+            if not self.Con.find(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
                 self.process_file(file_name)

@@ -387,11 +387,11 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         except AttributeError:
             pass
 
-        self.table_model.set_data(self.Session.output_storage)
         if options.cfg.experimental:
             self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
         else:
             self.table_model.set_header(self.Session.header)
+        self.table_model.set_data(self.Session.output_storage)
             
         self.proxy_model = results.CoqSortProxyModel()
         self.proxy_model.setSourceModel(self.table_model)
@@ -605,7 +605,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         table = []
         for row in self.table_model.content:
             table.append([row[x] for x in self.table_model.header])
-        treemap.TreeMapVisualizer.MosaicPlot(table, self)
+        treemap.TreeMapVisualizer.MosaicPlot(self.table_model, self)
 
     def run_query(self):
         self.getGuiValues()
