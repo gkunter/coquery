@@ -11,6 +11,7 @@ import logfile
 import sys
 import copy
 import QtProgress
+import operator
 
 SORT_NONE = 0
 SORT_INC = 1
@@ -18,78 +19,71 @@ SORT_DEC = 2
 SORT_REV_INC = 3
 SORT_REV_DEC = 4
 
-class CoqSortProxyModel(QtGui.QSortFilterProxyModel):
-    """ Define a QSortFilterProxyModel class that is used as am abstraction
-    layer for the sortable results view. """
+class CoqTableModel(QtCore.QAbstractTableModel):
+    """ Define a QAbstractTableModel class that stores the query results so
+    that they can be shown in the results view. """
     
-    def __init__(self, *args):
-        super(CoqSortProxyModel, self).__init__(*args)
+    def __init__(self, parent, header, data, *args):
+        super(CoqTableModel, self).__init__(parent, *args)
+        self.content = data
+        self.header = header
+        if data:
+            self.rownames = range(1, len(data) + 1)
+        else:
+            self.rownames = None
+
         self.sort_columns = []
-        self.descending_order = []
-        self.reverse_sort = []
+        if self.header:
+            self.sort_state = [SORT_NONE] * len(self.header)        
+        else:
+            self.sort_state = []
         
-    def setSourceModel(self, *args):
-        super(CoqSortProxyModel, self).setSourceModel(*args)
-        if self.sourceModel().header:
-            self.sort_state = [SORT_NONE] * len(self.sourceModel().header)
+    def set_header(self, header):
+        last_header = self.header
+        self.header = header
+        if last_header <> self.header:
+            self.sort_state = [SORT_NONE] * len(self.header)
+            self.sort_columns = []
         
+        for i, x in enumerate(header):
+            self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
+        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(header))
+        
+    def set_data(self, data):
+        self.content = data
+        if data:
+            self.rownames = range(1, len(data) + 1)
+        else:
+            self.rownames = None
+        p = self.createIndex(0, 0)
+        q = self.createIndex(len(self.content), len(self.content[0]))
+        self.dataChanged.emit(p, q)
+
     def data(self, index, role):
-        if role == QtCore.Qt.TextAlignmentRole:
-            if self.sort_state[index.column()] in [SORT_REV_DEC, SORT_REV_INC]:
-                return QtCore.Qt.AlignRight
-        return super(CoqSortProxyModel, self).data(index, role)
-
-    def lessThan(self, first, second):
-        """ Compare the content of the first row to the content of the
-        second. Return True if the first row should be placed above the 
-        second row if all sorting columns are considered. """
-        
-        # if no sorting rows are set, the row with the lower row number
-        # should come first:
-        if not self.sort_columns:
-            return first.row() < second.row()
-
-        # Go through the sorting columns, and compare the two rows in each
-        # column. If a comparison already resolves the sorting order, the 
-        # following columns are not considered anymore.
-        for col in self.sort_columns:
-            state = self.sort_state[col]
-            
-            # get cell content of first and second row in current column:
+        if not index.isValid():
+            return None
+        if role == QtCore.Qt.DisplayRole:
             try:
-                data_first = self.sourceModel().createIndex(first.row(), col).data(QtCore.Qt.DisplayRole).lower()
-                data_second = self.sourceModel().createIndex(second.row(), col).data(QtCore.Qt.DisplayRole).lower()
-            except AttributeError:
-                data_first = self.sourceModel().createIndex(first.row(), col).data(QtCore.Qt.DisplayRole)
-                data_second = self.sourceModel().createIndex(second.row(), col).data(QtCore.Qt.DisplayRole)
-
-            # reverse the contents if backward sorting is set for the column:
-            if state in [SORT_REV_DEC, SORT_REV_INC]:
-                data_first = data_first[::-1]
-                data_second = data_second[::-1]
-
-            ## compare the rows, and return an appropriate value if one of the
-            ## two has a lower value than the other:
-            #if data_first < data_second:
-                #return True or state in [SORT_DEC, SORT_REV_DEC]
-            #if data_first > data_second:
-                #return False or state in [SORT_DEC, SORT_REV_DEC]
-
-            if state in (SORT_DEC, SORT_REV_DEC):
-                if data_first > data_second:
-                    return True
-                if data_first < data_second:
-                    return False
-            elif state in (SORT_INC, SORT_REV_INC):
-                if data_first < data_second:
-                    return True
-                if data_first > data_second:
-                    return False
+                if options.cfg.experimental:
+                    return self.content[index.row()][self.header[index.column()]]
+                else:
+                    return self.content[index.row()] [index.column()]
+            except (IndexError, KeyError):
+                return None
+        elif role == QtCore.Qt.ForegroundRole:
+            column = index.column()
+            header = self.header[column]
+            try:
+                col = options.cfg.column_color[header.lower()]
+            except KeyError:
+                return None
+            return QtGui.QColor(col)
+        elif role == QtCore.Qt.TextAlignmentRole:
+            if self.header[index.column()] == "coq_context_left" or self.sort_state[index.column()] in set([SORT_REV_DEC, SORT_REV_INC]):
+                return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
+        else:
+            return None
         
-        # The first row has not been found to have lower values than the
-        # second:
-        return False
-
     def headerData(self, index, orientation, role):
         """ Return the header at the given index, taking the sorting settings
         into account. """
@@ -97,28 +91,17 @@ class CoqSortProxyModel(QtGui.QSortFilterProxyModel):
         # Return row names?
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
-                return self.sourceModel().rownames[index]
+                return self.rownames[index]
             else:
                 return None
 
         # Return column names:
-        header = self.sourceModel().header
-        if not header or index > len(header):
+        if not self.header or index > len(self.header):
             return None
 
-        #rc_feature_split = header[index].strip("coq_").split("_")
-        #if len(rc_feature_split) == 3:
-            #print(rc_feature_split)
-            #rc_feature = "_".join(rc_feature_split[0:2])
-            #column_name = options.cfg.main_window.Session.Corpus.resource.__getattribute__(rc_feature)
-            #column_name = "{}{}".format(column_name, rc_feature_split[-1])
-        #else:
-            #column_name = rc_feature_split[0]
-
-        column_name = options.cfg.main_window.Session.Corpus.resource.translate_header(header[index])
-        
-        # Get header string?
         if role == QtCore.Qt.DisplayRole:
+            # Get header string?
+            column_name = options.cfg.main_window.Session.Corpus.resource.translate_header(self.header[index])
             # Return normal header if not a sort column:
             if index not in self.sort_columns:
                 return column_name
@@ -134,7 +117,7 @@ class CoqSortProxyModel(QtGui.QSortFilterProxyModel):
                 tag_list.append("rev")
             
             return "{}{}".format(
-                    header[index], 
+                    column_name, 
                     ["", " ({}) ".format(", ".join(tag_list))][bool(tag_list)])
 
         # Get header decoration (i.e. the sorting arrows)?
@@ -148,81 +131,7 @@ class CoqSortProxyModel(QtGui.QSortFilterProxyModel):
                 return None
         else:
             return None
-        
-    def sort(self, *args):
-        options.cfg.main_window.ui.statusbar.showMessage("Sorting results...")
-        options.cfg.main_window.ui.progress_bar.setRange(0, 0)
-        self_sort_thread = QtProgress.ProgressThread(
-            super(CoqSortProxyModel, self).sort, self, *args)
-        self_sort_thread.taskFinished.connect(self.sort_finished)
-        self_sort_thread.taskException.connect(self.exception_during_sort)
-        self_sort_thread.start()
-        
-    def sort_finished(self):
-        # Stop the progress indicator:
-        options.cfg.main_window.ui.progress_bar.setRange(0, 1)
-        options.cfg.main_window.ui.statusbar.showMessage("Results are now sorted.")
 
-    def exception_during_sort(self):
-        error_box.ErrorBox.show(self.exc_info, self.exception)
-
-        
-class CoqTableModel(QtCore.QAbstractTableModel):
-    """ Define a QAbstractTableModel class that stores the query results so
-    that they can be shown in the results view. """
-    
-    def __init__(self, parent, header, data, *args):
-        super(CoqTableModel, self).__init__(parent, *args)
-        self.content = data
-        self.header = header
-        if data:
-            self.rownames = range(1, len(data) + 1)
-        else:
-            self.rownames = None
-        
-    def set_header(self, header):
-        self.header = header
-        for i, x in enumerate(header):
-            self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
-        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(header))
-        
-    def set_data(self, data):
-        self.content = data
-        if data:
-            self.rownames = range(1, len(data) + 1)
-        else:
-            self.rownames = None
-        p = self.createIndex(0, 0)
-        q = self.createIndex(len(self.content), len(self.content[0]))
-        self.dataChanged.emit(p, q)
-        
-    def data(self, index, role):
-        if not index.isValid():
-            return None
-        row = index.row()
-        column = index.column()
-        
-        if role == QtCore.Qt.DisplayRole:
-            try:
-                if options.cfg.experimental:
-                    return self.content[row][self.header[column]]
-                else:
-                    return self.content[row] [column]
-            except (IndexError, KeyError):
-                return None
-        elif role == QtCore.Qt.ForegroundRole:
-            header = self.header[column]
-            try:
-                col = options.cfg.column_color[header.lower()]
-            except KeyError:
-                return None
-            return QtGui.QColor(col)
-        elif role == QtCore.Qt.TextAlignmentRole:
-            if self.header[column] == "coq_context_left":
-                return QtCore.Qt.AlignRight
-        else:
-            return None
-        
     def rowCount(self, parent):
         if self.content:
             return len(self.content)
@@ -234,7 +143,88 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             return len(self.header)
         else:
             return None
+        
+    def lessThan(self, first, second):
+        """ Compare the content of the first row to the content of the
+        second. Return True if the first row should be placed above the 
+        second row if all sorting columns are considered. """
+        
+        # if no sorting rows are set, the row with the lower row number
+        # should come first:
+        if not self.sort_columns:
+            return first.row() < second.row()
 
+        # Go through the sorting columns, and compare the two rows in each
+        # column. If a comparison already resolves the sorting order, the 
+        # following columns are not considered anymore.
+        for col in self.sort_columns:
+            header = self.header[col]
+            state = self.sort_state[col]
+            
+            # get cell content of first and second row in current column:
+            try:
+                data_first = self.content[first.row()] [header].lower()
+                data_second = self.content[second.row()] [header].lower()
+            except AttributeError:
+                data_first = self.content[first.row()] [header]
+                data_second = self.content[second.row()] [header]
+
+            # reverse the contents if backward sorting is set for the column:
+            if state in set([SORT_REV_DEC, SORT_REV_INC]):
+                data_first = data_first[::-1]
+                data_second = data_second[::-1]
+
+            # compare the rows, and return an appropriate value if one of the
+            # two has a lower value than the other:
+            if state in set([SORT_DEC, SORT_REV_DEC]):
+                if data_first > data_second:
+                    return True
+                if data_first < data_second:
+                    return False
+            elif state in set([SORT_INC, SORT_REV_INC]):
+                if data_first < data_second:
+                    return True
+                if data_first > data_second:
+                    return False
+
+        # The first row has not been found to have lower values than the
+        # second:
+        return False
+        
+    def do_sort(self):
+        for col in self.sort_columns[::-1]:
+            if self.sort_state[col] in set([SORT_INC, SORT_DEC]):
+                key_fun = lambda row: row[self.header[col]]
+            elif self.sort_state[col] in set([SORT_REV_INC, SORT_REV_DEC]):
+                key_fun = lambda row: row[self.header[col]][::-1]
+            else:
+                continue
+            if self.sort_state[col] in set([SORT_INC, SORT_REV_INC]):
+                self.content = sorted(self.content, key=key_fun)
+            else:
+                self.content = sorted(self.content, key=key_fun, reverse=True)
+    
+    def sort(self, *args):
+        if not self.sort_columns:
+            return
+        self.layoutAboutToBeChanged.emit()
+        options.cfg.main_window.ui.progress_bar.setRange(0, 0)
+        self_sort_thread = QtProgress.ProgressThread(
+            self.do_sort, self)
+        self_sort_thread.taskFinished.connect(self.sort_finished)
+        self_sort_thread.taskException.connect(self.exception_during_sort)
+        self_sort_thread.start()
+        
+    def sort_finished(self):
+        # Stop the progress indicator:
+        options.cfg.main_window.ui.progress_bar.setRange(0, 1)
+        self.layoutChanged.emit()
+
+    def exception_during_sort(self):
+        options.cfg.main_window.ui.progress_bar.setRange(0, 1)
+        options.cfg.main_window.ui.statusbar.showMessage("Error during sorting.")
+        error_box.ErrorBox.show(self.exc_info, self.exception)
+        
 class ResultsViewer(QtGui.QDialog):
     """ Defines a QDialog class that can be used to display the results from
     a query session. """
@@ -267,13 +257,9 @@ class ResultsViewer(QtGui.QDialog):
 
         self.table_model = CoqTableModel(self, Session.header, Session.output_storage)
 
-        self.proxy_model = CoqSortProxyModel()
-        self.proxy_model.setSourceModel(self.table_model)
-        self.proxy_model.sortCaseSensitivity = False
-
         # make horizontal headers sortable in a special way:
         self.ui.data_preview.horizontalHeader().sectionClicked.connect(self.change_sorting)
-        self.ui.data_preview.setModel(self.proxy_model)
+        self.ui.data_preview.setModel(self.table_model)
         self.ui.data_preview.setSortingEnabled(False)
         #self.adjust_header_width()
 
@@ -297,8 +283,8 @@ class ResultsViewer(QtGui.QDialog):
             with open(name, "wt") as output_file:
                 writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
                 writer.writerow(self.Session.header)
-                for y in range(self.proxy_model.rowCount()):
-                    writer.writerow([QtCore.QString(self.proxy_model.index(y, x).data()) for x in range(self.proxy_model.columnCount())])
+                for y in range(self.table_model.rowCount()):
+                    writer.writerow([QtCore.QString(self.table_model.index(y, x).data()) for x in range(self.table_model.columnCount())])
                     
     def view_logfile(self):
         logfile.LogfileViewer.view(options.cfg.log_file_path)        
@@ -310,9 +296,9 @@ class ResultsViewer(QtGui.QDialog):
     def change_sorting(self, index):
         header = self.ui.data_preview.horizontalHeader()
 
-        if not self.proxy_model.sort_state[index]:
-            self.proxy_model.sort_columns.append(index)
-        self.proxy_model.sort_state[index] += 1
+        if not self.table_model.sort_state[index]:
+            self.table_model.sort_columns.append(index)
+        self.table_model.sort_state[index] += 1
         
         probe_index = self.table_model.createIndex(0, index)
         probe_cell = probe_index.data()
@@ -321,19 +307,19 @@ class ResultsViewer(QtGui.QDialog):
         else:
             max_state = SORT_DEC
 
-        if self.proxy_model.sort_state[index] > max_state:
-            self.proxy_model.sort_state[index] = SORT_NONE
-            self.proxy_model.sort_columns.remove(index)
+        if self.table_model.sort_state[index] > max_state:
+            self.table_model.sort_state[index] = SORT_NONE
+            self.table_model.sort_columns.remove(index)
 
-        self.proxy_model.sort(0, QtCore.Qt.AscendingOrder)
+        self.table_model.sort(0, QtCore.Qt.AscendingOrder)
 
     def adjust_header_width(self):
-        old_sort_state = copy.copy(self.proxy_model.sort_state)
-        old_sort_columns = copy.copy(self.proxy_model.sort_columns)
-        self.proxy_model.sort_state = [SORT_REV_DEC] * len(self.table_model.header)
-        self.proxy_model.sort_columns = range(len(self.table_model.header))
-        self.proxy_model.sort_state = old_sort_state
-        self.proxy_model.sort_columns = old_sort_columns
+        old_sort_state = copy.copy(self.table_model.sort_state)
+        old_sort_columns = copy.copy(self.table_model.sort_columns)
+        self.table_model.sort_state = [SORT_REV_DEC] * len(self.table_model.header)
+        self.table_model.sort_columns = range(len(self.table_model.header))
+        self.table_model.sort_state = old_sort_state
+        self.table_model.sort_columns = old_sort_columns
 
         
 def main():

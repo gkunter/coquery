@@ -273,16 +273,14 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.log_table.setModel(self.log_proxy)
 
         self.table_model = results.CoqTableModel(self, None, None)
-
+        self.table_model.dataChanged.connect(self.table_model.sort)
         header = self.ui.data_preview.horizontalHeader()
-        header.sectionClicked.connect(self.header_sorting)
         header.sectionResized.connect(self.result_column_resize)
         header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_header_menu)
 
         self.ui.data_preview.setStyleSheet('::item:hover { color: blue; text-decoration: underline }')
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
-        self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
     
@@ -291,7 +289,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         options.cfg.column_width[header] = new
 
     def result_cell_clicked(self, index):
-        model_index = self.proxy_model.mapToSource(index)
+        model_index = index
         row = model_index.row()
         data = self.table_model.content[row]
         token_id = data["coquery_invisible_corpus_id"]
@@ -382,38 +380,14 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             pass
         
     def display_results(self):
-        try:
-            self.proxy_model.close()
-        except AttributeError:
-            pass
-
         if options.cfg.experimental:
             self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
         else:
             self.table_model.set_header(self.Session.header)
         self.table_model.set_data(self.Session.output_storage)
-            
-        self.proxy_model = results.CoqSortProxyModel()
-        self.proxy_model.setSourceModel(self.table_model)
+        self.ui.data_preview.setModel(self.table_model)
 
-        self.ui.data_preview.setModel(self.proxy_model)
-
-        headers = self.ui.data_preview.horizontalHeader()
-
-        #for i, _ in enumerate(self.table_model.header):
-            #column_title = headers.model().headerData(
-                #i, QtCore.Qt.Horizontal, QtCore.Qt.DisplayRole)
-            #if column_title.startswith("coq_invisible"):
-                #self.ui.data_preview.setColumnHidden(i, True)
-        #hide all columns in the table the name of which starts with
-        #'coq_invisible':
-        #for i, column in enumerate(self.table_model.header):
-            #if column.startswith("coquery_invisible"):
-                #self.ui.data_preview.setColumnHidden(i, True)
-            #else:
-                #self.ui.data_preview.setColumnHidden(i, False)
-            
-        # set column widths and colors:
+        # set column widths:
         for i, column in enumerate(self.table_model.header):
             if column.lower() in options.cfg.column_width:
                 self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower()])
@@ -430,8 +404,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                 with codecs.open(name, "wt") as output_file:
                     writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
                     writer.writerow(self.Session.header)
-                    for y in range(self.proxy_model.rowCount()):
-                        writer.writerow([self.proxy_model.index(y, x).data() for x in range(self.proxy_model.columnCount())])
+                    for y in range(self.table_model.rowCount()):
+                        writer.writerow([self.table_model.index(y, x).data() for x in range(self.table_model.columnCount())])
             except IOError as e:
                 QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. The results have not been saved.")
             else:
@@ -483,18 +457,18 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         group = QtGui.QActionGroup(self, exclusive=True)
         action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
         action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
-        if self.proxy_model.sort_state[column] == results.SORT_NONE:
+        if self.table_model.sort_state[column] == results.SORT_NONE:
             action.setChecked(True)
         self.menu.addAction(action)
         
         action = group.addAction(QtGui.QAction("Ascending", self, checkable=True))
         action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_INC))
-        if self.proxy_model.sort_state[column] == results.SORT_INC:
+        if self.table_model.sort_state[column] == results.SORT_INC:
             action.setChecked(True)
         self.menu.addAction(action)
         action = group.addAction(QtGui.QAction("Descending", self, checkable=True))
         action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_DEC))
-        if self.proxy_model.sort_state[column] == results.SORT_DEC:
+        if self.table_model.sort_state[column] == results.SORT_DEC:
             action.setChecked(True)
         self.menu.addAction(action)
                                  
@@ -504,13 +478,13 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         if type(probe_cell) in [unicode, str, QtCore.QString]:
             action = group.addAction(QtGui.QAction("Ascending, reverse", self, checkable=True))
             action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
-            if self.proxy_model.sort_state[column] == results.SORT_REV_INC:
+            if self.table_model.sort_state[column] == results.SORT_REV_INC:
                 action.setChecked(True)
 
             self.menu.addAction(action)
             action = group.addAction(QtGui.QAction("Descending, reverse", self, checkable=True))
             action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_DEC))
-            if self.proxy_model.sort_state[column] == results.SORT_REV_DEC:
+            if self.table_model.sort_state[column] == results.SORT_REV_DEC:
                 action.setChecked(True)
             self.menu.addAction(action)
         
@@ -536,33 +510,14 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.menu.close()
         if not mode:
             try:
-                self.proxy_model.sort_columns.remove(index)
+                self.table_model.sort_columns.remove(index)
             except IndexError:
                 pass
-        elif index not in self.proxy_model.sort_columns:
-            self.proxy_model.sort_columns.append(index)
-        self.proxy_model.sort_state[index] = mode
-        self.proxy_model.sort(0, QtCore.Qt.AscendingOrder)
+        elif index not in self.table_model.sort_columns:
+            self.table_model.sort_columns.append(index)
+        self.table_model.sort_state[index] = mode
+        self.table_model.sort(0, QtCore.Qt.AscendingOrder)
         
-    def header_sorting(self, index):
-        return
-        if not self.proxy_model.sort_state[index]:
-            self.proxy_model.sort_columns.append(index)
-        self.proxy_model.sort_state[index] += 1
-  
-        probe_index = self.table_model.createIndex(0, index)
-        probe_cell = probe_index.data()
-        if isinstance(probe_cell, (unicode, str, QtCore.QString)):
-            max_state = results.SORT_REV_DEC
-        else:
-            max_state = results.SORT_DEC
-
-        if self.proxy_model.sort_state[index] > max_state:
-            self.proxy_model.sort_state[index] = results.SORT_NONE
-            self.proxy_model.sort_columns.remove(index)
-
-        self.proxy_model.sort(0, QtCore.Qt.AscendingOrder)
-
     def set_query_button(self):
         """ Set the action button to start queries. """
         self.ui.button_run_query.clicked.disconnect()
