@@ -585,7 +585,7 @@ class StatisticsQuery(CorpusQuery):
         
         # convert all values to strings (the Unicode writer needs that):
         self.Results = {key: str(self.Results[key]) for key in self.Results}
-    
+
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
         for x in sorted(self.Results):
             if options.cfg.gui:

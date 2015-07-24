@@ -282,28 +282,17 @@ class Session(object):
                 if current_query.tokens:
                     if options.cfg.experimental:
                         current_query.set_result_list(self.Corpus.yield_query_results_new(current_query))
-
-                        if not options.cfg.dry_run:
-                            if not self.output_file:
-                                self.open_output_file()
-                        start_time = time.time()
-                        current_query.write_results(
-                            self.output_file, 
-                            current_query.number_of_tokens,
-                            self.max_number_of_tokens)
-                        logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
-                        self.end_time = datetime.datetime.now()
                     else:
                         current_query.set_result_list(self.Corpus.yield_query_results(current_query))
-                        if not options.cfg.dry_run:
-                            if not self.output_file:
-                                self.open_output_file()
-                            start_time = time.time()
-                            current_query.write_results(
-                                self.output_file, 
-                                current_query.number_of_tokens,
-                                self.max_number_of_tokens)
-                            logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
+                if not options.cfg.dry_run:
+                    if not self.output_file:
+                        self.open_output_file()
+                start_time = time.time()
+                current_query.write_results(
+                    self.output_file, 
+                    current_query.number_of_tokens,
+                    self.max_number_of_tokens)
+                logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
         self.end_time = datetime.datetime.now()
 
 class StatisticsSession(Session):
@@ -313,9 +302,12 @@ class StatisticsSession(Session):
             self.query_list.append(queries.StatisticsQuery(self.Corpus, self))
         else:
             raise QueryModeError(options.cfg.corpus, options.cfg.MODE)
+        self.header = ["Variable", "Value"]
+        self.output_order = self.header
     
     def expand_header(self):
         self.header = ["Variable", "Value"]
+        self.output_odrer = self.header
 
 class SessionCommandLine(Session):
     def __init__(self):
