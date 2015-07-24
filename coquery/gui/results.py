@@ -41,20 +41,21 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def set_header(self, header):
         last_header = self.header
         self.header = header
-        if last_header <> self.header:
+        if last_header <> self.header and self.header:
             self.sort_state = [SORT_NONE] * len(self.header)
             self.sort_columns = []
-        
-        for i, x in enumerate(header):
-            self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
-        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(header))
-        
+        if header:
+            for i, x in enumerate(header):
+                self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
+            self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(header))
+
     def set_data(self, data):
         self.content = data
         if data:
             self.rownames = range(1, len(data) + 1)
         else:
             self.rownames = None
+            return
         p = self.createIndex(0, 0)
         q = self.createIndex(len(self.content), len(self.content[0]))
         self.dataChanged.emit(p, q)
@@ -64,9 +65,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             return None
         if role == QtCore.Qt.DisplayRole:
             try:
-                if options.cfg.experimental:
+                try:
                     return self.content[index.row()][self.header[index.column()]]
-                else:
+                except (TypeError):
                     return self.content[index.row()] [index.column()]
             except (IndexError, KeyError):
                 return None
