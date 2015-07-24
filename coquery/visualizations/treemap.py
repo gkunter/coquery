@@ -40,7 +40,7 @@ class hashabledict(dict):
         return hash(tuple(sorted(self.items())))
 
 tree_cache = {}
-def tree_weight(tree, label="count"):
+def tree_weight(tree):
     """ Return the summed values of all terminal nodes in the tree."""
     i = 0
     #hash_tree = hashabledict(tree)
@@ -130,6 +130,34 @@ class VisualizerThread(QtCore.QThread):
             print(e)
         self.taskFinished.emit()
 
+class VisualizerWidget(QtGui.QWidget):
+    def __init__(self, parent=None, *args):
+        super(VisualizerWidget, self).__init__(parent, *args)
+        self.model = None
+    
+    def setModel(self, model):
+        self.model = model
+        self.set_data(self.model.content)
+        
+    def set_data(self, content):
+        self.table = []
+        for row in self.content:
+            table.append([row[x] for x in self.model.header])
+            
+    def get_levels(self, name):
+        column = self.model.header.index(name)
+        levels = set([])
+        for x in self.content:
+            levels.add(self.content[column])
+        return levels
+    
+class Tableau(VisualizerWidget):
+    def __init__(self, row, column, weight, parent=None, *args):
+        super(Tableau, self).__init__(parent, *args)
+        self.model = None
+        self._row = row
+        self._column = column
+        self._weight = weight
 
 class TreeMap(QtGui.QWidget):
     def __init__(self, parent=None, *args):
@@ -138,14 +166,32 @@ class TreeMap(QtGui.QWidget):
         self.plotting = False
         self.threading = False
             
-    def setModel(self, model):
+    def setModel(self, model, view):
         self.model = model
+        self.view = view
         self.set_data(self.model.content)
         
     def set_data(self, content):
         table = []
+        
+        # get the column order from the visual QTableView:
+        header = self.view.horizontalHeader()
+        column_order = [self.model.header[header.logicalIndex(section)] for section in range(header.count())]
+        # ... but make sure that the frequency is the last column:
+        try:
+            column_order.remove("coq_frequency")
+        except IndexError:
+            pass
+        else:
+            column_order.append("coq_frequency")
+        print(column_order)    
+        
         for row in content:
-            table.append([row[x] for x in self.model.header])
+            table.append([row[x] for x in column_order])
+            
+        # sort the columns:
+        for i in range(len(table[0]))[::-1]:
+            table = sorted(table, key=lambda x:x[i])
 
         self.tree = table_to_tree(table)
         self.max_weight = tree_weight(self.tree)
@@ -191,8 +237,8 @@ class TreeMap(QtGui.QWidget):
         if name:
             name_metrics = self.qp.fontMetrics().boundingRect(name)
             rect = QtCore.QRect(p[0] + 1, p[1] + 1, q[0] - p[0], q[1] - p[1])
-            self.qp.drawText(rect, QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop, name.replace("\t", ":"))
-            self.qp.drawText(rect, QtCore.Qt.AlignCenter, str(weight))
+            self.qp.drawText(rect, QtCore.Qt.AlignCenter, name.replace("\t", ":"))
+            self.qp.drawText(rect, QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop, str(weight))
         
     def get_color(self, value, weight=None):
         if not value:
@@ -222,14 +268,16 @@ class TreeMap(QtGui.QWidget):
         width = q[axis] - p[axis]
         if label in root:
             self.paint_rectangle(p, q, name, tree_weight(root))
-        for i, child_name in enumerate(root):
+        for i, child_name in enumerate(sorted(root)):
             if child_name != label:
                 child = root[child_name]
-                q[axis] = Decimal(p[axis]) + Decimal(tree_weight(child) / tree_weight(root)) * Decimal(width)
+                q[axis] = p[axis] + (width * float(tree_weight(child))) / tree_weight(root)
                 if name:
                     new_name = "{}\t{}".format(name, child_name)
                 else:
                     new_name = child_name
+                margin_x = (q[1 - axis] - p[1 - axis]) * 0.01
+                margin_y = (q[axis] - p[axis]) * 0.01
                 self.tree_map(child, list(p), list(q), 1 - axis, color, new_name)
                 p[axis] = q[axis]
 
@@ -242,6 +290,7 @@ class TreeMapVisualizer(QtGui.QDialog):
         self.setWindowIcon(options.cfg.icon)
         self.visualizer = visualizer
         options.cfg.main_window.table_model.dataChanged.connect(self.visualizer.refresh_plot)
+        options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.connect(self.visualizer.refresh_plot)
         self.ui.check_freeze.stateChanged.connect(self.toggle_freeze)
         self.frozen = False
         
@@ -249,16 +298,18 @@ class TreeMapVisualizer(QtGui.QDialog):
         self.frozen = not self.frozen
         if self.frozen:
             options.cfg.main_window.table_model.dataChanged.disconnect(self.visualizer.refresh_plot)
+            options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.disconnect(self.visualizer.refresh_plot)
         else:
             options.cfg.main_window.table_model.dataChanged.connect(self.visualizer.refresh_plot)
+            options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.connect(self.visualizer.refresh_plot)
 
     @staticmethod
-    def MosaicPlot(model, parent=None):
+    def MosaicPlot(model, view, parent=None):
         """ Plot a mosaic plot for the data provided in 'table'. The last
         column of 'table' contains the frequency/weight of the row. The 
         other rows are a hierarchical set of factors."""
         tm = TreeMap(parent)
-        tm.setModel(model)
+        tm.setModel(model, view)
 
         dialog = TreeMapVisualizer(tm, parent)
         dialog.ui.visualization_layout.addWidget(tm)
