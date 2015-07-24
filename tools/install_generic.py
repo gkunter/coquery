@@ -133,6 +133,9 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
         # FileId
         # An int value containing the unique identifier of this file.
         # 
+        # File 
+        # A text value containing the base file name of this data file.
+        # 
         # Path
         # A text value containing the path that points to this data file.
         
@@ -146,25 +149,6 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
                 "`{}` TINYTEXT NOT NULL".format(self.file_name),
                 "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
-
-        # The following is obsolete for the experimental query method.
-        ## Any corpus that provides either CORP_CONTEXT, CORP_SOURCE or
-        ## CORP_FILENAME also needs to specify a source table. Each row in
-        ## this source table represents a corpus source, and it has to 
-        ## contain at least the following column:
-        ##
-        ## SourceId
-        ## An int value containing the unique identifier of this source.
-        ## 
-        ## Additional columns may also store further information such as 
-        ## year or genre.
-        ## 
-        ## In this generic corpus, detailed information on the source texts
-        ## is not available, so no separate source table is required. 
-        ## Instead, the corpus uses the file table as the source table:
-        
-        #self.source_table = "file"
-        #self.source_id = "FileId"
 
     def get_description(self):
         return "This script creates the corpus '{}' by reading data from the files in {} to populate the MySQL database '{}' so that the database can be queried by Coquery.".format(self.name, self.arguments.path, self.arguments.db_name)

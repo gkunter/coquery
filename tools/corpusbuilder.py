@@ -89,6 +89,12 @@ class Corpus(SQLCorpus):
 {corpus_code}
 """
 
+# Corpus builders should include code that determines word counts for 
+# subcorpora. More specifically, they should produce a table with all
+# combinations of corpus features and the associated number of words.
+# For example, COCA should have a table with Genre, Year and Frequency,
+# with 5 x 23 rows (5 Genres, 23 Years). 
+
 class BaseCorpusBuilder(object):
     logger = None
     module_code = None
