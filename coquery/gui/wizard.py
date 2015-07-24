@@ -469,4 +469,14 @@ class CoqueryWizard(QtGui.QWizard):
             self.ui.filter_box.addTag(filt)
             options.cfg.filter_list.remove(filt)
         
+        # get table from last session, if possible:
+        try:
+            self.table_model.set_header(options.cfg.last_header)
+            self.table_model.set_data(options.cfg.last_content)
+            self.Session = options.cfg.last_session
+            self.ui.data_preview.setModel(self.table_model)
+        except AttributeError:
+            self.table_model.set_header(None)
+            self.table_model.set_data(None)
+        
         return True
