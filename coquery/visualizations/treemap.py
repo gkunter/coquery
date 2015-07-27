@@ -35,23 +35,14 @@ def table_to_tree(table, label="count"):
                 parent = parent.setdefault(child, {})
     return tree
 
-class hashabledict(dict):
-    def __hash__(self):
-        return hash(tuple(sorted(self.items())))
-
-tree_cache = {}
 def tree_weight(tree):
     """ Return the summed values of all terminal nodes in the tree."""
     i = 0
-    #hash_tree = hashabledict(tree)
-    #if hash_tree in tree_cache:
-        #return tree_cache[hash_tree]
     for node in tree:
         if isinstance(tree[node], (int, float, long)):
             i += tree[node]
         else:
             i += tree_weight(tree[node])
-    #tree_cache[hash_tree] = i
     return i
 
 #table = [
@@ -184,7 +175,6 @@ class TreeMap(QtGui.QWidget):
             pass
         else:
             column_order.append("coq_frequency")
-        print(column_order)    
         
         for row in content:
             table.append([row[x] for x in column_order])
