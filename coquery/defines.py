@@ -32,6 +32,7 @@ import imp
 import sys
 import warnings
 import csv, codecs
+import math
 
 # The following flags are used to indicate which fields are provided by the 
 # lexicon of a corpus, and also to access the fields of the value of 
@@ -58,6 +59,7 @@ QUERY_MODE_TOKENS = "TOKEN"
 QUERY_MODE_FREQUENCIES = "FREQ"
 QUERY_MODE_DISTINCT = "DISTINCT"
 QUERY_MODE_STATISTICS = "STATS"
+QUERY_MODE_COLLOCATIONS = "COLLOCATE"
 
 TABLE_CORPUS = "corpus"
 TABLE_WORD = "word"
@@ -76,6 +78,15 @@ COLUMN_NAMES = {
     "coq_context_left": "Left context",
     "coq_context_right": "Right context",
     "coq_context_string": "Context",
+    "coq_collocate_word_label": "Collocate word",
+    "coq_collocate_lemma_label": "Collocate lemma",
+    "coq_collocate_pos_label": "Collocate POS",
+    "coq_collocate_transcript_label": "Collocate transcript",
+    "coq_collocate_frequency": "Total frequency",
+    "coq_collocate_frequency_left": "Left collocate frequency",
+    "coq_collocate_frequency_right": "Right collocate frequency",
+    "coq_mutual_information": "Mutual information",
+
     "coquery_query_string": "Query string"}
 
 # for Python 3 compatibility:
@@ -173,29 +184,32 @@ class ResourceList(object):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
         return self.available_resources
 
-def collapse_words(word_list):
-    """ Concatenate the words in the word list, taking clitics, punctuation
-    and some other stop words into account."""
-    stop_words = ["<p>", "<P>"]
-    conflate_words = ["n't", "'s", "'ve"]
-    token_list = []
-    punct = '!\'),-./:;?^_`}’'
-    quote_list = ['"', "'"]
-    context_list = [x.strip() for x in word_list]
-    open_quote = {}
-    open_quote ['"'] = False
-    open_quote ["'"] = False
-    for i, current_token in enumerate(context_list):
-        try:
-            if '""""' in current_token:
-                current_token = '"'
-            if current_token not in stop_words:
-                if current_token not in punct and current_token not in conflate_words:
-                    if i > 0 and context_list[i-1] not in '([{‘':
-                        token_list.append(" ")
-                token_list.append(current_token)
-        except (UnicodeEncodeError, UnicodeDecodeError):
-            token_list.append(unicode(current_token.decode("utf-8")))
-    return "".join(token_list)
+class FileSize(long):
+    """ Define a long class that can store file sizes, and which allows
+    custom formatting by using the format specifier S, which displays a 
+    human-readable file size with suffixes b, kb, Mb etc.
+    Adapted from http://code.activestate.com/recipes/578321-human-readable-filememory-sizes/
+    """
+    def __format__(self, fmt):
+        if self < 0:
+            return "(unknown)"
+        if fmt == "" or fmt[-1] != "S":
+            if fmt[-1].tolower() in ['b','c','d','o','x','n','e','f','g','%']:
+                # Numeric format.
+                return long(self).__format__(fmt)
+            else:
+                return str(self).__format__(fmt)
+
+        val, suffixes = float(self), ["b ","Kb","Mb","Gb","Tb","Pb"]
+        if val < 1:
+            # Can't take log(0) in any base.
+            i, v = 0, 0
+        else:
+            exp = int(math.log(val,1024))+1
+            v = val / math.pow(1024, exp)
+            # Move to the next bigger suffix when the value is large enough:
+            v, exp = (v, exp) if v > 0.5 else (v * 1024, exp - 1)
+        return ("{0:{1}f}" + suffixes[exp]).format(v, fmt[:-1])
+
 resource_list = ResourceList()
 
