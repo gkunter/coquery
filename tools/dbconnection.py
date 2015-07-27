@@ -91,6 +91,9 @@ class DBConnection(object):
     
     def create_index(self, table_name, index_name, variables, index_type, index_length):
         cur = self.Con.cursor()
+        self.execute(cur, "SELECT * FROM {} LIMIT 1".format(table_name))
+        if not cur.fetchone():
+            return
         if index_length:
             variables = ["%s(%s)" % (variables[0], index_length)]
         if index_type:
