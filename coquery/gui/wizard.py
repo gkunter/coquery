@@ -345,6 +345,8 @@ class CoqueryWizard(QtGui.QWizard):
                 options.cfg.MODE = QUERY_MODE_TOKENS
             if self.ui.radio_mode_frequency.isChecked():
                 options.cfg.MODE = QUERY_MODE_FREQUENCIES
+            if self.ui.radio_mode_collocations.isChecked():
+                options.cfg.MODE = QUERY_MODE_COLLOCATIONS
             try:
                 if self.ui.radio_mode_statistics.isChecked():
                     options.cfg.MODE = QUERY_MODE_STATISTICS
@@ -444,6 +446,8 @@ class CoqueryWizard(QtGui.QWizard):
             self.ui.radio_mode_frequency.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_TOKENS:
             self.ui.radio_mode_tokens.setChecked(True)
+        elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
+            self.ui.radio_mode_collocations.setChecked(True)
 
         # either fill query string or query file input:
         if options.cfg.query_list:

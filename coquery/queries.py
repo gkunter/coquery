@@ -27,6 +27,8 @@ THE SOFTWARE.
 """
 
 from __future__ import unicode_literals
+from __future__ import division
+import math
 
 try:
     range = xrange
@@ -352,7 +354,7 @@ class CorpusQuery(object):
     ErrorInQuery = False
 
     def __init__(self, S, Session, token_class, source_filter):
-        
+        self.token_class = token_class
         self.query_list = []
         self.max_number_of_tokens = 0
         repeated_queries = tokens.preprocess_query(S)
@@ -596,7 +598,8 @@ class StatisticsQuery(CorpusQuery):
 class FrequencyQuery(CorpusQuery):
     def __init__(self, *args):
         super(FrequencyQuery, self).__init__(*args)
-        self.Session.output_fields.add(LEX_FREQ)
+        if not options.cfg.experimental:
+            self.Session.output_fields.add(LEX_FREQ)
         
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
         if options.cfg.experimental:
@@ -631,11 +634,10 @@ class FrequencyQuery(CorpusQuery):
                     else:
                         output_list = []
 
-                    output_list.extend([current_result[x] for x in self.Session.output_order])
-
                     if options.cfg.gui:
                         self.Session.output_storage.append(current_result)
                     else:
+                        output_list.extend([current_result[x] for x in self.Session.output_order])
                         output_file.writerow(output_list)
             return
         
@@ -697,4 +699,183 @@ class FrequencyQuery(CorpusQuery):
             else:
                 output_file.writerow(output_list)
 
+class CollocationQuery(TokenQuery):
+    def __init__(self, S, Session, token_class, source_filter):
+        self.left_span = options.cfg.context_left
+        self.right_span = options.cfg.context_right
+
+        self._query_string = S
+        # build query string so that the neighbourhood is also queried:
+        S = "{}{}{}".format("* " * self.left_span, S, " *" * self.right_span)
+
+        # and then use this string for a normal TokenQuery:
+        super(CollocationQuery, self).__init__(S, Session, token_class, source_filter)
+        self.Session.output_order = self.Session.header
+
+    def mutual_information(self, f_1, f_2, f_coll, size, span):
+        """ Calculate the Mutual Information for two words. f_1 and f_2 are
+        the frequencies of the two words, f_coll is the frequency of 
+        word 2 in the neighbourhood of word 1, size is the corpus size, and
+        span is the size of the neighbourhood in words to the left and right
+        of word 2.
+        
+        Following http://corpus.byu.edu/mutualinformation.asp, MI is 
+        calculated as:
+
+            MI = log ( (f_coll * size) / (f_1 * f_2 * span) ) / log (2)
+        
+        """
+
+        return math.log((f_coll * size) / (f_1 * f_2 * span)) / math.log(2)
+
+    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
+        self.Session.output_order = self.Session.header
+        count_left = collections.Counter()
+        count_right = collections.Counter()
+        count_total = collections.Counter()
+        
+        left_span = options.cfg.context_left
+        right_span = options.cfg.context_right
+
+        features = []
+        lexicon_features = self.Corpus.resource.get_lexicon_features()
+        for rc_feature in options.cfg.selected_features:
+            if rc_feature in [x for x, _ in lexicon_features]:
+                features.append("coq_{}".format(rc_feature))
+            
+        corpus_size = self.Corpus.get_corpus_size()
+        query_freq = 0
+        context_info = {}
+        
+        for current_result in self.Results:
+            query_freq += 1
+            # increase the count for all items in the left neighbourhood:
+            for i in range(left_span):
+                tup = []
+                for feature in features:
+                    lookup = "{}_{}".format(feature, i+1)
+                    # normally, collocations will be case-insensitive, but
+                    # the option to heed case is provided:
+                    if options.cfg.case_sensitive:
+                        tup.append(current_result[lookup])
+                    else:
+                        tup.append(current_result[lookup].lower())
+                count_left[tuple(tup)] += 1
+                count_total[tuple(tup)] += 1
+
+                context_info[tuple(tup)] = (
+                    current_result["coquery_invisible_corpus_id"],
+                    current_result["coquery_invisible_origin_id"],
+                    current_result["coquery_invisible_number_of_tokens"])
+
+
+            # increase the count for all items in the right neighbourhood:
+            for i in range(right_span):
+                tup = []
+                for feature in features:
+                    lookup = "{}_{}".format(feature, self.number_of_tokens - left_span +i+1)
+                    # normally, collocations will be case-insensitive, but
+                    # the option to heed case is provided:
+                    if options.cfg.case_sensitive:
+                        tup.append(current_result[lookup])
+                    else:
+                        tup.append(current_result[lookup].lower())
+                count_right[tuple(tup)] += 1
+                count_total[tuple(tup)] += 1
+                context_info[tuple(tup)] = (
+                    current_result["coquery_invisible_corpus_id"],
+                    current_result["coquery_invisible_origin_id"],
+                    current_result["coquery_invisible_number_of_tokens"])
+
+        self.Session.output_order = self.Session.header
+        
+        S = ""
+        for collocate_tuple in count_total:
+            try:
+                word = collocate_tuple[features.index("coq_word_label")]
+            except ValueError:
+                try:
+                    word = collocate_tuple[features.index("coq_corpus_word")]
+                except ValueError:
+                    word = ""
+            try:
+                lemma = collocate_tuple[features.index("coq_word_lemma")]
+            except ValueError:
+                try:
+                    lemma = collocate_tuple[features.index("coq_lemma_label")]
+                except ValueError:
+                    lemma = ""
+            try:
+                pos = collocate_tuple[features.index("coq_word_pos")]
+            except ValueError:
+                try:
+                    pos = collocate_tuple[features.index("coq_pos_label")]
+                except ValueError:
+                    pos  = ""
+            if word:
+                S = word
+            elif lemma:
+                S = "[{}]".format(lemma)
+            if S and pos:
+                S = "{}.[{}]".format(S, pos)
+            elif pos:
+                S = "[{}]".format(pos)
+            coll_freq = self.Corpus.get_frequency(self.token_class(S, self.Corpus.lexicon))
+            # build a new token from the tuple:
+        
+            current_result = {}
+            
+            current_result["coquery_query_string"] = self._query_string
+            for i, feature in enumerate(features):
+                feature = feature.partition("_")[2]
+                current_result["coq_collocate_{}".format(feature)] = collocate_tuple[i]
+            current_result["coq_frequency"] = count_total[collocate_tuple]
+            current_result["coq_collocate_frequency"] = coll_freq
+            current_result["coq_collocate_frequency_right"] = count_left[collocate_tuple]
+            current_result["coq_collocate_frequency_left"] = count_right[collocate_tuple]
+            current_result["coq_mutual_information"] = round(self.mutual_information(
+                query_freq,
+                coll_freq, 
+                count_total[collocate_tuple], 
+                corpus_size, 
+                self.left_span + self.right_span), 3)
+            
+            
+            corpus_id, origin_id, number = context_info[collocate_tuple]
+            
+            current_result["coquery_invisible_corpus_id"] = corpus_id
+            current_result["coquery_invisible_origin_id"] = origin_id 
+            current_result["coquery_invisible_number_of_tokens"] = number
+
+            if options.cfg.gui:
+                self.Session.output_storage.append(current_result)
+            else:
+                output_list = [current_result[x] for x in self.Session.output_order]
+                output_file.writerow(output_list)
+
+    def get_collocates(self):
+        """ Run a normal query base on the token string, but pad the query by
+        empty queries '*' for each word in the left and right context. This
+        query respects the output column selection, so it can be restricted to
+        only some parts of the corpus. Also, it can be restricted to lemmas
+        and POS tags.
+        
+        Then, for each neighbourhood column, make a word count: for each word
+        in the neighbourhood span, form tuples (based on all selected lexicon
+        features), and count how often the tuple occurs. Then, calculate the 
+        MI for each tuple. Finally, construct the output rows.
+        
+        Each output row consists of these columns:
+        
+        - Query string
+        - Collocate tuple (one column for each feature)
+        - Collocate frequency
+        - Collocate frequency (left)
+        - Collocate frequency (right)
+        - MI
+        
+        This output may also be supplemented by other lexical measures, for 
+        example, the conditional probability. """
+        
+        
 logger = logging.getLogger(__init__.NAME)

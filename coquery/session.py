@@ -71,30 +71,33 @@ class Session(object):
             self.query_type = queries.TokenQuery
         elif options.cfg.MODE == QUERY_MODE_DISTINCT:
             self.query_type = queries.DistinctQuery
+        elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
+            self.query_type = queries.CollocationQuery
             
-        if options.cfg.show_orth:
-            self.requested_fields.append(LEX_ORTH)        
-        if options.cfg.show_lemma:
-            self.requested_fields.append(LEX_LEMMA)
-        if options.cfg.show_pos:
-            self.requested_fields.append(LEX_POS)
-        try:
-            if options.cfg.show_phon:
-                self.requested_fields.append(LEX_PHON)
-        except AttributeError:
-            pass
-        if options.cfg.show_source:
-            self.requested_fields.append(CORP_SOURCE)
-        if options.cfg.show_filename:
-            self.requested_fields.append(CORP_FILENAME)
-        if options.cfg.show_speaker:
-            self.requested_fields.append(CORP_SPEAKER)
-        if options.cfg.show_time:
-            self.requested_fields.append(CORP_TIMING)
-        if options.cfg.context_span or options.cfg.context_columns or options.cfg.context_sentence:
-            self.requested_fields.append(CORP_CONTEXT)
-            
-        self.output_fields = set([x for x in self.requested_fields if self.Corpus.provides_feature(x)])
+        if not options.cfg.experimental:
+            if options.cfg.show_orth:
+                self.requested_fields.append(LEX_ORTH)        
+            if options.cfg.show_lemma:
+                self.requested_fields.append(LEX_LEMMA)
+            if options.cfg.show_pos:
+                self.requested_fields.append(LEX_POS)
+            try:
+                if options.cfg.show_phon:
+                    self.requested_fields.append(LEX_PHON)
+            except AttributeError:
+                pass
+            if options.cfg.show_source:
+                self.requested_fields.append(CORP_SOURCE)
+            if options.cfg.show_filename:
+                self.requested_fields.append(CORP_FILENAME)
+            if options.cfg.show_speaker:
+                self.requested_fields.append(CORP_SPEAKER)
+            if options.cfg.show_time:
+                self.requested_fields.append(CORP_TIMING)
+            if options.cfg.context_span or options.cfg.context_columns or options.cfg.context_sentence:
+                self.requested_fields.append(CORP_CONTEXT)
+                
+            self.output_fields = set([x for x in self.requested_fields if self.Corpus.provides_feature(x)])
 
         logger.info("Corpus: %s" % options.cfg.corpus)
         self.output_file = None
@@ -107,55 +110,23 @@ class Session(object):
         example, -p adds one or more numbered part-of-speech labels to the 
         header. The number of labels depends on the maximum number of query 
         tokens in this session. """
-    
-        if not self.header:
-            # If there is no header yet (e.g. because the input file did not
-            # contain headsers), create a new header with column labels 
-            # 'Inputx' for the maximum number of input columns available, 
-            # with x corresponding to the number of the column.
-            # The column containing the query string is labelled 'Query'.
-            self.header = ["Input%s" % (x+1) for x in range(self.max_number_of_input_columns - 1)]
-            if options.cfg.show_query:
-                self.header.insert (options.cfg.query_column_number - 1, "Query")
-        
-        if options.cfg.show_parameters:
-            self.header.append ("Parameters")
-            
-        if options.cfg.show_filter:
-            self.header.append ("Filter")
-        
-        if options.cfg.show_id:
-            self.header.append("ID")
-            
-        if options.cfg.show_orth:
-            self.header += ["W%s" % (x+1) for x in range(self.max_number_of_tokens)]
 
-        if options.cfg.show_phon and self.Corpus.provides_feature(LEX_PHON):
-            self.header += ["W_Phon%s" % (x+1) for x in range(self.max_number_of_tokens)]
+        if options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
+            self.header = ["coquery_query_string"]
+            lexicon_features = self.Corpus.resource.get_lexicon_features()
+            for rc_feature in options.cfg.selected_features:
+                if rc_feature in [x for x, _ in lexicon_features]:
+                    self.header.append("coq_collocate_{}".format(rc_feature))
+            self.header.append("coq_frequency")
+            self.header.append("coq_collocate_frequency")
+            self.header.append("coq_collocate_frequency_left")
+            self.header.append("coq_collocate_frequency_right")
+            self.header.append("coq_mutual_information")
+            self.header.append("coquery_invisible_corpus_id")
+            self.header.append("coquery_invisible_origin_id")
+            self.header.append("coquery_invisible_number_of_tokens")
+            return
             
-        if options.cfg.show_lemma and self.Corpus.provides_feature(LEX_LEMMA):
-            self.header += ["L%s" % (x + 1) for x in range(self.max_number_of_tokens)]
-            
-        if options.cfg.show_pos and self.Corpus.provides_feature(LEX_POS):
-            self.header += ["PoS%s" % (x + 1) for x in range(self.max_number_of_tokens)]
-        
-        if options.cfg.show_source and self.Corpus.provides_feature(CORP_SOURCE):
-            self.header += self.Corpus.get_source_info_header()
-        if options.cfg.show_speaker and self.Corpus.provides_feature(CORP_SPEAKER):
-            self.header += self.Corpus.get_speaker_info_header()
-        if options.cfg.show_filename and self.Corpus.provides_feature(CORP_FILENAME):
-            self.header += self.Corpus.get_file_info_header()
-        if options.cfg.show_time and self.Corpus.provides_feature(CORP_TIMING):
-            self.header += self.Corpus.get_time_info_header()
-            
-        if (options.cfg.context_span or options.cfg.context_columns) and self.Corpus.provides_feature(CORP_CONTEXT):
-            self.header += self.Corpus.get_context_header(self.max_number_of_tokens)
-        if options.cfg.context_sentence and self.Corpus.provides_feature(CORP_CONTEXT):
-            self.header += self.Corpus.get_context_sentence_header()
-
-        if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-            self.header.append (options.cfg.freq_label)
-        
         if options.cfg.experimental:
             corpus_features = [x for x, _ in self.Corpus.resource.get_corpus_features() if x in options.cfg.selected_features]
             lexicon_features = [x for x, _ in self.Corpus.resource.get_lexicon_features() if x in options.cfg.selected_features]
@@ -185,7 +156,54 @@ class Session(object):
                 self.header.append("coq_invisible_token_id")
                 self.header.append("coq_invisible_source_id")
                 self.header.append("coq_invisible_number_of_tokens")
+        else:
+            if not self.header:
+                # If there is no header yet (e.g. because the input file did not
+                # contain headsers), create a new header with column labels 
+                # 'Inputx' for the maximum number of input columns available, 
+                # with x corresponding to the number of the column.
+                # The column containing the query string is labelled 'Query'.
+                self.header = ["Input%s" % (x+1) for x in range(self.max_number_of_input_columns - 1)]
+                if options.cfg.show_query:
+                    self.header.insert (options.cfg.query_column_number - 1, "Query")
+            
+            if options.cfg.show_parameters:
+                self.header.append ("Parameters")
+                
+            if options.cfg.show_filter:
+                self.header.append ("Filter")
+            
+            if options.cfg.show_id:
+                self.header.append("ID")
+                
+            if options.cfg.show_orth:
+                self.header += ["W%s" % (x+1) for x in range(self.max_number_of_tokens)]
 
+            if options.cfg.show_phon and self.Corpus.provides_feature(LEX_PHON):
+                self.header += ["W_Phon%s" % (x+1) for x in range(self.max_number_of_tokens)]
+                
+            if options.cfg.show_lemma and self.Corpus.provides_feature(LEX_LEMMA):
+                self.header += ["L%s" % (x + 1) for x in range(self.max_number_of_tokens)]
+                
+            if options.cfg.show_pos and self.Corpus.provides_feature(LEX_POS):
+                self.header += ["PoS%s" % (x + 1) for x in range(self.max_number_of_tokens)]
+            
+            if options.cfg.show_source and self.Corpus.provides_feature(CORP_SOURCE):
+                self.header += self.Corpus.get_source_info_header()
+            if options.cfg.show_speaker and self.Corpus.provides_feature(CORP_SPEAKER):
+                self.header += self.Corpus.get_speaker_info_header()
+            if options.cfg.show_filename and self.Corpus.provides_feature(CORP_FILENAME):
+                self.header += self.Corpus.get_file_info_header()
+            if options.cfg.show_time and self.Corpus.provides_feature(CORP_TIMING):
+                self.header += self.Corpus.get_time_info_header()
+                
+            if (options.cfg.context_span or options.cfg.context_columns) and self.Corpus.provides_feature(CORP_CONTEXT):
+                self.header += self.Corpus.get_context_header(self.max_number_of_tokens)
+            if options.cfg.context_sentence and self.Corpus.provides_feature(CORP_CONTEXT):
+                self.header += self.Corpus.get_context_sentence_header()
+
+            if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
+                self.header.append (options.cfg.freq_label)
 
     def get_expected_column_number(self, max_number_of_tokens):
         """ Return the expected number of columns, based on the maximum 
