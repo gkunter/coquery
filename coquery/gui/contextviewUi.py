@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'contextview.ui'
 #
-# Created: Mon Jul 20 23:29:51 2015
+# Created: Mon Jul 27 02:42:16 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -75,8 +75,8 @@ class Ui_ContextView(object):
         self.spin_context_width.setSizePolicy(sizePolicy)
         self.spin_context_width.setFrame(True)
         self.spin_context_width.setButtonSymbols(QtGui.QAbstractSpinBox.UpDownArrows)
-        self.spin_context_width.setMaximum(500)
-        self.spin_context_width.setProperty("value", 5)
+        self.spin_context_width.setMaximum(1000)
+        self.spin_context_width.setProperty("value", 10)
         self.spin_context_width.setObjectName(_fromUtf8("spin_context_width"))
         self.horizontalLayout.addWidget(self.spin_context_width)
         self.slider_context_width = QtGui.QSlider(self.box_context_width)
@@ -86,7 +86,8 @@ class Ui_ContextView(object):
         sizePolicy.setHeightForWidth(self.slider_context_width.sizePolicy().hasHeightForWidth())
         self.slider_context_width.setSizePolicy(sizePolicy)
         self.slider_context_width.setMinimum(0)
-        self.slider_context_width.setMaximum(500)
+        self.slider_context_width.setMaximum(1000)
+        self.slider_context_width.setPageStep(25)
         self.slider_context_width.setProperty("value", 10)
         self.slider_context_width.setSliderPosition(10)
         self.slider_context_width.setOrientation(QtCore.Qt.Horizontal)
