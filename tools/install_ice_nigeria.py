@@ -1,40 +1,162 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
-
+from __future__ import print_function
 import xml.etree
 import os.path, re
 import csv, cStringIO, codecs, string
-
+from collections import defaultdict
 import corpusbuilder
 
-class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
-    #def read_speaker_data(self, path):
-        #e = xml.etree.ElementTree.parse(current_file).getroot()
-        #header = e.find("teiHeader")
-        #file_desc = header.find("fileDesc")
-        #encoding_desc = header.find("encodingDesc")
-        #profile_desc = header.find("profileDesc")
-        #revision_desc = header.find("revisionDesc")
-        
-        ## Get the date:
-        #creation = profile_desc.find("creation")
-        #date_element = creation.find("date")
-        #if date_element != None:
-            #source_date = get_year(date_element.text.strip())
-        #else:
-            #source_date = get_year(creation.attrib.get("date", "0000"))
-                
-        ## Get XMLName and OldName:
-        #for idno in file_desc.find("publicationStmt").findall("idno"):
-            #if idno.attrib["type"] == "bnc":
-                #source_xmlname = idno.text.strip()
-            #else:
-                #source_oldname = idno.text.strip()
+class corpus_code():
+    def tag_to_qhtml(self, s):
+        translate_dict = {
+            "p": "p",
+            "punctuation": "",
+            "heading": "h1",
+            "boldface": "b",
+            "italics": "i",
+            "underline": "u",
+            "superscript": "sup",
+            "subscript": "sup",
+            "text": "html", 
+            "deleted": "s",
+            "other-language": "span style='font-style: italic;'>",
+            "quote": "span style='font-style: italic; color: lightgrey; '>",
+            "error": "s"}
+        if s in translate_dict:
+            return translate_dict[s]
+        else:
+            print("unsupported tag: ", s)
+            return s
+    
+    def render_context(self, token_id, source_id, token_width, context_width, widget):
+        start = max(0, token_id - context_width)
+        end = token_id + token_width + context_width - 1
+    
+        S = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end} AND {corpus}.{source_id} = {current_source_id}".format(
+            corpus=self.resource.corpus_table,
+            corpus_id=self.resource.corpus_id,
+            corpus_word_id=self.resource.corpus_word_id,
+            source_id=self.resource.corpus_source_id,
+            
+            word=self.resource.word_label,
+            word_table=self.resource.word_table,
+            word_id=self.resource.word_id,
+            
+            tag_table=self.resource.tag_table,
+            tag=self.resource.tag_label,
+            tag_id=self.resource.tag_id,
+            tag_corpus_id=self.resource.tag_corpus_id,
+            tag_type=self.resource.tag_type,
+            attribute=self.resource.tag_attribute,
+            
+            current_source_id=source_id,
+            start=start, end=end)
+        cur = self.resource.DB.execute_cursor(S)
+        entities = {}
 
-                #pass
-    
-    
+        for row in cur:
+            #row = [x.decode("utf-8", errors="replace") if isinstance(x, str) else x for x in row]
+            if row[self.resource.corpus_id] not in entities:
+                entities[row[self.resource.corpus_id]] = []
+            entities[row[self.resource.corpus_id]].append(row)
+
+        context = []
+        # we need to keep track of any opening and closing tag that does not
+        # have its matching tag in the selected context:
+        opened_tags = []
+        closed_tags = []
+        correct_word = ""
+        for token in sorted(entities):
+            entity_list = sorted(entities[token], key=lambda x:x[self.resource.tag_id])
+            text_output = False
+            word = entity_list[0][self.resource.word_label]
+            for row in entity_list:
+                tag = row[self.resource.tag_label]
+                
+                # special treatment for tags:
+                if tag:
+                    attributes = row[self.resource.tag_attribute]
+                    tag_type = row[self.resource.tag_type]
+
+                    if tag_type == "empty":
+                        if tag == "object":
+                            # add placeholder images for <object> tags
+                            if "type=table" in attributes:
+                                context.append("<br/><img src='../logo/placeholder_table.png'/><br/>")
+                            if "type=graphic" in attributes:
+                                context.append("<br/><img src='../logo/placeholder.png'/><br/>")
+                            if "type=formula" in attributes:
+                                context.append("<br/><img src='../logo/formula.png'/><br/>")
+                        elif tag == "error":
+                            if attributes.startswith("corrected="):
+                                correct_word = attributes[len("corrected="):]
+                                context.append('<span style="color: darkgreen;">{}</span>'.format(correct_word))
+                            correct_word  = ""
+                        elif tag == "break":
+                            context.append("<br/>")
+                        elif tag == "x-anonym-x":
+                            context.append('<span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span>'.format(attributes[len("type="):]))
+                        else:
+                            print(tag)
+                
+                    elif tag_type == "open":
+                        if tag == "error":
+                            if attributes.startswith("corrected="):
+                                correct_word = attributes[len("corrected="):]
+                            attributes = 'style="color: darkgrey;"'
+                        #elif tag == "other-language":
+                            #context.append('<span style="font-style: italic;">')
+                        tag = self.tag_to_qhtml(tag)
+                        if attributes:
+                            context.append("<{} {}>".format(tag, attributes))
+                        else:
+                            context.append("<{}>".format(tag))
+                        opened_tags.append(row[self.resource.tag_label])
+
+                    elif tag_type == "close":
+                        # if there is still a dangling correction from an 
+                        # open <error> tag, add the correct word now:
+                        if correct_word:
+                            context.append('<span style="color: darkgreen;">{}</span>'.format(correct_word))
+                            correct_word = ""
+                        # add the current token before processing any other
+                        # closing tag:
+                        if not text_output:
+                            text_output = True
+                            if token == token_id:
+                                context.append('<span style="font-weight: bold; background-color: lightyellow; border-style: outset;" >')
+                            context.append(word)
+                        
+                        if attributes:
+                            context.append("</{} {}>".format(self.tag_to_qhtml(tag), attributes))
+                        else:
+                            context.append("</{}>".format(self.tag_to_qhtml(tag)))
+                        # if the current tag closes an earlier opening tag,
+                        # remove that tag from the list of open environments:
+                        try:
+                            if opened_tags[-1] == row[self.resource.tag_label]:
+                                opened_tags.pop(len(opened_tags)-1)
+                        except IndexError:
+                            closed_tags.append(tag)
+                            pass
+                        if tag == "other-language":
+                            context.append('</span>')
+            if not text_output:
+                if token == token_id:
+                    context.append('<span style="font-weight: bold; background-color: lightyellow; border-style: outset;" >')
+                context.append(word)
+            if token == token_id + token_width - 1:
+                context.append('</span>')
+        for x in opened_tags[::-1]:
+            context.append("</{}>".format(self.tag_to_qhtml(x)))
+        for x in closed_tags:
+            context.insert(0, ("<{}>".format(self.tag_to_qhtml(x))))
+
+        widget.ui.context_area.setText(collapse_words(context))
+
+class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
     def __init__(self):
         """ Initialize the corpus builder. The initialization includes a 
         definition of the database schema. """
@@ -47,8 +169,6 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS", "CORP_SOURCE"]
 
         self.check_arguments()
-        if not self.arguments.summary_path:
-            self.arguments.summary_path = os.path.join(self.arguments.path, "../../summary.xml")
         
         # add table descriptions for the tables used in this database.
         #
@@ -91,18 +211,20 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         self.corpus_table = "corpus"
         self.corpus_id = "TokenId"
         self.corpus_word_id = "WordId"
-        self.corpus_source_id = "FileId"
-        self.corpus_sentence_id = "SentenceId"
+        self.corpus_file_id = "FileId"
+        self.corpus_source_id = "SourceId"
         
         self.add_table_description(self.corpus_table, self.corpus_id,
             {"CREATE": [
                 "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.corpus_id),
                 "`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_word_id),
-                "`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_sentence_id),                
+                #"`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_sentence_id),                
+                "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_file_id),
                 "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_source_id)],
             "INDEX": [
                 ([self.corpus_word_id], 0, "HASH"),
-                ([self.corpus_sentence_id], 0, "HASH"),
+                #([self.corpus_sentence_id], 0, "HASH"),
+                ([self.corpus_file_id], 0, "HASH"),
                 ([self.corpus_source_id], 0, "HASH")]})
         
         # Add the main lexicon table. Each row in this table represents a
@@ -157,76 +279,72 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         
         self.file_table = "file"
         self.file_id = "FileId"
-        self.file_label = "Path"
+        self.file_name = "Name"
+        self.file_path = "Path"
         
         self.add_table_description(self.file_table, self.file_id,
             {"CREATE": [
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
-                "`{}` TINYTEXT NOT NULL".format(self.file_label)]})
-
-        # Any corpus that provides either CORP_CONTEXT, CORP_SOURCE or
-        # CORP_FILENAME also needs to specify a source table. Each row in
-        # this source table represents a corpus source, and it has to 
-        # contain at least the following column:
-        #
-        # SourceId
-        # An int value containing the unique identifier of this source.
-        # 
-        # Additional columns may also store further information such as 
-        # year or genre.
+                "`{}` TINYTEXT NOT NULL".format(self.file_name),
+                "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
         
-        #self.speaker_table = "file"
-        #self.speaker_id = "FileId"
+        #self.sentence_table = "sentence"
+        #self.sentence_id = "SentenceId"
         
-        self.sentence_table = "sentence"
-        self.sentence_id = "SentenceId"
-        self.sentence_source_id = "SourceId"
-        
-        self.add_table_description(self.sentence_table, self.sentence_id,
-            {"CREATE" : [
-                "`{}` MEDIUMINT(5) UNSIGNED NOT NULL".format(self.sentence_id),
-                "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.sentence_source_id)],
-            "INDEX": [
-                ([self.sentence_source_id], 0, "HASH")]})
+        #self.add_table_description(self.sentence_table, self.sentence_id,
+            #{"CREATE" : [
+                #"`{}` MEDIUMINT(5) UNSIGNED NOT NULL".format(self.sentence_id)]})
         
         self.source_table = "source"
         self.source_id = "SourceId"
-        self.source_info_source = "Source"
-        self.source_info_mode = "Mode"
-        self.source_info_age = "Age"
-        self.source_info_gender = "Gender"
-        self.source_info_ethnicity = "Ethnicity"
-        self.source_info_date = "Date"
-        self.source_info_register = "Register"
-        self.source_info_place = "Place"
+        self.source_mode = "Mode"
+        self.source_age = "Age"
+        self.source_gender = "Gender"
+        self.source_ethnicity = "Ethnicity"
+        self.source_date = "Date"
+        self.source_register = "Register"
+        self.source_place = "Place"
         
         self.add_table_description(self.source_table, self.source_id,
             {"CREATE": [
                 "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.source_id),
-                "`{}` VARCHAR(12) NOT NULL".format(self.source_info_source),
-                "`{}` TINYTEXT NOT NULL".format(self.source_info_mode),
-                "`{}` VARCHAR(15) NOT NULL".format(self.source_info_date),
-                "`{}` VARCHAR(30) NOT NULL".format(self.source_info_register),
-                "`{}` VARCHAR(30) NOT NULL".format(self.source_info_place),
-                "`{}` VARCHAR(5) NOT NULL".format(self.source_info_age),
-                "`{}` VARCHAR(1) NOT NULL".format(self.source_info_gender),
-                "`{}` VARCHAR(15) NOT NULL".format(self.source_info_ethnicity)],
+                "`{}` TINYTEXT NOT NULL".format(self.source_mode),
+                "`{}` VARCHAR(15) NOT NULL".format(self.source_date),
+                "`{}` VARCHAR(30) NOT NULL".format(self.source_register),
+                "`{}` VARCHAR(30) NOT NULL".format(self.source_place),
+                "`{}` VARCHAR(5) NOT NULL".format(self.source_age),
+                "`{}` VARCHAR(1) NOT NULL".format(self.source_gender),
+                "`{}` VARCHAR(15) NOT NULL".format(self.source_ethnicity)],
             "INDEX": [
-                ([self.source_info_mode], 0, "BTREE"),
-                ([self.source_info_register], 0, "BTREE"),
-                ([self.source_info_date], 0, "BTREE"),
-                ([self.source_info_place], 0, "BTREE"),
-                ([self.source_info_gender], 0, "BTREE"),
-                ([self.source_info_ethnicity], 0, "BTREE"),
-                ([self.source_info_ethnicity], 0, "BTREE")]})
+                ([self.source_mode], 0, "BTREE"),
+                ([self.source_register], 0, "BTREE"),
+                ([self.source_date], 0, "BTREE"),
+                ([self.source_place], 0, "BTREE"),
+                ([self.source_gender], 0, "BTREE"),
+                ([self.source_ethnicity], 0, "BTREE"),
+                ([self.source_ethnicity], 0, "BTREE")]})
                 
-        self._source_info = {}
-        self._sentence_id = None
+        self.tag_table = "tags"
+        self.tag_id = "TagId"
+        self.tag_label = "Tag"
+        self.tag_type = "Type"
+        self.tag_corpus_id = self.corpus_id
+        self.tag_attribute = "Attribute"
         
-        #self.file_filter = "*Pr_18_tmp*"
-        
-    def additional_arguments(self):
-        self.parser.add_argument("--summary-path", help="Path to the summary.xml file containing speaker data (default: relative to input file path)", type=str)
+        self.add_table_description(self.tag_table, self.tag_id,
+            {"CREATE": [
+                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_id),
+                "`{}` ENUM('open', 'close', 'empty')".format(self.tag_type),
+                "`{}` TINYTEXT NOT NULL".format(self.tag_label),
+                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_corpus_id),
+                "`{}` TINYTEXT NOT NULL".format(self.tag_attribute)],
+            "INDEX": [
+                ([self.tag_corpus_id], 0, "HASH"),
+                ([self.tag_label], 0, "BTREE"),
+                ([self.tag_type], 0, "BTREE")]})
+                
+        self._corpus_id = 0
+        self._corpus_code = corpus_code
         
     def process_child(self, child):
         def process_content(content):
@@ -249,26 +367,61 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                     self._word_id = self.table_get(self.word_table, 
                         {self.word_label: word_text, 
                         self.word_lemma: lemma_text, 
-                        self.word_pos: word_pos})[self.word_id]
+                        self.word_pos: word_pos}, case=True)
                         
-                    self.table_add(self.corpus_table,
+                    self._corpus_id = self.table_add(self.corpus_table,
                         {self.corpus_word_id: self._word_id,
-                        self.corpus_source_id: self._source_id,
-                        self.corpus_sentence_id: self._sentence_id})
+                        self.corpus_file_id: self._file_id,
+                        self.corpus_source_id: self._source_id})
 
-                    if new_sentence:
-                        self._sentence_id = self.table_get(self.sentence_table,
-                            {self.sentence_source_id: self._source_id})[self.sentence_id]
+                    #if new_sentence:
+                        #self._sentence_id = self.table_get(self.sentence_table,
+                            #{self.sentence_source_id: self._source_id})
 
+            
         content = child.text
         if content:
+            # insert an opening tag for the current element:
+            self.table_add(self.tag_table,
+                        {self.tag_label: "{}".format(child.tag),
+                            self.tag_corpus_id: self._corpus_id + 1,
+                            self.tag_type: "open",
+                            self.tag_attribute: ", ".join(["{}={}".format(x, child.attrib[x]) for x in child.attrib])})
+            # process the content of the current element, either
+            # completely or up to the point that there is a sub-element:
             process_content(content)
-        for grandchild in child:
-            self.process_child(grandchild)
-        content = child.tail
-        if content:
-            process_content(content)
-        
+
+            # if there are any sub-elements, process them 
+            # recursively:
+            for grandchild in child:
+                self.process_child(grandchild)
+            
+            # insert a closing tag for the current element:
+            self.table_add(self.tag_table,
+                        {self.tag_label: "{}".format(child.tag),
+                            self.tag_corpus_id: self._corpus_id,
+                            self.tag_type: "close",
+                            self.tag_attribute: ", ".join(["{}={}".format(x, child.attrib[x]) for x in child.attrib])})
+        else:
+            # the current element is an empty element, add a matching tag:
+            self.table_add(self.tag_table,
+                        {self.tag_label: "{}".format(child.tag),
+                            self.tag_corpus_id: self._corpus_id,
+                            self.tag_type: "empty",
+                            self.tag_attribute: ", ".join(["{}={}".format(x, child.attrib[x]) for x in child.attrib])})
+
+            if child.tag == "x-anonym-x":
+                # ICE-NG contains anonymized labels for names, placenames,
+                # and other nouns. Insert a special label in that case:
+                self._word_id = self.table_get(self.word_table, 
+                        {self.word_label: "ANONYMIZED", 
+                        self.word_lemma: "ANONYMIZED", 
+                        self.word_pos: "np"}, case=True)
+
+        # process everything in the tail:
+        tail = child.tail
+        if tail:
+            process_content(tail)
         
     def process_xml_file(self, current_file):
         """ Reads an XML file."""
@@ -310,7 +463,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         #     <error corrected="&quot;.">
         #     &quot;   PUNCT   &quot;
         #     </error>
-        
+
         file_buffer = cStringIO.StringIO()
         with codecs.open(current_file, "rt", encoding = self.arguments.encoding) as input_file:
             skip = False
@@ -386,12 +539,9 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                     if fix_split_token:
                         pass
                     else:
-                        try:
-                            file_buffer.write(line.encode("utf-8"))
-                        except (UnicodeEncodeError, UnicodeDecodeError) as e:
-                            print(line.decode("utf-8"))
-                            print(line)
-                            raise e
+                        # The file buffer uses byte-strings, not unicode 
+                        # strings. Therefore, encode the string first:
+                        file_buffer.write(line.encode("utf-8"))
                         file_buffer.write("\n")
                         last = line
 
@@ -410,7 +560,6 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 end_line = 999999
             S = S.splitlines()
             self.logger.error(e)
-            print(current_file)
             for i, x in enumerate(S):                
                 if i > start_line:
                     print("{:<3}: {}".format(i, x.decode("utf8")))
@@ -420,6 +569,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                     break
             raise e
         
+        # get meta info, enclosed in <meta> tags:
         meta_info_keys = ["date", "place"]
         meta_info = {}        
         meta_xml = e.find("meta")
@@ -428,6 +578,8 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 meta_info[x] = meta_xml.find(x).text.strip().split("\t")[0]
             except AttributeError:
                 meta_info[x] = "?"
+                
+        # get speaker/author information, enclosed in <author> tags:
         meta_xml = meta_xml.find("author")
         meta_info_keys = ["gender", "age", "ethnic-group"]
         for x in meta_info_keys:
@@ -438,29 +590,25 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 
         meta_info["register"] = os.path.basename(os.path.dirname(current_file))
         meta_info["mode"] = os.path.basename(os.path.normpath(os.path.join(os.path.dirname(current_file), "..")))
-        #genre = source_info["xml"].split("/")[1]
 
-                
-        base = self.get_file_identifier(current_file)
-        self._source_info[base] = meta_info
-        
+        # all meta data gathered, store it:
         self._source_id = self.table_get(self.source_table,
-            {self.source_info_source: base,
-             self.source_info_age: meta_info["age"],
-             self.source_info_gender: meta_info["gender"],
-             self.source_info_ethnicity: meta_info["ethnic-group"],
-             self.source_info_date: meta_info["date"],
-             self.source_info_mode: meta_info["mode"],
-             self.source_info_register: meta_info["register"],
-             self.source_info_place: meta_info["place"]})[self.source_id]
+            {self.source_age: meta_info["age"],
+             self.source_gender: meta_info["gender"],
+             self.source_ethnicity: meta_info["ethnic-group"],
+             self.source_date: meta_info["date"],
+             self.source_mode: meta_info["mode"],
+             self.source_register: meta_info["register"],
+             self.source_place: meta_info["place"]})
             
-        self._sentence_id = self.table_get(self.sentence_table,
-                {self.sentence_source_id: self._source_id})[self.sentence_id]
+        #self._sentence_id = self.table_get(self.sentence_table, {})
         
-        for x in e.find("text"):
-            self.process_child(x)
+        root = e.find("text")
+        self.process_child(root)
         
     def process_file(self, current_file):
+        # Process every file except for bl_18a.xml.pos. This file only 
+        # contains unimportant meta information:
         if current_file.find("bl_18a.xml.pos") == -1:
             self.process_xml_file(current_file)
 
@@ -471,7 +619,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         return base.lower()
 
     def read_source_data(self):
-        #e = xml.etree.ElementTree.parse(self.arguments.summary_path).getroot()
+        #e = xml.etree.ElementTree.parse(self.arguments._path).getroot()
         
         #for desc in e.findall("file"):
             #meta = desc.find("meta")
@@ -480,8 +628,11 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         pass
 
     def get_description(self):
-        return "This script makes ICE Nigeria available to Coquery by reading the corpus data files from {} into the MySQL database '{}' so that the database can be queried by Coquery.".format(self.arguments.path, self.arguments.db_name)
+        return "This script makes ICE Nigeria available to Coquery by reading the corpus data files from {}/POS-Tagged into the MySQL database '{}' so that the database can be queried by Coquery.The required data file 'ICE-Nigeria-written-pos-tagged.zip' can be downloaded from http://sourceforge.net/projects/ice-nigeria/files/.".format(self.arguments.path, self.arguments.db_name)
 
+    def get_citation(self):
+        return "(no citation)"
+    
 def main():
     ICENigeriaBuilder().build()
     
