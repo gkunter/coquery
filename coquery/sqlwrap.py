@@ -55,7 +55,7 @@ ModifyingCommands = ["ALTER", "CREATE", "DELETE", "DROP", "INSERT",
 NonModifyingCommands = ["SELECT", "SHOW", "DESCRIBE", "SET", "RESET"]
 
 class SqlDB (object):
-    def __init__(self, Host, Port, User, Password, Database=None):
+    def __init__(self, Host, Port, User, Password, Database=None, encoding="utf8"):
         self.Con = None
         self.Cur = None
         self.Host = Host
@@ -72,18 +72,20 @@ class SqlDB (object):
                     port=Port, 
                     user=User, 
                     passwd=Password, 
-                    db=Database)
+                    db=Database,
+                    charset=encoding)
             else:
                 self.Con = mysql.connect(
                     host=Host, 
                     port=Port, 
                     user=User, 
-                    passwd=Password)
+                    passwd=Password,
+                    charset=encoding)
 
         except Exception as e:
              raise SQLInitializationError(e)
-        
         self.Cur = self.Con.cursor()
+        self.set_variable("NAMES", encoding)
 
     def kill_connection(self):
         try:
@@ -91,10 +93,20 @@ class SqlDB (object):
         except mysql.OperationalError:
             pass
 
-    def close(self):
-        self.Cur.close()
-        self.Con.close()
+    def set_variable(self, variable, value):
+        cur = self.Con.cursor()
+        if isinstance(value, (str, unicode)):
+            self.execute("SET {} '{}'".format(variable, value))
+        else:
+            self.execute("SET {}={}".format(variable, value))
 
+    def close(self):
+        try:
+            self.Cur.close()
+            self.Con.close()
+        except mysql.ProgrammingError:
+            pass
+        
     def explain(self, S):
         """
 Call        explain(self, S)
@@ -183,5 +195,9 @@ Value       no return value
         return self.Cur.fetchone()
     
     def start_read_only(self):
-        self.execute("START TRANSACTION READ ONLY")
-        self.commit()
+        self.Cur.execute("START TRANSACTION READ ONLY;")
+        
+    def get_database_size(self, database):
+        """ Returns the size of the database in bytes."""
+        self.Cur.execute("SELECT data_length+index_length FROM information_schema.tables WHERE table_schema = '{}'".format(database))
+        return self.Cur.fetchone()[0]
