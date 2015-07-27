@@ -36,6 +36,76 @@ import time
 import datetime
 from defines import *
 
+def join_punctuation(seq, characters='!\'),-./:;?^_`}’'):
+    characters = set(characters)
+    seq = iter(seq)
+    current = next(seq)
+
+    for nxt in seq:
+        if nxt in characters:
+            current += nxt
+        else:
+            yield unicode(current.decode("utf-8", errors="replace"))
+            current = nxt
+
+    yield unicode(current.decode("utf-8", errors="replace"))
+
+def collapse_words2(word_list):
+    print(word_list)
+    return " ".join(join_punctuation(word_list))
+
+def collapse_words(word_list):
+    
+    def is_tag(s):
+        # there are some tags that should still be preceded by spaces. In 
+        # paricular those that are normally used for typesetting, including
+        # <span>, but excluding <sup> and <sub>, because these are frequently
+        # used in formula:
+        
+        if s.startswith("<span") or s.startswith("</span"):
+            return False
+        if s in set(["</b>", "<b>", "</i>", "<i>", "</u>", "<u>", "</s>", "<s>"]):
+            return False
+        return s.startswith("<") and s.endswith(">") and len(s) > 2
+
+    """ Concatenate the words in the word list, taking clitics, punctuation
+    and some other stop words into account."""
+    contraction = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
+    token_list = []
+    punct = '!\'),-./:;?^_`}’”]'
+    quote_list = ['"', "'"]
+    context_list = [x.strip() for x in word_list]
+    open_quote = {}
+    open_quote ['"'] = False
+    open_quote ["'"] = False
+    last_token = ""
+    for i, current_token in enumerate(context_list):
+        if '""""' in current_token:
+            current_token = '"'
+    
+        # stupid list of exceptions in which the current_token should NOT
+        # be preceded by a space:
+        no_space = False
+        if all([x in punct for x in current_token]):
+            no_space = True        
+        if current_token in contraction:
+            no_space = True            
+        if last_token in '({[‘“':
+            no_space = True            
+        if is_tag(last_token):
+            no_space = True        
+        if is_tag(current_token):
+            no_space = True
+        if last_token.endswith("/"):
+            no_space = True
+            
+        if not no_space:
+            token_list.append(" ")
+        
+        token_list.append(current_token)
+        last_token = current_token
+    return "".join(token_list)
+
 class BaseLexicon(object):
     """
     CLASS
@@ -265,6 +335,10 @@ class BaseResource(object):
         for x in list(table_dict.keys()):
             if x != "coquery" and not "{}_table".format(x) in table_dict[x]:
                 table_dict.pop(x)
+        try:
+            table_dict.pop("tag")
+        except (AttributeError, KeyError):
+            pass
         return table_dict
     
     @classmethod
@@ -401,7 +475,7 @@ class BaseResource(object):
         lexicon_tables = cls.get_table_tree("word")
         lexicon_variables = []
         for x in table_dict:
-            if x in lexicon_tables and x != "coquery":
+            if x in lexicon_tables and x not in ("tags", "coquery"):
                 for y in table_dict[x]:
                     if not y.endswith("_id") and not y.startswith("{}_table".format(x)):
                         lexicon_variables.append((y, type(cls).__getattribute__(cls, y)))    
@@ -460,6 +534,11 @@ class BaseCorpus(object):
         self.query_cache = {}
         self.lexicon = lexicon
         self.resource = resource
+        
+    def get_corpus_size(self):
+        """ Return the number of tokens in the corpus, taking the current 
+        filter restrictions into account."""
+        raise CorpusUnsupportedFunctionError
 
     def get_word_id(self, token_id):
         """ returns the word id of the token specified by token_id. """
@@ -742,7 +821,10 @@ class SQLLexicon(BaseLexicon):
             if CurrentWord != "*":
                 current_token = tokens.COCAWord(CurrentWord, self)
                 current_token.negated = token.negated
-                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), current_token))
+                # take care of quotation marks:
+                S = unicode(current_token)
+                S = S.replace('"', '""')
+                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), S))
                 
         for current_transcript in token.transcript_specifiers:
             if current_transcript:
@@ -759,10 +841,12 @@ class SQLLexicon(BaseLexicon):
                     target = "{}.{}".format(
                         self.resource.transcript_table,
                         self.resource.transcript_label)
-                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), current_token))
+                # take care of quotation marks:
+                S = unicode(current_token)
+                S = S.replace('"', '""')
+                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), S))
         
         where_clauses = []
-        
         if sub_clauses:
             where_clauses.append("(%s)" % " OR ".join (sub_clauses))
         if token.class_specifiers and LEX_POS in self.provides:
@@ -888,21 +972,20 @@ class SQLLexicon(BaseLexicon):
         where_string = self.sql_string_get_posid_list_where(token)
 
         if "pos_table" in dir(self.resource):
-            return "SELECT DISTINCT {word_table}.{word_pos} FROM {word_table} INNER JOIN {pos_table} ON {pos_table}.{pos_id} = {word_table}.{word_pos} WHERE {where_string}".format(
+            return "SELECT {word_table}.{word_pos} FROM {word_table} INNER JOIN {pos_table} ON {pos_table}.{pos_id} = {word_table}.{word_pos} WHERE {where_string}".format(
                 word_pos=self.resource.word_pos_id,
                 word_table=self.resource.word_table,
                 pos_table=self.resource.pos_table,
                 pos_id=self.resource.pos_id,
                 where_string=where_string)
         else:
-            return "SELECT DISTINCT {} FROM {} WHERE {}".format(
+            return "SELECT {} FROM {} WHERE {}".format(
                 self.resource.word_pos, self.resource.word_table, where_string)
 
     def get_posid_list(self, token):
-        print(1)
         S = self.sql_string_get_posid_list(token)
         self.resource.DB.execute(S)
-        return [x[0] for x in self.resource.DB.fetch_all()]
+        return set([x[0] for x in self.resource.DB.fetch_all()])
 
     def sql_string_get_matching_wordids(self, token):
         """ returns a string that may be used to query all word_ids that
@@ -952,35 +1035,46 @@ class SQLLexicon(BaseLexicon):
         
     def get_statistics(self):
         stats = {}
-        stats["lexicon_features"] = " ".join(self.provides)
-        stats["lexicon_variables"] = " ".join([x for x, _ in self.resource.get_lexicon_features()])
-        self.resource.DB.execute("SELECT COUNT(*) FROM {word_table}".format(
-            word_table=self.resource.word_table))
-        stats["lexicon_words"] = self.resource.DB.Cur.fetchone()[0]
-        if LEX_POS in self.provides:
-            if "pos_table" in dir(self.resource):
-                self.resource.DB.execute("SELECT COUNT(DISTINCT {}) FROM {}".format(
-                    self.resource.pos_id, self.resource.pos_table))
-            else:
-                self.resource.DB.execute("SELECT COUNT(DISTINCT {}) FROM {}".format(
-                    self.resource.word_pos, self.resource.word_table))
-            stats["lexicon_distinct_pos"] = self.resource.DB.Cur.fetchone()[0]
-        if LEX_LEMMA in self.provides:
-            if "lemma_table" in dir(self.resource):
-                lemma_table = self.resource.lemma_table
-                lemma_label = self.resource.lemma_label
-            else:
-                lemma_table = self.resource.word_table
-                lemma_label = self.resource.word_lemma
-            self.resource.DB.execute("SELECT COUNT(DISTINCT {}) FROM {}".format(
-                lemma_label, lemma_table))
-            stats["lexicon_lemmas"] = self.resource.DB.Cur.fetchone()[0]
+        stats["lexicon_provides"] = " ".join(self.provides)
+        stats["lexicon_features"] = " ".join([x for x, _ in self.resource.get_lexicon_features()])
         return stats
 
 class SQLCorpus(BaseCorpus):
     def __init__(self, lexicon, resource):
         super(SQLCorpus, self).__init__(lexicon, resource)
         self.query_results = None
+        self._frequency_cache =  {}
+
+    def get_corpus_size(self):
+        """ Return the number of tokens in the corpus, taking the current 
+        filter restrictions into account."""
+
+        filter_strings = self.sql_string_run_query_filter_list(self_joined=False)
+           
+        S = "SELECT COUNT(*) FROM {}".format(self.resource.corpus_table)
+        self.resource.DB.execute(S)
+        return self.resource.DB.Cur.fetchone()[0]
+
+    def get_frequency(self, token):
+        """ Return a longint that gives the corpus frequency of the token,
+        taking the filter list from options.cfg.filter_list into account."""
+        if token.S in self._frequency_cache:
+            return self._frequency_cache[token.S]
+        
+        try:
+            if "pos_table" not in dir(self.resource):
+                word_pos_column = self.resource.word_pos
+            else:
+                word_pos_column = self.resource.word_pos_id
+        except AttributeError:
+            word_pos_column = None
+        S = "SELECT COUNT(*) FROM {0} WHERE {1}".format(
+            self.resource.corpus_table,
+            " AND ".join(self.get_whereclauses(token, self.resource.word_id, word_pos_column)))
+        self.resource.DB.execute(S)
+        freq = self.resource.DB.Cur.fetchone()[0]
+        self._frequency_cache[token.S] = freq
+        return freq
 
     def sql_string_get_word_id_of_token(self, token_id):
         return "SELECT {} FROM {} WHERE {} = {} LIMIT 1".format(
@@ -1418,11 +1512,6 @@ class SQLCorpus(BaseCorpus):
         else:
             return " ".join(table_string_list)
 
-    def get_frequency(self, token):
-        """ Return a longint that gives the corpus frequency of the token,
-        taking the filter list from options.cfg.filter_list into account."""
-        pass
-
     def get_whereclauses(self, Token, WordTarget, PosTarget):
         if not Token:
             return []
@@ -1577,7 +1666,7 @@ class SQLCorpus(BaseCorpus):
         else:
             return ", ".join(self.column_list)
     
-    def sql_string_run_query_filter_list(self, Query, self_joined):
+    def sql_string_run_query_filter_list(self, self_joined):
         filter_list = self.resource.translate_filters(options.cfg.filter_list)
         L = []
         for column, corpus_feature, table, operator, value_list, val_range in filter_list:
@@ -1688,6 +1777,8 @@ class SQLCorpus(BaseCorpus):
         for rc_feature in requested_features:
             rc_table = "{}_table".format(rc_feature.split("_")[0])
             if rc_table == "coquery_table":
+                continue
+            if rc_table == "tag_table":
                 continue
             if rc_table not in required_tables:
                 tree = self.resource.get_table_structure(rc_table, options.cfg.selected_features)
@@ -2230,7 +2321,6 @@ class SQLCorpus(BaseCorpus):
 
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
-        
         self.resource.DB.execute(
             self.sql_string_get_wordid_in_range(
                 start, 
