@@ -94,7 +94,7 @@ class Options(object):
         
     def setup_parser(self):
         group = self.parser.add_mutually_exclusive_group()
-        self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS), type=str, nargs="?")
+        self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS, QUERY_MODE_COLLOCATIONS), type=str, nargs="?")
         self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
         
         group.add_argument("--gui", help="Use a graphical user interface (requires Qt)", action="store_true")
@@ -178,79 +178,84 @@ class Options(object):
             self.parser.print_help()
             sys.exit(1)
         
-        if self.args.corpus:
-            # build a dictionary D for the selected corpus that contains as 
-            # values the features provided by each of the tables defined in
-            # the resource. The features are included as tuples, with first,
-            # the display name and second, the resource feature name.
-            resource, _, _, _ = resource_list.available[self.args.corpus]
-            corpus_features = resource.get_corpus_features()
-            lexicon_features = resource.get_lexicon_features()
-            D = {}
-            for rc_feature, column in corpus_features + lexicon_features:
-                if "_denorm_" not in rc_feature:
-                    table = "{}_table".format(rc_feature.split("_")[0])
-                    if table not in D:
-                        D[table] = set([])
-                    D[table].add((column, rc_feature))
+        D = {}
         
-            if self.args.corpus.upper() == "COCA":
-                group = self.parser.add_argument_group("COCA compatibility", "These options apply only to the COCA corpus module, and are unsupported by any other corpus.")
-                # COCA compatibility options
-                group.add_argument("--exact-pos-tags", help="part-of-speech tags must match exactly the label used in the query string (default: be COCA-compatible and match any part-of-speech tag that starts with the given label)", action="store_true", dest="exact_pos_tags")
-                group.add_argument("-@", "--use-pos-diacritics", help="use undocumented characters '@' and '%%' in queries using part-of-speech tags (default: be COCA-compatible and ignore these characters in part-of-speech tags)", action="store_true", dest="ignore_pos_chars")
+        if self.args.corpus:
+            try:
+                # build a dictionary D for the selected corpus that contains as 
+                # values the features provided by each of the tables defined in
+                # the resource. The features are included as tuples, with first,
+                # the display name and second, the resource feature name.
+                resource, _, _, _ = resource_list.available[self.args.corpus]
+                corpus_features = resource.get_corpus_features()
+                lexicon_features = resource.get_lexicon_features()
+                for rc_feature, column in corpus_features + lexicon_features:
+                    if "_denorm_" not in rc_feature:
+                        table = "{}_table".format(rc_feature.split("_")[0])
+                        if table not in D:
+                            D[table] = set([])
+                        D[table].add((column, rc_feature))
             
-        # add choice arguments for the available table columns:
-        for rc_table in D.keys():
-            table = type(resource).__getattribute__(resource, str(rc_table))
-            if len(D[rc_table]) > 1:
-                D[rc_table].add(("ALL", None))
-                group_help = "These options specify which data columns from the table '{0}' will be included in the output. You can either repeat the option for every column that you wish to add, or you can use --{0} ALL if you wish to include all columns from the table in the output.".format(table)
-                group_name = "Output options for table '{0}'".format(table)
-            else:
-                group_name = "Output option for table '{0}'".format(table)
-                group_help = "This option will include the data column '{1}' from the table '{0}' in the output.".format(table, list(D[rc_table])[0][0])
-            group = self.parser.add_argument_group(group_name, group_help)
-            group.add_argument("--{}".format(table), choices=sorted([x for x, _ in D[rc_table]]), dest=rc_table, action="append")
+                if self.args.corpus.upper() == "COCA":
+                    group = self.parser.add_argument_group("COCA compatibility", "These options apply only to the COCA corpus module, and are unsupported by any other corpus.")
+                    # COCA compatibility options
+                    group.add_argument("--exact-pos-tags", help="part-of-speech tags must match exactly the label used in the query string (default: be COCA-compatible and match any part-of-speech tag that starts with the given label)", action="store_true", dest="exact_pos_tags")
+                    group.add_argument("-@", "--use-pos-diacritics", help="use undocumented characters '@' and '%%' in queries using part-of-speech tags (default: be COCA-compatible and ignore these characters in part-of-speech tags)", action="store_true", dest="ignore_pos_chars")
+            except KeyError:
+                pass
 
-        # add output column shorthand options
-        group=self.parser.add_argument_group("Output column shorthands", "These options are shorthand forms that select some commonly used output columns. The equivalent shows the corresponding longer output option.")
-        if "word_label" in dir(resource) or "corpus_word" in dir(resource):
-            if "word_label" in dir(resource):
-                s = "--{} {}".format(resource.word_table, resource.word_label)
-            else:
-                s = "--{} {}".format(resource.corpus_table, resource.corpus_word)
-            group.add_argument("-O", help="show orthographic forms of each token, equivalent to: {}".format(s), action="store_true", dest="show_orth")
-        if "pos_label" in dir(resource) or "word_pos" in dir(resource):
-            if "pos_label" in dir(resource):
-                s = "--{} {}".format(resource.pos_table, resource.pos_label)
-            else:
-                s = "--{} {}".format(resource.word_table, resource.word_pos)
-            group.add_argument("-p", help="show the part-of-speech tag of each token, equivalent to: {}".format(s), action="store_true", dest="show_pos")
-        if "lemma_label" in dir(resource) or "word_lemma" in dir(resource):
-            if "lemma_label" in dir(resource):
-                s = "--{} {}".format(resource.lemma_table, resource.lemma_label)
-            else:
-                s = "--{} {}".format(resource.word_table, resource.word_lemma)
-            group.add_argument("-l", help="show the lemma of each token, equivalent to: {}".format(s), action="store_true", dest="show_lemma")
-        if "transcript_label" in dir(resource) or "word_transcript" in dir(resource):
-            if "transcript_label" in dir(resource):
-                s = "--{} {}".format(resource.transcript_table, resource.transcript_label)
-            else:
-                s = "--{} {}".format(resource.word_table, resource.word_transcript)
-            group.add_argument("--phon", help="show the phonological transcription of each token, equivalent to: {}".format(s), action="store_true", dest="show_phon")
-        if "file_label" in dir(resource) or "corpus_file" in dir(resource):
-            if "file_label" in dir(resource):
-                s = "--{} {}".format(resource.file_table, resource.file_label)
-            else:
-                s = "--{} {}".format(resource.corpus_table, resource.corpus_file)
-            group.add_argument("--filename", help="show the name of the file containing each token, equivalent to: {}".format(s), action="store_true", dest="show_filename")
-        if "time_label" in dir(resource) or "corpus_time" in dir(resource):
-            if "time_label" in dir(resource):
-                s = "--{} {}".format(resource.time_table, resource.time_label)
-            else:
-                s = "--{} {}".format(resource.corpus_table, resource.corpus_time)
-            group.add_argument("--time", help="show the time code for each token, equivalent to: {}".format(s), action="store_true", dest="show_time")
+        if D:
+            # add choice arguments for the available table columns:
+            for rc_table in D.keys():
+                table = type(resource).__getattribute__(resource, str(rc_table))
+                if len(D[rc_table]) > 1:
+                    D[rc_table].add(("ALL", None))
+                    group_help = "These options specify which data columns from the table '{0}' will be included in the output. You can either repeat the option for every column that you wish to add, or you can use --{0} ALL if you wish to include all columns from the table in the output.".format(table)
+                    group_name = "Output options for table '{0}'".format(table)
+                else:
+                    group_name = "Output option for table '{0}'".format(table)
+                    group_help = "This option will include the data column '{1}' from the table '{0}' in the output.".format(table, list(D[rc_table])[0][0])
+                group = self.parser.add_argument_group(group_name, group_help)
+                group.add_argument("--{}".format(table), choices=sorted([x for x, _ in D[rc_table]]), dest=rc_table, action="append")
+
+            # add output column shorthand options
+            group=self.parser.add_argument_group("Output column shorthands", "These options are shorthand forms that select some commonly used output columns. The equivalent shows the corresponding longer output option.")
+            if "word_label" in dir(resource) or "corpus_word" in dir(resource):
+                if "word_label" in dir(resource):
+                    s = "--{} {}".format(resource.word_table, resource.word_label)
+                else:
+                    s = "--{} {}".format(resource.corpus_table, resource.corpus_word)
+                group.add_argument("-O", help="show orthographic forms of each token, equivalent to: {}".format(s), action="store_true", dest="show_orth")
+            if "pos_label" in dir(resource) or "word_pos" in dir(resource):
+                if "pos_label" in dir(resource):
+                    s = "--{} {}".format(resource.pos_table, resource.pos_label)
+                else:
+                    s = "--{} {}".format(resource.word_table, resource.word_pos)
+                group.add_argument("-p", help="show the part-of-speech tag of each token, equivalent to: {}".format(s), action="store_true", dest="show_pos")
+            if "lemma_label" in dir(resource) or "word_lemma" in dir(resource):
+                if "lemma_label" in dir(resource):
+                    s = "--{} {}".format(resource.lemma_table, resource.lemma_label)
+                else:
+                    s = "--{} {}".format(resource.word_table, resource.word_lemma)
+                group.add_argument("-l", help="show the lemma of each token, equivalent to: {}".format(s), action="store_true", dest="show_lemma")
+            if "transcript_label" in dir(resource) or "word_transcript" in dir(resource):
+                if "transcript_label" in dir(resource):
+                    s = "--{} {}".format(resource.transcript_table, resource.transcript_label)
+                else:
+                    s = "--{} {}".format(resource.word_table, resource.word_transcript)
+                group.add_argument("--phon", help="show the phonological transcription of each token, equivalent to: {}".format(s), action="store_true", dest="show_phon")
+            if "file_label" in dir(resource) or "corpus_file" in dir(resource):
+                if "file_label" in dir(resource):
+                    s = "--{} {}".format(resource.file_table, resource.file_label)
+                else:
+                    s = "--{} {}".format(resource.corpus_table, resource.corpus_file)
+                group.add_argument("--filename", help="show the name of the file containing each token, equivalent to: {}".format(s), action="store_true", dest="show_filename")
+            if "time_label" in dir(resource) or "corpus_time" in dir(resource):
+                if "time_label" in dir(resource):
+                    s = "--{} {}".format(resource.time_table, resource.time_label)
+                else:
+                    s = "--{} {}".format(resource.corpus_table, resource.corpus_time)
+                group.add_argument("--time", help="show the time code for each token, equivalent to: {}".format(s), action="store_true", dest="show_time")
 
         #group.add_argument("-u", "--unique-id", help="include the token id for the first token matching the output", action="store_true", dest="show_id")
 
