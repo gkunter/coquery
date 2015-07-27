@@ -17,6 +17,7 @@ import sys
 import textwrap
 import fnmatch
 import inspect
+import xml.etree
 
 try:
     from pyqt_compat import QtCore, QtGui
@@ -61,6 +62,8 @@ class NLTKTaggerError(Exception):
         if use_gui:
             error_box.ErrorBox.show(sys.exc_info(), self)
 
+class MethodNotImplementedError(Exception):
+    msg = "Function not impemented."
 
 # module_code contains the Python skeleton code that will be used to write
 # the Python corpus module."""
@@ -146,6 +149,33 @@ class BaseCorpusBuilder(object):
             self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
             self.additional_arguments()
 
+    def add_tag_table(self):
+        """ Corpora should usually have a tag table that is used to store
+        text information. This method is called by the build() method and
+        adds a tag table if none is present yet."""
+        
+        if "tag_table" in dir(self):
+            return
+        
+        self.tag_table = "tags"
+        self.tag_id = "TagId"
+        self.tag_label = "Tag"
+        self.tag_type = "Type"
+        self.tag_corpus_id = self.corpus_id
+        self.tag_attribute = "Attribute"
+        
+        self.add_table_description(self.tag_table, self.tag_id,
+            {"CREATE": [
+                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_id),
+                "`{}` ENUM('open', 'close', 'empty')".format(self.tag_type),
+                "`{}` TINYTEXT NOT NULL".format(self.tag_label),
+                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_corpus_id),
+                "`{}` TINYTEXT NOT NULL".format(self.tag_attribute)],
+            "INDEX": [
+                ([self.tag_corpus_id], 0, "HASH"),
+                ([self.tag_label], 0, "BTREE"),
+                ([self.tag_type], 0, "BTREE")]})
+
     def check_arguments(self):
         """ Check the command line arguments. Add defaults if necessary."""
         if not self._widget:
@@ -183,9 +213,9 @@ class BaseCorpusBuilder(object):
         return self.Con.insert_id()
     
     def table_get(self, table_name, values, case=False):
-        """ This function returns the id of the entry matching the values 
-        from the table. If there is no entry matching the values in the
-        table, a new entry is added to the table based on the values.
+        """ This function returns the id of the first entry matching the 
+        values from the table. If there is no entry matching the values in 
+        the table, a new entry is added to the table based on the values.
         The values have to be given in the same order as the column 
         specifications in the table description."""
 
@@ -193,9 +223,11 @@ class BaseCorpusBuilder(object):
         if key in self._tables[table_name]:
             return self._tables[table_name][key]
 
-        try_entry = self.Con.find(table_name, values, [self._primary_keys[table_name]], case=case)
+        if values:
+            try_entry = self.Con.find(table_name, values, [self._primary_keys[table_name]], case=case)
+        else:
+            try_entry = None
         if try_entry:
-            #print(self._primary_keys[table_name], type(self._primary_keys[table_name])
             return try_entry[0][self._primary_keys[table_name]]
         else:
             self.Con.insert(table_name, values)
@@ -229,6 +261,7 @@ class BaseCorpusBuilder(object):
         database, using the information from the "CREATE" key of the
         table description entry."""
         self.Con.start_transaction()
+        self.add_tag_table()
         if self._widget:
             self._widget.ui.progress_bar.setFormat("Creating tables... (%v of %m)")
             self._widget.ui.progress_bar.setMaximum(len(self.table_description))
@@ -503,6 +536,119 @@ class BaseCorpusBuilder(object):
             {self.corpus_word_id: word_id,
                 self.corpus_file_id: self._file_id})
 
+    
+    ### METHODS FOR XML FILES
+
+    def xml_parse_file(self, file_object):
+        """ Return the root of the XML parsed tree from the file object. 
+        If there is a parsing error, print the surrounding environment and 
+        raise an exception."""
+        try:
+            e = xml.etree.ElementTree.parse(file_object).getroot()
+        except xml.etree.ElementTree.ParseError as e:
+            # in case of a parsing error, print the environment that caused
+            # the failure:
+            m = re.search(r"line (\d*), column (\d*)", str(e))
+            if m:
+                line = int(m.group(1))
+                column = int(m.group(2))
+                start_line = max(0, line - 5)
+                end_line = line + 5
+            else:
+                start_line = 0
+                end_line = 999999
+            S = S.splitlines()
+            self.logger.error(e)
+            for i, x in enumerate(S):                
+                if i > start_line:
+                    print("{:<3}: {}".format(i, x.decode("utf8")))
+                if i == line - 1:
+                    print("      " + " " * (column - 1) + "^")
+                if i > end_line:
+                    break
+            raise e
+        return e
+
+    def xml_get_body(self, root):
+        """ Return the XML body from the root."""
+        raise MethodNotImplementedError
+
+    def xml_get_meta_information(self, root):
+        """ Retrieve and store all meta information from the root."""
+        raise MethodNotImplementedError
+        
+    def xml_process_element(self, element):
+        """ Process the XML element. Processing involves several stages:
+        
+        1. Call xml_preprocess_tag(element) for tag actions when entering 
+        2. Call xml_process_content(element.text) to process the content
+        3. Call xml_process_element() for every nested element
+        4. Call xml_process_tail(element.tail) to process the tail
+        5. Call xml_postprocess_tag(element) for tag actions when leaving
+
+        """
+        
+        self.xml_preprocess_tag(element)
+        self.xml_process_content(element)
+        for child in element:
+            self.xml_process_element(child)
+        self.xml_process_tail(element)
+        self.xml_postprocess_tag(element)
+    
+    def xml_preprocess_tag(self, element):
+        """ Take any action that is triggered by the tag when entering the 
+        element."""
+        pass
+    
+    def xml_process_content(self, element):
+        pass
+    
+    def xml_process_tail(self, element):
+        pass
+    
+    def xml_postprocess_tag(self, element):
+        """ Take any action that is triggered by the tag when leaving the 
+        element."""
+        pass
+
+    def tag_next_token(self, tag, attributes):
+        """ Add an entry to the tag table that marks the next corpus_id.
+        The tag is marked as an opening tag and contains the 'tag' and a 
+        string representation of the dictionary 'attributes'. 
+        
+        The closing counterpart can be added by calling tag_last_token()."""
+        self.table_add(self.tag_table,
+            {self.tag_label: "{}".format(tag),
+                self.tag_corpus_id: self._corpus_id + 1,
+                self.tag_type: "open",
+                self.tag_attribute: ", ".join(
+                    ["{}={}".format(x, attributes[x]) for x in attributes])})
+
+    def tag_last_token(self, tag, attributes):
+        """ Add an entry to the tag table that marks the last corpus_id.
+        The tag is marked as a closing tag and contains the 'tag' and a 
+        string representation of the dictionary 'attributes'. 
+        
+        The opening counterpart can be added by calling tag_next_token()."""
+        self.table_add(self.tag_table,
+            {self.tag_label: "{}".format(tag),
+                self.tag_corpus_id: self._corpus_id,
+                self.tag_type: "close",
+                self.tag_attribute: ", ".join(
+                    ["{}={}".format(x, attributes[x]) for x in attributes])})
+
+    def add_empty_tag(self, tag, attributes):
+        """ Add an entry to the tag table that precedes the next corpus_id.
+        The tag is marked as an empty element and contains the 'tag' and a 
+        string representation of the dictionary 'attributes'. """
+        self.table_add(self.tag_table,
+            {self.tag_label: "{}".format(tag),
+                self.tag_corpus_id: self._corpus_id,
+                self.tag_type: "empty",
+                self.tag_attribute: ", ".join(
+                    ["{}={}".format(x, attributes[x]) for x in attributes])})
+
+    ### END XML
 
     def process_file(self, current_file):
         """ process_file(current_file) reads the content from current_file,
@@ -593,7 +739,7 @@ class BaseCorpusBuilder(object):
                 if self._widget:
                     self._widget.ui.progress_bar.setValue(column_count)
                 elif show_progress:
-                    progress.update(column_count)
+                    progress.update(column_count - 1)
         self.Con.commit()
         if show_progress and not self._widget:
             progress.finish()
@@ -627,7 +773,7 @@ class BaseCorpusBuilder(object):
                     if self._widget:
                         self._widget.ui.progress_bar.setValue(i)
                     elif show_progress:
-                        progress.update(index_count + 1)
+                        progress.update(index_count)
         self.Con.commit()
         if show_progress and not self._widget:
             progress.finish()

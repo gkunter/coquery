@@ -324,31 +324,34 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 ([self.source_ethnicity], 0, "BTREE"),
                 ([self.source_ethnicity], 0, "BTREE")]})
                 
-        self.tag_table = "tags"
-        self.tag_id = "TagId"
-        self.tag_label = "Tag"
-        self.tag_type = "Type"
-        self.tag_corpus_id = self.corpus_id
-        self.tag_attribute = "Attribute"
-        
-        self.add_table_description(self.tag_table, self.tag_id,
-            {"CREATE": [
-                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_id),
-                "`{}` ENUM('open', 'close', 'empty')".format(self.tag_type),
-                "`{}` TINYTEXT NOT NULL".format(self.tag_label),
-                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_corpus_id),
-                "`{}` TINYTEXT NOT NULL".format(self.tag_attribute)],
-            "INDEX": [
-                ([self.tag_corpus_id], 0, "HASH"),
-                ([self.tag_label], 0, "BTREE"),
-                ([self.tag_type], 0, "BTREE")]})
-                
         self._corpus_id = 0
         self._corpus_code = corpus_code
         
-    def process_child(self, child):
-        def process_content(content):
-            for row in content.splitlines():
+
+    def xml_preprocess_tag(self, element):
+        if element.text:
+            self.tag_next_token(element.tag, element.attrib)
+        else:
+            self.add_empty_tag(element.tag, element.attrib)
+
+    def xml_postprocess_tag(self, element):
+        if element.text:
+            self.tag_last_token(element.tag, element.attrib)
+        else:
+            if element.tag == "x-anonym-x":
+                # ICE-NG contains anonymized labels for names, placenames,
+                # and other nouns. Insert a special label in that case:
+                self._word_id = self.table_get(self.word_table, 
+                        {self.word_label: "ANONYMIZED", 
+                        self.word_lemma: "ANONYMIZED", 
+                        self.word_pos: "np"}, case=True)
+
+    def xml_process_content(self, element):
+        """ In ICE-NG, the XML elements contain rows of words. This method 
+        processes these rows, and creates token entries in the corpus table. 
+        It also creates new entries in the word table if necessary."""
+        if element.text:
+            for row in element.text.splitlines():
                 try:
                     word_text, word_pos, lemma_text = [x.strip() for x in row.split("\t")]
                 except ValueError:
@@ -378,50 +381,41 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                         #self._sentence_id = self.table_get(self.sentence_table,
                             #{self.sentence_source_id: self._source_id})
 
-            
-        content = child.text
-        if content:
-            # insert an opening tag for the current element:
-            self.table_add(self.tag_table,
-                        {self.tag_label: "{}".format(child.tag),
-                            self.tag_corpus_id: self._corpus_id + 1,
-                            self.tag_type: "open",
-                            self.tag_attribute: ", ".join(["{}={}".format(x, child.attrib[x]) for x in child.attrib])})
-            # process the content of the current element, either
-            # completely or up to the point that there is a sub-element:
-            process_content(content)
+    def xml_process_tail(self, element):
+        self.xml_process_content(element)
+        
+    def xml_get_meta_information(self, root):
+        meta_info_keys = ["date", "place"]
+        meta_info = {}        
+        meta_xml = root.find("meta")
+        for x in meta_info_keys:
+            try:
+                meta_info[x] = meta_xml.find(x).text.strip().split("\t")[0]
+            except AttributeError:
+                meta_info[x] = "?"
+                
+        # get speaker/author information, enclosed in <author> tags:
+        meta_xml = meta_xml.find("author")
+        meta_info_keys = ["gender", "age", "ethnic-group"]
+        for x in meta_info_keys:
+            try:
+                meta_info[x] = meta_xml.find(x).text.strip().split("\t")[0]
+            except AttributeError:
+                meta_info[x] = "?"
+                
+        meta_info["register"] = os.path.basename(os.path.dirname(self._current_file))
+        meta_info["mode"] = os.path.basename(os.path.normpath(os.path.join(os.path.dirname(self._current_file), "..")))
 
-            # if there are any sub-elements, process them 
-            # recursively:
-            for grandchild in child:
-                self.process_child(grandchild)
-            
-            # insert a closing tag for the current element:
-            self.table_add(self.tag_table,
-                        {self.tag_label: "{}".format(child.tag),
-                            self.tag_corpus_id: self._corpus_id,
-                            self.tag_type: "close",
-                            self.tag_attribute: ", ".join(["{}={}".format(x, child.attrib[x]) for x in child.attrib])})
-        else:
-            # the current element is an empty element, add a matching tag:
-            self.table_add(self.tag_table,
-                        {self.tag_label: "{}".format(child.tag),
-                            self.tag_corpus_id: self._corpus_id,
-                            self.tag_type: "empty",
-                            self.tag_attribute: ", ".join(["{}={}".format(x, child.attrib[x]) for x in child.attrib])})
-
-            if child.tag == "x-anonym-x":
-                # ICE-NG contains anonymized labels for names, placenames,
-                # and other nouns. Insert a special label in that case:
-                self._word_id = self.table_get(self.word_table, 
-                        {self.word_label: "ANONYMIZED", 
-                        self.word_lemma: "ANONYMIZED", 
-                        self.word_pos: "np"}, case=True)
-
-        # process everything in the tail:
-        tail = child.tail
-        if tail:
-            process_content(tail)
+        # all meta data gathered, store it:
+        self._source_id = self.table_get(self.source_table,
+            {self.source_age: meta_info["age"],
+             self.source_gender: meta_info["gender"],
+             self.source_ethnicity: meta_info["ethnic-group"],
+             self.source_date: meta_info["date"],
+             self.source_mode: meta_info["mode"],
+             self.source_register: meta_info["register"],
+             self.source_place: meta_info["place"]})
+                
         
     def process_xml_file(self, current_file):
         """ Reads an XML file."""
@@ -463,6 +457,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         #     <error corrected="&quot;.">
         #     &quot;   PUNCT   &quot;
         #     </error>
+        self._current_file = current_file
 
         file_buffer = cStringIO.StringIO()
         with codecs.open(current_file, "rt", encoding = self.arguments.encoding) as input_file:
@@ -546,65 +541,13 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                         last = line
 
         S = file_buffer.getvalue()
-        try:
-            e = xml.etree.ElementTree.parse(cStringIO.StringIO(S)).getroot()
-        except xml.etree.ElementTree.ParseError as e:
-            m = re.search(r"line (\d*), column (\d*)", str(e))
-            if m:
-                line = int(m.group(1))
-                column = int(m.group(2))
-                start_line = max(0, line - 5)
-                end_line = line + 5
-            else:
-                start_line = 0
-                end_line = 999999
-            S = S.splitlines()
-            self.logger.error(e)
-            for i, x in enumerate(S):                
-                if i > start_line:
-                    print("{:<3}: {}".format(i, x.decode("utf8")))
-                if i == line - 1:
-                    print("      " + " " * (column - 1) + "^")
-                if i > end_line:
-                    break
-            raise e
         
-        # get meta info, enclosed in <meta> tags:
-        meta_info_keys = ["date", "place"]
-        meta_info = {}        
-        meta_xml = e.find("meta")
-        for x in meta_info_keys:
-            try:
-                meta_info[x] = meta_xml.find(x).text.strip().split("\t")[0]
-            except AttributeError:
-                meta_info[x] = "?"
-                
-        # get speaker/author information, enclosed in <author> tags:
-        meta_xml = meta_xml.find("author")
-        meta_info_keys = ["gender", "age", "ethnic-group"]
-        for x in meta_info_keys:
-            try:
-                meta_info[x] = meta_xml.find(x).text.strip().split("\t")[0]
-            except AttributeError:
-                meta_info[x] = "?"
-                
-        meta_info["register"] = os.path.basename(os.path.dirname(current_file))
-        meta_info["mode"] = os.path.basename(os.path.normpath(os.path.join(os.path.dirname(current_file), "..")))
-
-        # all meta data gathered, store it:
-        self._source_id = self.table_get(self.source_table,
-            {self.source_age: meta_info["age"],
-             self.source_gender: meta_info["gender"],
-             self.source_ethnicity: meta_info["ethnic-group"],
-             self.source_date: meta_info["date"],
-             self.source_mode: meta_info["mode"],
-             self.source_register: meta_info["register"],
-             self.source_place: meta_info["place"]})
-            
-        #self._sentence_id = self.table_get(self.sentence_table, {})
+        e = self.xml_parse_file(cStringIO.StringIO(S))
+        self.xml_get_meta_information(e)
+        self.xml_process_element(self.xml_get_body(e))
         
-        root = e.find("text")
-        self.process_child(root)
+    def xml_get_body(self, root):
+        return root.find("text")
         
     def process_file(self, current_file):
         # Process every file except for bl_18a.xml.pos. This file only 
