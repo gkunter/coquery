@@ -1539,7 +1539,7 @@ class SQLCorpus(BaseCorpus):
     def sql_string_run_query_where_string(self, Query, self_joined):
         where_clauses = []
 
-        where_clauses = self.sql_string_run_query_filter_list(Query, self_joined)
+        where_clauses = self.sql_string_run_query_filter_list(self_joined)
 
         if Query.source_filter:
             where_clauses = [self.sql_string_run_query_textfilter(Query, self_joined)]
@@ -2071,7 +2071,7 @@ class SQLCorpus(BaseCorpus):
         column_string = self.sql_string_run_query_column_string(Query, self_joined)
         table_string = self.sql_string_run_query_table_string(Query, self_joined)
         
-        query_filter_list = self.sql_string_run_query_filter_list(Query, self_joined)
+        query_filter_list = self.sql_string_run_query_filter_list(self_joined)
         
         # make the experimental query mode the default for frequency queries 
         # with exactly one token, but optional otherwise:
