@@ -454,6 +454,8 @@ class BaseResource(object):
         variables are returned that all resource variable names that are 
         desendants of table 'corpus', but not of table 'word'. """
         table_dict = cls.get_table_dict()
+        if "corpus" not in table_dict:
+            return []
         corpus_table = table_dict["corpus"]
         lexicon_tables = cls.get_table_tree("word")
 
@@ -472,6 +474,8 @@ class BaseResource(object):
         variables are returned that all resource variable names that are 
         desendants of table 'word'. """
         table_dict = cls.get_table_dict()
+        if "word" not in table_dict:
+            return []
         lexicon_tables = cls.get_table_tree("word")
         lexicon_variables = []
         for x in table_dict:
@@ -1618,13 +1622,20 @@ class SQLCorpus(BaseCorpus):
                 self.column_list.update(["cl{num}.LC{num}".format(num=x+1) for x in range(options.cfg.context_left)])
                 self.column_list.update(["cr{num}.RC{num}".format(num=x+1) for x in range(options.cfg_context_right)])
             
-            # use new frequency query mode:
-            if (options.cfg.MODE == QUERY_MODE_FREQUENCIES) and not only_names:
-                self.column_list.add("COUNT(*) AS {}".format(options.cfg.freq_label))                    
+            
+            if options.cfg.experimental:
+                # use new frequency query mode:
+                if (options.cfg.MODE == QUERY_MODE_FREQUENCIES) and not only_names:
+                    self.column_list.add("COUNT(*) AS {}".format(options.cfg.freq_label))                    
                 
-            if not self.column_list and not only_names:
-                self.column_list.add("e1.{} AS TokenId".format(
-                        self.resource.corpus_id))
+                if not self.column_list and not only_names:
+                    self.column_list.add("e1.{} AS TokenId".format(
+                            self.resource.corpus_id))
+            else:
+                if not self.column_list and not only_names:
+                    self.column_list.add("{} AS TokenId".format(
+                            self.resource.corpus_id))
+                
                 
             if self_joined and not options.cfg.experimental and len(Query.Session.output_fields) > 1:
                 self.column_list.update(["{}.W{}".format(
