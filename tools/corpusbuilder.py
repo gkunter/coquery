@@ -71,6 +71,7 @@ module_code = """# -*- coding: utf-8 -*-
 # This module was automatically created by corpusbuilder.py.
 #
 
+from __future__ import unicode_literals
 from corpus import *
 
 class Resource(SQLResource):
@@ -179,9 +180,9 @@ class BaseCorpusBuilder(object):
         """ Add an entry containing the values to the table. A new unique
         id is also provided, and the class counter is updated. """
         self.Con.insert(table_name, values)
-        return 
+        return self.Con.insert_id()
     
-    def table_get(self, table_name, values):
+    def table_get(self, table_name, values, case=False):
         """ This function returns the id of the entry matching the values 
         from the table. If there is no entry matching the values in the
         table, a new entry is added to the table based on the values.
@@ -191,22 +192,16 @@ class BaseCorpusBuilder(object):
         key = tuple(values.values())
         if key in self._tables[table_name]:
             return self._tables[table_name][key]
-        try_entry = self.Con.find(
-            table_name, values, [self._primary_keys[table_name]])
-        if not try_entry:
-            self.Con.insert(table_name, values)
-            entry = self.Con.find(table_name, values, [self._primary_keys[table_name]])
-        else:
-            entry = try_entry
-        try:
-            self._tables[table_name][key] = entry[0]
-        except Exception as e:
-            print(entry)
-            print(values)
-            print(key)
-            raise e
 
-        return entry[0]
+        try_entry = self.Con.find(table_name, values, [self._primary_keys[table_name]], case=case)
+        if try_entry:
+            #print(self._primary_keys[table_name], type(self._primary_keys[table_name])
+            return try_entry[0][self._primary_keys[table_name]]
+        else:
+            self.Con.insert(table_name, values)
+            last = self.Con.insert_id()
+            self._tables[table_name][key] = last
+            return last
 
     def setup_logger(self):
         """ initializes a logger."""
@@ -233,6 +228,7 @@ class BaseCorpusBuilder(object):
         """ go through the table description and create a table in the
         database, using the information from the "CREATE" key of the
         table description entry."""
+        self.Con.start_transaction()
         if self._widget:
             self._widget.ui.progress_bar.setFormat("Creating tables... (%v of %m)")
             self._widget.ui.progress_bar.setMaximum(len(self.table_description))
@@ -246,8 +242,9 @@ class BaseCorpusBuilder(object):
             if self._widget:
                 self._widget.ui.progress_bar.setValue(i)
             elif show_progress:
-                progress.update(i)
+                progress.update(i + 1)
         self.Con.commit()
+
         if show_progress and not self._widget:
             progress.finish()
 
@@ -301,7 +298,7 @@ class BaseCorpusBuilder(object):
             {self.file_path: current_file,
              self.file_name: 
                  os.path.splitext(os.path.basename(current_file))[0]
-                 })[self.file_id]
+                 })
 
     def get_lemma(self, word):
         """ Return a lemma for the word. By default, this is simply the
@@ -319,7 +316,7 @@ class BaseCorpusBuilder(object):
         
         if "lemma_table" in self.table_description:
             return self.table_get(self.lemma_table, 
-                {self.lemma_label: self.get_lemma(word)})[self.lemma_id]
+                {self.lemma_label: self.get_lemma(word)})
         else:
             return self.get_lemma(word)
     
@@ -339,7 +336,7 @@ class BaseCorpusBuilder(object):
         
         if "pos_table" in self.table_description:
             return self.table_get(self.pos_table, 
-                {self.pos_label: self.get_pos(word)})[self.pos_id]
+                {self.pos_label: self.get_pos(word)})
         else:
             return self.get_pos(word)        
 
@@ -359,7 +356,7 @@ class BaseCorpusBuilder(object):
         
         if "transcript_table" in self.table_description:
             return self.table_get(self.transcript_table, 
-                {self.transcript_label: self.get_transcript(word)})[self.transcript_id]
+                {self.transcript_label: self.get_transcript(word)})
         else:
             return self.get_transcript(word)        
 
@@ -406,7 +403,7 @@ class BaseCorpusBuilder(object):
                     word_dict[self.word_transcript_id] = self.get_transcript_id(word)
 
                 # get a word id for the current word:
-                word_id = self.table_get(self.word_table, word_dict)[self.word_id]
+                word_id = self.table_get(self.word_table, word_dict)
                 
                 # add the word as a new token to the corpus:
                 self.table_add(self.corpus_table, 
@@ -420,8 +417,7 @@ class BaseCorpusBuilder(object):
         token (using NLTK if possible).
         Then, if the token does not exist in the word table, add a new word
         with its POS tag to the word table.
-        Then, try to lemmatize any new word (based very crudely on the 
-        orthography), adding new lemmas if necessary.
+        Then, try to lemmatize any new word
         Finally, add the token with its word identifier to the corpus table."""
         
         # Read raw text from file:
@@ -434,47 +430,79 @@ class BaseCorpusBuilder(object):
             
         tokens = []
         pos_map = []
-        
-        # create a list of all tokens:
+
         if self.arguments.use_nltk:
-            try:
-                tokens = nltk.word_tokenize(raw_text)
-            except LookupError as e:
-                raise NLTKTokenizerError(e, self.logger)
-            try:
+            self.lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
+            self.pos_translate = lambda x:{'NN':nltk.corpus.wordnet.NOUN, 
+                 'JJ':nltk.corpus.wordnet.ADJ,
+                 'VB':nltk.corpus.wordnet.VERB,
+                 'RB':nltk.corpus.wordnet.ADV} [x.upper()[:2]]
+
+            sentence_list = nltk.sent_tokenize(raw_text)
+            for sentence in sentence_list:
+                tokens = nltk.word_tokenize(sentence)
                 pos_map = nltk.pos_tag(tokens)
-            except LookupError as e:
-                raise NLTKTaggerError(e, self.logger)
-        if not tokens:
-            tokens = raw_text.split(" ")
-            tokens = [x.strip() for x in tokens]
-            tokens = [x for x in tokens if x]
-        if not pos_map:
-            pos_map = zip(tokens, [""] * len(tokens))
-            if "LEX_POS" in self.lexicon_features:
-                self.lexicon_features.remove("LEX_POS")
-        
-        for current_token, current_pos in pos_map:
-            if current_token in string.punctuation:
-                current_pos = "PUNCT"
-             
-            # get lemma id, and create new lemma if necessary:
-            lemma_id = self.table_get(self.lemma_table, 
-                                {self.lemma_label: current_token.lower()})[self.lemma_id]
+                if not sentence:
+                    print("empty")
+                for current_token, current_pos in pos_map:
+                    if current_token in string.punctuation:
+                        current_pos = "PUNCT"
+
+                    self.add_token(current_token.strip(), current_pos)
+            return
+        else:
+        # The default lemmatizer is pretty dumb and simply turns the 
+        # word-form to lower case so that at least 'Dogs' and 'dogs' are 
+        # assigned the same lemma -- which is a different lemma from the
+        # one assigned to 'dog' and 'Dog'.
+        #
+        # If NLTK is used, the lemmatizer will use the data from WordNet,
+        # which will result in much better results.
+            self.lemmatize = lambda x: x.lower()
+            self.pos_translate = lambda x: x
+            # create a list of all tokens, either using NLTK or using a 
+            # dumb tokenizer that simply splits by spaces.        
             
-            # get word id, and create new word if necessary:
-            word_dict = {self.word_lemma_id: lemma_id, 
-                        self.word_label: current_token}
-            if current_pos and "word_pos" in dir(self):
-                word_dict[self.word_pos] = current_pos 
+            tokens = raw_text.split(" ")
+            tokens = [x.strip() for x in tokens if x.strip()]
+            if not pos_map:
+                pos_map = zip(tokens, [""] * len(tokens))
+                if "LEX_POS" in self.lexicon_features:
+                    self.lexicon_features.remove("LEX_POS")
+            
+            for current_token, current_pos in pos_map:
+                # any punctuation at the beginning of the token is added to the
+                # corpus as a punctuation token, and is also stripped from the
+                # token:
+                while current_token and current_token[0] in string.punctuation:
+                    self.add_token(current_token[0], "PUNCT")
+                    current_token = current_token[1:]
+                if current_token:
+                    # add the token to the corpus:
+                    self.add_token(current_token, current_pos)
+            
+    def add_token(self, token_string, token_pos):
+        if token_string in string.punctuation:
+            token_pos = "PUNCT"
+            lemma = token_string
+        else:
+            try:
+                # use the current lemmatizer to assign the token to a lemma: 
+                lemma = self.lemmatize(token_string, self.pos_translate(token_pos)).lower()
+            except Exception as e:
+                lemma = token_string.lower()
+        # get word id, and create new word if necessary:
+        word_dict = {self.word_lemma: lemma, 
+                    self.word_label: token_string}
+        if token_pos and "word_pos" in dir(self):
+            word_dict[self.word_pos] = token_pos 
 
-            word_id = self.table_get(self.word_table, word_dict)[self.word_id]
+        word_id = self.table_get(self.word_table, word_dict, case=True)
+        # store new token in corpus table:
+        self.Con.insert(self.corpus_table, 
+            {self.corpus_word_id: word_id,
+                self.corpus_file_id: self._file_id})
 
-
-            # store new token in corpus table:
-            self.Con.insert(self.corpus_table, 
-                {self.corpus_word_id: word_id,
-                 self.corpus_file_id: self._file_id})
 
     def process_file(self, current_file):
         """ process_file(current_file) reads the content from current_file,
@@ -506,6 +534,7 @@ class BaseCorpusBuilder(object):
             self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         
         for i, file_name in enumerate(files):
+            self.Con.start_transaction()
             if not self.Con.find(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
@@ -514,7 +543,7 @@ class BaseCorpusBuilder(object):
             if self._widget:
                 self._widget.ui.progress_bar.setValue(i)
             elif show_progress:
-                progress.update(i)
+                progress.update(i + 1)
 
             self.Con.commit()
         if show_progress and not self._widget:
@@ -540,6 +569,7 @@ class BaseCorpusBuilder(object):
             progress.start()
             
         column_count = 0
+        self.Con.start_transaction()
         for current_table in self.table_description:
             field_specs = self.table_description[current_table]["CREATE"]
             for current_spec in field_specs:
@@ -563,8 +593,8 @@ class BaseCorpusBuilder(object):
                 if self._widget:
                     self._widget.ui.progress_bar.setValue(column_count)
                 elif show_progress:
-                    progress.update(column_count - 1)
-            self.Con.commit()
+                    progress.update(column_count)
+        self.Con.commit()
         if show_progress and not self._widget:
             progress.finish()
         
@@ -583,6 +613,7 @@ class BaseCorpusBuilder(object):
             progress = progressbar.ProgressBar(widgets=["Indexing ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=total_indices)
             progress.start()
         index_count = 0
+        self.Con.start_transaction()
         for i, current_table in enumerate(self.table_description):
             description = self.table_description[current_table]
             if "INDEX" in description:
@@ -596,8 +627,8 @@ class BaseCorpusBuilder(object):
                     if self._widget:
                         self._widget.ui.progress_bar.setValue(i)
                     elif show_progress:
-                        progress.update(index_count)
-            self.Con.commit()
+                        progress.update(index_count + 1)
+        self.Con.commit()
         if show_progress and not self._widget:
             progress.finish()
     
@@ -683,8 +714,11 @@ class BaseCorpusBuilder(object):
             # Ask if the existing code should be overwritten:
             else:
                 msq_module_exists = "A different version of the corpus module already exists in %s." % path
-                self.logger.warning(warning_text)
-                if self.ask_overwrite(warning_text):
+                try:
+                    self.logger.warning(msq_module_exists)
+                except NameError:
+                    pass
+                if self.ask_overwrite(msq_module_exists):
                     self.logger.warning("Overwriting existing corpus module.")
                 else:
                     return
@@ -713,6 +747,7 @@ class BaseCorpusBuilder(object):
             self.Con.set_variable("autocommit", 0)
             self.Con.set_variable("unique_checks", 0)
             self.Con.set_variable("foreign_key_checks", 0)
+            self.Con.start_transaction()
 
     def add_building_stage(self, stage):
         """ The parameter stage is a function that will be executed
@@ -748,15 +783,16 @@ class BaseCorpusBuilder(object):
         self.check_arguments()
         if not self._widget:
             self.setup_logger()
-            
         self.setup_db()
-        
+
         self.initialize_build()
         
         if self.arguments.c:
             self.create_tables()
+
         if self.arguments.l:
             self.load_files()
+
         if self.arguments.self_join:
             self.self_join()
             
@@ -783,15 +819,18 @@ if use_gui:
             self.ui = corpusBuilderUi.Ui_CorpusBuilder()
             self.ui.setupUi(self)
             self.ui.button_input_path.clicked.connect(self.select_path)
-            self.ui.button_lemma_path.clicked.connect(self.select_file)
             self.ui.radio_build_corpus.toggled.connect(self.changed_radio)
             self.ui.radio_only_module.toggled.connect(self.changed_radio)
             
             self.accepted = False
             self.builder_class = builder_class
             if not nltk_available:
+                self.ui.use_pos_tagging.setChecked(False)
                 self.ui.use_pos_tagging.setEnabled(False)
                 self.ui.label_3.setEnabled(False)
+            else:
+                self.ui.use_pos_tagging.setChecked(True)
+
             self.exec_()
 
         def select_path(self):
@@ -801,13 +840,6 @@ if use_gui:
             if name:
                 self.ui.input_path.setText(name)
 
-        def select_file(self):
-            name = QtGui.QFileDialog.getOpenFileName()
-            if type(name) == tuple:
-                name = name[0]
-            if name:
-                self.ui.lemma_path.setText(name)
-            
         def keyPressEvent(self, e):
             if e.key() == QtCore.Qt.Key_Escape:
                 self.reject()
