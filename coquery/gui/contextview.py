@@ -26,10 +26,6 @@ class ContextView(QtGui.QDialog):
         
         self.add_source_label("Token ID", token_id)
         self.add_source_label("Source ID", source_id)
-        if corpus:
-            rc_table = "{}_table".format(options.cfg.context_source_id.split("_")[0])
-            
-            print(corpus)
             
         self.update_context()
         
@@ -110,7 +106,6 @@ class ContextView(QtGui.QDialog):
             dialog.resize(options.cfg.context_view_width, dialog.height())
         except AttributeError:
             pass
-
         return dialog.show()
 
 def main():
