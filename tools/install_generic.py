@@ -85,44 +85,21 @@ class GenericCorpusBuilder(corpusbuilder.BaseCorpusBuilder):
         
         self.word_table = "word"
         self.word_id = "WordId"
-        self.word_lemma_id = "LemmaId"
+        self.word_lemma = "Lemma"
         self.word_label = "Text"
         self.word_pos = "Pos"
         
         create_columns = ["`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_id),
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_lemma_id),
+                "`{}` VARCHAR(40) NOT NULL".format(self.word_lemma),
                 "`{}` VARCHAR(12) NOT NULL".format(self.word_pos),
                 "`{}` VARCHAR(40) NOT NULL".format(self.word_label)]
-        index_columns = [([self.word_lemma_id], 0, "HASH"),
+        index_columns = [([self.word_lemma], 0, "HASH"),
                 ([self.word_pos], 0, "BTREE"),
                 ([self.word_label], 0, "BTREE")]
 
         self.add_table_description(self.word_table, self.word_id,
             {"CREATE": create_columns,
             "INDEX": index_columns})
-        # Add the lemma table. Each row in this table represents a lemma in
-        # the lexicon. Each word-form from the lexicon table is linked to
-        # exactly one lemma from this table, and more than one word-form
-        # may be linked to each lemma in this table. The table has the 
-        # following columns:
-        #
-        # LemmaId
-        # An int value containing the unique identifier of this lemma.
-        #
-        # Text
-        # A text value containing the orthographic representation of this
-        # lemma.
-        
-        self.lemma_table = "lemma"
-        self.lemma_id = "LemmaId"
-        self.lemma_label = "Text"
-        
-        self.add_table_description(self.lemma_table, self.lemma_id,
-            {"CREATE": [
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.lemma_id),
-                "`{}` TINYTEXT NOT NULL".format(self.lemma_label)],
-            "INDEX": [
-                ([self.lemma_label], 0, "BTREE")]})
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
