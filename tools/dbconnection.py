@@ -15,14 +15,21 @@ name = ""
 logger = None
 
 class DBConnection(object):
-    def __init__(self, db_user="mysql", db_host="localhost", db_port=3306, db_pass="mysql", local_infile=0):
-        self.Con = mysql.connect (host=db_host, user=db_user, passwd=db_pass, local_infile=local_infile)
+    def __init__(self, db_user="mysql", db_host="localhost", db_port=3306, db_pass="mysql", local_infile=0, encoding="utf8"):
+        
+        self.Con = mysql.connect(host=db_host, user=db_user, passwd=db_pass, local_infile=local_infile, charset=encoding)
         self.dry_run = False
 
+        self.set_variable("NAMES", encoding)
+        self.set_variable("CHARACTER SET", encoding)
         self.set_variable("autocommit", 0)
         self.set_variable("unique_checks", 0)
         self.set_variable("foreign_key_checks", 0)
-        self.Con.commit()
+        self._encoding = encoding
+
+    def start_transaction(self):
+        cur = self.Con.cursor()
+        self.execute(cur, "START TRANSACTION")
 
     def has_database(self, database_name):
         cur = self.Con.cursor()
@@ -34,18 +41,13 @@ class DBConnection(object):
         except mysql.ProgrammingError as ex:
             if cur:
                 print(cur.messages)
-                # You can show only the last error like this.
-                # print cursor.messages[-1]
             else:
                 print(self.Con.messages)
-                # Same here you can also do.
-                # print self.db.messages[-1]
-            print("123")
         return False
 
     def create_database(self, database_name):
         cur = self.Con.cursor()
-        self.execute(cur, "CREATE DATABASE {}".format(database_name.split()[0]))
+        self.execute(cur, "CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(database_name.split()[0]))
         return
 
     def use_database(self, database_name):
@@ -146,7 +148,7 @@ class DBConnection(object):
         except TypeError:
             return None        
 
-    def find(self, table_name, values, additional_variables=[]):
+    def find(self, table_name, values, additional_variables=[], case=False):
         """ Obtain all records from table_name that match the column-value
         pairs given in the dict values."""
         cur = self.Con.cursor(mysql_cursors.DictCursor)
@@ -154,15 +156,16 @@ class DBConnection(object):
         where = []
         for column, value in values.items():
             where.append('{} = "{}"'.format(column, unicode(value).replace('"', '""')))
-        S = "SELECT {} FROM {} WHERE {}".format(
-            ", ".join(variables), table_name, " AND ".join(where))
+        if case:
+            S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table_name, " AND BINARY ".join(where))
+        else:
+            S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table_name, " AND ".join(where))
         S = S.replace("\\", "\\\\")
         self.execute(cur, S, override=True)
         return cur.fetchall()
 
     def insert(self, table_name, data):
         cur = self.Con.cursor()
-
         # take care of quote characters and backslashes:
         new_data = copy.copy(data)
         for x in new_data:
@@ -172,11 +175,23 @@ class DBConnection(object):
         S = "INSERT INTO {}({}) VALUES({})".format(
             table_name, ",".join(new_data.keys()), ",".join('"%s"' % x for x in new_data.values()))
         self.execute(cur, S)
+        for x in data:
+            if not isinstance(data[x], (unicode, str, long, int)):
+                print(x)
+                print(data)
+                print(S)
+                asd
         return
+
+    def insert_id(self):
+        return self.Con.insert_id()
 
     def set_variable(self, variable, value):
         cur = self.Con.cursor()
-        self.execute(cur, 'SET {}={}'.format(variable, value), override=True)
+        if isinstance(value, (str, unicode)):
+            self.execute(cur, "SET {} '{}'".format(variable, value), override=True)
+        else:
+            self.execute(cur, "SET {}={}".format(variable, value), override=True)
         
     def commit(self):
         if not self.dry_run:
@@ -187,4 +202,5 @@ class DBConnection(object):
             self.Con.commit()
 
     def close(self):
+        self.Con.commit()
         self.Con.close()
