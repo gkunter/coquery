@@ -12,6 +12,7 @@ import sys
 import copy
 import QtProgress
 import operator
+import error_box
 
 SORT_NONE = 0
 SORT_INC = 1
@@ -82,8 +83,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.TextAlignmentRole:
             if self.header[index.column()] == "coq_context_left" or self.sort_state[index.column()] in set([SORT_REV_DEC, SORT_REV_INC]):
                 return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
-        else:
-            return None
+            try:
+                if isinstance(self.content[index.row()][self.header[index.column()]], (int, long, float, complex)):
+                    return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
+            except (TypeError):
+                if isinstance(self.content[index.row()] [index.column()], (int, long, float, complex)):
+                    return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
+        return None
         
     def headerData(self, index, orientation, role):
         """ Return the header at the given index, taking the sorting settings
@@ -133,13 +139,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         else:
             return None
 
-    def rowCount(self, parent):
+    def rowCount(self, parent=None):
         if self.content:
             return len(self.content)
         else:
             return None
         
-    def columnCount(self, parent):
+    def columnCount(self, parent=None):
         if self.header:
             return len(self.header)
         else:
