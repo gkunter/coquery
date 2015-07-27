@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>760</width>
+    <width>797</width>
     <height>591</height>
    </rect>
   </property>
@@ -37,7 +37,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="">
+    <widget class="QFrame" name="frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
        <horstretch>0</horstretch>
@@ -93,6 +93,9 @@
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout_2">
+        <property name="verticalSpacing">
+         <number>10</number>
+        </property>
         <item row="0" column="0">
          <widget class="QRadioButton" name="radio_build_corpus">
           <property name="text">
@@ -133,19 +136,6 @@
            <property name="verticalSpacing">
             <number>-1</number>
            </property>
-           <item row="1" column="0">
-            <widget class="QLineEdit" name="input_path">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="0">
             <widget class="QLabel" name="label_8">
              <property name="sizePolicy">
@@ -165,24 +155,16 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="1">
-            <widget class="QPushButton" name="button_lemma_path">
+           <item row="1" column="0">
+            <widget class="QLineEdit" name="input_path">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Browse</string>
-             </property>
-             <property name="icon">
-              <iconset theme="folder">
-               <normaloff/>
-              </iconset>
-             </property>
-             <property name="shortcut">
-              <string>Alt+B</string>
              </property>
             </widget>
            </item>
@@ -207,45 +189,19 @@
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_4">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to lemma dictionary file (optilnal):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="wordWrap">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLineEdit" name="lemma_path">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
-           </item>
            <item row="3" column="0">
             <widget class="QCheckBox" name="use_pos_tagging">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Automatic POS tagging (requires NLTK)</string>
+              <string>Use NLTK for part-of-speech tagging and lemmatization</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
@@ -255,16 +211,6 @@
        </layout>
       </item>
      </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QProgressBar" name="progress_bar">
-     <property name="value">
-      <number>0</number>
-     </property>
-     <property name="format">
-      <string>Idle.</string>
-     </property>
     </widget>
    </item>
    <item>
@@ -279,6 +225,16 @@
       </size>
      </property>
     </spacer>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progress_bar">
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="format">
+      <string>Idle.</string>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
