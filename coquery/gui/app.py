@@ -187,7 +187,10 @@ class QueryFilterBox(CoqTagBox):
     def addTag(self, *args):
         """ Add the tag to the tag cloud and the global filter list. """
         filt = queries.QueryFilter()
-        filt.resource = self.resource
+        try:
+            filt.resource = self.resource
+        except AttributeError:
+            return
         try:
             if args:
                 filt.text = args[0]
@@ -349,7 +352,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         QtGui.QMainWindow.__init__(self, parent)
         
         self.file_content = None
-        
+
         self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
         
@@ -618,12 +621,20 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             current_corpus = str(self.ui.combo_corpus.currentText())
             resource, _, _, module = resource_list.get_available_resources()[current_corpus.lower()]
             database = resource.db_name
-            msg_corpus_remove = "<p><b>You have requested to remove the corpus '{}'.</b></p><p>This step cannot be reverted. If you proceed, the corpus will not be available for further queries before you install it again.</p><p>Removing this corpus will free approximately {} of disk memory.</p><p><p>Do you really want to remove the corpus?</p>".format(current_corpus, database, "xxx")
+            try:
+                size = FileSize(sqlwrap.SqlDB(options.cfg.db_host, options.cfg.db_port, options.cfg.db_user, options.cfg.db_password).get_database_size(database))
+            except  TypeError:
+                size = FileSize(-1)
+            msg_corpus_remove = "<p><b>You have requested to remove the corpus '{0}'.</b></p><p>This step cannot be reverted. If you proceed, the corpus will not be available for further queries before you install it again.</p><p>Removing '{0}' will free approximately {1:.1S} of disk memory.</p><p><p>Do you really want to remove the corpus?</p>".format(current_corpus, size)
             
             response = QtGui.QMessageBox.warning(
                 self, "Remove corpus", msg_corpus_remove, QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
             
             if response == QtGui.QMessageBox.Yes:
+                try:
+                    self.Session.Corpus.resource.DB.close()
+                except AttributeError as e:
+                    pass
                 DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password)
                 self.ui.progress_bar.setRange(0, 0)
                 self.ui.progress_bar.setFormat("Removing corpus '{}'".format(current_corpus))
