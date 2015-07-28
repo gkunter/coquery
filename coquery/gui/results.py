@@ -143,13 +143,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         if self.content:
             return len(self.content)
         else:
-            return None
+            return 0
         
     def columnCount(self, parent=None):
         if self.header:
             return len(self.header)
         else:
-            return None
+            return 0
         
     def lessThan(self, first, second):
         """ Compare the content of the first row to the content of the
@@ -200,12 +200,18 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         
     def do_sort(self):
         for col in self.sort_columns[::-1]:
-            if self.sort_state[col] in set([SORT_INC, SORT_DEC]):
-                key_fun = lambda row: row[self.header[col]]
-            elif self.sort_state[col] in set([SORT_REV_INC, SORT_REV_DEC]):
-                key_fun = lambda row: row[self.header[col]][::-1]
+            if options.cfg.experimental:
+                if self.sort_state[col] in set([SORT_INC, SORT_DEC]):
+                    key_fun = lambda row: row[self.header[col]]
+                elif self.sort_state[col] in set([SORT_REV_INC, SORT_REV_DEC]):
+                    key_fun = lambda row: row[self.header[col]][::-1]
+                else:
+                    continue
             else:
-                continue
+                if self.sort_state[col] in set([SORT_INC, SORT_DEC]):
+                    key_fun = lambda row: row[col]
+                elif self.sort_state[col] in set([SORT_REV_INC, SORT_REV_DEC]):
+                    key_fun = lambda row: row[col][::-1]
             if self.sort_state[col] in set([SORT_INC, SORT_REV_INC]):
                 self.content = sorted(self.content, key=key_fun)
             else:
