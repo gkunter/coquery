@@ -35,24 +35,7 @@ import sqlwrap
 import time
 import datetime
 from defines import *
-
-def join_punctuation(seq, characters='!\'),-./:;?^_`}’'):
-    characters = set(characters)
-    seq = iter(seq)
-    current = next(seq)
-
-    for nxt in seq:
-        if nxt in characters:
-            current += nxt
-        else:
-            yield unicode(current.decode("utf-8", errors="replace"))
-            current = nxt
-
-    yield unicode(current.decode("utf-8", errors="replace"))
-
-def collapse_words2(word_list):
-    print(word_list)
-    return " ".join(join_punctuation(word_list))
+import collections
 
 def collapse_words(word_list):
     
@@ -296,6 +279,19 @@ class BaseResource(object):
     coquery_current_date = "Current date"
     coquery_current_time = "Current time"
     
+    # Define some TEI tags:
+    tag_translate = {
+        "head": "h1",
+        "list": "ul",
+        "item": "li",
+        "div": "div",
+        "label": "li",
+        "pb": "div type='page_break'",
+        "p": "p"}
+    
+    render_token_style = "background: lightyellow"
+
+    
     def __init__(self, *args):
         self.table_dict = type(self).get_table_dict()
     
@@ -530,7 +526,28 @@ class BaseResource(object):
             rc_feature = "_".join(header_fields[:-1])
             return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
         return header
-    
+
+    def tag_to_html(self, tag, attributes={}):
+        """ Translate a tag to a corresponding HTML/QHTML tag by checking 
+        the tag_translate dictionary."""
+        
+        try:
+            if tag == "hi":
+                if attributes.get("rend") == "it":
+                    return "i"
+            if tag == "head":
+                if attributes.get("type") == "MAIN":
+                    return "h1"
+                if attributes.get("type") == "SUB":
+                    return "h2"
+                if attributes.get("type") == "BYLINE":
+                    return "h3"
+            return self.tag_translate[tag]
+        except KeyError:
+            warnings.warn("unsupported tag: {}".format(tag))
+            print("unsupported tag: {}".format(tag))
+            return None
+
 class BaseCorpus(object):
     provides = []
     
@@ -2315,45 +2332,155 @@ class SQLCorpus(BaseCorpus):
                         stats["{}_distinct".format(variable)] = self.resource.DB.Cur.fetchone()[0]
         return stats
 
-    def render_context(self, token_id, source_id, token_width, context_width, widget):
-        """ Return a visual representation of the context around the 
-        specified token. The result is shown in an instance of the 
-        ContextView class.
-        
-        The most simple visual representation of the context is a plain text
-        display, but in principle, a corpus might implement a more elaborate
-        renderer. For example, a corpus may contain information about the
-        page layout, and the renderer could use that information to create a
-        facsimile of the original page.
-        
-        The renderer can interact with the widget in which the context will
-        be displayed. The area in which the context is shown is a QLabel
-        named widget.ui.context_area. """
 
+    def render_context(self, token_id, source_id, token_width, context_width, widget):
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
-        self.resource.DB.execute(
-            self.sql_string_get_wordid_in_range(
-                start, 
-                token_id - 1, source_id))
-        left = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+    
+        S = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_table}.{tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end} AND {corpus}.{source_id} = {current_source_id}".format(
+            corpus=self.resource.corpus_table,
+            corpus_id=self.resource.corpus_id,
+            corpus_word_id=self.resource.corpus_word_id,
+            source_id=self.resource.corpus_source_id,
+            
+            word=self.resource.word_label,
+            word_table=self.resource.word_table,
+            word_id=self.resource.word_id,
+            
+            tag_table=self.resource.tag_table,
+            tag=self.resource.tag_label,
+            tag_id=self.resource.tag_id,
+            tag_corpus_id=self.resource.tag_corpus_id,
+            tag_type=self.resource.tag_type,
+            attribute=self.resource.tag_attribute,
+            
+            current_source_id=source_id,
+            start=start, end=end)
+        cur = self.resource.DB.execute_cursor(S)
+        entities = {}
+
+        for row in cur:
+            if row[self.resource.corpus_id] not in entities:
+                entities[row[self.resource.corpus_id]] = []
+            entities[row[self.resource.corpus_id]].append(row)
+
+        context = collections.deque()
+        # we need to keep track of any opening and closing tag that does not
+        # have its matching tag in the selected context:
+        opened_tags = []
+        closed_tags = []
+        correct_word = ""
+        for token in sorted(entities):
+            entity_list = sorted(entities[token], key=lambda x:x[self.resource.tag_id])
+            text_output = False
+            word = entity_list[0][self.resource.word_label]
+            for row in entity_list:
+                tag = row[self.resource.tag_label]
+                
+                # special treatment for tags:
+                if tag:
+                    try:
+                        attributes = dict([x.split("=") for x in row[self.resource.tag_attribute].split(",")])
+                    except ValueError:
+                        attributes = {}
+                    tag_type = row[self.resource.tag_type]
+
+                    if tag_type == "empty":
+                        pass
+                
+                    elif tag_type == "open":
+                        tag = self.resource.tag_to_html(tag, attributes)
+                        if tag:
+                            if attributes:
+                                context.append("<{} {}>".format(
+                                    tag, 
+                                    ", ".join(["{}='{}'".format(x, attributes[x]) for x in attributes])))
+                            else:
+                                context.append("<{}>".format(tag))
+                            opened_tags.append(row[self.resource.tag_label])
+
+                    elif tag_type == "close":
+                        # add the current token before processing any other
+                        # closing tag:
+                        if not text_output:
+                            text_output = True
+                            if token_id <= token < token_id + token_width:
+                                context.append('<span style="{}"; >{}</span>'.format(self.resource.render_token_style, word))
+                            else:
+                                context.append(word)
+                        
+                        tag = self.resource.tag_to_html(tag, attributes)
+                        if tag:
+                            if attributes:
+                                context.append("</{} {}>".format(
+                                    tag, 
+                                    ", ".join(["{}='{}'".format(x, attributes[x]) for x in attributes])))
+                            else:
+                                context.append("</{}>".format(tag))
+                            # if the current tag closes an earlier opening tag,
+                            # remove that tag from the list of open environments:
+                            try:
+                                if opened_tags[-1] == row[self.resource.tag_label]:
+                                    opened_tags.pop(len(opened_tags)-1)
+                            except IndexError:
+                                closed_tags.append(tag)
+
+            if not text_output:
+                if token_id <= token < token_id + token_width:
+                    context.append('<span style="{}"; >{}</span>'.format(self.resource.render_token_style, word))
+                else:
+                    context.append(word)
+                    
+        for x in opened_tags[::-1]:
+            if self.resource.tag_to_html(x):
+                context.append("</{}>".format(self.resource.tag_to_html(x)))
+                
+        for x in closed_tags:
+            if self.resource.tag_to_html(x):
+                context.appendleft("<{}>".format(self.resource.tag_to_html(x)))
+
+        widget.ui.context_area.setText(collapse_words(context))
+
+
+    #def render_context(self, token_id, source_id, token_width, context_width, widget):
+        #""" Return a visual representation of the context around the 
+        #specified token. The result is shown in an instance of the 
+        #ContextView class.
         
-        self.resource.DB.execute(
-            self.sql_string_get_wordid_in_range(
-                token_id, 
-                token_id + token_width - 1, source_id))
-        token = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+        #The most simple visual representation of the context is a plain text
+        #display, but in principle, a corpus might implement a more elaborate
+        #renderer. For example, a corpus may contain information about the
+        #page layout, and the renderer could use that information to create a
+        #facsimile of the original page.
+        
+        #The renderer can interact with the widget in which the context will
+        #be displayed. The area in which the context is shown is a QLabel
+        #named widget.ui.context_area. """
 
-        self.resource.DB.execute(
-            self.sql_string_get_wordid_in_range(
-                token_id + token_width, 
-                end,
-                source_id))
-        right = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+        #start = max(0, token_id - context_width)
+        #end = token_id + token_width + context_width - 1
+        #self.resource.DB.execute(
+            #self.sql_string_get_wordid_in_range(
+                #start, 
+                #token_id - 1, source_id))
+        #left = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+        
+        #self.resource.DB.execute(
+            #self.sql_string_get_wordid_in_range(
+                #token_id, 
+                #token_id + token_width - 1, source_id))
+        #token = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
 
-        context = "{} <b>{}</b> {}".format(
-            collapse_words(left), collapse_words(token), collapse_words(right))
-        widget.ui.context_area.setText(context)
+        #self.resource.DB.execute(
+            #self.sql_string_get_wordid_in_range(
+                #token_id + token_width, 
+                #end,
+                #source_id))
+        #right = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+
+        #context = "{} <b>{}</b> {}".format(
+            #collapse_words(left), collapse_words(token), collapse_words(right))
+        #widget.ui.context_area.setText(context)
 
         
 class TestLexicon(BaseLexicon):
