@@ -347,6 +347,18 @@ class BaseCorpusBuilder(object):
         if in_memory:
             for table in self._new_tables:
                 self._new_tables[table].commit(self.Con)
+        else:
+            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
+                self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["%s"] * (len(self._corpus_keys))))
+            data = [row.values() for row in self._corpus_buffer]
+            if data: 
+                try:
+                    self.Con.executemany(sql_string, data)
+                except TypeError as e:
+                    print(sql_string, data[0])
+                    raise(e)
+            self._corpus_buffer = []        
+            
         self.Con.commit()
 
     
@@ -404,7 +416,7 @@ class BaseCorpusBuilder(object):
             return None
         else:
             try:
-                return self.Con.find(table_name, values, [self._primary_keys[table_name]], case=case)[0]
+                return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
             except TypeError:
                 return None
     
@@ -427,17 +439,11 @@ class BaseCorpusBuilder(object):
         key = tuple(values.values())
         if key in self._tables[table_name]:
             return self._tables[table_name][key]
-        
-        if values:
-            try_entry = self.Con.find(table_name, values, [self._primary_keys[table_name]], case=case)
-        else:
-            try_entry = None
-        if try_entry:
-            return try_entry[0][self._primary_keys[table_name]]
         else:
             last = self.Con.insert(table_name, values)
             self._tables[table_name][key] = last
             return last
+        
 
     def setup_logger(self):
         """ initializes a logger."""
@@ -730,18 +736,8 @@ class BaseCorpusBuilder(object):
 
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
+        self._corpus_keys = values.keys()
         self._corpus_buffer.append(values)
-        if len(self._corpus_buffer) > 10000:
-            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self.corpus_table, ", ".join(values.keys()), ", ".join(["%s"] * (len(values.keys()))))
-            data = [row.values() for row in self._corpus_buffer]
-            if data: 
-                try:
-                    self.Con.executemany(sql_string, data)
-                except TypeError as e:
-                    print(sql_string, data[0])
-                    raise(e)
-            self._corpus_buffer = []        
     
     def add_token(self, token_string, token_pos):
         if token_string in string.punctuation:
