@@ -17,7 +17,7 @@ import sys
 import textwrap
 import fnmatch
 import inspect
-import xml.etree
+import xml.etree.ElementTree as ET
 
 try:
     from pyqt_compat import QtCore, QtGui
@@ -47,6 +47,9 @@ try:
     show_progress = True
 except ImportError:
     show_progress = False
+
+
+insert_cache = collections.defaultdict(list)
 
 class NLTKTokenizerError(Exception):
     def __init__(self, e, logger):
@@ -99,6 +102,139 @@ class Corpus(SQLCorpus):
 # For example, COCA should have a table with Genre, Year and Frequency,
 # with 5 x 23 rows (5 Genres, 23 Years). 
 
+in_memory = False
+
+class Column(object):
+    """ Define an object that stores the description of a column in one 
+    MySQL table."""
+    primary = False
+    key = False
+    
+    def __init__(self, name, data_type, index=True):
+        """ Initialize the column. 'name' is the column name, 'data_type' is
+        the MySQL data type for this column. If 'index' is True (the 
+        default), an index will be created for this column."""
+        self._name = name
+        self._data_type = data_type
+        self._index = index
+        
+    def __repr__(self):
+        return "Column({}, {}, {})".format(self._name, self._data_type, self._index)
+        
+    @property
+    def name(self):
+        return self._name
+    
+    @name.setter
+    def name(self, new_name):
+        self._name = new_name
+    
+    @property
+    def data_type(self):
+        return self._data_type
+    
+    @data_type.setter
+    def data_type(self, new_type):
+        self._data_type = new_type
+        
+class Primary(Column):
+    """ Define a Column class that acts as the primary key in a table."""
+    primary = True
+
+    def __init__(self, name, data_type):
+        super(Primary, self).__init__(name, data_type, False)
+
+    def __repr__(self):
+        return "Primary(name='{}', data_type='{}', {})".format(self._name, self._data_type, self._index)
+        
+    
+class Link(Column):
+    """ Define a Column class that links a table to another table. In MySQL
+    terms, this acts like a foreign key."""
+    key = True
+    def __init__(self, name, table_name):
+        super(Link, self).__init__(name, "", True)
+        self._link = table_name
+
+    def __repr__(self):
+        return "Link(name='{}', '{}', data_type='{}')".format(self._name, self._link, self._data_type)
+        
+class Table(object):
+    """ Define a class that is used to store table definitions."""
+    def __init__(self, name):
+        self._name = name
+        self.columns = list()
+        self.primary = None
+        self._current_id = 0
+        self._add_cache = collections.OrderedDict()
+        self._commited = {}
+        self._col_names = None
+        
+    def commit(self, db_connector):
+        if self._add_cache:
+            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
+                self._name, ", ".join([self.primary.name] + self._col_names), ", ".join(["%s"] * (len(self._col_names) + 1)))
+            data = []
+            for row in self._add_cache:
+                row_id, row_data = self._add_cache[row]
+                if row_data:
+                    data.append([row_id] + row_data.values())
+            #data = [[row_id] + row.values() for row_id, row in self._add_cache if row]
+            if data: 
+                db_connector.executemany(sql_string, data)
+                for row in self._add_cache:
+                    row_id, row_data = self._add_cache[row]
+                    self._add_cache[row] = (row_id, None)        
+    
+    def add_data(self, row):
+        """ Add a valid primary key to the data in the 'row' dictionary, 
+        and store the data in add cache of the table. """ 
+        if not self._col_names:
+            self._col_names = row.keys()
+        self._current_id += 1
+        
+        self._add_cache[tuple([row[x] for x in sorted(row)])] = (self._current_id, row)
+        return self._current_id
+        
+    def get_or_insert(self, row):
+        """ Either return the id of the cached row, or insert the row as a
+        new entry and return the new id."""
+        
+        try:
+            return self._add_cache[tuple([row[x] for x in sorted(row)])][0]
+        except KeyError:
+            return self.add_data(row)
+        
+    def get_data_id(self, row):
+        try:
+            return self._add_cache[tuple([row[x] for x in sorted(row)])][0]
+        except KeyError:
+            return None
+        
+    def add_column(self, column):
+        self.columns.append(column)
+        if column.primary:
+            self.primary = column
+            
+    def get_create_string(self):
+        str_list = []
+        for column in self.columns:
+            if column.primary:
+                if in_memory:
+                    str_list.insert(0, "`{}` {}".format(
+                        column.name,
+                        column.data_type))
+                else:
+                    str_list.insert(0, "`{}` {} AUTO_INCREMENT".format(
+                        column.name,
+                        column.data_type))
+                    str_list.append("PRIMARY KEY (`{}`)".format(column.name))
+            else:
+                str_list.append("`{}` {}".format(
+                    column.name,
+                    column.data_type))
+        return ", ".join(str_list)
+    
 class BaseCorpusBuilder(object):
     logger = None
     module_code = None
@@ -124,6 +260,10 @@ class BaseCorpusBuilder(object):
         self._id_count = {}
         self._primary_keys = {}
         
+        self._new_tables = {}
+        
+        self._corpus_buffer = []
+        
         self._widget = gui
         
         if not gui:        
@@ -147,6 +287,7 @@ class BaseCorpusBuilder(object):
             self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
             self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
             self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
+            self.parser.add_argument("--in_memory", help="try to improve writing speed by retaining tables in working memory. May require a lot of memory for big corpora.", action="store_true")
             self.additional_arguments()
 
     def add_tag_table(self):
@@ -175,8 +316,16 @@ class BaseCorpusBuilder(object):
                 ([self.tag_corpus_id], 0, "HASH"),
                 ([self.tag_label], 0, "BTREE"),
                 ([self.tag_type], 0, "BTREE")]})
+            
+        self.add_new_table_description(self.tag_table,
+            [Primary(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
+             Column(self.tag_label, "TINYTEXT NOT NULL"),
+             Link(self.tag_corpus_id, self.corpus_table),
+             Column(self.tag_attribute, "TINYTEXT NOT NULL", index=False)])
 
     def check_arguments(self):
+        global in_memory
         """ Check the command line arguments. Add defaults if necessary."""
         if not self._widget:
             self.arguments, unknown = self.parser.parse_known_args()
@@ -188,10 +337,27 @@ class BaseCorpusBuilder(object):
                 self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../coquery/corpora"))
             self.name = self.arguments.name
             
+            in_memory = self.arguments.in_memory
+            
     def additional_arguments(self):
         """ Use this function if your corpus installer requires additional arguments."""
         pass
     
+    def commit_data(self):
+        if in_memory:
+            for table in self._new_tables:
+                self._new_tables[table].commit(self.Con)
+        self.Con.commit()
+
+    
+    def add_new_table_description(self, table_name, column_list):
+        new_table = Table(table_name)
+        for x in column_list:
+            if isinstance(x, Link):
+                x.data_type = self._new_tables[x._link].primary.data_type
+            new_table.add_column(x)
+        self._new_tables[table_name] = new_table
+                
     def add_table_description(self, table_name, primary_key, table_description):
         """ Add a primary key to the table description and the internal
         tables."""
@@ -209,8 +375,38 @@ class BaseCorpusBuilder(object):
     def table_add(self, table_name, values):
         """ Add an entry containing the values to the table. A new unique
         id is also provided, and the class counter is updated. """
-        self.Con.insert(table_name, values)
-        return self.Con.insert_id()
+        return self.Con.insert(table_name, values)
+    
+    def table_find(self, table_name, values):
+        """ Return the id of the first row that matches the values, or None
+        otherwise."""
+        
+        if in_memory:
+            keys_values = set(values.keys())
+            table = self._new_tables[table_name]
+            keys_table = sorted(table._col_names)
+            lookup_list = {}
+            
+            for key in values:
+                try:
+                    lookup_list[key] = keys_table.index(key)
+                except IndexError:
+                    pass
+
+            if lookup_list:
+                for key in table._add_cache:
+                    for lookup in lookup_list:
+                        if values[lookup] != key[lookup_list[lookup]]:
+                            break
+                        else:
+                            row_id, _ = table._add_cache[key]
+                            return 
+            return None
+        else:
+            try:
+                return self.Con.find(table_name, values, [self._primary_keys[table_name]], case=case)[0]
+            except TypeError:
+                return None
     
     def table_get(self, table_name, values, case=False):
         """ This function returns the id of the first entry matching the 
@@ -219,10 +415,19 @@ class BaseCorpusBuilder(object):
         The values have to be given in the same order as the column 
         specifications in the table description."""
 
+        # use new internal tables:
+        
+        if in_memory:
+            row_id = self._new_tables[table_name].get_data_id(values)
+            if row_id:
+                return row_id
+            else:
+                return self._new_tables[table_name].add_data(values)
+
         key = tuple(values.values())
         if key in self._tables[table_name]:
             return self._tables[table_name][key]
-
+        
         if values:
             try_entry = self.Con.find(table_name, values, [self._primary_keys[table_name]], case=case)
         else:
@@ -230,8 +435,7 @@ class BaseCorpusBuilder(object):
         if try_entry:
             return try_entry[0][self._primary_keys[table_name]]
         else:
-            self.Con.insert(table_name, values)
-            last = self.Con.insert_id()
+            last = self.Con.insert(table_name, values)
             self._tables[table_name][key] = last
             return last
 
@@ -260,6 +464,7 @@ class BaseCorpusBuilder(object):
         """ go through the table description and create a table in the
         database, using the information from the "CREATE" key of the
         table description entry."""
+        
         self.Con.start_transaction()
         self.add_tag_table()
         if self._widget:
@@ -271,7 +476,10 @@ class BaseCorpusBuilder(object):
             progress.start()
         for i, current_table in enumerate(self.table_description):
             if not self.Con.has_table(current_table):
-                self.Con.create_table(current_table, ", ".join(self.table_description[current_table]["CREATE"]), override=True)
+                if self._new_tables:
+                    self.Con.create_table(current_table, self._new_tables[current_table].get_create_string())
+                else:
+                    self.Con.create_table(current_table, ", ".join(self.table_description[current_table]["CREATE"]), override=True)
             if self._widget:
                 self._widget.ui.progress_bar.setValue(i)
             elif show_progress:
@@ -513,7 +721,28 @@ class BaseCorpusBuilder(object):
                 if current_token:
                     # add the token to the corpus:
                     self.add_token(current_token, current_pos)
-            
+    
+    def add_token_to_corpus(self, values):
+        if len(values) <> len(self.table_description[self.corpus_table]["CREATE"]) - 2:
+            print(self.table_description[self.corpus_table]["CREATE"])
+            print(len(values), values)
+            raise IndexError
+
+        self._corpus_id += 1
+        values[self.corpus_id] = self._corpus_id
+        self._corpus_buffer.append(values)
+        if len(self._corpus_buffer) > 10000:
+            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
+                self.corpus_table, ", ".join(values.keys()), ", ".join(["%s"] * (len(values.keys()))))
+            data = [row.values() for row in self._corpus_buffer]
+            if data: 
+                try:
+                    self.Con.executemany(sql_string, data)
+                except TypeError as e:
+                    print(sql_string, data[0])
+                    raise(e)
+            self._corpus_buffer = []        
+    
     def add_token(self, token_string, token_pos):
         if token_string in string.punctuation:
             token_pos = "PUNCT"
@@ -544,8 +773,8 @@ class BaseCorpusBuilder(object):
         If there is a parsing error, print the surrounding environment and 
         raise an exception."""
         try:
-            e = xml.etree.ElementTree.parse(file_object).getroot()
-        except xml.etree.ElementTree.ParseError as e:
+            e = ET.parse(file_object).getroot()
+        except ET.ParseError as e:
             # in case of a parsing error, print the environment that caused
             # the failure:
             m = re.search(r"line (\d*), column (\d*)", str(e))
@@ -589,10 +818,12 @@ class BaseCorpusBuilder(object):
         """
         
         self.xml_preprocess_tag(element)
-        self.xml_process_content(element)
+        if element.text:
+            self.xml_process_content(element)
         for child in element:
             self.xml_process_element(child)
-        self.xml_process_tail(element)
+        if element.tail:
+            self.xml_process_tail(element)
         self.xml_postprocess_tag(element)
     
     def xml_preprocess_tag(self, element):
@@ -680,7 +911,6 @@ class BaseCorpusBuilder(object):
             self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         
         for i, file_name in enumerate(files):
-            self.Con.start_transaction()
             if not self.Con.find(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
@@ -691,7 +921,8 @@ class BaseCorpusBuilder(object):
             elif show_progress:
                 progress.update(i + 1)
 
-            self.Con.commit()
+            self.commit_data()
+
         if show_progress and not self._widget:
             progress.finish()
     
@@ -744,7 +975,7 @@ class BaseCorpusBuilder(object):
         if show_progress and not self._widget:
             progress.finish()
         
-    def create_indices(self):
+    def create_indices(self, final):
         """ Creates the table indices as specified in the table description."""
         total_indices = 0
         for current_table in self.table_description:
@@ -761,6 +992,10 @@ class BaseCorpusBuilder(object):
         index_count = 0
         self.Con.start_transaction()
         for i, current_table in enumerate(self.table_description):
+            # only create indices for the corpus table in the final pass:
+            if not final and current_table == self.corpus_table:
+                continue
+
             description = self.table_description[current_table]
             if "INDEX" in description:
                 for variables, length, index_type in description["INDEX"]:
@@ -889,11 +1124,11 @@ class BaseCorpusBuilder(object):
         self.Con.use_database(self.arguments.db_name)
         # if this is a dry run, database access will only be emulated:
         self.Con.dry_run = self.arguments.dry_run
-        if not self.arguments.dry_run:
-            self.Con.set_variable("autocommit", 0)
-            self.Con.set_variable("unique_checks", 0)
-            self.Con.set_variable("foreign_key_checks", 0)
-            self.Con.start_transaction()
+
+        cursor = self.Con.Con.cursor()
+        self.Con.execute(cursor, "SET autocommit=0")
+        self.Con.execute(cursor, "SET unique_checks=0")
+        self.Con.execute(cursor, "SET foreign_key_checks=0")
 
     def add_building_stage(self, stage):
         """ The parameter stage is a function that will be executed
@@ -936,6 +1171,9 @@ class BaseCorpusBuilder(object):
         if self.arguments.c:
             self.create_tables()
 
+        #if self.arguments.i:
+            #self.create_indices(final=False)
+
         if self.arguments.l:
             self.load_files()
 
@@ -947,14 +1185,16 @@ class BaseCorpusBuilder(object):
             
         if self.arguments.o:
             self.optimize()
+
         if self.arguments.i:
-            self.create_indices()
+            self.create_indices(final=True)
+
         if self.verify_corpus():
             self.write_python_module(self.arguments.corpus_path)
         self.finalize_build()
                 
 if use_gui:
-        
+
     class BuilderGui(QtGui.QDialog):
         def __init__(self, builder_class, parent=None):
             super(BuilderGui, self).__init__(parent)
