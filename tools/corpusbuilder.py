@@ -417,7 +417,7 @@ class BaseCorpusBuilder(object):
         else:
             try:
                 return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
-            except TypeError:
+            except IndexError:
                 return None
     
     def table_get(self, table_name, values, case=False):
