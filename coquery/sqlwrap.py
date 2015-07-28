@@ -161,6 +161,10 @@ Value       no return value
             cursor.execute(S)
         return cursor
     
+    def executemany(self, S, data):
+        cur = self.Con.cursor()
+        cur.executemany(S, data)
+    
     def execute(self, S, ForceExecution = False):
         """
 Call        execute(self, S, ForceExecution=False)
