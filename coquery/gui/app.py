@@ -560,9 +560,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.set_query_button()
         
     def show_tree_map(self):
-        table = []
-        for row in self.table_model.content:
-            table.append([row[x] for x in self.table_model.header])
         treemap.TreeMapVisualizer.MosaicPlot(self.table_model, self.ui.data_preview, self)
 
     def run_query(self):
