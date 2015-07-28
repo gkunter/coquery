@@ -329,13 +329,13 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         
 
     def xml_preprocess_tag(self, element):
-        if element.text:
+        if element.text or list(element):
             self.tag_next_token(element.tag, element.attrib)
         else:
             self.add_empty_tag(element.tag, element.attrib)
 
     def xml_postprocess_tag(self, element):
-        if element.text:
+        if element.text or list(element):
             self.tag_last_token(element.tag, element.attrib)
         else:
             if element.tag == "x-anonym-x":
