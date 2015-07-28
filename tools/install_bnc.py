@@ -367,7 +367,7 @@ class BNCBuilder(BaseCorpusBuilder):
                  self.word_lemma: lemma_text, 
                  self.word_lemma_pos: lemma_pos,
                  self.word_pos: word_pos, 
-                 self.word_type: tag})
+                 self.word_type: tag}, case=True)
             
             # store the new token with all needed information:
             self.add_token_to_corpus({self.corpus_word_id: self._word_id,
