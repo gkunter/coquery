@@ -164,20 +164,22 @@ class TreeMap(QtGui.QWidget):
         
     def set_data(self, content):
         table = []
-        
-        # get the column order from the visual QTableView:
-        header = self.view.horizontalHeader()
-        column_order = [self.model.header[header.logicalIndex(section)] for section in range(header.count())]
-        # ... but make sure that the frequency is the last column:
-        try:
-            column_order.remove("coq_frequency")
-        except IndexError:
-            pass
+
+        if options.cfg.experimental:
+            # get the column order from the visual QTableView:
+            header = self.view.horizontalHeader()
+            column_order = [self.model.header[header.logicalIndex(section)] for section in range(header.count())]
+            # ... but make sure that the frequency is the last column:
+            try:
+                column_order.remove("coq_frequency")
+            except IndexError:
+                pass
+            else:
+                column_order.append("coq_frequency")
+            for row in content:
+                table.append([row[x] for x in column_order])
         else:
-            column_order.append("coq_frequency")
-        
-        for row in content:
-            table.append([row[x] for x in column_order])
+            table = [x for x in content]
             
         # sort the columns:
         for i in range(len(table[0]))[::-1]:
