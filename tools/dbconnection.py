@@ -9,10 +9,13 @@ except ImportError:
 
 import logging
 import copy
+from collections  import defaultdict
 
 verbose = False
 name = ""
 logger = None
+
+insert_cache = defaultdict(list)
 
 class DBConnection(object):
     def __init__(self, db_user="mysql", db_host="localhost", db_port=3306, db_pass="mysql", local_infile=0, encoding="utf8"):
@@ -54,6 +57,10 @@ class DBConnection(object):
         cur = self.Con.cursor()
         self.execute(cur, "USE {}".format(database_name.split()[0]))
         self.db_name = database_name
+
+    def executemany(self, s, d):
+        cur = self.Con.cursor()
+        cur.executemany(s, d)
 
     def execute(self, cursor, command, override=False):
         if verbose:
@@ -176,15 +183,11 @@ class DBConnection(object):
             new_data[x] = new_data[x].replace("\\", "\\\\")
 
         S = "INSERT INTO {}({}) VALUES({})".format(
-            table_name, ",".join(new_data.keys()), ",".join('"%s"' % x for x in new_data.values()))
+            table_name, 
+            ",".join(new_data.keys()), 
+            ",".join('"%s"' % x for x in new_data.values()))
         self.execute(cur, S)
-        for x in data:
-            if not isinstance(data[x], (unicode, str, long, int)):
-                print(x)
-                print(data)
-                print(S)
-                asd
-        return
+        return self.Con.insert_id()
 
     def insert_id(self):
         return self.Con.insert_id()
@@ -195,7 +198,7 @@ class DBConnection(object):
             self.execute(cur, "SET {} '{}'".format(variable, value), override=True)
         else:
             self.execute(cur, "SET {}={}".format(variable, value), override=True)
-        
+
     def commit(self):
         if not self.dry_run:
             self.Con.commit()
