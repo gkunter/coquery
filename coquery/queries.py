@@ -240,7 +240,7 @@ class QueryResult(object):
             count += len(self.query.Corpus.get_time_info_header())
         if CORP_CONTEXT in output_fields:
             count += len(self.query.Corpus.get_context_header(max_number_of_tokens))
-        if options.cfg.experimental or len(self.query.Session.output_fields) == 1:
+        if options.cfg.experimental:
             if LEX_FREQ in output_fields:
                 count += 1
         return count
@@ -254,8 +254,6 @@ class QueryResult(object):
         # create a list of lexicon entries for each word W1, ..., Wn in 
         # the results row:
 
-        entry_list = [self.query.Corpus.lexicon.get_entry(
-            x, self.query.Session.output_fields) for x in [self.data["W{}".format(x)] for x in range(1, number_of_token_columns + 1)]]
 
         index = 0
 
@@ -263,6 +261,8 @@ class QueryResult(object):
             output_row[index] = [self.data["TokenId"]]
             index += 1
         if LEX_ORTH in output_fields or CORP_CONTEXT in output_fields:
+            entry_list = [self.query.Corpus.lexicon.get_entry(
+                x, self.query.Session.output_fields) for x in [self.data["W{}".format(x)] for x in range(1, number_of_token_columns + 1)]]
             if options.cfg.case_sensitive:
                 words = [x.orth for x in entry_list]
             else:
@@ -508,9 +508,11 @@ class DistinctQuery(CorpusQuery):
     
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
         output_cache = set([])
-        #result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
-        result_columns = self.Session.get_expected_column_number(max_number_of_token_columns)
-        
+        if options.cfg.experimental:
+            result_columns = self.Session.get_expected_column_number(max_number_of_token_columns)
+        else:
+            result_columns = QueryResult(self, None).get_expected_length(max_number_of_token_columns)
+
         # construct that part of output lines that stays constant in all
         # lines:
         if self.InputLine:
@@ -603,6 +605,8 @@ class FrequencyQuery(CorpusQuery):
         
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
         if options.cfg.experimental:
+            frequency_filters = []
+
             # construct that part of output lines that stays constant in all
             # lines:
             if self.InputLine:
@@ -610,7 +614,6 @@ class FrequencyQuery(CorpusQuery):
             else:
                 constant_line = []
 
-            frequency_filters = []
             for x in options.cfg.filter_list:
                 parse = x.parse_filter(x.text)
                 if x.var.lower() == options.cfg.freq_label.lower():
@@ -644,6 +647,21 @@ class FrequencyQuery(CorpusQuery):
         # Check if the same query string has been queried in this session.
         # If so, use the cached results:
         
+        if self.InputLine:
+            constant_line = copy.copy(self.InputLine)
+        else:
+            constant_line = []
+
+        # construct that part of output lines that stays constant in all
+        # lines:
+        if options.cfg.show_query:
+            constant_line.insert(options.cfg.query_column_number - 1, self.query_string)
+        if options.cfg.show_parameters:
+            constant_line.append(options.cfg.parameter_string)
+        if options.cfg.show_filter:
+            constant_line.append(self.source_filter)
+
+        # get from cache, if possible:
         if self.query_string in self.Session._results:
             Lines = self.Session._results[self.query_string]
         else:
@@ -655,10 +673,13 @@ class FrequencyQuery(CorpusQuery):
                 # current_result can be None if the query token was not in the
                 # lexicon
                 if current_result:
-                    Lines[current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)] += 1
+                    key = tuple(constant_line + list(current_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)))
+                    Lines[key] += 1
             if not Lines:
                 empty_result = QueryResult(self, {}) 
-                Lines[empty_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)] = 0
+                Lines[tuple(constant_line + list(empty_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)))] = 0
+            
+            # write to cache:
             self.Session._results[self.query_string] = Lines
         
         if options.cfg.order_frequency:
@@ -667,28 +688,12 @@ class FrequencyQuery(CorpusQuery):
         else:
             data = Lines
             get_key = lambda x: x
-        
-        # construct that part of output lines that stays constant in all
-        # lines:
-        if self.InputLine:
-            constant_line = copy.copy(self.InputLine)
-        else:
-            constant_line = []
-        if options.cfg.show_query:
-            constant_line.insert(options.cfg.query_column_number - 1, self.query_string)
-        if options.cfg.show_parameters:
-            constant_line.append(options.cfg.parameter_string)
-        if options.cfg.show_filter:
-            constant_line.append(self.source_filter)
 
         # Output the collapsed lines:
         for current_line in data:
             key = get_key(current_line)
             # copy constant part of output
-            if constant_line:
-                output_list = copy.copy(constant_line)
-            else:
-                output_list = []
+            output_list = []
             # add data:
             #print(list(key))
             output_list.extend(list(key))
