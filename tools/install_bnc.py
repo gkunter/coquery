@@ -1,10 +1,11 @@
 from __future__ import unicode_literals 
 
-import corpusbuilder
+import cProfile
+from corpusbuilder import *
 import xml.etree
 import re
 
-class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
+class BNCBuilder(BaseCorpusBuilder):
     def __init__(self):
        # all corpus builders have to call the inherited __init__ function:
         super(BNCBuilder, self).__init__()
@@ -121,6 +122,14 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
                 ([self.word_lemma_pos], 0, "HASH"),
                 ([self.word_pos], 0, "BTREE")]})
 
+        self.add_new_table_description(self.word_table,
+            [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+             Column(self.word_label, "VARCHAR(133) NOT NULL"),
+             Column(self.word_lemma, "VARCHAR(133) NOT NULL"),
+             Column(self.word_pos, "ENUM('AJ0','AJ0-AV0','AJ0-NN1','AJ0-VVD','AJ0-VVG','AJ0-VVN','AJC','AJS','AT0','AV0','AV0-AJ0','AVP','AVP-PRP','AVQ','AVQ-CJS','CJC','CJS','CJS-AVQ','CJS-PRP','CJT','CJT-DT0','CRD','CRD-PNI','DPS','DT0','DT0-CJT','DTQ','EX0','ITJ','NN0','NN1','NN1-AJ0','NN1-NP0','NN1-VVB','NN1-VVG','NN2','NN2-VVZ','None','NP0','NP0-NN1','ORD','PNI','PNI-CRD','PNP','PNQ','PNX','POS','PRF','PRP','PRP-AVP','PRP-CJS','PUL','PUN','PUQ','PUR','TO0','UNC','VBB','VBD','VBG','VBI','VBN','VBZ','VDB','VDD','VDG','VDI','VDN','VDZ','VHB','VHD','VHG','VHI','VHN','VHZ','VM0','VVB','VVB-NN1','VVD','VVD-AJ0','VVD-VVN','VVG','VVG-AJ0','VVG-NN1','VVI','VVN','VVN-AJ0','VVN-VVD','VVZ','VVZ-NN2','XX0','ZZ0')"),
+             Column(self.word_lemma_pos, "ENUM('ADJ','ADV','ART','CONJ','INTERJ','PREP','PRON','SUBST','UNC','VERB', 'PUNCT')"),
+             Column(self.word_type, "ENUM('c','gap','pause','vocal','w')")])
+
         # Add the file table. Each row in this table represents an XML file
         # that has been incorporated into the corpus. Each token from the
         # corpus table is linked to exactly one file from this table, and
@@ -143,6 +152,11 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
                 "`{}` SMALLINT(4) UNSIGNED NOT NULL".format(self.file_id),
                 "`{}` TINYTEXT NOT NULL".format(self.file_path),
                 "`{}` TINYTEXT NOT NULL".format(self.file_name)]})
+
+        self.add_new_table_description(self.file_table,
+            [Primary(self.file_id, "SMALLINT(4) UNSIGNED NOT NULL"),
+             Column(self.file_path, "TINYTEXT NOT NULL"),
+             Column(self.file_name, "TINYTEXT NOT NULL")])
 
         # Add the speaker table. Each row in this table represents a speaker
         # who has contributed to the recordings in the BNC. Each sentence
@@ -168,8 +182,8 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         # otherwise.
         
         self.speaker_table = "speaker"
-        self.speaker_id = "id"
-        self.speaker_label = "Speaker_ID"
+        self.speaker_id = "Speaker_id"
+        self.speaker_label = "Speaker"
         self.speaker_age = "Age"
         self.speaker_sex = "Sex"
         
@@ -183,6 +197,12 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
                 ([self.speaker_age], 0, "HASH"),
                 ([self.speaker_label], 0, "HASH"),
                 ([self.speaker_sex], 0, "HASH")]})
+        
+        self.add_new_table_description(self.speaker_table,
+            [Primary(self.speaker_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+             Column(self.speaker_label, "TINYTEXT NOT NULL"),
+             Column(self.speaker_age, "ENUM('-82+','0','1','10','10+','11','12','13','13+','14','14+','15','16','17','17+','18','19','2','20','20+','21','21+','22','23','24','25','25+','26','27','28','29','3','3+','30','30+','31','32','33','34','35','35+','36','37','38','39','4','40','40+','41','42','43','44','45','45+','46','46+','47','48','48+','49','5','50','50+','51','52','53','54','55','55+','56','57','58','59','6','60','60+','61','62','63','64','65','65+','66','67','68','69','7','70','70+','71','72','73','74','75','75+','76','77','78','79','8','80','80+','81','82','84','86','87','89','9','92','93','95','unknown')"),
+             Column(self.speaker_sex, "ENUM('f','m','u')")])
        
         # Add the sentence table. Each row in this table represents a 
         # sentence from the XML file. Each token in the corpus table is 
@@ -194,11 +214,14 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         # An int value containing the unique identifier of this file.
 
         self.sentence_table = "sentence"
-        self.sentence_id = "id"
+        self.sentence_id = "Sentence_id"
 
         self.add_table_description(self.sentence_table, self.sentence_id,
             {"CREATE": [
                 "`{}` SMALLINT(4) UNSIGNED NOT NULL".format(self.sentence_id)]})
+
+        self.add_new_table_description(self.sentence_table,
+            [Primary(self.sentence_id, "SMALLINT(4) UNSIGNED NOT NULL")])
 
         # Add the source table. Each row in this table represents a BNC 
         # source. Each sentence from the sentence table is linked to exactly
@@ -264,6 +287,24 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
                 ([self.source_class], 0, "HASH"),
                 ([self.source_file_id], 0, "HASH"),
                 ([self.source_year], 0, "BTREE")]})
+            
+        self.add_new_table_description(self.source_table,
+            [Primary(self.source_id, "SMALLINT(4) UNSIGNED NOT NULL"),
+             Column(self.source_xmlname, "CHAR(3) NOT NULL"),
+             Column(self.source_oldname, "CHAR(6) NOT NULL"),
+             Column(self.source_genre, "ENUM('ACPROSE','CONVRSN','FICTION','NEWS','NONAC','OTHERPUB','OTHERSP','UNPUB') NOT NULL"),
+             Column(self.source_class, "ENUM('S brdcast discussn','S brdcast documentary','S brdcast news','S classroom','S consult','S conv','S courtroom','S demonstratn','S interview','S interview oral history','S lect commerce','S lect humanities arts','S lect nat science','S lect polit law edu','S lect soc science','S meeting','S parliament','S pub debate','S sermon','S speech scripted','S speech unscripted','S sportslive','S tutorial','S unclassified','W ac:humanities arts','W ac:medicine','W ac:nat science','W ac:polit law edu','W ac:soc science','W ac:tech engin','W admin','W advert','W biography','W commerce','W email','W essay school','W essay univ','W fict drama','W fict poetry','W fict prose','W hansard','W institut doc','W instructional','W letters personal','W letters prof','W misc','W news script','W newsp brdsht nat: arts','W newsp brdsht nat: commerce','W newsp brdsht nat: editorial','W newsp brdsht nat: misc','W newsp brdsht nat: report','W newsp brdsht nat: science','W newsp brdsht nat: social','W newsp brdsht nat: sports','W newsp other: arts','W newsp other: commerce','W newsp other: report','W newsp other: science','W newsp other: social','W newsp other: sports','W newsp tabloid','W nonAc: humanities arts','W nonAc: medicine','W nonAc: nat science','W nonAc: polit law edu','W nonAc: soc science','W nonAc: tech engin','W pop lore','W religion') NOT NULL"),
+             Column(self.source_year, "VARCHAR(21) NOT NULL"),
+             Link(self.source_file_id, self.file_table)])
+
+        self.add_new_table_description(self.corpus_table, 
+            [Primary(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
+             Link(self.corpus_sentence_id, self.sentence_table),
+             Link(self.corpus_speaker_id, self.speaker_table),
+             Link(self.corpus_word_id, self.word_table),
+             Link(self.corpus_source_id, self.source_table)])
+
+
     
     def get_node_value(self, node):
         """ Retrieve the text stored in the node. Some element types store
@@ -288,13 +329,16 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
             return node.attrib.get("dur", "").strip()
     
     def xml_preprocess_tag(self, element):
-        self._tagged = False
+        element._tagged = False
         tag = element.tag
         # <u> is an utterance. This element has a who attribute that 
         # specifies the speaker of the utterance.
         if tag == "u":
-            self._speaker_id = self.table_get(self.speaker_table,
-                                    {self.speaker_label: element.attrib["who"].strip()})
+            self.speaker_id = self.table_find(self.speaker_table, 
+                {self.speaker_label: element.attrib["who"].strip()})
+
+            #self._speaker_id = self.table_get(self.speaker_table,
+                                    #{self.speaker_label: element.attrib["who"].strip()})
         # <s> is a sentence:
         elif tag == "s":
             self._sentence_id = self.table_get(self.sentence_table, {})
@@ -326,27 +370,26 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
                  self.word_type: tag})
             
             # store the new token with all needed information:
-            self._corpus_id = self.table_add(self.corpus_table,
-                        {self.corpus_word_id: self._word_id,
+            self.add_token_to_corpus({self.corpus_word_id: self._word_id,
                          self.corpus_speaker_id: self._speaker_id,
                          self.corpus_sentence_id: self._sentence_id,
                          self.corpus_source_id: self._source_id})
+            #self._corpus_id = self.table_add(self.corpus_table,
+                        #{self.corpus_word_id: self._word_id,
+                         #self.corpus_speaker_id: self._speaker_id,
+                         #self.corpus_sentence_id: self._sentence_id,
+                         #self.corpus_source_id: self._source_id})
         else:
-            self.tag_next_token(element.tag, element.attrib)
-            self._tagged = True
-            
+            if element.text or list(element):
+                self.tag_next_token(element.tag, element.attrib)
+                element._tagged = True
+            else:
+                self.add_empty_tag(element.tag, element.attrib)
+                
     def xml_postprocess_tag(self, element):
-        if self._tagged:
+        if element._tagged:
             self.tag_last_token(element.tag, element.attrib)
     
-    def xml_process_content(self, element):
-        print("CONTENT DATA, source {}".format(self._source_id))
-        pass
-
-    def xml_process_tail(self, element):
-        print("TAIL DATA, source {}".format(self._source_id))
-        pass
-
     def get_speaker_data(self, *args):
         person = args[0]
         if person.tag == "person":
@@ -469,5 +512,9 @@ class BNCBuilder(corpusbuilder.BaseCorpusBuilder):
         self.xml_get_meta_info(e)
         self.xml_process_element(self.xml_get_body(e))
 
-if __name__ == "__main__":
+def main():
     BNCBuilder().build()
+
+if __name__ == "__main__":
+    main()
+    #cProfile.run("main()", sort=1)
