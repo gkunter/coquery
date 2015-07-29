@@ -64,8 +64,6 @@ class BNCBuilder(BaseCorpusBuilder):
         self.corpus_speaker_id = "Speaker_id"
         self.corpus_sentence_id = "Sentence_id"
 
-        self._corpus_id = 0
-
         self.add_table_description(self.corpus_table, self.corpus_id,
             {"CREATE": [
                 "`{}` INT(9) UNSIGNED NOT NULL".format(self.corpus_id),
