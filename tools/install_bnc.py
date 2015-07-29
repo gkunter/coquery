@@ -334,11 +334,15 @@ class BNCBuilder(BaseCorpusBuilder):
         # <u> is an utterance. This element has a who attribute that 
         # specifies the speaker of the utterance.
         if tag == "u":
-            self.speaker_id = self.table_find(self.speaker_table, 
+            lookup = self.table_find(
+                self.speaker_table, 
                 {self.speaker_label: element.attrib["who"].strip()})
-
-            #self._speaker_id = self.table_get(self.speaker_table,
-                                    #{self.speaker_label: element.attrib["who"].strip()})
+            if lookup:
+                self._speaker_id = lookup[self.speaker_id]
+            else:
+                self._speaker_id = self.table_get(
+                    self.speaker_table,
+                    {self.speaker_label: element.attrib["who"].strip()})
         # <s> is a sentence:
         elif tag == "s":
             self._sentence_id = self.table_get(self.sentence_table, {})
