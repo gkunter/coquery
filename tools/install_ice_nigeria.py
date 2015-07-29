@@ -6,7 +6,7 @@ import xml.etree
 import os.path, re
 import csv, cStringIO, codecs, string
 from collections import defaultdict
-import corpusbuilder
+from corpusbuilder import * 
 
 class corpus_code():
     def tag_to_qhtml(self, s):
@@ -156,7 +156,7 @@ class corpus_code():
 
         widget.ui.context_area.setText(collapse_words(context))
 
-class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
+class ICENigeriaBuilder(BaseCorpusBuilder):
     def __init__(self):
         """ Initialize the corpus builder. The initialization includes a 
         definition of the database schema. """
@@ -265,6 +265,12 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
             {"CREATE": create_columns,
             "INDEX": index_columns})
 
+        self.add_new_table_description(self.word_table,
+            [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
+             Column(self.word_label, "VARCHAR(32) NOT NULL"),
+             Column(self.word_lemma, "VARCHAR(32) NOT NULL"),
+             Column(self.word_pos, "VARCHAR(12) NOT NULL")])
+
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
         # corpus table is linked to exactly one file from this table, and
@@ -287,6 +293,11 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
                 "`{}` TINYTEXT NOT NULL".format(self.file_name),
                 "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
+
+        self.add_new_table_description(self.file_table,
+            [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+             Column(self.file_name, "TINYTEXT NOT NULL"),
+             Column(self.file_path, "TINYTEXT NOT NULL")])
         
         #self.sentence_table = "sentence"
         #self.sentence_id = "SentenceId"
@@ -323,6 +334,23 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 ([self.source_gender], 0, "BTREE"),
                 ([self.source_ethnicity], 0, "BTREE"),
                 ([self.source_ethnicity], 0, "BTREE")]})
+
+        self.add_new_table_description(self.source_table,
+            [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+            Column(self.source_mode, "TINYTEXT NOT NULL"),
+            Column(self.source_date, "VARCHAR(15) NOT NULL"), 
+            Column(self.source_register, "VARCHAR(30) NOT NULL"), 
+            Column(self.source_place, "VARCHAR(30) NOT NULL"), 
+            Column(self.source_age, "VARCHAR(5) NOT NULL"),  
+            Column(self.source_gender, "VARCHAR(1) NOT NULL"),  
+            Column(self.source_ethnicity, "VARCHAR(15) NOT NULL")])
+
+        self.add_new_table_description(self.corpus_table,
+            [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Link(self.corpus_file_id, self.file_table),
+             Link(self.corpus_word_id, self.word_table),
+             Link(self.corpus_source_id, self.source_table)])
+        
                 
         self._corpus_id = 0
         self._corpus_code = corpus_code
@@ -331,13 +359,12 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
     def xml_preprocess_tag(self, element):
         if element.text or list(element):
             self.tag_next_token(element.tag, element.attrib)
-        else:
-            self.add_empty_tag(element.tag, element.attrib)
 
     def xml_postprocess_tag(self, element):
         if element.text or list(element):
             self.tag_last_token(element.tag, element.attrib)
         else:
+            self.add_empty_tag(element.tag, element.attrib)
             if element.tag == "x-anonym-x":
                 # ICE-NG contains anonymized labels for names, placenames,
                 # and other nouns. Insert a special label in that case:
@@ -346,12 +373,12 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                         self.word_lemma: "ANONYMIZED", 
                         self.word_pos: "np"}, case=True)
 
-    def xml_process_content(self, element):
+    def xml_process_content(self, text):
         """ In ICE-NG, the XML elements contain rows of words. This method 
         processes these rows, and creates token entries in the corpus table. 
         It also creates new entries in the word table if necessary."""
-        if element.text:
-            for row in element.text.splitlines():
+        if text:
+            for row in text.splitlines():
                 try:
                     word_text, word_pos, lemma_text = [x.strip() for x in row.split("\t")]
                 except ValueError:
@@ -372,7 +399,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                         self.word_lemma: lemma_text, 
                         self.word_pos: word_pos}, case=True)
                         
-                    self._corpus_id = self.table_add(self.corpus_table,
+                    self.add_token_to_corpus(
                         {self.corpus_word_id: self._word_id,
                         self.corpus_file_id: self._file_id,
                         self.corpus_source_id: self._source_id})
@@ -457,6 +484,8 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         #     <error corrected="&quot;.">
         #     &quot;   PUNCT   &quot;
         #     </error>
+
+        
         self._current_file = current_file
 
         file_buffer = cStringIO.StringIO()
