@@ -2332,16 +2332,53 @@ class SQLCorpus(BaseCorpus):
                         stats["{}_distinct".format(variable)] = self.resource.DB.Cur.fetchone()[0]
         return stats
 
+    def renderer_open_element(self, tag, attributes):
+        label = self.resource.tag_to_html(tag, attributes)
+        if label:
+            if attributes:
+                return ["<{} {}>".format(
+                    label, 
+                    ", ".join(["{}='{}'".format(x, attributes[x]) for x in attributes]))]
+            else:
+                return ["<{}>".format(label)]
+        else:
+            return []
+        
+    def renderer_close_element(self, tag, attributes):
+        label = self.resource.tag_to_html(tag, attributes)
+        if label:
+            if attributes:
+                return ["</{} {}>".format(
+                    label, 
+                    ", ".join(["{}='{}'".format(x, attributes[x]) for x in attributes]))]
+            else:
+                return ["</{}>".format(label)]
+        else:
+            return []
 
     def render_context(self, token_id, source_id, token_width, context_width, widget):
+
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
-    
-        S = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_table}.{tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end} AND {corpus}.{source_id} = {current_source_id}".format(
+
+        origin_id = ""
+        try:
+            origin_id = self.resource.corpus_source_id
+        except AttributeError:
+            try:
+                origin_id = self.resource.corpus_file_id
+            except AttributeError:
+                origin_id = self.resource.corpus_sentence_id
+        
+        format_string = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_table}.{tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
+        if origin_id:
+            format_string += " AND {corpus}.{source_id} = {current_source_id}"
+        
+        S = format_string.format(
             corpus=self.resource.corpus_table,
             corpus_id=self.resource.corpus_id,
             corpus_word_id=self.resource.corpus_word_id,
-            source_id=self.resource.corpus_source_id,
+            source_id=origin_id,
             
             word=self.resource.word_label,
             word_table=self.resource.word_table,
@@ -2356,6 +2393,7 @@ class SQLCorpus(BaseCorpus):
             
             current_source_id=source_id,
             start=start, end=end)
+            
         cur = self.resource.DB.execute_cursor(S)
         entities = {}
 
@@ -2367,78 +2405,81 @@ class SQLCorpus(BaseCorpus):
         context = collections.deque()
         # we need to keep track of any opening and closing tag that does not
         # have its matching tag in the selected context:
-        opened_tags = []
-        closed_tags = []
+        opened_elements = []
+        closed_elements = []
         correct_word = ""
-        for token in sorted(entities):
-            entity_list = sorted(entities[token], key=lambda x:x[self.resource.tag_id])
-            text_output = False
-            word = entity_list[0][self.resource.word_label]
-            for row in entity_list:
-                tag = row[self.resource.tag_label]
-                
-                # special treatment for tags:
-                if tag:
-                    try:
-                        attributes = dict([x.split("=") for x in row[self.resource.tag_attribute].split(",")])
-                    except ValueError:
-                        attributes = {}
-                    tag_type = row[self.resource.tag_type]
-
-                    if tag_type == "empty":
-                        pass
-                
-                    elif tag_type == "open":
-                        tag = self.resource.tag_to_html(tag, attributes)
-                        if tag:
-                            if attributes:
-                                context.append("<{} {}>".format(
-                                    tag, 
-                                    ", ".join(["{}='{}'".format(x, attributes[x]) for x in attributes])))
-                            else:
-                                context.append("<{}>".format(tag))
-                            opened_tags.append(row[self.resource.tag_label])
-
-                    elif tag_type == "close":
-                        # add the current token before processing any other
-                        # closing tag:
-                        if not text_output:
-                            text_output = True
-                            if token_id <= token < token_id + token_width:
-                                context.append('<span style="{}"; >{}</span>'.format(self.resource.render_token_style, word))
-                            else:
-                                context.append(word)
-                        
-                        tag = self.resource.tag_to_html(tag, attributes)
-                        if tag:
-                            if attributes:
-                                context.append("</{} {}>".format(
-                                    tag, 
-                                    ", ".join(["{}='{}'".format(x, attributes[x]) for x in attributes])))
-                            else:
-                                context.append("</{}>".format(tag))
-                            # if the current tag closes an earlier opening tag,
-                            # remove that tag from the list of open environments:
-                            try:
-                                if opened_tags[-1] == row[self.resource.tag_label]:
-                                    opened_tags.pop(len(opened_tags)-1)
-                            except IndexError:
-                                closed_tags.append(tag)
-
-            if not text_output:
-                if token_id <= token < token_id + token_width:
-                    context.append('<span style="{}"; >{}</span>'.format(self.resource.render_token_style, word))
+        
+        for context_token_id in sorted(entities):
+            opening_elements = []
+            closing_elements = []
+            word = ""
+            
+            # create lists of opening and closing elements, and get the 
+            # current word:
+            for x in sorted(entities[context_token_id],
+                        key=lambda x:x[self.resource.tag_id]):
+                tag_type = x[self.resource.tag_type]
+                if not tag_type:
+                    word = x[self.resource.word_label]
                 else:
-                    context.append(word)
+                    if tag_type in ("open", "empty"):
+                        opening_elements.append(x)
+                    if tag_type in ("close", "empty"):
+                        closing_elements.append(x)
                     
-        for x in opened_tags[::-1]:
-            if self.resource.tag_to_html(x):
-                context.append("</{}>".format(self.resource.tag_to_html(x)))
+            # process all opening elements:
+            for element in opening_elements:
+                tag = element[self.resource.tag_label]
+                attr = element[self.resource.tag_attribute]
+                if attr:
+                    try:
+                        attributes = dict([x.split("=") for x in attr.split(",")])
+                    except ValueError:
+                        attributes = dict([attr.split("=")])
+                else: 
+                    attributes = {}
+                context += self.renderer_open_element(tag, attributes)
+                opened_elements.append(tag)
                 
-        for x in closed_tags:
-            if self.resource.tag_to_html(x):
-                context.appendleft("<{}>".format(self.resource.tag_to_html(x)))
+            if word:
+                # process the context word:
+                if token_id <= context_token_id < token_id + token_width:
+                    context.append("<span style='{}'; >".format(self.resource.render_token_style))
+                context.append(word)
+                if token_id <= context_token_id < token_id + token_width:
+                    context.append("</span>")
+            
+            # process all closing elements:
+            for element in closing_elements:
+                tag = element[self.resource.tag_label]
+                attr = element[self.resource.tag_attribute]
+                if attr:
+                    try:
+                        attributes = dict([x.split("=") for x in attr.split(",")])
+                    except ValueError:
+                        attributes = dict([attr.split("=")])
+                else: 
+                    attributes = {}
+                context += self.renderer_close_element(tag, attributes)
 
+                # remove the opening element if the current element closes it:
+                if opened_elements and tag == opened_elements[-1]:
+                    opened_elements.pop()
+                else:
+                    # otherwise, keep track of unmatched closing elements:
+                    closed_elements.append(tag)
+
+        # for all unmatchend opened elements, add a matching closing one:
+        for tag in opened_elements[::-1]:
+            if tag:
+                context.append("</{}>".format(tag))
+                
+        # for all unmatchend closing elements, add a matching opening one:
+        for tag in closed_elements:
+            if tag:
+                context.appendleft("<{}>".format(tag))
+
+        print(context)
         widget.ui.context_area.setText(collapse_words(context))
 
 
