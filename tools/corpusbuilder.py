@@ -347,7 +347,7 @@ class BaseCorpusBuilder(object):
         if in_memory:
             for table in self._new_tables:
                 self._new_tables[table].commit(self.Con)
-        else:
+        elif self._corpus_buffer:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
                 self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["%s"] * (len(self._corpus_keys))))
             data = [row.values() for row in self._corpus_buffer]
@@ -390,7 +390,7 @@ class BaseCorpusBuilder(object):
         return self.Con.insert(table_name, values)
     
     def table_find(self, table_name, values):
-        """ Return the id of the first row that matches the values, or None
+        """ Return the first row that matches the values, or None
         otherwise."""
         
         if in_memory:
