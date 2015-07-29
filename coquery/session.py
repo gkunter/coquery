@@ -122,6 +122,7 @@ class Session(object):
             self.header.append("coq_collocate_frequency_left")
             self.header.append("coq_collocate_frequency_right")
             self.header.append("coq_mutual_information")
+            self.header.append("coq_conditional_probability")
             self.header.append("coquery_invisible_corpus_id")
             self.header.append("coquery_invisible_origin_id")
             self.header.append("coquery_invisible_number_of_tokens")
@@ -257,6 +258,18 @@ class Session(object):
         self.expand_header()
         self._queries = {}
         self._results = {}
+
+        # verify filter list:
+        new_list = []
+        for filt in options.cfg.filter_list:
+            if isinstance(filt, queries.QueryFilter):
+                new_list.append(filt)
+            else:
+                new_filt = queries.QueryFilter()
+                new_filt.resource = self.Corpus.resource
+                new_filt.text = filt
+                new_list.append(new_filt)
+        options.cfg.filter_list = new_list
 
         self.start_time = datetime.datetime.now()
         self.end_time = None

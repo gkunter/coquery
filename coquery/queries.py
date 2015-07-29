@@ -186,6 +186,8 @@ class QueryFilter(object):
             return False
         if variable_names.count(var.lower()) > 1:
             print("ambiguous!")
+            print(variable_names, var.lower())
+            return True
         if op.lower() not in [x.lower() for x in self.operators]:
             return False
         return True
@@ -614,10 +616,15 @@ class FrequencyQuery(CorpusQuery):
             else:
                 constant_line = []
 
+            # Apply any frequency filter:
             for x in options.cfg.filter_list:
-                parse = x.parse_filter(x.text)
-                if x.var.lower() == options.cfg.freq_label.lower():
-                    frequency_filters.append(x)
+                try:
+                    parse = x.parse_filter(x.text)
+                except AttributeError:
+                    pass
+                else:
+                    if x.var.lower() == options.cfg.freq_label.lower():
+                        frequency_filters.append(x)
 
             for current_result in self.Results:
                 freq = current_result["coq_frequency"]
@@ -733,6 +740,19 @@ class CollocationQuery(TokenQuery):
 
         return math.log((f_coll * size) / (f_1 * f_2 * span)) / math.log(2)
 
+    def conditional_propability(self, freq_left, freq_total):
+        """ Calculate the conditional probability Pcond to encounter the query 
+        token given that the collocate occurred in the left neighbourhood of
+        the token.
+
+        Pcond(q | c) = P(c, q) / P(c) = f(c, q) / f(c),
+        
+        where f(c, q) is the number of occurrences of word c as a left 
+        collocate of query token q, and f(c) is the total number of 
+        occurrences of c in the corpus. """
+        
+        return float(freq_left) / float(freq_total)
+
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
         self.Session.output_order = self.Session.header
         count_left = collections.Counter()
@@ -836,15 +856,16 @@ class CollocationQuery(TokenQuery):
                 current_result["coq_collocate_{}".format(feature)] = collocate_tuple[i]
             current_result["coq_frequency"] = count_total[collocate_tuple]
             current_result["coq_collocate_frequency"] = coll_freq
-            current_result["coq_collocate_frequency_right"] = count_left[collocate_tuple]
-            current_result["coq_collocate_frequency_left"] = count_right[collocate_tuple]
+            current_result["coq_collocate_frequency_right"] = count_right[collocate_tuple]
+            current_result["coq_collocate_frequency_left"] = count_left[collocate_tuple]
             current_result["coq_mutual_information"] = round(self.mutual_information(
                 query_freq,
                 coll_freq, 
                 count_total[collocate_tuple], 
                 corpus_size, 
                 self.left_span + self.right_span), 3)
-            
+            current_result["coq_conditional_probability"] = round(
+                self.conditional_propability(count_left[collocate_tuple], coll_freq), 3)
             
             corpus_id, origin_id, number = context_info[collocate_tuple]
             

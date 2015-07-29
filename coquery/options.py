@@ -47,6 +47,7 @@ import logging
 import glob, imp
 import codecs
 import collections
+import tokens
 
 from defines import *
 from errors import *
@@ -335,6 +336,38 @@ class Options(object):
         except AttributeError:
             pass
         
+        if self.args.experimental:
+            if self.args.source_filter:
+                Genres, Years, Negated = tokens.COCATextToken(self.args.source_filter, None).get_parse()
+                
+                date_label = ""
+                genre_label = ""
+                
+                if Genres:
+                    if "corpus_genre" in dir(resource):
+                        genre_label = resource.corpus_genre
+                    elif "source_genre" in dir(resource):
+                        genre_label = resource.source_genre
+                    elif "source_info_genre" in dir(resource):
+                        genre_label = resource.source_info_genre
+                    elif "genre_label" in dir(resource):
+                        genre_label = resource.genre_label
+                if Years:
+                    if "corpus_year" in dir(resource):
+                        date_label = resource.corpus_year
+                    elif "corpus_date" in dir(resource):
+                        date_label = resource.corpus_date
+                    elif "source_year" in dir(resource):
+                        date_label = resource.source_year
+                    elif "source_date" in dir(resource):
+                        date_label = resource.source_date
+                
+                if date_label:
+                    for year in Years:
+                        self.args.filter_list.append("{} = {}".format(date_label,  year))
+                if genre_label:
+                    for genre in Genres:
+                        self.args.filter_list.append("{} = {}".format(genre_label,  genre))
         # Go through the table dictionary D, and add the resource features 
         # to the list of selected features if the corresponding choice 
         # parameter was set:

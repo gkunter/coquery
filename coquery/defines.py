@@ -82,10 +82,11 @@ COLUMN_NAMES = {
     "coq_collocate_lemma_label": "Collocate lemma",
     "coq_collocate_pos_label": "Collocate POS",
     "coq_collocate_transcript_label": "Collocate transcript",
-    "coq_collocate_frequency": "Total frequency",
-    "coq_collocate_frequency_left": "Left collocate frequency",
-    "coq_collocate_frequency_right": "Right collocate frequency",
+    "coq_collocate_frequency": "Collocate frequency",
+    "coq_collocate_frequency_left": "Left context frequency",
+    "coq_collocate_frequency_right": "Right context frequency",
     "coq_mutual_information": "Mutual information",
+    "coq_conditional_probability": "Pcond",
 
     "coquery_query_string": "Query string"}
 

@@ -1558,8 +1558,9 @@ class SQLCorpus(BaseCorpus):
         #return where_clauses
     
     def sql_string_run_query_where_string(self, Query, self_joined):
+        """ Return a SQL string that can be used in a query as the WHERE 
+        clause. This string considers filters and token specifications."""
         where_clauses = []
-
         where_clauses = self.sql_string_run_query_filter_list(self_joined)
 
         if Query.source_filter:
@@ -1695,6 +1696,7 @@ class SQLCorpus(BaseCorpus):
             return ", ".join(self.column_list)
     
     def sql_string_run_query_filter_list(self, self_joined):
+        """ Return an SQL string that contains the result filters."""
         filter_list = self.resource.translate_filters(options.cfg.filter_list)
         L = []
         for column, corpus_feature, table, operator, value_list, val_range in filter_list:
@@ -1734,31 +1736,24 @@ class SQLCorpus(BaseCorpus):
             
             # if a GUI is used, include source features so the entries in the
             # result table can be made clickable to show the context:
-            
-            # in order to make this not depend on a fixed database layout 
-            # (here: 'source' and 'file' tables), we should check for any
-            # table that corpus_table is linked to except for word_table
-            # (and all child tables).            
-            if "source_id" in dir(self.resource):
-                requested_features.append("source_id")
-                options.cfg.context_source_id = "source_id"
-            elif "file_id" in dir(self.resource):
-                requested_features.append("file_id")
-                options.cfg.context_source_id = "file_id"
-
-            #if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
-                #if "source_id" in dir(self.resource):
-                    #requested_features.append("source_id")
-                    #options.cfg.context_source_id = "source_id"
-                #elif "file_id" in dir(self.resource):
-                    #requested_features.append("file_id")
-                    #options.cfg.context_source_id = "file_id"
+            if options.cfg.gui or options.cfg.wizard:
+                # in order to make this not depend on a fixed database layout 
+                # (here: 'source' and 'file' tables), we should check for any
+                # table that corpus_table is linked to except for word_table
+                # (and all child tables).            
+                if "source_id" in dir(self.resource):
+                    requested_features.append("source_id")
+                    options.cfg.context_source_id = "source_id"
+                elif "file_id" in dir(self.resource):
+                    requested_features.append("file_id")
+                    options.cfg.context_source_id = "file_id"
         else:
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
         # add all features that are required for the query filters:
         rc_where_constraints = {}
         if number == 0:
+            print(123,[type(x) for x in options.cfg.filter_list])
             for filt in self.resource.translate_filters(options.cfg.filter_list):
                 variable, rc_feature, table_name, op, value_list, _value_range = filt
                 if op.upper() == "LIKE":
@@ -1928,8 +1923,7 @@ class SQLCorpus(BaseCorpus):
 
         # add the variable storing the source_id or file_id to the selected
         # columns so that they can be used to retrieve the context:
-        if number == 0:
-        #if number == 0 and options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
+        if number == 0 and options.cfg.context_source_id:
             select_list.add("coq_corpus_{}_1".format(options.cfg.context_source_id))
 
         select_list.add("coq_corpus_id_{}".format(number+1))
@@ -2047,7 +2041,6 @@ class SQLCorpus(BaseCorpus):
         and yield the results. """
         
         query_string = self.sql_string_query_new(Query, self_joined)
-        
         D = {}
         show_day = False
         show_time = False
@@ -2360,7 +2353,7 @@ class SQLCorpus(BaseCorpus):
 
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
-
+            
         origin_id = ""
         try:
             origin_id = self.resource.corpus_source_id
@@ -2369,31 +2362,50 @@ class SQLCorpus(BaseCorpus):
                 origin_id = self.resource.corpus_file_id
             except AttributeError:
                 origin_id = self.resource.corpus_sentence_id
-        
-        format_string = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_table}.{tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
+
+        if "tag_table" in dir(self.resource):
+            format_string = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_table}.{tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
+        else:
+            format_string = "SELECT {corpus}.{corpus_id}, {word} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
+            
         if origin_id:
             format_string += " AND {corpus}.{source_id} = {current_source_id}"
+    
+        if "tag_table" in dir(self.resource):
         
-        S = format_string.format(
-            corpus=self.resource.corpus_table,
-            corpus_id=self.resource.corpus_id,
-            corpus_word_id=self.resource.corpus_word_id,
-            source_id=origin_id,
-            
-            word=self.resource.word_label,
-            word_table=self.resource.word_table,
-            word_id=self.resource.word_id,
-            
-            tag_table=self.resource.tag_table,
-            tag=self.resource.tag_label,
-            tag_id=self.resource.tag_id,
-            tag_corpus_id=self.resource.tag_corpus_id,
-            tag_type=self.resource.tag_type,
-            attribute=self.resource.tag_attribute,
-            
-            current_source_id=source_id,
-            start=start, end=end)
-            
+            S = format_string.format(
+                corpus=self.resource.corpus_table,
+                corpus_id=self.resource.corpus_id,
+                corpus_word_id=self.resource.corpus_word_id,
+                source_id=self.resource.corpus_source_id,
+                
+                word=self.resource.word_label,
+                word_table=self.resource.word_table,
+                word_id=self.resource.word_id,
+                
+                tag_table=self.resource.tag_table,
+                tag=self.resource.tag_label,
+                tag_id=self.resource.tag_id,
+                tag_corpus_id=self.resource.tag_corpus_id,
+                tag_type=self.resource.tag_type,
+                attribute=self.resource.tag_attribute,
+                
+                current_source_id=source_id,
+                start=start, end=end)
+        else:
+            S = format_string.format(
+                corpus=self.resource.corpus_table,
+                corpus_id=self.resource.corpus_id,
+                corpus_word_id=self.resource.corpus_word_id,
+                source_id=self.resource.corpus_source_id,
+                
+                word=self.resource.word_label,
+                word_table=self.resource.word_table,
+                word_id=self.resource.word_id,
+                
+                current_source_id=source_id,
+                start=start, end=end)
+
         cur = self.resource.DB.execute_cursor(S)
         entities = {}
 
@@ -2413,20 +2425,22 @@ class SQLCorpus(BaseCorpus):
             opening_elements = []
             closing_elements = []
             word = ""
-            
-            # create lists of opening and closing elements, and get the 
-            # current word:
-            for x in sorted(entities[context_token_id],
-                        key=lambda x:x[self.resource.tag_id]):
-                tag_type = x[self.resource.tag_type]
-                if not tag_type:
-                    word = x[self.resource.word_label]
-                else:
-                    if tag_type in ("open", "empty"):
-                        opening_elements.append(x)
-                    if tag_type in ("close", "empty"):
-                        closing_elements.append(x)
-                    
+   
+            if "tag_id" in dir(self.resource):
+                # create lists of opening and closing elements, and get the 
+                # current word:
+                for x in sorted(entities[context_token_id],
+                            key=lambda x:x[self.resource.tag_id]):
+                    tag_type = x[self.resource.tag_type]
+                    if not tag_type:
+                        word = x[self.resource.word_label]
+                    else:
+                        if tag_type in ("open", "empty"):
+                            opening_elements.append(x)
+                        if tag_type in ("close", "empty"):
+                            closing_elements.append(x)
+            else:
+                word = entities[context_tokenid][self.resource.word_label]
             # process all opening elements:
             for element in opening_elements:
                 tag = element[self.resource.tag_label]
