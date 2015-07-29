@@ -263,7 +263,7 @@ class BaseCorpusBuilder(object):
         self._new_tables = {}
         
         self._corpus_buffer = []
-        
+        self._corpus_id = 0
         self._widget = gui
         
         if not gui:        
@@ -361,7 +361,6 @@ class BaseCorpusBuilder(object):
             
         self.Con.commit()
 
-    
     def add_new_table_description(self, table_name, column_list):
         new_table = Table(table_name)
         for x in column_list:
@@ -740,6 +739,7 @@ class BaseCorpusBuilder(object):
         self._corpus_buffer.append(values)
     
     def add_token(self, token_string, token_pos):
+        # get lemma string:
         if token_string in string.punctuation:
             token_pos = "PUNCT"
             lemma = token_string
@@ -749,19 +749,19 @@ class BaseCorpusBuilder(object):
                 lemma = self.lemmatize(token_string, self.pos_translate(token_pos)).lower()
             except Exception as e:
                 lemma = token_string.lower()
+
         # get word id, and create new word if necessary:
         word_dict = {self.word_lemma: lemma, 
                     self.word_label: token_string}
         if token_pos and "word_pos" in dir(self):
             word_dict[self.word_pos] = token_pos 
-
         word_id = self.table_get(self.word_table, word_dict, case=True)
-        # store new token in corpus table:
-        self.Con.insert(self.corpus_table, 
-            {self.corpus_word_id: word_id,
-                self.corpus_file_id: self._file_id})
 
-    
+        # store new token in corpus table:
+        self.add_token_to_corpus(
+            {self.corpus_word_id: word_id,
+             self.corpus_file_id: self._file_id})
+
     ### METHODS FOR XML FILES
 
     def xml_parse_file(self, file_object):
@@ -812,14 +812,14 @@ class BaseCorpusBuilder(object):
         5. Call xml_postprocess_tag(element) for tag actions when leaving
 
         """
-        
         self.xml_preprocess_tag(element)
         if element.text:
-            self.xml_process_content(element)
-        for child in element:
-            self.xml_process_element(child)
+            self.xml_process_content(element.text)
+        if list(element):
+            for child in element:
+                self.xml_process_element(child)
         if element.tail:
-            self.xml_process_tail(element)
+            self.xml_process_tail(element.tail)
         self.xml_postprocess_tag(element)
     
     def xml_preprocess_tag(self, element):
