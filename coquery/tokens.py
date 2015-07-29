@@ -54,8 +54,10 @@ corpus-specific.
         self.negated = False
         self.transcript = False
         self.parse()
-        
-        if LEX_POS not in self.lexicon.provides:
+
+        if not self.lexicon:
+            self.check_part_of_speech = False
+        elif LEX_POS not in self.lexicon.provides:
             self.check_part_of_speech = False
         
     def __eq__(self, S):
