@@ -870,7 +870,7 @@ class BaseCorpusBuilder(object):
         string representation of the dictionary 'attributes'. """
         self.table_add(self.tag_table,
             {self.tag_label: "{}".format(tag),
-                self.tag_corpus_id: self._corpus_id,
+                self.tag_corpus_id: self._corpus_id + 1,
                 self.tag_type: "empty",
                 self.tag_attribute: ", ".join(
                     ["{}={}".format(x, attributes[x]) for x in attributes])})
