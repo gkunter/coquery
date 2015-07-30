@@ -314,7 +314,42 @@ class BaseResource(object):
     
     @classmethod
     def get_resource_features(cls):
-        return [x for x in dir(cls) if "_" in x and not x.startswith("_")]
+        features = dir(cls)
+        
+        return [x for x in features if "_" in x and not x.startswith("_")]
+
+    #@classmethod
+    #def get_link_dictionary(self, dictionary):
+        #""" Try to link a dictionary to the word table of this resource. The
+        #argument 'dictionary' is a valid Resource class.
+        
+        #A dictionary is a corpus module that does not contain a sequential 
+        #list of tokens. Instead, every entry in the corpus table represents
+        #one dictionary entry.
+        
+        #Note that using linked dictionaries can slow down queries very
+        #significantly.
+        
+        #"""
+        
+        #d = {}
+        
+        #word_label = ""
+        #if "word_label" in dir(cls):
+            #word_label = self.word_label
+        #elif "corpus_word" in dir(cls):
+            #word_label = cls.corpus_word
+
+        #d["word_{}_id".format(dictionary.name)] = word_label
+        #d["{}_table".format(dictionary.name)] = "{}.{}".format(dictionary.db_name, dictionary.corpus_table)
+        #d["{}_id".format(dictionary.name)] = dictionary.word_label
+            
+        #try:
+            #d["{}_id".format(dictionary.name)] = dictionary.word_transcript
+        #except AttributeError:
+            #pass
+        
+        #return d.keys()
     
     @classmethod
     def get_table_dict(cls):
@@ -453,7 +488,10 @@ class BaseResource(object):
         if "corpus" not in table_dict:
             return []
         corpus_table = table_dict["corpus"]
-        lexicon_tables = cls.get_table_tree("word")
+        try:
+            lexicon_tables = cls.get_table_tree("word")
+        except KeyError:
+            lexicon_tables=[]
 
         corpus_variables = []
         for x in table_dict:
@@ -1753,7 +1791,6 @@ class SQLCorpus(BaseCorpus):
         # add all features that are required for the query filters:
         rc_where_constraints = {}
         if number == 0:
-            print(123,[type(x) for x in options.cfg.filter_list])
             for filt in self.resource.translate_filters(options.cfg.filter_list):
                 variable, rc_feature, table_name, op, value_list, _value_range = filt
                 if op.upper() == "LIKE":
