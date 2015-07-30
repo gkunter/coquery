@@ -278,20 +278,10 @@ class BaseResource(object):
     coquery_query_file = "Input file"
     coquery_current_date = "Current date"
     coquery_current_time = "Current time"
-    
-    # Define some TEI tags:
-    tag_translate = {
-        "head": "h1",
-        "list": "ul",
-        "item": "li",
-        "div": "div",
-        "label": "li",
-        "pb": "div type='page_break'",
-        "p": "p"}
-    
+
     render_token_style = "background: lightyellow"
 
-    
+        
     def __init__(self, *args):
         self.table_dict = type(self).get_table_dict()
     
@@ -526,27 +516,6 @@ class BaseResource(object):
             rc_feature = "_".join(header_fields[:-1])
             return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
         return header
-
-    def tag_to_html(self, tag, attributes={}):
-        """ Translate a tag to a corresponding HTML/QHTML tag by checking 
-        the tag_translate dictionary."""
-        
-        try:
-            if tag == "hi":
-                if attributes.get("rend") == "it":
-                    return "i"
-            if tag == "head":
-                if attributes.get("type") == "MAIN":
-                    return "h1"
-                if attributes.get("type") == "SUB":
-                    return "h2"
-                if attributes.get("type") == "BYLINE":
-                    return "h3"
-            return self.tag_translate[tag]
-        except KeyError:
-            warnings.warn("unsupported tag: {}".format(tag))
-            print("unsupported tag: {}".format(tag))
-            return None
 
 class BaseCorpus(object):
     provides = []
@@ -1753,7 +1722,6 @@ class SQLCorpus(BaseCorpus):
         # add all features that are required for the query filters:
         rc_where_constraints = {}
         if number == 0:
-            print(123,[type(x) for x in options.cfg.filter_list])
             for filt in self.resource.translate_filters(options.cfg.filter_list):
                 variable, rc_feature, table_name, op, value_list, _value_range = filt
                 if op.upper() == "LIKE":
@@ -2325,8 +2293,43 @@ class SQLCorpus(BaseCorpus):
                         stats["{}_distinct".format(variable)] = self.resource.DB.Cur.fetchone()[0]
         return stats
 
+    def get_tag_translate(self, s):
+        # Define some TEI tags:
+        tag_translate = {
+            "head": "h1",
+            "list": "ul",
+            "item": "li",
+            "div": "div",
+            "label": "li",
+            "pb": "div type='page_break'",
+            "p": "p"}
+        try:
+            return tag_translate[s]
+        except AttributeError:
+            return s
+
+    def tag_to_html(self, tag, attributes={}):
+        """ Translate a tag to a corresponding HTML/QHTML tag by checking 
+        the tag_translate dictionary."""
+        try:
+            if tag == "hi":
+                if attributes.get("rend") == "it":
+                    return "i"
+            if tag == "head":
+                if attributes.get("type") == "MAIN":
+                    return "h1"
+                if attributes.get("type") == "SUB":
+                    return "h2"
+                if attributes.get("type") == "BYLINE":
+                    return "h3"
+            return self.get_tag_translate(tag)
+        except KeyError:
+            warnings.warn("unsupported tag: {}".format(tag))
+            print("unsupported tag: {}".format(tag))
+            return None
+
     def renderer_open_element(self, tag, attributes):
-        label = self.resource.tag_to_html(tag, attributes)
+        label = self.tag_to_html(tag, attributes)
         if label:
             if attributes:
                 return ["<{} {}>".format(
@@ -2338,7 +2341,7 @@ class SQLCorpus(BaseCorpus):
             return []
         
     def renderer_close_element(self, tag, attributes):
-        label = self.resource.tag_to_html(tag, attributes)
+        label = self.tag_to_html(tag, attributes)
         if label:
             if attributes:
                 return ["</{} {}>".format(
@@ -2422,6 +2425,9 @@ class SQLCorpus(BaseCorpus):
         correct_word = ""
         
         for context_token_id in sorted(entities):
+            print()
+            print("TOKEN ", context_token_id)
+            print()
             opening_elements = []
             closing_elements = []
             word = ""
@@ -2432,15 +2438,24 @@ class SQLCorpus(BaseCorpus):
                 for x in sorted(entities[context_token_id],
                             key=lambda x:x[self.resource.tag_id]):
                     tag_type = x[self.resource.tag_type]
-                    if not tag_type:
-                        word = x[self.resource.word_label]
-                    else:
+                    if tag_type:
                         if tag_type in ("open", "empty"):
                             opening_elements.append(x)
                         if tag_type in ("close", "empty"):
                             closing_elements.append(x)
-            else:
-                word = entities[context_tokenid][self.resource.word_label]
+            word = entities[context_token_id][0][self.resource.word_label]
+            
+            if opening_elements:
+                print("OPENING")
+                print("\t", opening_elements)
+                print()
+            if closing_elements:
+                print("CLOSING")
+                print("\t", closing_elements)
+                print()
+                
+            print("WORD", word)
+            
             # process all opening elements:
             for element in opening_elements:
                 tag = element[self.resource.tag_label]
@@ -2486,12 +2501,12 @@ class SQLCorpus(BaseCorpus):
         # for all unmatchend opened elements, add a matching closing one:
         for tag in opened_elements[::-1]:
             if tag:
-                context.append("</{}>".format(tag))
+                context.append("</{}>".format(self.tag_to_html(tag)))
                 
         # for all unmatchend closing elements, add a matching opening one:
         for tag in closed_elements:
             if tag:
-                context.appendleft("<{}>".format(tag))
+                context.appendleft("<{}>".format(self.tag_to_html(tag)))
 
         print(context)
         widget.ui.context_area.setText(collapse_words(context))
