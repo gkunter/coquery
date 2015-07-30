@@ -492,6 +492,11 @@ class Options(object):
                             vars(self.args)["MODE"] = mode
                         except configparser.NoOptionError:
                             default_corpus = QUERY_MODE_DISTINCT
+                        try:
+                            last_query = config_file.get("main", "last_query_string")
+                            vars(self.args)["query_list"] = [last_query.strip('"')]
+                        except configparser.NoOptionError:
+                            pass
                     elif section == "output":
                         for variable, value in config_file.items("output"):
                             if value:
