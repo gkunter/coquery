@@ -304,10 +304,8 @@ class BaseResource(object):
     
     @classmethod
     def get_resource_features(cls):
-        features = dir(cls)
-        
-        return [x for x in features if "_" in x and not x.startswith("_")]
-
+        return [x for x in dir(cls) if "_" in x and not x.startswith("_")]
+    
     #@classmethod
     #def get_link_dictionary(self, dictionary):
         #""" Try to link a dictionary to the word table of this resource. The
@@ -340,6 +338,7 @@ class BaseResource(object):
             #pass
         
         #return d.keys()
+
     
     @classmethod
     def get_table_dict(cls):
@@ -478,10 +477,7 @@ class BaseResource(object):
         if "corpus" not in table_dict:
             return []
         corpus_table = table_dict["corpus"]
-        try:
-            lexicon_tables = cls.get_table_tree("word")
-        except KeyError:
-            lexicon_tables=[]
+        lexicon_tables = cls.get_table_tree("word")
 
         corpus_variables = []
         for x in table_dict:
@@ -542,17 +538,33 @@ class BaseResource(object):
         if header in COLUMN_NAMES:
             return COLUMN_NAMES[header]
         
+        # strip coq_ prefix:
         if header.startswith("coq_"):
             header = header.partition("coq_")[2]
-        header_fields = header.split("_")
-        if len(header_fields) == 1:
+
+        rc_feature, _, number = header.rpartition("_")
+
+        if rc_feature in [x for x, _ in cls.get_lexicon_features()]:
+            return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), number)
+        else:
             try:
-                return COLUMN_NAMES[header_fields[0]]
-            except KeyError:
-                return header_fields[0].capitalize()
-        if "_".join(header_fields[:-1]) in cls.get_resource_features():
-            rc_feature = "_".join(header_fields[:-1])
-            return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
+                return "{}".format(type(cls).__getattribute__(cls, str(rc_feature)))
+            except AttributeError:
+                if rc_feature in COLUMN_NAMES:
+                    return "{}{}".format(COLUMN_NAMES[rc_feature], number)
+                else:
+                    return header
+                    
+        #header_fields = header.split("_")
+        #if len(header_fields) == 1:
+            #try:
+                #return COLUMN_NAMES[header_fields[0]]
+            #except KeyError:
+                #return header_fields[0].capitalize()
+
+        #if "_".join(header_fields[:-1]) in cls.get_resource_features():
+            #rc_feature = "_".join(header_fields[:-1])
+            #return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
         return header
 
 class BaseCorpus(object):
@@ -2418,7 +2430,7 @@ class SQLCorpus(BaseCorpus):
                 corpus=self.resource.corpus_table,
                 corpus_id=self.resource.corpus_id,
                 corpus_word_id=self.resource.corpus_word_id,
-                source_id=self.resource.corpus_source_id,
+                source_id=origin_id,
                 
                 word=self.resource.word_label,
                 word_table=self.resource.word_table,
@@ -2438,7 +2450,7 @@ class SQLCorpus(BaseCorpus):
                 corpus=self.resource.corpus_table,
                 corpus_id=self.resource.corpus_id,
                 corpus_word_id=self.resource.corpus_word_id,
-                source_id=self.resource.corpus_source_id,
+                source_id=origin_id,
                 
                 word=self.resource.word_label,
                 word_table=self.resource.word_table,
