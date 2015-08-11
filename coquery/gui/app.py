@@ -24,7 +24,9 @@ import os
 from queryfilter import *
 
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
-import treemap
+import treemap2
+import barcodeplot
+import visualizer
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -214,6 +216,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         
         self.ui.action_tree_map.triggered.connect(self.show_tree_map)
+        self.ui.action_barcode_plot.triggered.connect(self.show_barcode_plot)
     
     def setup_hooks(self):
         super(CoqueryApp, self).setup_hooks()
@@ -526,7 +529,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.button_run_query.clicked.disconnect()
         self.ui.button_run_query.clicked.connect(self.run_query)
         old_width = self.ui.button_run_query.width()
-        self.ui.button_run_query.setText("Query")
+        self.ui.button_run_query.setText(gui_label_query_button)
         self.ui.button_run_query.setFixedWidth(max(old_width, self.ui.button_run_query.width()))
         self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-start")))
         
@@ -535,7 +538,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.button_run_query.clicked.disconnect()
         self.ui.button_run_query.clicked.connect(self.stop_query)
         old_width = self.ui.button_run_query.width()
-        self.ui.button_run_query.setText("Stop")
+        self.ui.button_run_query.setText(gui_label_stop_button)
         self.ui.button_run_query.setFixedWidth(max(old_width, self.ui.button_run_query.width()))
         self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-stop")))
     
@@ -560,7 +563,22 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.set_query_button()
         
     def show_tree_map(self):
-        treemap.TreeMapVisualizer.MosaicPlot(self.table_model, self.ui.data_preview, self)
+        if self.table_model.content:
+            visualizer.VisualizerDialog.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                treemap2.TreemapVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
+    def show_barcode_plot(self):
+        if self.table_model.content:
+            visualizer.VisualizerDialog.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                barcodeplot.BarcodeVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
     def run_query(self):
         self.getGuiValues()
