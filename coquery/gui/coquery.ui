@@ -445,7 +445,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Query</string>
+               <string>&amp;Query</string>
               </property>
               <property name="icon">
                <iconset theme="media-playback-start">
@@ -819,6 +819,9 @@
           <property name="verticalScrollMode">
            <enum>QAbstractItemView::ScrollPerPixel</enum>
           </property>
+          <property name="horizontalScrollMode">
+           <enum>QAbstractItemView::ScrollPerPixel</enum>
+          </property>
           <property name="sortingEnabled">
            <bool>true</bool>
           </property>
@@ -908,11 +911,12 @@
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
-     <string>Analysis</string>
+     <string>&amp;Analysis</string>
     </property>
     <addaction name="action_tree_map"/>
     <addaction name="action_heat_map"/>
     <addaction name="action_word_cloud"/>
+    <addaction name="action_barcode_plot"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1063,17 +1067,28 @@
   </action>
   <action name="action_tree_map">
    <property name="text">
-    <string>Tree map</string>
+    <string>&amp;Tree map</string>
    </property>
   </action>
   <action name="action_heat_map">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Heat map</string>
    </property>
   </action>
   <action name="action_word_cloud">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Word cloud</string>
+   </property>
+  </action>
+  <action name="action_barcode_plot">
+   <property name="text">
+    <string>&amp;Barcode plot</string>
    </property>
   </action>
  </widget>
