@@ -30,17 +30,23 @@ import os
 import options
 sys.path.append(os.path.join(sys.path[0], "../gui/"))
 import visualizerUi
-from pyqt_compat import QtGui, QtCore
+from pyqt_compat import QtGui, QtCore, pyside
 import collections
 import itertools
 import math
 from defines import *
 import error_box
 
+# Tell matplotlib if PySide is being used:
+if pyside:
+    import matplotlib
+    matplotlib.use("Qt4Agg")
+    matplotlib.rcParams["backend.qt4"] = "PySide"
+
+# import required matplotlib classes
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt4agg import (
-    FigureCanvasQTAgg as FigureCanvas,
-    NavigationToolbar2QT as NavigationToolbar)
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 
 
 #def table_to_tree(table, label="count"):
