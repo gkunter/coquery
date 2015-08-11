@@ -737,7 +737,6 @@ class CollocationQuery(TokenQuery):
             MI = log ( (f_coll * size) / (f_1 * f_2 * span) ) / log (2)
         
         """
-
         return math.log((f_coll * size) / (f_1 * f_2 * span)) / math.log(2)
 
     def conditional_propability(self, freq_left, freq_total):
@@ -750,7 +749,6 @@ class CollocationQuery(TokenQuery):
         where f(c, q) is the number of occurrences of word c as a left 
         collocate of query token q, and f(c) is the total number of 
         occurrences of c in the corpus. """
-        
         return float(freq_left) / float(freq_total)
 
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
@@ -858,15 +856,20 @@ class CollocationQuery(TokenQuery):
             current_result["coq_collocate_frequency"] = coll_freq
             current_result["coq_collocate_frequency_right"] = count_right[collocate_tuple]
             current_result["coq_collocate_frequency_left"] = count_left[collocate_tuple]
-            current_result["coq_mutual_information"] = round(self.mutual_information(
-                query_freq,
-                coll_freq, 
-                count_total[collocate_tuple], 
-                corpus_size, 
-                self.left_span + self.right_span), 3)
-            current_result["coq_conditional_probability"] = round(
-                self.conditional_propability(count_left[collocate_tuple], coll_freq), 3)
-            
+            try:
+                current_result["coq_mutual_information"] = round(self.mutual_information(
+                    query_freq,
+                    coll_freq, 
+                    count_total[collocate_tuple], 
+                    corpus_size, 
+                    self.left_span + self.right_span), 3)
+            except ZeroDivisionError:
+                current_result["coq_mutual_information"] = "<NA>"
+            try:
+                current_result["coq_conditional_probability"] = round(
+                    self.conditional_propability(count_left[collocate_tuple], coll_freq), 3)
+            except ZeroDivisionError:
+                current_result["coq_conditional_probability"] = "<NA>"
             corpus_id, origin_id, number = context_info[collocate_tuple]
             
             current_result["coquery_invisible_corpus_id"] = corpus_id
