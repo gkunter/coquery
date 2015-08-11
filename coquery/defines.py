@@ -33,6 +33,7 @@ import sys
 import warnings
 import csv, codecs
 import math
+import itertools
 
 # The following flags are used to indicate which fields are provided by the 
 # lexicon of a corpus, and also to access the fields of the value of 
@@ -96,6 +97,18 @@ try:
 except NameError:
     unicode = str
     long = int
+
+# Error messages used by the GUI:
+msg_visualization_no_data = """<p>The 'Query results' view is empty, hence there is nothing to visualize.</p>
+<p>You have either not run a query in this session yet, or there are no tokens in the corpus that match your last query.</p>
+<p>Try to run a visualization again once the Query results view is not empty anymore.</p>"""
+msg_visualization_no_frequency = """<p>No frequency data available.</p>
+<p>The visualization that you chose only works with query results from Frequency queries.</p>
+<p>Try to change the query mode to 'Frequency', re-run the query, and call the
+visualization again.</p>"""
+
+gui_label_query_button = "&Query"
+gui_label_stop_button = "&Stop"
 
 # from https://docs.python.org/2.7/library/csv.html#csv-examples
 class UTF8Recoder:
@@ -211,6 +224,18 @@ class FileSize(long):
             # Move to the next bigger suffix when the value is large enough:
             v, exp = (v, exp) if v > 0.5 else (v * 1024, exp - 1)
         return ("{0:{1}f}" + suffixes[exp]).format(v, fmt[:-1])
+
+def dict_product(d):
+    """ Create a Cartesian product of the lists stored as values in the
+    dictionary 'd'.
+    
+    This product is useful for example to create a table of all factor level
+    combinations. The factor levels can be accessed by the column names. """
+    
+    cart_product = itertools.product(*d.itervalues())
+    
+    return (dict(itertools.izip(d, x)) for x in cart_product)
+
 
 resource_list = ResourceList()
 
