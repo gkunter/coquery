@@ -82,13 +82,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             return QtGui.QColor(col)
         elif role == QtCore.Qt.TextAlignmentRole:
             if self.header[index.column()] == "coq_context_left" or self.sort_state[index.column()] in set([SORT_REV_DEC, SORT_REV_INC]):
-                return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
+                return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
             try:
                 if isinstance(self.content[index.row()][self.header[index.column()]], (int, long, float, complex)):
-                    return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
+                    return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
             except (TypeError):
                 if isinstance(self.content[index.row()] [index.column()], (int, long, float, complex)):
-                    return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
+                    return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
         return None
         
     def headerData(self, index, orientation, role):
