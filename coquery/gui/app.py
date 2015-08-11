@@ -23,8 +23,12 @@ import os
 
 from queryfilter import *
 
+# so, pandas:
+import pandas as pd
+
+# load visualizations
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
-import treemap2
+import treemap
 import barcodeplot
 import visualizer
 
@@ -208,6 +212,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     """ Coquery as standalone application. """
     
     def setup_menu_actions(self):
+        """ Connect menu actions to their methods."""
         self.ui.action_save_results.triggered.connect(self.save_results)
         self.ui.action_quit.triggered.connect(self.close)
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
@@ -219,6 +224,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.action_barcode_plot.triggered.connect(self.show_barcode_plot)
     
     def setup_hooks(self):
+        """ Connect all relevant signals to their methods."""
         super(CoqueryApp, self).setup_hooks()
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)
@@ -226,7 +232,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
         
     def setup_app(self):
-        """ initializes all widgets with suitable data """
+        """ Initialize all widgets with suitable data """
 
         self.create_output_options_tree()
         
@@ -291,7 +297,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.data_preview.setSortingEnabled(False)
     
     def result_column_resize(self, index, old, new):
-        header = self.table_model.header[index].lower()
+        header = self.table_model.content.columns[index].lower()
         options.cfg.column_width[header] = new
 
     def result_cell_clicked(self, index):
@@ -377,7 +383,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.show_no_corpus_message()
         
         options.cfg.main_window = self
-
         # Resize the window if a previous size is available
         try:
             if options.cfg.height and options.cfg.width:
@@ -386,19 +391,19 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             pass
         
     def display_results(self):
+        self.table_model.set_data(self.Session.output_storage)
         if options.cfg.experimental:
             self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
         else:
             self.table_model.set_header(self.Session.header)
-        self.table_model.set_data(self.Session.output_storage)
         self.ui.data_preview.setModel(self.table_model)
 
         # set column widths:
-        for i, column in enumerate(self.table_model.header):
+        for i, column in enumerate(self.table_model.content.columns):
             if column.lower() in options.cfg.column_width:
                 self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower()])
         
-        if self.table_model.rowCount(self):
+        if self.table_model.rowCount():
             self.last_results_saved = False
 
     def save_results(self):
@@ -450,7 +455,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         # show self.menu about the column
         self.menu = QtGui.QMenu("Column options", self)
         
-        if self.table_model.header[column].lower() in options.cfg.column_color:
+        if self.table_model.content.columns[column].lower() in options.cfg.column_color:
             action = QtGui.QAction("Reset color", self)
             action.triggered.connect(lambda: self.reset_color(column))
             self.menu.addAction(action)
@@ -498,7 +503,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         header.customContextMenuRequested.connect(self.show_header_menu)
 
     def reset_color(self, column):
-        header = self.table_model.header[column].lower()
+        header = self.table_model.content.columns[column].lower()
         try:
             options.cfg.column_color.pop(header)
             self.table_model.layoutChanged.emit()
@@ -507,7 +512,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
 
     def change_color(self, column):
         col = QtGui.QColorDialog.getColor()
-        header = self.table_model.header[column].lower()
+        header = self.table_model.content.columns[column].lower()
         if col.isValid():
             options.cfg.column_color[header] = col.name()
             #self.table_model.layoutChanged.emit()
@@ -567,7 +572,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             visualizer.VisualizerDialog.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
-                treemap2.TreemapVisualizer, self)
+                treemap.TreemapVisualizer, self)
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
