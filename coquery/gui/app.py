@@ -31,6 +31,7 @@ sys.path.append(os.path.join(sys.path[0], "visualizations"))
 import treemap
 import barcodeplot
 import visualizer
+import heatmap
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -222,12 +223,14 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         
         self.ui.action_tree_map.triggered.connect(self.show_tree_map)
         self.ui.action_barcode_plot.triggered.connect(self.show_barcode_plot)
+        self.ui.action_heat_map.triggered.connect(self.show_heatmap_plot)
     
     def setup_hooks(self):
         """ Connect all relevant signals to their methods."""
         super(CoqueryApp, self).setup_hooks()
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)
+        
         #self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
         
@@ -284,7 +287,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.log_proxy.sortCaseSensitivity = False
         self.ui.log_table.setModel(self.log_proxy)
 
-        self.table_model = results.CoqTableModel(self, None, None)
+        self.table_model = results.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
         header = self.ui.data_preview.horizontalHeader()
         header.sectionResized.connect(self.result_column_resize)
@@ -568,7 +571,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.set_query_button()
         
     def show_tree_map(self):
-        if self.table_model.content:
+        if not self.table_model.content.empty:
             visualizer.VisualizerDialog.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
@@ -576,8 +579,18 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
+    def show_heatmap_plot(self):
+        if not self.table_model.content.empty:
+            visualizer.VisualizerDialog.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                heatmap.HeatmapVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        
+
     def show_barcode_plot(self):
-        if self.table_model.content:
+        if not self.table_model.content.empty:
             visualizer.VisualizerDialog.Plot(
                 self.table_model, 
                 self.ui.data_preview, 

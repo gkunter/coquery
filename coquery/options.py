@@ -88,6 +88,7 @@ class Options(object):
         # these attributes are used only in the GUI:
         self.args.column_width = {}
         self.args.column_color = {}
+        self.args.column_visibility = {}
 
     @property
     def cfg(self):
