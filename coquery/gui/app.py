@@ -394,7 +394,14 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             pass
         
     def display_results(self):
-        self.table_model.set_data(self.Session.output_storage)
+        #print(type(self.Session.output_storage))
+        #print(self.Session.output_storage[0])
+        df = pd.DataFrame.from_dict(self.Session.output_storage, orient="columns")
+        if not options.cfg.experimental:
+            df.columns = self.Session.header
+        print(df.head())
+        self.table_model.set_data(df)
+        #self.table_model.set_data(self.Session.output_storage)
         if options.cfg.experimental:
             self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
         else:
@@ -457,53 +464,69 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         column = header.logicalIndexAt(point.x())
         # show self.menu about the column
         self.menu = QtGui.QMenu("Column options", self)
-        
-        if self.table_model.content.columns[column].lower() in options.cfg.column_color:
-            action = QtGui.QAction("Reset color", self)
-            action.triggered.connect(lambda: self.reset_color(column))
-            self.menu.addAction(action)
- 
-        action = QtGui.QAction("Change color...", self)
-        action.triggered.connect(lambda: self.change_color(column))
-        self.menu.addAction(action)
-        self.menu.addSeparator()
 
-        group = QtGui.QActionGroup(self, exclusive=True)
-        action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
-        action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
-        if self.table_model.sort_state[column] == results.SORT_NONE:
-            action.setChecked(True)
-        self.menu.addAction(action)
-        
-        action = group.addAction(QtGui.QAction("Ascending", self, checkable=True))
-        action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_INC))
-        if self.table_model.sort_state[column] == results.SORT_INC:
-            action.setChecked(True)
-        self.menu.addAction(action)
-        action = group.addAction(QtGui.QAction("Descending", self, checkable=True))
-        action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_DEC))
-        if self.table_model.sort_state[column] == results.SORT_DEC:
-            action.setChecked(True)
-        self.menu.addAction(action)
-                                 
-        
-        probe_index = self.table_model.createIndex(0, column)
-        probe_cell = probe_index.data()
-        if type(probe_cell) in [unicode, str, QtCore.QString]:
-            action = group.addAction(QtGui.QAction("Ascending, reverse", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
-            if self.table_model.sort_state[column] == results.SORT_REV_INC:
-                action.setChecked(True)
-
+        if not options.cfg.column_visibility.get(
+            self.table_model.content.columns[column].lower(), True):
+            action = QtGui.QAction("Show column", self)
+            action.triggered.connect(lambda: self.toggle_visibility(column))
             self.menu.addAction(action)
-            action = group.addAction(QtGui.QAction("Descending, reverse", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_DEC))
-            if self.table_model.sort_state[column] == results.SORT_REV_DEC:
+        else:
+            action = QtGui.QAction("Hide column", self)
+            action.triggered.connect(lambda: self.toggle_visibility(column))
+            self.menu.addAction(action)
+            self.menu.addSeparator()
+            
+            if self.table_model.content.columns[column].lower() in options.cfg.column_color:
+                action = QtGui.QAction("Reset color", self)
+                action.triggered.connect(lambda: self.reset_color(column))
+                self.menu.addAction(action)
+    
+            action = QtGui.QAction("Change color...", self)
+            action.triggered.connect(lambda: self.change_color(column))
+            self.menu.addAction(action)
+            self.menu.addSeparator()
+
+            group = QtGui.QActionGroup(self, exclusive=True)
+            action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
+            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
+            if self.table_model.sort_state[column] == results.SORT_NONE:
                 action.setChecked(True)
             self.menu.addAction(action)
+            
+            action = group.addAction(QtGui.QAction("Ascending", self, checkable=True))
+            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_INC))
+            if self.table_model.sort_state[column] == results.SORT_INC:
+                action.setChecked(True)
+            self.menu.addAction(action)
+            action = group.addAction(QtGui.QAction("Descending", self, checkable=True))
+            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_DEC))
+            if self.table_model.sort_state[column] == results.SORT_DEC:
+                action.setChecked(True)
+            self.menu.addAction(action)
+                                    
+            
+            probe_index = self.table_model.createIndex(0, column)
+            probe_cell = probe_index.data()
+            if type(probe_cell) in [unicode, str, QtCore.QString]:
+                action = group.addAction(QtGui.QAction("Ascending, reverse", self, checkable=True))
+                action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
+                if self.table_model.sort_state[column] == results.SORT_REV_INC:
+                    action.setChecked(True)
+
+                self.menu.addAction(action)
+                action = group.addAction(QtGui.QAction("Descending, reverse", self, checkable=True))
+                action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_DEC))
+                if self.table_model.sort_state[column] == results.SORT_REV_DEC:
+                    action.setChecked(True)
+                self.menu.addAction(action)
         
         self.menu.popup(header.mapToGlobal(point))
         header.customContextMenuRequested.connect(self.show_header_menu)
+
+    def toggle_visibility(self, column):
+        """ Show again a hidden column, or hide a visible column."""
+        header = self.table_model.content.columns[column]
+        options.cfg.column_visibility[header] = not options.cfg.column_visibility.get(header, True)
 
     def reset_color(self, column):
         header = self.table_model.content.columns[column].lower()
@@ -570,34 +593,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.ui.progress_bar.setRange(0, 1)
             self.set_query_button()
         
-    def show_tree_map(self):
-        if not self.table_model.content.empty:
-            visualizer.VisualizerDialog.Plot(
-                self.table_model, 
-                self.ui.data_preview, 
-                treemap.TreemapVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
-    def show_heatmap_plot(self):
-        if not self.table_model.content.empty:
-            visualizer.VisualizerDialog.Plot(
-                self.table_model, 
-                self.ui.data_preview, 
-                heatmap.HeatmapVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-        
-
-    def show_barcode_plot(self):
-        if not self.table_model.content.empty:
-            visualizer.VisualizerDialog.Plot(
-                self.table_model, 
-                self.ui.data_preview, 
-                barcodeplot.BarcodeVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
     def run_query(self):
         self.getGuiValues()
         # Lazily close an existing database connection:
@@ -645,6 +640,34 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
         
+    def show_tree_map(self):
+        if not self.table_model.content.empty:
+            visualizer.VisualizerDialog.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                treemap.TreemapVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
+    def show_heatmap_plot(self):
+        if not self.table_model.content.empty:
+            visualizer.VisualizerDialog.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                heatmap.HeatmapVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        
+
+    def show_barcode_plot(self):
+        if not self.table_model.content.empty:
+            visualizer.VisualizerDialog.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                barcodeplot.BarcodeVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
     def save_configuration(self):
         self.getGuiValues()
         options.save_configuration()
