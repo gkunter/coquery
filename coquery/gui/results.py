@@ -28,38 +28,47 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     pandas DataFrame object. It provides the required methods so that they 
     can be shown in the results view. """
     
-    def __init__(self, parent, header, data, *args):
+    def __init__(self, parent, *args):
         super(CoqTableModel, self).__init__(parent, *args)
         self.last_header = None
+        self.sort_columns = []
+        self.set_data(None)
+        #self.set_header(header)
+        #self.dataChanged.connect(self.dummy)
         
-        self.set_data(data)
-        self.set_header(header)
+    #def dummy(self, *args):
+        #print("dummy")
         
     def set_header(self, header): 
-        if self.content.columns <> self.last_header:
-            self.sort_state = [SORT_NONE] * len(self.content.columns)
-            self.sort_columns = []
+        self.sort_state = [SORT_NONE] * len(self.content.columns)
         for i, x in enumerate(self.content.columns):
             self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
         self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(self.content.columns))
         # remember the current header:
         self.last_header = self.content.columns
 
-    def set_data(self, data):
-        """ Set the content of the table model to the given data, using a
-        pandas DataFrame object. """
-        # create a pandas DataFrame for the provided data:
-        self.content = pd.DataFrame(data)
-        self.rownames = self.content.index
-        # try to set the columns to the output order of the current session
-        try:
-            self.content = self.content.reindex(columns=options.cfg.main_window.Session.output_order)
-        except AttributeError:
-            pass
-        # notify that the whole data frame has changed:
+    def reorder_data(self, new_order):
+        self.content = self.content.reindex(columns=new_order)
+        # notify the GUI that the whole data frame has changed:
+        #print("pling")
         self.dataChanged.emit(
             self.createIndex(0, 0), 
             self.createIndex(self.rowCount(), self.columnCount()))
+
+    def set_data(self, data=None):
+        """ Set the content of the table model to the given data, using a
+        pandas DataFrame object. """
+        # create a pandas DataFrame for the provided data:
+        #self.content = pd.DataFrame(data)
+        self.rownames = self.content.index
+        # try to set the columns to the output order of the current session
+        try:
+            self.reorder_data(options.cfg.main_window.Session.output_order)
+        except AttributeError:
+            # even if that failed, emit a signal that the data has changed:
+            self.dataChanged.emit(
+                self.createIndex(0, 0), 
+                self.createIndex(self.rowCount(), self.columnCount()))
 
     def column(self, i):
         """ Return the name of the column in the pandas data frame at index 
@@ -156,7 +165,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
     def rowCount(self, parent=None):
         """ Return the number of rows. """
-        return len(self.content)
+        return len(self.content.index)
         
     def columnCount(self, parent=None):
         """ Return the number of columns, ignoring all invisible columns. """
