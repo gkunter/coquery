@@ -480,7 +480,5 @@ class CoqueryWizard(QtGui.QWizard):
             self.Session = options.cfg.last_session
             self.ui.data_preview.setModel(self.table_model)
         except AttributeError:
-            self.table_model.set_header(None)
-            self.table_model.set_data(None)
-        
+            pass
         return True
