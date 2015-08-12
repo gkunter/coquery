@@ -37,6 +37,9 @@ import math
 from defines import *
 import error_box
 
+import numpy as np
+import pandas as pd
+
 # Tell matplotlib if PySide is being used:
 if pyside:
     import matplotlib
@@ -47,7 +50,7 @@ if pyside:
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
-
+import matplotlib.pyplot as plt
 
 #def table_to_tree(table, label="count"):
     #""" Return a tree that contains a tree representation of the table. It
@@ -157,12 +160,13 @@ class Visualizer(object):
         
         # _table stores the data from the model in such a way that it is 
         # accessible by the visualizer. """
+        
         self._table = []
 
         if options.cfg.experimental:
             # get the column order from the visual QTableView:
             header = self._view.horizontalHeader()
-            self._column_order = [self._model.header[header.logicalIndex(section)] for section in range(header.count())]
+            self._column_order = [self._model.content.columns[header.logicalIndex(section)] for section in range(header.count())]
             # ... but make sure that the frequency is the last column:
             try:
                 self._column_order.remove("coq_frequency")
@@ -173,17 +177,16 @@ class Visualizer(object):
                 # data. The frequency column is stripped otherwise.
                 if self.visualize_frequency:
                     self._column_order.append("coq_frequency")
-
-            for row in self._model.content:
-                self._table.append([row[x] for x in self._column_order])
+            
+            self._column_order += [x for x in options.cfg.main_window.Session.output_order if x.startswith("coquery_invisible") and x not in self._column_order]
+            self._table = self._model.content.reindex(columns=self._column_order)
         else:
             self._table = [x for x in self._model.content]
-            
-        # sort the columns:
-        for i in range(len(self._table[0]))[::-1]:
-            self._table = sorted(self._table, key=lambda x:x[i])
 
-            
+        self._table = self._table.sort(columns=self._column_order, axis="rows")
+        self._table.columns = [
+            options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in self._table.columns]
+
     def get_table_levels(self):
         """ Return an OrderedDict with column names as keys, and sets of 
         factor levels as values. 
@@ -192,7 +195,7 @@ class Visualizer(object):
         future, this method should become a class method of that class. """
         d = collections.OrderedDict()
         header = self._view.horizontalHeader()
-        self._column_order = [self._model.header[header.logicalIndex(section)] for section in range(header.count())]
+        self._column_order = [self._model.content.columns[header.logicalIndex(section)] for section in range(header.count())]
         for column in self._column_order:
             d[column] = self.get_levels(column)
         return d
@@ -235,96 +238,62 @@ class Visualizer(object):
 
     def get_levels(self, name):
         """ Return a set containing all distinct values in the column 'name'.
-        The values are returned in alphabetical order.
-
-        If an abstract data frame class is implemented at some point in the
-        future, this method should become a class method of that class. """
-        levels = []
-        for x in self._model.content:
-            levels.append(x[name])
-        return set(sorted(levels))
-    
-    def get_ordered_row(self, row):
+        The values are returned in alphabetical order. """
+        return self._table[name].unique()
+        
+    def get_ordered_row(self, index):
         """ Return a list containing the values of the dictionary 'row', in 
-        the order of the columns in the table view.
+        the order of the columns in the table view."""
+        return self._table.iloc[index]
+
+    def get_axis_rotation(self, axis, column):
+        """ Return a rotation angle for the axis text. The angle depends on
+        the oritentation of the axis, the number of factors to be drawn, and
+        on the current dimension of the subplot."""
+        if axis.upper() == "Y":
+            return 90
+            # get adjusted width:
+        return 0
+
+    def setup_axis(self, axis):
+        if axis.upper() == "Y":
+            for tick in self.subplot.get_yticklabels():
+                tick.set_rotation(0)
+        if axis.upper() == "X":
+            fact = self._table[self.col_factor].unique()
+            max_length=0
+            for x in fact:
+                max_length = max(max_length, len(x))
+            width = self.figure.get_figwidth() * self.figure.dpi
+            print(width)
+            print(fact)
+            print(max_length)
+            print(len(fact) * max_length)
+            print(width / (12 * self.get_font_scale()))
+            # Estimate whether all tick labels will fit horizontally on the
+            # x axis. Rotate the labels if the estimated number of characters
+            # that can be fitted on the x axis is smaller than the maximally
+            # possible length of factor levels:
+            if width / (12 * self.get_font_scale()) < len(fact) * max_length:
+                self.figure.autofmt_xdate()
+
+    def get_font_scale(self, default=12):
+        """ Return the scale of the font that Qt is using, relative to the
+        default font size."""
+        return options.cfg.app.font().pointSize()/12
+
+    def get_plot_context(self):
+        """ Return one of the Seaborn contexts. The selection depends on the
+        font size."""
+        font_scale = self.get_font_scale()
         
-        If an abstract data frame class is implemented at some point in the
-        future, this method should become a class method of that class. """
-        header = self._view.horizontalHeader()
-        self._column_order = [self._model.header[header.logicalIndex(section)] for section in range(header.count())]
-        l = []
-        for column in self._column_order:
-            l.append(row[column])
-        return l
-
-#class BarcodeVisualizer(Visualizer):
-    #""" Define a visualizer that displays the occurrences of query tokens as
-    #lines based on their token ids."""
-
-    #visualize_frequency = False
-    #def setup_figure(self):
-        #self.figure = Figure()
-        #self.subplot_dict = {}
-
-        #self.table_structure = self.get_table_levels()
-
-        ## prod contains a list of lists, where each inner list represents one
-        ## possible combination of factor levels from the current table
-        ## structure.
-        #prod = [self.get_ordered_row(x) for x in dict_product(self.table_structure)]
-
-        ## Try to choose a suitable grid layout for the figure. If there are
-        ## more than just a single factor, there is one column for each factor 
-        ## level of the last column in the data table. If there is only one 
-        ## factor, the levels are layed out so that there is an appropriate
-        ## number of rows and columns.
-        #if len(self.table_structure) > 1:
-            ## Get the number of the factor levels in the last column of the
-            ## data table:
-            #ncols = len(self.table_structure[self.table_structure.keys()[-1]])
-            #nrows = len(prod) // ncols
-        #else:
-            ## use default grid layout instead:
-            #nrows, ncols = self.get_grid_layout(len(prod))
-
-        ## Create a subplot for each factor level combination in the table
-        ## structure. The subplots are accessible by tuples of factor levels.
-        #for i, row in enumerate(prod):
-            #key = tuple(row)
-            #self.subplot_dict[key] = self.figure.add_subplot(
-                #nrows, ncols, i + 1)
-            
-            ## set y axis to to display values between 0 and 1, and x axis to
-            ## display values from 0 to the maximum token id number.
-            ## FIXME: currently, the x maximum is set to the corpus size, i.e.
-            ## the number of tokens in the corpus. Change this so that the 
-            ## maximum token id is used instead.
-            #self.subplot_dict[key].set_ylim(0, 1)
-            #self.subplot_dict[key].set_xlim(0, options.cfg.main_window.Session.Corpus.get_corpus_size())
-            
-            ## add a label to the x axis showing the factor level combinations
-            ## for this subplot:
-            #self.subplot_dict[key].set_xlabel(", ".join(key))
-
-    #def draw(self):
-        #""" Plot a vertical line for each token in the current data table.
-        #The line is drawn in the subplot matching the factor level 
-        #combination in that row. The horizontal position corresponds to the
-        #token id so that tokens that occur in the same part of the corpus
-        #will also have lines that are placed close to each other. """
-        
-        ##bins = collections.Counter()
-        ##for x in self._content:
-            ##bins[x["coquery_invisible_corpus_id"] // 10000] += 1
-        ##largest_bin = max(bins.values())
-        ##for x in bins:
-            ##self.subplot.bar([x * 10000 for x in bins.keys()], bins.values(), width=9500)
-            
-        #for row in self._model.content:
-            #l = tuple(self.get_ordered_row(row))
-            #self.subplot_dict[l].vlines(row["coquery_invisible_corpus_id"], 0, 1, colors=[(0, 0, 0, 0.25)])
-            
-        #self.figure.tight_layout()
+        if font_scale <= 0.7:
+            return "paper"
+        if font_scale <= 1.2:
+            return "notebook"
+        if font_scale <= 1.5:
+            return "talk"
+        return "poster"
 
 class VisualizerDialog(QtGui.QDialog):
     """ Defines a QDialog that is used to visualize the data in the main 
@@ -401,6 +370,8 @@ class VisualizerDialog(QtGui.QDialog):
         the sectionMoved signal of the header of the table view so that the 
         update_plot() method is not called anymore when the content of the 
         results table changes or the columns are moved."""
+        if self.frozen:
+            return
         options.cfg.main_window.table_model.dataChanged.disconnect(self.update_plot)
         options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.disconnect(self.update_plot)
         
@@ -431,7 +402,6 @@ class VisualizerDialog(QtGui.QDialog):
         """ Use the visualization type given as 'visualizer_class' to display
         the data given in the abstract data table 'model', using the table 
         view given in 'view'. """
-        
         dialog = VisualizerDialog(parent)
         visualizer = visualizer_class(model, view)
         if visualizer._model:
