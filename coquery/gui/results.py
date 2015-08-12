@@ -59,7 +59,11 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         """ Set the content of the table model to the given data, using a
         pandas DataFrame object. """
         # create a pandas DataFrame for the provided data:
-        #self.content = pd.DataFrame(data)
+        if not isinstance(data, pd.DataFrame):
+            self.content = pd.DataFrame(data)
+        else:
+            self.content = data
+        
         self.rownames = self.content.index
         # try to set the columns to the output order of the current session
         try:
