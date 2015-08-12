@@ -1072,10 +1072,10 @@
   </action>
   <action name="action_heat_map">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
-    <string>Heat map</string>
+    <string>&amp;Heat map</string>
    </property>
   </action>
   <action name="action_word_cloud">

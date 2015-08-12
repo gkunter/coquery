@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Mon Aug 10 17:12:45 2015
+# Created: Wed Aug 12 20:02:48 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -524,7 +524,7 @@ class Ui_MainWindow(object):
         self.action_tree_map = QtGui.QAction(MainWindow)
         self.action_tree_map.setObjectName(_fromUtf8("action_tree_map"))
         self.action_heat_map = QtGui.QAction(MainWindow)
-        self.action_heat_map.setEnabled(False)
+        self.action_heat_map.setEnabled(True)
         self.action_heat_map.setObjectName(_fromUtf8("action_heat_map"))
         self.action_word_cloud = QtGui.QAction(MainWindow)
         self.action_word_cloud.setEnabled(False)
@@ -620,7 +620,7 @@ class Ui_MainWindow(object):
         self.action_install_corpus.setText(_translate("MainWindow", "&Install corpus...", None))
         self.action_install_corpus.setToolTip(_translate("MainWindow", "Install a corpus into a MySQL database", None))
         self.action_tree_map.setText(_translate("MainWindow", "&Tree map", None))
-        self.action_heat_map.setText(_translate("MainWindow", "Heat map", None))
+        self.action_heat_map.setText(_translate("MainWindow", "&Heat map", None))
         self.action_word_cloud.setText(_translate("MainWindow", "Word cloud", None))
         self.action_barcode_plot.setText(_translate("MainWindow", "&Barcode plot", None))
 
