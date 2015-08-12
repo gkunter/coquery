@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'visualizer.ui'
 #
-# Created: Tue Jul 21 22:12:59 2015
+# Created: Wed Aug 12 19:59:49 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_visualizer(object):
     def setupUi(self, visualizer):
         visualizer.setObjectName(_fromUtf8("visualizer"))
-        visualizer.resize(640, 480)
+        visualizer.resize(800, 600)
         self.verticalLayout_2 = QtGui.QVBoxLayout(visualizer)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.box_visualize = QtGui.QFrame(visualizer)
