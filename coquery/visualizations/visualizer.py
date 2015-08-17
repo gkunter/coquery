@@ -39,6 +39,7 @@ import error_box
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 
 # Tell matplotlib if PySide is being used:
 if pyside:
@@ -51,6 +52,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
+
+import multiprocessing
 
 #def table_to_tree(table, label="count"):
     #""" Return a tree that contains a tree representation of the table. It
@@ -96,6 +99,10 @@ import matplotlib.pyplot as plt
 color_categories = ((228, 26, 28), (55,126,184), (77,175,74), (152,78,163), 
                     (255,127,0), (255,255,51), (166,86,40), (247,129,191), (153,153,153))
 
+# pandas snippet:
+# check if a column contains only a single value:
+# len(pd.unique(self._table[column].values.ravel())) == 1
+
 class Visualizer(object):
     """ Define a class that contains the code to visualize data in several
     ways. The visualizer is provided with the data by calling the method
@@ -110,16 +117,42 @@ class Visualizer(object):
         self._view = None
         self.set_data_source(data_model, data_view)
         self.setup_figure()
-        
-    def get_default_figure(self):
-        """ Return a Figure() instance with the default appearance 
-        parameters. """
-        return Figure(edgecolor="pink")
+    
+    #def get_xlim(self):
+        #return (0, options.cfg.main_window.Session.Corpus.get_corpus_size())
+    
+    #def get_ylim(self):
+        #return (0, 1)
         
     def setup_figure(self):
         """ Prepare the matplotlib figure for plotting. """ 
-        self.figure = self.get_default_figure()
-        self.subplot = self.figure.add_subplot(111)
+
+        
+        #self.g = sns.FacetGrid(self._table, size=15)
+        #return
+
+        with sns.plotting_context(
+            context=self.get_plot_context(), 
+            font_scale=self.get_font_scale()):
+
+            #print("col_factor: ", self._col_factor)
+            #print("col_wrap:   ", self._col_wrap)
+            #print("row_factor: ", self._row_factor)
+
+            self.g = sns.FacetGrid(self._table, 
+                                #xlim=self.get_xlim(),
+                                #ylim=self.get_ylim(),
+                                col=self._col_factor,
+                                #col_wrap=self._col_wrap,
+                                #row=self._row_factor,
+                                sharex=True,
+                                sharey=True)
+        
+        #self.figure = self.g.fig
+
+        ##mpl.rc("font",
+               ##{"family": "normal", "weight": "bold", "size": 22})
+
 
     def get_grid_layout(self, n):
         """ Return a tuple containing a nrows, ncols pair that can be used to
@@ -179,26 +212,48 @@ class Visualizer(object):
                     self._column_order.append("coq_frequency")
             
             self._column_order += [x for x in options.cfg.main_window.Session.output_order if x.startswith("coquery_invisible") and x not in self._column_order]
+            
+            # Remove hidden columns:
+            self._column_order = [x for x in self._column_order if 
+                options.cfg.column_visibility.get(x, True)]
+            
             self._table = self._model.content.reindex(columns=self._column_order)
         else:
             self._table = [x for x in self._model.content]
-
+        
         self._table = self._table.sort(columns=self._column_order, axis="rows")
         self._table.columns = [
             options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in self._table.columns]
 
-    def get_table_levels(self):
-        """ Return an OrderedDict with column names as keys, and sets of 
-        factor levels as values. 
+        # in order to prepare the layout of the figure, first determine
+        # how many dimensions the data table has.
+        self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object] if not x.startswith("coquery_invisible")]
+
+        if self.dimensionality:
+            self._groupby = self._factor_columns[-self.dimensionality:]
+        else:
+            self._groupby = []
+        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby]
         
-        If an abstract data frame class is implemented at some point in the
-        future, this method should become a class method of that class. """
-        d = collections.OrderedDict()
-        header = self._view.horizontalHeader()
-        self._column_order = [self._model.content.columns[header.logicalIndex(section)] for section in range(header.count())]
-        for column in self._column_order:
-            d[column] = self.get_levels(column)
-        return d
+        #print("grouping:   ", self._groupby)
+        #print("levels:      ", self._levels)
+        #print("factors:    ", self._factor_columns)
+        #print("dimensions: ", self.dimensionality)
+        
+        if len(self._factor_columns) > self.dimensionality:
+            self._col_factor = self._factor_columns[-self.dimensionality - 1]
+        else:
+            self._col_factor = None
+        if len(self._factor_columns) > self.dimensionality + 1:
+            self._row_factor = self._factor_columns[-self.dimensionality - 2]
+            self._col_wrap = None
+        else:
+            self._row_factor = None
+            if self._col_factor:
+                self._col_wrap, _ = self.get_grid_layout(
+                    len(pd.unique(self._table[self._col_factor].ravel())))
+            else:
+                self._col_wrap = None
 
     def get_content_tree(self, table, label="count"):
         """ Return a tree that contains a tree representation of the table.
@@ -239,7 +294,7 @@ class Visualizer(object):
     def get_levels(self, name):
         """ Return a set containing all distinct values in the column 'name'.
         The values are returned in alphabetical order. """
-        return self._table[name].unique()
+        return pd.unique(self._table[name].values.ravel())
         
     def get_ordered_row(self, index):
         """ Return a list containing the values of the dictionary 'row', in 
@@ -255,32 +310,52 @@ class Visualizer(object):
             # get adjusted width:
         return 0
 
-    def setup_axis(self, axis):
+    def setup_axis(self, axis, label=None):
         if axis.upper() == "Y":
-            for tick in self.subplot.get_yticklabels():
-                tick.set_rotation(0)
+            self.g.set_yticklabels(rotation=0)
+            #for tick in self.subplot.get_yticklabels():
+                #tick.set_rotation(0)
+            #if label:
+                #self.subplot.yaxis.set_label(label)
         if axis.upper() == "X":
-            fact = self._table[self.col_factor].unique()
-            max_length=0
-            for x in fact:
-                max_length = max(max_length, len(x))
-            width = self.figure.get_figwidth() * self.figure.dpi
-            print(width)
-            print(fact)
-            print(max_length)
-            print(len(fact) * max_length)
-            print(width / (12 * self.get_font_scale()))
-            # Estimate whether all tick labels will fit horizontally on the
-            # x axis. Rotate the labels if the estimated number of characters
-            # that can be fitted on the x axis is smaller than the maximally
-            # possible length of factor levels:
-            if width / (12 * self.get_font_scale()) < len(fact) * max_length:
-                self.figure.autofmt_xdate()
+            for ax in self.g.fig.axes:
+                if sns.utils.axis_ticklabels_overlap(ax.get_xticklabels()):
+                    self.g.fig.autofmt_xdate()
+                    break
+
+            #fact = self._table[self._groupby[0]].unique()
+            #max_length=0
+            #for x in fact:
+                #max_length = max(max_length, len(x))
+            #width = self.figure.get_figwidth() * self.figure.dpi
+            ## Estimate whether all tick labels will fit horizontally on the
+            ## x axis. Rotate the labels if the estimated number of characters
+            ## that can be fitted on the x axis is smaller than the maximally
+            ## possible length of factor levels:
+            #if width / (8 * self.get_font_scale()) < len(fact) * max_length:
+                #self.figure.autofmt_xdate()
+            #if label:
+                #self.subplot.xaxis.set_label(label)
+
+
 
     def get_font_scale(self, default=12):
         """ Return the scale of the font that Qt is using, relative to the
         default font size."""
         return options.cfg.app.font().pointSize()/12
+
+    def get_colors_for_factor(self, column, rgb_string=False):
+        """ Return a dictionary with colors for each factor level. Colors
+        are recycled if necessary. If the argument 'rgb_string' is True, 
+        the dictionary will contain as values strings of the form #rrggbb. 
+        Otherwise, the values will be tuples with RGB values scaled from
+        0 to 1. """
+        if rgb_string:
+            col = ["#{:02X}{:02X}{:02X}".format(r, g, b) for r, g, b in color_categories]
+        else:
+            col = [[x / 255 for x in rgb] for rgb in color_categories]
+        fact = self._table[column].unique()
+        return dict(zip(fact, (col * (1 + (len(fact) // len(col))))[0:len(fact)]))
 
     def get_plot_context(self):
         """ Return one of the Seaborn contexts. The selection depends on the
@@ -295,7 +370,7 @@ class Visualizer(object):
             return "talk"
         return "poster"
 
-class VisualizerDialog(QtGui.QDialog):
+class VisualizerDialog(QtGui.QWidget):
     """ Defines a QDialog that is used to visualize the data in the main 
     data preview area. It connects the dataChanged signal of the abstract 
     data table and the sectionMoved signal of the header of the table view to 
@@ -308,61 +383,86 @@ class VisualizerDialog(QtGui.QDialog):
     def __init__(self, parent=None):
         super(VisualizerDialog, self).__init__(parent)
         
-        self.ui = visualizerUi.Ui_visualizer()
+        self.ui = visualizerUi.Ui_Visualizer()
         self.ui.setupUi(self)
         self.setWindowIcon(options.cfg.icon)
+        self.dialog_stack = []
 
         # Connect the required signals so the plot is updated on changes to
         # the results table:
         self.connect_signals()
+        self.ui.button_close.clicked.connect(self.close)
         self.ui.check_freeze.stateChanged.connect(self.toggle_freeze)
         self.frozen = False
 
         # Matplotlib visualizations do not use the QLabel called graph_area 
         # for plotting, so it is removed from the dialog:
-        self.ui.graph_area.close()
-        self.ui.verticalLayout.removeWidget(self.ui.graph_area)
+        #self.ui.graph_area.close()
+        #self.ui.verticalLayout.removeWidget(self.ui.graph_area)
 
     def add_visualizer(self, visualizer):
         """ Add a Visualizer instance to the visualization dialog. Also, 
         add a matplotlib canvas and a matplotlib navigation toolbar to the 
         dialog. """
         self.visualizer = visualizer
-        self.visualizer.draw()
+        options.cfg.main_window.widget_list.append(self)
 
     def update_plot(self):
         """ Update the plot. During the update, the canvas and the navigation
         toolbar are replaced by new instances, as is the figure used by the 
         visualizer. Finally, the draw() method of the visualizer is called to
         plot the visualization again. """
-        self.remove_matplot()
         self.visualizer.setup_figure()
-        self.add_visualizer(self.visualizer)
+        self.remove_matplot()
         self.add_matplot()
+        #self.add_visualizer(self.visualizer)
         self.visualizer.update_data()
         self.visualizer.draw()
 
     def add_matplot(self):
         """ Add a matplotlib canvas and a navigation bar to the dialog. """
-        self.canvas = FigureCanvas(self.visualizer.figure)
+        self.canvas = FigureCanvas(self.visualizer.g.fig)
+        self.canvas.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        self.canvas.updateGeometry()
         self.ui.verticalLayout.addWidget(self.canvas)
         self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)
-        self.ui.verticalLayout.addWidget(self.toolbar)
+        self.ui.navigation_layout.addWidget(self.toolbar)
 
     def remove_matplot(self):
         """ Remove the matplotlib canvas and the navigation bar from the 
         dialog. """
         self.ui.verticalLayout.removeWidget(self.canvas)
         self.canvas.close()
-        self.ui.verticalLayout.removeWidget(self.toolbar)
+        self.ui.navigation_layout.removeWidget(self.toolbar)
         self.toolbar.close()
         
+    def close(self, *args):
+        """ Close the visualizer widget, disconnect the signals, and remove 
+        the visualizer from the list of visualizers when closing."""
+        super(VisualizerDialog, self).close(*args)
+        try:
+            options.cfg.main_window.widget_list.remove(self)
+        except ValueError:
+            pass
+        try:
+            self.disconnect_signals()
+        except RuntimeError:
+            pass
+        
+    def closeEvent(self, *args):
+        """ Catch close event so that the visualizer is disconnected and 
+        removed from the list of visualizers. """
+        self.close()
+        super(VisualizerDialog, self).closeEvent(*args)
+
     def connect_signals(self):
         """ Connect the dataChanged signal of the abstract data table and the 
         sectionMoved signal of the header of the table view to the 
         update_plot() method so that the method is called whenever either the
         content of the results table changes, or the columns are moved."""
+
         options.cfg.main_window.table_model.dataChanged.connect(self.update_plot)
+        options.cfg.main_window.table_model.layoutChanged.connect(self.update_plot)
         options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.connect(self.update_plot)
 
     def disconnect_signals(self):
@@ -370,9 +470,8 @@ class VisualizerDialog(QtGui.QDialog):
         the sectionMoved signal of the header of the table view so that the 
         update_plot() method is not called anymore when the content of the 
         results table changes or the columns are moved."""
-        if self.frozen:
-            return
         options.cfg.main_window.table_model.dataChanged.disconnect(self.update_plot)
+        options.cfg.main_window.table_model.layoutChanged.disconnect(self.update_plot)
         options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.disconnect(self.update_plot)
         
     def toggle_freeze(self):
@@ -392,23 +491,26 @@ class VisualizerDialog(QtGui.QDialog):
         else:
             self.connect_signals()
 
-    def done(self, *args):
-        """ Disconnect all signals, and close the dialog normally."""
-        self.disconnect_signals()
-        super(VisualizerDialog, self).done(*args)
+    def plot_it(self):
+        print("starting")
+        self.visualizer.setup_figure()
+        self.visualizer.draw()
+        print("done")
 
-    @staticmethod
-    def Plot(model, view, visualizer_class, parent=None):
+    def Plot(self, model, view, visualizer_class, parent=None):
         """ Use the visualization type given as 'visualizer_class' to display
         the data given in the abstract data table 'model', using the table 
         view given in 'view'. """
-        dialog = VisualizerDialog(parent)
+        dialog = self
         visualizer = visualizer_class(model, view)
         if visualizer._model:
+            dialog.setVisible(True)
             dialog.add_visualizer(visualizer)
             dialog.add_matplot()
-            return dialog.show()
- 
+            #self.sub_process = multiprocessing.Process(target=self.plot_it, args=())
+            #self.sub_process.start()
+            self.visualizer.draw()
+            
 if __name__ == "__main__":
     unittest.main()
             
