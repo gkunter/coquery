@@ -33,11 +33,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.last_header = None
         self.sort_columns = []
         self.set_data(None)
-        #self.set_header(header)
-        #self.dataChanged.connect(self.dummy)
-        
-    #def dummy(self, *args):
-        #print("dummy")
         
     def set_header(self, header): 
         self.sort_state = [SORT_NONE] * len(self.content.columns)
@@ -50,7 +45,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def reorder_data(self, new_order):
         self.content = self.content.reindex(columns=new_order)
         # notify the GUI that the whole data frame has changed:
-        #print("pling")
         self.dataChanged.emit(
             self.createIndex(0, 0), 
             self.createIndex(self.rowCount(), self.columnCount()))
@@ -100,12 +94,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # no color is specified:
         elif role == QtCore.Qt.ForegroundRole:
             header = self.column(index.column())
-            try:
-                col = options.cfg.column_color[header.lower()]
-                return QtGui.QColor(col)
-            except KeyError:
-                return None
-            
+            if options.cfg.column_visibility.get(
+                self.content.columns[index.column()], True):
+                try:
+                    col = options.cfg.column_color[header.lower()]
+                    return QtGui.QColor(col)
+                except KeyError:
+                    return None
+            else:
+                return QtGui.QColor("lightgrey")
+                
         # TextAlignmentRole: return the alignment of the column:
         elif role == QtCore.Qt.TextAlignmentRole:
             column = self.column(index.column())
@@ -116,6 +114,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             # sorting enabled:
             if column == "coq_context_left" or self.sort_state[index.column()] in set([SORT_REV_DEC, SORT_REV_INC]):
                 return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
+        
         return None
         
     def headerData(self, index, orientation, role):
@@ -130,6 +129,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 return None
 
         if role == QtCore.Qt.DisplayRole:
+            if not options.cfg.column_visibility.get(
+                self.content.columns[index], True):
+                return "[hidden]"
+            
             # Get header string?
             column = self.column(index)
             
@@ -155,9 +158,12 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             return "{}{}".format(
                     display_name, 
                     ["", " ({}) ".format(", ".join(tag_list))][bool(tag_list)])
-        
+
         # Get header decoration (i.e. the sorting arrows)?
         elif role == QtCore.Qt.DecorationRole:
+            if not options.cfg.column_visibility.get(
+            self.content.columns[index], True):
+                return None
             # add arrows as sorting direction indicators if necessary:
             if self.sort_state[index] in [SORT_DEC, SORT_REV_DEC]:
                 return QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_ArrowDown)
@@ -184,6 +190,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         directions = []
         # go through all sort columns:
         for col in self.sort_columns:
+            if not options.cfg.column_visibility.get(self.column(col), True):
+                continue
             # add a temporary column if reverse sorting is requested:
             if self.sort_state[col] in set([SORT_REV_DEC, SORT_REV_INC]):
                 name = "{}_rev".format(self.column(col))
