@@ -917,6 +917,8 @@
     <addaction name="action_heat_map"/>
     <addaction name="action_word_cloud"/>
     <addaction name="action_barcode_plot"/>
+    <addaction name="action_beeswarm_plot"/>
+    <addaction name="action_barchart_plot"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1088,7 +1090,17 @@
   </action>
   <action name="action_barcode_plot">
    <property name="text">
-    <string>&amp;Barcode plot</string>
+    <string>&amp;Location plot</string>
+   </property>
+  </action>
+  <action name="action_beeswarm_plot">
+   <property name="text">
+    <string>Bee&amp;swarm plot</string>
+   </property>
+  </action>
+  <action name="action_barchart_plot">
+   <property name="text">
+    <string>Barchart</string>
    </property>
   </action>
  </widget>

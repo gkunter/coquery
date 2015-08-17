@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Wed Aug 12 20:02:48 2015
+# Created: Sat Aug 15 15:39:29 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -531,6 +531,10 @@ class Ui_MainWindow(object):
         self.action_word_cloud.setObjectName(_fromUtf8("action_word_cloud"))
         self.action_barcode_plot = QtGui.QAction(MainWindow)
         self.action_barcode_plot.setObjectName(_fromUtf8("action_barcode_plot"))
+        self.action_beeswarm_plot = QtGui.QAction(MainWindow)
+        self.action_beeswarm_plot.setObjectName(_fromUtf8("action_beeswarm_plot"))
+        self.action_barchart_plot = QtGui.QAction(MainWindow)
+        self.action_barchart_plot.setObjectName(_fromUtf8("action_barchart_plot"))
         self.menuFile.addAction(self.action_open_input_file)
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addSeparator()
@@ -549,6 +553,8 @@ class Ui_MainWindow(object):
         self.menuAnalyse.addAction(self.action_heat_map)
         self.menuAnalyse.addAction(self.action_word_cloud)
         self.menuAnalyse.addAction(self.action_barcode_plot)
+        self.menuAnalyse.addAction(self.action_beeswarm_plot)
+        self.menuAnalyse.addAction(self.action_barchart_plot)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuCorpus.menuAction())
         self.menubar.addAction(self.menuAnalyse.menuAction())
@@ -622,5 +628,7 @@ class Ui_MainWindow(object):
         self.action_tree_map.setText(_translate("MainWindow", "&Tree map", None))
         self.action_heat_map.setText(_translate("MainWindow", "&Heat map", None))
         self.action_word_cloud.setText(_translate("MainWindow", "Word cloud", None))
-        self.action_barcode_plot.setText(_translate("MainWindow", "&Barcode plot", None))
+        self.action_barcode_plot.setText(_translate("MainWindow", "&Location plot", None))
+        self.action_beeswarm_plot.setText(_translate("MainWindow", "Bee&swarm plot", None))
+        self.action_barchart_plot.setText(_translate("MainWindow", "Barchart", None))
 
