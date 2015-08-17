@@ -32,6 +32,9 @@ import treemap
 import barcodeplot
 import visualizer
 import heatmap
+import beeswarmplot
+import stripplot
+import barplot
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -223,7 +226,9 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         
         self.ui.action_tree_map.triggered.connect(self.show_tree_map)
         self.ui.action_barcode_plot.triggered.connect(self.show_barcode_plot)
+        self.ui.action_beeswarm_plot.triggered.connect(self.show_beeswarm_plot)
         self.ui.action_heat_map.triggered.connect(self.show_heatmap_plot)
+        self.ui.action_barchart_plot.triggered.connect(self.show_barchart_plot)
     
     def setup_hooks(self):
         """ Connect all relevant signals to their methods."""
@@ -306,7 +311,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     def result_cell_clicked(self, index):
         model_index = index
         row = model_index.row()
-        data = self.table_model.content[row]
+        data = self.table_model.content.iloc[row]
         token_id = data["coquery_invisible_corpus_id"]
         origin_id = data["coquery_invisible_origin_id"]
         token_width = data["coquery_invisible_number_of_tokens"]
@@ -372,6 +377,9 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.csv_options = None
         self.query_thread = None
         self.last_results_saved = True
+        
+        self.visualizers = []
+        self.context_viewers = []
         
         # the dictionaries column_width and column_color store default
         # attributes of the columns by display name. This means that problems
@@ -465,14 +473,25 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         # show self.menu about the column
         self.menu = QtGui.QMenu("Column options", self)
 
+        display_name = options.cfg.main_window.Session.Corpus.resource.translate_header(self.table_model.content.columns[column])
+        action = QtGui.QWidgetAction(self)
+        label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        action.setDefaultWidget(label)
+        self.menu.addAction(action)
+        self.menu.addSeparator()
+
         if not options.cfg.column_visibility.get(
             self.table_model.content.columns[column].lower(), True):
             action = QtGui.QAction("Show column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
+            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
             self.menu.addAction(action)
+            
         else:
             action = QtGui.QAction("Hide column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
+            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
             self.menu.addAction(action)
             self.menu.addSeparator()
             
@@ -523,10 +542,16 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.menu.popup(header.mapToGlobal(point))
         header.customContextMenuRequested.connect(self.show_header_menu)
 
-    def toggle_visibility(self, column):
+    def toggle_visibility(self, index):
         """ Show again a hidden column, or hide a visible column."""
-        header = self.table_model.content.columns[column]
-        options.cfg.column_visibility[header] = not options.cfg.column_visibility.get(header, True)
+        column = self.table_model.content.columns[index]
+        options.cfg.column_visibility[column] = not options.cfg.column_visibility.get(column, True)
+        self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
+        # Resort the data if this is a sorting column:
+        if index in self.table_model.sort_columns:
+            self.table_model.sort(0, QtCore.Qt.AscendingOrder)
+        self.table_model.layoutChanged.emit()
+
 
     def reset_color(self, column):
         header = self.table_model.content.columns[column].lower()
@@ -642,7 +667,9 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         
     def show_tree_map(self):
         if not self.table_model.content.empty:
-            visualizer.VisualizerDialog.Plot(
+            viz = visualizer.VisualizerDialog()
+            self.visualizers.append(viz)
+            viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
                 treemap.TreemapVisualizer, self)
@@ -651,17 +678,44 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
 
     def show_heatmap_plot(self):
         if not self.table_model.content.empty:
-            visualizer.VisualizerDialog.Plot(
+            viz = visualizer.VisualizerDialog()
+            self.visualizers.append(viz)
+            viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
                 heatmap.HeatmapVisualizer, self)
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         
+    def show_beeswarm_plot(self):
+        if not self.table_model.content.empty:
+            viz = visualizer.VisualizerDialog()
+            self.visualizers.append(viz)
+            viz.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                #beeswarmplot.BeeswarmVisualizer, self)
+                stripplot.StripplotVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
+    def show_barchart_plot(self):
+        if not self.table_model.content.empty:
+            viz = visualizer.VisualizerDialog()
+            self.visualizers.append(viz)
+            viz.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                #beeswarmplot.BeeswarmVisualizer, self)
+                #stripplot.StripplotVisualizer, self)
+                barplot.BarchartVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
     def show_barcode_plot(self):
         if not self.table_model.content.empty:
-            visualizer.VisualizerDialog.Plot(
+            viz = visualizer.VisualizerDialog()
+            self.visualizers.append(viz)
+            viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
                 barcodeplot.BarcodeVisualizer, self)
@@ -723,11 +777,13 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             msg_query_running = "<p>The last query results have not been saved. If you quit now, they will be lost.</p><p>Do you really want to quit?</p>"
             response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
+                [x.close() for x in self.visualizers]
                 self.save_configuration()
                 event.accept()
             else:
                 event.ignore()            
         else:
+            [x.close() for x in self.visualizers]
             self.save_configuration()
             event.accept()
         
