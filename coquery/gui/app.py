@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
+from __future__ import print_function
 
 from session import *
 from defines import *
@@ -378,8 +379,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.query_thread = None
         self.last_results_saved = True
         
-        self.visualizers = []
-        self.context_viewers = []
+        self.widget_list = []
         
         # the dictionaries column_width and column_color store default
         # attributes of the columns by display name. This means that problems
@@ -402,14 +402,10 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             pass
         
     def display_results(self):
-        #print(type(self.Session.output_storage))
-        #print(self.Session.output_storage[0])
         df = pd.DataFrame.from_dict(self.Session.output_storage, orient="columns")
         if not options.cfg.experimental:
             df.columns = self.Session.header
-        print(df.head())
         self.table_model.set_data(df)
-        #self.table_model.set_data(self.Session.output_storage)
         if options.cfg.experimental:
             self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
         else:
@@ -542,6 +538,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.menu.popup(header.mapToGlobal(point))
         header.customContextMenuRequested.connect(self.show_header_menu)
 
+
     def toggle_visibility(self, index):
         """ Show again a hidden column, or hide a visible column."""
         column = self.table_model.content.columns[index]
@@ -668,7 +665,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     def show_tree_map(self):
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
-            self.visualizers.append(viz)
             viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
@@ -679,7 +675,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     def show_heatmap_plot(self):
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
-            self.visualizers.append(viz)
             viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
@@ -690,7 +685,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     def show_beeswarm_plot(self):
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
-            self.visualizers.append(viz)
             viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
@@ -702,7 +696,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     def show_barchart_plot(self):
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
-            self.visualizers.append(viz)
             viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
@@ -711,6 +704,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                 barplot.BarchartVisualizer, self)
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
     def show_barcode_plot(self):
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
@@ -772,19 +766,25 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.fill_combo_corpus()
         self.change_corpus()
             
+    def shutdown(self):
+        """ Shut down the application by removing all open widgets and saving
+        the configuration. """
+        for x in self.widget_list:
+            x.close()
+        self.save_configuration()
+            
+            
     def closeEvent(self, event):
         if not self.last_results_saved:
             msg_query_running = "<p>The last query results have not been saved. If you quit now, they will be lost.</p><p>Do you really want to quit?</p>"
             response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
-                [x.close() for x in self.visualizers]
-                self.save_configuration()
+                self.shutdown()
                 event.accept()
             else:
                 event.ignore()            
         else:
-            [x.close() for x in self.visualizers]
-            self.save_configuration()
+            self.shutdown()
             event.accept()
         
     def mysql_settings(self):
