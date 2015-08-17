@@ -7,7 +7,7 @@ import sys
 import contextviewUi
 import options
 
-class ContextView(QtGui.QDialog):
+class ContextView(QtGui.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, parent=None):
         
         super(ContextView, self).__init__(parent)
@@ -19,6 +19,11 @@ class ContextView(QtGui.QDialog):
         
         self.ui = contextviewUi.Ui_ContextView()
         self.ui.setupUi(self)
+        
+        
+        #self.ui.button_close.setIcon(
+            #QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_SP_DialogCloseButton))
+
 
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
         self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
@@ -85,15 +90,17 @@ class ContextView(QtGui.QDialog):
         if e.key() == QtCore.Qt.Key_Escape:
             self.accept()
             
-    def done(self, *args):
+    def closeEvent(self, *args):
+        self.close()
         options.cfg.context_view_height = self.height()
         options.cfg.context_view_width = self.width()
         options.cfg.context_view_words = self.ui.slider_context_width.value()
-        super(ContextView, self).done(*args)
-
+        options.cfg.main_window.widget_list.remove(self)
+        super(ContextView, self).closeEvent(*args)
+        
     @staticmethod
     def display(resource, token_id, source_id, token_width, parent=None):
-        dialog = ContextView(resource, token_id, source_id, token_width, parent=parent)        
+        dialog = ContextView(resource, token_id, source_id, token_width, parent=None)        
         try:
             dialog.ui.slider_context_width.setValue(options.cfg.context_view_words)
         except AttributeError:
@@ -106,7 +113,8 @@ class ContextView(QtGui.QDialog):
             dialog.resize(options.cfg.context_view_width, dialog.height())
         except AttributeError:
             pass
-        return dialog.show()
+        dialog.setVisible(True)
+        options.cfg.main_window.widget_list.append(dialog)
 
 def main():
     app = QtGui.QApplication(sys.argv)
