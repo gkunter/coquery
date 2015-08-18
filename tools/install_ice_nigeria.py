@@ -29,132 +29,172 @@ class corpus_code():
         else:
             print("unsupported tag: ", s)
             return s
+
+    def renderer_open_element(self, tag, attributes):
+        context = super(Corpus, self).renderer_open_element(tag, attributes)
+        if tag == "object":
+            # add placeholder images for <object> tags
+            if attributes.get("type", "") == "table":
+                context.append("<br/><img src='../logo/placeholder_table.png'/><br/>")
+            if attributes.get("type", "") == "graphic":
+                context.append("<br/><img src='../logo/placeholder.png'/><br/>")
+            if attributes.get("type", "") == "formula":
+                context.append("<br/><img src='../logo/formula.png'/><br/>")
+
+        if tag == "x-anonym-x":
+            anon_type = "anonymized"
+            try:
+                anon_type = attributes["type"]
+            except KeyError:
+                pass
+            context.append('<span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span>'.format(anon_type))
+
+
+        return context
+
+    def renderer_close_element(self, tag, attributes):
+        context = super(Corpus, self).renderer_close_element(tag, attributes)
+        if tag == "error":
+            try:
+                context.append('<span style="color: darkgreen;">{}</span>'.format(attributes["corrected"]))
+            except KeyError:
+                pass
+        #if tag == "x-anonym-x":
+            #anon_type = "anonymized"
+            #try:
+                #anon_type = attributes["type"]
+            #except AttributeError:
+                #pass
+            #context.append('<span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span>'.format(anon_type))
+
+        return context
+
+
+    #def render_context(self, token_id, source_id, token_width, context_width, widget):
+        #start = max(0, token_id - context_width)
+        #end = token_id + token_width + context_width - 1
     
-    def render_context(self, token_id, source_id, token_width, context_width, widget):
-        start = max(0, token_id - context_width)
-        end = token_id + token_width + context_width - 1
-    
-        S = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end} AND {corpus}.{source_id} = {current_source_id}".format(
-            corpus=self.resource.corpus_table,
-            corpus_id=self.resource.corpus_id,
-            corpus_word_id=self.resource.corpus_word_id,
-            source_id=self.resource.corpus_source_id,
+        #S = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end} AND {corpus}.{source_id} = {current_source_id}".format(
+            #corpus=self.resource.corpus_table,
+            #corpus_id=self.resource.corpus_id,
+            #corpus_word_id=self.resource.corpus_word_id,
+            #source_id=self.resource.corpus_source_id,
             
-            word=self.resource.word_label,
-            word_table=self.resource.word_table,
-            word_id=self.resource.word_id,
+            #word=self.resource.word_label,
+            #word_table=self.resource.word_table,
+            #word_id=self.resource.word_id,
             
-            tag_table=self.resource.tag_table,
-            tag=self.resource.tag_label,
-            tag_id=self.resource.tag_id,
-            tag_corpus_id=self.resource.tag_corpus_id,
-            tag_type=self.resource.tag_type,
-            attribute=self.resource.tag_attribute,
+            #tag_table=self.resource.tag_table,
+            #tag=self.resource.tag_label,
+            #tag_id=self.resource.tag_id,
+            #tag_corpus_id=self.resource.tag_corpus_id,
+            #tag_type=self.resource.tag_type,
+            #attribute=self.resource.tag_attribute,
             
-            current_source_id=source_id,
-            start=start, end=end)
-        cur = self.resource.DB.execute_cursor(S)
-        entities = {}
+            #current_source_id=source_id,
+            #start=start, end=end)
+        #cur = self.resource.DB.execute_cursor(S)
+        #entities = {}
 
-        for row in cur:
-            #row = [x.decode("utf-8", errors="replace") if isinstance(x, str) else x for x in row]
-            if row[self.resource.corpus_id] not in entities:
-                entities[row[self.resource.corpus_id]] = []
-            entities[row[self.resource.corpus_id]].append(row)
+        #for row in cur:
+            ##row = [x.decode("utf-8", errors="replace") if isinstance(x, str) else x for x in row]
+            #if row[self.resource.corpus_id] not in entities:
+                #entities[row[self.resource.corpus_id]] = []
+            #entities[row[self.resource.corpus_id]].append(row)
 
-        context = []
-        # we need to keep track of any opening and closing tag that does not
-        # have its matching tag in the selected context:
-        opened_tags = []
-        closed_tags = []
-        correct_word = ""
-        for token in sorted(entities):
-            entity_list = sorted(entities[token], key=lambda x:x[self.resource.tag_id])
-            text_output = False
-            word = entity_list[0][self.resource.word_label]
-            for row in entity_list:
-                tag = row[self.resource.tag_label]
+        #context = []
+        ## we need to keep track of any opening and closing tag that does not
+        ## have its matching tag in the selected context:
+        #opened_tags = []
+        #closed_tags = []
+        #correct_word = ""
+        #for token in sorted(entities):
+            #entity_list = sorted(entities[token], key=lambda x:x[self.resource.tag_id])
+            #text_output = False
+            #word = entity_list[0][self.resource.word_label]
+            #for row in entity_list:
+                #tag = row[self.resource.tag_label]
                 
-                # special treatment for tags:
-                if tag:
-                    attributes = row[self.resource.tag_attribute]
-                    tag_type = row[self.resource.tag_type]
+                ## special treatment for tags:
+                #if tag:
+                    #attributes = row[self.resource.tag_attribute]
+                    #tag_type = row[self.resource.tag_type]
 
-                    if tag_type == "empty":
-                        if tag == "object":
-                            # add placeholder images for <object> tags
-                            if "type=table" in attributes:
-                                context.append("<br/><img src='../logo/placeholder_table.png'/><br/>")
-                            if "type=graphic" in attributes:
-                                context.append("<br/><img src='../logo/placeholder.png'/><br/>")
-                            if "type=formula" in attributes:
-                                context.append("<br/><img src='../logo/formula.png'/><br/>")
-                        elif tag == "error":
-                            if attributes.startswith("corrected="):
-                                correct_word = attributes[len("corrected="):]
-                                context.append('<span style="color: darkgreen;">{}</span>'.format(correct_word))
-                            correct_word  = ""
-                        elif tag == "break":
-                            context.append("<br/>")
-                        elif tag == "x-anonym-x":
-                            context.append('<span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span>'.format(attributes[len("type="):]))
-                        else:
-                            print(tag)
+                    #if tag_type == "empty":
+                        #if tag == "object":
+                            ## add placeholder images for <object> tags
+                            #if "type=table" in attributes:
+                                #context.append("<br/><img src='../logo/placeholder_table.png'/><br/>")
+                            #if "type=graphic" in attributes:
+                                #context.append("<br/><img src='../logo/placeholder.png'/><br/>")
+                            #if "type=formula" in attributes:
+                                #context.append("<br/><img src='../logo/formula.png'/><br/>")
+                        #elif tag == "error":
+                            #if attributes.startswith("corrected="):
+                                #correct_word = attributes[len("corrected="):]
+                                #context.append('<span style="color: darkgreen;">{}</span>'.format(correct_word))
+                            #correct_word  = ""
+                        #elif tag == "break":
+                            #context.append("<br/>")
+                        #elif tag == "x-anonym-x":
+                            #context.append('<span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span>'.format(attributes[len("type="):]))
+                        #else:
+                            #print(tag)
                 
-                    elif tag_type == "open":
-                        if tag == "error":
-                            if attributes.startswith("corrected="):
-                                correct_word = attributes[len("corrected="):]
-                            attributes = 'style="color: darkgrey;"'
-                        #elif tag == "other-language":
-                            #context.append('<span style="font-style: italic;">')
-                        tag = self.tag_to_qhtml(tag)
-                        if attributes:
-                            context.append("<{} {}>".format(tag, attributes))
-                        else:
-                            context.append("<{}>".format(tag))
-                        opened_tags.append(row[self.resource.tag_label])
+                    #elif tag_type == "open":
+                        #if tag == "error":
+                            #if attributes.startswith("corrected="):
+                                #correct_word = attributes[len("corrected="):]
+                            #attributes = 'style="color: darkgrey;"'
+                        ##elif tag == "other-language":
+                            ##context.append('<span style="font-style: italic;">')
+                        #tag = self.tag_to_qhtml(tag)
+                        #if attributes:
+                            #context.append("<{} {}>".format(tag, attributes))
+                        #else:
+                            #context.append("<{}>".format(tag))
+                        #opened_tags.append(row[self.resource.tag_label])
 
-                    elif tag_type == "close":
-                        # if there is still a dangling correction from an 
-                        # open <error> tag, add the correct word now:
-                        if correct_word:
-                            context.append('<span style="color: darkgreen;">{}</span>'.format(correct_word))
-                            correct_word = ""
-                        # add the current token before processing any other
-                        # closing tag:
-                        if not text_output:
-                            text_output = True
-                            if token == token_id:
-                                context.append('<span style="font-weight: bold; background-color: lightyellow; border-style: outset;" >')
-                            context.append(word)
+                    #elif tag_type == "close":
+                        ## if there is still a dangling correction from an 
+                        ## open <error> tag, add the correct word now:
+                        #if correct_word:
+                            #context.append('<span style="color: darkgreen;">{}</span>'.format(correct_word))
+                            #correct_word = ""
+                        ## add the current token before processing any other
+                        ## closing tag:
+                        #if not text_output:
+                            #text_output = True
+                            #if token == token_id:
+                                #context.append('<span style="font-weight: bold; background-color: lightyellow; border-style: outset;" >')
+                            #context.append(word)
                         
-                        if attributes:
-                            context.append("</{} {}>".format(self.tag_to_qhtml(tag), attributes))
-                        else:
-                            context.append("</{}>".format(self.tag_to_qhtml(tag)))
-                        # if the current tag closes an earlier opening tag,
-                        # remove that tag from the list of open environments:
-                        try:
-                            if opened_tags[-1] == row[self.resource.tag_label]:
-                                opened_tags.pop(len(opened_tags)-1)
-                        except IndexError:
-                            closed_tags.append(tag)
-                            pass
-                        if tag == "other-language":
-                            context.append('</span>')
-            if not text_output:
-                if token == token_id:
-                    context.append('<span style="font-weight: bold; background-color: lightyellow; border-style: outset;" >')
-                context.append(word)
-            if token == token_id + token_width - 1:
-                context.append('</span>')
-        for x in opened_tags[::-1]:
-            context.append("</{}>".format(self.tag_to_qhtml(x)))
-        for x in closed_tags:
-            context.insert(0, ("<{}>".format(self.tag_to_qhtml(x))))
+                        #if attributes:
+                            #context.append("</{} {}>".format(self.tag_to_qhtml(tag), attributes))
+                        #else:
+                            #context.append("</{}>".format(self.tag_to_qhtml(tag)))
+                        ## if the current tag closes an earlier opening tag,
+                        ## remove that tag from the list of open environments:
+                        #try:
+                            #if opened_tags[-1] == row[self.resource.tag_label]:
+                                #opened_tags.pop(len(opened_tags)-1)
+                        #except IndexError:
+                            #closed_tags.append(tag)
+                            #pass
+                        #if tag == "other-language":
+                            #context.append('</span>')
+            #if not text_output:
+                #if token == token_id:
+                    #context.append('<span style="font-weight: bold; background-color: lightyellow; border-style: outset;" >')
+                #context.append(word)
+            #if token == token_id + token_width - 1:
+                #context.append('</span>')
+        #for x in opened_tags[::-1]:
+            #context.append("</{}>".format(self.tag_to_qhtml(x)))
+        #for x in closed_tags:
+            #context.insert(0, ("<{}>".format(self.tag_to_qhtml(x))))
 
-        widget.ui.context_area.setText(collapse_words(context))
+        #widget.ui.context_area.setText(collapse_words(context))
 
 class ICENigeriaBuilder(BaseCorpusBuilder):
     def __init__(self):
@@ -274,6 +314,12 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             
                                        
 
+        self.add_new_table_description(self.word_table,
+            [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
+             Column(self.word_label, "VARCHAR(32) NOT NULL"),
+             Column(self.word_lemma, "VARCHAR(32) NOT NULL"),
+             Column(self.word_pos, "VARCHAR(12) NOT NULL")])
+
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
         # corpus table is linked to exactly one file from this table, and
@@ -296,6 +342,11 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
                 "`{}` TINYTEXT NOT NULL".format(self.file_name),
                 "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
+
+        self.add_new_table_description(self.file_table,
+            [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+             Column(self.file_name, "TINYTEXT NOT NULL"),
+             Column(self.file_path, "TINYTEXT NOT NULL")])
         
         self.add_new_table_description(self.file_table,
             [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
@@ -340,42 +391,42 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
 
         self.add_new_table_description(self.source_table,
             [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
-             Column(self.source_mode, "TINYTEXT NOT NULL"),
-             Column(self.source_date, "VARCHAR(15) NOT NULL"),
-             Column(self.source_register, "VARCHAR(30) NOT NULL"),
-             Column(self.source_place, "VARCHAR(30) NOT NULL"),
-             Column(self.source_age, "VARCHAR(5) NOT NULL"),
-             Column(self.source_gender, "VARCHAR(1) NOT NULL"),
-             Column(self.source_ethnicity, "VARCHAR(15) NOT NULL")])
+            Column(self.source_mode, "TINYTEXT NOT NULL"),
+            Column(self.source_date, "VARCHAR(15) NOT NULL"), 
+            Column(self.source_register, "VARCHAR(30) NOT NULL"), 
+            Column(self.source_place, "VARCHAR(30) NOT NULL"), 
+            Column(self.source_age, "VARCHAR(5) NOT NULL"),  
+            Column(self.source_gender, "VARCHAR(1) NOT NULL"),  
+            Column(self.source_ethnicity, "VARCHAR(15) NOT NULL")])
 
         self.add_new_table_description(self.corpus_table,
             [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table),
+             Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_source_id, self.source_table)])
-
                 
         self._corpus_id = 0
         self._corpus_code = corpus_code
         
 
     def xml_preprocess_tag(self, element):
-        if element.text or list(element):
-            self.tag_next_token(element.tag, element.attrib)
-        else:
-            self.add_empty_tag(element.tag, element.attrib)
+        self.tag_next_token(element.tag, element.attrib)
+        #if element.text or list(element):
+            #self.tag_next_token(element.tag, element.attrib)
+        #else:
+            #self.add_empty_tag(element.tag, element.attrib)
+            #if element.tag == "x-anonym-x":
+                ## ICE-NG contains anonymized labels for names, placenames,
+                ## and other nouns. Insert a special label in that case:
+                #self._word_id = self.table_get(self.word_table, 
+                        #{self.word_label: "ANONYMIZED", 
+                        #self.word_lemma: "ANONYMIZED", 
+                        #self.word_pos: "np"}, case=True)
 
     def xml_postprocess_tag(self, element):
-        if element.text or list(element):
+        # mon-empty tag
+        #if element.text or list(element):
             self.tag_last_token(element.tag, element.attrib)
-        else:
-            if element.tag == "x-anonym-x":
-                # ICE-NG contains anonymized labels for names, placenames,
-                # and other nouns. Insert a special label in that case:
-                self._word_id = self.table_get(self.word_table, 
-                        {self.word_label: "ANONYMIZED", 
-                        self.word_lemma: "ANONYMIZED", 
-                        self.word_pos: "np"}, case=True)
 
     def process_text(self, text):
         for row in text.splitlines():
@@ -399,7 +450,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                     self.word_lemma: lemma_text, 
                     self.word_pos: word_pos}, case=True)
                     
-                self._corpus_id = self.table_add(self.corpus_table,
+                self.add_token_to_corpus(
                     {self.corpus_word_id: self._word_id,
                     self.corpus_file_id: self._file_id,
                     self.corpus_source_id: self._source_id})
@@ -407,7 +458,6 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                 #if new_sentence:
                     #self._sentence_id = self.table_get(self.sentence_table,
                         #{self.sentence_source_id: self._source_id})
-        
 
     def xml_process_content(self, element):
         """ In ICE-NG, the XML elements contain rows of words. This method 
@@ -493,6 +543,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         #     <error corrected="&quot;.">
         #     &quot;   PUNCT   &quot;
         #     </error>
+
+        
         self._current_file = current_file
 
         file_buffer = cStringIO.StringIO()

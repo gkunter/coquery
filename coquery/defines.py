@@ -4,26 +4,6 @@ FILENAME: defines.py -- part of Coquery corpus query tool
 
 This module defines several constants used in different other modules.
 
-LICENSE:
-Copyright (c) 2015 Gero Kunter
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
 """
 
 import glob
@@ -33,6 +13,7 @@ import sys
 import warnings
 import csv, codecs
 import math
+import itertools
 
 # The following flags are used to indicate which fields are provided by the 
 # lexicon of a corpus, and also to access the fields of the value of 
@@ -96,6 +77,18 @@ try:
 except NameError:
     unicode = str
     long = int
+
+# Error messages used by the GUI:
+msg_visualization_no_data = """<p>The 'Query results' view is empty, hence there is nothing to visualize.</p>
+<p>You have either not run a query in this session yet, or there are no tokens in the corpus that match your last query.</p>
+<p>Try to run a visualization again once the Query results view is not empty anymore.</p>"""
+msg_visualization_no_frequency = """<p>No frequency data available.</p>
+<p>The visualization that you chose only works with query results from Frequency queries.</p>
+<p>Try to change the query mode to 'Frequency', re-run the query, and call the
+visualization again.</p>"""
+
+gui_label_query_button = "&Query"
+gui_label_stop_button = "&Stop"
 
 # from https://docs.python.org/2.7/library/csv.html#csv-examples
 class UTF8Recoder:
@@ -216,6 +209,18 @@ class FileSize(long):
             # Move to the next bigger suffix when the value is large enough:
             v, exp = (v, exp) if v > 0.5 else (v * 1024, exp - 1)
         return ("{0:{1}f}" + suffixes[exp]).format(v, fmt[:-1])
+
+def dict_product(d):
+    """ Create a Cartesian product of the lists stored as values in the
+    dictionary 'd'.
+    
+    This product is useful for example to create a table of all factor level
+    combinations. The factor levels can be accessed by the column names. """
+    
+    cart_product = itertools.product(*d.itervalues())
+    
+    return (dict(itertools.izip(d, x)) for x in cart_product)
+
 
 resource_list = ResourceList()
 

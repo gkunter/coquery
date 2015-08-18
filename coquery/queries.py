@@ -256,6 +256,8 @@ class QueryResult(object):
         # create a list of lexicon entries for each word W1, ..., Wn in 
         # the results row:
 
+        entry_list = [self.query.Corpus.lexicon.get_entry(
+            x, self.query.Session.output_fields) for x in [self.data["W{}".format(x)] for x in range(1, number_of_token_columns + 1)]]
 
         index = 0
 
@@ -263,8 +265,6 @@ class QueryResult(object):
             output_row[index] = [self.data["TokenId"]]
             index += 1
         if LEX_ORTH in output_fields or CORP_CONTEXT in output_fields:
-            entry_list = [self.query.Corpus.lexicon.get_entry(
-                x, self.query.Session.output_fields) for x in [self.data["W{}".format(x)] for x in range(1, number_of_token_columns + 1)]]
             if options.cfg.case_sensitive:
                 words = [x.orth for x in entry_list]
             else:
@@ -315,6 +315,7 @@ class QueryResult(object):
                 output_row[index:] = context
             else:
                 output_row[index] = collapse_words(context)
+
         return tuple(output_row)
 
 class CorpusQuery(object):
@@ -419,86 +420,6 @@ class CorpusQuery(object):
             return True
         else:
             return False
-    
-    def get_row(self, query_result, number_of_token_columns, max_number_of_tokens, row_length=None):
-        """ get_row() from CorpusQuery."""
-        output_row = [""] * (row_length)
-        if not query_result:
-            return tuple(output_row)
-        output_fields = self.Session.output_fields
-        index = 0
-        if options.cfg.show_id:
-            output_row[index] = [query_result["TokenId"]]
-            index += 1
-        if LEX_ORTH in output_fields or CORP_CONTEXT in output_fields:
-            if options.cfg.case_sensitive:
-                words = [query_result["W{}_orth".format(x)] for x in range(1, number_of_token_columns + 1)]
-            else:
-                words = [query_result["W{}_orth".format(x)].upper() for x in range(1, number_of_token_columns + 1)]
-            if LEX_ORTH in output_fields:
-                output_row[index:(index+number_of_token_columns)] = words
-                index += max_number_of_tokens
-
-        if LEX_PHON in output_fields:
-            output_row[index:(index+number_of_token_columns)] = [query_result["W{}_phon".format(x)] for x in range(1, number_of_token_columns + 1)]
-            index += max_number_of_tokens
-
-        if LEX_LEMMA in output_fields:
-            output_row[index:(index+number_of_token_columns)] = [query_result["L{}_orth".format(x)] for x in range(1, number_of_token_columns + 1)]
-            index += max_number_of_tokens
-
-        if LEX_POS in output_fields:
-            output_row[index:(index+number_of_token_columns)] = [query_result["W{}_pos".format(x)] for x in range(1, number_of_token_columns + 1)]
-            index += max_number_of_tokens
-
-        if options.cfg.experimental:
-            if options.cfg.experimental:
-                source_info = self.Corpus.get_source_info(query_result["SourceId"])
-        else:
-            if CORP_SOURCE in output_fields:
-                source_info = self.Corpus.get_source_info(query_result["SourceId"])
-                output_row[index:(index+len(source_info))] = source_info
-                index += len(source_info)
-                
-            if CORP_SPEAKER in output_fields:
-                speaker_info = self.Corpus.get_speaker_info(query_result["SpeakerId"])
-                output_row[index:(index+len(speaker_info))] = speaker_info
-                index += len(speaker_info)
-
-            if CORP_FILENAME in output_fields:
-                if options.cfg.experimental:
-                    file_info = [query_result[self.Corpus.resource.file_label]]
-                else:
-                    file_info = self.Corpus.get_file_info(query_result["SourceId"])
-                output_row[index:(index+len(file_info))] = file_info
-                index += len(file_info)
-
-            if CORP_TIMING in output_fields:
-                if options.cfg.experimental:
-                    time_info = [query_result[self.Corpus.resource.corpus_time]]
-                else:
-                    time_info = self.Corpus.get_time_info(query_result["TokenId"])
-                output_row[index:(index+len(time_info))] = time_info
-                index += len(time_info)
-
-            if CORP_CONTEXT in output_fields:
-                context_width = max(options.cfg.context_span, options.cfg.context_columns)
-                L = list(range(context_width))
-                context_left = [query_result["LC{}".format(x + 1)] for x in L[::-1]]
-                context_right = [query_result["RC{}".format(x + 1)] for x in L]
-                context = context_left + words + context_right
-                if options.cfg.context_columns:
-                    output_row[index:] = context
-                else:
-                    output_row[index] = collapse_words(context)
-        if options.cfg.experimental or len(self.Session.output_fields) == 1 or self.number_of_queries == 1:
-            if LEX_FREQ in output_fields:
-                try:
-                    output_row[index] = query_result.data[options.cfg.freq_label]
-                except AttributeError:
-                    output_row[index] = query_result[options.cfg.freq_label]
-                index += 1
-        return tuple(output_row)
 
 class DistinctQuery(CorpusQuery):
     """ Define a CorpusQuery subclass that reformats the query results in a 
@@ -737,7 +658,6 @@ class CollocationQuery(TokenQuery):
             MI = log ( (f_coll * size) / (f_1 * f_2 * span) ) / log (2)
         
         """
-
         return math.log((f_coll * size) / (f_1 * f_2 * span)) / math.log(2)
 
     def conditional_propability(self, freq_left, freq_total):
@@ -750,7 +670,6 @@ class CollocationQuery(TokenQuery):
         where f(c, q) is the number of occurrences of word c as a left 
         collocate of query token q, and f(c) is the total number of 
         occurrences of c in the corpus. """
-        
         return float(freq_left) / float(freq_total)
 
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
@@ -858,15 +777,20 @@ class CollocationQuery(TokenQuery):
             current_result["coq_collocate_frequency"] = coll_freq
             current_result["coq_collocate_frequency_right"] = count_right[collocate_tuple]
             current_result["coq_collocate_frequency_left"] = count_left[collocate_tuple]
-            current_result["coq_mutual_information"] = round(self.mutual_information(
-                query_freq,
-                coll_freq, 
-                count_total[collocate_tuple], 
-                corpus_size, 
-                self.left_span + self.right_span), 3)
-            current_result["coq_conditional_probability"] = round(
-                self.conditional_propability(count_left[collocate_tuple], coll_freq), 3)
-            
+            try:
+                current_result["coq_mutual_information"] = round(self.mutual_information(
+                    query_freq,
+                    coll_freq, 
+                    count_total[collocate_tuple], 
+                    corpus_size, 
+                    self.left_span + self.right_span), 3)
+            except ZeroDivisionError:
+                current_result["coq_mutual_information"] = "<NA>"
+            try:
+                current_result["coq_conditional_probability"] = round(
+                    self.conditional_propability(count_left[collocate_tuple], coll_freq), 3)
+            except ZeroDivisionError:
+                current_result["coq_conditional_probability"] = "<NA>"
             corpus_id, origin_id, number = context_info[collocate_tuple]
             
             current_result["coquery_invisible_corpus_id"] = corpus_id

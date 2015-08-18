@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
+from __future__ import print_function
 
 from session import *
 from defines import *
@@ -23,8 +24,18 @@ import os
 
 from queryfilter import *
 
+# so, pandas:
+import pandas as pd
+
+# load visualizations
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
 import treemap
+import barcodeplot
+import visualizer
+import heatmap
+import beeswarmplot
+import stripplot
+import barplot
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -206,6 +217,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     """ Coquery as standalone application. """
     
     def setup_menu_actions(self):
+        """ Connect menu actions to their methods."""
         self.ui.action_save_results.triggered.connect(self.save_results)
         self.ui.action_quit.triggered.connect(self.close)
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
@@ -214,16 +226,22 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         
         self.ui.action_tree_map.triggered.connect(self.show_tree_map)
+        self.ui.action_barcode_plot.triggered.connect(self.show_barcode_plot)
+        self.ui.action_beeswarm_plot.triggered.connect(self.show_beeswarm_plot)
+        self.ui.action_heat_map.triggered.connect(self.show_heatmap_plot)
+        self.ui.action_barchart_plot.triggered.connect(self.show_barchart_plot)
     
     def setup_hooks(self):
+        """ Connect all relevant signals to their methods."""
         super(CoqueryApp, self).setup_hooks()
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)
+        
         #self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
         
     def setup_app(self):
-        """ initializes all widgets with suitable data """
+        """ Initialize all widgets with suitable data """
 
         self.create_output_options_tree()
         
@@ -275,7 +293,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.log_proxy.sortCaseSensitivity = False
         self.ui.log_table.setModel(self.log_proxy)
 
-        self.table_model = results.CoqTableModel(self, None, None)
+        self.table_model = results.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
         header = self.ui.data_preview.horizontalHeader()
         header.sectionResized.connect(self.result_column_resize)
@@ -288,13 +306,13 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.data_preview.setSortingEnabled(False)
     
     def result_column_resize(self, index, old, new):
-        header = self.table_model.header[index].lower()
+        header = self.table_model.content.columns[index].lower()
         options.cfg.column_width[header] = new
 
     def result_cell_clicked(self, index):
         model_index = index
         row = model_index.row()
-        data = self.table_model.content[row]
+        data = self.table_model.content.iloc[row]
         token_id = data["coquery_invisible_corpus_id"]
         origin_id = data["coquery_invisible_origin_id"]
         token_width = data["coquery_invisible_number_of_tokens"]
@@ -361,6 +379,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.query_thread = None
         self.last_results_saved = True
         
+        self.widget_list = []
+        
         # the dictionaries column_width and column_color store default
         # attributes of the columns by display name. This means that problems
         # may arise if several columns have the same name!
@@ -374,7 +394,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.show_no_corpus_message()
         
         options.cfg.main_window = self
-
         # Resize the window if a previous size is available
         try:
             if options.cfg.height and options.cfg.width:
@@ -383,19 +402,22 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             pass
         
     def display_results(self):
+        df = pd.DataFrame.from_dict(self.Session.output_storage, orient="columns")
+        if not options.cfg.experimental:
+            df.columns = self.Session.header
+        self.table_model.set_data(df)
         if options.cfg.experimental:
             self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
         else:
             self.table_model.set_header(self.Session.header)
-        self.table_model.set_data(self.Session.output_storage)
         self.ui.data_preview.setModel(self.table_model)
 
         # set column widths:
-        for i, column in enumerate(self.table_model.header):
+        for i, column in enumerate(self.table_model.content.columns):
             if column.lower() in options.cfg.column_width:
                 self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower()])
         
-        if self.table_model.rowCount(self):
+        if self.table_model.rowCount():
             self.last_results_saved = False
 
     def save_results(self):
@@ -454,56 +476,90 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         column = header.logicalIndexAt(point.x())
         # show self.menu about the column
         self.menu = QtGui.QMenu("Column options", self)
-        
-        if self.table_model.header[column].lower() in options.cfg.column_color:
-            action = QtGui.QAction("Reset color", self)
-            action.triggered.connect(lambda: self.reset_color(column))
-            self.menu.addAction(action)
- 
-        action = QtGui.QAction("Change color...", self)
-        action.triggered.connect(lambda: self.change_color(column))
+
+        display_name = options.cfg.main_window.Session.Corpus.resource.translate_header(self.table_model.content.columns[column])
+        action = QtGui.QWidgetAction(self)
+        label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        action.setDefaultWidget(label)
         self.menu.addAction(action)
         self.menu.addSeparator()
 
-        group = QtGui.QActionGroup(self, exclusive=True)
-        action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
-        action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
-        if self.table_model.sort_state[column] == results.SORT_NONE:
-            action.setChecked(True)
-        self.menu.addAction(action)
-        
-        action = group.addAction(QtGui.QAction("Ascending", self, checkable=True))
-        action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_INC))
-        if self.table_model.sort_state[column] == results.SORT_INC:
-            action.setChecked(True)
-        self.menu.addAction(action)
-        action = group.addAction(QtGui.QAction("Descending", self, checkable=True))
-        action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_DEC))
-        if self.table_model.sort_state[column] == results.SORT_DEC:
-            action.setChecked(True)
-        self.menu.addAction(action)
-                                 
-        
-        probe_index = self.table_model.createIndex(0, column)
-        probe_cell = probe_index.data()
-        if type(probe_cell) in [unicode, str, QtCore.QString]:
-            action = group.addAction(QtGui.QAction("Ascending, reverse", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
-            if self.table_model.sort_state[column] == results.SORT_REV_INC:
-                action.setChecked(True)
+        if not options.cfg.column_visibility.get(
+            self.table_model.content.columns[column].lower(), True):
+            action = QtGui.QAction("Show column", self)
+            action.triggered.connect(lambda: self.toggle_visibility(column))
+            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
+            self.menu.addAction(action)
+            
+        else:
+            action = QtGui.QAction("Hide column", self)
+            action.triggered.connect(lambda: self.toggle_visibility(column))
+            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
+            self.menu.addAction(action)
+            self.menu.addSeparator()
+            
+            if self.table_model.content.columns[column].lower() in options.cfg.column_color:
+                action = QtGui.QAction("Reset color", self)
+                action.triggered.connect(lambda: self.reset_color(column))
+                self.menu.addAction(action)
+    
+            action = QtGui.QAction("Change color...", self)
+            action.triggered.connect(lambda: self.change_color(column))
+            self.menu.addAction(action)
+            self.menu.addSeparator()
 
-            self.menu.addAction(action)
-            action = group.addAction(QtGui.QAction("Descending, reverse", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_DEC))
-            if self.table_model.sort_state[column] == results.SORT_REV_DEC:
+            group = QtGui.QActionGroup(self, exclusive=True)
+            action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
+            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
+            if self.table_model.sort_state[column] == results.SORT_NONE:
                 action.setChecked(True)
             self.menu.addAction(action)
+            
+            action = group.addAction(QtGui.QAction("Ascending", self, checkable=True))
+            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_INC))
+            if self.table_model.sort_state[column] == results.SORT_INC:
+                action.setChecked(True)
+            self.menu.addAction(action)
+            action = group.addAction(QtGui.QAction("Descending", self, checkable=True))
+            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_DEC))
+            if self.table_model.sort_state[column] == results.SORT_DEC:
+                action.setChecked(True)
+            self.menu.addAction(action)
+                                    
+            
+            probe_index = self.table_model.createIndex(0, column)
+            probe_cell = probe_index.data()
+            if type(probe_cell) in [unicode, str, QtCore.QString]:
+                action = group.addAction(QtGui.QAction("Ascending, reverse", self, checkable=True))
+                action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
+                if self.table_model.sort_state[column] == results.SORT_REV_INC:
+                    action.setChecked(True)
+
+                self.menu.addAction(action)
+                action = group.addAction(QtGui.QAction("Descending, reverse", self, checkable=True))
+                action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_DEC))
+                if self.table_model.sort_state[column] == results.SORT_REV_DEC:
+                    action.setChecked(True)
+                self.menu.addAction(action)
         
         self.menu.popup(header.mapToGlobal(point))
         header.customContextMenuRequested.connect(self.show_header_menu)
 
+
+    def toggle_visibility(self, index):
+        """ Show again a hidden column, or hide a visible column."""
+        column = self.table_model.content.columns[index]
+        options.cfg.column_visibility[column] = not options.cfg.column_visibility.get(column, True)
+        self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
+        # Resort the data if this is a sorting column:
+        if index in self.table_model.sort_columns:
+            self.table_model.sort(0, QtCore.Qt.AscendingOrder)
+        self.table_model.layoutChanged.emit()
+
+
     def reset_color(self, column):
-        header = self.table_model.header[column].lower()
+        header = self.table_model.content.columns[column].lower()
         try:
             options.cfg.column_color.pop(header)
             self.table_model.layoutChanged.emit()
@@ -512,7 +568,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
 
     def change_color(self, column):
         col = QtGui.QColorDialog.getColor()
-        header = self.table_model.header[column].lower()
+        header = self.table_model.content.columns[column].lower()
         if col.isValid():
             options.cfg.column_color[header] = col.name()
             #self.table_model.layoutChanged.emit()
@@ -534,7 +590,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.button_run_query.clicked.disconnect()
         self.ui.button_run_query.clicked.connect(self.run_query)
         old_width = self.ui.button_run_query.width()
-        self.ui.button_run_query.setText("Query")
+        self.ui.button_run_query.setText(gui_label_query_button)
         self.ui.button_run_query.setFixedWidth(max(old_width, self.ui.button_run_query.width()))
         self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-start")))
         
@@ -543,7 +599,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.button_run_query.clicked.disconnect()
         self.ui.button_run_query.clicked.connect(self.stop_query)
         old_width = self.ui.button_run_query.width()
-        self.ui.button_run_query.setText("Stop")
+        self.ui.button_run_query.setText(gui_label_stop_button)
         self.ui.button_run_query.setFixedWidth(max(old_width, self.ui.button_run_query.width()))
         self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-stop")))
     
@@ -567,9 +623,6 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             self.ui.progress_bar.setRange(0, 1)
             self.set_query_button()
         
-    def show_tree_map(self):
-        treemap.TreeMapVisualizer.MosaicPlot(self.table_model, self.ui.data_preview, self)
-
     def run_query(self):
         self.getGuiValues()
         # Lazily close an existing database connection:
@@ -617,6 +670,60 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
         
+    def show_tree_map(self):
+        if not self.table_model.content.empty:
+            viz = visualizer.VisualizerDialog()
+            viz.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                treemap.TreemapVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
+    def show_heatmap_plot(self):
+        if not self.table_model.content.empty:
+            viz = visualizer.VisualizerDialog()
+            viz.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                heatmap.HeatmapVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        
+    def show_beeswarm_plot(self):
+        if not self.table_model.content.empty:
+            viz = visualizer.VisualizerDialog()
+            viz.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                #beeswarmplot.BeeswarmVisualizer, self)
+                stripplot.StripplotVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
+    def show_barchart_plot(self):
+        if not self.table_model.content.empty:
+            viz = visualizer.VisualizerDialog()
+            viz.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                #beeswarmplot.BeeswarmVisualizer, self)
+                #stripplot.StripplotVisualizer, self)
+                barplot.BarchartVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
+    def show_barcode_plot(self):
+        if not self.table_model.content.empty:
+            viz = visualizer.VisualizerDialog()
+            self.visualizers.append(viz)
+            viz.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                barcodeplot.BarcodeVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
     def save_configuration(self):
         self.getGuiValues()
         options.save_configuration()
@@ -667,17 +774,25 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.fill_combo_corpus()
         self.change_corpus()
             
+    def shutdown(self):
+        """ Shut down the application by removing all open widgets and saving
+        the configuration. """
+        for x in self.widget_list:
+            x.close()
+        self.save_configuration()
+            
+            
     def closeEvent(self, event):
         if not self.last_results_saved:
             msg_query_running = "<p>The last query results have not been saved. If you quit now, they will be lost.</p><p>Do you really want to quit?</p>"
             response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
-                self.save_configuration()
+                self.shutdown()
                 event.accept()
             else:
                 event.ignore()            
         else:
-            self.save_configuration()
+            self.shutdown()
             event.accept()
         
     def mysql_settings(self):

@@ -20,52 +20,71 @@ SORT_DEC = 2
 SORT_REV_INC = 3
 SORT_REV_DEC = 4
 
+import pandas as pd
+import numpy as np
+
 class CoqTableModel(QtCore.QAbstractTableModel):
-    """ Define a QAbstractTableModel class that stores the query results so
-    that they can be shown in the results view. """
+    """ Define a QAbstractTableModel class that stores the query results in a 
+    pandas DataFrame object. It provides the required methods so that they 
+    can be shown in the results view. """
     
-    def __init__(self, parent, header, data, *args):
+    def __init__(self, parent, *args):
         super(CoqTableModel, self).__init__(parent, *args)
-        self.content = data
-        self.header = header
-        if data:
-            self.rownames = range(1, len(data) + 1)
-        else:
-            self.rownames = None
-
+        self.last_header = None
         self.sort_columns = []
-        if self.header:
-            self.sort_state = [SORT_NONE] * len(self.header)        
-        else:
-            self.sort_state = []
+        self.set_data(None)
         
-    def set_header(self, header):
-        last_header = self.header
-        self.header = header
-        if last_header <> self.header and self.header:
-            self.sort_state = [SORT_NONE] * len(self.header)
-            self.sort_columns = []
-        if header:
-            for i, x in enumerate(header):
-                self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
-            self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(header))
+    def set_header(self, header): 
+        self.sort_state = [SORT_NONE] * len(self.content.columns)
+        for i, x in enumerate(self.content.columns):
+            self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
+        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(self.content.columns))
+        # remember the current header:
+        self.last_header = self.content.columns
 
-    def set_data(self, data):
-        self.content = data
-        if data:
-            self.rownames = range(1, len(data) + 1)
+    def reorder_data(self, new_order):
+        self.content = self.content.reindex(columns=new_order)
+        # notify the GUI that the whole data frame has changed:
+        self.dataChanged.emit(
+            self.createIndex(0, 0), 
+            self.createIndex(self.rowCount(), self.columnCount()))
+
+    def set_data(self, data=None):
+        """ Set the content of the table model to the given data, using a
+        pandas DataFrame object. """
+        # create a pandas DataFrame for the provided data:
+        if not isinstance(data, pd.DataFrame):
+            self.content = pd.DataFrame(data)
         else:
-            self.rownames = None
-            return
-        p = self.createIndex(0, 0)
-        q = self.createIndex(len(self.content), len(self.content[0]))
-        self.dataChanged.emit(p, q)
+            self.content = data
+        
+        self.rownames = self.content.index
+        # try to set the columns to the output order of the current session
+        try:
+            self.reorder_data(options.cfg.main_window.Session.output_order)
+        except AttributeError:
+            # even if that failed, emit a signal that the data has changed:
+            self.dataChanged.emit(
+                self.createIndex(0, 0), 
+                self.createIndex(self.rowCount(), self.columnCount()))
+
+    def column(self, i):
+        """ Return the name of the column in the pandas data frame at index 
+        position 'i'. """
+        return self.content.columns[i]
 
     def data(self, index, role):
+        """ Return a representation of the data cell indexed by 'index', 
+        using the specified Qt role. """
+        
         if not index.isValid():
             return None
+        
+        # DisplayRole: return the content of the cell in the data frame:
         if role == QtCore.Qt.DisplayRole:
             try:
+                return self.content.iloc[index.row(), index.column()]
+            except AttributeError:
                 try:
                     dat = self.content[index.row()][self.header[index.column()]]
                 except (TypeError):
@@ -74,23 +93,31 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             except (IndexError, KeyError):
                 return None
 
+        # ForegroundRole: return the colour of the column, or the default if
+        # no color is specified:
         elif role == QtCore.Qt.ForegroundRole:
-            column = index.column()
-            header = self.header[column]
-            try:
-                col = options.cfg.column_color[header.lower()]
-            except KeyError:
-                return None
-            return QtGui.QColor(col)
+            header = self.column(index.column())
+            if options.cfg.column_visibility.get(
+                self.content.columns[index.column()], True):
+                try:
+                    col = options.cfg.column_color[header.lower()]
+                    return QtGui.QColor(col)
+                except KeyError:
+                    return None
+            else:
+                return QtGui.QColor("lightgrey")
+                
+        # TextAlignmentRole: return the alignment of the column:
         elif role == QtCore.Qt.TextAlignmentRole:
-            if self.header[index.column()] == "coq_context_left" or self.sort_state[index.column()] in set([SORT_REV_DEC, SORT_REV_INC]):
-                return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
-            try:
-                if isinstance(self.content[index.row()][self.header[index.column()]], (int, long, float, complex)):
-                    return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
-            except (TypeError):
-                if isinstance(self.content[index.row()] [index.column()], (int, long, float, complex)):
-                    return QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter
+            column = self.column(index.column())
+            # integers and floats are always right-aligned:
+            if self.content[column].dtype in (np.float64, np.int64):
+                return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
+            # right-align the left context as well as columns with reverse 
+            # sorting enabled:
+            if column == "coq_context_left" or self.sort_state[index.column()] in set([SORT_REV_DEC, SORT_REV_INC]):
+                return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
+        
         return None
         
     def headerData(self, index, orientation, role):
@@ -104,16 +131,22 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             else:
                 return None
 
-        # Return column names:
-        if not self.header or index > len(self.header):
-            return None
-
         if role == QtCore.Qt.DisplayRole:
+            if not options.cfg.column_visibility.get(
+                self.content.columns[index], True):
+                return "[hidden]"
+            
             # Get header string?
-            column_name = options.cfg.main_window.Session.Corpus.resource.translate_header(self.header[index])
+            column = self.column(index)
+            
+            # do not return a header string for invisible columns:
+            if column.startswith("coquery_invisible"):
+                return None
+            
+            display_name = options.cfg.main_window.Session.Corpus.resource.translate_header(column)
             # Return normal header if not a sort column:
             if index not in self.sort_columns:
-                return column_name
+                return display_name
             tag_list = []
             
             # Add sorting order number if more than one sorting columns have
@@ -126,11 +159,14 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 tag_list.append("rev")
             
             return "{}{}".format(
-                    column_name, 
+                    display_name, 
                     ["", " ({}) ".format(", ".join(tag_list))][bool(tag_list)])
 
         # Get header decoration (i.e. the sorting arrows)?
         elif role == QtCore.Qt.DecorationRole:
+            if not options.cfg.column_visibility.get(
+            self.content.columns[index], True):
+                return None
             # add arrows as sorting direction indicators if necessary:
             if self.sort_state[index] in [SORT_DEC, SORT_REV_DEC]:
                 return QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_ArrowDown)
@@ -138,87 +174,45 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 return QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_ArrowUp)
             else:
                 return None
-        else:
-            return None
+        return None
 
     def rowCount(self, parent=None):
-        if self.content:
-            return len(self.content)
-        else:
-            return 0
+        """ Return the number of rows. """
+        return len(self.content.index)
         
     def columnCount(self, parent=None):
-        if self.header:
-            return len(self.header)
-        else:
-            return 0
-        
-    def lessThan(self, first, second):
-        """ Compare the content of the first row to the content of the
-        second. Return True if the first row should be placed above the 
-        second row if all sorting columns are considered. """
-        
-        # if no sorting rows are set, the row with the lower row number
-        # should come first:
-        if not self.sort_columns:
-            return first.row() < second.row()
-
-        # Go through the sorting columns, and compare the two rows in each
-        # column. If a comparison already resolves the sorting order, the 
-        # following columns are not considered anymore.
-        for col in self.sort_columns:
-            header = self.header[col]
-            state = self.sort_state[col]
-            
-            # get cell content of first and second row in current column:
-            try:
-                data_first = self.content[first.row()] [header].lower()
-                data_second = self.content[second.row()] [header].lower()
-            except AttributeError:
-                data_first = self.content[first.row()] [header]
-                data_second = self.content[second.row()] [header]
-
-            # reverse the contents if backward sorting is set for the column:
-            if state in set([SORT_REV_DEC, SORT_REV_INC]):
-                data_first = data_first[::-1]
-                data_second = data_second[::-1]
-
-            # compare the rows, and return an appropriate value if one of the
-            # two has a lower value than the other:
-            if state in set([SORT_DEC, SORT_REV_DEC]):
-                if data_first > data_second:
-                    return True
-                if data_first < data_second:
-                    return False
-            elif state in set([SORT_INC, SORT_REV_INC]):
-                if data_first < data_second:
-                    return True
-                if data_first > data_second:
-                    return False
-
-        # The first row has not been found to have lower values than the
-        # second:
-        return False
+        """ Return the number of columns, ignoring all invisible columns. """
+        return len([x for x in self.content.columns if not x.startswith("coquery_invisible")])
         
     def do_sort(self):
-        for col in self.sort_columns[::-1]:
-            if options.cfg.experimental:
-                if self.sort_state[col] in set([SORT_INC, SORT_DEC]):
-                    key_fun = lambda row: row[self.header[col]]
-                elif self.sort_state[col] in set([SORT_REV_INC, SORT_REV_DEC]):
-                    key_fun = lambda row: row[self.header[col]][::-1]
-                else:
-                    continue
+        """ Sort the content data frame by taking all sorting columns and 
+        their settings into account. """
+        
+        sort_columns = []
+        del_columns = []
+        directions = []
+        # go through all sort columns:
+        for col in self.sort_columns:
+            if not options.cfg.column_visibility.get(self.column(col), True):
+                continue
+            # add a temporary column if reverse sorting is requested:
+            if self.sort_state[col] in set([SORT_REV_DEC, SORT_REV_INC]):
+                name = "{}_rev".format(self.column(col))
+                del_columns.append(name)
+                self.content[name] = self.content[self.column(col)].apply(lambda x: x[::-1])
             else:
-                if self.sort_state[col] in set([SORT_INC, SORT_DEC]):
-                    key_fun = lambda row: row[col]
-                elif self.sort_state[col] in set([SORT_REV_INC, SORT_REV_DEC]):
-                    key_fun = lambda row: row[col][::-1]
-            if self.sort_state[col] in set([SORT_INC, SORT_REV_INC]):
-                self.content = sorted(self.content, key=key_fun)
-            else:
-                self.content = sorted(self.content, key=key_fun, reverse=True)
-    
+                name = self.column(col)
+            # add the sorting direction
+            directions.append(self.sort_state[col] in set([SORT_INC, SORT_REV_INC]))
+            sort_columns.append(name)
+            
+        # sort the data frame:
+        self.content.sort(
+            columns=sort_columns, ascending=directions,
+            axis="index", inplace=True)
+        # remove all temporary columns:
+        self.content.drop(labels=del_columns, axis="columns", inplace=True)
+            
     def sort(self, *args):
         if not self.sort_columns:
             return
@@ -240,108 +234,3 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         options.cfg.main_window.ui.statusbar.showMessage("Error during sorting.")
         error_box.ErrorBox.show(self.exc_info, self.exception)
         
-class ResultsViewer(QtGui.QDialog):
-    """ Defines a QDialog class that can be used to display the results from
-    a query session. """
-    def __init__(self, Session, parent=None):
-        def format_file_size(size):
-            if size > 1024**4:
-                return "{0:.1f} TiB".format(size/1024**4)
-            elif size > 1024**3:
-                return "{0:.1f} GiB".format(size/1024**3)
-            elif size > 1024**2:
-                return "{0:.1f} MiB".format(size/1024**2)
-            elif size > 1024:
-                return "{0:.1f} KiB".format(size/1024)
-            else:
-                return "{} bytes".format(size)
-        
-        super(ResultsViewer, self).__init__(parent)
-        
-        self.Session = Session
-        
-        self.ui = resultsUi.Ui_resultsDialog()
-        self.ui.setupUi(self)
-        self.setWindowIcon(options.cfg.icon)
-        
-        # Connect buttons:
-        self.ui.button_browse.clicked.connect(self.save_results)
-        self.ui.button_quit.clicked.connect(self.accept)
-        self.ui.button_restart.clicked.connect(self.reject)
-        self.ui.button_logfile.clicked.connect(self.view_logfile)
-
-        self.table_model = CoqTableModel(self, Session.header, Session.output_storage)
-
-        # make horizontal headers sortable in a special way:
-        self.ui.data_preview.horizontalHeader().sectionClicked.connect(self.change_sorting)
-        self.ui.data_preview.setModel(self.table_model)
-        self.ui.data_preview.setSortingEnabled(False)
-        #self.adjust_header_width()
-
-        if not Session.end_time:
-            return
-        diff = (Session.end_time - Session.start_time)
-        duration = diff.seconds
-        if duration > 3600:
-            self.ui.label_time.setText("{} hrs, {}, min, {} s".format(duration // 3600, duration % 3600 // 60, duration % 60))
-        elif duration > 60:
-            self.ui.label_time.setText("{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3]))
-        else:
-            self.ui.label_time.setText("{}.{} s".format(duration, str(diff.microseconds)[:3]))
-        self.ui.row_numbers.setText("{}".format(len(Session.output_storage)))
-        
-    def save_results(self):
-        name = QtGui.QFileDialog.getSaveFileName(directory="~")
-        if type(name) == tuple:
-            name = name[0]
-        if name:
-            with open(name, "wt") as output_file:
-                writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
-                writer.writerow(self.Session.header)
-                for y in range(self.table_model.rowCount()):
-                    writer.writerow([QtCore.QString(self.table_model.index(y, x).data()) for x in range(self.table_model.columnCount())])
-                    
-    def view_logfile(self):
-        logfile.LogfileViewer.view(options.cfg.log_file_path)        
-
-    def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Escape:
-            self.accept()
-            
-    def change_sorting(self, index):
-        header = self.ui.data_preview.horizontalHeader()
-
-        if not self.table_model.sort_state[index]:
-            self.table_model.sort_columns.append(index)
-        self.table_model.sort_state[index] += 1
-        
-        probe_index = self.table_model.createIndex(0, index)
-        probe_cell = probe_index.data()
-        if type(probe_cell) in [unicode, str, QtCore.QString]:
-            max_state = SORT_REV_DEC
-        else:
-            max_state = SORT_DEC
-
-        if self.table_model.sort_state[index] > max_state:
-            self.table_model.sort_state[index] = SORT_NONE
-            self.table_model.sort_columns.remove(index)
-
-        self.table_model.sort(0, QtCore.Qt.AscendingOrder)
-
-    def adjust_header_width(self):
-        old_sort_state = copy.copy(self.table_model.sort_state)
-        old_sort_columns = copy.copy(self.table_model.sort_columns)
-        self.table_model.sort_state = [SORT_REV_DEC] * len(self.table_model.header)
-        self.table_model.sort_columns = range(len(self.table_model.header))
-        self.table_model.sort_state = old_sort_state
-        self.table_model.sort_columns = old_sort_columns
-
-        
-def main():
-    app = QtGui.QApplication(sys.argv)
-    viewer = ResultsViewer()
-    viewer.exec_()
-    
-if __name__ == "__main__":
-    main()
-    
