@@ -6,7 +6,7 @@ import xml.etree
 import os.path, re
 import csv, cStringIO, codecs, string
 from collections import defaultdict
-import corpusbuilder
+from corpusbuilder import *
 
 class corpus_code():
     def tag_to_qhtml(self, s):
@@ -21,8 +21,8 @@ class corpus_code():
             "subscript": "sup",
             "text": "html", 
             "deleted": "s",
-            "other-language": "span style='font-style: italic;'>",
-            "quote": "span style='font-style: italic; color: lightgrey; '>",
+            "other-language": "span style='font-style: italic;'",
+            "quote": "span style='font-style: italic; color: darkgrey; '",
             "error": "s"}
         if s in translate_dict:
             return translate_dict[s]
@@ -156,7 +156,7 @@ class corpus_code():
 
         widget.ui.context_area.setText(collapse_words(context))
 
-class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
+class ICENigeriaBuilder(BaseCorpusBuilder):
     def __init__(self):
         """ Initialize the corpus builder. The initialization includes a 
         definition of the database schema. """
@@ -226,7 +226,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 #([self.corpus_sentence_id], 0, "HASH"),
                 ([self.corpus_file_id], 0, "HASH"),
                 ([self.corpus_source_id], 0, "HASH")]})
-        
+
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
         #
@@ -264,6 +264,15 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         self.add_table_description(self.word_table, self.word_id,
             {"CREATE": create_columns,
             "INDEX": index_columns})
+            
+        self.add_new_table_description(self.word_table,
+            [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
+             Column(self.word_label, "VARCHAR(32) NOT NULL"),
+             Column(self.word_lemma, "VARCHAR(32) NOT NULL"),
+             Column(self.word_pos, "VARCHAR(12) NOT NULL")])
+             
+            
+                                       
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
@@ -279,7 +288,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         
         self.file_table = "file"
         self.file_id = "FileId"
-        self.file_name = "Name"
+        self.file_name = "Filename"
         self.file_path = "Path"
         
         self.add_table_description(self.file_table, self.file_id,
@@ -287,6 +296,11 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
                 "`{}` TINYTEXT NOT NULL".format(self.file_name),
                 "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
+        
+        self.add_new_table_description(self.file_table,
+            [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+             Column(self.file_name, "TINYTEXT NOT NULL"),
+             Column(self.file_path, "TINYTEXT NOT NULL")])
         
         #self.sentence_table = "sentence"
         #self.sentence_id = "SentenceId"
@@ -323,6 +337,23 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 ([self.source_gender], 0, "BTREE"),
                 ([self.source_ethnicity], 0, "BTREE"),
                 ([self.source_ethnicity], 0, "BTREE")]})
+
+        self.add_new_table_description(self.source_table,
+            [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+             Column(self.source_mode, "TINYTEXT NOT NULL"),
+             Column(self.source_date, "VARCHAR(15) NOT NULL"),
+             Column(self.source_register, "VARCHAR(30) NOT NULL"),
+             Column(self.source_place, "VARCHAR(30) NOT NULL"),
+             Column(self.source_age, "VARCHAR(5) NOT NULL"),
+             Column(self.source_gender, "VARCHAR(1) NOT NULL"),
+             Column(self.source_ethnicity, "VARCHAR(15) NOT NULL")])
+
+        self.add_new_table_description(self.corpus_table,
+            [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Link(self.corpus_word_id, self.word_table),
+             Link(self.corpus_file_id, self.file_table),
+             Link(self.corpus_source_id, self.source_table)])
+
                 
         self._corpus_id = 0
         self._corpus_code = corpus_code
@@ -346,43 +377,48 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                         self.word_lemma: "ANONYMIZED", 
                         self.word_pos: "np"}, case=True)
 
+    def process_text(self, text):
+        for row in text.splitlines():
+            try:
+                word_text, word_pos, lemma_text = [x.strip() for x in row.split("\t")]
+            except ValueError:
+                pass
+            else:
+                new_sentence = False
+                
+                if word_pos == "CD":
+                    lemma_text = word_text
+                if word_pos in string.punctuation:
+                    word_pos = "PUNCT"
+                if word_pos == "SENT":
+                    new_sentence = True
+                    word_pos = "PUNCT"
+                    
+                self._word_id = self.table_get(self.word_table, 
+                    {self.word_label: word_text, 
+                    self.word_lemma: lemma_text, 
+                    self.word_pos: word_pos}, case=True)
+                    
+                self._corpus_id = self.table_add(self.corpus_table,
+                    {self.corpus_word_id: self._word_id,
+                    self.corpus_file_id: self._file_id,
+                    self.corpus_source_id: self._source_id})
+
+                #if new_sentence:
+                    #self._sentence_id = self.table_get(self.sentence_table,
+                        #{self.sentence_source_id: self._source_id})
+        
+
     def xml_process_content(self, element):
         """ In ICE-NG, the XML elements contain rows of words. This method 
         processes these rows, and creates token entries in the corpus table. 
         It also creates new entries in the word table if necessary."""
         if element.text:
-            for row in element.text.splitlines():
-                try:
-                    word_text, word_pos, lemma_text = [x.strip() for x in row.split("\t")]
-                except ValueError:
-                    pass
-                else:
-                    new_sentence = False
-                    
-                    if word_pos == "CD":
-                        lemma_text = word_text
-                    if word_pos in string.punctuation:
-                        word_pos = "PUNCT"
-                    if word_pos == "SENT":
-                        new_sentence = True
-                        word_pos = "PUNCT"
-                        
-                    self._word_id = self.table_get(self.word_table, 
-                        {self.word_label: word_text, 
-                        self.word_lemma: lemma_text, 
-                        self.word_pos: word_pos}, case=True)
-                        
-                    self._corpus_id = self.table_add(self.corpus_table,
-                        {self.corpus_word_id: self._word_id,
-                        self.corpus_file_id: self._file_id,
-                        self.corpus_source_id: self._source_id})
-
-                    #if new_sentence:
-                        #self._sentence_id = self.table_get(self.sentence_table,
-                            #{self.sentence_source_id: self._source_id})
+            self.process_text(element.text)
 
     def xml_process_tail(self, element):
-        self.xml_process_content(element)
+        if element.tail:
+            self.process_text(element.tail)
         
     def xml_get_meta_information(self, root):
         meta_info_keys = ["date", "place"]
@@ -552,7 +588,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
     def process_file(self, current_file):
         # Process every file except for bl_18a.xml.pos. This file only 
         # contains unimportant meta information:
-        if current_file.find("bl_18a.xml.pos") == -1:
+        if current_file.lower().find("bl_18a.xml.pos") == -1:
             self.process_xml_file(current_file)
 
     def get_file_identifier(self, path):
@@ -560,15 +596,6 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         while "." in base:
             base, _= os.path.splitext(base)
         return base.lower()
-
-    def read_source_data(self):
-        #e = xml.etree.ElementTree.parse(self.arguments._path).getroot()
-        
-        #for desc in e.findall("file"):
-            #meta = desc.find("meta")
-            #base = self.get_file_identifier(meta.attrib["raw"])
-            #self._source_info[base] = meta.attrib
-        pass
 
     def get_description(self):
         return "This script makes ICE Nigeria available to Coquery by reading the corpus data files from {}/POS-Tagged into the MySQL database '{}' so that the database can be queried by Coquery.The required data file 'ICE-Nigeria-written-pos-tagged.zip' can be downloaded from http://sourceforge.net/projects/ice-nigeria/files/.".format(self.arguments.path, self.arguments.db_name)
