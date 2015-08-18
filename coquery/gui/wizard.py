@@ -334,7 +334,6 @@ class CoqueryWizard(QtGui.QWizard):
     def getGuiValues(self):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
-        
         if options.cfg:
             options.cfg.corpus = unicode(self.ui.combo_corpus.currentText()).lower()
         
@@ -365,6 +364,10 @@ class CoqueryWizard(QtGui.QWizard):
             # retrieve the CSV options for the current input file:
             if self.csv_options:
                 sep, col, head, skip = self.csv_options
+                if sep == "{tab}":
+                    sep = "\t"
+                if sep == "{space}":
+                    sep = " "
                 options.cfg.input_separator = sep
                 options.cfg.query_column_number = col
                 options.cfg.file_has_headers = head
@@ -385,7 +388,7 @@ class CoqueryWizard(QtGui.QWizard):
                    options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-            
+            options.cfg.context_mode = self.ui.context_mode.currentText()
             options.cfg.selected_features = []
             
             # Go throw options tree widget to get all checked output columns:
