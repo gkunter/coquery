@@ -452,9 +452,7 @@ class CorpusQuery(object):
             index += max_number_of_tokens
 
         if options.cfg.experimental:
-            print("###")
             if options.cfg.experimental:
-                print("info", self.Corpus.get_source_info_header())
                 source_info = self.Corpus.get_source_info(query_result["SourceId"])
         else:
             if CORP_SOURCE in output_fields:
@@ -531,10 +529,11 @@ class DistinctQuery(CorpusQuery):
 
                 if not options.cfg.case_sensitive:
                     for x in current_result:
-                        try:
-                            current_result[x] = current_result[x].lower()
-                        except AttributeError:
-                            pass
+                        if x.startswith("coq_word") or x.startswith("coq_Lemma"):
+                            try:
+                                current_result[x] = current_result[x].lower()
+                            except AttributeError:
+                                pass
 
                 # store values from visible columns into output_list:
                 output_list.extend([current_result[x] for x in self.Session.output_order if not x.startswith("coquery_invisible_")])
@@ -635,10 +634,11 @@ class FrequencyQuery(CorpusQuery):
                 if not fail:
                     if not options.cfg.case_sensitive:
                         for x in current_result:
-                            try:
-                                current_result[x] = current_result[x].lower()
-                            except AttributeError:
-                                pass
+                            if x.startswith("coq_word") or x.startswith("coq_Lemma"):
+                                try:
+                                    current_result[x] = current_result[x].lower()
+                                except AttributeError:
+                                    pass
                     if constant_line:
                         output_list = copy.copy(constant_line)
                     else:
@@ -669,8 +669,8 @@ class FrequencyQuery(CorpusQuery):
             constant_line.append(self.source_filter)
 
         # get from cache, if possible:
-        if self.query_string in self.Session._results:
-            Lines = self.Session._results[self.query_string]
+        if tuple(constant_line + [self.query_string]) in self.Session._results:
+            Lines = self.Session._results[tuple(constant_line + [self.query_string])]
         else:
             # Collapse all identical lines in the result list:
             Lines = collections.Counter()
@@ -687,7 +687,7 @@ class FrequencyQuery(CorpusQuery):
                 Lines[tuple(constant_line + list(empty_result.get_row(number_of_token_columns, max_number_of_token_columns, result_columns)))] = 0
             
             # write to cache:
-            self.Session._results[self.query_string] = Lines
+            self.Session._results[tuple(constant_line + [self.query_string])] = Lines
         
         if options.cfg.order_frequency:
             data = Lines.most_common()
