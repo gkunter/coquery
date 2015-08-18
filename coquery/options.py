@@ -138,7 +138,7 @@ class Options(object):
         group.add_argument("--no-sort", help="do not sort the results in a frequency query (default: sort by frequency)", action="store_false", dest="order_frequency")
         group.add_argument("--suppress-header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
         
-        group.add_argument("--context_mode", help="specify the way the context is included in the output", choices=[CONTEXT_KWIC, CONTEXT_STRINGS, CONTEXT_COLUMNS], default=CONTEXT_KWIC, type=str)
+        group.add_argument("--context_mode", help="specify the way the context is included in the output", choices=[CONTEXT_KWIC, CONTEXT_STRING, CONTEXT_COLUMNS], default=CONTEXT_KWIC, type=str)
         group.add_argument("-c", "--context_span", help="include context with N words to the left and the right of the keyword, or with N words to the left and M words to the right if the notation '-c N, M' is used", default=0, type=int, dest="context_span")
         #group.add_argument("--sentence", help="include the sentence of the token as a context (not supported by all corpora)", dest="context_sentence", action="store_true")
 
@@ -509,6 +509,10 @@ class Options(object):
                             vars(self.args)["context_right"] = int(config_file.get("context", "words_right"))
                         except (configparser.NoOptionError, ValueError):
                             pass
+                        try:
+                            vars(self.args)["context_mode"] = config_file.get("context", "mode")
+                        except (configparser.NoOptionError, ValueError):
+                            pass
 
                     elif section == "gui":
                         try:
@@ -608,15 +612,12 @@ def save_configuration():
         for i, filt in enumerate(cfg.filter_list):
             config.set("filter", "filter{}".format(i+1), '"{}"'.format(filt))
         
+    if not "context" in config.sections():
+        config.add_section("context")
+    config.set("context", "mode", cfg.context_mode)
     if cfg.context_left or cfg.context_right:
-        if not "context" in config.sections():
-            config.add_section("context")
         config.set("context", "words_left", cfg.context_left)
         config.set("context", "words_right", cfg.context_right)
-        if cfg.context_columns:
-            config.set("context", "mode", "Columns")
-        elif cfg.context_span:
-            config.set("context", "mode", "KWIC")
 
     if cfg.gui or cfg.wizard:
         if not "gui" in config.sections():
