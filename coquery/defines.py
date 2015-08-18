@@ -69,7 +69,7 @@ TABLE_FILE = "file"
 TABLE_SPEAKER = "speaker"
 
 CONTEXT_KWIC = "KWIC"
-CONTEXT_STRINGS = "Strings"
+CONTEXT_STRING = "String"
 CONTEXT_COLUMNS = "Columns"
 
 COLUMN_NAMES = {
@@ -119,6 +119,8 @@ class UnicodeReader:
 
     def __init__(self, f, encoding="utf-8", types=None, **kwds):
         f = UTF8Recoder(f, encoding)
+        if "delimiter" in kwds:
+            kwds["delimiter"] = str(kwds["delimiter"])
         self.reader = csv.reader(f, **kwds)
         self.types = types
         self.encoding = encoding
@@ -150,7 +152,10 @@ class UnicodeWriter(object):
             elif isinstance(s, (int, float, long, complex)):
                 return s
             elif not isinstance(s, str):
-                return str(s)
+                try:
+                    return str(s)
+                except UnicodeEncodeError as e:
+                    raise e
             return s
         return self.writer.writerow([encode_string(x) for x in row])
 
