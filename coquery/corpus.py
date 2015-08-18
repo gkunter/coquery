@@ -552,6 +552,8 @@ class BaseResource(object):
         if header in COLUMN_NAMES:
             return COLUMN_NAMES[header]
         
+        corpus_features = [x for x, _ in cls.get_corpus_features()]
+        
         if header.startswith("coq_"):
             header = header.partition("coq_")[2]
         header_fields = header.split("_")
@@ -562,7 +564,10 @@ class BaseResource(object):
                 return header_fields[0].capitalize()
         if "_".join(header_fields[:-1]) in cls.get_resource_features():
             rc_feature = "_".join(header_fields[:-1])
-            return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
+            if rc_feature in corpus_features:
+                return "{}".format(type(cls).__getattribute__(cls, str(rc_feature)))
+            else:
+                return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
         return header
 
     def tag_to_html(self, tag, attributes={}):
@@ -2020,10 +2025,13 @@ class SQLCorpus(BaseCorpus):
                 final_select.append("coq_{}_1".format(rc_feature))
 
         if options.cfg.context_right or options.cfg.context_left:
-            if options.cfg.context_left:
-                final_select.append('NULL AS coq_context_left')
-            if options.cfg.context_right:
-                final_select.append('NULL AS coq_context_right')
+            if options.cfg.context_mode == CONTEXT_STRING:
+                final_select.append('NULL AS coq_context')
+            elif options.cfg.context_mode == CONTEXT_KWIC:
+                if options.cfg.context_left:
+                    final_select.append('NULL AS coq_context_left')
+                if options.cfg.context_right:
+                    final_select.append('NULL AS coq_context_right')
         
         # Add NULL values for all Coquery features; they are supplied not
         # by the SQL query, but by the Python script in yield_query_results().
@@ -2067,7 +2075,6 @@ class SQLCorpus(BaseCorpus):
         #sys.exit(0)
 
         Query.Session.output_order = [x.split(" AS ")[-1] for x in final_select]
-
         if Query.Session.output_order:
             return query_string
         else:
@@ -2109,14 +2116,17 @@ class SQLCorpus(BaseCorpus):
 
             #if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
             if (options.cfg.context_left or options.cfg.context_right):
-                left, right = self.get_context(
+                left, target, right = self.get_context(
                     current_result["coquery_invisible_corpus_id"], 
                     current_result["coquery_invisible_origin_id"], 
                     Query.number_of_tokens, True)
-                if options.cfg.context_left:
-                    current_result["coq_context_left"] = collapse_words(left)
-                if options.cfg.context_right:
-                    current_result["coq_context_right"] = collapse_words(right)
+                if options.cfg.context_mode == CONTEXT_KWIC:
+                    if options.cfg.context_left:
+                        current_result["coq_context_left"] = collapse_words(left)
+                    if options.cfg.context_right:
+                        current_result["coq_context_right"] = collapse_words(right)
+                elif options.cfg.context_mode == CONTEXT_STRING:
+                    current_result["coq_context"] = collapse_words(left + target + right)
             yield current_result
 
     def yield_query_results(self, Query, self_joined=False):
@@ -2270,7 +2280,16 @@ class SQLCorpus(BaseCorpus):
 
         options.cfg.verbose = old_verbose
 
-        return (left_context_words, right_context_words)
+        if options.cfg.context_mode == CONTEXT_STRING:
+            self.resource.DB.execute(
+                self.sql_string_get_wordid_in_range(
+                    token_id,
+                    token_id + number_of_tokens - 1,
+                    source_id))
+            target_words = [self.lexicon.get_entry(x, [LEX_ORTH]).orth.upper() for (x, ) in self.resource.DB.Cur]
+        else:
+            target_words = []
+        return (left_context_words, target_words, right_context_words)
 
     def sql_string_get_source_info(self, source_id):
         if options.cfg.experimental:
