@@ -67,11 +67,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole:
             try:
                 try:
-                    return self.content[index.row()][self.header[index.column()]]
+                    dat = self.content[index.row()][self.header[index.column()]]
                 except (TypeError):
-                    return self.content[index.row()] [index.column()]
+                    dat = self.content[index.row()] [index.column()]
+                return dat
             except (IndexError, KeyError):
                 return None
+
         elif role == QtCore.Qt.ForegroundRole:
             column = index.column()
             header = self.header[column]
