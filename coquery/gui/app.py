@@ -408,9 +408,17 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                     writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
                     writer.writerow(self.Session.header)
                     for y in range(self.table_model.rowCount()):
-                        writer.writerow([self.table_model.index(y, x).data() for x in range(self.table_model.columnCount())])
+                        row = [self.table_model.index(y, x).data() for x in range(self.table_model.columnCount())]
+                        try:
+                            row = [x.toUtf8() if not isinstance(x, (int, long, complex, float)) else x for x in row]
+                        except AttributeError:
+                            pass
+                        writer.writerow(row)
             except IOError as e:
-                QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. The results have not been saved.")
+                QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. <b>The results have not been saved.</b>")
+            except (UnicodeEncodingError, UnicodeDecodingError):
+                QtGui.QMessageBox.critical(self, "Encoding error", "<p>Unfortunatenly, there was an error while encoding the characters in the results view. <b>The save file is probably incomplete.</b></p><p>At least one column contains special characters which could not be translated to a format that can be written to a file. You may try to work around this issue by reducing the number of output columns so that the offending character is not in the output anymore.</p><p>We apologize for this inconvenience. Please do not hesitate to contact the authors about it so that the problem may be fixed in a future version.</p>")
+                
             else:
                 self.last_results_saved = True
     
