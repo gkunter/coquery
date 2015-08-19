@@ -135,16 +135,16 @@ class Visualizer(object):
             context=self.get_plot_context(), 
             font_scale=self.get_font_scale()):
 
-            #print("col_factor: ", self._col_factor)
-            #print("col_wrap:   ", self._col_wrap)
-            #print("row_factor: ", self._row_factor)
+            print("col_factor: ", self._col_factor)
+            print("col_wrap:   ", self._col_wrap)
+            print("row_factor: ", self._row_factor)
 
             self.g = sns.FacetGrid(self._table, 
                                 #xlim=self.get_xlim(),
                                 #ylim=self.get_ylim(),
                                 col=self._col_factor,
-                                #col_wrap=self._col_wrap,
-                                #row=self._row_factor,
+                                col_wrap=self._col_wrap,
+                                row=self._row_factor,
                                 sharex=True,
                                 sharey=True)
         
@@ -235,10 +235,10 @@ class Visualizer(object):
             self._groupby = []
         self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby]
         
-        #print("grouping:   ", self._groupby)
-        #print("levels:      ", self._levels)
-        #print("factors:    ", self._factor_columns)
-        #print("dimensions: ", self.dimensionality)
+        print("grouping:   ", self._groupby)
+        print("levels:      ", self._levels)
+        print("factors:    ", self._factor_columns)
+        print("dimensions: ", self.dimensionality)
         
         if len(self._factor_columns) > self.dimensionality:
             self._col_factor = self._factor_columns[-self.dimensionality - 1]
@@ -385,6 +385,8 @@ class VisualizerDialog(QtGui.QWidget):
         
         self.ui = visualizerUi.Ui_Visualizer()
         self.ui.setupUi(self)
+        self.ui.button_close.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
+        
         self.setWindowIcon(options.cfg.icon)
         self.dialog_stack = []
 
@@ -394,11 +396,6 @@ class VisualizerDialog(QtGui.QWidget):
         self.ui.button_close.clicked.connect(self.close)
         self.ui.check_freeze.stateChanged.connect(self.toggle_freeze)
         self.frozen = False
-
-        # Matplotlib visualizations do not use the QLabel called graph_area 
-        # for plotting, so it is removed from the dialog:
-        #self.ui.graph_area.close()
-        #self.ui.verticalLayout.removeWidget(self.ui.graph_area)
 
     def add_visualizer(self, visualizer):
         """ Add a Visualizer instance to the visualization dialog. Also, 
@@ -415,7 +412,6 @@ class VisualizerDialog(QtGui.QWidget):
         self.visualizer.setup_figure()
         self.remove_matplot()
         self.add_matplot()
-        #self.add_visualizer(self.visualizer)
         self.visualizer.update_data()
         self.visualizer.draw()
 
