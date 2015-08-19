@@ -29,13 +29,6 @@ import pandas as pd
 
 # load visualizations
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
-import treemap
-import barcodeplot
-import visualizer
-import heatmap
-import beeswarmplot
-import stripplot
-import barplot
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -671,6 +664,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.query_thread.start()
         
     def show_tree_map(self):
+        import visualizer
+        import treemap
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
@@ -681,6 +676,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
     def show_heatmap_plot(self):
+        import visualizer
+        import heatmap
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
@@ -691,32 +688,34 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         
     def show_beeswarm_plot(self):
+        import visualizer
+        import beeswarmplot
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
-                #beeswarmplot.BeeswarmVisualizer, self)
-                stripplot.StripplotVisualizer, self)
+                beeswarmplot.BeeswarmVisualizer, self)
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
     def show_barchart_plot(self):
+        import visualizer
+        import barplot
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
-                #beeswarmplot.BeeswarmVisualizer, self)
-                #stripplot.StripplotVisualizer, self)
                 barplot.BarchartVisualizer, self)
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
     def show_barcode_plot(self):
+        import visualizer
+        import barcodeplot
         if not self.table_model.content.empty:
             viz = visualizer.VisualizerDialog()
-            self.visualizers.append(viz)
             viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
