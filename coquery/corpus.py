@@ -518,7 +518,6 @@ class BaseResource(object):
         if header in COLUMN_NAMES:
             return COLUMN_NAMES[header]
         
-        corpus_features = [x for x, _ in cls.get_corpus_features()]
         # strip coq_ prefix:
         if header.startswith("coq_"):
             header = header.partition("coq_")[2]
@@ -529,15 +528,23 @@ class BaseResource(object):
             return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), number)
         else:
             try:
-                return COLUMN_NAMES[header_fields[0]]
-            except KeyError:
-                return header_fields[0].capitalize()
-        if "_".join(header_fields[:-1]) in cls.get_resource_features():
-            rc_feature = "_".join(header_fields[:-1])
-            if rc_feature in corpus_features:
                 return "{}".format(type(cls).__getattribute__(cls, str(rc_feature)))
-            else:
-                return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
+            except AttributeError:
+                if rc_feature in COLUMN_NAMES:
+                    return "{}{}".format(COLUMN_NAMES[rc_feature], number)
+                else:
+                    return header
+                    
+        #header_fields = header.split("_")
+        #if len(header_fields) == 1:
+            #try:
+                #return COLUMN_NAMES[header_fields[0]]
+            #except KeyError:
+                #return header_fields[0].capitalize()
+
+        #if "_".join(header_fields[:-1]) in cls.get_resource_features():
+            #rc_feature = "_".join(header_fields[:-1])
+            #return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
         return header
 
 class BaseCorpus(object):
