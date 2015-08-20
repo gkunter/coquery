@@ -1,0 +1,88 @@
+Case study 
+
+Is the analytic comparative relatively more frequent in contexts such as (1)
+when compared to contexts such as (2)?
+
+(1) ... VRB more ADJ.
+    ... VRB ADJ-comp.
+
+(2) ... more ADJ N
+    ... ADJ-comp N
+    
+(1) and (2) translates to the queries in (3) and (4), respectively. Note 
+that the asterisk '*' is used to pad the queries in such a way that the
+degree marker 'more' and the comparative adjective marker '[jjr]' are 
+aligned in the second column in all four queries:
+
+(3) [v*]    more    [j*]    [punct]
+    [v*]    [jjr]   [punct] 
+
+(4) *       more    [j*]    [n*]
+    *       [jjr]   [n*]
+
+Using these queries, the crucial category distinctions are encoded in the
+first two columns. If the first column contains the verb marker '[v*]', the
+query refers to comparatives in predicative position, and to attributive 
+comparatives otherwise. If the second column contains the degree marker 
+'more', the query refers to analytic comparatives, and to synthetic 
+comparatives if the second column contains '[jjr]'.
+    
+With "Coquery > Query string" as the only output column, a 'Frquency' query 
+yields the table in (5):
+
+(5) [v*] more [j*] [punct]      15
+    [v*] [jjr] [punct]          32
+    #[punct] more [j*] [n*]     54
+    #[punct] [jjr] [n*]         475
+    
+First, with 54 + 475 = 529 tokens, the attributive position of the 
+comparative is much more frequent than the predicative position (15 + 32 = 
+47 tokens). Second, the distribution of anayltic and synthetic comparatives 
+in the two positions does not appear to be the same: 54 / 529 = 10.2 percent 
+of the comparatives that precede a noun are analytic, whereas 15 / 47 = 31.9
+percent of the comparatives that follow a verb and which precede a sentence
+punctuation mark are analytic. Apparently, synthetic comparatives are 
+dispreferred in the predicative position.
+
+Coquery allows a visualization of this distribution, but a few adjustments
+to the query are necessary. First, instead of "Coquery > Query string" as 
+the output column, "Word > Query token" is selected, which produces a
+separate column for each token in the query string that is filled with the
+token specification from the string for that slot. In essence, the table in 
+(6) is identical to the table in (5), only with each query token in a 
+separate column:
+
+(6) ...
+
+As described above, the category information is encoded in the first two
+columns (sentential position in the first column, comparative type in the
+second). Columns three and four do not contribute to the category of the 
+token, and therefore are not essential for a visualization. Therefore, they
+are temporarily hidden by right-clicking on the column headers of these two
+columns, and selecting "Hide column" from the context menu. Afterwards, 
+selecting "Barchart" from the "Analysis" menu creates the bar chart plot 
+shown in Figure 1:
+
+(Figure 1)
+
+The data columns are assigned to the plot elements automatically from the
+rightmost column to the left. Additional output columns can also be included. 
+For example, if "Source > Gender" is added as the leftmost column, the 
+visualization will show a separate bar plot like that in in Figure 1 for
+each of the three factor levels of Gender ("m", "f", and "?"). The columns
+can be rearranged by clicking on the column header with the left button, and
+dragging them to the desired position. All other visualizations are likewise
+responsive to column positions, and may be modified in this way. 
+
+As a general rule for data visualization in Coquery, columns should be 
+arranged from left to right in increasing importance. The column containing 
+the most important contrast should be the last column on the right. The 
+number of columns that can be visualized depends on the type of 
+visualization. The bar chart in Figure 1 visualizes two columns. If a third
+or a fourth column are present in the data set, the visualization will 
+use the distinct values in these columns to divide the plotting area into 
+separate panels ("trellis charts", lattice charts" or "small multiples", cf. 
+Tufte 1990: 67) for each distinct value combination. Note that, in theory, 
+the number of panels is not limited, both drawing performance and 
+readability may deteriorate quickly for grids with more than ten or twenty
+columns or rows.
