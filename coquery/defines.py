@@ -86,6 +86,11 @@ msg_visualization_no_frequency = """<p>No frequency data available.</p>
 <p>The visualization that you chose only works with query results from Frequency queries.</p>
 <p>Try to change the query mode to 'Frequency', re-run the query, and call the
 visualization again.</p>"""
+msg_corpus_no_documentation = """<p>No corpus documentation available.</p>
+<p>The current corpus module does not provide a link to the corpus
+documentation. You may find help on how the corpus is structured by using an
+internet search engine.</p>"""
+
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
