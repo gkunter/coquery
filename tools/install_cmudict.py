@@ -8,6 +8,7 @@ class CMUdictBuilder(corpusbuilder.BaseCorpusBuilder):
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_ORTH", "LEX_PHON"]
         self.corpus_features = ["CORP_STATISTICS"]
+        self.documentation_url = 'http://www.speech.cs.cmu.edu/cgi-bin/cmudict'
         
         # Add table descriptions for the table used in this database.
         #

@@ -34,6 +34,7 @@ class BURSCBuilder(corpusbuilder.BaseCorpusBuilder):
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_PHON", "LEX_POS"]
         self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS", "CORP_TIMING"]
+        self.documentation_url = "https://catalog.ldc.upenn.edu/LDC96S36"
         
         # add table descriptions for the tables used in this database.
         #
