@@ -1989,14 +1989,15 @@ class SQLCorpus(BaseCorpus):
             if not rc_feature.startswith("coquery_") and "coq_{}_1".format(rc_feature) not in final_select:
                 final_select.append("coq_{}_1".format(rc_feature))
 
-        if options.cfg.context_right or options.cfg.context_left:
-            if options.cfg.context_mode == CONTEXT_STRING:
-                final_select.append('NULL AS coq_context')
-            elif options.cfg.context_mode == CONTEXT_KWIC:
-                if options.cfg.context_left:
-                    final_select.append('NULL AS coq_context_left')
-                if options.cfg.context_right:
-                    final_select.append('NULL AS coq_context_right')
+        if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
+            if options.cfg.context_right or options.cfg.context_left:
+                if options.cfg.context_mode == CONTEXT_STRING:
+                    final_select.append('NULL AS coq_context')
+                elif options.cfg.context_mode == CONTEXT_KWIC:
+                    if options.cfg.context_left:
+                        final_select.append('NULL AS coq_context_left')
+                    if options.cfg.context_right:
+                        final_select.append('NULL AS coq_context_right')
         
         # Add NULL values for all Coquery features; they are supplied not
         # by the SQL query, but by the Python script in yield_query_results().
@@ -2080,18 +2081,19 @@ class SQLCorpus(BaseCorpus):
             current_result.update(D)
 
             #if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
-            if (options.cfg.context_left or options.cfg.context_right):
-                left, target, right = self.get_context(
-                    current_result["coquery_invisible_corpus_id"], 
-                    current_result["coquery_invisible_origin_id"], 
-                    Query.number_of_tokens, True)
-                if options.cfg.context_mode == CONTEXT_KWIC:
-                    if options.cfg.context_left:
-                        current_result["coq_context_left"] = collapse_words(left)
-                    if options.cfg.context_right:
-                        current_result["coq_context_right"] = collapse_words(right)
-                elif options.cfg.context_mode == CONTEXT_STRING:
-                    current_result["coq_context"] = collapse_words(left + target + right)
+            if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
+                if (options.cfg.context_left or options.cfg.context_right):
+                    left, target, right = self.get_context(
+                        current_result["coquery_invisible_corpus_id"], 
+                        current_result["coquery_invisible_origin_id"], 
+                        Query.number_of_tokens, True)
+                    if options.cfg.context_mode == CONTEXT_KWIC:
+                        if options.cfg.context_left:
+                            current_result["coq_context_left"] = collapse_words(left)
+                        if options.cfg.context_right:
+                            current_result["coq_context_right"] = collapse_words(right)
+                    elif options.cfg.context_mode == CONTEXT_STRING:
+                        current_result["coq_context"] = collapse_words(left + target + right)
             yield current_result
 
     def yield_query_results(self, Query, self_joined=False):
