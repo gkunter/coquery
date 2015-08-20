@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Sat Aug 15 15:39:29 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -454,7 +453,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.tabbed_views)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1222, 34))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1222, 21))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -535,6 +534,12 @@ class Ui_MainWindow(object):
         self.action_beeswarm_plot.setObjectName(_fromUtf8("action_beeswarm_plot"))
         self.action_barchart_plot = QtGui.QAction(MainWindow)
         self.action_barchart_plot.setObjectName(_fromUtf8("action_barchart_plot"))
+        self.action_time_series_plot = QtGui.QAction(MainWindow)
+        self.action_time_series_plot.setObjectName(_fromUtf8("action_time_series_plot"))
+        self.action_corpus_documentation = QtGui.QAction(MainWindow)
+        icon = QtGui.QIcon.fromTheme(_fromUtf8("help-browser"))
+        self.action_corpus_documentation.setIcon(icon)
+        self.action_corpus_documentation.setObjectName(_fromUtf8("action_corpus_documentation"))
         self.menuFile.addAction(self.action_open_input_file)
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addSeparator()
@@ -547,6 +552,7 @@ class Ui_MainWindow(object):
         self.menuCorpus.addAction(self.action_remove_corpus)
         self.menuCorpus.addSeparator()
         self.menuCorpus.addAction(self.action_statistics)
+        self.menuCorpus.addAction(self.action_corpus_documentation)
         self.menuSettings.addAction(self.action_mySQL_settings)
         self.menuSettings.addAction(self.action_options)
         self.menuAnalyse.addAction(self.action_tree_map)
@@ -555,6 +561,7 @@ class Ui_MainWindow(object):
         self.menuAnalyse.addAction(self.action_barcode_plot)
         self.menuAnalyse.addAction(self.action_beeswarm_plot)
         self.menuAnalyse.addAction(self.action_barchart_plot)
+        self.menuAnalyse.addAction(self.action_time_series_plot)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuCorpus.menuAction())
         self.menubar.addAction(self.menuAnalyse.menuAction())
@@ -630,5 +637,7 @@ class Ui_MainWindow(object):
         self.action_word_cloud.setText(_translate("MainWindow", "Word cloud", None))
         self.action_barcode_plot.setText(_translate("MainWindow", "&Location plot", None))
         self.action_beeswarm_plot.setText(_translate("MainWindow", "Bee&swarm plot", None))
-        self.action_barchart_plot.setText(_translate("MainWindow", "Barchart", None))
+        self.action_barchart_plot.setText(_translate("MainWindow", "&Barchart", None))
+        self.action_time_series_plot.setText(_translate("MainWindow", "T&ime series", None))
+        self.action_corpus_documentation.setText(_translate("MainWindow", "Corpus documentation...", None))
 

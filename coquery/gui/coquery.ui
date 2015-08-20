@@ -872,7 +872,7 @@
      <x>0</x>
      <y>0</y>
      <width>1222</width>
-     <height>34</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -901,6 +901,7 @@
     <addaction name="action_remove_corpus"/>
     <addaction name="separator"/>
     <addaction name="action_statistics"/>
+    <addaction name="action_corpus_documentation"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -919,6 +920,7 @@
     <addaction name="action_barcode_plot"/>
     <addaction name="action_beeswarm_plot"/>
     <addaction name="action_barchart_plot"/>
+    <addaction name="action_time_series_plot"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1100,7 +1102,20 @@
   </action>
   <action name="action_barchart_plot">
    <property name="text">
-    <string>Barchart</string>
+    <string>&amp;Barchart</string>
+   </property>
+  </action>
+  <action name="action_time_series_plot">
+   <property name="text">
+    <string>T&amp;ime series</string>
+   </property>
+  </action>
+  <action name="action_corpus_documentation">
+   <property name="icon">
+    <iconset theme="help-browser"/>
+   </property>
+   <property name="text">
+    <string>Corpus documentation...</string>
    </property>
   </action>
  </widget>
