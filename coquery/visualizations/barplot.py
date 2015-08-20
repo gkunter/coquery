@@ -8,6 +8,10 @@ import pandas as pd
 class BarchartVisualizer(vis.Visualizer):
     dimensionality = 2
 
+    def setup_figure(self):
+        with sns.axes_style("whitegrid"):
+            super(BarchartVisualizer, self).setup_figure()
+
     def draw(self):
         """ Plot bar charts. """
         if self._row_factor:
@@ -35,12 +39,17 @@ class BarchartVisualizer(vis.Visualizer):
                 y_cat = self._levels[0][int(y)]
                 if len(self._groupby) == 2:
                     try:
+                        # calculate the factor level number from the y
+                        # coordinate. The vaules used here seem to work, but
+                        # are only derived empirically:
                         sub_cat = sorted(self._levels[1])[int(((offset - 0.1) / 0.8) * len(self._levels[1]))]                    
                     except IndexError:
                         sub_cat = sorted(self._levels[1])[-1]
                 else:
                     sub_cat = None
+                    
                 if title:
+                    # obtain the grid row and column from the axes title:
                     if self._row_factor:
                         row_spec, col_spec = title.split(" | ")
                         _, row_value = row_spec.split(" = ")
@@ -53,7 +62,9 @@ class BarchartVisualizer(vis.Visualizer):
                 else:
                     row_value = None
                     col_value = None
-                    
+            
+            # this is a rather klunky way of getting the frequency from the
+            # cross table:
             if self._row_factor:
                 try:
                     freq = self.ct[col_value]
@@ -105,7 +116,7 @@ class BarchartVisualizer(vis.Visualizer):
                         freq)
             return ""
 
-        def sub_data(data, color):
+        def plot_facet(data, color):
             if len(self._groupby) == 1:
                 # Don't use the 'hue' argument if there is only a single 
                 # grouping factor:
@@ -123,22 +134,24 @@ class BarchartVisualizer(vis.Visualizer):
                     hue_order=sorted(self._levels[1]),
                     palette=palette_name,
                     data=data)
+            # add a custom annotator for this axes:
             ax.format_coord = lambda x, y: my_format_coord(x, y, ax.get_title())
             return ax
 
-        sns.despine(self.g.fig)
-                    #left=False, right=False, top=False, bottom=False)
+        sns.despine(self.g.fig,
+                    left=False, right=False, top=False, bottom=False)
 
         # choose the "Paired" palette if the number of grouping factor
         # levels is even and below 13, or the "Set3" palette otherwise:
         if len(self._levels[1 if len(self._groupby) == 2 else 0]) in (2, 4, 6, 8, 12):
             palette_name = "Paired"
         else:
+            # use 'Set3', a quantitative palette, if there are two grouping
+            # factors, or a palette diverging from Red to Purple otherwise:
             palette_name = "Set3" if len(self._groupby) == 2 else "RdPu"
-            
 
         # plot FacetGrid:
-        self.g.map_dataframe(sub_data) 
+        self.g.map_dataframe(plot_facet) 
         # Add axis labels:
         self.g.set_axis_labels("Frequency", self._groupby[0])
         # Add a legend if there are two grouping factors:
