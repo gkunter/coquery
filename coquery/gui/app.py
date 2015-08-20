@@ -217,12 +217,14 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
         self.ui.action_mySQL_settings.triggered.connect(self.mysql_settings)
         self.ui.action_statistics.triggered.connect(self.run_statistics)
+        self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         
         self.ui.action_tree_map.triggered.connect(self.show_tree_map)
         self.ui.action_barcode_plot.triggered.connect(self.show_barcode_plot)
         self.ui.action_beeswarm_plot.triggered.connect(self.show_beeswarm_plot)
         self.ui.action_heat_map.triggered.connect(self.show_heatmap_plot)
         self.ui.action_barchart_plot.triggered.connect(self.show_barchart_plot)
+        self.ui.action_time_series_plot.triggered.connect(self.show_time_series_plot)
     
     def setup_hooks(self):
         """ Connect all relevant signals to their methods."""
@@ -723,9 +725,34 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
+    def show_time_series_plot(self):
+        import visualizer
+        import time_series
+        if not self.table_model.content.empty:
+            viz = visualizer.VisualizerDialog()
+            viz.Plot(
+                self.table_model, 
+                self.ui.data_preview, 
+                time_series.TimeSeriesVisualizer, self)
+        else:
+            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+
     def save_configuration(self):
         self.getGuiValues()
         options.save_configuration()
+
+    def open_corpus_help(self):
+        if self.ui.combo_corpus.isEnabled():
+            current_corpus = str(self.ui.combo_corpus.currentText())
+            resource, _, _, module = resource_list.get_available_resources()[current_corpus.lower()]
+            try:
+                url = resource.documentation_url
+            except AttributeError:
+                QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            else:
+                import webbrowser
+                webbrowser.open(url)
+                
         
     def remove_corpus(self):
         if self.ui.combo_corpus.isEnabled():
