@@ -27,6 +27,7 @@ THE SOFTWARE.
 """
 
 from __future__ import unicode_literals
+from __future__ import print_function
 from __future__ import division
 import math
 
@@ -44,6 +45,8 @@ from errors import *
 from corpus import *
 import tokens
 import options
+
+import pandas as pd
 
 def expand_list(L, length, fill=""):
     """ expands the list L so that it has length elements, using the content
@@ -690,8 +693,50 @@ class CollocationQuery(TokenQuery):
         corpus_size = self.Corpus.get_corpus_size()
         query_freq = 0
         context_info = {}
+
+        df = pd.DataFrame(self.Results)
+
+        # FIXME: Be more generic than always using coq_word_label!
+        fix_col = ["coquery_invisible_corpus_id", 
+                   "coquery_invisible_origin_id",
+                   "coquery_invisible_number_of_tokens"]
+        left_cols = ["coq_word_label_{}".format(x + 1) for x in range(options.cfg.context_left)]
+        right_cols = ["coq_word_label_{}".format(x + self.number_of_tokens - options.cfg.context_right + 1) for x in range(options.cfg.context_right)]
+        left_context_span = df[fix_col + left_cols]
+        right_context_span = df[fix_col + right_cols]
+
+        left = left_context_span[left_cols].stack().value_counts()
+        right = right_context_span[right_cols].stack().value_counts()
+
+        print(left_context_span.to_dict())
+        print(right_context_span.to_dict())
+
+        print(left_context_span)
+        print("LEFT")
+        print(left)
+
+        all_words = set(left.index + right.index)
+        
+        left = left.reindex(all_words).fillna(0)
+        right = right.reindex(all_words).fillna(0)
+        
+        collocates = pd.concat([left, right], axis=1)
+        collocates.columns = ["coq_collocate_frequency_right", "coq_collocate_frequency_right"]
+        #print(collocates)
+        collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
+        collocates["coq_word_label"] = collocates.index
+        collocates["coq_frequency"] = collocates["coq_word_label"].apply(
+            lambda x: self.Corpus.get_frequency(self.token_class(x, self.Corpus.lexicon)))
+        collocates["coquery_query_string"] = self._query_string
+        
+        print(df)
+        
+        
+        print(collocates)
         
         for current_result in self.Results:
+            print(current_result)
+            
             query_freq += 1
             # increase the count for all items in the left neighbourhood:
             for i in range(left_span):
