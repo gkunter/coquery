@@ -258,6 +258,7 @@ class BaseResource(object):
     coquery_query_file = "Input file"
     coquery_current_date = "Current date"
     coquery_current_time = "Current time"
+    word_query_token = "Query token"
 
     render_token_style = "background: lightyellow"
 
@@ -855,7 +856,7 @@ class SQLLexicon(BaseLexicon):
                         self.resource.word_table, 
                         self.resource.word_transcript)
                 elif self.resource.transcript_table != self.resource.word_table:
-                    target = "TRANSCRIPT.{}".format(
+                    target = "COQ_TRANSCRIPT_TABLE.{}".format(
                         self.resource.transcript_label)
                 else:
                     target = "{}.{}".format(
@@ -1857,12 +1858,20 @@ class SQLCorpus(BaseCorpus):
 
             column_list = []
             for rc_feature in sub_tree["rc_requested_features"]:
-                name = "coq_{}_{}".format(
-                    rc_feature,
-                    number+1)
-                variable_string = "{} AS {}".format(
-                    self.resource.__getattribute__(rc_feature),
-                    name)
+                if rc_feature == "word_query_token":
+                    name = "coq_{}_{}".format(
+                        rc_feature,
+                        number+1)
+                    variable_string = '"{}" AS {}'.format(
+                        current_token.S,
+                        name)
+                else:
+                    name = "coq_{}_{}".format(
+                        rc_feature,
+                        number+1)
+                    variable_string = "{} AS {}".format(
+                        self.resource.__getattribute__(rc_feature),
+                        name)
                 column_list.append(variable_string)
                 #if not rc_feature.endswith("_id"):
                 select_list.add(name)
