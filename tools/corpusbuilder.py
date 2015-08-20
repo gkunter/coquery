@@ -83,6 +83,7 @@ from corpus import *
 class Resource(SQLResource):
     name = '{name}'
     db_name = '{db_name}'
+    documentation_url = '{url}'
 {variables}
 {resource_code}
     
@@ -1071,6 +1072,7 @@ class BaseCorpusBuilder(object):
         output_code = self.module_code.format(
                 name=self.name,
                 db_name=self.arguments.db_name,
+                url=self.documentation_url,
                 variables=variable_code,
                 lexicon_provides=lexicon_provides,
                 corpus_provides=corpus_provides,
