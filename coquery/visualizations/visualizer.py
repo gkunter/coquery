@@ -82,23 +82,6 @@ import multiprocessing
             #i += tree_weight(tree[node])
     #return i
 
-#color_map = {"young": "DarkOrange", "middle": "Red", "old": "RoyalBlue"}
-
-#color_pairs = ["rgb(166,206,227)", "rgb(31,120,180)", 
-    #"rgb(178,223,138)", "rgb(51,160,44)", 
-    #"rgb(251,154,153)", "rgb(227,26,28)", 
-    #"rgb(253,191,111)", "rgb(255,127,0)", 
-    #"rgb(202,178,214)", "rgb(106,61,154)", 
-    #"rgb(255,255,153)", "rgb(177,89,40)"]
-
-
-#color_categories = ["rgb(228,26,28)", "rgb(55,126,184)", "rgb(77,175,74)", 
-#"rgb(152,78,163)", "rgb(255,127,0)", "rgb(255,255,51)", 
-#"rgb(166,86,40)", "rgb(247,129,191)", "rgb(153,153,153)"]
-
-color_categories = ((228, 26, 28), (55,126,184), (77,175,74), (152,78,163), 
-                    (255,127,0), (255,255,51), (166,86,40), (247,129,191), (153,153,153))
-
 # pandas snippet:
 # check if a column contains only a single value:
 # len(pd.unique(self._table[column].values.ravel())) == 1
@@ -127,10 +110,6 @@ class Visualizer(object):
     def setup_figure(self):
         """ Prepare the matplotlib figure for plotting. """ 
 
-        
-        #self.g = sns.FacetGrid(self._table, size=15)
-        #return
-
         with sns.plotting_context(
             context=self.get_plot_context(), 
             font_scale=self.get_font_scale()):
@@ -147,12 +126,6 @@ class Visualizer(object):
                                 row=self._row_factor,
                                 sharex=True,
                                 sharey=True)
-        
-        #self.figure = self.g.fig
-
-        ##mpl.rc("font",
-               ##{"family": "normal", "weight": "bold", "size": 22})
-
 
     def get_grid_layout(self, n):
         """ Return a tuple containing a nrows, ncols pair that can be used to
