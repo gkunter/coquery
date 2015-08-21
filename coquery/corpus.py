@@ -17,6 +17,8 @@ import datetime
 from defines import *
 import collections
 
+import json
+
 def collapse_words(word_list):
     
     def is_tag(s):
@@ -1741,12 +1743,12 @@ class SQLCorpus(BaseCorpus):
                 # (here: 'source' and 'file' tables), we should check for any
                 # table that corpus_table is linked to except for word_table
                 # (and all child tables).            
-                if "source_id" in dir(self.resource):
-                    requested_features.append("source_id")
-                    options.cfg.context_source_id = "source_id"
-                elif "file_id" in dir(self.resource):
-                    requested_features.append("file_id")
-                    options.cfg.context_source_id = "file_id"
+                if "corpus_source_id" in dir(self.resource):
+                    requested_features.append("corpus_source_id")
+                    options.cfg.context_source_id = "corpus_source_id"
+                elif "corpus_file_id" in dir(self.resource):
+                    requested_features.append("corpus_file_id")
+                    options.cfg.context_source_id = "corpus_file_id"
         else:
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
@@ -1772,26 +1774,6 @@ class SQLCorpus(BaseCorpus):
 
         if current_token.word_specifiers or current_token.transcript_specifiers or current_token.class_specifiers:
             requested_features.append("corpus_word_id")
-
-        # add requested features depending on the token specifications:
-        if current_token.word_specifiers:
-            if "word_label" in dir(self.resource):
-                requested_features.append("word_label")
-        if current_token.transcript_specifiers:
-            if "transcript_label" in dir(self.resource):
-                requested_features.append("word_transcript")
-            elif "transcript_label" in dir(self.resource):
-                requested_features.append("transcript_label")
-        if current_token.class_specifiers:
-            if "word_pos" in dir(self.resource):
-                requested_features.append("word_pos")
-            elif "pos_label" in dir(self.resource):
-                requested_features.append("pos_label")
-        if current_token.lemma_specifiers:
-            if "word_lemma" in dir(self.resource):
-                requested_features.append("word_lemma")
-            elif "lemma_label" in dir(self.resource):
-                requested_features.append("lemma_label")
 
         # get a list of all tables that are required to query the requested
         # features:
@@ -1931,14 +1913,55 @@ class SQLCorpus(BaseCorpus):
         # add the variable storing the source_id or file_id to the selected
         # columns so that they can be used to retrieve the context:
         if number == 0 and options.cfg.context_source_id:
-            select_list.add("coq_corpus_{}_1".format(options.cfg.context_source_id))
+            select_list.add("coq_{}_1".format(options.cfg.context_source_id))
 
         select_list.add("coq_corpus_id_{}".format(number+1))
 
         return "SELECT {} FROM {}".format(
             ", ".join(select_list), 
             " ".join(L)), select_list, L
+    
+    def get_subquery_order(self, Query):
+        """ Return an order list in which the subqueries should be executed. 
+        Ideally, the order corresponds to the number of rows in the corpus
+        that match the subquery, from small to large. This increases query
+        performance because it reduces the number of rows that need to be 
+        scanned once all tables have been joined.
         
+        The optimal order would be in decreasing frequency order for the 
+        subcorpus specified by all source filters, but this is not 
+        implemented yet. It may turn out that determining the subcorpus 
+        frequency is too time-consuming after all. 
+        
+        Instead, the current implentation is a heuristic. It assumes that 
+        a longer token string is more specific, and should therefore have
+        precedence over a short token string. This may be true for normal
+        queries, but queries that contain an OR selection the heuristic is
+        probably suggesting suboptimal orders.
+        
+        The second criterion is the number of asterisks in the query string:
+        a query string containing a '*' should be joined later than a query 
+        string of the same length without '*'. """
+        # FIXME: improve the heuristic.
+        
+        if len(Query) == 1:
+            return [0]
+        
+        def calc_weight(s):
+            if s == "*":
+                w = -9999
+            else:
+                w = len(s) * 2
+            if s.count("%"):
+                w = w - s.count("%")
+            return w
+        
+        sort_list = list(enumerate(Query.tokens))
+        # first, sort in reverse length:
+        sort_list = sorted(sort_list, 
+                           key=lambda x: calc_weight(x[1].S), reverse=True)
+        return [x+1 for x, _ in sort_list]
+    
     def sql_string_query_new(self, Query, self_joined):
         """ Return a string that is sufficient to run the query on the
         MySQL database. """
@@ -1947,18 +1970,37 @@ class SQLCorpus(BaseCorpus):
         # name of that resource feature which that keeps track of the source 
         # of the first token of the query. 
         options.cfg.context_source_id = None
+        
+        query_string_part = []
+        sub_query_list = {}
 
+        order = self.get_subquery_order(Query)
+        logger.info("Token order: {}".format(", ".join([Query.tokens[x-1].S for x in order])))
+        referent_id = order.pop(0)
+        
         for i, current_token in enumerate(Query.tokens):
             s, select_list, join_list = self.get_sub_query_string(current_token, i, self_joined)
-            if i == 0:
+            if i == referent_id - 1:
                 outer_list = join_list
-                query_string_part = ["SELECT COQ_OUTPUT_FIELDS FROM ({}) AS e1".format(s)]
+                sub_query_list[i+1] = s                
+            elif i < referent_id - 1:
+                if s:
+                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
+                        s = s, 
+                        i=i+1, 
+                        i1=referent_id - i - 1, 
+                        ref=referent_id,
+                        token=self.resource.corpus_id)
+                    sub_query_list[i+1] = join_string
             else:
                 if s:
-                    join_string = "INNER JOIN ({s}) AS e{i1} ON coq_corpus_id_{i1} = coq_corpus_id_1 + {i}".format(s = s, i=i, i1=i+1, token=self.resource.corpus_id)
-                    if not join_string in query_string_part:
-                        query_string_part.append(join_string)
-        
+                    join_string = "INNER JOIN ({s}) AS e{i1} ON coq_corpus_id_{i1} = coq_corpus_id_{ref} + {i}".format(s = s, i=i, i1=i+1, token=self.resource.corpus_id, ref=referent_id)
+                    sub_query_list[i+1] = join_string
+
+        query_string_part = [
+            "SELECT COQ_OUTPUT_FIELDS FROM ({}) AS e{}".format(sub_query_list.pop(referent_id), referent_id)]
+        for x in order:
+            query_string_part.append(sub_query_list[x])
 
         corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
         lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
@@ -2021,7 +2063,7 @@ class SQLCorpus(BaseCorpus):
         if options.cfg.context_source_id:
         #if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
             final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
-            final_select.append("coq_corpus_{}_1 AS coquery_invisible_origin_id".format(options.cfg.context_source_id))
+            final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.context_source_id))
             final_select.append("{} AS coquery_invisible_number_of_tokens".format(Query.number_of_tokens))
 
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(final_select))
@@ -2032,7 +2074,7 @@ class SQLCorpus(BaseCorpus):
                 query_string, options.cfg.number_of_tokens)
 
         if options.cfg.verbose:
-            query_string = query_string.replace("INNER JOIN ", "INNER JOIN \n\t")
+            query_string = query_string.replace("INNER JOIN ", "\nINNER JOIN \n\t")
             query_string = query_string.replace("SELECT ", "SELECT \n\t")
             query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
@@ -2181,7 +2223,7 @@ class SQLCorpus(BaseCorpus):
                     corpus=self.resource.corpus_table,
                     token_id=self.resource.corpus_id,
                     start=start, end=end,
-                    corpus_source=self.resource.__getattribute__("corpus_{}".format(options.cfg.context_source_id)),
+                    corpus_source=self.resource.__getattribute__(options.cfg.context_source_id),
                     this_source=source_id)
             else:
                 # if no source id is specified, simply return the tokens in
@@ -2563,7 +2605,7 @@ class SQLCorpus(BaseCorpus):
             if tag:
                 context.appendleft("<{}>".format(self.tag_to_html(tag)))
 
-        print(context)
+        #print(context)
         widget.ui.context_area.setText(collapse_words(context))
 
 
