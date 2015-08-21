@@ -55,6 +55,7 @@ ModifyingCommands = ["ALTER", "CREATE", "DELETE", "DROP", "INSERT",
 NonModifyingCommands = ["SELECT", "SHOW", "DESCRIBE", "SET", "RESET"]
 
 class SqlDB (object):
+    """ A wrapper for MySQL. """
     def __init__(self, Host, Port, User, Password, Database=None, encoding="utf8"):
         self.Con = None
         self.Cur = None
