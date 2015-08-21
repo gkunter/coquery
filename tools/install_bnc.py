@@ -198,6 +198,8 @@ class BNCBuilder(BaseCorpusBuilder):
                 ([self.speaker_label], 0, "HASH"),
                 ([self.speaker_sex], 0, "HASH")]})
         
+        self.add_time_feature(self.speaker_age)
+        
         self.add_new_table_description(self.speaker_table,
             [Primary(self.speaker_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.speaker_label, "TINYTEXT NOT NULL"),
@@ -287,6 +289,8 @@ class BNCBuilder(BaseCorpusBuilder):
                 ([self.source_class], 0, "HASH"),
                 ([self.source_file_id], 0, "HASH"),
                 ([self.source_year], 0, "BTREE")]})
+
+        self.add_time_feature(self.source_year)
             
         self.add_new_table_description(self.source_table,
             [Primary(self.source_id, "SMALLINT(4) UNSIGNED NOT NULL"),

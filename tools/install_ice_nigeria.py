@@ -390,6 +390,9 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                 ([self.source_ethnicity], 0, "BTREE"),
                 ([self.source_ethnicity], 0, "BTREE")]})
 
+        self.add_time_feature(self.source_date)
+        self.add_time_feature(self.source_age)
+
         self.add_new_table_description(self.source_table,
             [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
             Column(self.source_mode, "TINYTEXT NOT NULL"),
