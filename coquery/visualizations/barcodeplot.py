@@ -2,6 +2,7 @@
 
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import unittest
 import options
@@ -39,26 +40,20 @@ def lineplot(a, level=0, start=0, end=1, axis="x", color="black", ax=None, **kwa
     """
     if ax is None:
         ax = plt.gca()
-    #a = np.asarray(a)
     vertical = kwargs.pop("vertical", axis == "y")
     func = ax.axhline if vertical else ax.axvline
     kwargs.setdefault("linewidth", 1)
-    for i, pt in enumerate(a):
-        print(i, level[i], pt, start[i], end[i])
-        func(pt, start[i], end[i], color="black", **kwargs)
+    for i in a.index:
+        func(a[i], start[level[i]], end[level[i]], color=color[level[i]], **kwargs)
     return ax
 
 class BarcodeVisualizer(vis.Visualizer):
     visualize_frequency = False
-    dimensionality = 0
+    dimensionality = 1
 
     def setup_figure(self):
         with sns.axes_style("white"):
             super(BarcodeVisualizer, self).setup_figure()
-        #self._starts = [x / len(self._levels[0]) for x in range(len(self._levels[0]))]
-        #self._ends = [0.95 * (x+1) / len(self._levels[0]) for x in range(len(self._levels[0]))]
-        #self._ticks = [(x+0.5) / len(self._levels[0]) for x in range(len(self._levels[0]))]
-        #self._colors = sns.color_palette("Paired", len(self._levels[0]))
     
     def draw(self):
         """ Plot a vertical line for each token in the current data table.
@@ -66,29 +61,26 @@ class BarcodeVisualizer(vis.Visualizer):
         combination in that row. The horizontal position corresponds to the
         token id so that tokens that occur in the same part of the corpus
         will also have lines that are placed close to each other. """
-        #self._starts = [x / len(self._levels[0]) for x in range(len(self._levels[0]))]
-        #self._ends = [0.95 * (x+1) / len(self._levels[0]) for x in range(len(self._levels[0]))]
-        #self._ticks = [(x+0.5) / len(self._levels[0]) for x in range(len(self._levels[0]))]
-        #self._colors = sns.color_palette("Paired", len(self._levels[0]))
+        def plot_facet(data, color):
+            starts = dict(zip(
+                self._levels[0],
+                [x / len(self._levels[0]) for x in range(len(self._levels[0]))]))
+            ends = dict(zip(
+                self._levels[0],
+                [0.95 * ((x+1) / len(self._levels[0])) for x in range(len(self._levels[0]))]))
+            colors = dict(zip(
+                self._levels[0],
+                sns.color_palette("Paired", len(self._levels[0]))))
+            lineplot(data.coquery_invisible_corpus_id,
+                     level=data[self._groupby[-1]],
+                     start=starts, end=ends, color=colors, ax=plt.gca())
 
-
-        
         sns.despine(self.g.fig, 
                     left=False, right=False, top=False, bottom=False)
-        #print(
-            #self._table[self._groupby[0]], 
-            #self._table[self._groupby[0]].apply(lambda x: self._levels[0].index(x)))
-        #levels = self._table[self._groupby[0]].apply(lambda x: self._levels[0].index(x))
-        #self.g.map(lineplot, 
-                   #"coquery_invisible_corpus_id", 
-                   #level=levels,
-                   #start=self._table[self._groupby[0]].apply(
-                       #lambda x: self._starts[self._levels[0].index(x)]),
-                   #end=self._table[self._groupby[0]].apply(
-                       #lambda x: self._ends[self._levels[0].index(x)]),
-                   #color=self._table[self._groupby[0]].apply(
-                       #lambda x: self._colors[self._levels[0].index(x)]))
-        self.g.map(sns.rugplot, "coquery_invisible_corpus_id", height=1)
+
+        self._ticks = [(x+0.5) / len(self._levels[0]) for x in range(len(self._levels[0]))]
+
+        self.g.map_dataframe(plot_facet)
 
         if not self._levels or len(self._levels[0]) < 2:
             self.g.set(yticks=[])
@@ -98,4 +90,4 @@ class BarcodeVisualizer(vis.Visualizer):
             self.g.set(yticklabels=self._levels[0])
             self.g.set_axis_labels("Corpus position", self._groupby[0])
         self.g.set_titles(fontweight="bold", size=options.cfg.app.font().pointSize() * self.get_font_scale())
-        #self.figure.tight_layout()
+        self.g.fig.tight_layout()
