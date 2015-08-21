@@ -912,15 +912,35 @@
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
-     <string>&amp;Analysis</string>
+     <string>&amp;Visualizations</string>
     </property>
-    <addaction name="action_tree_map"/>
-    <addaction name="action_heat_map"/>
-    <addaction name="action_word_cloud"/>
-    <addaction name="action_barcode_plot"/>
-    <addaction name="action_beeswarm_plot"/>
-    <addaction name="action_barchart_plot"/>
-    <addaction name="action_time_series_plot"/>
+    <widget class="QMenu" name="menuTime_data">
+     <property name="title">
+      <string>&amp;Time data</string>
+     </property>
+     <addaction name="action_percentage_area_plot"/>
+     <addaction name="action_stacked_area_plot"/>
+     <addaction name="action_line_plot"/>
+    </widget>
+    <widget class="QMenu" name="menuFrequencies">
+     <property name="title">
+      <string>&amp;Frequencies</string>
+     </property>
+     <addaction name="action_barchart_plot"/>
+     <addaction name="action_heat_map"/>
+     <addaction name="action_tree_map"/>
+     <addaction name="action_word_cloud"/>
+    </widget>
+    <widget class="QMenu" name="menuCorpus_locations">
+     <property name="title">
+      <string>&amp;Corpus locations</string>
+     </property>
+     <addaction name="action_barcode_plot"/>
+     <addaction name="action_beeswarm_plot"/>
+    </widget>
+    <addaction name="menuCorpus_locations"/>
+    <addaction name="menuFrequencies"/>
+    <addaction name="menuTime_data"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1092,7 +1112,7 @@
   </action>
   <action name="action_barcode_plot">
    <property name="text">
-    <string>&amp;Location plot</string>
+    <string>&amp;Barcode plot</string>
    </property>
   </action>
   <action name="action_beeswarm_plot">
@@ -1112,10 +1132,27 @@
   </action>
   <action name="action_corpus_documentation">
    <property name="icon">
-    <iconset theme="help-browser"/>
+    <iconset theme="help-browser">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Corpus documentation...</string>
+   </property>
+  </action>
+  <action name="action_percentage_area_plot">
+   <property name="text">
+    <string>&amp;Percentage areas</string>
+   </property>
+  </action>
+  <action name="action_stacked_area_plot">
+   <property name="text">
+    <string>&amp;Stacked areas</string>
+   </property>
+  </action>
+  <action name="action_line_plot">
+   <property name="text">
+    <string>&amp;Lines</string>
    </property>
   </action>
  </widget>
