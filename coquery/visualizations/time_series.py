@@ -3,6 +3,7 @@
 import visualizer as vis
 import seaborn as sns
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 
 class TimeSeriesVisualizer(vis.Visualizer):
@@ -19,39 +20,46 @@ class TimeSeriesVisualizer(vis.Visualizer):
             self.percentage = kwargs.pop("percentage")
         except KeyError:
             self.percentage = False
+        try:
+            self.smooth = kwargs.pop("smooth")
+        except KeyError:
+            self.smooth = False
             
         super(TimeSeriesVisualizer, self).__init__(*args, **kwargs)
     
-    def update_data(self):
+    def update_data(self, bandwidth=1):
         super(TimeSeriesVisualizer, self).update_data()
-        year = self._table.columns[self._table.columns == "Year"]
-        age = self._table.columns[self._table.columns == "Age"]
-        date = self._table.columns[self._table.columns == "Date"]
-        if len(year):
-            self._time_column = year[0]
-        elif len(date):
-            self._time_column = date[0]
-        elif len(age):
-            self._time_column = age[0]
+        
+        for x in self._table.columns[::-1]:
+            if x in self._time_columns:
+                self._time_column = x
+                break
         else:
             self._time_column = ""
 
+        self.bandwidth = bandwidth
+
         if self._time_column:
-            self._table[self._time_column] = pd.to_datetime([str(x) for x in self._table[self._time_column]], 
-                                errors="ignore", exact=False)
-            if len(self._groupby) == 2:
-                if self._col_factor:
-                    self._row_factor = self._col_factor
-                self._col_factor = self._groupby[0]
-                
-                self._groupby[0] = self._groupby[1]
-                self._levels = [self._levels[1]]
-                self._groupby[1] = self._time_column
+            #self._table[self._time_column] = pd.to_datetime([str(x) for x in self._table[self._time_column]], 
+                                #errors="ignore", exact=False, coerce=True)
+            if  self._time_column in self._groupby:
+                if self._groupby[-1] != self._time_column:
+                    self._groupby = self._groupby[::-1]
+                    self._levels = self._levels[::-1]
             else:
-                self._groupby.append(self._time_column)
+                if len(self._groupby) == 2:
+                    if self._col_factor:
+                        self._row_factor = self._col_factor
+                    self._col_factor = self._groupby[0]
+                    
+                    self._groupby[0] = self._groupby[1]
+                    self._levels = [self._levels[1]]
+                    self._groupby[1] = self._time_column
+                else:
+                    self._groupby.append(self._time_column)
     
     def setup_figure(self):
-        with sns.axes_style("white"):
+        #with sns.axes_style("white"):
             super(TimeSeriesVisualizer, self).setup_figure()
 
     def draw(self, **kwargs):
@@ -60,36 +68,57 @@ class TimeSeriesVisualizer(vis.Visualizer):
         def plot_facet(data, color, **kwargs):
             
             if len(self._groupby) == 2:
-                ct = pd.crosstab(data[self._groupby[1]], data[self._groupby[0]])
-                if len(self._levels) == 2:
-                    ct = ct.reindex_axis(self._levels[1], axis=0).fillna(0)
+                num = []
+                date = []
+                time = data[self._time_column]
+                for x in time:
+                    try:
+                        num.append((float(x) // self.bandwidth) * self.bandwidth)
+                    except ValueError:
+                        num.append(np.NaN)
+                    try:
+                        date.append(pd.Timestamp("{}".format(
+                            (pd.Timestamp(x).year // self.bandwidth) * self.bandwidth)))
+                    except ValueError:
+                        date.append(pd.NaT)
+                if pd.isnull(date).sum() <= pd.isnull(num).sum():
+                    time = date
+                    num = None
+                else:
+                    time = num
+                    date = None
+                ct = pd.crosstab(pd.Series(time), data[self._groupby[0]])
                 ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
-                ct.index = pd.to_datetime(ct.index, coerce=True)
                 ct = ct[pd.notnull(ct.index)]
             else:
                 ct = pd.crosstab(
-                    data[self._groupby[0]],
-                    pd.Series([""] * len(self._table[self._groupby[0]]), name="")                    )
+                    data[self._time_column],
+                    pd.Series([""] * len(self._table[self._time_column]), name="")                    )
+            print(ct.head())
             
+            # percentage area plot:
             if self.percentage:
-                ct = ct.apply(lambda x: x / sum(x), axis=1)
-                ct = ct.resample("AS")
-                return ct.plot(kind="area", ax=plt.gca(), stacked=True, color=self.get_palette(), **kwargs)
+                ct = ct.apply(lambda x: (100 * x) / sum(x), axis=1)
+                ct.plot(kind="area", ax=plt.gca(), stacked=True, color=self.get_palette(), **kwargs)
+                #ct.plot(kind="area", ax=plt.gca(), stacked=True, **kwargs)
             else:
                 if self.area:
+                    # Stacked area plot:
                     if len(self._groupby) == 2:
                         self.vmax = max(self.vmax, ct.apply(sum, axis=1).max())
-                    return ct.plot(ax=plt.gca(), kind="area", stacked=True, color=self.get_palette(), **kwargs)
+                    ct.plot(ax=plt.gca(), kind="area", stacked=True, color=self.get_palette(), **kwargs)
+                    #ct.plot(ax=plt.gca(), kind="area", stacked=True, **kwargs)
                 else:
+                    # Line plot:
                     self.vmax = max(self.vmax, ct.values.max())
                     ct.plot(ax=plt.gca(), stacked=False, color=self.get_palette(), **kwargs)
+                    #ct.plot(ax=plt.gca(), stacked=False, **kwargs)
             
-        self.g.map_dataframe(plot_facet, 
-                             )
+        self.g.map_dataframe(plot_facet)
         
         self.g.add_legend(title=self._groupby[0])
         if self.percentage:
-            self.g.set(ylim=(0, 1))
+            self.g.set(ylim=(0, 100))
         else:
             self.g.set(ylim=(0, self.vmax))
         if self.percentage:
