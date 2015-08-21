@@ -18,6 +18,7 @@ import textwrap
 import fnmatch
 import inspect
 import xml.etree.ElementTree as ET
+import difflib
 
 try:
     from pyqt_compat import QtCore, QtGui
@@ -83,7 +84,6 @@ from corpus import *
 class Resource(SQLResource):
     name = '{name}'
     db_name = '{db_name}'
-    documentation_url = '{url}'
 {variables}
 {resource_code}
     
@@ -132,7 +132,7 @@ class Column(object):
     
     @property
     def data_type(self):
-        return self._data_type
+        return self._data_type.split()[0].partition("(")[0]
     
     @data_type.setter
     def data_type(self, new_type):
@@ -257,6 +257,7 @@ class BaseCorpusBuilder(object):
         self.table_description = {}
         self.lexicon_features = []
         self.corpus_features = []
+        self._time_features = []
         self._tables = {}
         self._id_count = {}
         self._primary_keys = {}
@@ -515,6 +516,9 @@ class BaseCorpusBuilder(object):
         except AttributeError:
             lines = []
         return "".join(lines)
+
+    def add_time_feature(self, x):
+        self._time_features.append(x)
     
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
@@ -534,6 +538,8 @@ class BaseCorpusBuilder(object):
             lines = [x for x in inspect.getsourcelines(self._resource_code)[0] if not x.strip().startswith("class")]
         except AttributeError:
             lines = []
+        lines.insert(0, "    time_features = {}".format(
+            "[{}]".format(", ".join(['"{}"'.format(x) for x in self._time_features]))))
         return "".join(lines)
     
     def get_method_code(self, method):
@@ -1026,17 +1032,26 @@ class BaseCorpusBuilder(object):
                 no_fail = False
         return no_fail
     
-    def ask_overwrite(self, warning_msg):
+    def ask_overwrite(self, warning_msg, existing_code, output_code):
+        existing_code = existing_code.split("\n")
+        print("\n|".join(existing_code))
+        output_code = output_code.split("\n")
+        print("\n|".join(output_code))
         if not self._widget:
-            print("Enter Y to overwrite the existing version.")
-            print("Enter N to keep the existing version.")
-            try:
-                response = raw_input("Overwrite? [Y or N] ")
-            except NameError:
-                response = input("Overwrite? [Y or N] ")
+            while True:
+                print("Enter Y to overwrite the existing version.")
+                print("Enter N to keep the existing version.")
+                print("Enter V to view the difference between the two versions.")
+                try:
+                    response = raw_input("Overwrite? [Y, N, or V] ")
+                except NameError:
+                    response = input("Overwrite? [Y, N, or V] ")
+                if response.upper() in ["Y", "N"]:
+                    break
+                else:
+                    for x in difflib.context_diff(existing_code, output_code):
+                        sys.stdout.write(x)
             return response.upper() == "Y"
-                    
-            return 
         else:
             warning_msg = "<p>{}</p><p>Do you really want to overwrite the existing version?</p>".format(warning_msg)
             return QtGui.QMessageBox.question(self._widget, "Library exists.", warning_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
@@ -1097,7 +1112,7 @@ class BaseCorpusBuilder(object):
                     self.logger.warning(msq_module_exists)
                 except NameError:
                     pass
-                if self.ask_overwrite(msq_module_exists):
+                if self.ask_overwrite(msq_module_exists, existing_code, output_code):
                     self.logger.warning("Overwriting existing corpus module.")
                 else:
                     return
