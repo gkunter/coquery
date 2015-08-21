@@ -169,9 +169,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 return None
             # add arrows as sorting direction indicators if necessary:
             if self.sort_state[index] in [SORT_DEC, SORT_REV_DEC]:
-                return QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_ArrowDown)
-            elif self.sort_state[index] in [SORT_INC, SORT_REV_INC]:
                 return QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_ArrowUp)
+            elif self.sort_state[index] in [SORT_INC, SORT_REV_INC]:
+                return QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_ArrowDown)
             else:
                 return None
         return None
