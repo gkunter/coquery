@@ -224,7 +224,13 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.ui.action_beeswarm_plot.triggered.connect(self.show_beeswarm_plot)
         self.ui.action_heat_map.triggered.connect(self.show_heatmap_plot)
         self.ui.action_barchart_plot.triggered.connect(self.show_barchart_plot)
-        self.ui.action_time_series_plot.triggered.connect(self.show_time_series_plot)
+        
+        self.ui.action_percentage_area_plot.triggered.connect(
+            lambda: self.show_time_series_plot(area=True, percentage=True))
+        self.ui.action_stacked_area_plot.triggered.connect(
+            lambda: self.show_time_series_plot(area=True, percentage=False))
+        self.ui.action_line_plot.triggered.connect(
+            lambda: self.show_time_series_plot(area=False, percentage=False))
     
     def setup_hooks(self):
         """ Connect all relevant signals to their methods."""
@@ -725,7 +731,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
-    def show_time_series_plot(self):
+    def show_time_series_plot(self, area, percentage, **kwargs):
         import visualizer
         import time_series
         if not self.table_model.content.empty:
@@ -733,7 +739,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
-                time_series.TimeSeriesVisualizer, self)
+                time_series.TimeSeriesVisualizer, self, area=area, percentage=percentage, **kwargs)
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
