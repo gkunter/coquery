@@ -1945,7 +1945,7 @@ class SQLCorpus(BaseCorpus):
         # FIXME: improve the heuristic.
         
         if len(Query) == 1:
-            return [0]
+            return [1]
         
         def calc_weight(s):
             if s == "*":
