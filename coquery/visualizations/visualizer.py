@@ -24,22 +24,24 @@ calling the static method Plot(). """
 from __future__ import division
 from __future__ import print_function
 
-import unittest
 import sys
 import os
-import options
-sys.path.append(os.path.join(sys.path[0], "../gui/"))
-import visualizerUi
-from pyqt_compat import QtGui, QtCore, pyside
 import collections
 import itertools
 import math
-from defines import *
-import error_box
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
+
+from pyqt_compat import QtGui, QtCore, pyside
+
+import options
+sys.path.append(os.path.join(sys.path[0], "../gui/"))
+import visualizerUi
+from defines import *
+import error_box
+
 
 # Tell matplotlib if PySide is being used:
 if pyside:
@@ -159,6 +161,24 @@ class Visualizer(object):
         self._model = model
         self._view = view
         self.update_data()
+        
+    def get_palette(self):
+        """ Return a palette that is suitable for the data. """
+        
+        # choose the "Paired" palette if the number of grouping factor
+        # levels is even and below 13, or the "Set3" palette otherwise:
+        if len(self._levels) == 0:
+            if len(self._groupby) == 1:
+                return sns.color_palette("Paired")[0]
+            else:
+                palette_name = "Paired"        
+        elif len(self._levels[-1]) in (2, 4, 6, 8, 12):
+            palette_name = "Paired"
+        else:
+            # use 'Set3', a quantitative palette, if there are two grouping
+            # factors, or a palette diverging from Red to Purple otherwise:
+            palette_name = "Set3" if len(self._groupby) == 2 else "RdPu"
+        return sns.color_palette(palette_name)
         
     def update_data(self):
         """ Update the internal representation of the model content so that
@@ -466,12 +486,13 @@ class VisualizerDialog(QtGui.QWidget):
         self.visualizer.draw()
         print("done")
 
-    def Plot(self, model, view, visualizer_class, parent=None):
+    def Plot(self, model, view, visualizer_class, parent=None, **kwargs):
         """ Use the visualization type given as 'visualizer_class' to display
         the data given in the abstract data table 'model', using the table 
         view given in 'view'. """
         dialog = self
-        visualizer = visualizer_class(model, view)
+        print(kwargs)
+        visualizer = visualizer_class(model, view, **kwargs)
         if visualizer._model:
             dialog.setVisible(True)
             dialog.add_visualizer(visualizer)
