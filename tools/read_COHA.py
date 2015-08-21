@@ -46,6 +46,7 @@ table_description = {
             "ARGS": "LINES TERMINATED BY '\\r\\n' IGNORE 3 LINES" },
         "INDEX": {
             "PoS": (["PoS"], 0, "HASH"),
+            "WordCS": (["WordCS"], 13, "BTREE"),
             "Word": (["Word"], 13, "BTREE"),
             "Lemma": (["Lemma"], 13, "BTREE")
             }
