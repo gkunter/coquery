@@ -427,21 +427,18 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             name = name[0]
         if name:
             try:
+                columns = [x for x in self.table_model.content.columns if not x.startswith("coquery_invisible")]
+                columns = [x for x in columns if options.cfg.column_visibility.get(x, True)]
+                tab = self.table_model.content[columns]
                 with codecs.open(name, "wt") as output_file:
                     writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
-                    writer.writerow(self.Session.header)
-                    for y in range(self.table_model.rowCount()):
-                        row = [self.table_model.index(y, x).data() for x in range(self.table_model.columnCount())]
-                        try:
-                            row = [x.toUtf8() if not isinstance(x, (int, long, complex, float)) else x for x in row]
-                        except AttributeError:
-                            pass
-                        writer.writerow(row)
+                    writer.writerow([options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in tab.columns])
+                    for i in tab.index:
+                        writer.writerow(tab.iloc[i])
             except IOError as e:
                 QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. <b>The results have not been saved.</b>")
-            except (UnicodeEncodingError, UnicodeDecodingError):
+            except (UnicodeEncodeError, UnicodeDecodeError):
                 QtGui.QMessageBox.critical(self, "Encoding error", "<p>Unfortunatenly, there was an error while encoding the characters in the results view. <b>The save file is probably incomplete.</b></p><p>At least one column contains special characters which could not be translated to a format that can be written to a file. You may try to work around this issue by reducing the number of output columns so that the offending character is not in the output anymore.</p><p>We apologize for this inconvenience. Please do not hesitate to contact the authors about it so that the problem may be fixed in a future version.</p>")
-                
             else:
                 self.last_results_saved = True
     
@@ -488,24 +485,24 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
 
         if not options.cfg.column_visibility.get(
             self.table_model.content.columns[column].lower(), True):
-            action = QtGui.QAction("Show column", self)
+            action = QtGui.QAction("&Show column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
             self.menu.addAction(action)
             
         else:
-            action = QtGui.QAction("Hide column", self)
+            action = QtGui.QAction("&Hide column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
             self.menu.addAction(action)
             self.menu.addSeparator()
             
             if self.table_model.content.columns[column].lower() in options.cfg.column_color:
-                action = QtGui.QAction("Reset color", self)
+                action = QtGui.QAction("&Reset color", self)
                 action.triggered.connect(lambda: self.reset_color(column))
                 self.menu.addAction(action)
     
-            action = QtGui.QAction("Change color...", self)
+            action = QtGui.QAction("&Change color...", self)
             action.triggered.connect(lambda: self.change_color(column))
             self.menu.addAction(action)
             self.menu.addSeparator()
@@ -517,12 +514,12 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                 action.setChecked(True)
             self.menu.addAction(action)
             
-            action = group.addAction(QtGui.QAction("Ascending", self, checkable=True))
+            action = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
             action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_INC))
             if self.table_model.sort_state[column] == results.SORT_INC:
                 action.setChecked(True)
             self.menu.addAction(action)
-            action = group.addAction(QtGui.QAction("Descending", self, checkable=True))
+            action = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
             action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_DEC))
             if self.table_model.sort_state[column] == results.SORT_DEC:
                 action.setChecked(True)
@@ -532,13 +529,13 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             probe_index = self.table_model.createIndex(0, column)
             probe_cell = probe_index.data()
             if type(probe_cell) in [unicode, str, QtCore.QString]:
-                action = group.addAction(QtGui.QAction("Ascending, reverse", self, checkable=True))
+                action = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
                 action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
                 if self.table_model.sort_state[column] == results.SORT_REV_INC:
                     action.setChecked(True)
 
                 self.menu.addAction(action)
-                action = group.addAction(QtGui.QAction("Descending, reverse", self, checkable=True))
+                action = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
                 action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_DEC))
                 if self.table_model.sort_state[column] == results.SORT_REV_DEC:
                     action.setChecked(True)
@@ -731,7 +728,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
-    def show_time_series_plot(self, area, percentage, **kwargs):
+    def show_time_series_plot(self, area, percentage):
         import visualizer
         import time_series
         if not self.table_model.content.empty:
@@ -739,7 +736,9 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             viz.Plot(
                 self.table_model, 
                 self.ui.data_preview, 
-                time_series.TimeSeriesVisualizer, self, area=area, percentage=percentage, **kwargs)
+                time_series.TimeSeriesVisualizer, 
+                self, area=area, percentage=percentage, 
+                smooth=True)
         else:
             QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
