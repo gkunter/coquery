@@ -23,6 +23,7 @@ calling the static method Plot(). """
 
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import sys
 import os
@@ -177,7 +178,7 @@ class Visualizer(object):
         else:
             # use 'Set3', a quantitative palette, if there are two grouping
             # factors, or a palette diverging from Red to Purple otherwise:
-            palette_name = "Set3" if len(self._groupby) == 2 else "RdPu"
+            palette_name = "Paired" if len(self._groupby) == 2 else "RdPu"
         return sns.color_palette(palette_name)
         
     def update_data(self):
@@ -205,7 +206,8 @@ class Visualizer(object):
                     self._column_order.append("coq_frequency")
             
             self._column_order += [x for x in options.cfg.main_window.Session.output_order if x.startswith("coquery_invisible") and x not in self._column_order]
-            
+            self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
+                    
             # Remove hidden columns:
             self._column_order = [x for x in self._column_order if 
                 options.cfg.column_visibility.get(x, True)]
@@ -390,6 +392,24 @@ class VisualizerDialog(QtGui.QWidget):
         self.ui.check_freeze.stateChanged.connect(self.toggle_freeze)
         self.frozen = False
 
+    def add_smooth_spinner(self):
+        self.ui.spinner = QtGui.QSpinBox()
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.ui.spinner.sizePolicy().hasHeightForWidth())
+        self.ui.spinner.setSizePolicy(sizePolicy)
+        self.ui.spinner.setFrame(True)
+        self.ui.spinner.setButtonSymbols(QtGui.QAbstractSpinBox.UpDownArrows)
+        self.ui.spinner.setMaximum(10)
+        self.ui.spinner.setMinimum(1)
+        self.ui.spinner.setSuffix(" year(s)")
+        self.ui.horizontalLayout_3.insertWidget(2, self.ui.spinner)
+        self.ui.horizontalLayout_3.insertWidget(2, QtGui.QLabel("Bins: "))
+        
+        
+        self.ui.spinner.valueChanged.connect(self.update_plot)
+
     def add_visualizer(self, visualizer):
         """ Add a Visualizer instance to the visualization dialog. Also, 
         add a matplotlib canvas and a matplotlib navigation toolbar to the 
@@ -402,11 +422,21 @@ class VisualizerDialog(QtGui.QWidget):
         toolbar are replaced by new instances, as is the figure used by the 
         visualizer. Finally, the draw() method of the visualizer is called to
         plot the visualization again. """
+        if self.smooth:
+            self.ui.spinner.valueChanged.disconnect(self.update_plot)
+            self.ui.spinner.setEnabled(False)
         self.visualizer.setup_figure()
         self.remove_matplot()
         self.add_matplot()
-        self.visualizer.update_data()
+        if self.smooth:
+            self.visualizer.update_data(bandwidth=self.ui.spinner.value())
+        else:
+            self.visualizer.update_data()
+            
         self.visualizer.draw()
+        if self.smooth:
+            self.ui.spinner.valueChanged.connect(self.update_plot)
+            self.ui.spinner.setEnabled(True)
 
     def add_matplot(self):
         """ Add a matplotlib canvas and a navigation bar to the dialog. """
@@ -491,7 +521,9 @@ class VisualizerDialog(QtGui.QWidget):
         the data given in the abstract data table 'model', using the table 
         view given in 'view'. """
         dialog = self
-        print(kwargs)
+        self.smooth = kwargs.get("smooth", False)
+        if self.smooth:
+            self.add_smooth_spinner()
         visualizer = visualizer_class(model, view, **kwargs)
         if visualizer._model:
             dialog.setVisible(True)
