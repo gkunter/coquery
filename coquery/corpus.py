@@ -1994,7 +1994,9 @@ class SQLCorpus(BaseCorpus):
                     sub_query_list[i+1] = join_string
             else:
                 if s:
-                    join_string = "INNER JOIN ({s}) AS e{i1} ON coq_corpus_id_{i1} = coq_corpus_id_{ref} + {i}".format(s = s, i=i, i1=i+1, token=self.resource.corpus_id, ref=referent_id)
+                    join_string = "INNER JOIN ({s}) AS e{i1} ON coq_corpus_id_{i1} = coq_corpus_id_{ref} + {i}".format(
+                        s = s, i=i - referent_id + 1,
+                        i1=i+1, token=self.resource.corpus_id, ref=referent_id)
                     sub_query_list[i+1] = join_string
 
         query_string_part = [
