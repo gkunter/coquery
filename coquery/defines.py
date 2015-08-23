@@ -52,6 +52,7 @@ TABLE_SPEAKER = "speaker"
 CONTEXT_KWIC = "KWIC"
 CONTEXT_STRING = "String"
 CONTEXT_COLUMNS = "Columns"
+CONTEXT_SENTENCE = "Sentence"
 
 COLUMN_NAMES = {
     "coq_frequency": "Frequency", 
@@ -156,10 +157,6 @@ class UnicodeWriter(object):
                     raise e
             return s
         return self.writer.writerow([encode_string(x) for x in row])
-
-    def writerows(self, rows):
-        for row in rows:
-            self.writerow(row)
 
 class ResourceList(object):
     def __init__(self):
