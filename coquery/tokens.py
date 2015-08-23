@@ -136,8 +136,6 @@ class COCAToken(QueryToken):
         self.lemma_specifiers = []        
         self.transcript_specifiers = []
 
-        print(123)
-        
         while self.S.startswith(self.NegationChar):
             self.negated = not self.negated
             self.S = self.S[1:]
