@@ -53,7 +53,6 @@ class Session(object):
         self.query_list = []
         self.requested_fields = []
             
-        
         # load current corpus module depending on the value of options.cfg.corpus,
         # i.e. the corpus specified as an argumment:        
         ResourceClass, CorpusClass, LexiconClass, Path = resource_list.get_available_resources()[options.cfg.corpus]
@@ -74,31 +73,6 @@ class Session(object):
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.query_type = queries.CollocationQuery
             
-        if not options.cfg.experimental:
-            if options.cfg.show_orth:
-                self.requested_fields.append(LEX_ORTH)        
-            if options.cfg.show_lemma:
-                self.requested_fields.append(LEX_LEMMA)
-            if options.cfg.show_pos:
-                self.requested_fields.append(LEX_POS)
-            try:
-                if options.cfg.show_phon:
-                    self.requested_fields.append(LEX_PHON)
-            except AttributeError:
-                pass
-            if options.cfg.show_source:
-                self.requested_fields.append(CORP_SOURCE)
-            if options.cfg.show_filename:
-                self.requested_fields.append(CORP_FILENAME)
-            if options.cfg.show_speaker:
-                self.requested_fields.append(CORP_SPEAKER)
-            if options.cfg.show_time:
-                self.requested_fields.append(CORP_TIMING)
-            if options.cfg.context_span or options.cfg.context_columns or options.cfg.context_sentence:
-                self.requested_fields.append(CORP_CONTEXT)
-                
-            self.output_fields = set([x for x in self.requested_fields if self.Corpus.provides_feature(x)])
-
         logger.info("Corpus: %s" % options.cfg.corpus)
         self.output_file = None
 
@@ -128,83 +102,34 @@ class Session(object):
             self.header.append("coquery_invisible_number_of_tokens")
             return
             
-        if options.cfg.experimental:
-            corpus_features = [x for x, _ in self.Corpus.resource.get_corpus_features() if x in options.cfg.selected_features]
-            lexicon_features = [x for x, _ in self.Corpus.resource.get_lexicon_features() if x in options.cfg.selected_features]
-            corpus_names = [x for _, x in self.Corpus.resource.get_corpus_features() if _ in options.cfg.selected_features]
-            lexicon_names = [x for _, x in self.Corpus.resource.get_lexicon_features() if _ in options.cfg.selected_features]
-            h = []
-            for rc_feature in self.Corpus.resource.get_preferred_output_order():
-                if rc_feature in options.cfg.selected_features and rc_feature in lexicon_features:
-                    h += ["{}{}".format(lexicon_names[lexicon_features.index(rc_feature)], i+1) for i in range(self.max_number_of_tokens)]
-            for rc_feature in self.Corpus.resource.get_preferred_output_order():
-                if rc_feature in options.cfg.selected_features and rc_feature in corpus_features:
-                    h += [corpus_names[corpus_features.index(rc_feature)]]
-            for rc_feature in options.cfg.selected_features:
-                if rc_feature.startswith("coquery"):
-                    name = self.Corpus.resource.__getattribute__(rc_feature)
-                    h.append(name)
-            self.header = h
-            if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-                self.header.append (options.cfg.freq_label)
-            if options.cfg.context_left:
-                self.header.append("Left_context")
-            if options.cfg.context_right:
-                self.header.append("Right_context")
-            # if a GUI is used, include source features so the entries in the
-            # result table can be made clickable to show the context:
-            if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.gui):
-                self.header.append("coq_invisible_token_id")
-                self.header.append("coq_invisible_source_id")
-                self.header.append("coq_invisible_number_of_tokens")
-        else:
-            if not self.header:
-                # If there is no header yet (e.g. because the input file did not
-                # contain headsers), create a new header with column labels 
-                # 'Inputx' for the maximum number of input columns available, 
-                # with x corresponding to the number of the column.
-                # The column containing the query string is labelled 'Query'.
-                self.header = ["Input%s" % (x+1) for x in range(self.max_number_of_input_columns - 1)]
-                if options.cfg.show_query:
-                    self.header.insert (options.cfg.query_column_number - 1, "Query")
-            
-            if options.cfg.show_parameters:
-                self.header.append ("Parameters")
-                
-            if options.cfg.show_filter:
-                self.header.append ("Filter")
-            
-            if options.cfg.show_id:
-                self.header.append("ID")
-                
-            if options.cfg.show_orth:
-                self.header += ["W%s" % (x+1) for x in range(self.max_number_of_tokens)]
-
-            if options.cfg.show_phon and self.Corpus.provides_feature(LEX_PHON):
-                self.header += ["W_Phon%s" % (x+1) for x in range(self.max_number_of_tokens)]
-                
-            if options.cfg.show_lemma and self.Corpus.provides_feature(LEX_LEMMA):
-                self.header += ["L%s" % (x + 1) for x in range(self.max_number_of_tokens)]
-                
-            if options.cfg.show_pos and self.Corpus.provides_feature(LEX_POS):
-                self.header += ["PoS%s" % (x + 1) for x in range(self.max_number_of_tokens)]
-            
-            if options.cfg.show_source and self.Corpus.provides_feature(CORP_SOURCE):
-                self.header += self.Corpus.get_source_info_header()
-            if options.cfg.show_speaker and self.Corpus.provides_feature(CORP_SPEAKER):
-                self.header += self.Corpus.get_speaker_info_header()
-            if options.cfg.show_filename and self.Corpus.provides_feature(CORP_FILENAME):
-                self.header += self.Corpus.get_file_info_header()
-            if options.cfg.show_time and self.Corpus.provides_feature(CORP_TIMING):
-                self.header += self.Corpus.get_time_info_header()
-                
-            if (options.cfg.context_span or options.cfg.context_columns) and self.Corpus.provides_feature(CORP_CONTEXT):
-                self.header += self.Corpus.get_context_header(self.max_number_of_tokens)
-            if options.cfg.context_sentence and self.Corpus.provides_feature(CORP_CONTEXT):
-                self.header += self.Corpus.get_context_sentence_header()
-
-            if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-                self.header.append (options.cfg.freq_label)
+        corpus_features = [x for x, _ in self.Corpus.resource.get_corpus_features() if x in options.cfg.selected_features]
+        lexicon_features = [x for x, _ in self.Corpus.resource.get_lexicon_features() if x in options.cfg.selected_features]
+        corpus_names = [x for _, x in self.Corpus.resource.get_corpus_features() if _ in options.cfg.selected_features]
+        lexicon_names = [x for _, x in self.Corpus.resource.get_lexicon_features() if _ in options.cfg.selected_features]
+        h = []
+        for rc_feature in self.Corpus.resource.get_preferred_output_order():
+            if rc_feature in options.cfg.selected_features and rc_feature in lexicon_features:
+                h += ["{}{}".format(lexicon_names[lexicon_features.index(rc_feature)], i+1) for i in range(self.max_number_of_tokens)]
+        for rc_feature in self.Corpus.resource.get_preferred_output_order():
+            if rc_feature in options.cfg.selected_features and rc_feature in corpus_features:
+                h += [corpus_names[corpus_features.index(rc_feature)]]
+        for rc_feature in options.cfg.selected_features:
+            if rc_feature.startswith("coquery"):
+                name = self.Corpus.resource.__getattribute__(rc_feature)
+                h.append(name)
+        self.header = h
+        if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
+            self.header.append (options.cfg.freq_label)
+        if options.cfg.context_left:
+            self.header.append("Left_context")
+        if options.cfg.context_right:
+            self.header.append("Right_context")
+        # if a GUI is used, include source features so the entries in the
+        # result table can be made clickable to show the context:
+        if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.gui):
+            self.header.append("coq_invisible_token_id")
+            self.header.append("coq_invisible_source_id")
+            self.header.append("coq_invisible_number_of_tokens")
 
     def get_expected_column_number(self, max_number_of_tokens):
         """ Return the expected number of columns, based on the maximum 
@@ -281,12 +206,8 @@ class Session(object):
                 any_result = False
                 for sub_query in current_query.query_list:
                     query_results = []
-                    if options.cfg.experimental:
-                        for current_result in self.Corpus.yield_query_results_new(sub_query):
-                            query_results.append(current_result)
-                    else:
-                        for current_result in self.Corpus.yield_query_results(sub_query):
-                            query_results.append(current_result)
+                    for current_result in self.Corpus.yield_query_results_new(sub_query):
+                        query_results.append(current_result)
                         
                     sub_query.set_result_list(query_results)
                     if query_results:
@@ -311,10 +232,7 @@ class Session(object):
                 logger.info("Start query: '{}'".format(current_query))
 
                 if current_query.tokens:
-                    if options.cfg.experimental:
-                        current_query.set_result_list(self.Corpus.yield_query_results_new(current_query))
-                    else:
-                        current_query.set_result_list(self.Corpus.yield_query_results(current_query))
+                    current_query.set_result_list(self.Corpus.yield_query_results_new(current_query))
                 if not options.cfg.dry_run:
                     if not self.output_file:
                         self.open_output_file()
