@@ -405,7 +405,10 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
             pass
         
     def display_results(self):
-        df = pd.DataFrame.from_dict(self.Session.output_storage, orient="columns")
+        if isinstance(self.Session.output_storage, pd.DataFrame):
+            df = self.Session.output_storage
+        else:
+            df = pd.DataFrame.from_dict(self.Session.output_storage, orient="columns")
         if not options.cfg.experimental:
             df.columns = self.Session.header
         self.table_model.set_data(df)
