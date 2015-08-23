@@ -283,6 +283,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         
         self.ui.filter_box.edit_tag.setCompleter(self.completer)
 
+        self.stop_progress_indicator()
+
         self.setup_hooks()
         self.setup_menu_actions()
         
@@ -445,10 +447,20 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
     def exception_during_query(self):
         error_box.ErrorBox.show(self.exc_info, self.exception)
         
+    def start_progress_indicator(self):
+        """ Show the progress indicator, and make it move. """
+        self.ui.progress_bar.setRange(0, 0)
+        self.ui.progress_bar.show()
+        
+    def stop_progress_indicator(self):
+        """ Stop the progress indicator from moving, and hide it as well. """
+        self.ui.progress_bar.setRange(0, 1)
+        self.ui.progress_bar.hide()
+        
     def query_finished(self):
         self.set_query_button()
-        # Stop the progress indicator:
-        self.ui.progress_bar.setRange(0, 1)
+        self.stop_progress_indicator()
+
         # show results:
         self.display_results()
         self.query_thread = None
@@ -618,8 +630,8 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                 self.query_thread.wait()
             self.ui.statusbar.showMessage("Last query interrupted.")
             self.ui.button_run_query.setEnabled(True)
-            self.ui.progress_bar.setRange(0, 1)
             self.set_query_button()
+            self.stop_progress_indicator()
         
     def run_query(self):
         self.getGuiValues()
@@ -652,7 +664,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         else:
             self.set_stop_button()
             self.ui.statusbar.showMessage("Running query...")
-            self.ui.progress_bar.setRange(0, 0)
+            self.start_progress_indicator()
             self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
             self.query_thread.taskFinished.connect(self.query_finished)
             self.query_thread.taskException.connect(self.exception_during_query)
@@ -662,7 +674,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
         self.getGuiValues()
         self.Session = StatisticsSession()
         self.ui.statusbar.showMessage("Gathering corpus statistics...")
-        self.ui.progress_bar.setRange(0, 0)
+        self.start_progress_indicator()
         self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
         self.query_thread.taskFinished.connect(self.query_finished)
         self.query_thread.taskException.connect(self.exception_during_query)
@@ -779,8 +791,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                 except AttributeError as e:
                     pass
                 DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password)
-                self.ui.progress_bar.setRange(0, 0)
-                self.ui.progress_bar.setFormat("Removing corpus '{}'".format(current_corpus))
+                self.start_progress_indicator()
                 try:
                     DB.execute("DROP DATABASE {}".format(database))
                 except sqlwrap.mysql.OperationalError as e:
@@ -791,8 +802,7 @@ class CoqueryApp(QtGui.QMainWindow, wizard.CoqueryWizard):
                     os.remove(module)
                 except IOError:
                     QtGui.QMessageBox.critical(self, "Storage error – Coquery", "<p>There was an error while deleting the corpus module.</p>", QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                self.ui.progress_bar.setRange(0, 1)
-                self.ui.progress_bar.setFormat("Idle.")
+                self.stop_progress_indicator()
                 self.fill_combo_corpus()
                 logger.warning("Removed corpus {}.".format(current_corpus))
         self.change_corpus()

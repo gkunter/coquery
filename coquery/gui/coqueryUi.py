@@ -2,7 +2,8 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt4 UI code generator 4.10.3
+# Created: Sun Aug 23 10:17:54 2015
+#      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -211,11 +212,11 @@ class Ui_MainWindow(object):
         spacerItem5 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.corpus_settings.addItem(spacerItem5)
         self.box_query_button = QtGui.QHBoxLayout()
-        self.box_query_button.setSpacing(20)
+        self.box_query_button.setSpacing(0)
         self.box_query_button.setContentsMargins(-1, -1, -1, 0)
         self.box_query_button.setObjectName(_fromUtf8("box_query_button"))
         self.button_run_query = QtGui.QPushButton(self.general_settings)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.button_run_query.sizePolicy().hasHeightForWidth())
@@ -225,8 +226,15 @@ class Ui_MainWindow(object):
         self.button_run_query.setIcon(icon)
         self.button_run_query.setObjectName(_fromUtf8("button_run_query"))
         self.box_query_button.addWidget(self.button_run_query)
+        spacerItem6 = QtGui.QSpacerItem(20, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.box_query_button.addItem(spacerItem6)
         self.progress_bar = QtGui.QProgressBar(self.general_settings)
         self.progress_bar.setEnabled(True)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.progress_bar.sizePolicy().hasHeightForWidth())
+        self.progress_bar.setSizePolicy(sizePolicy)
         self.progress_bar.setMaximum(1)
         self.progress_bar.setProperty("value", 0)
         self.progress_bar.setTextVisible(True)
@@ -235,6 +243,7 @@ class Ui_MainWindow(object):
         self.progress_bar.setTextDirection(QtGui.QProgressBar.TopToBottom)
         self.progress_bar.setObjectName(_fromUtf8("progress_bar"))
         self.box_query_button.addWidget(self.progress_bar)
+        self.box_query_button.setStretch(2, 3)
         self.corpus_settings.addLayout(self.box_query_button)
         self.horizontalLayout_7.addWidget(self.general_settings)
         self.box_input_settings = QtGui.QFrame(self.options_area)
@@ -453,7 +462,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.tabbed_views)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1222, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1222, 34))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
