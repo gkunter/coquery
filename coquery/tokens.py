@@ -52,7 +52,6 @@ corpus-specific.
         self.lemma_specifiers = []
         self.transcript_specifiers = []
         self.negated = False
-        self.transcript = False
         self.parse()
 
         if not self.lexicon:
@@ -86,30 +85,6 @@ the appropriate SQL correspondents.
             assert not self.lemma_specifiers
         return self.word_specifiers, self.lemma_specifiers, self.class_specifiers, self.negated
 
-    def check_brackets(self, S):
-        """ 
-check_brackets(S) returns True if S starts and ends with exactly one 
-matching bracket, and does not contain any other brackets. The type of 
-brackets is class-specific, it defaults to ( and ), but the COCA classes 
-use [ and ]. 
-        """        
-        if self.bracket_open in S or self.bracket_close in S:
-            if S.count(self.bracket_open) != S.count(self.bracket_close):
-                raise TokenParseError(self)
-            if not S.startswith(self.bracket_open) or not S.endswith(self.bracket_close):
-                raise TokenParseError(self)
-            if S.count (self.bracket_open) > 1:
-                raise TokenParseError(self)
-            if S.count (self.bracket_close) > 1:
-                raise TokenParseError(self)
-            return True
-        else:
-            return False
-    
-    def check_transcript(self, S):
-        """ return True if S starts and ends with the transcription markers"""
-        return S.startswith(self.transcript_open) and S.endswith(self.transcript_close)
-    
     def parse (self):
         """ parse() is the function that derives word, lemma, and class
         specificiations from the token string. The syntax is 
@@ -216,8 +191,6 @@ def parse_query_string(S, token_type):
     state = ST_NORMAL
     current_word = ""
     negated = False
-    
-    t2 = []
     
     for current_char in S:
         if state == ST_NORMAL:
