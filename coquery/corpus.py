@@ -2057,7 +2057,6 @@ class SQLCorpus(BaseCorpus):
         if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             if final_select:
                 query_string = "{} GROUP BY {}".format(query_string, ", ".join([x.split(" AS ")[-1] for x in final_select]))
-            if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
                 final_select.append("COUNT(*) AS coq_frequency")
 
         # include variables that are required to make entries in the result
