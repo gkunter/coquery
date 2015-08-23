@@ -655,13 +655,8 @@ class CoqueryApp(QtGui.QMainWindow):
             df = self.Session.output_storage
         else:
             df = pd.DataFrame.from_dict(self.Session.output_storage, orient="columns")
-        if not options.cfg.experimental:
-            df.columns = self.Session.header
         self.table_model.set_data(df)
-        if options.cfg.experimental:
-            self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
-        else:
-            self.table_model.set_header(self.Session.header)
+        self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
         self.ui.data_preview.setModel(self.table_model)
 
         # set column widths:
