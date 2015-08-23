@@ -135,6 +135,8 @@ class COCAToken(QueryToken):
         self.class_specifiers = []
         self.lemma_specifiers = []        
         self.transcript_specifiers = []
+
+        print(123)
         
         while self.S.startswith(self.NegationChar):
             self.negated = not self.negated
@@ -248,6 +250,9 @@ def parse_query_string(S, token_type):
                 current_word = "%s%s" % (current_word, token_type.transcript_close)
                 state = ST_NORMAL
             elif current_char != token_type.or_character:
+                current_word = "%s%s" % (current_word, current_char)
+            # FIXME: or character may be broken
+            elif current_char == token_type.or_character:
                 current_word = "%s%s" % (current_word, current_char)
             else:
                 raise TokenParseError(S)
