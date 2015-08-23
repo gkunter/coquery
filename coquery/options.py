@@ -100,7 +100,6 @@ class Options(object):
         self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
         
         group.add_argument("--gui", help="Use a graphical user interface (requires Qt)", action="store_true")
-        group.add_argument("--wizard", help="Use a wizard interface (requires Qt)", action="store_true")
         # General options:
         self.parser.add_argument("-o", "--outputfile", help="write results to OUTPUTFILE (default: write to console)", type=str, dest="output_path")
         group = self.parser.add_mutually_exclusive_group()
@@ -166,7 +165,6 @@ class Options(object):
         # whether a GUI is requested. This parse doesn't raise an argument 
         # error.
         args, unknown = self.parser.parse_known_args()
-        self.args.wizard = args.wizard
         self.args.gui = args.gui
         
         self.read_configuration()
@@ -176,7 +174,7 @@ class Options(object):
         
         # if no corpus is selected and no GUI is requested, display the help
         # and exit.
-        if "corpus" not in dir(self.args) and not (args.gui or args.wizard):
+        if "corpus" not in dir(self.args) and not (args.gui):
             self.parser.print_help()
             sys.exit(1)
         
@@ -480,7 +478,7 @@ class Options(object):
                 
             # only use the other settings from the configuration file if a 
             # GUI is used:
-            if self.args.gui or self.args.wizard:
+            if self.args.gui:
                 for section in config_file.sections():
                     if section == "main":
                         try:
@@ -625,7 +623,7 @@ def save_configuration():
         config.set("context", "words_left", cfg.context_left)
         config.set("context", "words_right", cfg.context_right)
 
-    if cfg.gui or cfg.wizard:
+    if cfg.gui:
         if not "gui" in config.sections():
             config.add_section("gui")
         window_size = cfg.main_window.size()

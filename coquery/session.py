@@ -153,7 +153,7 @@ class Session(object):
                 self.header.append("Right_context")
             # if a GUI is used, include source features so the entries in the
             # result table can be made clickable to show the context:
-            if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.gui or options.cfg.wizard):
+            if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.gui):
                 self.header.append("coq_invisible_token_id")
                 self.header.append("coq_invisible_source_id")
                 self.header.append("coq_invisible_number_of_tokens")
@@ -228,7 +228,7 @@ class Session(object):
                 length += 1
         # if a GUI is used, include source features so the entries in the
         # result table can be made clickable to show the context:
-        if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.gui or options.cfg.wizard):
+        if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.gui):
             length += 3
         return length
 

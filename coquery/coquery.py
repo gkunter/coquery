@@ -32,7 +32,6 @@ from __future__ import unicode_literals
 
 import sys
 import os.path
-import tempfile
 
 import logging
 import logging.handlers
@@ -65,8 +64,8 @@ def main():
         options.cfg.log_file_path = os.path.join(os.path.expanduser("~"), "coquery.log")
 
         # Check if a valid corpus was specified, but only if no GUI is
-        # requested (the GUI wizard will handle corpus selection later):
-        if not (options.cfg.gui or options.cfg.wizard):
+        # requested (the GUI will handle corpus selection later):
+        if not (options.cfg.gui):
             if not resource_list.get_available_resources():
                 raise NoCorpusError
 
@@ -107,54 +106,13 @@ def main():
         Coq = CoqueryApp()
         options.cfg.gui_logger.setGui(Coq)
         Coq.show()
-        Coq.setWizardDefaults()
+        Coq.setGUIDefaults()
         options.cfg.icon = QtGui.QIcon()
         options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_tiny.png".format(sys.path[0])))
         Coq.setWindowIcon(options.cfg.icon)
         options.cfg.app.exec_()
         logger.info("--- Finished program (after %.3f seconds) ---" % (time.time() - start_time))
 
-    # Otherwise, run the Wizard GUI?
-    elif options.cfg.wizard:
-        options.cfg.gui = True
-        # use wizard gui:
-        sys.path.append(os.path.join(sys.path[0], "gui"))
-        from pyqt_compat import QtCore, QtGui
-        from wizard import CoqueryWizard
-        from QtProgress import ProgressIndicator
-        from results import ResultsViewer
-        options.cfg.app = QtGui.QApplication(sys.argv)
-        Wizard = CoqueryWizard()
-        Wizard.setWizardDefaults()
-        options.cfg.icon = QtGui.QIcon()
-        options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_small.png".format(sys.path[0])))
-        Wizard.setWindowIcon(options.cfg.icon)
-    
-        while True:
-            if Wizard.getWizardArguments():
-                with tempfile.NamedTemporaryFile() as temp_file:
-                    options.cfg.output_path = temp_file.name
-                if options.cfg.MODE == QUERY_MODE_STATISTICS:
-                    Session = StatisticsSession()
-                else:
-                    if options.cfg.input_path:
-                        Session = SessionInputFile()
-                    elif options.cfg.query_list:
-                        Session = SessionCommandLine()
-                    else:
-                        Session = SessionStdIn()
-                ProgressIndicator.RunThread(Session.run_queries, "Querying...")
-                # Display results (which are stored in a memory file)
-                # in a dialog, with the option to save it to a file:
-                finish = ResultsViewer(Session).exec_()
-                if finish:
-                    logger.info("--- Finished program (after %.3f seconds) ---" % (time.time() - start_time))
-                    break
-                Wizard.restart()
-                Wizard.next()
-            else:
-                break
-            
     # Otherwise, run program as a command-line tool:
     else:
         # Choose the appropriate Session type instance:

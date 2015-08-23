@@ -1738,7 +1738,7 @@ class SQLCorpus(BaseCorpus):
             
             # if a GUI is used, include source features so the entries in the
             # result table can be made clickable to show the context:
-            if options.cfg.gui or options.cfg.wizard:
+            if options.cfg.gui:
                 # in order to make this not depend on a fixed database layout 
                 # (here: 'source' and 'file' tables), we should check for any
                 # table that corpus_table is linked to except for word_table
