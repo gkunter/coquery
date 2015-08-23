@@ -1142,9 +1142,9 @@ class CoqueryApp(QtGui.QMainWindow):
             if self.ui.radio_context_mode_kwic.isChecked():
                 options.cfg.context_mode = CONTEXT_KWIC
             if self.ui.radio_context_mode_string.isChecked():
-                options.cfg.MODE = CONTEXT_STRING
+                options.cfg.context_mode  = CONTEXT_STRING
             if self.ui.radio_context_mode_columns.isChecked():
-                options.cfg.MODE = CONTEXT_COLUMNS
+                options.cfg.context_mode  = CONTEXT_COLUMNS
 
                 
             # either get the query input string or the query file name:
