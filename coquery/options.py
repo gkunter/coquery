@@ -135,12 +135,11 @@ class Options(object):
 
         # Output options:
         group = self.parser.add_argument_group("Output options")
-        group.add_argument("--no-sort", help="do not sort the results in a frequency query (default: sort by frequency)", action="store_false", dest="order_frequency")
         group.add_argument("--suppress-header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
         
         group.add_argument("--context_mode", help="specify the way the context is included in the output", choices=[CONTEXT_KWIC, CONTEXT_STRING, CONTEXT_COLUMNS], default=CONTEXT_KWIC, type=str)
         group.add_argument("-c", "--context_span", help="include context with N words to the left and the right of the keyword, or with N words to the left and M words to the right if the notation '-c N, M' is used", default=0, type=int, dest="context_span")
-        #group.add_argument("--sentence", help="include the sentence of the token as a context (not supported by all corpora)", dest="context_sentence", action="store_true")
+        group.add_argument("--sentence", help="include the sentence of the token as a context (not supported by all corpora, currently not implemented)", dest="context_sentence", action="store_true")
 
 
         group.add_argument("--number-of-tokens", help="output up to NUMBER different tokens (default: all tokens)", default=0, type=int, dest="number_of_tokens", metavar="NUMBER")
@@ -335,38 +334,37 @@ class Options(object):
         except AttributeError:
             pass
         
-        if self.args.experimental:
-            if self.args.source_filter:
-                Genres, Years, Negated = tokens.COCATextToken(self.args.source_filter, None).get_parse()
-                
-                date_label = ""
-                genre_label = ""
-                
-                if Genres:
-                    if "corpus_genre" in dir(resource):
-                        genre_label = resource.corpus_genre
-                    elif "source_genre" in dir(resource):
-                        genre_label = resource.source_genre
-                    elif "source_info_genre" in dir(resource):
-                        genre_label = resource.source_info_genre
-                    elif "genre_label" in dir(resource):
-                        genre_label = resource.genre_label
-                if Years:
-                    if "corpus_year" in dir(resource):
-                        date_label = resource.corpus_year
-                    elif "corpus_date" in dir(resource):
-                        date_label = resource.corpus_date
-                    elif "source_year" in dir(resource):
-                        date_label = resource.source_year
-                    elif "source_date" in dir(resource):
-                        date_label = resource.source_date
-                
-                if date_label:
-                    for year in Years:
-                        self.args.filter_list.append("{} = {}".format(date_label,  year))
-                if genre_label:
-                    for genre in Genres:
-                        self.args.filter_list.append("{} = {}".format(genre_label,  genre))
+        if self.args.source_filter:
+            Genres, Years, Negated = tokens.COCATextToken(self.args.source_filter, None).get_parse()
+            
+            date_label = ""
+            genre_label = ""
+            
+            if Genres:
+                if "corpus_genre" in dir(resource):
+                    genre_label = resource.corpus_genre
+                elif "source_genre" in dir(resource):
+                    genre_label = resource.source_genre
+                elif "source_info_genre" in dir(resource):
+                    genre_label = resource.source_info_genre
+                elif "genre_label" in dir(resource):
+                    genre_label = resource.genre_label
+            if Years:
+                if "corpus_year" in dir(resource):
+                    date_label = resource.corpus_year
+                elif "corpus_date" in dir(resource):
+                    date_label = resource.corpus_date
+                elif "source_year" in dir(resource):
+                    date_label = resource.source_year
+                elif "source_date" in dir(resource):
+                    date_label = resource.source_date
+            
+            if date_label:
+                for year in Years:
+                    self.args.filter_list.append("{} = {}".format(date_label,  year))
+            if genre_label:
+                for genre in Genres:
+                    self.args.filter_list.append("{} = {}".format(genre_label,  genre))
         # Go through the table dictionary D, and add the resource features 
         # to the list of selected features if the corresponding choice 
         # parameter was set:
@@ -397,7 +395,7 @@ class Options(object):
         self.args.show_time = "corpus_time" in self.args.selected_features
         self.args.show_id = False
         self.args.show_phon = False
-        
+
         if self.args.context_mode == CONTEXT_COLUMNS:
             self.args.context_columns = True
         else:
