@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Sun Aug 23 10:17:54 2015
+# Created: Sun Aug 23 17:10:59 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -190,22 +190,23 @@ class Ui_MainWindow(object):
         self.horizontalLayout_10 = QtGui.QHBoxLayout()
         self.horizontalLayout_10.setObjectName(_fromUtf8("horizontalLayout_10"))
         self.label = QtGui.QLabel(self.box_context_settings)
+        self.label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.label.setObjectName(_fromUtf8("label"))
         self.horizontalLayout_10.addWidget(self.label)
         spacerItem4 = QtGui.QSpacerItem(0, 20, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_10.addItem(spacerItem4)
-        self.context_mode = QtGui.QComboBox(self.box_context_settings)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.context_mode.sizePolicy().hasHeightForWidth())
-        self.context_mode.setSizePolicy(sizePolicy)
-        self.context_mode.setSizeAdjustPolicy(QtGui.QComboBox.AdjustToContents)
-        self.context_mode.setObjectName(_fromUtf8("context_mode"))
-        self.context_mode.addItem(_fromUtf8(""))
-        self.context_mode.addItem(_fromUtf8(""))
-        self.context_mode.addItem(_fromUtf8(""))
-        self.horizontalLayout_10.addWidget(self.context_mode)
+        self.verticalLayout_3 = QtGui.QVBoxLayout()
+        self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
+        self.radio_context_mode_kwic = QtGui.QRadioButton(self.box_context_settings)
+        self.radio_context_mode_kwic.setObjectName(_fromUtf8("radio_context_mode_kwic"))
+        self.verticalLayout_3.addWidget(self.radio_context_mode_kwic)
+        self.radio_context_mode_string = QtGui.QRadioButton(self.box_context_settings)
+        self.radio_context_mode_string.setObjectName(_fromUtf8("radio_context_mode_string"))
+        self.verticalLayout_3.addWidget(self.radio_context_mode_string)
+        self.radio_context_mode_columns = QtGui.QRadioButton(self.box_context_settings)
+        self.radio_context_mode_columns.setObjectName(_fromUtf8("radio_context_mode_columns"))
+        self.verticalLayout_3.addWidget(self.radio_context_mode_columns)
+        self.horizontalLayout_10.addLayout(self.verticalLayout_3)
         self.verticalLayout_7.addLayout(self.horizontalLayout_10)
         self.verticalLayout_8.addLayout(self.verticalLayout_7)
         self.corpus_settings.addWidget(self.box_context_settings)
@@ -614,9 +615,9 @@ class Ui_MainWindow(object):
         self.context_right_span.setSpecialValueText(_translate("MainWindow", "none", None))
         self.context_right_span.setSuffix(_translate("MainWindow", " words", None))
         self.label.setText(_translate("MainWindow", "Context mode:", None))
-        self.context_mode.setItemText(0, _translate("MainWindow", "KWIC", None))
-        self.context_mode.setItemText(1, _translate("MainWindow", "String", None))
-        self.context_mode.setItemText(2, _translate("MainWindow", "Columns", None))
+        self.radio_context_mode_kwic.setText(_translate("MainWindow", "KWIC", None))
+        self.radio_context_mode_string.setText(_translate("MainWindow", "Single string", None))
+        self.radio_context_mode_columns.setText(_translate("MainWindow", "Columns", None))
         self.button_run_query.setText(_translate("MainWindow", "&Query", None))
         self.progress_bar.setFormat(_translate("MainWindow", "Ready.", None))
         self.label_12.setText(_translate("MainWindow", "Enter query strings:", None))

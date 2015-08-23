@@ -1138,6 +1138,15 @@ class CoqueryApp(QtGui.QMainWindow):
             except AttributeError:
                 pass
                 
+            # determine context mode:
+            if self.ui.radio_context_mode_kwic.isChecked():
+                options.cfg.context_mode = CONTEXT_KWIC
+            if self.ui.radio_context_mode_string.isChecked():
+                options.cfg.MODE = CONTEXT_STRING
+            if self.ui.radio_context_mode_columns.isChecked():
+                options.cfg.MODE = CONTEXT_COLUMNS
+
+                
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
                 if type(self.ui.edit_query_string) == QtGui.QLineEdit:
@@ -1168,13 +1177,12 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             except AttributeError:
-                if self.ui.context_mode.currentText() == CONTEXT_KWIC:
+                if options.cfg.context_mode == CONTEXT_KWIC:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-                elif self.ui.context_mode.currentText() == CONTEXT_COLUMNS:
+                elif options.cfg.context_mode == CONTEXT_COLUMNS:
                    options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-            options.cfg.context_mode = self.ui.context_mode.currentText()
             options.cfg.selected_features = []
             
             # Go throw options tree widget to get all checked output columns:
@@ -1251,10 +1259,13 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.ui.context_left_span.setValue(options.cfg.context_left)
         self.ui.context_right_span.setValue(options.cfg.context_right)
-        if options.cfg.context_columns:
-            self.ui.context_mode.setEditText(CONTEXT_COLUMNS)
-        if options.cfg.context_span:
-            self.ui.context_mode.setEditText(CONTEXT_KWIC)
+        
+        if options.cfg.context_mode == CONTEXT_STRING:
+            self.ui.radio_context_mode_string.setChecked(True)
+        if options.cfg.context_mode == CONTEXT_COLUMNS:
+            self.ui.radio_context_mode_column.setChecked(True)
+        else:
+            self.ui.radio_context_mode_kwic.setChecked(True)
             
         self.csv_options = (options.cfg.input_separator, options.cfg.query_column_number, options.cfg.file_has_headers, options.cfg.skip_lines)
         

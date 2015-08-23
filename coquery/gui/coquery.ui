@@ -356,6 +356,9 @@
                    <property name="text">
                     <string>Context mode:</string>
                    </property>
+                   <property name="alignment">
+                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                   </property>
                   </widget>
                  </item>
                  <item>
@@ -375,32 +378,29 @@
                   </spacer>
                  </item>
                  <item>
-                  <widget class="QComboBox" name="context_mode">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="sizeAdjustPolicy">
-                    <enum>QComboBox::AdjustToContents</enum>
-                   </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_3">
                    <item>
-                    <property name="text">
-                     <string>KWIC</string>
-                    </property>
+                    <widget class="QRadioButton" name="radio_context_mode_kwic">
+                     <property name="text">
+                      <string>KWIC</string>
+                     </property>
+                    </widget>
                    </item>
                    <item>
-                    <property name="text">
-                     <string>String</string>
-                    </property>
+                    <widget class="QRadioButton" name="radio_context_mode_string">
+                     <property name="text">
+                      <string>Single string</string>
+                     </property>
+                    </widget>
                    </item>
                    <item>
-                    <property name="text">
-                     <string>Columns</string>
-                    </property>
+                    <widget class="QRadioButton" name="radio_context_mode_columns">
+                     <property name="text">
+                      <string>Columns</string>
+                     </property>
+                    </widget>
                    </item>
-                  </widget>
+                  </layout>
                  </item>
                 </layout>
                </item>
