@@ -8,16 +8,17 @@ This module defines classes BaseLexicon and BaseCorpus.
 from __future__ import unicode_literals
 from __future__ import print_function
 
+import time
+import datetime
+from collections import *
+
+import json
+
 from errors import *
 import tokens
 import options
 import sqlwrap
-import time
-import datetime
 from defines import *
-import collections
-
-import json
 
 def collapse_words(word_list):
     
@@ -152,6 +153,7 @@ class BaseLexicon(object):
         None
         """
         self.resource = resource
+        self._query_cache = {}
         
         if LEX_POS in self.provides:
             self.pos_dict = {}
@@ -825,11 +827,31 @@ class SQLLexicon(BaseLexicon):
         self.resource.DB.execute(self.sql_string_get_other_wordforms(current_word))
         return [result[0] for result in self.resource.DB.Cur]
 
+    def sql_string_get_orth(self, word_id):
+        return     
+    def get_orth(self, word_id):
+        """ Return the orthographic form of the lexicon entry 'word_id'. """
+
+        try:
+            return self._query_cache[word_id]
+        except KeyError:
+            self.resource.DB.execute(
+                "SELECT {} FROM {} WHERE {} = {} LIMIT 1".format(
+                self.resource.word_label, 
+                self.resource.word_table,
+                self.resource.word_id,
+                word_id))
+            orth = self.resource.DB.Cur.fetchone()
+            if orth:
+                orth = orth[0]
+                self._query_cache[word_id] = orth
+                return orth
+            else:
+                return "<NA>"
+
     def sql_string_get_entry(self, word_id, requested):
-        # For the experimental stuff, this function needs to be incorporated
-        # into sql_string_run_query_column_string() and
-        # sql_string_run_query_table_string()
-        
+        """ Return a MySQL string that can be used to query the requested
+        fields for the lexical entry 'word_id. """        
         if word_id == "NA":
             word_id = -1
         
@@ -899,8 +921,16 @@ class SQLLexicon(BaseLexicon):
         return select_string
     
     def get_entry(self, word_id, requested):
-        # check if there is an entry in the cache for the word_id with the
-        # requested features:
+        """ Return a Entry() instance that contains the requested fields for 
+        the lexicon entry with 'word_id'.
+        
+        This function is deprecated, and may be removed in future versions if
+        no obvious usecase emerges. It is the only place where the Entry()
+        class is used, it makes use of the old feature specification, it is 
+        not very much aware of more complex database hierarchies, and it 
+        contains code that is redundant with sql_string_get_matching_wordids().
+        """
+        
         if not tuple(requested) in self.entry_cache:
             self.entry_cache[tuple(requested)] = {}
         try:
@@ -1031,29 +1061,43 @@ class SQLCorpus(BaseCorpus):
         self._frequency_cache[token.S] = freq
         return freq
 
-    def get_whereclauses(self, Token, WordTarget, PosTarget):
-        if not Token:
+    def get_whereclauses(self, token, WordTarget, PosTarget):
+        if not token:
             return []
         where_clauses = []
         # FIXME: This is a hard-coded special case for 'coca'. Ugh. Instead,
         # it should probably be a check against 'self_joined' or something
         # like that
         if self.resource.name == "coca":
-            L = set(self.lexicon.get_matching_wordids(Token))
+            L = set(self.lexicon.get_matching_wordids(token))
             if L:
-                where_clauses = ["{} IN ({})".format(
+                return ["{} IN ({})".format(
                     WordTarget, ", ".join(["{}".format(x) for x in L]))]
-            return where_clauses
     
-        if Token.word_specifiers or Token.lemma_specifiers or Token.transcript_specifiers:
-            L = set(self.lexicon.get_matching_wordids(Token))
+        if token.word_specifiers or token.lemma_specifiers or token.transcript_specifiers:
+            # if there is a token with either a wordform, lemma, or token
+            # specification, then get the list of matching word_ids from the 
+            # lexicon:
+            L = set(self.lexicon.get_matching_wordids(token))
             if L:
-                where_clauses.append("%s IN (%s)" % (WordTarget, ", ".join (map (str, L))))
+                where_clauses.append("{} IN ({})".format(
+                    WordTarget, 
+                    ", ".join (map (str, L))))
         else:
-            if Token.class_specifiers:
-                L = self.lexicon.get_posid_list(Token)
+            # if only a class specification is given, this specification is
+            # used as the where clause:
+            if token.class_specifiers:
+                
+                if "pos_table" not in dir(self.resource):
+                    word_pos_column = self.resource.word_pos
+                else:
+                    word_pos_column = self.resource.word_pos_id
+
+                L = self.lexicon.get_posid_list(token)
                 if L: 
-                    where_clauses.append("%s IN (%s)" % (PosTarget, ", ".join (["'%s'" % x for x in L])))
+                    where_clauses.append("{} IN ({})".format(
+                        PosTarget, 
+                        ", ".join (["'%s'" % x for x in L])))
         return where_clauses
     
     def sql_string_run_query_filter_list(self, self_joined):
@@ -1089,7 +1133,7 @@ class SQLCorpus(BaseCorpus):
             
             # if a GUI is used, include source features so the entries in the
             # result table can be made clickable to show the context:
-            if options.cfg.gui:
+            if options.cfg.gui or options.cfg.context_left or options.cfg.context_right:
                 # in order to make this not depend on a fixed database layout 
                 # (here: 'source' and 'file' tables), we should check for any
                 # table that corpus_table is linked to except for word_table
@@ -1104,7 +1148,7 @@ class SQLCorpus(BaseCorpus):
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
         # add all features that are required for the query filters:
-        rc_where_constraints = {}
+        rc_where_constraints = defaultdict(set)
         if number == 0:
             for filt in self.resource.translate_filters(options.cfg.filter_list):
                 variable, rc_feature, table_name, op, value_list, _value_range = filt
@@ -1117,15 +1161,13 @@ class SQLCorpus(BaseCorpus):
                 if rc_feature not in requested_features:
                     requested_features.append(rc_feature)
                 rc_table = "{}_table".format(rc_feature.partition("_")[0])
-                if rc_table not in rc_where_constraints:
-                    rc_where_constraints[rc_table] = set([])
                 rc_where_constraints[rc_table].add(
                     '{} {} "{}"'.format(
                         self.resource.__getattribute__(rc_feature), op, value_list[0]))
 
         # make sure that the word_id is always included in the query:
         requested_features.append("corpus_word_id")
-
+        
         # get a list of all tables that are required to query the requested
         # features:
         required_tables = {}
@@ -1162,13 +1204,15 @@ class SQLCorpus(BaseCorpus):
             if x: 
                 sub_list.add(x)
         if sub_list:
+            print(sub_list)
             if current_token.negated:
                 s = "NOT ({})".format(" AND ".join(sub_list))
             else:
                 s = " AND ".join(sub_list)
-            if "corpus_table" not in rc_where_constraints:
-                rc_where_constraints["corpus_table"] = set([])
-            rc_where_constraints["corpus_table"].add(s)
+            if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
+                rc_where_constraints["word_table"].add(s)
+            else:
+                rc_where_constraints["corpus_table"].add(s)
 
         select_list = set([])
         for rc_table in required_tables:
@@ -1537,14 +1581,14 @@ class SQLCorpus(BaseCorpus):
             self.sql_string_get_wordid_in_range(
                 start, 
                 token_id - 1, source_id))
-        left_context_words = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+        left_context_words = [self.lexicon.get_orth(x) for (x, ) in self.resource.DB.Cur]
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
         self.resource.DB.execute(
             self.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
                 token_id + number_of_tokens + options.cfg.context_right - 1, source_id))
-        right_context_words = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+        right_context_words = [self.lexicon.get_orth(x) for (x, ) in self.resource.DB.Cur]
         right_context_words =  right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
         options.cfg.verbose = old_verbose
@@ -1555,7 +1599,7 @@ class SQLCorpus(BaseCorpus):
                     token_id,
                     token_id + number_of_tokens - 1,
                     source_id))
-            target_words = [self.lexicon.get_entry(x, [LEX_ORTH]).orth.upper() for (x, ) in self.resource.DB.Cur]
+            target_words = [self.lexicon.get_orth(x) for (x, ) in self.resource.DB.Cur]
         else:
             target_words = []
         return (left_context_words, target_words, right_context_words)
@@ -1640,6 +1684,19 @@ class SQLCorpus(BaseCorpus):
             return []
 
     def render_context(self, token_id, source_id, token_width, context_width, widget):
+        """ Return a visual representation of the context around the 
+        specified token. The result is shown in an instance of the 
+        ContextView class.
+        
+        The most simple visual representation of the context is a plain text
+        display, but in principle, a corpus might implement a more elaborate
+        renderer. For example, a corpus may contain information about the
+        page layout, and the renderer could use that information to create a
+        facsimile of the original page.
+        
+        The renderer can interact with the widget in which the context will
+        be displayed. The area in which the context is shown is a QLabel
+        named widget.ui.context_area. """
 
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
@@ -1704,7 +1761,7 @@ class SQLCorpus(BaseCorpus):
                 entities[row[self.resource.corpus_id]] = []
             entities[row[self.resource.corpus_id]].append(row)
 
-        context = collections.deque()
+        context = deque()
         # we need to keep track of any opening and closing tag that does not
         # have its matching tag in the selected context:
         opened_elements = []
@@ -1798,48 +1855,6 @@ class SQLCorpus(BaseCorpus):
         #print(context)
         widget.ui.context_area.setText(collapse_words(context))
 
-
-    #def render_context(self, token_id, source_id, token_width, context_width, widget):
-        #""" Return a visual representation of the context around the 
-        #specified token. The result is shown in an instance of the 
-        #ContextView class.
-        
-        #The most simple visual representation of the context is a plain text
-        #display, but in principle, a corpus might implement a more elaborate
-        #renderer. For example, a corpus may contain information about the
-        #page layout, and the renderer could use that information to create a
-        #facsimile of the original page.
-        
-        #The renderer can interact with the widget in which the context will
-        #be displayed. The area in which the context is shown is a QLabel
-        #named widget.ui.context_area. """
-
-        #start = max(0, token_id - context_width)
-        #end = token_id + token_width + context_width - 1
-        #self.resource.DB.execute(
-            #self.sql_string_get_wordid_in_range(
-                #start, 
-                #token_id - 1, source_id))
-        #left = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
-        
-        #self.resource.DB.execute(
-            #self.sql_string_get_wordid_in_range(
-                #token_id, 
-                #token_id + token_width - 1, source_id))
-        #token = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
-
-        #self.resource.DB.execute(
-            #self.sql_string_get_wordid_in_range(
-                #token_id + token_width, 
-                #end,
-                #source_id))
-        #right = [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
-
-        #context = "{} <b>{}</b> {}".format(
-            #collapse_words(left), collapse_words(token), collapse_words(right))
-        #widget.ui.context_area.setText(context)
-
-        
 class TestLexicon(BaseLexicon):
     def is_part_of_speech(self, pos):
         return pos in ["N", "V"]
