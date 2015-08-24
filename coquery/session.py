@@ -183,7 +183,7 @@ class Session(object):
                 any_result = False
                 for sub_query in current_query.query_list:
                     query_results = []
-                    for current_result in self.Corpus.yield_query_results_new(sub_query):
+                    for current_result in self.Corpus.yield_query_results(sub_query):
                         query_results.append(current_result)
                         
                     sub_query.set_result_list(query_results)
@@ -209,7 +209,7 @@ class Session(object):
                 logger.info("Start query: '{}'".format(current_query))
 
                 if current_query.tokens:
-                    current_query.set_result_list(self.Corpus.yield_query_results_new(current_query))
+                    current_query.set_result_list(self.Corpus.yield_query_results(current_query))
                 if not options.cfg.dry_run:
                     if not self.output_file:
                         self.open_output_file()
