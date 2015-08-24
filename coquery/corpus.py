@@ -1345,7 +1345,7 @@ class SQLCorpus(BaseCorpus):
                            key=lambda x: calc_weight(x[1].S), reverse=True)
         return [x+1 for x, _ in sort_list]
     
-    def sql_string_query_new(self, Query, self_joined):
+    def sql_string_query(self, Query, self_joined):
         """ Return a string that is sufficient to run the query on the
         MySQL database. """
 
@@ -1439,7 +1439,7 @@ class SQLCorpus(BaseCorpus):
         if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             if final_select:
                 query_string = "{} GROUP BY {}".format(query_string, ", ".join([x.split(" AS ")[-1] for x in final_select]))
-                final_select.append("COUNT(*) AS coq_frequency")
+            final_select.append("COUNT(*) AS coq_frequency")
 
         # include variables that are required to make entries in the result
         # table clickable, but only if a GUI is used:
@@ -1471,11 +1471,11 @@ class SQLCorpus(BaseCorpus):
         else:
             return ""
         
-    def yield_query_results_new(self, Query, self_joined=False):
+    def yield_query_results(self, Query, self_joined=False):
         """ Run the corpus query specified in the Query object on the corpus
         and yield the results. """
         
-        query_string = self.sql_string_query_new(Query, self_joined)
+        query_string = self.sql_string_query(Query, self_joined)
         D = {}
         show_day = False
         show_time = False
@@ -1496,6 +1496,7 @@ class SQLCorpus(BaseCorpus):
                     show_day = True
                 elif x == "coquery_current_time":
                     show_time = True
+        
         cursor = self.resource.DB.execute_cursor(query_string)
         for current_result in cursor:
             now = datetime.datetime.now()
