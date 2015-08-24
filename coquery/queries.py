@@ -229,7 +229,7 @@ class CorpusQuery(object):
             return self.tokens[self._current - 1]
 
     def __str__(self):
-        return " ".join(map(str, self.tokens))
+        return " ".join(["{}".format(x) for x in self.tokens])
     
     def __len__(self):
         return len(self.tokens)

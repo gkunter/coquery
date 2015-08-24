@@ -331,6 +331,25 @@ class QueryFilterBox(CoqTagBox):
             super(QueryFilterBox, self).addTag(filt.text)
             options.cfg.filter_list.append(filt)
 
+#class CoqFileSystemModel(QtGui.QFileSystemModel):
+    #def lessThan(self, left, right):
+        #print(123)
+        #return self.data(left, QtCore.Qt.DisplayRole) < self.data(right, QtCore.Qt.DisplayRole)
+    
+    #def sort(self, *args):
+        #print("sort")
+        #super(CoqFileSystemModel, self).sort(*args)
+    
+    #def data(self, index, role):
+        #if role == QtCore.Qt.DisplayRole and index.column() == 0:
+            #file_name = self.filePath(index)
+            #if self.isDir(index):
+                #return super(CoqFileSystemModel, self).data(index, role) + QtCore.QDir.separator()
+            #else:
+                #return super(CoqFileSystemModel, self).data(index, role).upper()
+
+        #return super(CoqFileSystemModel, self).data(index, role)
+
 class CoqueryApp(QtGui.QMainWindow):
     """ Coquery as standalone application. """
     
@@ -367,10 +386,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # hook up events so that the radio buttons are set correctly
         # between either query from file or query from string:
-        self.focus_to_file = clickFilter()
+        self.focus_to_file = focusFilter()
         self.ui.edit_file_name.installEventFilter(self.focus_to_file)
-        self.focus_to_file.clicked.connect(self.select_file)
+        #self.focus_to_file.clicked.connect(self.select_file)
         self.ui.edit_file_name.textChanged.connect(self.switch_to_file)
+        self.ui.edit_file_name.textChanged.connect(self.verify_file_name)
         self.focus_to_query = focusFilter()
         self.focus_to_query.focus.connect(self.switch_to_query)
         self.ui.edit_query_string.installEventFilter(self.focus_to_query)
@@ -413,14 +433,25 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.verticalLayout_5.addWidget(self.ui.filter_box)
 
+        # set auto-completer for the filter edit:
         self.filter_variable_model = QtGui.QStringListModel()
-
         self.completer = QtGui.QCompleter()
         self.completer.setModel(self.filter_variable_model)
-        self.completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
+        self.completer.setCompletionMode(QtGui.QCompleter.InlineCompletion)
         self.completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
-        
         self.ui.filter_box.edit_tag.setCompleter(self.completer)
+
+        # use a file system model for the file name auto-completer::
+        self.dirModel = QtGui.QFileSystemModel()
+        # make sure that the model is updated on changes to the file system:
+        self.dirModel.setRootPath(QtCore.QDir.currentPath())
+        self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
+
+        # set auto-completer for the input file edit:
+        self.path_completer = QtGui.QCompleter()
+        self.path_completer.setModel(self.dirModel)
+        self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
+        self.ui.edit_file_name.setCompleter(self.path_completer)
 
         self.stop_progress_indicator()
 
@@ -460,9 +491,20 @@ class CoqueryApp(QtGui.QMainWindow):
         token_width = data["coquery_invisible_number_of_tokens"]
         contextview.ContextView.display(self.Session.Corpus, token_id, origin_id, token_width, self)
 
+    def verify_file_name(self):
+        file_name = self.ui.edit_file_name.text()
+        if not os.path.isfile(file_name):
+            self.ui.edit_file_name.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
+            self.ui.button_file_options.setEnabled(False)
+            return False
+        else:
+            self.ui.edit_file_name.setStyleSheet('QLineEdit { background-color: white } ')
+            self.ui.button_file_options.setEnabled(True)
+            return True
+
     def switch_to_file(self):
         """ Toggle to query file input. """
-        self.ui.radio_query_file.setFocus()
+        #self.ui.radio_query_file.setFocus()
         self.ui.radio_query_file.setChecked(True)
 
     def switch_to_query(self):
@@ -677,7 +719,6 @@ class CoqueryApp(QtGui.QMainWindow):
         
         if name:
             self.ui.edit_file_name.setText(name)
-            self.ui.button_file_options.setEnabled(True)
             self.switch_to_file()
             
     def file_options(self):
@@ -902,6 +943,15 @@ class CoqueryApp(QtGui.QMainWindow):
             self.stop_progress_indicator()
         
     def run_query(self):
+        if not self.verify_file_name():
+            msg_filename_error = """<p><b>File name not valid.</b></p>
+            <p>You have chosen to read the query strings from a file, but
+            the query file name that you have entered is not valid. Please enter a
+            valid query file name, or select a file by pressing the Open
+            button.</p>"""
+            QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            return
+        
         self.getGuiValues()
         # Lazily close an existing database connection:
         try:
@@ -909,7 +959,6 @@ class CoqueryApp(QtGui.QMainWindow):
         except AttributeError as e:
             pass
         try:
-            
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = options.cfg.query_list[0].splitlines()
                 self.Session = SessionCommandLine()
