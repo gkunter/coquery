@@ -334,6 +334,12 @@ class Options(object):
         except AttributeError:
             pass
         
+        try:
+            if self.args.show_query:
+                self.args.selected_features.append("coquery_query_string")
+        except AttributeError:
+            pass
+        
         if self.args.source_filter:
             Genres, Years, Negated = tokens.COCATextToken(self.args.source_filter, None).get_parse()
             
