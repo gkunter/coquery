@@ -252,6 +252,61 @@
              <item>
               <layout class="QVBoxLayout" name="verticalLayout_7">
                <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_10">
+                 <item>
+                  <widget class="QLabel" name="label">
+                   <property name="text">
+                    <string>Context mode:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_7">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeType">
+                    <enum>QSizePolicy::Minimum</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <layout class="QVBoxLayout" name="verticalLayout_3">
+                   <item>
+                    <widget class="QRadioButton" name="radio_context_mode_kwic">
+                     <property name="text">
+                      <string>KWIC</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radio_context_mode_string">
+                     <property name="text">
+                      <string>Single string</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radio_context_mode_columns">
+                     <property name="text">
+                      <string>Columns</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </item>
+               <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_9">
                  <item>
                   <widget class="QLabel" name="context_left_span_label">
@@ -346,61 +401,6 @@
                     <string> words</string>
                    </property>
                   </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_10">
-                 <item>
-                  <widget class="QLabel" name="label">
-                   <property name="text">
-                    <string>Context mode:</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_7">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeType">
-                    <enum>QSizePolicy::Minimum</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>0</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_3">
-                   <item>
-                    <widget class="QRadioButton" name="radio_context_mode_kwic">
-                     <property name="text">
-                      <string>KWIC</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QRadioButton" name="radio_context_mode_string">
-                     <property name="text">
-                      <string>Single string</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QRadioButton" name="radio_context_mode_columns">
-                     <property name="text">
-                      <string>Columns</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
                  </item>
                 </layout>
                </item>
@@ -520,12 +520,15 @@
           <enum>QFrame::Raised</enum>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
+          <property name="spacing">
+           <number>20</number>
+          </property>
           <property name="margin">
            <number>10</number>
           </property>
           <item>
            <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,1">
-            <property name="verticalSpacing">
+            <property name="spacing">
              <number>0</number>
             </property>
             <item row="0" column="0">
@@ -571,7 +574,7 @@
           </item>
           <item>
            <layout class="QGridLayout" name="gridLayout_3" columnstretch="0,1,0">
-            <property name="verticalSpacing">
+            <property name="spacing">
              <number>0</number>
             </property>
             <item row="1" column="0">
@@ -603,7 +606,7 @@
             <item row="2" column="1">
              <widget class="QLineEdit" name="edit_file_name">
               <property name="enabled">
-               <bool>false</bool>
+               <bool>true</bool>
               </property>
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -621,7 +624,7 @@
                <string/>
               </property>
               <property name="readOnly">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
               <property name="placeholderText">
                <string>(no file selected)</string>
