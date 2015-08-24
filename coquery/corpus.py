@@ -1204,7 +1204,6 @@ class SQLCorpus(BaseCorpus):
             if x: 
                 sub_list.add(x)
         if sub_list:
-            print(sub_list)
             if current_token.negated:
                 s = "NOT ({})".format(" AND ".join(sub_list))
             else:
