@@ -151,7 +151,7 @@ class Session(object):
             self.output_file_object = open(options.cfg.output_path, FileMode)
             self.output_file = UnicodeWriter(self.output_file_object, delimiter=options.cfg.output_separator)
         if not options.cfg.append and self.show_header:
-            self.output_file.writerow (self.header)
+            self.output_file.writerow(self.header)
     
     def run_queries(self):
         """ Process all queries. For each query, go through the entries in 
@@ -253,7 +253,7 @@ class SessionInputFile(Session):
         super(SessionInputFile, self).__init__()
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
-            for current_line in UnicodeReader(InputFile, delimiter=options.cfg.input_separator):
+            for current_line in UnicodeReader(InputFile, delimiter=options.cfg.input_separator, encoding=options.cfg.input_encoding):
                 if current_line:
                     if options.cfg.query_column_number > len(current_line):
                         raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)
