@@ -178,6 +178,7 @@ class Session(object):
         if options.cfg.gui:
             self.storage_created = False
         for current_query in self.query_list:
+            self.literal_query_string = current_query.query_string
             if len(current_query.query_list) > 1:
                 start_time = time.time()
                 any_result = False

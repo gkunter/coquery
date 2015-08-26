@@ -242,6 +242,7 @@ class BaseResource(object):
     
     # Add internal table that can be used to access system information:
     coquery_query_string = "Query string"
+    coquery_expanded_query_string = "Expanded query string"
     coquery_query_file = "Input file"
     coquery_current_date = "Current date"
     coquery_current_time = "Current time"
@@ -1489,6 +1490,12 @@ class SQLCorpus(BaseCorpus):
             if x.startswith("coquery_"):
                 D[x] = ""
                 if x == "coquery_query_string":
+                    try:
+                        D[x] = Query.Session.literal_query_string
+                    except AttributeError:
+                        print(1)
+                        pass
+                elif x == "coquery_expanded_query_string":
                     try:
                         D[x] = Query.query_string
                     except AttributeError:
