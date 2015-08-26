@@ -55,6 +55,16 @@ class NoTraceException(GenericException):
 class NoArgumentsError(NoTraceException):
     error_message = "No arguments given to script."
     
+class InvalidGraphLayout(NoTraceException):
+    error_message = """<p><b>The visualization grid layout is too large.</b></p>
+    <p>The visualization could not be plotted because either the row grouping 
+    factor or the column grouping factor contains more than 16 distinct values.
+    The resulting plot would thus contain more than 16 rows or columns, which
+    is too small to plot.</p>
+    <p>You may try to rearrange your data table by either hiding or moving 
+    the column that causes this problem, or by selecting other output columns
+    with less distinct values.</p>"""
+    
 class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
 

@@ -115,6 +115,7 @@ class Options(object):
         group.add_argument("-n", "--number", help="use column NUMBER in INPUTFILE for queries", type=int, default=1, dest="query_column_number")
         group.add_argument("--is", "--input-separator", help="use CHARACTER as separator in input CSV file",  default=',', metavar="CHARACTER", dest="input_separator")
         group.add_argument("--os", "--output-separator", help="use CHARACTER as separator in output CSV file", default=',', metavar="CHARACTER", dest="output_separator")
+        group.add_argument("--input-encoding", help="use INPUT-ENCODING as the encoding scheme for the input file (default: utf-8)", type=str, default="utf-8", dest="input_encoding")
 
         # Debug options:
         group = self.parser.add_argument_group("Debug options")
@@ -124,6 +125,7 @@ class Options(object):
         group.add_argument("-E", "--explain", help="explain mySQL queries in log file", action="store_true", dest="explain_queries")
         group.add_argument("--benchmark", help="benchmarking of Coquery", action="store_true")
         group.add_argument("--profile", help="deterministic profiling of Coquery", action="store_true")
+        group.add_argument("--memory-dump", help="list objects that consume much memory after queries", action="store_true", dest="memory_dump")
         group.add_argument("--experimental", help="use experimental features (may be buggy)", action="store_true")
         group.add_argument("--comment", help="a comment that is shown in the log file", type=str)
 
@@ -331,6 +333,12 @@ class Options(object):
                     self.args.selected_features.append("time_label")
                 else:
                     self.args.selected_features.append("corpus_time")
+        except AttributeError:
+            pass
+        
+        try:
+            if self.args.show_query:
+                self.args.selected_features.append("coquery_query_string")
         except AttributeError:
             pass
         

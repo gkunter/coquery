@@ -242,6 +242,7 @@ class BaseResource(object):
     
     # Add internal table that can be used to access system information:
     coquery_query_string = "Query string"
+    coquery_expanded_query_string = "Expanded query string"
     coquery_query_file = "Input file"
     coquery_current_date = "Current date"
     coquery_current_time = "Current time"
@@ -1167,7 +1168,34 @@ class SQLCorpus(BaseCorpus):
 
         # make sure that the word_id is always included in the query:
         requested_features.append("corpus_word_id")
-        
+
+        # make sure that the tables and features that are required to 
+        # match the current token are also requested as features:
+        try:
+            if "pos_table" not in dir(self.resource):
+                pos_feature = "word_pos"
+            else:
+                pos_feature = "word_pos_id"
+        except AttributeError:
+            word_pos_column = None
+        else:
+            word_pos_column = self.resource.__getattribute__(pos_feature)
+
+        sub_list = set([])
+        for x in self.get_whereclauses(current_token, self.resource.corpus_word_id, word_pos_column):
+            if x: 
+                sub_list.add(x)
+        if sub_list:
+            if current_token.negated:
+                s = "NOT ({})".format(" AND ".join(sub_list))
+            else:
+                s = " AND ".join(sub_list)
+            if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
+                requested_features.append(pos_feature)
+                rc_where_constraints["word_table"].add(s)
+            else:
+                rc_where_constraints["corpus_table"].add(s)
+
         # get a list of all tables that are required to query the requested
         # features:
         required_tables = {}
@@ -1191,28 +1219,7 @@ class SQLCorpus(BaseCorpus):
         join_strings[self.resource.corpus_table] = "{} AS COQ_CORPUS_TABLE".format(self.resource.corpus_table)
         full_tree = self.resource.get_table_structure("corpus_table", requested_features)
 
-        try:
-            if "pos_table" not in dir(self.resource):
-                word_pos_column = self.resource.word_pos
-            else:
-                word_pos_column = self.resource.word_pos_id
-        except AttributeError:
-            word_pos_column = None
-        
-        sub_list = set([])
-        for x in self.get_whereclauses(current_token, self.resource.corpus_word_id, word_pos_column):
-            if x: 
-                sub_list.add(x)
-        if sub_list:
-            if current_token.negated:
-                s = "NOT ({})".format(" AND ".join(sub_list))
-            else:
-                s = " AND ".join(sub_list)
-            if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
-                rc_where_constraints["word_table"].add(s)
-            else:
-                rc_where_constraints["corpus_table"].add(s)
-
+        # select all tables that are required by the requested features:
         select_list = set([])
         for rc_table in required_tables:
             rc_tab = rc_table.split("_")[0]
@@ -1345,7 +1352,7 @@ class SQLCorpus(BaseCorpus):
                            key=lambda x: calc_weight(x[1].S), reverse=True)
         return [x+1 for x, _ in sort_list]
     
-    def sql_string_query_new(self, Query, self_joined):
+    def sql_string_query(self, Query, self_joined):
         """ Return a string that is sufficient to run the query on the
         MySQL database. """
 
@@ -1367,7 +1374,7 @@ class SQLCorpus(BaseCorpus):
                 sub_query_list[i+1] = s                
             elif i < referent_id - 1:
                 if s:
-                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
+                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{i} >= {i1} AND coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
                         s = s, 
                         i=i+1, 
                         i1=referent_id - i - 1, 
@@ -1439,7 +1446,7 @@ class SQLCorpus(BaseCorpus):
         if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
             if final_select:
                 query_string = "{} GROUP BY {}".format(query_string, ", ".join([x.split(" AS ")[-1] for x in final_select]))
-                final_select.append("COUNT(*) AS coq_frequency")
+            final_select.append("COUNT(*) AS coq_frequency")
 
         # include variables that are required to make entries in the result
         # table clickable, but only if a GUI is used:
@@ -1471,11 +1478,11 @@ class SQLCorpus(BaseCorpus):
         else:
             return ""
         
-    def yield_query_results_new(self, Query, self_joined=False):
+    def yield_query_results(self, Query, self_joined=False):
         """ Run the corpus query specified in the Query object on the corpus
         and yield the results. """
         
-        query_string = self.sql_string_query_new(Query, self_joined)
+        query_string = self.sql_string_query(Query, self_joined)
         D = {}
         show_day = False
         show_time = False
@@ -1483,6 +1490,12 @@ class SQLCorpus(BaseCorpus):
             if x.startswith("coquery_"):
                 D[x] = ""
                 if x == "coquery_query_string":
+                    try:
+                        D[x] = Query.Session.literal_query_string
+                    except AttributeError:
+                        print(1)
+                        pass
+                elif x == "coquery_expanded_query_string":
                     try:
                         D[x] = Query.query_string
                     except AttributeError:
@@ -1496,6 +1509,7 @@ class SQLCorpus(BaseCorpus):
                     show_day = True
                 elif x == "coquery_current_time":
                     show_time = True
+        
         cursor = self.resource.DB.execute_cursor(query_string)
         for current_result in cursor:
             now = datetime.datetime.now()

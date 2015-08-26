@@ -15,6 +15,9 @@ import csv, codecs
 import math
 import itertools
 
+import gc
+import sys
+
 # The following flags are used to indicate which fields are provided by the 
 # lexicon of a corpus, and also to access the fields of the value of 
 # BaseLexicon.get_entry(WordId):
@@ -70,6 +73,7 @@ COLUMN_NAMES = {
     "coq_mutual_information": "Mutual information",
     "coq_conditional_probability": "Pcond",
 
+    "coquery_expanded_query_string": "Expanded query string",
     "coquery_query_string": "Query string"}
 
 # for Python 3 compatibility:
@@ -231,3 +235,17 @@ def dict_product(d):
 
 resource_list = ResourceList()
 
+def memory_dump():
+    for obj in gc.get_objects():
+        i = id(obj)
+        size = sys.getsizeof(obj, 0)
+        # referrers = [id(o) for o in gc.get_referrers(obj)]
+        try:
+            cls = str(obj.__class__)
+        except:
+            cls = "<no class>"
+        if size > 1024 * 50:
+            referents = set([id(o) for o in gc.get_referents(obj)])
+            print({'id': i, 'class': cls, 'size': size, "ref": len(referents)})
+            if len(referents) < 2000:
+                print(obj)

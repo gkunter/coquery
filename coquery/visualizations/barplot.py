@@ -156,6 +156,6 @@ class BarchartVisualizer(vis.Visualizer):
         self.g.set_axis_labels("Frequency", self._groupby[0])
         # Add a legend if there are two grouping factors:
         if len(self._groupby) == 2:
-            self.g.add_legend(title=self._groupby[1], frameon=True)
+            self.g.fig.get_axes()[-1].legend(title=self._groupby[1], frameon=True, framealpha=0.7, loc="lower left").draggable()
         # Try to make the figure fit into the area nicely:
         self.g.fig.tight_layout()

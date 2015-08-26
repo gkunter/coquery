@@ -195,7 +195,7 @@ class CorpusQuery(object):
         self.token_class = token_class
         self.query_list = []
         self.max_number_of_tokens = 0
-        repeated_queries = tokens.preprocess_query(S)
+        repeated_queries = set(tokens.preprocess_query(S))
         if len(repeated_queries) > 1:
             for current_string in repeated_queries:
                 current_query = self.__class__(current_string, Session, token_class, source_filter)
@@ -471,7 +471,7 @@ class CollocationQuery(TokenQuery):
         collocates["coq_word_label"] = collocates.index
         collocates["coq_frequency"] = collocates["coq_word_label"].apply(
             lambda x: self.Corpus.get_frequency(self.token_class(x, self.Corpus.lexicon)))
-        collocates["coquery_query_string"] = self._query_string
+        collocates["coquery_query_string"] = self.Session.listeral_query_string
         
         print(df)
         
@@ -558,7 +558,7 @@ class CollocationQuery(TokenQuery):
         
             current_result = {}
             
-            current_result["coquery_query_string"] = self._query_string
+            current_result["coquery_query_string"] = self.Session.literal_query_string
             for i, feature in enumerate(features):
                 feature = feature.partition("_")[2]
                 current_result["coq_collocate_{}".format(feature)] = collocate_tuple[i]

@@ -151,7 +151,7 @@ class Session(object):
             self.output_file_object = open(options.cfg.output_path, FileMode)
             self.output_file = UnicodeWriter(self.output_file_object, delimiter=options.cfg.output_separator)
         if not options.cfg.append and self.show_header:
-            self.output_file.writerow (self.header)
+            self.output_file.writerow(self.header)
     
     def run_queries(self):
         """ Process all queries. For each query, go through the entries in 
@@ -178,12 +178,13 @@ class Session(object):
         if options.cfg.gui:
             self.storage_created = False
         for current_query in self.query_list:
+            self.literal_query_string = current_query.query_string
             if len(current_query.query_list) > 1:
                 start_time = time.time()
                 any_result = False
                 for sub_query in current_query.query_list:
                     query_results = []
-                    for current_result in self.Corpus.yield_query_results_new(sub_query):
+                    for current_result in self.Corpus.yield_query_results(sub_query):
                         query_results.append(current_result)
                         
                     sub_query.set_result_list(query_results)
@@ -209,7 +210,7 @@ class Session(object):
                 logger.info("Start query: '{}'".format(current_query))
 
                 if current_query.tokens:
-                    current_query.set_result_list(self.Corpus.yield_query_results_new(current_query))
+                    current_query.set_result_list(self.Corpus.yield_query_results(current_query))
                 if not options.cfg.dry_run:
                     if not self.output_file:
                         self.open_output_file()
@@ -253,7 +254,7 @@ class SessionInputFile(Session):
         super(SessionInputFile, self).__init__()
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
-            for current_line in UnicodeReader(InputFile, delimiter=options.cfg.input_separator):
+            for current_line in UnicodeReader(InputFile, delimiter=options.cfg.input_separator, encoding=options.cfg.input_encoding):
                 if current_line:
                     if options.cfg.query_column_number > len(current_line):
                         raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)
