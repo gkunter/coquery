@@ -179,7 +179,12 @@ class ResourceList(object):
             corpus_name, ext = os.path.splitext(os.path.basename(corpus))
             try:
                 module = imp.load_source(corpus_name, corpus)
-                resource = module.Resource
+            except Exception as e:
+                warnings.warn("{} could not be loaded.".format(corpus_name))
+                warnings.warn("Exception: {}".format(e))
+                continue
+            resource = module.Resource
+            try:
                 self.available_resources[resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
             except (AttributeError, ImportError):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
