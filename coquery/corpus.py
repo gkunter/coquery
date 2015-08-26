@@ -1167,7 +1167,34 @@ class SQLCorpus(BaseCorpus):
 
         # make sure that the word_id is always included in the query:
         requested_features.append("corpus_word_id")
-        
+
+        # make sure that the tables and features that are required to 
+        # match the current token are also requested as features:
+        try:
+            if "pos_table" not in dir(self.resource):
+                pos_feature = "word_pos"
+            else:
+                pos_feature = "word_pos_id"
+        except AttributeError:
+            word_pos_column = None
+        else:
+            word_pos_column = self.resource.__getattribute__(pos_feature)
+
+        sub_list = set([])
+        for x in self.get_whereclauses(current_token, self.resource.corpus_word_id, word_pos_column):
+            if x: 
+                sub_list.add(x)
+        if sub_list:
+            if current_token.negated:
+                s = "NOT ({})".format(" AND ".join(sub_list))
+            else:
+                s = " AND ".join(sub_list)
+            if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
+                requested_features.append(pos_feature)
+                rc_where_constraints["word_table"].add(s)
+            else:
+                rc_where_constraints["corpus_table"].add(s)
+
         # get a list of all tables that are required to query the requested
         # features:
         required_tables = {}
@@ -1191,28 +1218,7 @@ class SQLCorpus(BaseCorpus):
         join_strings[self.resource.corpus_table] = "{} AS COQ_CORPUS_TABLE".format(self.resource.corpus_table)
         full_tree = self.resource.get_table_structure("corpus_table", requested_features)
 
-        try:
-            if "pos_table" not in dir(self.resource):
-                word_pos_column = self.resource.word_pos
-            else:
-                word_pos_column = self.resource.word_pos_id
-        except AttributeError:
-            word_pos_column = None
-        
-        sub_list = set([])
-        for x in self.get_whereclauses(current_token, self.resource.corpus_word_id, word_pos_column):
-            if x: 
-                sub_list.add(x)
-        if sub_list:
-            if current_token.negated:
-                s = "NOT ({})".format(" AND ".join(sub_list))
-            else:
-                s = " AND ".join(sub_list)
-            if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
-                rc_where_constraints["word_table"].add(s)
-            else:
-                rc_where_constraints["corpus_table"].add(s)
-
+        # select all tables that are required by the requested features:
         select_list = set([])
         for rc_table in required_tables:
             rc_tab = rc_table.split("_")[0]
@@ -1367,7 +1373,7 @@ class SQLCorpus(BaseCorpus):
                 sub_query_list[i+1] = s                
             elif i < referent_id - 1:
                 if s:
-                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
+                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{i} >= {i1} AND coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
                         s = s, 
                         i=i+1, 
                         i1=referent_id - i - 1, 
