@@ -943,15 +943,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.stop_progress_indicator()
         
     def run_query(self):
-        if not self.verify_file_name():
-            msg_filename_error = """<p><b>File name not valid.</b></p>
-            <p>You have chosen to read the query strings from a file, but
-            the query file name that you have entered is not valid. Please enter a
-            valid query file name, or select a file by pressing the Open
-            button.</p>"""
-            QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-            return
-        
         self.getGuiValues()
         # Lazily close an existing database connection:
         try:
@@ -963,6 +954,14 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.query_list = options.cfg.query_list[0].splitlines()
                 self.Session = SessionCommandLine()
             else:
+                if not self.verify_file_name():
+                    msg_filename_error = """<p><b>File name not valid.</b></p>
+                    <p>You have chosen to read the query strings from a file, but
+                    the query file name that you have entered is not valid. Please enter a
+                    valid query file name, or select a file by pressing the Open
+                    button.</p>"""
+                    QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                    return
                 self.Session = SessionInputFile()
         except SQLInitializationError as e:
             msg_initialization_error = """<p>An error occurred while
