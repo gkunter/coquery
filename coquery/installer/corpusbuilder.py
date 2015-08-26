@@ -132,6 +132,9 @@ class Column(object):
     
     @property
     def data_type(self):
+        return self._data_type
+    
+    def base_type(self):
         return self._data_type.split()[0].partition("(")[0]
     
     @data_type.setter
@@ -1006,7 +1009,11 @@ class BaseCorpusBuilder(object):
                     if not self.Con.has_index(current_table, current_index):
                         self.logger.info("Creating index {} on table '{}'".format(
                             current_index, current_table))
-                        self.Con.create_index(current_table, current_index, variables, index_type, length)
+                        try:
+                            self.Con.create_index(current_table, current_index, variables, index_type, length)
+                        except dbconnection.mysql.OperationalError as e:
+                            if self.logger:
+                                self.logger.error(e)
                     index_count += 1
                     if self._widget:
                         self._widget.ui.progress_bar.setValue(i)

@@ -1,0 +1,131 @@
+<?xml version='1.0'?>
+<annotated version="1.0">
+<meta>
+<transcriber>
+ug	NN	<unknown>
+</transcriber>
+<date>
+2008	CD	@card@
+</date>
+<place>
+?	SENT	?
+</place>
+<author>
+<gender>
+m	NN	m
+</gender>
+<age>
+39	CD	@card@
+</age>
+<ethnic-group>
+Igala	NP	<unknown>
+</ethnic-group>
+</author>
+</meta>
+<text>
+<heading>
+6	CD	6
+.	SENT	.
+Equipping	VBG	equip
+Indigenous	JJ	indigenous
+Languages	NNS	language
+and	CC	and
+Indigenizing	VBG	<unknown>
+Information	NP	Information
+Communication	NP	Communication
+Technology	NP	Technology
+:	:	:
+Principles	NNS	principle
+,	,	,
+Processes	NNS	process
+and	CC	and
+the	DT	the
+Challenges	NP	<unknown>
+</heading>
+<p>
+He	PP	he
+summarizes	VBZ	summarize
+these	DT	these
+requirements	NNS	requirement
+in	IN	in
+the	DT	the
+following	VBG	follow
+words	NNS	word
+(	(	(
+p.222	NN	<unknown>
+)	)	)
+:	:	:
+â€œ	NN	<unknown>
+<quote>
+There	EX	there
+must	MD	must
+be	VB	be
+codification	NN	codification
+in	IN	in
+terms	NNS	term
+of	IN	of
+standard	JJ	standard
+orthography	NN	orthography
+,	,	,
+a	DT	a
+reliable	JJ	reliable
+reference	NN	reference
+grammar	NN	grammar
+,	,	,
+a	DT	a
+comprehensive	JJ	comprehensive
+monolingual	JJ	monolingual
+dictionary	NN	dictionary
+,	,	,
+sufficient	JJ	sufficient
+and	CC	and
+adequate	JJ	adequate
+reading	NN	reading
+materials	NNS	material
+,	,	,
+and	CC	and
+teacher	NN	teacher
+training	NN	training
+manuals	NNS	manual
+</quote>
+â€	NN	<unknown>
+?	SENT	?
+.	SENT	.
+The	DT	the
+targeted	JJ	targeted
+indigenous	JJ	indigenous
+languages	NNS	language
+must	MD	must
+posses	NNS	posse
+all	RB	all
+of	IN	of
+these	DT	these
+to	TO	to
+be	VB	be
+able	JJ	able
+to	TO	to
+cope	VB	cope
+with	IN	with
+the	DT	the
+new	JJ	new
+function	NN	function
+of	IN	of
+taking	VBG	take
+over	RP	over
+from	IN	from
+English	NP	English
+for	IN	for
+instruction	NN	instruction
+in	IN	in
+education	NN	education
+and	CC	and
+acquisition	NN	acquisition
+of	IN	of
+general	JJ	general
+knowledge	NN	knowledge
+and	CC	and
+skills	NNS	skill
+.	SENT	.
+</p>
+</text>
+</annotated>

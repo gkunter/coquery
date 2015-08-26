@@ -1,6 +1,9 @@
-import corpusbuilder
+from __future__ import unicode_literals
 
-class CMUdictBuilder(corpusbuilder.BaseCorpusBuilder):
+from corpusbuilder import *
+import codecs
+
+class CMUdictBuilder(BaseCorpusBuilder):
     def __init__(self):
         # all corpus builders have to call the inherited __init__ function:
         super(CMUdictBuilder, self).__init__()
@@ -69,6 +72,12 @@ class CMUdictBuilder(corpusbuilder.BaseCorpusBuilder):
             "INDEX": [
                 ([self.word_label], 0, "HASH"),
                 ([self.word_transcript], 0, "HASH")]})
+        
+        self.add_new_table_description(self.word_table,
+            [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.word_label, "VARCHAR(33) NOT NULL"),
+             Column(self.word_transcript, "VARCHAR(93) NOT NULL")])
+
 
     def create_tables(self):
         for i, current_table in enumerate(self.table_description):
@@ -77,7 +86,7 @@ class CMUdictBuilder(corpusbuilder.BaseCorpusBuilder):
         super(CMUdictBuilder, self).create_tables()
 
     def load_files(self):
-        with open(self.arguments.path, "rt") as input_file:
+        with codecs.open(self.arguments.path, "rt", encoding = self.arguments.encoding) as input_file:
             for word_id, current_line in enumerate(input_file):
                 current_line = current_line.strip()
                 if current_line and not current_line.startswith (";;;"):

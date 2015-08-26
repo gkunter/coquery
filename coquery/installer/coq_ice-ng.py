@@ -6,7 +6,8 @@ import xml.etree
 import os.path, re
 import csv, cStringIO, codecs, string
 from collections import defaultdict
-from corpusbuilder import *
+
+import corpusbuilder
 
 class corpus_code():
     def tag_to_qhtml(self, s):
@@ -196,7 +197,7 @@ class corpus_code():
 
         #widget.ui.context_area.setText(collapse_words(context))
 
-class ICENigeriaBuilder(BaseCorpusBuilder):
+class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
     def __init__(self):
         """ Initialize the corpus builder. The initialization includes a 
         definition of the database schema. """
@@ -207,7 +208,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
         self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS", "CORP_SOURCE"]
-        self.documentation_url = "http://ice-corpora.net/ice/index.htm"
+        self.documentation_url = ICENigeriaBuilder.get_documentation()
 
         self.check_arguments()
         
@@ -653,12 +654,27 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             base, _= os.path.splitext(base)
         return base.lower()
 
-    def get_description(self):
-        return "This script makes ICE Nigeria available to Coquery by reading the corpus data files from {}/POS-Tagged into the MySQL database '{}' so that the database can be queried by Coquery.The required data file 'ICE-Nigeria-written-pos-tagged.zip' can be downloaded from http://sourceforge.net/projects/ice-nigeria/files/.".format(self.arguments.path, self.arguments.db_name)
+    @staticmethod
+    def get_title():
+        return "International Corpus of English – Nigeria"
 
-    def get_citation(self):
-        return "(no citation)"
-    
+    @staticmethod
+    def get_description():
+        return [
+            "International Corpus of English – Nigeria"]
+        #return "This script makes ICE Nigeria available to Coquery by reading the corpus data files from {}/POS-Tagged into the MySQL database '{}' so that the database can be queried by Coquery.The required data file 'ICE-Nigeria-written-pos-tagged.zip' can be downloaded from http://sourceforge.net/projects/ice-nigeria/files/.".format(self.arguments.path, self.arguments.db_name)
+
+    @staticmethod
+    def get_references():
+        return ["(no reference)"]
+
+    @staticmethod
+    def get_url():
+        return "http://ice-corpora.net/ice/index.htm"
+
+
+BuilderClass = ICENigeriaBuilder
+
 def main():
     ICENigeriaBuilder().build()
     
