@@ -708,6 +708,9 @@ class CoqueryApp(QtGui.QMainWindow):
         
         if self.table_model.rowCount():
             self.last_results_saved = False
+            
+        if options.cfg.memory_dump:
+            memory_dump()
 
     def select_file(self):
         """ Call a file selector, and add file name to query file input. """
