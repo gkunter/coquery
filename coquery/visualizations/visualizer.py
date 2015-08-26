@@ -30,6 +30,8 @@ import os
 import collections
 import itertools
 import math
+import logging
+import __init__
 
 import numpy as np
 import pandas as pd
@@ -41,6 +43,7 @@ import options
 sys.path.append(os.path.join(sys.path[0], "../gui/"))
 import visualizerUi
 from defines import *
+from errors import *
 import error_box
 
 
@@ -54,6 +57,7 @@ if pyside:
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backend_bases import key_press_handler
 import matplotlib.pyplot as plt
 
 import multiprocessing
@@ -98,6 +102,17 @@ class Visualizer(object):
     
     visualize_frequency = True
     
+    def _validate_layout(func):
+        def func_wrapper(self):
+            if self._col_wrap and self._col_wrap > 16:
+                raise InvalidGraphLayout
+            if self._col_factor and len(pd.unique(self._table[self._col_factor].values.ravel())) > 16:
+                raise InvalidGraphLayout
+            if self._row_factor and len(pd.unique(self._table[self._row_factor].values.ravel())) > 16:
+                raise InvalidGraphLayout
+            return func(self)
+        return func_wrapper
+    
     def __init__(self, data_model, data_view):
         self._model = None
         self._view = None
@@ -109,10 +124,10 @@ class Visualizer(object):
     
     #def get_ylim(self):
         #return (0, 1)
-        
+
+    @_validate_layout
     def setup_figure(self):
         """ Prepare the matplotlib figure for plotting. """ 
-
         with sns.plotting_context(
             context=self.get_plot_context(), 
             font_scale=self.get_font_scale()):
@@ -120,7 +135,6 @@ class Visualizer(object):
             print("col_factor: ", self._col_factor)
             print("col_wrap:   ", self._col_wrap)
             print("row_factor: ", self._row_factor)
-
             self.g = sns.FacetGrid(self._table, 
                                 #xlim=self.get_xlim(),
                                 #ylim=self.get_ylim(),
@@ -190,31 +204,31 @@ class Visualizer(object):
         
         self._table = []
 
-        if options.cfg.experimental:
-            # get the column order from the visual QTableView:
-            header = self._view.horizontalHeader()
-            self._column_order = [self._model.content.columns[header.logicalIndex(section)] for section in range(header.count())]
-            # ... but make sure that the frequency is the last column:
-            try:
-                self._column_order.remove("coq_frequency")
-            except ValueError:
-                pass
-            else:
-                # ... but only if the current visualizer displays frequency
-                # data. The frequency column is stripped otherwise.
-                if self.visualize_frequency:
-                    self._column_order.append("coq_frequency")
-            
-            self._column_order += [x for x in options.cfg.main_window.Session.output_order if x.startswith("coquery_invisible") and x not in self._column_order]
-            self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
-                    
-            # Remove hidden columns:
-            self._column_order = [x for x in self._column_order if 
-                options.cfg.column_visibility.get(x, True)]
-            
-            self._table = self._model.content.reindex(columns=self._column_order)
+        # get the column order from the visual QTableView:
+        header = self._view.horizontalHeader()
+        self._column_order = [self._model.content.columns[header.logicalIndex(section)] for section in range(header.count())]
+        # ... but make sure that the frequency is the last column:
+        try:
+            self._column_order.remove("coq_frequency")
+        except ValueError:
+            pass
         else:
-            self._table = [x for x in self._model.content]
+            # ... but only if the current visualizer displays frequency
+            # data. The frequency column is stripped otherwise.
+            if self.visualize_frequency:
+                self._column_order.append("coq_frequency")
+        
+        self._column_order += [x for x in options.cfg.main_window.Session.output_order if x.startswith("coquery_invisible") and x not in self._column_order]
+        try:
+            self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
+        except AttributeError:
+            self._time_columns = []
+            
+        # Remove hidden columns:
+        self._column_order = [x for x in self._column_order if 
+            options.cfg.column_visibility.get(x, True)]
+        
+        self._table = self._model.content.reindex(columns=self._column_order)
         
         self._table = self._table.sort(columns=self._column_order, axis="rows")
         self._table.columns = [
@@ -239,6 +253,7 @@ class Visualizer(object):
             self._col_factor = self._factor_columns[-self.dimensionality - 1]
         else:
             self._col_factor = None
+            
         if len(self._factor_columns) > self.dimensionality + 1:
             self._row_factor = self._factor_columns[-self.dimensionality - 2]
             self._col_wrap = None
@@ -407,7 +422,6 @@ class VisualizerDialog(QtGui.QWidget):
         self.ui.horizontalLayout_3.insertWidget(2, self.ui.spinner)
         self.ui.horizontalLayout_3.insertWidget(2, QtGui.QLabel("Bins: "))
         
-        
         self.ui.spinner.valueChanged.connect(self.update_plot)
 
     def add_visualizer(self, visualizer):
@@ -441,9 +455,11 @@ class VisualizerDialog(QtGui.QWidget):
     def add_matplot(self):
         """ Add a matplotlib canvas and a navigation bar to the dialog. """
         self.canvas = FigureCanvas(self.visualizer.g.fig)
-        self.canvas.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        self.canvas.updateGeometry()
         self.ui.verticalLayout.addWidget(self.canvas)
+        self.canvas.setParent(self.ui.box_visualize)
+        self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
+        self.canvas.setFocus()
+        self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
         self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)
         self.ui.navigation_layout.addWidget(self.toolbar)
 
@@ -474,6 +490,14 @@ class VisualizerDialog(QtGui.QWidget):
         self.close()
         super(VisualizerDialog, self).closeEvent(*args)
 
+    def keyPressEvent(self, event):
+        """ Catch key events so that they can be passed on to the matplotlib
+        toolbar. """
+        try:
+            key_press_handler(event, self.canvas, self.toolbar)
+        except ValueError, AttributeError:
+            logger.warn("The keypress '{}' could not be handled correctly by the graph library.".format(event.key))
+            
     def connect_signals(self):
         """ Connect the dataChanged signal of the abstract data table and the 
         sectionMoved signal of the header of the table view to the 
@@ -524,15 +548,17 @@ class VisualizerDialog(QtGui.QWidget):
         self.smooth = kwargs.get("smooth", False)
         if self.smooth:
             self.add_smooth_spinner()
-        visualizer = visualizer_class(model, view, **kwargs)
-        if visualizer._model:
-            dialog.setVisible(True)
-            dialog.add_visualizer(visualizer)
-            dialog.add_matplot()
-            #self.sub_process = multiprocessing.Process(target=self.plot_it, args=())
-            #self.sub_process.start()
-            self.visualizer.draw()
-            
+        try:
+            visualizer = visualizer_class(model, view, **kwargs)
+            if visualizer._model:
+                dialog.setVisible(True)
+                dialog.add_visualizer(visualizer)
+                dialog.add_matplot()
+                #self.sub_process = multiprocessing.Process(target=self.plot_it, args=())
+                #self.sub_process.start()
+                self.visualizer.draw()
+        except InvalidGraphLayout as e:
+            QtGui.QMessageBox.critical(self, "Visualization error", e.error_message)
 if __name__ == "__main__":
     unittest.main()
             
@@ -542,3 +568,6 @@ if __name__ == "__main__":
     #TreeMap.MosaicPlot([x for x in table if x[0] == "WIS" and x[1] == "female"])
     #tm.tree_map(tree, [0, 0], [500, 500], 0, None, None)
     #sys.exit(app.exec_())
+
+
+logger = logging.getLogger(__init__.NAME)
