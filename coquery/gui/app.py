@@ -952,6 +952,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.Session.Corpus.resource.DB.close()
         except AttributeError as e:
             pass
+        self.ui.statusbar.showMessage("Preparing query...")
         try:
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = options.cfg.query_list[0].splitlines()
