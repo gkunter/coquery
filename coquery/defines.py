@@ -73,6 +73,7 @@ COLUMN_NAMES = {
     "coq_mutual_information": "Mutual information",
     "coq_conditional_probability": "Pcond",
 
+    "coquery_query_token": "Query token",
     "coquery_expanded_query_string": "Expanded query string",
     "coquery_query_string": "Query string"}
 
