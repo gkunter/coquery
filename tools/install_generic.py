@@ -10,6 +10,8 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
         self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS"]
+        
+        self.documentation_url = "(no URL availabe)"
 
         # add table descriptions for the tables used in this database.
         #
