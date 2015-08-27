@@ -32,15 +32,18 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         super(CoqTableModel, self).__init__(parent, *args)
         self.last_header = None
         self.sort_columns = []
-        self.set_data(None)
+        self.header = []
+        self.set_data(pd.DataFrame())
+
         
     def set_header(self, header): 
-        self.sort_state = [SORT_NONE] * len(self.content.columns)
-        for i, x in enumerate(self.content.columns):
+        self.header = [x for x in self.content.columns.values if not x.startswith("coquery_invisible")]
+        for i, x in enumerate(x):
             self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
-        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(self.content.columns))
+        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(self.header))
+        self.sort_state = [SORT_NONE] * len(self.header)
         # remember the current header:
-        self.last_header = self.content.columns
+        self.last_header = self.header
 
     def reorder_data(self, new_order):
         self.content = self.content.reindex(columns=new_order)
@@ -71,7 +74,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def column(self, i):
         """ Return the name of the column in the pandas data frame at index 
         position 'i'. """
-        return self.content.columns[i]
+        return self.header[i]
 
     def data(self, index, role):
         """ Return a representation of the data cell indexed by 'index', 
@@ -83,13 +86,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # DisplayRole: return the content of the cell in the data frame:
         if role == QtCore.Qt.DisplayRole:
             try:
-                return self.content.iloc[index.row(), index.column()]
-            except AttributeError:
-                try:
-                    dat = self.content[index.row()][self.header[index.column()]]
-                except (TypeError):
-                    dat = self.content[index.row()] [index.column()]
-                return dat
+                return self.content.iloc[index.row()][self.header[index.column()]]
             except (IndexError, KeyError):
                 return None
 
@@ -98,7 +95,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ForegroundRole:
             header = self.column(index.column())
             if options.cfg.column_visibility.get(
-                self.content.columns[index.column()], True):
+                self.header[index.column()], True):
                 try:
                     col = options.cfg.column_color[header.lower()]
                     return QtGui.QColor(col)
@@ -133,7 +130,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.DisplayRole:
             if not options.cfg.column_visibility.get(
-                self.content.columns[index], True):
+                self.header[index], True):
                 return "[hidden]"
             
             # Get header string?
@@ -165,7 +162,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # Get header decoration (i.e. the sorting arrows)?
         elif role == QtCore.Qt.DecorationRole:
             if not options.cfg.column_visibility.get(
-            self.content.columns[index], True):
+            self.header[index], True):
                 return None
             # add arrows as sorting direction indicators if necessary:
             if self.sort_state[index] in [SORT_DEC, SORT_REV_DEC]:
@@ -182,7 +179,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         
     def columnCount(self, parent=None):
         """ Return the number of columns, ignoring all invisible columns. """
-        return len([x for x in self.content.columns if not x.startswith("coquery_invisible")])
+        return len([x for x in self.header if not x.startswith("coquery_invisible")])
         
     def do_sort(self):
         """ Sort the content data frame by taking all sorting columns and 
