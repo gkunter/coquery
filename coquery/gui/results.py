@@ -34,9 +34,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.sort_columns = []
         self.header = []
         self.set_data(pd.DataFrame())
-
         
-    def set_header(self, header): 
+    def set_header(self, header = None): 
         self.header = [x for x in self.content.columns.values if not x.startswith("coquery_invisible")]
         for i, x in enumerate(x):
             self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
