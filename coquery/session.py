@@ -57,6 +57,7 @@ class Session(object):
         self.output_object = None
         self.output_order = []
         self.header_shown = False
+        self.input_columns = []
 
     def expand_header(self):
         """
