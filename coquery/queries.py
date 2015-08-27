@@ -189,9 +189,12 @@ class QueryFilter(object):
             return False
 
 class CorpusQuery(object):
-    ErrorInQuery = False
+    """ Define a class that manages the query string, and is responsible for
+    the output of the query results. """
+    
+    collapse_identical = True
 
-    def __init__(self, S, Session, token_class, source_filter):
+    def __init__(self, S, Session, token_class):
         self.token_class = token_class
         self.query_list = []
         self.max_number_of_tokens = 0
@@ -215,68 +218,63 @@ class CorpusQuery(object):
         self.input_header = []
         self.input_frame = pd.DataFrame()
 
-        if self.Corpus.provides_feature(CORP_SOURCE):
-            self.source_filter = source_filter
-        else:
-            self.source_filter = None
-        
-    def __iter__(self):
-        return self
-    
-    def next(self):
-        if self._current >= len(self.tokens):
-            raise StopIteration
-        else:
-            self._current += 1
-            return self.tokens[self._current - 1]
-
     def __str__(self):
         return " ".join(["{}".format(x) for x in self.tokens])
     
     def __len__(self):
         return len(self.tokens)
 
-    def set_result_list(self, data):
-        self.Results = data
+    def aggregate_data(self, df):
+        """ Aggregate the data frame. """
+        return df
+    
+    def filter_data(self, df):
+        """ Apply filters to the data frame. """
+        return df
+    
+    def insert_static_data(self, df):
+        """ Insert data columns that are constant for each query result in 
+        the query, e.g. data from the input file, query string data, etc. """
+        
+        for column in self.Session.output_order:
+            if column == "coquery_invisible_number_of_tokens":
+                df[column] = self.number_of_tokens
+            if column == "coquery_query_string":
+                df[column] = self.Session.literal_query_string
+            elif column == "coquery_expanded_query_string":
+                df[column] = self.query_string
+            elif column == "coquery_query_file":
+                if options.cfg.input_path:
+                    df[column] = options.cfg.input_path
+                else:
+                    df[column] = ""
+            elif column == "coquery_current_date":
+                df[column] = datetime.datetime.now().strftime("%Y-%m-%d")
+            elif column == "coquery_current_time":
+                df[column] = datetime.datetime.now().strftime("%H:%M:%S")
+            elif column.startswith("coquery_query_token"):
+                n = int(column.rpartition("_")[-1])
+                df[column] = self.tokens[n - 1].S
+            else:
+                # add column labels for the columns in the input file:
+                if all([x == None for x in self.input_frame.columns]):
+                    # no header in input file, so use X1, X2, ..., Xn:
+                    input_columns = [("coq_X{}".format(x), x) for x in range(len(self.input_frame.columns))]
+                else:
+                    input_columns = [("coq_{}".format(x), x) for x in self.input_frame.columns]
+                for df_col, input_col in input_columns:
+                    df[df_col] = self.input_frame[input_col][0]
+        return df
 
-    def get_result_list(self):
-        return self.Results
-    
-    def write_results(self, output_file):
-        for CurrentLine in self.get_result_list():
-            output_file.writerow(CurrentLine)
-    
-    def use_flat_query(self):
-        """ Return True if a flat query should be used, or False otherwise.
-        A flat query is a query that uses only a single SQL statement that
-        retrieves the content of all columns in the result table. """
-        if len(self.Session.output_fields) == 1:
-            return True
-        else:
-            return False
-
-class DistinctQuery(CorpusQuery):
-    """ Define a CorpusQuery subclass that reformats the query results in a 
-    beautified way that is suitable for CSV or GUI output."""
-    
-    collapse_identical = True
-    
     def write_results(self, output_object):
         """ Transform the query results to a pandas DataFrame that is either
         directly written to a CSV file, or stored for later processing in
         the GUI. """
         # turn query results into a pandas DataFrame:
         df = pd.DataFrame(self.Results)
+        df = self.insert_static_data(df)
+
         if len(df.index) > 0:
-            # add column labels for the columns in the input file:
-            if all([x == None for x in self.input_frame.columns]):
-                # no header in input file, so use X1, X2, ..., Xn:
-                input_columns = [("coq_X{}".format(x), x) for x in range(len(self.input_frame.columns))]
-            else:
-                input_columns = [("coq_{}".format(x), x) for x in self.input_frame.columns]
-            for df_col, input_col in input_columns:
-                df[df_col] = self.input_frame[input_col][0]
-            
             vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
 
             # word and lemma columns are lower-cased, unless requested otherwise:
@@ -289,14 +287,16 @@ class DistinctQuery(CorpusQuery):
             if self.collapse_identical:
                 df.drop_duplicates(subset=vis_cols, inplace=True)
                 df.reset_index(drop=True, inplace=True)
-
         else:
             vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
             df = pd.DataFrame(columns=vis_cols)
-        
+
+        df = self.aggregate_data(df)
+        df = self.filter_data(df)
         if options.cfg.gui:
             # append the data frame to the existing data frame
-            self.Session.output_object = pd.concat([self.Session.output_object, df])
+            self.Session.output_object = self.Session.output_object.append(df)
+            self.Session.output_object.fillna("", inplace=True)
         else:
             # write data frame to output_file as a CSV file, using the 
             # current output_separator. Encoding is always "utf-8".
@@ -311,13 +311,13 @@ class DistinctQuery(CorpusQuery):
             self.Session.header_shown = True
         return
 
-class TokenQuery(DistinctQuery):
-    """ Define a subclass of DistinctQuery. The only difference between this
-    subclass and the parent class DistinctQuery is that the attribute
+class TokenQuery(CorpusQuery):
+    """ Define a subclass of CorpusQuery. The only difference between this
+    subclass and the parent class CorpusQuery is that the attribute
     collapse_identical is set to False in the subclass. This attribute is 
     evaluated in the write_results() method. 
     
-    If collapse_identical is True (as in DistinctQuery), query results with 
+    If collapse_identical is True (as in CorpusQuery), query results with 
     identical output lines are collapsed into a single row, i.e. are included 
     in the output only once.
 
@@ -325,69 +325,83 @@ class TokenQuery(DistinctQuery):
     identical output lines are always included in the output. """
     collapse_identical = False
 
+class FrequencyQuery(TokenQuery):
+    """ Define a Query class that creates an aggregate table of the 
+    results with a frequency column. Also apply frequency filters. 
+    
+    The results are grouped by all columns that are currently visible. The 
+    invisible coulmns are sampled so that each aggregate row contains the 
+    first value from each aggregate group. """
+    
+    def aggregate_data(self, df):
+        # get a list of grouping and sampling columns:
+        
+        columns = []
+        for x in df.columns.values:
+            try:
+                n = int(x.rpartition("_")[-1])
+            except ValueError:
+                columns.append(x)
+            else:
+                if n <= self.number_of_tokens:
+                    columns.append(x)
+
+        group_columns = [x for x in columns if not x.startswith("coquery_invisible")]
+        sample_columns = [x for x in columns if x not in group_columns]
+        
+        # Add a frequency column:
+        df["coq_frequency"] = 0
+        self.Session.output_order.append("coq_frequency")
+        
+        if len(df.index) == 0:
+            df = df.append(pd.DataFrame([["<NA>"] * len(self.Session.output_order)], columns=self.Session.output_order))
+            df = self.insert_static_data(df)
+            df["coq_frequency"] = 0
+            return df
+        else:
+            # create a dictionary that contains the aggregate functions for
+            # the different columns. For the sampling columns, this function
+            # simply returns the first entry in the column, and for the 
+            # frequency column, the function returns the length of the 
+            # column:
+            aggr_dict = {"coq_frequency": len}
+            aggr_dict.update(
+                {col: lambda x: x.head(1) for col in sample_columns})
+            # group the data frame by the group columns, apply the aggregate
+            # functions to each group, and return the aggregated data frame:
+
+            gp = df.groupby(group_columns)
+            return gp.agg(aggr_dict).reset_index()
+
+    def filter_data(self, df):
+        """ Apply the frequency filters to the frequency column. """
+        for filt in options.cfg.filter_list:
+            try:
+                parse = filt.parse_filter(filt.text)
+            except AttributeError:
+                pass
+            else:
+                if filt.var == options.cfg.freq_label:
+                    df = df[df["coq_frequency"].apply(filt.check_number)]
+        return df
+
 class StatisticsQuery(CorpusQuery):
     def __init__(self, corpus, session):
-        super(StatisticsQuery, self).__init__("", session, None, None)
+        super(StatisticsQuery, self).__init__("", session, None)
         self.Results = self.Session.Corpus.get_statistics()
         
         # convert all values to strings (the Unicode writer needs that):
         self.Results = {key: str(self.Results[key]) for key in self.Results}
 
     def write_results(self, output_file):
-        for x in sorted(self.Results):
-            if options.cfg.gui:
-                self.Session.output_storage.append([x, self.Results[x]])
-            else:
-                output_file.writerow([x, self.Results[x]])
+        df = sorted(self.Results)
 
-class FrequencyQuery(CorpusQuery):
-    def __init__(self, *args):
-        super(FrequencyQuery, self).__init__(*args)
-        
-    def write_results(self, output_object):
-        # turn query results into a pandas DataFrame:
+        #for x in sorted(self.Results):
+            #if options.cfg.gui:
+                #self.Session.output_storage.append([x, self.Results[x]])
+            #else:
+                #output_file.writerow([x, self.Results[x]])
 
-        df = pd.DataFrame(self.Results)
-        if len(df.index) > 0:
-            # add column labels for the columns in the input file:
-            if all([x == None for x in self.input_frame.columns]):
-                # no header in input file, so use X1, X2, ..., Xn:
-                input_columns = [("coq_X{}".format(x), x) for x in range(len(self.input_frame.columns))]
-            else:
-                input_columns = [("coq_{}".format(x), x) for x in self.input_frame.columns]
-            for df_col, input_col in input_columns:
-                df[df_col] = self.input_frame[input_col][0]
-            
-            vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
-
-            # word and lemma columns are lower-cased, unless requested otherwise:
-            if not options.cfg.case_sensitive and len(df.index) > 0:
-                for x in df.columns:
-                    if x.startswith("coq_word") or x.startswith("coq_lemma"):
-                        df[x] = df[x].apply(lambda x: x.lower() if x else x)
-
-        else:
-            vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
-            df = pd.DataFrame(columns=vis_cols)
-
-        sample_columns = [x for x in df.columns.values if x not in vis_cols]
-        df["coq_frequency"] = 0
-        aggr_dict = {"coq_frequency": len}
-        aggr_dict.update(
-            {col: lambda x: x.head(1) for col in sample_columns})
-        df = df.groupby(vis_cols, as_index=False).agg(aggr_dict)
-        self.Session.output_order.append("coq_frequency")
-        
-        # Apply all frequency filters:
-        frequency_filters = []
-        for x in options.cfg.filter_list:
-            try:
-                parse = x.parse_filter(x.text)
-            except AttributeError:
-                pass
-            else:
-                df = df[filt.check_number(df["coq_frequency"])]
-        
         if options.cfg.gui:
             # append the data frame to the existing data frame
             self.Session.output_object = pd.concat([self.Session.output_object, df])
@@ -404,6 +418,7 @@ class FrequencyQuery(CorpusQuery):
             # produce multiple headers:
             self.Session.header_shown = True
         return
+
 
 
 
