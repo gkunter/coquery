@@ -192,17 +192,11 @@ class Session(object):
                         any_result = True
                         if not self.output_file:
                             self.open_output_file()
-                        sub_query.write_results(
-                            self.output_file, 
-                            sub_query.number_of_tokens, 
-                            self.max_number_of_tokens)                
+                        sub_query.write_results(self.output_file)
                 if not any_result:
                     if not self.output_file:
                         self.open_output_file()
-                    current_query.write_results(
-                        self.output_file,
-                        sub_query.number_of_tokens,
-                        self.max_number_of_tokens)
+                    current_query.write_results(self.output_file)
                 logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
                 
             else:
@@ -215,10 +209,7 @@ class Session(object):
                     if not self.output_file:
                         self.open_output_file()
                 start_time = time.time()
-                current_query.write_results(
-                    self.output_file, 
-                    current_query.number_of_tokens,
-                    self.max_number_of_tokens)
+                current_query.write_results(self.output_file)
                 logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
         self.end_time = datetime.datetime.now()
 

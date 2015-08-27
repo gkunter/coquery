@@ -240,7 +240,7 @@ class CorpusQuery(object):
     def get_result_list(self):
         return self.Results
     
-    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
+    def write_results(self, output_file):
         for CurrentLine in self.get_result_list():
             output_file.writerow(CurrentLine)
     
@@ -259,7 +259,7 @@ class DistinctQuery(CorpusQuery):
     
     collapse_identical = True
     
-    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
+    def write_results(self, output_file, data = None):
         
         if options.cfg.gui:
             if self.InputLine:
@@ -342,7 +342,7 @@ class StatisticsQuery(CorpusQuery):
         # convert all values to strings (the Unicode writer needs that):
         self.Results = {key: str(self.Results[key]) for key in self.Results}
 
-    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns):
+    def write_results(self, output_file):
         for x in sorted(self.Results):
             if options.cfg.gui:
                 self.Session.output_storage.append([x, self.Results[x]])
@@ -353,7 +353,7 @@ class FrequencyQuery(CorpusQuery):
     def __init__(self, *args):
         super(FrequencyQuery, self).__init__(*args)
         
-    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
+    def write_results(self, output_file, data = None):
         frequency_filters = []
 
         # construct that part of output lines that stays constant in all
@@ -438,7 +438,7 @@ class CollocationQuery(TokenQuery):
         occurrences of c in the corpus. """
         return float(freq_left) / float(freq_total)
 
-    def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
+    def write_results(self, output_file, data = None):
         self.Session.output_order = self.Session.header
         count_left = collections.Counter()
         count_right = collections.Counter()
