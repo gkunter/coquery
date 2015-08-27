@@ -693,11 +693,14 @@ class CoqueryApp(QtGui.QMainWindow):
             pass
         
     def display_results(self):
-        if isinstance(self.Session.output_storage, pd.DataFrame):
-            df = self.Session.output_storage
+        if options.cfg.experimental:
+            self.table_model.set_data(self.Session.output_storage)
         else:
-            df = pd.DataFrame.from_dict(self.Session.output_storage, orient="columns")
-        self.table_model.set_data(df)
+            if isinstance(self.Session.output_storage, pd.DataFrame):
+                df = self.Session.output_storage
+            else:
+                df = pd.DataFrame.from_dict(self.Session.output_storage, orient="columns")
+            self.table_model.set_data(df)
         self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
         self.ui.data_preview.setModel(self.table_model)
 
