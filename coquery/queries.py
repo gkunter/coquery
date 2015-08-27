@@ -260,30 +260,34 @@ class DistinctQuery(CorpusQuery):
     collapse_identical = True
     
     def write_results(self, output_file, number_of_token_columns, max_number_of_token_columns, data = None):
-        output_cache = set([])
-        result_columns = self.Session.get_expected_column_number(max_number_of_token_columns)
         
+        if options.cfg.gui:
+            if self.InputLine:
+                output_list = copy.copy(self.InputLine)
+            else:
+                output_list = []
+
+            df = pd.DataFrame(self.Results)
+            if not options.cfg.case_sensitive:
+                for x in df.columns:
+                    if x.startswith("coq_word") or x.startswith("coq_lemma"):
+                        
+                        df[x] = df[x].apply(lambda x: x.lower())
+                        
+            if self.collapse_identical:
+                df.drop_duplicates(subset=[x for x in df.columns if not x.startswith("coquery_invisible")], inplace=True)
+                df.reset_index(drop=True, inplace=True)
+                
+            self.Session.output_storage = df
+            return
+            
+        output_cache = set([])
         # construct that part of output lines that stays constant in all
         # lines:
         if self.InputLine:
             constant_line = copy.copy(self.InputLine)
         else:
             constant_line = []
-
-        if options.cfg.experimental:
-            if options.cfg.gui:
-                if constant_line:
-                    output_list = copy.copy(constant_line)
-                else:
-                    output_list = []
-
-                self.Session.output_storage = pd.DataFrame(self.Results)
-                if not options.cfg.case_sensitive:
-                    for x in self.Session.output_storage.columns:
-                        if x.startswith("coq_word") or x.startswith("coq_Lemma"):
-                            self.Session.output_storage[x].apply(lambda x: x.lower)
-                return
-            
 
         for current_result in self.Results:
             if constant_line:
