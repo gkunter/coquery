@@ -296,7 +296,7 @@ class DistinctQuery(CorpusQuery):
         
         if options.cfg.gui:
             # append the data frame to the existing data frame
-            self.Session.output_object = pd.concat(self.Session.output_object, df)
+            self.Session.output_object = pd.concat([self.Session.output_object, df])
         else:
             # write data frame to output_file as a CSV file, using the 
             # current output_separator. Encoding is always "utf-8".
@@ -346,6 +346,7 @@ class FrequencyQuery(CorpusQuery):
         
     def write_results(self, output_object):
         # turn query results into a pandas DataFrame:
+
         df = pd.DataFrame(self.Results)
         if len(df.index) > 0:
             # add column labels for the columns in the input file:
@@ -368,6 +369,14 @@ class FrequencyQuery(CorpusQuery):
         else:
             vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
             df = pd.DataFrame(columns=vis_cols)
+
+        sample_columns = [x for x in df.columns.values if x not in vis_cols]
+        df["coq_frequency"] = 0
+        aggr_dict = {"coq_frequency": len}
+        aggr_dict.update(
+            {col: lambda x: x.head(1) for col in sample_columns})
+        df = df.groupby(vis_cols, as_index=False).agg(aggr_dict)
+        self.Session.output_order.append("coq_frequency")
         
         # Apply all frequency filters:
         frequency_filters = []
@@ -381,7 +390,7 @@ class FrequencyQuery(CorpusQuery):
         
         if options.cfg.gui:
             # append the data frame to the existing data frame
-            self.Session.output_object = pd.concat(self.Session.output_object, df)
+            self.Session.output_object = pd.concat([self.Session.output_object, df])
         else:
             # write data frame to output_file as a CSV file, using the 
             # current output_separator. Encoding is always "utf-8".
