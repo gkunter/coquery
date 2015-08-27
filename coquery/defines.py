@@ -236,6 +236,7 @@ def dict_product(d):
 resource_list = ResourceList()
 
 def memory_dump():
+    x = 0
     for obj in gc.get_objects():
         i = id(obj)
         size = sys.getsizeof(obj, 0)
@@ -246,6 +247,7 @@ def memory_dump():
             cls = "<no class>"
         if size > 1024 * 50:
             referents = set([id(o) for o in gc.get_referents(obj)])
-            print({'id': i, 'class': cls, 'size': size, "ref": len(referents)})
-            if len(referents) < 2000:
-                print(obj)
+            x += 1
+            print(x, {'id': i, 'class': cls, 'size': size, "ref": len(referents)})
+            #if len(referents) < 2000:
+                #print(obj)
