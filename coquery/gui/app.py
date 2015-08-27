@@ -693,7 +693,7 @@ class CoqueryApp(QtGui.QMainWindow):
             pass
         
     def display_results(self):
-        self.table_model.set_data(self.Session.output_storage)
+        self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
         self.ui.data_preview.setModel(self.table_model)
 
@@ -786,7 +786,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
         
         self.ui.statusbar.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
-            len(self.Session.output_storage), duration_str))        
+            len(self.Session.output_object), duration_str))
         
     def show_header_menu(self, point ):
         header = self.ui.data_preview.horizontalHeader()
