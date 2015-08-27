@@ -183,7 +183,12 @@ class ResourceList(object):
             corpus_name, ext = os.path.splitext(os.path.basename(corpus))
             try:
                 module = imp.load_source(corpus_name, corpus)
-                resource = module.Resource
+            except Exception as e:
+                warnings.warn("{} could not be loaded.".format(corpus_name))
+                warnings.warn("Exception: {}".format(e))
+                continue
+            resource = module.Resource
+            try:
                 self.available_resources[resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
             except (AttributeError, ImportError):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
@@ -231,6 +236,7 @@ def dict_product(d):
 resource_list = ResourceList()
 
 def memory_dump():
+    x = 0
     for obj in gc.get_objects():
         i = id(obj)
         size = sys.getsizeof(obj, 0)
@@ -241,6 +247,7 @@ def memory_dump():
             cls = "<no class>"
         if size > 1024 * 50:
             referents = set([id(o) for o in gc.get_referents(obj)])
-            print({'id': i, 'class': cls, 'size': size, "ref": len(referents)})
-            if len(referents) < 2000:
-                print(obj)
+            x += 1
+            print(x, {'id': i, 'class': cls, 'size': size, "ref": len(referents)})
+            #if len(referents) < 2000:
+                #print(obj)

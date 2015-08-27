@@ -270,6 +270,21 @@ class DistinctQuery(CorpusQuery):
         else:
             constant_line = []
 
+        if options.cfg.experimental:
+            if options.cfg.gui:
+                if constant_line:
+                    output_list = copy.copy(constant_line)
+                else:
+                    output_list = []
+
+                self.Session.output_storage = pd.DataFrame(self.Results)
+                if not options.cfg.case_sensitive:
+                    for x in self.Session.output_storage.columns:
+                        if x.startswith("coq_word") or x.startswith("coq_Lemma"):
+                            self.Session.output_storage[x].apply(lambda x: x.lower)
+                return
+            
+
         for current_result in self.Results:
             if constant_line:
                 output_list = copy.copy(constant_line)
