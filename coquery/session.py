@@ -23,8 +23,6 @@ import tokens
 
 import logging
 
-
-
 class Session(object):
     def __init__(self):
         self.header = None
@@ -49,7 +47,7 @@ class Session(object):
         elif options.cfg.MODE == QUERY_MODE_TOKENS:
             self.query_type = queries.TokenQuery
         elif options.cfg.MODE == QUERY_MODE_DISTINCT:
-            self.query_type = queries.DistinctQuery
+            self.query_type = queries.CorpusQuery
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.query_type = queries.CollocationQuery
             
@@ -67,6 +65,8 @@ class Session(object):
         example, -p adds one or more numbered part-of-speech labels to the 
         header. The number of labels depends on the maximum number of query 
         tokens in this session. """
+
+        return []
 
         if options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.header = ["coquery_query_string"]
@@ -189,7 +189,7 @@ class Session(object):
                     query_results = []
                     for current_result in self.Corpus.yield_query_results(sub_query):
                         query_results.append(current_result)
-                    sub_query.set_result_list(query_results)
+                    sub_query.Results = query_results
                     if query_results:
                         any_result = True
                         sub_query.write_results(self.output_object)
@@ -202,7 +202,7 @@ class Session(object):
                 logger.info("Start query: '{}'".format(current_query))
 
                 if current_query.tokens:
-                    current_query.set_result_list(self.Corpus.yield_query_results(current_query))
+                    current_query.Results = self.Corpus.yield_query_results(current_query)
                 start_time = time.time()
                 current_query.write_results(self.output_object)
                 logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
@@ -228,7 +228,7 @@ class SessionCommandLine(Session):
         logger.info("{} queries".format(len(options.cfg.query_list)) if len(options.cfg.query_list) > 1 else "Single query")
         for query_string in options.cfg.query_list:
             if self.query_type:
-                new_query = self.query_type(query_string, self, tokens.COCAToken, options.cfg.source_filter)
+                new_query = self.query_type(query_string, self, tokens.COCAToken)
             else: 
                 raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
             self.query_list.append(new_query)
@@ -256,7 +256,7 @@ class SessionInputFile(Session):
                     else:
                         if read_lines >= options.cfg.skip_lines:
                             query_string = current_line.pop(options.cfg.query_column_number - 1)
-                            new_query = self.query_type(query_string, self, tokens.COCAToken, options.cfg.source_filter)
+                            new_query = self.query_type(query_string, self, tokens.COCAToken)
                             new_query.InputLine = copy.copy(current_line)
                             new_query.input_frame = pd.DataFrame(
                                 [current_line], columns=input_header)
@@ -282,9 +282,7 @@ class SessionStdIn(Session):
                 else:
                     if read_lines >= options.cfg.skip_lines:
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
-                        new_query = self.query_type(
-                                query_string, self, tokens.COCAToken, options.cfg.source_filter)
-                        
+                        new_query = self.query_type(query_string, self, tokens.COCAToken)
                         new_query.InputLine = copy.copy(current_line)
                         self.query_list.append(new_query)
                         self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
