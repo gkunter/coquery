@@ -246,7 +246,7 @@ class BaseResource(object):
     coquery_query_file = "Input file"
     coquery_current_date = "Current date"
     coquery_current_time = "Current time"
-    word_query_token = "Query token"
+    coquery_query_token = "Query token"
 
     render_token_style = "background: lightyellow"
 
@@ -1233,20 +1233,12 @@ class SQLCorpus(BaseCorpus):
 
             column_list = []
             for rc_feature in sub_tree["rc_requested_features"]:
-                if rc_feature == "word_query_token":
-                    name = "coq_{}_{}".format(
-                        rc_feature,
-                        number+1)
-                    variable_string = '"{}" AS {}'.format(
-                        current_token.S,
-                        name)
-                else:
-                    name = "coq_{}_{}".format(
-                        rc_feature,
-                        number+1)
-                    variable_string = "{} AS {}".format(
-                        self.resource.__getattribute__(rc_feature),
-                        name)
+                name = "coq_{}_{}".format(
+                    rc_feature,
+                    number+1)
+                variable_string = "{} AS {}".format(
+                    self.resource.__getattribute__(rc_feature),
+                    name)
                 column_list.append(variable_string)
                 #if not rc_feature.endswith("_id"):
                 select_list.add(name)
@@ -1432,23 +1424,14 @@ class SQLCorpus(BaseCorpus):
                     if options.cfg.context_right:
                         final_select.append('NULL AS coq_context_right')
         
-        # Add NULL values for all Coquery features; they are supplied not
-        # by the SQL query, but by the Python script in yield_query_results().
-        for x in options.cfg.selected_features:
-            if x.startswith("coquery_"):
-                final_select.append("NULL AS {}".format(x))
-
         # construct the query string from the sub-query parts:
         query_string = " ".join(query_string_part)
-
 
         # include variables that are required to make entries in the result
         # table clickable, but only if a GUI is used:
         if options.cfg.context_source_id:
-        #if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
             final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
             final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.context_source_id))
-            final_select.append("{} AS coquery_invisible_number_of_tokens".format(Query.number_of_tokens))
 
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(final_select))
         
@@ -1463,58 +1446,21 @@ class SQLCorpus(BaseCorpus):
             query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
 
-        #print(query_string)
-        #sys.exit(0)
-
         Query.Session.output_order = Query.Session.input_columns + [x.split(" AS ")[-1] for x in final_select]
-        if Query.Session.output_order:
-            return query_string
-        else:
-            return ""
+        return query_string
         
     def yield_query_results(self, Query, self_joined=False):
         """ Run the corpus query specified in the Query object on the corpus
         and yield the results. """
-        
         query_string = self.sql_string_query(Query, self_joined)
-        D = {}
-        show_day = False
-        show_time = False
-        for x in options.cfg.selected_features:
-            if x.startswith("coquery_"):
-                D[x] = ""
-                if x == "coquery_query_string":
-                    try:
-                        D[x] = Query.Session.literal_query_string
-                    except AttributeError:
-                        print(1)
-                        pass
-                elif x == "coquery_expanded_query_string":
-                    try:
-                        D[x] = Query.query_string
-                    except AttributeError:
-                        pass
-                elif x == "coquery_query_file":
-                    try:
-                        D[x] = options.cfg.input_path
-                    except AttributeError:
-                        pass
-                elif x == "coquery_current_date":
-                    show_day = True
-                elif x == "coquery_current_time":
-                    show_time = True
+        Query.Session.output_order.append("coquery_invisible_number_of_tokens")
+        if "coquery_query_token" in options.cfg.selected_features:
+            Query.Session.output_order += ["coquery_query_token_{}".format(x + 1) for x in range(Query.number_of_tokens)]
         
         cursor = self.resource.DB.execute_cursor(query_string)
         for current_result in cursor:
-            now = datetime.datetime.now()
-            if show_day:
-                current_result["coquery_current_date"] = now.strftime("%Y-%m-%d")
-            if show_time: 
-                current_result["coquery_current_time"] = now.strftime("%H:%M:%S")
-            current_result.update(D)
-
-            #if options.cfg.MODE != QUERY_MODE_FREQUENCIES and (options.cfg.context_left or options.cfg.context_right):
             if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
+                # add contexts for each query match:
                 if (options.cfg.context_left or options.cfg.context_right):
                     left, target, right = self.get_context(
                         current_result["coquery_invisible_corpus_id"], 
