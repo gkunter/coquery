@@ -10,6 +10,7 @@ import sys
 import copy
 import time, datetime
 import fileinput
+import pandas as pd
 
 import __init__
 import options
@@ -21,6 +22,8 @@ import queries
 import tokens
 
 import logging
+
+
 
 class Session(object):
     def __init__(self):
@@ -51,7 +54,9 @@ class Session(object):
             self.query_type = queries.CollocationQuery
             
         logger.info("Corpus: %s" % options.cfg.corpus)
-        self.output_file = None
+        self.output_object = None
+        self.output_order = []
+        self.header_shown = False
 
     def expand_header(self):
         """
@@ -135,23 +140,17 @@ class Session(object):
         return length
 
     def open_output_file(self):
-        if self.output_file:
-            return
-        if options.cfg.gui and not self.storage_created:
-            self.output_storage = []
-            self.storage_created = True
-            return
-        elif not options.cfg.output_path:
-            self.output_file = UnicodeWriter(sys.stdout, delimiter=options.cfg.output_separator)
+        if options.cfg.gui:
+            self.output_object = pd.DataFrame()
         else:
-            if options.cfg.append:
-                FileMode = "at"
+            if not options.cfg.output_path:
+                self.output_object = sys.stdout
             else:
-                FileMode = "wt"
-            self.output_file_object = open(options.cfg.output_path, FileMode)
-            self.output_file = UnicodeWriter(self.output_file_object, delimiter=options.cfg.output_separator)
-        if not options.cfg.append and self.show_header:
-            self.output_file.writerow(self.header)
+                if options.cfg.append:
+                    file_mode = "at"
+                else:
+                    file_mode = "wt"
+                self.output_object = open(options.cfg.output_path, file_mode)
     
     def run_queries(self):
         """ Process all queries. For each query, go through the entries in 
@@ -177,6 +176,9 @@ class Session(object):
         self.end_time = None
         if options.cfg.gui:
             self.storage_created = False
+        
+        self.open_output_file()
+
         for current_query in self.query_list:
             self.literal_query_string = current_query.query_string
             if len(current_query.query_list) > 1:
@@ -186,17 +188,12 @@ class Session(object):
                     query_results = []
                     for current_result in self.Corpus.yield_query_results(sub_query):
                         query_results.append(current_result)
-                        
                     sub_query.set_result_list(query_results)
                     if query_results:
                         any_result = True
-                        if not self.output_file:
-                            self.open_output_file()
-                        sub_query.write_results(self.output_file)
+                        sub_query.write_results(self.output_object)
                 if not any_result:
-                    if not self.output_file:
-                        self.open_output_file()
-                    current_query.write_results(self.output_file)
+                    current_query.write_results(self.output_object)
                 logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
                 
             else:
@@ -205,11 +202,8 @@ class Session(object):
 
                 if current_query.tokens:
                     current_query.set_result_list(self.Corpus.yield_query_results(current_query))
-                if not options.cfg.dry_run:
-                    if not self.output_file:
-                        self.open_output_file()
                 start_time = time.time()
-                current_query.write_results(self.output_file)
+                current_query.write_results(self.output_object)
                 logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
         self.end_time = datetime.datetime.now()
 
@@ -243,21 +237,28 @@ class SessionCommandLine(Session):
 class SessionInputFile(Session):
     def __init__(self):
         super(SessionInputFile, self).__init__()
+        input_header = None
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
             for current_line in UnicodeReader(InputFile, delimiter=options.cfg.input_separator, encoding=options.cfg.input_encoding):
                 if current_line:
                     if options.cfg.query_column_number > len(current_line):
                         raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)
+                    
                     if options.cfg.file_has_headers and self.header == None:
                         self.header = copy.copy(current_line)
-                        if not options.cfg.show_query:
-                            self.header.pop(options.cfg.query_column_number - 1)
+                        input_header = self.header
+                        input_header.pop(options.cfg.query_column_number - 1)
+                        
+                        self.input_columns = ["coq_{}".format(x) for x in input_header]
+                        
                     else:
                         if read_lines >= options.cfg.skip_lines:
                             query_string = current_line.pop(options.cfg.query_column_number - 1)
                             new_query = self.query_type(query_string, self, tokens.COCAToken, options.cfg.source_filter)
                             new_query.InputLine = copy.copy(current_line)
+                            new_query.input_frame = pd.DataFrame(
+                                [current_line], columns=input_header)
                             self.query_list.append(new_query)
                             self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
                     self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)

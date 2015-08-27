@@ -1472,7 +1472,7 @@ class SQLCorpus(BaseCorpus):
         #print(query_string)
         #sys.exit(0)
 
-        Query.Session.output_order = [x.split(" AS ")[-1] for x in final_select]
+        Query.Session.output_order = Query.Session.input_columns + [x.split(" AS ")[-1] for x in final_select]
         if Query.Session.output_order:
             return query_string
         else:

@@ -212,6 +212,8 @@ class CorpusQuery(object):
         self.Corpus = Session.Corpus
         self.Results = []
         self.InputLine = []
+        self.input_header = []
+        self.input_frame = pd.DataFrame()
 
         if self.Corpus.provides_feature(CORP_SOURCE):
             self.source_filter = source_filter
@@ -259,66 +261,55 @@ class DistinctQuery(CorpusQuery):
     
     collapse_identical = True
     
-    def write_results(self, output_file, data = None):
-        
-        if options.cfg.gui:
-            if self.InputLine:
-                output_list = copy.copy(self.InputLine)
+    def write_results(self, output_object):
+        """ Transform the query results to a pandas DataFrame that is either
+        directly written to a CSV file, or stored for later processing in
+        the GUI. """
+        # turn query results into a pandas DataFrame:
+        df = pd.DataFrame(self.Results)
+        if len(df.index) > 0:
+            # add column labels for the columns in the input file:
+            if all([x == None for x in self.input_frame.columns]):
+                # no header in input file, so use X1, X2, ..., Xn:
+                input_columns = [("coq_X{}".format(x), x) for x in range(len(self.input_frame.columns))]
             else:
-                output_list = []
+                input_columns = [("coq_{}".format(x), x) for x in self.input_frame.columns]
+            for df_col, input_col in input_columns:
+                df[df_col] = self.input_frame[input_col][0]
+            
+            vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
 
-            df = pd.DataFrame(self.Results)
-            if not options.cfg.case_sensitive:
+            # word and lemma columns are lower-cased, unless requested otherwise:
+            if not options.cfg.case_sensitive and len(df.index) > 0:
                 for x in df.columns:
                     if x.startswith("coq_word") or x.startswith("coq_lemma"):
-                        
-                        df[x] = df[x].apply(lambda x: x.lower())
-                        
+                        df[x] = df[x].apply(lambda x: x.lower() if x else x)
+
+            # for DISTINCT query mode, duplicates are dropped from the dataframe:
             if self.collapse_identical:
-                df.drop_duplicates(subset=[x for x in df.columns if not x.startswith("coquery_invisible")], inplace=True)
+                df.drop_duplicates(subset=vis_cols, inplace=True)
                 df.reset_index(drop=True, inplace=True)
-                
-            self.Session.output_storage = df
-            return
-            
-        output_cache = set([])
-        # construct that part of output lines that stays constant in all
-        # lines:
-        if self.InputLine:
-            constant_line = copy.copy(self.InputLine)
+
         else:
-            constant_line = []
-
-        for current_result in self.Results:
-            if constant_line:
-                output_list = copy.copy(constant_line)
-            else:
-                output_list = []
-
-            if not options.cfg.case_sensitive:
-                for x in current_result:
-                    if x.startswith("coq_word") or x.startswith("coq_Lemma"):
-                        try:
-                            current_result[x] = current_result[x].lower()
-                        except AttributeError:
-                            pass
-
-            # store values from visible columns into output_list:
-            output_list.extend([current_result[x] for x in self.Session.output_order if not x.startswith("coquery_invisible_")])
-            output_list = tuple(output_list)
-
-            if self.collapse_identical:
-                if output_list not in output_cache:
-                    if options.cfg.gui:
-                        self.Session.output_storage.append(current_result)
-                    else:
-                        output_file.writerow(output_list)
-                    output_cache.add(output_list)
-            else:
-                if options.cfg.gui:
-                    self.Session.output_storage.append(current_result)
-                else:
-                    output_file.writerow(output_list)
+            vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
+            df = pd.DataFrame(columns=vis_cols)
+        
+        if options.cfg.gui:
+            # append the data frame to the existing data frame
+            self.Session.output_object = pd.concat(self.Session.output_object, df)
+        else:
+            # write data frame to output_file as a CSV file, using the 
+            # current output_separator. Encoding is always "utf-8".
+            df[vis_cols].to_csv(output_object, 
+                header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
+                sep=options.cfg.output_separator,
+                encoding="utf-8",
+                index=False)
+            # remember that the header columns have already been included in
+            # the output so that multiple queries in a single session do not
+            # produce multiple headers:
+            self.Session.header_shown = True
+        return
 
 class TokenQuery(DistinctQuery):
     """ Define a subclass of DistinctQuery. The only difference between this
@@ -353,50 +344,59 @@ class FrequencyQuery(CorpusQuery):
     def __init__(self, *args):
         super(FrequencyQuery, self).__init__(*args)
         
-    def write_results(self, output_file, data = None):
-        frequency_filters = []
+    def write_results(self, output_object):
+        # turn query results into a pandas DataFrame:
+        df = pd.DataFrame(self.Results)
+        if len(df.index) > 0:
+            # add column labels for the columns in the input file:
+            if all([x == None for x in self.input_frame.columns]):
+                # no header in input file, so use X1, X2, ..., Xn:
+                input_columns = [("coq_X{}".format(x), x) for x in range(len(self.input_frame.columns))]
+            else:
+                input_columns = [("coq_{}".format(x), x) for x in self.input_frame.columns]
+            for df_col, input_col in input_columns:
+                df[df_col] = self.input_frame[input_col][0]
+            
+            vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
 
-        # construct that part of output lines that stays constant in all
-        # lines:
-        if self.InputLine:
-            constant_line = copy.copy(self.InputLine)
+            # word and lemma columns are lower-cased, unless requested otherwise:
+            if not options.cfg.case_sensitive and len(df.index) > 0:
+                for x in df.columns:
+                    if x.startswith("coq_word") or x.startswith("coq_lemma"):
+                        df[x] = df[x].apply(lambda x: x.lower() if x else x)
+
         else:
-            constant_line = []
-
-        # Apply any frequency filter:
+            vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
+            df = pd.DataFrame(columns=vis_cols)
+        
+        # Apply all frequency filters:
+        frequency_filters = []
         for x in options.cfg.filter_list:
             try:
                 parse = x.parse_filter(x.text)
             except AttributeError:
                 pass
             else:
-                if x.var.lower() == options.cfg.freq_label.lower():
-                    frequency_filters.append(x)
+                df = df[filt.check_number(df["coq_frequency"])]
+        
+        if options.cfg.gui:
+            # append the data frame to the existing data frame
+            self.Session.output_object = pd.concat(self.Session.output_object, df)
+        else:
+            # write data frame to output_file as a CSV file, using the 
+            # current output_separator. Encoding is always "utf-8".
+            df[vis_cols].to_csv(output_object, 
+                header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
+                sep=options.cfg.output_separator,
+                encoding="utf-8",
+                index=False)
+            # remember that the header columns have already been included in
+            # the output so that multiple queries in a single session do not
+            # produce multiple headers:
+            self.Session.header_shown = True
+        return
 
-        for current_result in self.Results:
-            freq = current_result["coq_frequency"]
-            fail = False
-            for filt in frequency_filters:
-                if not filt.check_number(freq):
-                    fail = True
-            if not fail:
-                if not options.cfg.case_sensitive:
-                    for x in current_result:
-                        if x.startswith("coq_word") or x.startswith("coq_Lemma"):
-                            try:
-                                current_result[x] = current_result[x].lower()
-                            except AttributeError:
-                                pass
-                if constant_line:
-                    output_list = copy.copy(constant_line)
-                else:
-                    output_list = []
 
-                if options.cfg.gui:
-                    self.Session.output_storage.append(current_result)
-                else:
-                    output_list.extend([current_result[x] for x in self.Session.output_order])
-                    output_file.writerow(output_list)
 
 class CollocationQuery(TokenQuery):
     def __init__(self, S, Session, token_class, source_filter):
@@ -438,7 +438,7 @@ class CollocationQuery(TokenQuery):
         occurrences of c in the corpus. """
         return float(freq_left) / float(freq_total)
 
-    def write_results(self, output_file, data = None):
+    def write_results(self, output_file):
         self.Session.output_order = self.Session.header
         count_left = collections.Counter()
         count_right = collections.Counter()
