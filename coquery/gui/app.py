@@ -694,7 +694,8 @@ class CoqueryApp(QtGui.QMainWindow):
         
     def display_results(self):
         self.table_model.set_data(self.Session.output_object)
-        self.table_model.set_header([x for x in self.Session.output_order if not x.startswith("coquery_invisible")])
+        self.table_model.set_header()
+        
         self.ui.data_preview.setModel(self.table_model)
 
         # set column widths:
