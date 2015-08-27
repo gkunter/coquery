@@ -765,21 +765,21 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.progress_bar.setRange(0, 1)
         self.ui.progress_bar.hide()
         
-    def query_finished(self):
+    def finalize_query(self):
+        self.query_thread = None
+        self.ui.statusbar.showMessage("Preparing results table...")
+        self.display_results()
         self.set_query_button()
         self.stop_progress_indicator()
 
-        # show results:
-        self.display_results()
-        self.query_thread = None
         try:
-            diff = (self.Session.end_time - self.Session.start_time)
+            diff = (datetime.datetime.now() - self.Session.start_time)
         except TypeError:
             duration_str = "NA"
         else:
             duration = diff.seconds
             if duration > 3600:
-                duration_str = "{} hrs, {}, min, {} s".format(duration // 3600, duration % 3600 // 60, duration % 60)
+                duration_str = "{} hrs, {} min, {} s".format(duration // 3600, duration % 3600 // 60, duration % 60)
             elif duration > 60:
                 duration_str = "{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3])
             else:
@@ -982,7 +982,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.statusbar.showMessage("Running query...")
             self.start_progress_indicator()
             self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
-            self.query_thread.taskFinished.connect(self.query_finished)
+            self.query_thread.taskFinished.connect(self.finalize_query)
             self.query_thread.taskException.connect(self.exception_during_query)
             self.query_thread.start()
 
