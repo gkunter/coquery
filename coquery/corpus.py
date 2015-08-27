@@ -1441,12 +1441,6 @@ class SQLCorpus(BaseCorpus):
         # construct the query string from the sub-query parts:
         query_string = " ".join(query_string_part)
 
-        # For Frequeny queries, add a COUNT() column named 'coq_frequency' as
-        # well as a GROUP BY clause:
-        if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-            if final_select:
-                query_string = "{} GROUP BY {}".format(query_string, ", ".join([x.split(" AS ")[-1] for x in final_select]))
-            final_select.append("COUNT(*) AS coq_frequency")
 
         # include variables that are required to make entries in the result
         # table clickable, but only if a GUI is used:
