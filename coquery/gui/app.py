@@ -160,7 +160,6 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         return check_list
         
 
-
 class LogTableModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, *args):
         super(LogTableModel, self).__init__(parent, *args)
@@ -297,14 +296,13 @@ class GuiHandler(logging.StreamHandler):
         self.app = app
         
     def emit(self, record):
-        try:
-            self.log_data.append(record)
-            if len(self.log_data) == 1:
-                self.app.ui.log_table.horizontalHeader().setStretchLastSection(True)
-                
-            self.app.log_table.layoutChanged.emit()
-        except:
-            self.handleError(record)
+        self.log_data.append(record)
+        self.app.log_table.dataChanged.emit(
+            self.app.log_table.index(len(self.log_data), 0),
+            self.app.log_table.index(len(self.log_data), 3))
+        if len(self.log_data) == 1:
+            self.app.ui.log_table.horizontalHeader().setStretchLastSection(True)
+        self.app.log_table.layoutChanged.emit()
 
 class QueryFilterBox(CoqTagBox):
     def destroyTag(self, tag):
