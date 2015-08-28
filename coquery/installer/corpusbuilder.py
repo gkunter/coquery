@@ -1,5 +1,46 @@
 # -*- coding: utf-8 -*-
 
+""" 
+The module :mod:`corpusbuilder.py` provides the framework for corpus module
+installers.
+
+Different corpora may use different file formats and different file
+layouts to provide the content of the corpus to the users. In order to
+make this content available to Coquery, the content of the corpus files
+must be processed, and stored in a database. Once this has been done,
+a corpus module, containing information on the database layout, will be
+written to a place where Coquery can find it. After that, the corpus 
+can be queried by Coquery.
+
+Thus, in order to use a new corpus with Coquery, a subclass of 
+:class:`BaseCorpusBuilder` needs to be defined that is tailored to the
+structure of that corpus. Usually, such a subclass will at least 
+reimplement :func:`BaseCorpusBuilder.__init__`,. The reimplementation 
+contains the specifications for the data tables such as the name and data 
+type of the columns. It also specifies links between different data tables.
+Please note that the reimplemented :func:`__init__`` should start with a 
+call to the inherited initialization method, like so::
+
+    super(YourCorpusBuilderClass, self).__init__(gui)
+
+In addition to that, most subclasses will also reimplement either
+:func:`BaseCorpusBuilder.process_file` or one of the related methods (e.g. 
+:func:`BaseCorpusBuilder.process_text_file`. The reimplemented method is 
+aware of the data format that is used in the corpus data files, and is 
+therefore able to process the information stored in the data files. It is 
+responsible for storing the information correctly in the pertaining data 
+tables defined in :func:`BaseCorpusBuilder.__init__`.
+
+Examples
+--------    
+For examples of reimplementations of ``BaseCorpusBuilder``, see the 
+corpus installers distributed in the Coquery default installation. For 
+instance, :mod:`coq_generic.py` is a generic installer that process any 
+collection of text files in a directiory into a query-able corpus, and
+:mod:`coq_bnc.py` contains an installer that reads and processes the XML 
+version of the British National corpus.
+"""
+
 from __future__ import unicode_literals
 from __future__ import print_function
 import codecs
@@ -151,7 +192,6 @@ class Primary(Column):
     def __repr__(self):
         return "Primary(name='{}', data_type='{}', {})".format(self._name, self._data_type, self._index)
         
-    
 class Link(Column):
     """ Define a Column class that links a table to another table. In MySQL
     terms, this acts like a foreign key."""
@@ -240,6 +280,11 @@ class Table(object):
         return ", ".join(str_list)
     
 class BaseCorpusBuilder(object):
+    """ 
+    This class is the base class used to build and install a corpus for 
+    Coquery. For corpora currently not supported by Coquery, new builders 
+    can be developed by subclassing this class.
+    """
     logger = None
     module_code = None
     name = None
@@ -296,9 +341,13 @@ class BaseCorpusBuilder(object):
             self.additional_arguments()
 
     def add_tag_table(self):
-        """ Corpora should usually have a tag table that is used to store
-        text information. This method is called by the build() method and
-        adds a tag table if none is present yet."""
+        """ 
+        Create the table description for a tag table.
+        
+        Corpora should usually have a tag table that is used to store
+        text information. This method is called during :func:`build` and
+        adds a tag table if none is present yet.
+        """
         
         if "tag_table" in dir(self):
             return
@@ -322,7 +371,7 @@ class BaseCorpusBuilder(object):
                 ([self.tag_label], 0, "BTREE"),
                 ([self.tag_type], 0, "BTREE")]})
             
-        self.add_new_table_description(self.tag_table,
+        self.create_table_description(self.tag_table,
             [Primary(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
              Column(self.tag_label, "TINYTEXT NOT NULL"),
@@ -345,7 +394,8 @@ class BaseCorpusBuilder(object):
             in_memory = self.arguments.in_memory
             
     def additional_arguments(self):
-        """ Use this function if your corpus installer requires additional arguments."""
+        """ Use this function if your corpus installer requires additional
+        arguments."""
         pass
     
     def commit_data(self):
@@ -366,7 +416,19 @@ class BaseCorpusBuilder(object):
             
         self.Con.commit()
 
-    def add_new_table_description(self, table_name, column_list):
+    def create_table_description(self, table_name, column_list):
+        """
+        Create the description of a MySQL table. The MySQL table described
+        in this way will be created during :func:`build` by calling 
+        :func:`build_create_table`.
+        
+        Parameters
+        ----------
+        table_name : string
+            The name of the MySQL table
+        column_list : list
+            A list of :class:`Column` instances
+        """        
         new_table = Table(table_name)
         for x in column_list:
             if isinstance(x, Link):
@@ -389,13 +451,19 @@ class BaseCorpusBuilder(object):
         self._id_count[table_name] = 0
         
     def table_add(self, table_name, values):
-        """ Add an entry containing the values to the table. A new unique
-        id is also provided, and the class counter is updated. """
+        """ 
+        Add an entry containing the values to the table. 
+        
+        This method adds a row with the values to the specified table. A new
+        unique id is also provided, and the class counter is updated. 
+        """
         return self.Con.insert(table_name, values)
     
     def table_find(self, table_name, values):
-        """ Return the first row that matches the values, or None
-        otherwise."""
+        """ 
+        Return the first row that matches the values, or None
+        otherwise.
+        """
         
         if in_memory:
             keys_values = set(values.keys())
@@ -425,11 +493,14 @@ class BaseCorpusBuilder(object):
                 return None
     
     def table_get(self, table_name, values, case=False):
-        """ This function returns the id of the first entry matching the 
-        values from the table. If there is no entry matching the values in 
-        the table, a new entry is added to the table based on the values.
-        The values have to be given in the same order as the column 
-        specifications in the table description."""
+        """ 
+        Returns the id of the first entry matching the values from the table.
+        
+        If there is no entry matching the values in the table, a new entry is
+        added to the table based on the values. The values have to be given 
+        in the same order as the column specifications in the table
+        description.
+        """
 
         # use new internal tables:
         
@@ -450,7 +521,9 @@ class BaseCorpusBuilder(object):
         
 
     def setup_logger(self):
-        """ initializes a logger."""
+        """ 
+        Initialize the logger.
+        """
         class TextwrapFormatter(logging.Formatter):
             def __init__(self, fmt):
                 super(TextwrapFormatter, self).__init__(fmt=fmt)
@@ -470,10 +543,12 @@ class BaseCorpusBuilder(object):
         stream_handler.setLevel(logging.WARNING)
         self.logger.addHandler(stream_handler)
 
-    def create_tables(self):
-        """ go through the table description and create a table in the
-        database, using the information from the "CREATE" key of the
-        table description entry."""
+    def build_create_tables(self):
+        """ 
+        Create the MySQL tables used by the corpus, based on the column
+        information given in the table description (see
+        :func:``create_table_description``).
+        """
         
         self.Con.start_transaction()
         self.add_tag_table()
@@ -500,8 +575,10 @@ class BaseCorpusBuilder(object):
             progress.finish()
 
     def get_file_list(self, path):
-        """ returns a list of file names from the given path that match
-        the file filter from self.file_filter."""
+        """ 
+        Returns a list of file names from the given path that match
+        the file filter from self.file_filter.
+        """
         L = []
         for source_path, folders, files in os.walk(path):
             for current_file in files:
@@ -548,7 +625,7 @@ class BaseCorpusBuilder(object):
     def get_method_code(self, method):
         pass
 
-    def store_filename(self, current_file):
+    def store_filename(self, file_name):
         self._file_name = current_file
         self._file_id = self.table_get(self.file_table, 
             {self.file_path: current_file,
@@ -616,24 +693,36 @@ class BaseCorpusBuilder(object):
         else:
             return self.get_transcript(word)        
 
-    def process_xlabel_file(self, current_file):
-        """ Process an xlabel file.
-        xlabel files are used by ESPS/waves+ to store phonetic 
-        annotations. Some spoken corpora are provided in this format.
-        A description can be found here:
-        http://staffhome.ecm.uwa.edu.au/~00014742/research/speech/local/entropic/ESPSDoc/waves/manual/xlabel.pdf
-        """
+    def process_xlabel_file(self, file_name):
+        """ 
+        Process an xlabel file.
         
-        # xlabel files consist of a header and a file body, separated by a
-        # row containing only the hash mark '#'. Everything preceding this 
-        # mark is ignored:
+        This method reads the content of the file, and interprets it as an
+        ESPS/waves+ xlabel file. Xlabel filess are used in some spoken 
+        corpora to represent phonetic annotations. A description of the file format can be found here: 
+        
+        http://staffhome.ecm.uwa.edu.au/~00014742/research/speech/local/entropic/ESPSDoc/waves/manual/xlabel.pdf
+
+        Basically, an xlabel file consists of a header and a file body, 
+        separated by a row containing only the hash mark '#'. This method 
+        ignores the data from the header. Rows in the file body consist of
+        three columns ``time color word``, separated by whitespace. Rows with less than three columns are ignored.
+        
+        Parameters
+        ----------
+        file_name : string
+            The path name of the file that is to be processed
+        """
         file_body = False
+        # read file using the specified encoding (default is 'utf-8), and 
+        # retry using 'ISO-8859-1'/'latin-1' in case of an error:
         try:
-            with codecs.open(current_file, "rt", encoding=self.arguments.encoding) as input_file:
+            with codecs.open(file_name, "rt", encoding=self.arguments.encoding) as input_file:
                 input_data = input_file.read()
         except UnicodeDecodeError:
-            with codecs.open(current_file, "rt", encoding="ISO-8859-1") as input_file:
+            with codecs.open(file_name, "rt", encoding="ISO-8859-1") as input_file:
                 input_data = input_file.read()
+                
         input_data = input_data.splitlines()
         for row in input_data:
             # only process the lines after the hash mark:
@@ -642,8 +731,8 @@ class BaseCorpusBuilder(object):
             elif file_body:
                 try:
                     time, color, word = row.split()
-                # in xlabel files, rows can contain only the time tag,
-                # but no other labels. In this case, the row is ignored:
+                # in xlabel files, rows can sometimes contain only the time 
+                # tag, but no other labels. In this case, the row is ignored:
                 except ValueError:
                     continue
                 
@@ -667,21 +756,30 @@ class BaseCorpusBuilder(object):
                         self.corpus_file_id: self._file_id,
                         self.corpus_time: time})
                 
-    def process_text_file(self, current_file):
-        """ Process a text file.
-        First, attempt to tokenize the text, and to assign a POS tag to each
-        token (using NLTK if possible).
-        Then, if the token does not exist in the word table, add a new word
-        with its POS tag to the word table.
-        Then, try to lemmatize any new word
-        Finally, add the token with its word identifier to the corpus table."""
+    def process_text_file(self, file_name):
+        """ 
+        Process a text file.
+        
+        This method reads the content of the file, and interprets it as an
+        plain text file. It first attempt to tokenize the text, and to 
+        assign a POS tag to each token (using NLTK if possible). Then, if
+        the token does not exist in the word table, add a new word with its 
+        POS tag to the word table. Then, try to lemmatize any new word. 
+        Finally, add the token with its word identifier to the corpus table,
+        and proceed with the next word.
+        
+        Parameters
+        ----------
+        file_name : string
+            The path name of the file that is to be processed
+        """
         
         # Read raw text from file:
         try:
-            with codecs.open(current_file, "rt", encoding=self.arguments.encoding) as input_file:
+            with codecs.open(file_name, "rt", encoding=self.arguments.encoding) as input_file:
                 raw_text = input_file.read()
         except UnicodeDecodeError:
-            with codecs.open(current_file, "rt", encoding="ISO-8859-1") as input_file:
+            with codecs.open(file_name, "rt", encoding="ISO-8859-1") as input_file:
                 raw_text = input_file.read()
             
         tokens = []
@@ -738,7 +836,7 @@ class BaseCorpusBuilder(object):
                     self.add_token(current_token, current_pos)
     
     def add_token_to_corpus(self, values):
-        if len(values) <> len(self.table_description[self.corpus_table]["CREATE"]) - 2:
+        if len(values) != len(self.table_description[self.corpus_table]["CREATE"]) - 2:
             print(self.table_description[self.corpus_table]["CREATE"])
             print(len(values), values)
             raise IndexError
@@ -850,10 +948,21 @@ class BaseCorpusBuilder(object):
 
     def tag_next_token(self, tag, attributes):
         """ Add an entry to the tag table that marks the next corpus_id.
-        The tag is marked as an opening tag and contains the 'tag' and a 
-        string representation of the dictionary 'attributes'. 
         
-        The closing counterpart can be added by calling tag_last_token()."""
+        The tag is marked as an opening tag and contains the name ``tag`` 
+        and a string representation of the dictionary ``attributes``. 
+        
+        The closing counterpart can be added by calling 
+        :func:`tag_last_token`.
+        
+        Parameters
+        ----------
+        tag : string
+            The name of the tag
+        attributes : dict
+            A dictionary containing the attributes of the opening tag.
+            
+        """
         self.table_add(self.tag_table,
             {self.tag_label: "{}".format(tag),
                 self.tag_corpus_id: self._corpus_id + 1,
@@ -862,11 +971,24 @@ class BaseCorpusBuilder(object):
                     ["{}={}".format(x, attributes[x]) for x in attributes])})
 
     def tag_last_token(self, tag, attributes):
-        """ Add an entry to the tag table that marks the last corpus_id.
-        The tag is marked as a closing tag and contains the 'tag' and a 
-        string representation of the dictionary 'attributes'. 
+        """ 
+        Add an entry to the tag table that marks the last corpus_id.
         
-        The opening counterpart can be added by calling tag_next_token()."""
+        The tag is marked as a closing tag and contains the name `tag` and a 
+        string representation of the dictionary `attributes`.
+        
+        The opening counterpart can be added by calling
+        :func:`tag_next_token`.
+
+        
+        Parameters
+        ----------
+        tag : string
+            The name of the tag
+        attributes : dict
+            A dictionary containing the attributes of the closing tag.
+        """
+        
         self.table_add(self.tag_table,
             {self.tag_label: "{}".format(tag),
                 self.tag_corpus_id: self._corpus_id,
@@ -875,9 +997,33 @@ class BaseCorpusBuilder(object):
                     ["{}={}".format(x, attributes[x]) for x in attributes])})
 
     def add_empty_tag(self, tag, attributes):
-        """ Add an entry to the tag table that precedes the next corpus_id.
-        The tag is marked as an empty element and contains the 'tag' and a 
-        string representation of the dictionary 'attributes'. """
+        """ 
+        Add an empty tag after the current corpus element.
+        
+        This method is usually called from within :func:`process_file` or a
+        related method. It will add an entry to the tag table so that 
+        an empty tag is inserted into the corpus after the current corpus
+        element. This empty tag has the name ``tag`` and the attributes 
+        given in ``attributes``.
+        
+        Parameters
+        ----------
+        tag : string
+            The name of the tag
+        attributes : dict
+            A dictionary containing the attributes of the empty tag.
+            
+        Examples
+        --------
+        Let's assume that the corpus file contains an empty XML tag that 
+        serves as a placeholder for graphics that are contained in the 
+        original texts. In the ICE-NG files, such a placeholder is indicated
+        by ``<object type="graphic">``. In order to store this information
+        in the tag table, the corpus installer may have the line 
+        ``self.add_empty_tag("object", {"type": "graphic"})`` in the 
+        reimplementation of :func:`process_file` so that the method is 
+        called the placeholder tag is encountered in the source files.
+        """
         self.table_add(self.tag_table,
             {self.tag_label: "{}".format(tag),
                 self.tag_corpus_id: self._corpus_id + 1,
@@ -887,15 +1033,31 @@ class BaseCorpusBuilder(object):
 
     ### END XML
 
-    def process_file(self, current_file):
-        """ process_file(current_file) reads the content from current_file,
-        parses the information relevant for the corpus from the file, and
+    def process_file(self, file_name):
+        """
+        Pass the file name to a processing method.
+        
+        This method passes the file name to a method that reads the content 
+        from the file, parses the information relevant for the corpus, and
         stores the information to the database. The default implementation
-        simply calls process_text_file() on current_file, assuming that
-        the file is a plain text file. """
-        self.process_text_file(current_file)
+        always calls :func:``process_text_file`` and assumes that the file 
+        is a plain text file. 
+        
+        Subclasses of BaseCorpusBuilder should override this method so that
+        the appropriate method is called for the file. In this way, it is
+        possible for example to treat some files as plain text files by
+        calling :func:``process_text_file`` on them, and other files as 
+        XML files by calling :func:``process_xml_file``.
+        
+        Parameters
+        ----------
+        file_name : string
+            The path name of the file that is to be processed
 
-    def load_files(self):
+        """
+        self.process_text_file(file_name)
+
+    def build_load_files(self):
         """ Goes through the list of suitable files, and calls process_file()
         on each file name. File names are added to the file table.""" 
         files = self.get_file_list(self.arguments.path)
@@ -935,7 +1097,7 @@ class BaseCorpusBuilder(object):
     def create_joined_table(self):
         pass
     
-    def optimize(self):
+    def build_optimize(self):
         """ Optimizes the table columns so that they use a minimal amount
         of disk space."""
         totals = 0
@@ -981,8 +1143,23 @@ class BaseCorpusBuilder(object):
         if show_progress and not self._widget:
             progress.finish()
         
-    def create_indices(self, final):
-        """ Creates the table indices as specified in the table description."""
+    def build_create_indices(self):
+        """ 
+        Create a MySQL index for each column in the database. 
+        
+        In Coquery, each column of a corpus table can be included in the
+        output, and the columns are also available for filtering. As access
+        to MySQL columns can be very significantly faster if the column is
+        indexed, the corpus builder creates indices for any data column.
+        
+        The downside is that indexing may take considerable time for larger
+        corpora such as the British National Corpus or the Corpus of 
+        Contemporary American English. Indices also increase the disk space
+        required to store the corpus database.
+        
+        However, the performance increase won by indexing usually clearly 
+        outweighs these disadvantages.
+        """
         total_indices = 0
         for current_table in self.table_description:
             if "INDEX" in self.table_description[current_table]:
@@ -1027,8 +1204,21 @@ class BaseCorpusBuilder(object):
         return dir(BaseCorpusBuilder)
 
     def verify_corpus(self):
-        """ Returns True if the database and all tables in the table
-        description exist."""
+        """
+        Apply some basic checks to determine whether a MySQL database is
+        available to the corpus module.
+        
+        This method first checks whether a database under the given name is
+        exists on the MySQL server. It then tests whether the database
+        contains all data tables specified in the table descriptions defined 
+        by previous calls to :func:`create_table_description`.
+        
+        Returns
+        -------
+            bool : boolean
+                True if the database and all tables in the table
+                descriptions exist, or False otherwise.
+        """
         no_fail = True
         if not self.Con.has_database(self.arguments.db_name):
             no_fail = False
@@ -1063,8 +1253,8 @@ class BaseCorpusBuilder(object):
             warning_msg = "<p>{}</p><p>Do you really want to overwrite the existing version?</p>".format(warning_msg)
             return QtGui.QMessageBox.question(self._widget, "Library exists.", warning_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
                 
-    def write_python_module(self, corpus_path):
-        """ Writes a Python module with the necessary specifications to the
+    def build_write_module(self, corpus_path):
+        """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
         if self.arguments.dry_run:
             return
@@ -1129,7 +1319,7 @@ class BaseCorpusBuilder(object):
             self.logger.info("Library %s written." % path)
             
     def setup_db(self):
-        """ Creates a connection to the server, and creates the database if
+        """ Create a connection to the server, and creates the database if
         necessary."""
         dbconnection.verbose = self.arguments.verbose
         dbconnection.logger = self.logger
@@ -1164,7 +1354,7 @@ class BaseCorpusBuilder(object):
         return []
 
     def initialize_build(self):
-        """ Starts logging, starts the timer."""
+        """ Start logging, start the timer."""
         self.start_time = time.time()
         if self.arguments.dry_run:
             self.logger.info("--- Starting (dry run) ---")
@@ -1175,12 +1365,32 @@ class BaseCorpusBuilder(object):
         if not self._widget:
             print("\n%s\n" % textwrap.TextWrapper(width=79).fill(self.get_description()))
 
-    def finalize_build(self):
-        """ Logs duration of build. """
+    def build_finalize(self):
+        """ Wrap up everything after the corpus installation is complete. """
         self.Con.close()
         self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
 
     def build(self):
+        """ 
+        Build the corpus database, and install the corpus module.
+        
+        This method runs all steps required to make the data from a corpus 
+        available to Coquery. Most importantly, it calls these functions (in
+        order):
+        
+        * :func:`build_create_tables` to create all MySQL tables that were specified by previous calls to :func:`create_table_description`
+        * :func:`build_load_files` to read all datafiles, process their content, and insert the content into the MySQL tables
+        * :func:`build_self_joined` to create a self-joined corpus table that increases query performance of multi-token queries, but which requires a lot of disk space
+        * :func:`build_optimize` to ensure that the MySQL tables use the optimal data format for the data
+        * :func:`build_create_indices` to create database indices that speed up the MySQL queries
+        * :func:`build_write_module` to write the corpus module to the ``corpora`` sub-directory of the Coquery install directory (or the corpus directory specified in the configuration file)
+        
+        .. note:: 
+        
+            Self-joined tables are currently not supported by 
+            :class:`BaseCorpusBuilder`. Corpus installers that want to use
+            this feature have to override :func:`build_self_joined`.
+        """
         self.check_arguments()
         if not self._widget:
             self.setup_logger()
@@ -1189,29 +1399,27 @@ class BaseCorpusBuilder(object):
         self.initialize_build()
         
         if self.arguments.c:
-            self.create_tables()
-
-        #if self.arguments.i:
-            #self.create_indices(final=False)
+            self.build_create_tables()
 
         if self.arguments.l:
-            self.load_files()
+            self.build_load_files()
 
         if self.arguments.self_join:
-            self.self_join()
+            self.build_self_joined()
             
         for stage in self.additional_stages:
             stage()
             
         if self.arguments.o:
-            self.optimize()
+            self.build_optimize()
 
         if self.arguments.i:
-            self.create_indices(final=True)
+            self.build_create_indices(final=True)
 
         if self.verify_corpus():
-            self.write_python_module(self.arguments.corpus_path)
-        self.finalize_build()
+            self.build_write_module(self.arguments.corpus_path)
+            
+        self.build_finalize()
                 
 if use_gui:
 
@@ -1256,7 +1464,6 @@ if use_gui:
             else:
                 self.ui.box_build_options.setEnabled(False)
                 
-                
         def accept(self):
             self.accepted = True
             self.builder = self.builder_class(gui = self)
@@ -1293,6 +1500,5 @@ if use_gui:
             namespace.db_user = options.cfg.db_user
             namespace.db_password = options.cfg.db_password
             namespace.db_port = options.cfg.db_port
-            
             
             return namespace
