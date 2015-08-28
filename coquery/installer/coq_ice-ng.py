@@ -307,7 +307,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
             {"CREATE": create_columns,
             "INDEX": index_columns})
             
-        self.add_new_table_description(self.word_table,
+        self.create_table_description(self.word_table,
             [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(32) NOT NULL"),
              Column(self.word_lemma, "VARCHAR(32) NOT NULL"),
@@ -316,7 +316,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
             
                                        
 
-        self.add_new_table_description(self.word_table,
+        self.create_table_description(self.word_table,
             [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(32) NOT NULL"),
              Column(self.word_lemma, "VARCHAR(32) NOT NULL"),
@@ -345,12 +345,12 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 "`{}` TINYTEXT NOT NULL".format(self.file_name),
                 "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
 
-        self.add_new_table_description(self.file_table,
+        self.create_table_description(self.file_table,
             [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.file_name, "TINYTEXT NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
         
-        self.add_new_table_description(self.file_table,
+        self.create_table_description(self.file_table,
             [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.file_name, "TINYTEXT NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
@@ -394,7 +394,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         self.add_time_feature(self.source_date)
         self.add_time_feature(self.source_age)
 
-        self.add_new_table_description(self.source_table,
+        self.create_table_description(self.source_table,
             [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
             Column(self.source_mode, "TINYTEXT NOT NULL"),
             Column(self.source_date, "VARCHAR(15) NOT NULL"), 
@@ -404,7 +404,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
             Column(self.source_gender, "VARCHAR(1) NOT NULL"),  
             Column(self.source_ethnicity, "VARCHAR(15) NOT NULL")])
 
-        self.add_new_table_description(self.corpus_table,
+        self.create_table_description(self.corpus_table,
             [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Link(self.corpus_file_id, self.file_table),
              Link(self.corpus_word_id, self.word_table),
