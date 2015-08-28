@@ -1454,8 +1454,13 @@ class SQLCorpus(BaseCorpus):
         and yield the results. """
         query_string = self.sql_string_query(Query, self_joined)
         Query.Session.output_order.append("coquery_invisible_number_of_tokens")
-        if "coquery_query_token" in options.cfg.selected_features:
-            Query.Session.output_order += ["coquery_query_token_{}".format(x + 1) for x in range(Query.number_of_tokens)]
+        for rc_feature in options.cfg.selected_features:
+            if rc_feature.startswith("coquery_"):
+                if rc_feature == "coquery_query_token": 
+                    Query.Session.output_order += ["coquery_query_token_{}".format(x + 1) for x in range(Query.number_of_tokens)]
+                else:
+                    Query.Session.output_order.append(rc_feature)
+
         
         cursor = self.resource.DB.execute_cursor(query_string)
         for current_result in cursor:
