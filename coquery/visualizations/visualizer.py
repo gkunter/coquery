@@ -1,25 +1,31 @@
 # -*- coding: utf-8 -*-
-""" Provide the base classes required for data visualization. 
+""" 
+This module provides the base classes required for data visualization:
 
-The class Visualizer() provides the framework for new visualizations. Its 
-method draw() can be overridden to create a new plot type, and the method 
-setup_figure() can be used to define the grid layout required for this plot
-type. Visualizer classes have the class attribute visualize_frequency. If
-True, the class provides a plot type that can be used to display the result 
-of frequency queries. If False, it provides a plot type that can be used to
-display token queries (either DISTINCT or ALL).
+* :class:`Visualizer`
+* :class:`VisualizerDialog`
 
-Visualizer() also contains some interfaces to the result table, but these 
-functions may be moved to an independent class that provides some dataframe-
-like interfaces.
+The class :class:`Visualizer` provides the framework for new visualizations. 
+Implementation a new visualization usually involves the following steps:
 
-The second base class is VisualizerDialog(), which can be used to provide a
-dialog window for visualizations. This dialog makes use of the Matplotlib
-navigation toolbar for zooming, panning, and saving. It also provides the
-capability to freeze and unfreeze the current visualization.
+* Write a subclass of :class:`Visualizer`. The subclass will reimplement at least :func:`draw` to contain the plotting routines for the new visualization.
+* Store the Python file containing the subclass in the directory `visualizations`.
+* Make the new visualizer available to Coquery. At the moment, this can only be done by manually adding a menu entry to the `Visualizations` menu, and setting up the required signal connections in :mod:`gui/app.py`. Future versions of Coquery may provide a more simple interface for supplying visualizations.
 
-A visualization dialog with a specific visualization type can be opened by 
-calling the static method Plot(). """
+The class :class:`VisualizerDialog` provides a dialog window for 
+visualizations. This dialog makes use of the Matplotlib navigation toolbar 
+for zooming, panning, and saving. It also provides the capability to freeze 
+and unfreeze the current visualization. A visualization dialog with a 
+specific visualization type can be opened by calling :func:`VisualizerDialog.Plot`.
+
+Examples
+--------
+Examples of different visualizations can be found in the `visualizations` 
+folder of the Coquery installation. For instance,
+:mod:`visualizations/barplot.py` contains the subclass :class:`BarchartVisualizer` which visualizes the frequency distribution of 
+the current results table in the form of one or more barcharts, and  :mod:`visualizations/barcodeplot.py` contains the subclass :class:`BarcodeVisualizer` which draws a barcode plot where vertical lines 
+indicate the position within the corpus for each token in the result table.
+"""
 
 from __future__ import division
 from __future__ import print_function
@@ -94,11 +100,18 @@ import multiprocessing
 # len(pd.unique(self._table[column].values.ravel())) == 1
 
 class Visualizer(object):
-    """ Define a class that contains the code to visualize data in several
-    ways. The visualizer is provided with the data by calling the method
-    set_model(), and it gains access to the matplotlib figure by calling
-    the method set_subplot(). The method refresh() is called whenever
-    the data source changes. """
+    """ 
+    Define a class that contains the code to visualize data in several
+    ways. 
+    
+    The data to be visualized is passed to the visualizer by calling 
+    :func:`set_data_source`. :func:`update_data` contains the code that is
+    required to translate the data from the data source into a format that
+    is usable for the visualizer. This method is also called whenever the
+    layout or content of the data source changes. The visualization routines
+    are specified in :func:`draw`. This method is usually called externally 
+    by :func:`VisualizerDialog.Plot`. 
+    """
     
     visualize_frequency = True
     
@@ -178,7 +191,9 @@ class Visualizer(object):
         self.update_data()
         
     def get_palette(self):
-        """ Return a palette that is suitable for the data. """
+        """ 
+        Return a palette that is suitable for the data. 
+        """
         
         # choose the "Paired" palette if the number of grouping factor
         # levels is even and below 13, or the "Set3" palette otherwise:
@@ -196,8 +211,10 @@ class Visualizer(object):
         return sns.color_palette(palette_name)
         
     def update_data(self):
-        """ Update the internal representation of the model content so that
-        it is usable by the visualizer."""
+        """
+        Update the internal representation of the model content so that
+        it is usable by the visualizer.
+        """
         
         # _table stores the data from the model in such a way that it is 
         # accessible by the visualizer. """
@@ -266,13 +283,26 @@ class Visualizer(object):
                 self._col_wrap = None
 
     def get_content_tree(self, table, label="count"):
-        """ Return a tree that contains a tree representation of the table.
+        """ 
+        Return a tree that contains a tree representation of the table.
+        
         It is assumed that the first column represents the highest tree 
         level, the second column the second tree level, and so on. The last 
         column gives the values of the terminal nodes.
         
-        If an abstract data frame class is implemented at some point in the
-        future, this method should become a class method of that class.
+        Parameters
+        ----------
+        table : container object
+            A data object containing one or more columns that will be used
+            as branches for the tree, and a numeric column as the last 
+            column which will be used as the weight value for each branch.
+        label : string
+            The string used to label branch weights.        
+            
+        Returns
+        -------
+        tree : dict
+            A dictionary containing the tree structure of the data table.
         """
         tree = {}
         
@@ -287,12 +317,14 @@ class Visualizer(object):
         return tree
 
     def tree_weight(self, tree):
-        """ Return the summed values of all terminal nodes in the tree.
-        
-        If an abstract data frame class is implemented at some point in the
-        future, this method should become a class method of that class.
         """
-
+        Return the summed values of all terminal nodes in the tree.
+        
+        Parameters
+        ----------
+        tree : dict
+            A dictionary created by :func:`get_content_tree`.
+        """
         i = 0
         for node in tree:
             if isinstance(tree[node], (int, float, long)):
@@ -302,25 +334,66 @@ class Visualizer(object):
         return i
 
     def get_levels(self, name):
-        """ Return a set containing all distinct values in the column 'name'.
-        The values are returned in alphabetical order. """
+        """ 
+        Return a set containing all distinct values in the column 'name'.
+        
+        The values are returned in alphabetical order. 
+        
+        Parameters
+        ----------
+        name : string
+            The column name for which the unique values are requested
+            
+        Returns
+        -------
+        levels : list
+            A unique list of all values that are contained in the specified
+            data column.
+        """
         return pd.unique(self._table[name].values.ravel())
         
     def get_ordered_row(self, index):
-        """ Return a list containing the values of the dictionary 'row', in 
-        the order of the columns in the table view."""
+        """ 
+        Return a list containing the values of the dictionary 'row', in 
+        the order of the columns in the table view.
+        
+        Parameters
+        ----------
+        index : int
+            The row number 
+            
+        Returns
+        -------
+        row : a list of values from the data table
+        """
         return self._table.iloc[index]
 
-    def get_axis_rotation(self, axis, column):
-        """ Return a rotation angle for the axis text. The angle depends on
-        the oritentation of the axis, the number of factors to be drawn, and
-        on the current dimension of the subplot."""
+    def setup_axis(self, axis, label=None):
+        """ 
+        Setup the selected axis
+        
+        This method sets the labels on the vertical axis so that they are
+        always displayed in parallel to the horizotnal axis, and not rotated.
+        
+        For the vertical axis, it attempts to detect overlapping labels. If
+        overlap is found, the Matplotlib function
+        :func:`FigureCanvas.autofmt_xdate` is called which rotates the label
+        by 45 degrees in order to avoid overlap while still keeping 
+        readability high.
+        
+        Parameters
+        ----------
+        axis : string, either 'y' or 'x'
+            The axis for which the rotation is determined
+            
+        
+        """
         if axis.upper() == "Y":
             return 90
             # get adjusted width:
         return 0
 
-    def setup_axis(self, axis, label=None):
+
         if axis.upper() == "Y":
             self.g.set_yticklabels(rotation=0)
             #for tick in self.subplot.get_yticklabels():
@@ -350,16 +423,50 @@ class Visualizer(object):
 
 
     def get_font_scale(self, default=12):
-        """ Return the scale of the font that Qt is using, relative to the
-        default font size."""
-        return options.cfg.app.font().pointSize()/12
+        """ 
+        Return the scaling factor of the current font, relative to a default
+        font size.
+        
+        Parameters
+        ----------
+        default : int (default=12)
+            The default font size for which the relative scaling factor of 
+            the current font is calculated.
+            
+        Returns
+        -------
+        scale : float
+            The scaling factor of the current font.
+        """
+        return options.cfg.app.font().pointSize()/default
 
-    def get_colors_for_factor(self, column, rgb_string=False):
-        """ Return a dictionary with colors for each factor level. Colors
-        are recycled if necessary. If the argument 'rgb_string' is True, 
-        the dictionary will contain as values strings of the form #rrggbb. 
-        Otherwise, the values will be tuples with RGB values scaled from
-        0 to 1. """
+    def get_colors_for_factor(self, column, palette, rgb_string=False):
+        """ 
+        Create a dictionary with colors for each factor level. 
+        
+        The method assigns each distinct value from a data column to a 
+        color from the palette. If there are distinct values than colors, 
+        the palette is recycled.
+        
+        Parameters
+        ----------
+        column : string
+            The data column for which colors are requested
+        palette : iterable
+            An iterable containing tuples of three values (R, G, B) 
+            representing a color
+        rgb_string : bool
+            A boolean variable that specifies whether the color 
+            representations returned by this method should be strings of the
+            form #rrggbb if True. If False, the method returns tuples of
+            three RGB values scaled from 0 to 1 as representations
+        
+        Returns
+        -------
+        colors : dict
+            A dictionary with a color representation as the value for each 
+            factor level
+        """
         if rgb_string:
             col = ["#{:02X}{:02X}{:02X}".format(r, g, b) for r, g, b in color_categories]
         else:
@@ -368,8 +475,25 @@ class Visualizer(object):
         return dict(zip(fact, (col * (1 + (len(fact) // len(col))))[0:len(fact)]))
 
     def get_plot_context(self):
-        """ Return one of the Seaborn contexts. The selection depends on the
-        font size."""
+        """ 
+        Return one of the Seaborn contexts. 
+        
+        The :mod:`Seaborn` library, which handles the overall layout of the
+        :mod:`matplotlib` canvas that is used for drawing, provides different
+        plotting contexts that manage font sizes, margins, and so on. The 
+        available contexts are: `paper`, `notebook`, `talk`, and `poster`,
+        in increasing context size order.
+        
+        This method selects a suitable context based on the current font 
+        scaling that is determined by calling :func:`get_font_scale`. For 
+        larger font sizes, larger context sizes are chosen. This should 
+        adjust spacing for displays with different resolutions.
+        
+        Returns
+        -------
+        context : string
+            A Seaborn context, either `paper`, `notebook`, `talk`, or `poster`
+        """
         font_scale = self.get_font_scale()
         
         if font_scale <= 0.7:
@@ -495,7 +619,7 @@ class VisualizerDialog(QtGui.QWidget):
         toolbar. """
         try:
             key_press_handler(event, self.canvas, self.toolbar)
-        except ValueError, AttributeError:
+        except (ValueError, AttributeError) as e:
             logger.warn("The keypress '{}' could not be handled correctly by the graph library.".format(event.key))
             
     def connect_signals(self):
