@@ -1,4 +1,5 @@
 from __future__ import unicode_literals 
+from __future__ import print_function
 
 try:
     import MySQLdb as mysql
@@ -71,9 +72,9 @@ class DBConnection(object):
             else:
                 return True
         except Exception as e:
-            print
-            print
-            print command
+            print()
+            print()
+            print(command)
             raise e
 
     def has_table(self, table_name):
