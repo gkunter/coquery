@@ -127,6 +127,9 @@ class ResourceIncompleteDefinitionError(GenericException):
 class LexiconUnsupportedFunctionError(GenericException):
     error_message = "Function not yet supported by lexicon."
 
+class WordNotInLexiconError(NoTraceException):
+    error_message = "Word is not in the lexicon"
+
 class LexiconUnknownPartOfSpeechTag(GenericException):
     error_message = "Part-of-speech tag not in current lexicon"
     def __init__(self, par):

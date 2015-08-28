@@ -1015,7 +1015,7 @@ class SQLLexicon(BaseLexicon):
         self.resource.DB.execute(self.sql_string_get_matching_wordids(token))
         query_results = self.resource.DB.fetch_all ()
         if not query_results:
-            return [-1]
+            raise WordNotInLexiconError
         else:
             return [x[0] for x in query_results]
         
@@ -1054,11 +1054,15 @@ class SQLCorpus(BaseCorpus):
                 word_pos_column = self.resource.word_pos_id
         except AttributeError:
             word_pos_column = None
-        S = "SELECT COUNT(*) FROM {0} WHERE {1}".format(
-            self.resource.corpus_table,
-            " AND ".join(self.get_whereclauses(token, self.resource.word_id, word_pos_column)))
-        self.resource.DB.execute(S)
-        freq = self.resource.DB.Cur.fetchone()[0]
+        try:
+            where_clauses = self.get_whereclauses(token, self.resource.word_id, word_pos_column)
+        except WordNotInLexicon:
+            freq = 0
+        else:
+            S = "SELECT COUNT(*) FROM {0} WHERE {1}".format(
+                self.resource.corpus_table, " AND ".join(where_clauses))
+            self.resource.DB.execute(S)
+            freq = self.resource.DB.Cur.fetchone()[0]
         self._frequency_cache[token.S] = freq
         return freq
 
@@ -1179,10 +1183,17 @@ class SQLCorpus(BaseCorpus):
         except AttributeError:
             word_pos_column = None
         else:
-            word_pos_column = self.resource.__getattribute__(pos_feature)
+            try:
+                word_pos_column = self.resource.__getattribute__(pos_feature)
+            except AttributeError:
+                word_pos_column = None
 
         sub_list = set([])
-        for x in self.get_whereclauses(current_token, self.resource.corpus_word_id, word_pos_column):
+        where_clauses = self.get_whereclauses(
+            current_token, 
+            self.resource.corpus_word_id, 
+            word_pos_column)
+        for x in where_clauses:
             if x: 
                 sub_list.add(x)
         if sub_list:
@@ -1433,6 +1444,11 @@ class SQLCorpus(BaseCorpus):
             final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
             final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.context_source_id))
 
+        # if nothing is selected at all, add at least the corpus id to the 
+        # list:
+        if not final_select:
+            final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
+            
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(final_select))
         
         # add LIMIT clause if necessary:
@@ -1452,7 +1468,12 @@ class SQLCorpus(BaseCorpus):
     def yield_query_results(self, Query, self_joined=False):
         """ Run the corpus query specified in the Query object on the corpus
         and yield the results. """
-        query_string = self.sql_string_query(Query, self_joined)
+        
+        try:
+            query_string = self.sql_string_query(Query, self_joined)
+        except WordNotInLexiconError:
+            query_string = ""
+        
         Query.Session.output_order.append("coquery_invisible_number_of_tokens")
         for rc_feature in options.cfg.selected_features:
             if rc_feature.startswith("coquery_"):
@@ -1462,7 +1483,10 @@ class SQLCorpus(BaseCorpus):
                     Query.Session.output_order.append(rc_feature)
 
         
-        cursor = self.resource.DB.execute_cursor(query_string)
+        if query_string:
+            cursor = self.resource.DB.execute_cursor(query_string)
+        else:
+            cursor = {}
         for current_result in cursor:
             if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
                 # add contexts for each query match:
