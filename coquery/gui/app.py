@@ -1123,7 +1123,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.change_corpus()
 
     def build_corpus(self):
-        sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../tools")))
         import coq_generic
         import corpusbuilder
         corpusbuilder.BuilderGui(coq_generic.GenericCorpusBuilder, self)
