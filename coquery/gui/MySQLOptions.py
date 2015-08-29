@@ -29,7 +29,7 @@ def check_valid_host(s):
     def is_valid_ipv6_address(address):
         try:
             socket.inet_pton(socket.AF_INET6, address)
-        except socket.error:  # not a valid address
+        except (socket.error, AttributeError):  # not a valid address
             return False
         return True
 
