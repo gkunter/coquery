@@ -717,10 +717,10 @@ class BaseCorpusBuilder(object):
         # read file using the specified encoding (default is 'utf-8), and 
         # retry using 'ISO-8859-1'/'latin-1' in case of an error:
         try:
-            with codecs.open(file_name, "rt", encoding=self.arguments.encoding) as input_file:
+            with codecs.open(file_name, "r", encoding=self.arguments.encoding) as input_file:
                 input_data = input_file.read()
         except UnicodeDecodeError:
-            with codecs.open(file_name, "rt", encoding="ISO-8859-1") as input_file:
+            with codecs.open(file_name, "r", encoding="ISO-8859-1") as input_file:
                 input_data = input_file.read()
                 
         input_data = input_data.splitlines()
@@ -776,10 +776,10 @@ class BaseCorpusBuilder(object):
         
         # Read raw text from file:
         try:
-            with codecs.open(file_name, "rt", encoding=self.arguments.encoding) as input_file:
+            with codecs.open(file_name, "r", encoding=self.arguments.encoding) as input_file:
                 raw_text = input_file.read()
         except UnicodeDecodeError:
-            with codecs.open(file_name, "rt", encoding="ISO-8859-1") as input_file:
+            with codecs.open(file_name, "r", encoding="ISO-8859-1") as input_file:
                 raw_text = input_file.read()
             
         tokens = []
@@ -1300,7 +1300,7 @@ class BaseCorpusBuilder(object):
         # Handle existing versions of the corpus module
         if os.path.exists(path):
             # Read existing code as string:
-            with codecs.open(path, "rt") as input_file:
+            with codecs.open(path, "r") as input_file:
                 existing_code = input_file.read()
             # Keep if existing code is the same as the new code:
             if existing_code == output_code:
@@ -1318,7 +1318,7 @@ class BaseCorpusBuilder(object):
                 else:
                     return
         # write module code:
-        with codecs.open(path, "wt") as output_file:
+        with codecs.open(path, "w") as output_file:
             output_file.write(output_code)
             self.logger.info("Library %s written." % path)
             

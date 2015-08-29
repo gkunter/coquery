@@ -553,7 +553,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         self._current_file = current_file
 
         file_buffer = cStringIO.StringIO()
-        with codecs.open(current_file, "rt", encoding = self.arguments.encoding) as input_file:
+        with codecs.open(current_file, "r", encoding = self.arguments.encoding) as input_file:
             skip = False
             fix_split_token = ""
             for i, line in enumerate(input_file):

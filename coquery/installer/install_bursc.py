@@ -217,7 +217,7 @@ class BURSCBuilder(corpusbuilder.BaseCorpusBuilder):
         root, ext = os.path.splitext(filename)
         self._wrd_list = []
         try:
-            with codecs.open("{}.wrd".format(root), "rt", encoding="latin-1") as wrd_file:
+            with codecs.open("{}.wrd".format(root), "r", encoding="latin-1") as wrd_file:
                 in_body = False
                 for row in wrd_file:
                     row = row.strip()
@@ -245,7 +245,7 @@ class BURSCBuilder(corpusbuilder.BaseCorpusBuilder):
         self._pos_list = collections.OrderedDict()
         root, ext = os.path.splitext(filename)
         try:
-            with codecs.open("{}.pos".format(root), "rt") as pos_file:
+            with codecs.open("{}.pos".format(root), "r") as pos_file:
                 for row in pos_file:
                     row = row.strip()
                     if row.strip():
@@ -263,7 +263,7 @@ class BURSCBuilder(corpusbuilder.BaseCorpusBuilder):
         if not os.path.exists(transcript_file):
             transcript_file = "{}.ala".format(root)
         if os.path.exists(transcript_file):
-            with codecs.open(transcript_file, "rt") as transcript_file:
+            with codecs.open(transcript_file, "r") as transcript_file:
                 transcript = []
                 for row in transcript_file:
                     if row.strip():
@@ -283,10 +283,10 @@ class BURSCBuilder(corpusbuilder.BaseCorpusBuilder):
         
     def process_txt_file(self, filename):
         try:
-            with codecs.open(filename, "rt", encoding=self.arguments.encoding) as input_file:
+            with codecs.open(filename, "r", encoding=self.arguments.encoding) as input_file:
                 raw_text = input_file.read()
         except UnicodeDecodeError:
-            with codecs.open(filename, "rt", encoding="ISO-8859-1") as input_file:
+            with codecs.open(filename, "r", encoding="ISO-8859-1") as input_file:
                 raw_text = input_file.read()
         self._word_list = []
         for word in raw_text.split():

@@ -204,7 +204,7 @@ class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
     # Redefine the process_file method so that the .words files provided
     # by the Buckeye corpus are handled correctly:
     def process_file(self, filename):
-        with codecs.open(filename, "rt", encoding="utf8") as input_file:
+        with codecs.open(filename, "r", encoding="utf8") as input_file:
             for current_line in csv.reader(input_file, delimiter=str("\t")):
                 if len(current_line) == 5:
                     time, word, lemma_trans, trans, pos = current_line

@@ -86,7 +86,7 @@ class CMUdictBuilder(BaseCorpusBuilder):
         super(CMUdictBuilder, self).create_tables()
 
     def load_files(self):
-        with codecs.open(self.arguments.path, "rt", encoding = self.arguments.encoding) as input_file:
+        with codecs.open(self.arguments.path, "r", encoding = self.arguments.encoding) as input_file:
             for word_id, current_line in enumerate(input_file):
                 current_line = current_line.strip()
                 if current_line and not current_line.startswith (";;;"):
