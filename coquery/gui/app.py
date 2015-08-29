@@ -1084,7 +1084,6 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 import webbrowser
                 webbrowser.open(url)
-                
         
     def remove_corpus(self):
         if self.ui.combo_corpus.isEnabled():
@@ -1124,9 +1123,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def build_corpus(self):
         sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../tools")))
-        import install_generic
+        import coq_generic
         import corpusbuilder
-        corpusbuilder.BuilderGui(install_generic.GenericCorpusBuilder, self)
+        corpusbuilder.BuilderGui(coq_generic.GenericCorpusBuilder, self)
         self.fill_combo_corpus()
         self.change_corpus()
             
