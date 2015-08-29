@@ -35,3 +35,9 @@ else:
         QtGui.QVBoxLayout.setMargin = lambda x, y: True
     if "setMargin" not in dir(QtGui.QGridLayout):
         QtGui.QGridLayout.setMargin = lambda x, y: True
+
+import sys
+if sys.platform == 'win32':
+    frameShadow = QtGui.QFrame.Sunken
+else:
+    frameShadow = QtGui.QFrame.Raised
