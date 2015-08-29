@@ -1284,35 +1284,24 @@ class SQLCorpus(BaseCorpus):
                     alias = sub_tree["alias"],
                     where = where_string)
 
-        output_columns = []
-        for x in options.cfg.selected_features:
-            if x in corpus_variables and number > 0:
-                break
-            rc_table = "{}_table".format(x.split("_")[0])
-            if rc_table == "coquery_table":
-                continue
-            tree = required_tables[rc_table]
-            output_columns.append("{}.{}{}".format(tree["alias"], self.resource.__getattribute__(x), number + 1))
-        
+        # create a list containing the join strings for the different tables,
+        # in the order in which they are required based on their position in
+        # the database layout:
         table_order = self.resource.get_table_order(full_tree)
         L = []
         for x in table_order:
-            if x in join_strings:
-                if join_strings[x] not in L:
-                    L.append(join_strings[x])
-        if not select_list:
-            return "", None, None
+            if x in join_strings and not join_strings[x] in L:
+                L.append(join_strings[x])
 
+        if not select_list:
+            return ""
+        
         # add the variable storing the source_id or file_id to the selected
         # columns so that they can be used to retrieve the context:
         if number == 0 and options.cfg.context_source_id:
             select_list.add("coq_{}_1".format(options.cfg.context_source_id))
 
-        select_list.add("coq_corpus_id_{}".format(number+1))
-
-        return "SELECT {} FROM {}".format(
-            ", ".join(select_list), 
-            " ".join(L)), select_list, L
+        return "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
     
     def get_subquery_order(self, Query):
         """ Return an order list in which the subqueries should be executed. 
@@ -1364,18 +1353,18 @@ class SQLCorpus(BaseCorpus):
         # of the first token of the query. 
         options.cfg.context_source_id = None
         
-        query_string_part = []
         sub_query_list = {}
 
         order = self.get_subquery_order(Query)
         logger.info("Token order: {}".format(", ".join([Query.tokens[x-1].S for x in order])))
         referent_id = order.pop(0)
-        
-        for i, current_token in enumerate(Query.tokens):
-            s, select_list, join_list = self.get_sub_query_string(current_token, i, self_joined)
-            if i == referent_id - 1:
+
+        # get a partial query string for each token:
+        for i, token in enumerate(Query.tokens):
+            s = self.get_sub_query_string(token, i, self_joined)
+            if i + 1 == referent_id:
                 sub_query_list[i+1] = s                
-            elif i < referent_id - 1:
+            elif i + 1 < referent_id:
                 if s:
                     join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{i} >= {i1} AND coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
                         s = s, 
