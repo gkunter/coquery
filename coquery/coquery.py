@@ -94,7 +94,7 @@ def main():
     # Run the Application GUI?
     if options.cfg.gui:
         sys.path.append(os.path.join(sys.path[0], "gui"))
-        from pyqt_compat import QtCore, QtGui
+        from pyqt_compat import QtGui
         from app import CoqueryApp
         from app import GuiHandler
 
