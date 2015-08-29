@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import sys
+
+s = "".join(sys.stdin.readlines())
+s = s.replace("from PyQt4 import QtCore, QtGui", 
+                "from pyqt_compat import QtCore, QtGui, frameShadow")
+s = s.replace("setFrameShadow(QtGui.QFrame.Raised)", 
+                "setFrameShadow(frameShadow)")
+print s        
