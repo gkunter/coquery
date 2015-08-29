@@ -626,11 +626,11 @@ class BaseCorpusBuilder(object):
         pass
 
     def store_filename(self, file_name):
-        self._file_name = current_file
+        self._file_name = file_name
         self._file_id = self.table_get(self.file_table, 
-            {self.file_path: current_file,
+            {self.file_path: file_name,
              self.file_name: 
-                 os.path.splitext(os.path.basename(current_file))[0]
+                 os.path.splitext(os.path.basename(file_name))[0]
                  })
 
     def get_lemma(self, word):
@@ -1131,9 +1131,16 @@ class BaseCorpusBuilder(object):
                             current_table, current_field, current_type, optimal_type))
                         try:
                             self.Con.modify_field_type(current_table, current_field, optimal_type)
-                        except dbconnection.mysql.OperationalError as e:
+                        except (
+                            dbconnection.mysql.InterfaceError, 
+                            dbconnection.mysql.DataError,
+                            dbconnection.mysql.DatabaseError, 
+                            dbconnection.mysql.OperationalError, 
+                            dbconnection.mysql.IntegrityError, 
+                            dbconnection.mysql.InternalError, 
+                            dbconnection.mysql.ProgrammingError) as e:
                             if self.logger:
-                                self.logger.error(e)
+                                self.logger.warning(e)
                 column_count += 1
                 if self._widget:
                     self._widget.ui.progress_bar.setValue(column_count)
@@ -1176,9 +1183,6 @@ class BaseCorpusBuilder(object):
         self.Con.start_transaction()
         for i, current_table in enumerate(self.table_description):
             # only create indices for the corpus table in the final pass:
-            if not final and current_table == self.corpus_table:
-                continue
-
             description = self.table_description[current_table]
             if "INDEX" in description:
                 for variables, length, index_type in description["INDEX"]:
@@ -1190,7 +1194,7 @@ class BaseCorpusBuilder(object):
                             self.Con.create_index(current_table, current_index, variables, index_type, length)
                         except dbconnection.mysql.OperationalError as e:
                             if self.logger:
-                                self.logger.error(e)
+                                self.logger.Warning(e)
                     index_count += 1
                     if self._widget:
                         self._widget.ui.progress_bar.setValue(i)
@@ -1414,7 +1418,7 @@ class BaseCorpusBuilder(object):
             self.build_optimize()
 
         if self.arguments.i:
-            self.build_create_indices(final=True)
+            self.build_create_indices()
 
         if self.verify_corpus():
             self.build_write_module(self.arguments.corpus_path)
