@@ -84,11 +84,12 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         
         # DisplayRole: return the content of the cell in the data frame:
         if role == QtCore.Qt.DisplayRole:
-            try:
-                return self.content.iloc[index.row()][self.header[index.column()]]
-            except (IndexError, KeyError):
-                return None
-
+            column = self.header[index.column()]
+            value = self.content.iloc[index.row()][column] 
+            if type(value) == np.int64:
+                value = int(value)
+            return value
+            
         # ForegroundRole: return the colour of the column, or the default if
         # no color is specified:
         elif role == QtCore.Qt.ForegroundRole:
@@ -134,7 +135,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             
             # Get header string?
             column = self.column(index)
-            
             # do not return a header string for invisible columns:
             if column.startswith("coquery_invisible"):
                 return None
