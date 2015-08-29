@@ -44,9 +44,7 @@ import sys
 import os
 import argparse
 import logging
-import glob, imp
 import codecs
-import collections
 import tokens
 
 from defines import *
@@ -172,10 +170,12 @@ class Options(object):
             
         if args.corpus:
             self.args.corpus = args.corpus
+        else:
+            self.args.corpus = ""
         
         # if no corpus is selected and no GUI is requested, display the help
         # and exit.
-        if "corpus" not in dir(self.args) and not (args.gui):
+        if not self.args.corpus and not (args.gui):
             self.parser.print_help()
             sys.exit(1)
         
