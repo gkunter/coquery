@@ -15,6 +15,7 @@ except NameError:
 
 import __init__
 import collections
+import datetime
 
 from errors import *
 import tokens
@@ -304,6 +305,27 @@ class CorpusQuery(object):
                     df[df_col] = self.input_frame[input_col][0]
         return df
 
+    def no_result_data_frame(self):
+        """
+        Return a data frame that represents a query without results.
+        
+        This method creates a new data frame that contains '<NA>' for all
+        output columns that would be filled by data from the data base if the
+        query matched any token from the corpus. Columns that contain static
+        data, i.e. values that are not provided by the data base, but by 
+        Coquery itself (e.g. the query string, the name of the input file),
+        the data frame contains the appropriate values.
+        
+        Returns
+        -------
+        df : DataFrame
+            A data frame with strings '<NA>' in data columns, and appropriate
+            values for the static columns.
+        """
+        df = pd.DataFrame([["<NA>"] * len(self.Session.output_order)], columns=self.Session.output_order)
+        df = self.insert_static_data(df)
+        return df
+
     def write_results(self, output_object):
         """ Transform the query results to a pandas DataFrame that is either
         directly written to a CSV file, or stored for later processing in
@@ -312,9 +334,9 @@ class CorpusQuery(object):
         df = pd.DataFrame(self.Results)
         df = self.insert_static_data(df)
 
-        if len(df.index) > 0:
-            vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
-
+        vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
+        # check if the results table contains rows and columns
+        if len(df.index) and len(vis_cols):
             # word and lemma columns are lower-cased, unless requested otherwise:
             if not options.cfg.case_sensitive and len(df.index) > 0:
                 for x in df.columns:
@@ -326,7 +348,7 @@ class CorpusQuery(object):
                 df.drop_duplicates(subset=vis_cols, inplace=True)
                 df.reset_index(drop=True, inplace=True)
         else:
-            vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
+            # create an empty data frame
             df = pd.DataFrame(columns=vis_cols)
 
         df = self.aggregate_data(df)
@@ -409,13 +431,8 @@ class FrequencyQuery(TokenQuery):
         self.Session.output_order.append("coq_frequency")
         
         if len(df.index) == 0:
-            # if there are no rows in the data frame, i.e. if the query did
-            # not match any token in the corpus, create a new data frame that
-            # contains '<NA>' for all columns filled from the database, and 
-            # the appropriate static data for the other columns:
-            df = df.append(pd.DataFrame([["<NA>"] * len(self.Session.output_order)], columns=self.Session.output_order))
+            df = self.no_result_data_frame()
             df["coq_frequency"] = 0
-            df = self.insert_static_data(df)
             return df
         elif len(group_columns) == 0:
             # if no grouping variables are selected, simply return the first
