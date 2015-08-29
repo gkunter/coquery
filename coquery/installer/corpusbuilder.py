@@ -1123,7 +1123,10 @@ class BaseCorpusBuilder(object):
                     current_field = match.group(1)
                     self.logger.info("Determine current and optimal type for column {}.{}".format(
                         current_table, current_field))
-                    optimal_type = self.Con.get_optimal_field_type(current_table, current_field)
+                    try:
+                        optimal_type = self.Con.get_optimal_field_type(current_table, current_field)
+                    except AttributeError:
+                        continue
                     current_type = self.Con.get_field_type(current_table, current_field)
                     if current_type.lower() != optimal_type.lower():
                         optimal_type = optimal_type.decode("utf-8")
