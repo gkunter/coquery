@@ -29,6 +29,7 @@ import pandas as pd
 
 # load visualizations
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
+sys.path.append(os.path.join(sys.path[0], "installer"))
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
