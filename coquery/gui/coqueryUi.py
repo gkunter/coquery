@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'coquery.ui'
+# Form implementation generated from reading ui file 'gui/coquery.ui'
 #
-# Created: Sun Aug 23 18:04:56 2015
+# Created: Sun Aug 30 00:04:47 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui
+from pyqt_compat import QtCore, QtGui, frameShadow
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -39,7 +39,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.options_area.sizePolicy().hasHeightForWidth())
         self.options_area.setSizePolicy(sizePolicy)
         self.options_area.setFrameShape(QtGui.QFrame.NoFrame)
-        self.options_area.setFrameShadow(QtGui.QFrame.Raised)
+        self.options_area.setFrameShadow(frameShadow)
         self.options_area.setObjectName(_fromUtf8("options_area"))
         self.horizontalLayout_7 = QtGui.QHBoxLayout(self.options_area)
         self.horizontalLayout_7.setSpacing(20)
@@ -64,7 +64,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.box_corpus_select.sizePolicy().hasHeightForWidth())
         self.box_corpus_select.setSizePolicy(sizePolicy)
         self.box_corpus_select.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.box_corpus_select.setFrameShadow(QtGui.QFrame.Raised)
+        self.box_corpus_select.setFrameShadow(frameShadow)
         self.box_corpus_select.setObjectName(_fromUtf8("box_corpus_select"))
         self.horizontalLayout_5 = QtGui.QHBoxLayout(self.box_corpus_select)
         self.horizontalLayout_5.setMargin(10)
@@ -95,7 +95,7 @@ class Ui_MainWindow(object):
         self.corpus_settings.addWidget(self.box_corpus_select)
         self.box_query_mode = QtGui.QFrame(self.general_settings)
         self.box_query_mode.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.box_query_mode.setFrameShadow(QtGui.QFrame.Raised)
+        self.box_query_mode.setFrameShadow(frameShadow)
         self.box_query_mode.setObjectName(_fromUtf8("box_query_mode"))
         self.gridLayout_5 = QtGui.QGridLayout(self.box_query_mode)
         self.gridLayout_5.setMargin(10)
@@ -141,7 +141,7 @@ class Ui_MainWindow(object):
         self.corpus_settings.addWidget(self.box_query_mode)
         self.box_context_settings = QtGui.QFrame(self.general_settings)
         self.box_context_settings.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.box_context_settings.setFrameShadow(QtGui.QFrame.Raised)
+        self.box_context_settings.setFrameShadow(frameShadow)
         self.box_context_settings.setObjectName(_fromUtf8("box_context_settings"))
         self.verticalLayout_8 = QtGui.QVBoxLayout(self.box_context_settings)
         self.verticalLayout_8.setMargin(10)
@@ -254,7 +254,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.box_input_settings.sizePolicy().hasHeightForWidth())
         self.box_input_settings.setSizePolicy(sizePolicy)
         self.box_input_settings.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.box_input_settings.setFrameShadow(QtGui.QFrame.Raised)
+        self.box_input_settings.setFrameShadow(frameShadow)
         self.box_input_settings.setObjectName(_fromUtf8("box_input_settings"))
         self.verticalLayout = QtGui.QVBoxLayout(self.box_input_settings)
         self.verticalLayout.setSpacing(20)
@@ -358,7 +358,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.box_output_options.sizePolicy().hasHeightForWidth())
         self.box_output_options.setSizePolicy(sizePolicy)
         self.box_output_options.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.box_output_options.setFrameShadow(QtGui.QFrame.Raised)
+        self.box_output_options.setFrameShadow(frameShadow)
         self.box_output_options.setObjectName(_fromUtf8("box_output_options"))
         self.output_columns = QtGui.QVBoxLayout(self.box_output_options)
         self.output_columns.setSpacing(0)
@@ -379,7 +379,7 @@ class Ui_MainWindow(object):
         self.output_settings.addWidget(self.box_output_options)
         self.box_source_filter = QtGui.QFrame(self.options_area)
         self.box_source_filter.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.box_source_filter.setFrameShadow(QtGui.QFrame.Raised)
+        self.box_source_filter.setFrameShadow(frameShadow)
         self.box_source_filter.setObjectName(_fromUtf8("box_source_filter"))
         self.verticalLayout_5 = QtGui.QVBoxLayout(self.box_source_filter)
         self.verticalLayout_5.setObjectName(_fromUtf8("verticalLayout_5"))
@@ -674,4 +674,5 @@ class Ui_MainWindow(object):
         self.action_percentage_area_plot.setText(_translate("MainWindow", "&Percentage areas", None))
         self.action_stacked_area_plot.setText(_translate("MainWindow", "&Stacked areas", None))
         self.action_line_plot.setText(_translate("MainWindow", "&Lines", None))
+
 
