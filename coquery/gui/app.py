@@ -1095,7 +1095,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 size = FileSize(sqlwrap.SqlDB(options.cfg.db_host, options.cfg.db_port, options.cfg.db_user, options.cfg.db_password).get_database_size(database))
             except  TypeError:
                 size = FileSize(-1)
-            msg_corpus_remove = "<p><b>You have requested to remove the corpus '{0}'.</b></p><p>This step cannot be reverted. If you proceed, the corpus will not be available for further queries before you install it again.</p><p>Removing '{0}' will free approximately {1:.1S} of disk memory.</p><p><p>Do you really want to remove the corpus?</p>".format(current_corpus, size)
+            msg_corpus_remove = "<p><b>You have requested to remove the corpus '{0}'.</b></p><p>This step cannot be reverted. If you proceed, the corpus will not be available for further queries before you install it again.</p><p>Removing '{0}' will free approximately {1:.1S} of disk space.</p><p><p>Do you really want to remove the corpus?</p>".format(current_corpus, size)
             
             response = QtGui.QMessageBox.warning(
                 self, "Remove corpus", msg_corpus_remove, QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
@@ -1123,9 +1123,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.change_corpus()
 
     def build_corpus(self):
-        import coq_generic
+        import coq_install_generic
         import corpusbuilder
-        corpusbuilder.BuilderGui(coq_generic.GenericCorpusBuilder, self)
+        corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, self)
         self.fill_combo_corpus()
         self.change_corpus()
             
