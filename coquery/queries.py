@@ -14,12 +14,9 @@ except NameError:
     pass
 
 import __init__
-import copy
-import string
 import collections
 
 from errors import *
-from corpus import *
 import tokens
 import options
 
@@ -149,10 +146,23 @@ class QueryFilter(object):
         return self.var, self.operator, self.value_list, self.value_range
             
     def validate(self, s):
-        """ Check if the text contains a valid filter. A filter is valid if
-        it has the form 'x OP y', where x is a resource variable name, OP is
-        a comparison operator, and value is either a string, a number or a 
-        list. """
+        """ 
+        Check if the text contains a valid filter. 
+        
+        A filter is valid if it has the form 'x OP y', where x is a resource 
+        variable name, OP is a comparison operator, and value is either a 
+        string, a number or a list. 
+        
+        Parameters
+        ----------
+        s : string
+            The text of the filter
+            
+        Returns
+        -------
+        b : boolean
+            True if the argumnet is a valid filter text, or False otherwise.
+        """
         var, op, value_range, value_list = self.parse_filter(s)
         if not var:
             return False
@@ -168,8 +178,19 @@ class QueryFilter(object):
         return True
     
     def check_number(self, n):
-        """ Return true if the number n is not filtered by this filter, or
-        false otherwise."""
+        """
+        Check whether the integer value n is filtered by this filter.
+        
+        Parameters
+        ----------
+        n : int
+            The value to be checked against the filter
+            
+        Returns
+        -------
+        b : boolean
+            True if the value is filtered by this filter, or False otherwise.
+        """
         if not self._parsed:
             self.parse_filter(self._text)
             
@@ -189,8 +210,10 @@ class QueryFilter(object):
             return False
 
 class CorpusQuery(object):
-    """ Define a class that manages the query string, and is responsible for
-    the output of the query results. """
+    """ 
+    This class manages the query string, and is responsible for the output 
+    of the query results. 
+    """
     
     collapse_identical = True
 
@@ -233,8 +256,23 @@ class CorpusQuery(object):
         return df
     
     def insert_static_data(self, df):
-        """ Insert data columns that are constant for each query result in 
-        the query, e.g. data from the input file, query string data, etc. """
+        """ 
+        Insert columns that are constant for each query result in the query.
+        
+        Static data is the data that is not obtained from the database, but
+        is derived from external sources, e.g. the current system time, 
+        the other columns in the input file, the query string, etc. 
+        
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame into which the static data is inserted.
+        
+        Returns
+        -------
+        df : DataFrame
+            The data frame containing also the static data.
+        """
         
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
@@ -312,30 +350,47 @@ class CorpusQuery(object):
         return
 
 class TokenQuery(CorpusQuery):
-    """ Define a subclass of CorpusQuery. The only difference between this
-    subclass and the parent class CorpusQuery is that the attribute
-    collapse_identical is set to False in the subclass. This attribute is 
-    evaluated in the write_results() method. 
+    """ 
+    TokenQuery is a subclass of CorpusQuery. 
     
-    If collapse_identical is True (as in CorpusQuery), query results with 
-    identical output lines are collapsed into a single row, i.e. are included 
-    in the output only once.
-
-    If collapse_identical is False (as in this subclass), query results with
-    identical output lines are always included in the output. """
+    In this subclass, the attribute collapse_identical is set to False so 
+    that :func:`write_results` does not remove the duplicate rows from the
+    data frame containing the query results.
+    """
     collapse_identical = False
 
 class FrequencyQuery(TokenQuery):
-    """ Define a Query class that creates an aggregate table of the 
-    results with a frequency column. Also apply frequency filters. 
+    """ 
+    FrequencyQuery is a subclass of TokenQuery.
     
-    The results are grouped by all columns that are currently visible. The 
-    invisible coulmns are sampled so that each aggregate row contains the 
-    first value from each aggregate group. """
+    In this subclass, :func:`write_results` creates an aggregrate table of
+    the data frame containing the query results. The results are grouped by 
+    all columns that are currently visible. The invisible coulmns are sampled 
+    so that each aggregate row contains the first value from each aggregate 
+    group. The aggregate table contains an additional column with the lengths
+    of the groups as a frequency value.
+    
+    The aggregated table is also filtered by applying the currently active
+    frequency filters.
+    """
     
     def aggregate_data(self, df):
-        # get a list of grouping and sampling columns:
+        """
+        Aggregate the data frame by obtaining the row frequencies for each
+        group specified by the visible data columns.
         
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame to be aggregated
+            
+        Returns
+        -------
+        df : DataFrame
+            A new data frame that contains in the column coq_frequency the
+            row frequencies of the aggregated groups.
+        """
+        # get a list of grouping and sampling columns:
         columns = []
         for x in df.columns.values:
             try:
@@ -354,9 +409,21 @@ class FrequencyQuery(TokenQuery):
         self.Session.output_order.append("coq_frequency")
         
         if len(df.index) == 0:
+            # if there are no rows in the data frame, i.e. if the query did
+            # not match any token in the corpus, create a new data frame that
+            # contains '<NA>' for all columns filled from the database, and 
+            # the appropriate static data for the other columns:
             df = df.append(pd.DataFrame([["<NA>"] * len(self.Session.output_order)], columns=self.Session.output_order))
-            df = self.insert_static_data(df)
             df["coq_frequency"] = 0
+            df = self.insert_static_data(df)
+            return df
+        elif len(group_columns) == 0:
+            # if no grouping variables are selected, simply return the first
+            # row of the data frame together with the total length of the 
+            # data frame as the frequency:
+            freq = len(df.index)
+            df = df.iloc[[0]]
+            df["coq_frequency"] = freq
             return df
         else:
             # create a dictionary that contains the aggregate functions for
@@ -374,7 +441,20 @@ class FrequencyQuery(TokenQuery):
             return gp.agg(aggr_dict).reset_index()
 
     def filter_data(self, df):
-        """ Apply the frequency filters to the frequency column. """
+        """ 
+        Apply the frequency filters to the frequency column. 
+        
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame to be filtered.
+
+        Returns
+        -------
+        df : DataFrame
+            A new data frame that contains the filtered rows from the 
+            argument data frame.
+        """
         for filt in options.cfg.filter_list:
             try:
                 parse = filt.parse_filter(filt.text)
@@ -419,11 +499,8 @@ class StatisticsQuery(CorpusQuery):
             self.Session.header_shown = True
         return
 
-
-
-
 class CollocationQuery(TokenQuery):
-    def __init__(self, S, Session, token_class, source_filter):
+    def __init__(self, S, Session, token_class):
         self.left_span = options.cfg.context_left
         self.right_span = options.cfg.context_right
 
@@ -432,7 +509,7 @@ class CollocationQuery(TokenQuery):
         S = "{}{}{}".format("* " * self.left_span, S, " *" * self.right_span)
 
         # and then use this string for a normal TokenQuery:
-        super(CollocationQuery, self).__init__(S, Session, token_class, source_filter)
+        super(CollocationQuery, self).__init__(S, Session, token_class)
         self.Session.output_order = self.Session.header
 
     def mutual_information(self, f_1, f_2, f_coll, size, span):
@@ -483,10 +560,11 @@ class CollocationQuery(TokenQuery):
 
         df = pd.DataFrame(self.Results)
 
+        print(df.head())
+
         # FIXME: Be more generic than always using coq_word_label!
         fix_col = ["coquery_invisible_corpus_id", 
-                   "coquery_invisible_origin_id",
-                   "coquery_invisible_number_of_tokens"]
+                   "coquery_invisible_origin_id"]
         left_cols = ["coq_word_label_{}".format(x + 1) for x in range(options.cfg.context_left)]
         right_cols = ["coq_word_label_{}".format(x + self.number_of_tokens - options.cfg.context_right + 1) for x in range(options.cfg.context_right)]
         left_context_span = df[fix_col + left_cols]
@@ -508,22 +586,38 @@ class CollocationQuery(TokenQuery):
         right = right.reindex(all_words).fillna(0)
         
         collocates = pd.concat([left, right], axis=1)
-        collocates.columns = ["coq_collocate_frequency_right", "coq_collocate_frequency_right"]
+        collocates = collocates.reset_index()
+        collocates.columns = ["coq_word_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
         #print(collocates)
         collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
-        collocates["coq_word_label"] = collocates.index
         collocates["coq_frequency"] = collocates["coq_word_label"].apply(
             lambda x: self.Corpus.get_frequency(self.token_class(x, self.Corpus.lexicon)))
-        collocates["coquery_query_string"] = self.Session.listeral_query_string
+        collocates["coquery_query_string"] = self._query_string
         
-        print(df)
-        
-        
-        print(collocates)
+        print(collocates.head())
+
+        self.Session.output_order = collocates.columns.values
+        print(self.Session.output_order)
+
+        if options.cfg.gui:
+            # append the data frame to the existing data frame
+            self.Session.output_object = pd.concat([self.Session.output_object, collocates])
+        else:
+            # write data frame to output_file as a CSV file, using the 
+            # current output_separator. Encoding is always "utf-8".
+            collocates[vis_cols].to_csv(output_object, 
+                header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
+                sep=options.cfg.output_separator,
+                encoding="utf-8",
+                index=False)
+            # remember that the header columns have already been included in
+            # the output so that multiple queries in a single session do not
+            # produce multiple headers:
+            self.Session.header_shown = True
+        return
+
         
         for current_result in self.Results:
-            print(current_result)
-            
             query_freq += 1
             # increase the count for all items in the left neighbourhood:
             for i in range(left_span):
