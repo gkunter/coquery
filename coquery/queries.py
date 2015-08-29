@@ -456,13 +456,11 @@ class FrequencyQuery(TokenQuery):
             argument data frame.
         """
         for filt in options.cfg.filter_list:
-            try:
-                parse = filt.parse_filter(filt.text)
-            except AttributeError:
-                pass
-            else:
-                if filt.var == options.cfg.freq_label:
+            if filt.var == options.cfg.freq_label:
+                try:
                     df = df[df["coq_frequency"].apply(filt.check_number)]
+                except AttributeError:
+                    pass
         return df
 
 class StatisticsQuery(CorpusQuery):
