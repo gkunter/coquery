@@ -591,7 +591,7 @@ class UnicodeConfigParser(configparser.RawConfigParser):
 def save_configuration():
     config = UnicodeConfigParser()
     if os.path.exists(cfg.config_path):
-        with codecs.open(cfg.config_path, "rt", "utf-8") as input_file:
+        with codecs.open(cfg.config_path, "r", "utf-8") as input_file:
             config.read(input_file)
     
     if not "main" in config.sections():
