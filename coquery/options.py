@@ -669,7 +669,7 @@ def save_configuration():
             pass
 
 
-    with codecs.open(cfg.config_path, "wt", "utf-8") as output_file:
+    with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)
 
 
