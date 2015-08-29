@@ -8,11 +8,7 @@ This module defines classes BaseLexicon and BaseCorpus.
 from __future__ import unicode_literals
 from __future__ import print_function
 
-import time
-import datetime
 from collections import *
-
-import json
 
 from errors import *
 import tokens
@@ -442,7 +438,6 @@ class BaseResource(object):
         table_dict = cls.get_table_dict()
         if "corpus" not in table_dict:
             return []
-        corpus_table = table_dict["corpus"]
         lexicon_tables = cls.get_table_tree("word")
 
         corpus_variables = []
@@ -1091,13 +1086,7 @@ class SQLCorpus(BaseCorpus):
         else:
             # if only a class specification is given, this specification is
             # used as the where clause:
-            if token.class_specifiers:
-                
-                if "pos_table" not in dir(self.resource):
-                    word_pos_column = self.resource.word_pos
-                else:
-                    word_pos_column = self.resource.word_pos_id
-
+            if token.class_specifiers:                
                 L = self.lexicon.get_posid_list(token)
                 if L: 
                     where_clauses.append("{} IN ({})".format(
@@ -1737,7 +1726,6 @@ class SQLCorpus(BaseCorpus):
         # have its matching tag in the selected context:
         opened_elements = []
         closed_elements = []
-        correct_word = ""
         
         for context_token_id in sorted(entities):
             print()
