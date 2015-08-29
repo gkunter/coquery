@@ -864,7 +864,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.menu.popup(header.mapToGlobal(point))
         header.customContextMenuRequested.connect(self.show_header_menu)
 
-
     def toggle_visibility(self, index):
         """ Show again a hidden column, or hide a visible column."""
         column = self.table_model.content.columns[index]
@@ -992,7 +991,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.statusbar.showMessage("Gathering corpus statistics...")
         self.start_progress_indicator()
         self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
-        self.query_thread.taskFinished.connect(self.query_finished)
+        self.query_thread.taskFinished.connect(self.finalize_query)
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
         
@@ -1136,7 +1135,6 @@ class CoqueryApp(QtGui.QMainWindow):
             x.close()
         self.save_configuration()
             
-            
     def closeEvent(self, event):
         if not self.last_results_saved:
             msg_query_running = "<p>The last query results have not been saved. If you quit now, they will be lost.</p><p>Do you really want to quit?</p>"
@@ -1161,7 +1159,6 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.db_port = settings.db_port
             options.cfg.db_user = settings.db_user
             options.cfg.db_password = settings.db_password
-        
 
     def getGuiValues(self):
         """ Set the values in options.cfg.* depending on the current values
