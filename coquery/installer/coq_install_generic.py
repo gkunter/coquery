@@ -103,7 +103,7 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
             {"CREATE": create_columns,
             "INDEX": index_columns})
             
-        self.add_new_table_description(self.word_table,
+        self.create_table_description(self.word_table,
             [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
             Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
             Column(self.word_pos, "VARCHAR(12) NOT NULL"),
@@ -135,12 +135,12 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
                 "`{}` TINYTEXT NOT NULL".format(self.file_name),
                 "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
 
-        self.add_new_table_description(self.file_table,
+        self.create_table_description(self.file_table,
             [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
             Column(self.file_name, "TINYTEXT NOT NULL"),
             Column(self.file_path, "TINYTEXT NOT NULL")])
 
-        self.add_new_table_description(self.corpus_table,
+        self.create_table_description(self.corpus_table,
             [Primary(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table)])
