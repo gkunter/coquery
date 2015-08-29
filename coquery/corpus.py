@@ -827,7 +827,6 @@ class SQLLexicon(BaseLexicon):
         return     
     def get_orth(self, word_id):
         """ Return the orthographic form of the lexicon entry 'word_id'. """
-
         try:
             return self._query_cache[word_id]
         except KeyError:
@@ -1497,8 +1496,8 @@ class SQLCorpus(BaseCorpus):
             verbose=" -- sql_string_get_sentence_wordid" if options.cfg.verbose else "")
 
     def get_context_sentence(self, sentence_id):
-        self.resource.DB.execute(
-            self.sql_string_get_sentence_wordid(sentence_id))
+        S = self.sql_string_get_sentence_wordid(sentence_id)
+        self.resource.DB.execute(S)
         return [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
 
     def sql_string_get_wordid_in_range(self, start, end, source_id):
@@ -1536,30 +1535,33 @@ class SQLCorpus(BaseCorpus):
             start = 1
         else:
             start = token_id - left_span
-                
-        self.resource.DB.execute(
-            self.sql_string_get_wordid_in_range(
+
+        S = self.sql_string_get_wordid_in_range(
                 start, 
-                token_id - 1, source_id))
-        left_context_words = [self.lexicon.get_orth(x) for (x, ) in self.resource.DB.Cur]
+                token_id - 1, source_id)
+        self.resource.DB.execute(S)
+        results = list(self.resource.DB.Cur)
+        left_context_words = [self.lexicon.get_orth(x) for (x, ) in results]
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
-        self.resource.DB.execute(
-            self.sql_string_get_wordid_in_range(
+        S = self.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
-                token_id + number_of_tokens + options.cfg.context_right - 1, source_id))
-        right_context_words = [self.lexicon.get_orth(x) for (x, ) in self.resource.DB.Cur]
-        right_context_words =  right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
+                token_id + number_of_tokens + options.cfg.context_right - 1, source_id)
+        self.resource.DB.execute(S)
+        results = list(self.resource.DB.Cur)
+        right_context_words = [self.lexicon.get_orth(x) for (x, ) in results]
+        right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
         options.cfg.verbose = old_verbose
 
         if options.cfg.context_mode == CONTEXT_STRING:
-            self.resource.DB.execute(
-                self.sql_string_get_wordid_in_range(
+            S = self.sql_string_get_wordid_in_range(
                     token_id,
                     token_id + number_of_tokens - 1,
-                    source_id))
-            target_words = [self.lexicon.get_orth(x) for (x, ) in self.resource.DB.Cur]
+                    source_id)
+            self.resource.DB.execute(S)
+            results = list(self.resource.DB.Cur)
+            target_words = [self.lexicon.get_orth(x) for (x, ) in results]
         else:
             target_words = []
         return (left_context_words, target_words, right_context_words)
