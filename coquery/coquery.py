@@ -47,7 +47,7 @@ import __init__
 
 def set_logger():
     logger = logging.getLogger(__init__.NAME)
-    logger.setLevel (logging.INFO)
+    logger.setLevel(logging.INFO)
     file_handler = logging.handlers.RotatingFileHandler(os.path.join(os.path.expanduser("~"), "coquery.log"), maxBytes=1024*1024, backupCount=10)
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
     logger.addHandler(file_handler)
@@ -58,7 +58,7 @@ def main():
     logger = set_logger()
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (__init__.NAME, __init__.__version__))
-
+    logger.info("{}".format(sys.version))
     try:
         options.process_options()
         options.cfg.log_file_path = os.path.join(os.path.expanduser("~"), "coquery.log")
