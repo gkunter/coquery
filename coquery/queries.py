@@ -204,7 +204,7 @@ class QueryFilter(object):
             elif self.operator == "<":
                 return n < float(self.value_list[0])
             elif self.operator == "<>":
-                return n <> float(self.value_list[0])
+                return n != float(self.value_list[0])
             elif self.operator == "IN":
                 return n >= float(self.value_range[0]) and n <= float(self.value_range[1])
         except ValueError:
