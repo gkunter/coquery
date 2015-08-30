@@ -20,11 +20,11 @@ try:
     try:
         import MySQLdb as mysql
         import MySQLdb.cursors as mysql_cursors
-        print("Using MySQLdb")
+        logger.debug("Using MySQLdb")
     except ImportError:
         import pymysql as mysql
         import pymysql.cursors as mysql_cursors
-        print("Using pymysql")
+        logger.debug("Using pymysql")
 except ImportError:
     raise DependencyError(["MySQLdb", "pymysql"])
 
