@@ -10,6 +10,8 @@ import sys
 import copy
 import time, datetime
 import fileinput
+import codecs
+
 import pandas as pd
 
 import __init__
@@ -148,10 +150,11 @@ class Session(object):
                 self.output_object = sys.stdout
             else:
                 if options.cfg.append:
-                    file_mode = "at"
+                    file_mode = "a"
                 else:
-                    file_mode = "wt"
-                self.output_object = open(options.cfg.output_path, file_mode)
+                    file_mode = "w"
+                
+                self.output_object = codecs.open(options.cfg.output_path, file_mode, encoding=options.cfg.output_encoding)
     
     def run_queries(self):
         """ Process all queries. For each query, go through the entries in 
@@ -207,7 +210,8 @@ class Session(object):
                 current_query.write_results(self.output_object)
                 logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
         self.end_time = datetime.datetime.now()
-
+        if not options.cfg.gui:
+            self.output_object.close()
 class StatisticsSession(Session):
     def __init__(self):
         super(StatisticsSession, self).__init__()
