@@ -740,7 +740,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 columns = [x for x in self.table_model.content.columns if not x.startswith("coquery_invisible")]
                 columns = [x for x in columns if options.cfg.column_visibility.get(x, True)]
                 tab = self.table_model.content[columns]
-                with codecs.open(name, "wt") as output_file:
+                with codecs.open(name, "w", encoding=options.cfg.output_encoding) as output_file:
                     writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
                     writer.writerow([options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in tab.columns])
                     for i in tab.index:
@@ -1108,7 +1108,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.start_progress_indicator()
                 try:
                     DB.execute("DROP DATABASE {}".format(database))
-                except sqlwrap.mysql.OperationalError as e:
+                except (sqlwrap.mysql.InternalError, sqlwrap.mysql.OperationalError) as e:
                     QtGui.QMessageBox.critical(self, "Database error – Coquery", "<p>There was an error while deleting the corpus databases:</p><p>{}</p>".format(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                 finally:
                     DB.close()
