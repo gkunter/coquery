@@ -33,7 +33,6 @@ class SqlDB (object):
     def __init__(self, Host, Port, User, Password, Database=None, encoding="utf8"):
         self.Con = None
         self.Cur = None
-        
         try:
             if Database:
                 self.Con = mysql.connect(
@@ -51,7 +50,7 @@ class SqlDB (object):
                     passwd=Password,
                     charset=encoding)
 
-        except Exception as e:
+        except mysql.InternalError as e:
              raise SQLInitializationError(e)
         self.Cur = self.Con.cursor()
         self.set_variable("NAMES", encoding)
@@ -64,7 +63,11 @@ class SqlDB (object):
 
     def set_variable(self, variable, value):
         cur = self.Con.cursor()
-        if isinstance(value, (str, unicode)):
+        try:
+            string_classes = (str, unicode)
+        except NameError:
+            string_classes = (str)
+        if isinstance(value, string_classes):
             self.execute("SET {} '{}'".format(variable, value))
         else:
             self.execute("SET {}={}".format(variable, value))
