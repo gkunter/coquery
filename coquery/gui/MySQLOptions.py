@@ -38,7 +38,7 @@ def check_valid_host(s):
             return False
         # strings must contain at least one letter, otherwise they should be
         # considered ip addresses
-        if not any([x in string.letters for x in s]):
+        if not any([x in string.ascii_letters for x in s]):
             return
         if s.endswith("."):
             s= s[:-1] # strip exactly one dot from the right, if present
@@ -84,7 +84,7 @@ class MySQLOptions(QtGui.QDialog):
         the settings from the GUI. Return True if a connection can be
         established, or True if not. Also, set up the connection indicator
         accordingly."""
-        def indicate_no_connection(self, s):
+        def indicate_no_connection(self, e):
             self.ui.label_connection.setText("Not connected: {}".format(e))
             self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
