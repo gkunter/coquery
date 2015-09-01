@@ -845,8 +845,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 action.setChecked(True)
             self.menu.addAction(action)
                                     
-            
-            if isinstance(self.table_model[[column]][0], (int, float)):
+            if self.table_model.content[[column]].dtypes[0] == "object":
                 action = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
                 action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
                 if self.table_model.sort_state[column] == results.SORT_REV_INC:
