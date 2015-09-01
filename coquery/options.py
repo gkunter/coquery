@@ -168,10 +168,9 @@ class Options(object):
         self.args.gui = args.gui
         
         self.read_configuration()
-            
         if args.corpus:
             self.args.corpus = args.corpus
-        else:
+        elif not self.args.corpus:
             self.args.corpus = ""
         
         # if no corpus is selected and no GUI is requested, display the help
