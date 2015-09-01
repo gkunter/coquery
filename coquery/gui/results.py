@@ -124,7 +124,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # Return row names?
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
-                return self.rownames[index]
+                return str(self.rownames[index])
             else:
                 return None
 
