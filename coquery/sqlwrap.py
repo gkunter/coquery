@@ -81,10 +81,15 @@ class SqlDB (object):
         
     def explain(self, S):
         """
-Call        explain(self, S)
-Summary     Execute an SQL EXPLAIN command for the command S. The resulting
-            table will be printed to the log file as INFO.             
-Value       no return value
+        Explain a MySQL query.
+        
+        The output of the EXPLAIN command is formatted as a table, and then
+        logged to the logger as an INFO.
+        
+        Parameters
+        ----------
+        S : string
+            The MySQL string to be explained.
         """
         command = S.partition(" ")[0].upper()
         if command in ["SHOW", "DESCRIBE", "SET", "RESET"]:
