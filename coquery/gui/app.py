@@ -694,7 +694,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def display_results(self):
         self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header()
-        
+
         self.ui.data_preview.setModel(self.table_model)
 
         # set column widths:
@@ -784,9 +784,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 duration_str = "{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3])
             else:
                 duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
-        
         self.ui.statusbar.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
-            len(self.Session.output_object), duration_str))
+            len(self.Session.output_object.index), duration_str))
         
     def show_header_menu(self, point ):
         header = self.ui.data_preview.horizontalHeader()
@@ -1161,7 +1160,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
         if options.cfg:
-            options.cfg.corpus = unicode(self.ui.combo_corpus.currentText()).lower()
+            options.cfg.corpus = str(self.ui.combo_corpus.currentText()).lower()
         
             # determine query mode:
             if self.ui.radio_mode_context.isChecked():
@@ -1190,11 +1189,11 @@ class CoqueryApp(QtGui.QMainWindow):
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
                 if type(self.ui.edit_query_string) == QtGui.QLineEdit:
-                    options.cfg.query_list = [unicode(self.ui.edit_query_string.text())]
+                    options.cfg.query_list = [str(self.ui.edit_query_string.text())]
                 else:
-                    options.cfg.query_list = [unicode(self.ui.edit_query_string.toPlainText())]
+                    options.cfg.query_list = [str(self.ui.edit_query_string.toPlainText())]
             elif self.ui.radio_query_file.isChecked():
-                options.cfg.input_path = unicode(self.ui.edit_file_name.text())
+                options.cfg.input_path = str(self.ui.edit_file_name.text())
 
             # retrieve the CSV options for the current input file:
             if self.csv_options:
