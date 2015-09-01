@@ -408,7 +408,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
 
         # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(resource_list.get_available_resources().keys())]
+        corpora = [x.upper() for x in sorted(get_available_resources().keys())]
 
         self.ui.combo_corpus.addItems(corpora)
         
@@ -529,7 +529,7 @@ class CoqueryApp(QtGui.QMainWindow):
         in the current corpus. If no corpus is avaiable, disable the options
         area and some menu entries. If any corpus is available, these widgets
         are enabled again."""
-        if not resource_list.get_available_resources():
+        if not get_available_resources():
             self.disable_corpus_widgets()
         else:
             self.enable_corpus_widgets()
@@ -540,7 +540,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if self.ui.combo_corpus.count():
             corpus_name = str(self.ui.combo_corpus.currentText()).lower()
-            self.resource, self.corpus, self.lexicon, self.path = resource_list.get_available_resources()[corpus_name]
+            self.resource, self.corpus, self.lexicon, self.path = get_available_resources()[corpus_name]
             self.ui.filter_box.resource = self.resource
             
             corpus_variables = [x for _, x in self.resource.get_corpus_features()]
@@ -612,7 +612,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems([x.upper() for x in resource_list.get_available_resources()])
+        self.ui.combo_corpus.addItems([x.upper() for x in get_available_resources()])
 
         # try to return to last corpus name:
         new_index = self.ui.combo_corpus.findText(last_corpus)
@@ -680,7 +680,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         # A non-modal dialog is shown if no corpus resource is available.
         # The dialog contains some assistance on how to build a new corpus.
-        if not resource_list.get_available_resources():
+        if not get_available_resources():
             self.show_no_corpus_message()
         
         options.cfg.main_window = self
@@ -1074,7 +1074,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def open_corpus_help(self):
         if self.ui.combo_corpus.isEnabled():
             current_corpus = str(self.ui.combo_corpus.currentText())
-            resource, _, _, module = resource_list.get_available_resources()[current_corpus.lower()]
+            resource, _, _, module = get_available_resources()[current_corpus.lower()]
             try:
                 url = resource.documentation_url
             except AttributeError:
@@ -1086,7 +1086,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def remove_corpus(self):
         if self.ui.combo_corpus.isEnabled():
             current_corpus = str(self.ui.combo_corpus.currentText())
-            resource, _, _, module = resource_list.get_available_resources()[current_corpus.lower()]
+            resource, _, _, module = get_available_resources()[current_corpus.lower()]
             database = resource.db_name
             try:
                 size = FileSize(sqlwrap.SqlDB(options.cfg.db_host, options.cfg.db_port, options.cfg.db_user, options.cfg.db_password).get_database_size(database))

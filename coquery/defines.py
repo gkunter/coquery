@@ -7,8 +7,8 @@ This module defines several constants used in different other modules.
 """
 
 import glob
-import os.path
-import imp
+import os, inspect
+import importlib
 import sys
 import warnings
 import csv, codecs
@@ -163,38 +163,6 @@ class UnicodeWriter(object):
             return s
         return self.writer.writerow([encode_string(x) for x in row])
 
-class ResourceList(object):
-    def __init__(self):
-        self.available_resources = self.get_available_resources()
-        
-    @property
-    def available(self):
-        """ Return a list that represents all available corpus modules. Each
-        entry in the list is a tuple containing the Resource() class, 
-        Corpus() class, Lexicon() class, and the corpus module filename as
-        a string."""
-        return self.get_available_resources()
-
-    def get_available_resources(self):
-        self.available_resources = {}
-        corpus_path = os.path.join(sys.path[0], "corpora")
-        if not os.path.exists(corpus_path):
-            os.makedirs(corpus_path)
-        for corpus in glob.glob(os.path.join(corpus_path, "*.py")):
-            corpus_name, ext = os.path.splitext(os.path.basename(corpus))
-            try:
-                module = imp.load_source(corpus_name, corpus)
-            except Exception as e:
-                warnings.warn("{} could not be loaded.".format(corpus_name))
-                warnings.warn("Exception: {}".format(e))
-                continue
-            resource = module.Resource
-            try:
-                self.available_resources[resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
-            except (AttributeError, ImportError):
-                warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
-        return self.available_resources
-
 class FileSize(long):
     """ Define a long class that can store file sizes, and which allows
     custom formatting by using the format specifier S, which displays a 
@@ -234,7 +202,7 @@ def dict_product(d):
     return (dict(itertools.izip(d, x)) for x in cart_product)
 
 
-resource_list = ResourceList()
+#resource_list = ResourceList()
 
 def memory_dump():
     x = 0
@@ -252,3 +220,59 @@ def memory_dump():
             print(x, {'id': i, 'class': cls, 'size': size, "ref": len(referents)})
             #if len(referents) < 2000:
                 #print(obj)
+
+def get_available_resources():
+    """ 
+    Return a dictionary with the available corpus module resource classes
+    as values, and the corpus module names as keys.
+    
+    This method scans the content of the sub-directory 'corpora' for valid
+    corpus modules. If a corpus module is found, the three resource classes
+    Resource, Corpus, and Lexicon are retrieved from the module.
+    
+    Returns
+    -------
+    d : dict
+        A dictionary with resource names as keys, and tuples of resource
+        classes as values.
+    """
+    d  = {}
+    
+    corpus_path = os.path.realpath(
+        os.path.abspath(
+            os.path.join(
+                sys.path[0], "corpora")))
+    if not os.path.exists(corpus_path):
+        os.makedirs(corpus_path)
+
+    for corpus in glob.glob(os.path.join(corpus_path, "*.py")):
+        corpus_name, ext = os.path.splitext(os.path.basename(corpus))
+        try:
+            module = importlib.import_module("corpora.{}".format(corpus_name))
+        except SyntaxError as e:
+            warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+            raise e
+        try:
+            d[module.Resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
+        except (AttributeError, ImportError):
+            warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+    return d
+
+def get_resource(name):
+    """
+    Return a tuple containing the Resource, Corpus, and Lexicon of the 
+    corpus module specified by 'name'.
+    
+    Arguments
+    ---------
+    name : str
+        The name of the corpus module
+        
+    Returns
+    -------
+    res : tuple
+        A tuple consisting of the Resource class, Corpus class, and Lexicon 
+        class defined in the corpus module
+    """
+    Resource, Corpus, Lexicon, _ = get_available_resources()[name]
+    return Resource, Corpus, Lexicon
