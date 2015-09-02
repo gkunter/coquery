@@ -88,7 +88,7 @@ class ContextView(QtGui.QWidget):
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
-            self.accept()
+            self.close()
             
     def closeEvent(self, *args):
         options.cfg.context_view_height = self.height()
