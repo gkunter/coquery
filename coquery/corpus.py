@@ -16,6 +16,8 @@ import options
 import sqlwrap
 from defines import *
 
+import json
+
 def collapse_words(word_list):
     
     def is_tag(s):
@@ -1123,7 +1125,6 @@ class SQLCorpus(BaseCorpus):
             
         # corpus variables will only be included in the subquery string if 
         # this is the first subquery.
-        corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
         if number == 0:
             requested_features = [x for x in options.cfg.selected_features]
             
@@ -1141,6 +1142,7 @@ class SQLCorpus(BaseCorpus):
                     requested_features.append("corpus_file_id")
                     options.cfg.context_source_id = "corpus_file_id"
         else:
+            corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
         # add all features that are required for the query filters:
@@ -1179,6 +1181,7 @@ class SQLCorpus(BaseCorpus):
             except AttributeError:
                 word_pos_column = None
 
+        # create constraint lists:
         sub_list = set([])
         where_clauses = self.get_whereclauses(
             current_token, 
@@ -1198,8 +1201,8 @@ class SQLCorpus(BaseCorpus):
             else:
                 rc_where_constraints["corpus_table"].add(s)
 
-        # get a list of all tables that are required to query the requested
-        # features:
+        # get a list of all tables that are required to satisfy the 
+        # feature request:
         required_tables = {}
         for rc_feature in requested_features:
             rc_table = "{}_table".format(rc_feature.split("_")[0])
@@ -1218,62 +1221,94 @@ class SQLCorpus(BaseCorpus):
                     requested_features.append(parent_id)
 
         join_strings = {}
+        external_links = []
         join_strings[self.resource.corpus_table] = "{} AS COQ_CORPUS_TABLE".format(self.resource.corpus_table)
         full_tree = self.resource.get_table_structure("corpus_table", requested_features)
 
-        # select all tables that are required by the requested features:
+        # create a list of the tables 
         select_list = set([])
         for rc_table in required_tables:
-            rc_tab = rc_table.split("_")[0]
-            sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
-            parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree) 
-            table = self.resource.__getattribute__(rc_table)
-            if parent_tree:
-                rc_parent = parent_tree["rc_table_name"]
-            else:
-                rc_parent = None
-
-            column_list = []
-            for rc_feature in sub_tree["rc_requested_features"]:
-                name = "coq_{}_{}".format(
-                    rc_feature,
-                    number+1)
-                variable_string = "{} AS {}".format(
-                    self.resource.__getattribute__(rc_feature),
-                    name)
-                column_list.append(variable_string)
-                #if not rc_feature.endswith("_id"):
-                select_list.add(name)
+            if "." in rc_table:
+                external_corpus, rc_table = rc_table.split(".")
+                resource = get_available_resources()[external_corpus][0]
+                table = resource.__getattribute__(resource, rc_table)
                 
-            columns = ", ".join(column_list)
-            where_string = ""
-            if rc_table in rc_where_constraints:
-                where_string = "WHERE {}".format(" AND ".join(list(rc_where_constraints[rc_table])))
+                column_list = []
+                for linked in options.cfg.external_links:
+                    rc_corpus, rc_feature = linked.split(".")
+                    if rc_corpus == external_corpus:
+                        name = "coq_{}_{}_{}".format(external_corpus, rc_feature, number +1)
+                        variable_string = "{} AS {}".format(
+                            resource.__getattribute__(resource, rc_feature),
+                            name)
+                        column_list.append(variable_string)
+                        select_list.add(name)
+                        
+                        external, internal = options.cfg.external_links[linked]
+                        internal_feature = internal.rpartition(".")[-1]
+                        external_feature = external.rpartition(".")[-1]
+                        column_list.append("{} AS coq_{}_{}_{}".format(
+                            resource.__getattribute__(resource, external_feature),
+                            external_corpus,
+                            external_feature, number+1))
+                        
+                                        
+                columns = ", ".join(set(column_list))
+                alias = "coq_{}_{}".format(external_corpus, table).upper()
+                S = "INNER JOIN (SELECT {columns} FROM {corpus}.{table}) AS {alias} ON coq_{internal_feature}_{n} = coq_{corpus}_{external_feature}_{n}".format(columns=columns, n=number+1, internal_feature=internal_feature, corpus=external_corpus, table=table, external_feature=external_feature, alias=alias)
+                external_links.append(S)
 
-            if rc_parent:
-                parent_id = "coq_{}_{}_id_{}".format(
-                    rc_parent.split("_")[0], 
-                    rc_table.split("_")[0],
-                    number+1)
-                child_id = "coq_{}_id_{}".format(
-                    rc_table.split("_")[0],
-                    number+1)
-                
-                join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {parent_id} = {child_id}".format(
-                    columns = columns, 
-                    table = table,
-                    alias = sub_tree["alias"],
-                    parent = parent_tree["alias"],
-                    where = where_string,
-                    number = number+1,
-                    parent_id = parent_id,
-                    child_id = child_id)
             else:
-                join_strings[rc_table] = "(SELECT {columns} FROM {table} {where}) AS {alias}".format(
-                    columns = columns, 
-                    table = table,
-                    alias = sub_tree["alias"],
-                    where = where_string)
+                rc_tab = rc_table.split("_")[0]
+                sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
+                parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree) 
+                table = self.resource.__getattribute__(rc_table)
+                if parent_tree:
+                    rc_parent = parent_tree["rc_table_name"]
+                else:
+                    rc_parent = None
+
+                column_list = []
+                for rc_feature in sub_tree["rc_requested_features"]:
+                    name = "coq_{}_{}".format(
+                        rc_feature,
+                        number+1)
+                    variable_string = "{} AS {}".format(
+                        self.resource.__getattribute__(rc_feature),
+                        name)
+                    column_list.append(variable_string)
+                    #if not rc_feature.endswith("_id"):
+                    select_list.add(name)
+                    
+                columns = ", ".join(column_list)
+                where_string = ""
+                if rc_table in rc_where_constraints:
+                    where_string = "WHERE {}".format(" AND ".join(list(rc_where_constraints[rc_table])))
+
+                if rc_parent:
+                    parent_id = "coq_{}_{}_id_{}".format(
+                        rc_parent.split("_")[0], 
+                        rc_table.split("_")[0],
+                        number+1)
+                    child_id = "coq_{}_id_{}".format(
+                        rc_table.split("_")[0],
+                        number+1)
+                    
+                    join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {parent_id} = {child_id}".format(
+                        columns = columns, 
+                        table = table,
+                        alias = sub_tree["alias"],
+                        parent = parent_tree["alias"],
+                        where = where_string,
+                        number = number+1,
+                        parent_id = parent_id,
+                        child_id = child_id)
+                else:
+                    join_strings[rc_table] = "(SELECT {columns} FROM {table} {where}) AS {alias}".format(
+                        columns = columns, 
+                        table = table,
+                        alias = sub_tree["alias"],
+                        where = where_string)
 
         # create a list containing the join strings for the different tables,
         # in the order in which they are required based on their position in
@@ -1283,6 +1318,10 @@ class SQLCorpus(BaseCorpus):
         for x in table_order:
             if x in join_strings and not join_strings[x] in L:
                 L.append(join_strings[x])
+                
+        for x in external_links:
+            if x not in L:
+                L.append(x)
 
         if not select_list:
             return ""
@@ -1392,18 +1431,32 @@ class SQLCorpus(BaseCorpus):
                             final_select.append("coq_{}_{}".format(rc_feature, i+1))
                         else:
                             final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
-        
+
+        # add any external feature:
+        for linked in options.cfg.external_links:
+            external, internal = options.cfg.external_links[linked]
+            internal_feature = internal.split(".")[-1]
+            external_corpus, external_feature = linked.split(".")
+            if internal_feature in [x for x, _ in lexicon_features]:
+                for i in range(Query.Session.max_number_of_tokens):
+                    if i < Query.number_of_tokens:
+                        final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
+                    else:
+                        final_select.append("NULL AS coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
+
         # add the corpus features in the preferred order:
         for rc_feature in self.resource.get_preferred_output_order():
             if rc_feature in options.cfg.selected_features:
                 if rc_feature in [x for x, _ in corpus_features]:
                     final_select.append("coq_{}_1".format(rc_feature))
         
+        
         # Add any feature that is selected that is neither a corpus feature,
         # a lexicon feature nor a Coquery feature:
         for rc_feature in options.cfg.selected_features:
             if not rc_feature.startswith("coquery_") and "coq_{}_1".format(rc_feature) not in final_select:
-                final_select.append("coq_{}_1".format(rc_feature))
+                if "." not in rc_feature:
+                    final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
         if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
             if options.cfg.context_right or options.cfg.context_left:
@@ -1669,8 +1722,11 @@ class SQLCorpus(BaseCorpus):
         # table:
         id_list = []
         for x in tab[tab.coquery_invisible_origin_id == source_id].index:
-            start = tab.iloc[x].coquery_invisible_corpus_id
-            end = start + tab.iloc[x].coquery_invisible_number_of_tokens
+            print(x)
+            print(tab.to_dict())
+            print(tab.iloc[x - 1])
+            start = tab.iloc[x - 1].coquery_invisible_corpus_id
+            end = start + tab.iloc[x - 1].coquery_invisible_number_of_tokens
             id_list += [y for y in range(start, end)]
 
         start = max(0, token_id - context_width)
