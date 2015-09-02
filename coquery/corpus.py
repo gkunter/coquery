@@ -1722,9 +1722,6 @@ class SQLCorpus(BaseCorpus):
         # table:
         id_list = []
         for x in tab[tab.coquery_invisible_origin_id == source_id].index:
-            print(x)
-            print(tab.to_dict())
-            print(tab.iloc[x - 1])
             start = tab.iloc[x - 1].coquery_invisible_corpus_id
             end = start + tab.iloc[x - 1].coquery_invisible_number_of_tokens
             id_list += [y for y in range(start, end)]
