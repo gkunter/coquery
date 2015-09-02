@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'linkselect.ui'
 #
-# Created: Wed Sep  2 20:44:16 2015
+# Created: Wed Sep  2 20:48:19 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -33,18 +33,17 @@ class Ui_LinkSelect(object):
         self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
-        self.verticalLayout = QtGui.QVBoxLayout(self.frame)
-        self.verticalLayout.setSpacing(20)
-        self.verticalLayout.setMargin(10)
-        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        self.verticalLayout_3 = QtGui.QVBoxLayout(self.frame)
+        self.verticalLayout_3.setSpacing(20)
+        self.verticalLayout_3.setMargin(10)
+        self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.label = QtGui.QLabel(self.frame)
         self.label.setWordWrap(True)
         self.label.setObjectName(_fromUtf8("label"))
-        self.verticalLayout.addWidget(self.label)
-        self.checkBox = QtGui.QCheckBox(self.frame)
-        self.checkBox.setChecked(True)
-        self.checkBox.setObjectName(_fromUtf8("checkBox"))
-        self.verticalLayout.addWidget(self.checkBox)
+        self.verticalLayout_3.addWidget(self.label)
+        self.verticalLayout = QtGui.QVBoxLayout()
+        self.verticalLayout.setSpacing(0)
+        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.label_2 = QtGui.QLabel(self.frame)
         self.label_2.setObjectName(_fromUtf8("label_2"))
         self.verticalLayout.addWidget(self.label_2)
@@ -63,9 +62,14 @@ class Ui_LinkSelect(object):
         self.treeWidget.header().setSortIndicatorShown(False)
         self.treeWidget.header().setStretchLastSection(True)
         self.verticalLayout.addWidget(self.treeWidget)
+        self.verticalLayout_3.addLayout(self.verticalLayout)
         self.verticalLayout_2.addWidget(self.frame)
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
+        self.checkBox = QtGui.QCheckBox(LinkSelect)
+        self.checkBox.setChecked(True)
+        self.checkBox.setObjectName(_fromUtf8("checkBox"))
+        self.horizontalLayout.addWidget(self.checkBox)
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
         self.buttonBox = QtGui.QDialogButtonBox(LinkSelect)
@@ -83,8 +87,8 @@ class Ui_LinkSelect(object):
     def retranslateUi(self, LinkSelect):
         LinkSelect.setWindowTitle(_translate("LinkSelect", "Select link column – Coquery", None))
         self.label.setText(_translate("LinkSelect", "<html><head/><body><p>You can link a data table from another corpus to the currently selected corpus by choosing a link column from the selector below. The content in the link column is compared to the content of the column <span style=\" font-weight:600;\">\'{resource_feature}\'</span> from the currently selected corpus. If the contents match, the columns from the linked data table can be included in the results view by selecting them as additional output columns.</p><p><span style=\" font-weight:600;\">Note:</span> If you select an external output column, query result from the currently selected corpus that does not match an entry in the linked external table are <span style=\" font-weight:600;\">dropped</span> from the results table. In other words, only complete records with data from the currently selected corpus and the external data table are queried.</p><p><span style=\" font-weight:600;\">Note:</span>  If you select an external output column, the time needed to execute the query may increase significantly.</p></body></html>", None))
-        self.checkBox.setText(_translate("LinkSelect", "Ignore case when comparing contents.", None))
         self.label_2.setText(_translate("LinkSelect", "Link <b>{resource_feature}</b> to...", None))
         self.treeWidget.headerItem().setText(0, _translate("LinkSelect", "Corpus", None))
+        self.checkBox.setText(_translate("LinkSelect", "Ignore case when comparing contents.", None))
 
 
