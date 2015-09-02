@@ -32,15 +32,20 @@ from __future__ import unicode_literals
 
 import sys
 import os.path
+import time
 
 import logging
 import logging.handlers
 
-import options
-from session import *
 from errors import *
+import options
 
-import time
+try:
+    from session import *
+except DependencyError as e:
+    print(str(e))
+    sys.exit(1)
+    
 import __init__
 
 def set_logger():
