@@ -136,6 +136,8 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         if options.cfg.allow_links:
             self.itemActivated.connect(self.enable_button)
         self.setDragEnabled(True)
+        self.setAnimated(True)
+
 
     def enable_button(self, *args):
         self.selected_item = args
