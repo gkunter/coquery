@@ -1892,9 +1892,6 @@ class SQLCorpus(BaseCorpus):
         #print(context)
         widget.ui.context_area.setText(collapse_words(context))
 
-class TestLexicon(BaseLexicon):
-    def is_part_of_speech(self, pos):
-        return pos in ["N", "V"]
     
 """ Revised query for self-joins?
 

@@ -6,6 +6,11 @@ import sys
 
 sys.path.append(os.path.normpath(os.path.join(sys.path[0], "..")))
 import tokens
+from corpus import BaseLexicon, BaseResource
+
+class TestLexicon(BaseLexicon):
+    def is_part_of_speech(self, pos):
+        return pos in ["N", "V"]
 
 class TestQueryTokenCOCA(unittest.TestCase):
     token_type = tokens.COCAToken
@@ -14,8 +19,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         super(TestQueryToken, self).runTest()
     
     def setUp(self):
-        import corpus
-        self.lexicon = corpus.TestLexicon(corpus.BaseResource())
+        self.lexicon = TestLexicon(BaseResource())
     
     def test_word_only(self):
         token = self.token_type("word", self.lexicon)
@@ -83,6 +87,14 @@ class TestQueryTokenCOCA(unittest.TestCase):
         
     def test_only_pos(self):
         token = self.token_type("[N|V]", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, ["N", "V"])
+        self.assertEqual(token.word_specifiers, [])        
+        
+    def test_wildcard_pos(self):
+        token = self.token_type("*.[N|V]", self.lexicon)
         token.parse()
         self.assertEqual(token.lemma_specifiers, [])
         self.assertEqual(token.transcript_specifiers, [])
