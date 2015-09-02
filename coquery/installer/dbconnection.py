@@ -112,19 +112,30 @@ class DBConnection(object):
     def get_field_type(self, table_name, column_name):
         cur = self.Con.cursor()
         self.execute(cur, "SHOW FIELDS FROM %s WHERE Field = '%s'" % (table_name, column_name), override=True)
-        Results = unicode(cur.fetchone())
+        Results = cur.fetchone()
+        try:
+            if isinstance(Results, bytes):
+                Results = Results.decode("utf-8")
+        except NameError:
+            Results = str(Results)
         if Results:
             field_type = Results[1]
             if Results[2] == "NO":
                 field_type += " NOT NULL"
-            return unicode(field_type)
+            return str(field_type)
         else:
             return None
         
     def get_optimal_field_type(self, table_name, column_name):
         cur = self.Con.cursor()
         self.execute(cur, "SELECT %s FROM %s PROCEDURE ANALYSE()" % (column_name, table_name), override=True)
-        return str(cur.fetchone()[-1])
+        x = cur.fetchone()[-1]
+        try:
+            if isinstance(x, bytes):
+                x = x.decode("utf-8")
+        except NameError:
+            x = str(x)
+        return x
         
     def modify_field_type(self, table_name, column_name, new_type):
         cur = self.Con.cursor()
@@ -163,10 +174,10 @@ class DBConnection(object):
         """ Obtain all records from table_name that match the column-value
         pairs given in the dict values."""
         cur = self.Con.cursor(mysql_cursors.DictCursor)
-        variables = values.keys() + additional_variables
+        variables = list(values.keys()) + additional_variables
         where = []
         for column, value in values.items():
-            where.append('{} = "{}"'.format(column, unicode(value).replace('"', '""')))
+            where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
         if case:
             S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table_name, " AND BINARY ".join(where))
         else:
@@ -180,7 +191,7 @@ class DBConnection(object):
         # take care of quote characters and backslashes:
         new_data = copy.copy(data)
         for x in new_data:
-            new_data[x] = "%s" % unicode(new_data[x]).replace('"', '""')
+            new_data[x] = "%s" % str(new_data[x]).replace('"', '""')
             new_data[x] = new_data[x].replace("\\", "\\\\")
 
         S = "INSERT INTO {}({}) VALUES({})".format(
@@ -195,7 +206,7 @@ class DBConnection(object):
 
     def set_variable(self, variable, value):
         cur = self.Con.cursor()
-        if isinstance(value, (str, unicode)):
+        if isinstance(value, str):
             self.execute(cur, "SET {} '{}'".format(variable, value), override=True)
         else:
             self.execute(cur, "SET {}={}".format(variable, value), override=True)
