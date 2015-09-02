@@ -137,12 +137,14 @@ class COCAToken(QueryToken):
             self.class_specifiers = [x.strip() for x in class_specification.split("|") if x.strip()]
         
         if lemma_specification and not class_specification:
-            if self.check_part_of_speech and LEX_POS in self.lexicon.provides:
-                # check if all elements pass as part-of-speech-tags:
-                if len(self.lemma_specifiers) == self.lexicon.check_pos_list(self.lemma_specifiers):
-                    # if so, interpret elements as part-of-speech tags:
-                    self.class_specifiers = self.lemma_specifiers
-                    self.lemma_specifiers = []
+            # check if all elements pass as part-of-speech-tags:
+            if len(self.lemma_specifiers) == self.lexicon.check_pos_list(self.lemma_specifiers):
+                # if so, interpret elements as part-of-speech tags:
+                self.class_specifiers = self.lemma_specifiers
+                self.lemma_specifiers = []
+        # special case: allow *.[POS]
+        if all([x in self.lexicon.resource.wildcards for x in self.word_specifiers]) and self.class_specifiers:
+            self.word_specifiers = []
 
 class COCAWord(COCAToken):
     """ A class that is simply parsed as a single word. """
