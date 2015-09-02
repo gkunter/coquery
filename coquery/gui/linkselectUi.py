@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'linkselect.ui'
 #
-# Created: Wed Sep  2 16:54:15 2015
+# Created: Wed Sep  2 20:44:16 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -82,7 +82,7 @@ class Ui_LinkSelect(object):
 
     def retranslateUi(self, LinkSelect):
         LinkSelect.setWindowTitle(_translate("LinkSelect", "Select link column – Coquery", None))
-        self.label.setText(_translate("LinkSelect", "<html><head/><body><p>You can link a data table from another corpus to the currently selected corpus by choosing a link column from the selector below. The content in the link column is compared to the content of the column <b>\'{resource_feature}\'</b> from the currently selected corpus. If the contents match, the columns from the linked data table can be included in the results view by selecting them as additional output columns.</p><p><span style=\" font-weight:600;\">Warning</span>: If you include output columns from a linked external table columns in the query output, the time needed to execute the query may increase significantly.</p></body></html>", None))
+        self.label.setText(_translate("LinkSelect", "<html><head/><body><p>You can link a data table from another corpus to the currently selected corpus by choosing a link column from the selector below. The content in the link column is compared to the content of the column <span style=\" font-weight:600;\">\'{resource_feature}\'</span> from the currently selected corpus. If the contents match, the columns from the linked data table can be included in the results view by selecting them as additional output columns.</p><p><span style=\" font-weight:600;\">Note:</span> If you select an external output column, query result from the currently selected corpus that does not match an entry in the linked external table are <span style=\" font-weight:600;\">dropped</span> from the results table. In other words, only complete records with data from the currently selected corpus and the external data table are queried.</p><p><span style=\" font-weight:600;\">Note:</span>  If you select an external output column, the time needed to execute the query may increase significantly.</p></body></html>", None))
         self.checkBox.setText(_translate("LinkSelect", "Ignore case when comparing contents.", None))
         self.label_2.setText(_translate("LinkSelect", "Link <b>{resource_feature}</b> to...", None))
         self.treeWidget.headerItem().setText(0, _translate("LinkSelect", "Corpus", None))
