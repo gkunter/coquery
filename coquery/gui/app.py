@@ -8,7 +8,6 @@ from defines import *
 from pyqt_compat import QtCore, QtGui
 import __init__
 import coqueryUi
-import csvOptions
 import QtProgress
 
 import results 
@@ -17,9 +16,7 @@ import codecs
 import random
 import logging
 import sqlwrap
-import MySQLOptions
 import queries
-import contextview
 import os
 
 from queryfilter import *
@@ -68,8 +65,8 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         self._objectName = ""
         self._link_by = None
 
-    def setLink(self, link):
-        self._link_by = link
+    def setLink(self, from_item, link):
+        self._link_by = (from_item, link)
         
     def setObjectName(self, name):
         """ Store resource variable name as object name. """
@@ -114,7 +111,7 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
             # do not propagate a partially checked state
             return
         
-        if str(self._objectName).endswith("_root") and check_state:
+        if str(self._objectName).endswith("_table") and check_state:
             self.setExpanded(True)
         
         # propagate check state to children:
@@ -142,7 +139,9 @@ class CoqTreeWidget(QtGui.QTreeWidget):
 
     def enable_button(self, *args):
         self.selected_item = args
-        if self.selected_item[0]._link_by:
+        if not self.selected_item:
+            return
+        if self.selected_item[0]._link_by or self.selected_item[0].parent()._link_by:
             options.cfg.main_window.ui.button_add_link.setEnabled(False)
             options.cfg.main_window.ui.button_remove_link.setEnabled(True)
         elif str(self.selected_item[0]._objectName).rpartition("_")[-1] != "table":
@@ -523,9 +522,11 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.column_width[header] = new
 
     def result_cell_clicked(self, index):
+        import contextview
         model_index = index
         row = model_index.row()
         data = self.table_model.content.iloc[row]
+        print(data)
         token_id = data["coquery_invisible_corpus_id"]
         origin_id = data["coquery_invisible_origin_id"]
         token_width = data["coquery_invisible_number_of_tokens"]
@@ -625,7 +626,7 @@ class CoqueryApp(QtGui.QMainWindow):
             root = CoqTreeItem()
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
             root.setText(0, table.capitalize())
-            root.setObjectName(coqueryUi._fromUtf8("{}_root".format(table)))
+            root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setCheckState(0, QtCore.Qt.Unchecked)
             if table_dict[table]:
                 tree.addTopLevelItem(root)
@@ -735,7 +736,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def display_results(self):
         self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header()
-        
+
         self.ui.data_preview.setModel(self.table_model)
 
         # set column widths:
@@ -763,6 +764,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
     def file_options(self):
         """ Get CSV file options for current query input file. """
+        import csvOptions
         results = csvOptions.CSVOptions.getOptions(
             self.ui.edit_file_name.text(), 
             self.csv_options, 
@@ -781,11 +783,11 @@ class CoqueryApp(QtGui.QMainWindow):
                 columns = [x for x in self.table_model.content.columns if not x.startswith("coquery_invisible")]
                 columns = [x for x in columns if options.cfg.column_visibility.get(x, True)]
                 tab = self.table_model.content[columns]
-                with codecs.open(name, "w", encoding=options.cfg.output_encoding) as output_file:
-                    writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
-                    writer.writerow([options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in tab.columns])
-                    for i in tab.index:
-                        writer.writerow(tab.iloc[i])
+                tab.to_csv(name,
+                           sep=options.cfg.output_separator,
+                           index=False,
+                           header=[options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in tab.columns],
+                           encoding=options.cfg.output_encoding)
             except IOError as e:
                 QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. <b>The results have not been saved.</b>")
             except (UnicodeEncodeError, UnicodeDecodeError):
@@ -825,9 +827,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 duration_str = "{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3])
             else:
                 duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
-        
         self.ui.statusbar.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
-            len(self.Session.output_object), duration_str))
+            len(self.Session.output_object.index), duration_str))
         
     def show_header_menu(self, point ):
         header = self.ui.data_preview.horizontalHeader()
@@ -886,8 +887,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 action.setChecked(True)
             self.menu.addAction(action)
                                     
-            
-            if isinstance(self.table_model[[column]][0], (int, float)):
+            if self.table_model.content[[column]].dtypes[0] == "object":
                 action = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
                 action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
                 if self.table_model.sort_state[column] == results.SORT_REV_INC:
@@ -1188,6 +1188,7 @@ class CoqueryApp(QtGui.QMainWindow):
             event.accept()
         
     def mysql_settings(self):
+        import MySQLOptions
         settings = MySQLOptions.MySQLOptions.set(
             options.cfg.db_host, 
             options.cfg.db_port,
@@ -1202,8 +1203,28 @@ class CoqueryApp(QtGui.QMainWindow):
     def getGuiValues(self):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
+        
+        def traverse_output_columns(node):
+            output_features = []
+            for child in [node.child(i) for i in range(node.childCount())]:
+                output_features += traverse_output_columns(child)
+            if node.checkState(0) == QtCore.Qt.Checked and not node.objectName().rpartition("_")[-1] == "table":
+                output_features.append(node.objectName())
+            return output_features
+        
+        def get_external_links(node):
+            output_features = {}
+            for child in [node.child(i) for i in range(node.childCount())]:
+                output_features.update(get_external_links(child))
+            if node.checkState(0) == QtCore.Qt.Checked:
+                if node.parent() and node.parent()._link_by:
+                    d = {node.objectName(): ("{}.{}".format(node.parent().objectName(), node.parent()._link_by[1]),
+                                             node.parent()._link_by[0])}
+                    output_features.update(d)
+            return output_features
+
         if options.cfg:
-            options.cfg.corpus = unicode(self.ui.combo_corpus.currentText()).lower()
+            options.cfg.corpus = str(self.ui.combo_corpus.currentText()).lower()
         
             # determine query mode:
             if self.ui.radio_mode_context.isChecked():
@@ -1232,11 +1253,11 @@ class CoqueryApp(QtGui.QMainWindow):
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
                 if type(self.ui.edit_query_string) == QtGui.QLineEdit:
-                    options.cfg.query_list = [unicode(self.ui.edit_query_string.text())]
+                    options.cfg.query_list = [str(self.ui.edit_query_string.text())]
                 else:
-                    options.cfg.query_list = [unicode(self.ui.edit_query_string.toPlainText())]
+                    options.cfg.query_list = [str(self.ui.edit_query_string.toPlainText())]
             elif self.ui.radio_query_file.isChecked():
-                options.cfg.input_path = unicode(self.ui.edit_file_name.text())
+                options.cfg.input_path = str(self.ui.edit_file_name.text())
 
             # retrieve the CSV options for the current input file:
             if self.csv_options:
@@ -1265,48 +1286,15 @@ class CoqueryApp(QtGui.QMainWindow):
                    options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-            options.cfg.selected_features = []
             
             # Go throw options tree widget to get all checked output columns:
+            options.cfg.external_links = {}
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                for child in [root.child(i) for i in range(root.childCount())]:
-                    if child.checkState(0) == QtCore.Qt.Checked:
-                        options.cfg.selected_features.append(str(child.objectName()))
-                        
-                    table, _, variable = str(child.objectName()).partition("_")
-                    
-                    if table == "coquery":
-                        if variable == "query_string":
-                            options.cfg.show_query = bool(child.checkState(0))
-                        if variable == "input_file":
-                            options.cfg.show_input_file = bool(child.checkState(0))
-                    if table == "word":
-                        if variable == "label":
-                            options.cfg.show_orth = bool(child.checkState(0))
-                        if variable == "pos":
-                            options.cfg.show_pos = bool(child.checkState(0))
-                        if variable == "transcript":
-                            options.cfg.show_phon = bool(child.checkState(0))
-                    if table == "lemma":
-                        if variable == "label":
-                            options.cfg.show_lemma = bool(child.checkState(0))
-                        if variable == "pos":
-                            options.cfg.show_lemma_pos = bool(child.checkState(0))
-                        if variable == "transcript":
-                            options.cfg.show_lemma_phon = bool(child.checkState(0))
-                    try:
-                        if table == "source":
-                            options.cfg.source_columns.append(str(child.objectName()))
-                    except AttributeError:
-                        pass
-                    if table == "file":
-                        if variable == "label":
-                            options.cfg.show_filename = bool(child.checkState(0))
-                    if table == "speaker":
-                        options.cfg.show_speaker = options.cfg.show_speaker | child.checkState(0)
-                    if table == "corpus":
-                        if variable == "time":
-                            options.cfg.show_time = bool(child.checkState(0))
+                options.cfg.external_links.update(get_external_links(root))
+            
+            options.cfg.selected_features = []
+            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
+                options.cfg.selected_features += traverse_output_columns(root)
             return True
 
     def setGUIDefaults(self):
@@ -1381,6 +1369,10 @@ class CoqueryApp(QtGui.QMainWindow):
             The name of the corpus and the name of the table from that corpus
             as feature strings. 
         """
+        
+        
+        corpus, table, feature = linkselect.LinkSelect.display(self)
+        
         corpus = "bnc"
         table = "word"
         feature_name = "word_label"
@@ -1388,22 +1380,30 @@ class CoqueryApp(QtGui.QMainWindow):
         return (corpus, table, feature_name)
 
     def add_link(self):
+        import linkselect
         selected_item, column = self.ui.options_tree.selected_item
         selected_item.setExpanded(True)
 
         if column > self.ui.options_tree.columnCount():
             self.ui.options_tree.setColumnCount(column + 2)
 
-        corpus, table_name, feature_name = self.select_table()
+        link = linkselect.LinkSelect.display(
+            feature=selected_item.text(0),
+            corpus_omit=str(self.ui.combo_corpus.currentText()).lower())
+        
+        if not link:
+            return
+        else:
+            corpus, table_name, feature_name, case = link
         
         resource = get_available_resources()[corpus][0]
         table = resource.get_table_dict()[table_name]
         
         child_table = CoqTreeItem()
-        selected_item.addChild(child_table)
-        child_table.setText(column, "{}.{}".format(corpus.upper(), table_name.capitalize()))
-        child_table.setObjectName("{}.{}".format(corpus, table_name))
-        child_table.setLink(selected_item.objectName)
+        selected_item.parent().addChild(child_table)
+        child_table.setText(column, "{} ► {}.{}".format(str(selected_item.text(0)).capitalize(), corpus.upper(), table_name.capitalize()))
+        child_table.setObjectName("{}.{}_table".format(corpus, table_name))
+        child_table.setLink("{}.{}".format(selected_item.parent().objectName(), selected_item.objectName()), feature_name)
         child_table.setCheckState(column, False)
         
         for rc_feature in table:
@@ -1422,7 +1422,6 @@ class CoqueryApp(QtGui.QMainWindow):
             node.close()
         
         selected_item, column = self.ui.options_tree.selected_item
-        #remove_children(selected_item)
         selected_item.parent().removeChild(selected_item)
         
     

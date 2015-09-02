@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 class TimeSeriesVisualizer(vis.Visualizer):
     visualize_frequency = True
-    dimensionality = 1
+    dimensionality = 2
     vmax = 0
     
     def __init__(self, *args, **kwargs):
@@ -61,7 +61,7 @@ class TimeSeriesVisualizer(vis.Visualizer):
             super(TimeSeriesVisualizer, self).setup_figure()
 
     def draw(self, **kwargs):
-        """ Draw a heat map. """
+        """ Draw time series. """
         
         def plot_facet(data, color, **kwargs):
             
@@ -108,10 +108,9 @@ class TimeSeriesVisualizer(vis.Visualizer):
                 else:
                     # Line plot:
                     self.vmax = max(self.vmax, ct.values.max())
-                    print(ct)
-                    ct.plot(ax=plt.gca())
+                    ct.plot(ax=plt.gca(), color=self.get_palette())
                     #ct.plot(ax=plt.gca(), stacked=False, color=self.get_palette(), **kwargs)
-            
+        
         self.g.map_dataframe(plot_facet)
         
         if self.percentage:
@@ -128,6 +127,6 @@ class TimeSeriesVisualizer(vis.Visualizer):
         
         #self.setup_axis("Y")
         #self.setup_axis("X")
-        
-        self.g.fig.get_axes()[-1].legend(title=self._groupby[0], framealpha=0.7, frameon=True, loc="lower left").draggable()
+        if len(self._groupby) == 2:
+            self.g.fig.get_axes()[-1].legend(title=self._groupby[0], framealpha=0.7, frameon=True, loc="lower left").draggable()
         self.g.fig.tight_layout()

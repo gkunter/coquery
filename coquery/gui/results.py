@@ -60,7 +60,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         else:
             self.content = data
         
-        self.rownames = self.content.index
+        self.rownames = list(self.content.index.values)
         # try to set the columns to the output order of the current session
         try:
             self.reorder_data(options.cfg.main_window.Session.output_order)
@@ -124,7 +124,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # Return row names?
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
-                return self.rownames[index]
+                return str(self.rownames[index])
             else:
                 return None
 

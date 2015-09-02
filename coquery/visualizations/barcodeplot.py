@@ -89,5 +89,6 @@ class BarcodeVisualizer(vis.Visualizer):
             self.g.set(yticks=self._ticks)
             self.g.set(yticklabels=self._levels[0])
             self.g.set_axis_labels("Corpus position", self._groupby[0])
+        self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
         self.g.set_titles(fontweight="bold", size=options.cfg.app.font().pointSize() * self.get_font_scale())
         self.g.fig.tight_layout()

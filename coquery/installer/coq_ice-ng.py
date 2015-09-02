@@ -4,13 +4,19 @@ from __future__ import unicode_literals
 from __future__ import print_function
 import xml.etree
 import os.path, re
-import csv, cStringIO, codecs, string
+import csv, codecs, string
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
+    
+    
 from collections import defaultdict
 
-import corpusbuilder
+from corpusbuilder import *
 
 class corpus_code():
-    def tag_to_qhtml(self, s):
+    def get_tag_translate(self, tag):
         translate_dict = {
             "p": "p",
             "punctuation": "",
@@ -197,7 +203,7 @@ class corpus_code():
 
         #widget.ui.context_area.setText(collapse_words(context))
 
-class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
+class ICENigeriaBuilder(BaseCorpusBuilder):
     def __init__(self):
         """ Initialize the corpus builder. The initialization includes a 
         definition of the database schema. """
@@ -208,7 +214,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
         self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS", "CORP_SOURCE"]
-        self.documentation_url = ICENigeriaBuilder.get_documentation()
+        self.documentation_url = ICENigeriaBuilder.get_url()
 
         self.check_arguments()
         
@@ -397,7 +403,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         self.create_table_description(self.source_table,
             [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
             Column(self.source_mode, "TINYTEXT NOT NULL"),
-            Column(self.source_date, "VARCHAR(15) NOT NULL"), 
+            Column(self.source_date, "VARCHAR(10) NOT NULL"), 
             Column(self.source_register, "VARCHAR(30) NOT NULL"), 
             Column(self.source_place, "VARCHAR(30) NOT NULL"), 
             Column(self.source_age, "VARCHAR(5) NOT NULL"),  
@@ -464,16 +470,16 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                     #self._sentence_id = self.table_get(self.sentence_table,
                         #{self.sentence_source_id: self._source_id})
 
-    def xml_process_content(self, element):
+    def xml_process_content(self, element_text):
         """ In ICE-NG, the XML elements contain rows of words. This method 
         processes these rows, and creates token entries in the corpus table. 
         It also creates new entries in the word table if necessary."""
-        if element.text:
-            self.process_text(element.text)
+        if element_text:
+            self.process_text(element_text)
 
-    def xml_process_tail(self, element):
-        if element.tail:
-            self.process_text(element.tail)
+    def xml_process_tail(self, element_tail_text):
+        if element_tail_text:
+            self.process_text(element_tail_text)
         
     def xml_get_meta_information(self, root):
         meta_info_keys = ["date", "place"]
@@ -496,13 +502,17 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                 
         meta_info["register"] = os.path.basename(os.path.dirname(self._current_file))
         meta_info["mode"] = os.path.basename(os.path.normpath(os.path.join(os.path.dirname(self._current_file), "..")))
+        
+        date = meta_info["date"].strip().strip("-")
+        if date in ["?", "TODO"]:
+            date = ""
 
         # all meta data gathered, store it:
         self._source_id = self.table_get(self.source_table,
             {self.source_age: meta_info["age"],
              self.source_gender: meta_info["gender"],
              self.source_ethnicity: meta_info["ethnic-group"],
-             self.source_date: meta_info["date"],
+             self.source_date: date,
              self.source_mode: meta_info["mode"],
              self.source_register: meta_info["register"],
              self.source_place: meta_info["place"]})
@@ -552,7 +562,7 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
         
         self._current_file = current_file
 
-        file_buffer = cStringIO.StringIO()
+        file_buffer = StringIO()
         with codecs.open(current_file, "r", encoding = self.arguments.encoding) as input_file:
             skip = False
             fix_split_token = ""
@@ -629,13 +639,15 @@ class ICENigeriaBuilder(corpusbuilder.BaseCorpusBuilder):
                     else:
                         # The file buffer uses byte-strings, not unicode 
                         # strings. Therefore, encode the string first:
-                        file_buffer.write(line.encode("utf-8"))
+                        #file_buffer.write(line.encode("utf-8"))
+                        #file_buffer.write("\n")
+                        file_buffer.write(line)
                         file_buffer.write("\n")
                         last = line
 
         S = file_buffer.getvalue()
         
-        e = self.xml_parse_file(cStringIO.StringIO(S))
+        e = self.xml_parse_file(StringIO(S))
         self.xml_get_meta_information(e)
         self.xml_process_element(self.xml_get_body(e))
         

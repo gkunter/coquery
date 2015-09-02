@@ -14,21 +14,6 @@ class BarchartVisualizer(vis.Visualizer):
 
     def draw(self):
         """ Plot bar charts. """
-        if self._row_factor:
-            self.ct = pd.crosstab(
-                [self._table[self._row_factor], self._table[self._groupby[0]]],
-                [self._table[self._col_factor], self._table[self._groupby[1]]])
-        elif self._col_factor:
-            self.ct = pd.crosstab(
-                self._table[self._groupby[0]],
-                [self._table[self._col_factor], self._table[self._groupby[1]]])
-        elif len(self._groupby) == 2:
-            self.ct = pd.crosstab(
-                self._table[self._groupby[0]],
-                self._table[self._groupby[1]])
-        else:
-            self.ct = self._table[self._groupby[0]].value_counts()
-                
         def my_format_coord(x, y, title):
             y = y + 0.5
             offset = y - int(y)
@@ -138,6 +123,21 @@ class BarchartVisualizer(vis.Visualizer):
             ax.format_coord = lambda x, y: my_format_coord(x, y, ax.get_title())
             return ax
 
+        if self._row_factor:
+            self.ct = pd.crosstab(
+                [self._table[self._row_factor], self._table[self._groupby[0]]],
+                [self._table[self._col_factor], self._table[self._groupby[1]]])
+        elif self._col_factor:
+            self.ct = pd.crosstab(
+                self._table[self._groupby[0]],
+                [self._table[self._col_factor], self._table[self._groupby[1]]])
+        elif len(self._groupby) == 2:
+            self.ct = pd.crosstab(
+                self._table[self._groupby[0]],
+                self._table[self._groupby[1]])
+        else:
+            self.ct = self._table[self._groupby[0]].value_counts()
+                
         sns.despine(self.g.fig,
                     left=False, right=False, top=False, bottom=False)
 

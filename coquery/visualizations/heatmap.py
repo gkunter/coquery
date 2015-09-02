@@ -50,8 +50,8 @@ class HeatmapVisualizer(vis.Visualizer):
                 linewidths=1)
 
             vmax = pd.crosstab(
-                [self._table[x] for x in [self._row_factor, self._groupby[0]] if x <> None],
-                [self._table[x] for x in [self._col_factor, self._groupby[1]] if x <> None]).values.max()
+                [self._table[x] for x in [self._row_factor, self._groupby[0]] if x != None],
+                [self._table[x] for x in [self._col_factor, self._groupby[1]] if x != None]).values.max()
 
         self.g.map_dataframe(FUN)
 

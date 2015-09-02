@@ -224,7 +224,7 @@ class Table(object):
             for row in self._add_cache:
                 row_id, row_data = self._add_cache[row]
                 if row_data:
-                    data.append([row_id] + row_data.values())
+                    data.append([row_id] + list(row_data.values()))
             #data = [[row_id] + row.values() for row_id, row in self._add_cache if row]
             if data: 
                 db_connector.executemany(sql_string, data)
@@ -280,6 +280,8 @@ class Table(object):
                     column.name,
                     column.data_type))
         return ", ".join(str_list)
+    
+
     
 class BaseCorpusBuilder(object):
     """ 
@@ -407,7 +409,7 @@ class BaseCorpusBuilder(object):
         elif self._corpus_buffer:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
                 self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["%s"] * (len(self._corpus_keys))))
-            data = [row.values() for row in self._corpus_buffer]
+            data = [list(row.values()) for row in self._corpus_buffer]
             if data: 
                 try:
                     self.Con.executemany(sql_string, data)
@@ -1165,7 +1167,10 @@ class BaseCorpusBuilder(object):
                         continue
                     current_type = self.Con.get_field_type(current_table, current_field)
                     if current_type.lower() != optimal_type.lower():
-                        optimal_type = optimal_type.decode("utf-8")
+                        try:
+                            optimal_type = optimal_type.decode("utf-8")
+                        except AttributeError:
+                            pass
                         self.logger.info("Optimising column {}.{} from {} to {}".format(
                             current_table, current_field, current_type, optimal_type))
                         try:
@@ -1399,19 +1404,19 @@ class Resource(SQLResource):
 
     @staticmethod
     def get_title():
-        return ""
+        return "(no title)"
 
     @staticmethod
     def get_description():
-        return []
-    
+        return ["(no description)"]
+
     @staticmethod
     def get_references():
-        return []
+        return ["(no reference)"]
 
     @staticmethod
     def get_url():
-        return ""
+        return "(no URL)"
 
     def get_speaker_data(self, *args):
         return []
@@ -1423,7 +1428,7 @@ class Resource(SQLResource):
         self.logger.info("Building corpus %s" % self.name)
         self.logger.info("Command line arguments: %s" % " ".join(sys.argv[1:]))
         if not self._widget:
-            print("\n%s\n" % textwrap.TextWrapper(width=79).fill("\n".join(self.get_description())))
+            print("\n%s\n" % textwrap.TextWrapper(width=79).fill("".join(self.get_description())))
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """

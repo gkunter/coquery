@@ -28,7 +28,7 @@ class ContextView(QtGui.QWidget):
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
         self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
         self.ui.slider_context_width.setTracking(True)
-        
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.closeEvent)
         self.add_source_label("Token ID", token_id)
         self.add_source_label("Source ID", source_id)
             
@@ -91,12 +91,10 @@ class ContextView(QtGui.QWidget):
             self.accept()
             
     def closeEvent(self, *args):
-        self.close()
         options.cfg.context_view_height = self.height()
         options.cfg.context_view_width = self.width()
         options.cfg.context_view_words = self.ui.slider_context_width.value()
         options.cfg.main_window.widget_list.remove(self)
-        super(ContextView, self).closeEvent(*args)
         
     @staticmethod
     def display(resource, token_id, source_id, token_width, parent=None):
