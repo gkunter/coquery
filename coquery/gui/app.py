@@ -1390,24 +1390,28 @@ class CoqueryApp(QtGui.QMainWindow):
         selected_item, column = self.ui.options_tree.selected_item
         selected_item.setExpanded(True)
 
-        corpus, table = self.select_table()
-
-        child_table = CoqTreeItem()
-        selected_item.addChild(child_table)
-        
-        print(column, self.ui.options_tree.columnCount())
         if column > self.ui.options_tree.columnCount():
             self.ui.options_tree.setColumnCount(column + 2)
+
+        corpus, table_name = self.select_table()
         
-        child_table.setText(0, "{}.{}".format(corpus, table))
+        resource = get_available_resources()[corpus][0]
+        table = resource.get_table_dict()[table_name]
+        
+        child_table = CoqTreeItem()
+        selected_item.addChild(child_table)
+        child_table.setText(column, "{}.{}".format(corpus, table_name))
+        child_table.setObjectName("{}.{}".format(corpus, table_name))
         child_table.setLink(selected_item.objectName)
         child_table.setCheckState(column, False)
-        for x in ["Word", "Lemma", "Lemma_pos", "C5_pos", "Type"]:
-            new_item = CoqTreeItem()
-            new_item.setText(0, x)
-            new_item.setObjectName("bmc.word_xxx")
-            new_item.setCheckState(column + 1, False)
-            child_table.addChild(new_item)
+        
+        for rc_feature in table:
+            if rc_feature.rpartition("_")[-1] not in ("id", "table"):
+                new_item = CoqTreeItem()
+                new_item.setText(0, resource.__getattribute__(resource, rc_feature))
+                new_item.setObjectName("{}.{}".format(corpus, rc_feature))
+                new_item.setCheckState(column, False)
+                child_table.addChild(new_item)
             
     def remove_link(self):
         def remove_children(node):
