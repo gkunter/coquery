@@ -51,16 +51,18 @@ from defines import *
 from errors import *
 
 class Options(object):
-    corpus_argument_dict = {
-        "help": "specify the corpus to use", 
-        "choices": resource_list.get_available_resources().keys(), 
-        "type": type(str(""))}
-    
     def __init__(self):
         try:
             self.base_path = os.path.dirname(__init__.__file__)
         except AttributeError:
             self.base_path = "."
+
+        self.corpus_argument_dict = {
+            "help": "specify the corpus to use", 
+            "choices": get_available_resources().keys(), 
+            "type": type(str(""))}
+
+
         self.prog_name = __init__.NAME
         self.config_name = "%s.cfg" % __init__.NAME
         self.version = __init__.__version__
@@ -127,6 +129,7 @@ class Options(object):
         group.add_argument("--memory-dump", help="list objects that consume much memory after queries", action="store_true", dest="memory_dump")
         group.add_argument("--experimental", help="use experimental features (may be buggy)", action="store_true")
         group.add_argument("--comment", help="a comment that is shown in the log file", type=str)
+        group.add_argument("--allow-links", help="enable experimental feature: corpus features can be linked to external tables", action="store_true", dest="allow_links")
 
         # Query options:
         group = self.parser.add_argument_group("Query options")
@@ -187,7 +190,7 @@ class Options(object):
                 # values the features provided by each of the tables defined in
                 # the resource. The features are included as tuples, with first,
                 # the display name and second, the resource feature name.
-                resource, _, _, _ = resource_list.available[self.args.corpus]
+                resource, _, _ = get_resource(self.args.corpus)
                 corpus_features = resource.get_corpus_features()
                 lexicon_features = resource.get_lexicon_features()
                 for rc_feature, column in corpus_features + lexicon_features:
@@ -421,23 +424,6 @@ class Options(object):
         except AttributeError:
             self.args.output_separator = codecs.getdecoder("unicode_escape") (self.args.output_separator) [0]
         
-        #if self.args.source_columns == None:
-            #self.args.show_source = False
-            #self.args.source_columns = []
-        #else:
-            #potential_labels = [x[len("source_info_"):] for x in dir(resource_list.get_available_resources()[self.args.corpus][0]) if x.startswith("source_info_")]
-            
-            ##for x in self.args.source_columns:
-                ##if x.lower() == "all":
-                    ##self.args.source_columns = potential_labels
-                    ##break
-            
-            #for x in self.args.source_columns:
-                #if x.upper() != "ALL":
-                    #if x.lower() not in potential_labels:
-                        #raise SourceFeatureUnavailableError(x, "(possible: {})".format(", ".join(potential_labels)))
-            #self.args.show_source = True
-            
         if self.args.context_span:
             self.args.context_left = self.args.context_span
             self.args.context_right = self.args.context_span

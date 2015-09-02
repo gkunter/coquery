@@ -40,8 +40,6 @@ import options
 from session import *
 from errors import *
 
-import cProfile
-
 import time
 import __init__
 
@@ -66,13 +64,13 @@ def main():
         # Check if a valid corpus was specified, but only if no GUI is
         # requested (the GUI will handle corpus selection later):
         if not (options.cfg.gui):
-            if not resource_list.get_available_resources():
+            if not get_available_resources():
                 raise NoCorpusError
 
             if not options.cfg.corpus:
                 raise NoCorpusSpecifiedError
 
-            if options.cfg.corpus not in resource_list.get_available_resources():
+            if options.cfg.corpus not in get_available_resources():
                 raise CorpusUnavailableError(options.cfg.corpus)
             
     except Exception as e:
@@ -131,6 +129,7 @@ def main():
             # Check if profiling is requested. If so, wrap the profiler 
             # around the query execution:
             if options.cfg.profile:
+                import cProfile
                 cProfile.runctx("Session.run_queries()", globals(), locals())
             # Otherwise, run queries normally:
             else:

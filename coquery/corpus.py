@@ -1663,6 +1663,16 @@ class SQLCorpus(BaseCorpus):
         be displayed. The area in which the context is shown is a QLabel
         named widget.ui.context_area. """
 
+        tab = options.cfg.main_window.table_model.content
+        
+        # create a list of all token ids that are also listed in the results
+        # table:
+        id_list = []
+        for x in tab[tab.coquery_invisible_origin_id == source_id].index:
+            start = tab.iloc[x].coquery_invisible_corpus_id
+            end = start + tab.iloc[x].coquery_invisible_number_of_tokens
+            id_list += [y for y in range(start, end)]
+
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
             
@@ -1780,10 +1790,17 @@ class SQLCorpus(BaseCorpus):
                 
             if word:
                 # process the context word:
-                if token_id <= context_token_id < token_id + token_width:
+                
+                # highlight words that are in the results table:
+                if context_token_id in id_list:
                     context.append("<span style='{}'; >".format(self.resource.render_token_style))
+                # additional highlight if the word is the target word:
+                if token_id <= context_token_id < token_id + token_width:
+                    context.append("<b>")
                 context.append(word)
                 if token_id <= context_token_id < token_id + token_width:
+                    context.append("</b>")
+                if context_token_id in id_list:
                     context.append("</span>")
             
             # process all closing elements:
