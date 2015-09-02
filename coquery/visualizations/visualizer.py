@@ -44,6 +44,7 @@ import pandas as pd
 import seaborn as sns
 
 from pyqt_compat import QtGui, QtCore, pyside
+from gui.QtProgress import ProgressIndicator
 
 import options
 sys.path.append(os.path.join(sys.path[0], "../gui/"))
@@ -94,10 +95,6 @@ import multiprocessing
         #else:
             #i += tree_weight(tree[node])
     #return i
-
-# pandas snippet:
-# check if a column contains only a single value:
-# len(pd.unique(self._table[column].values.ravel())) == 1
 
 class Visualizer(object):
     """ 
@@ -202,7 +199,7 @@ class Visualizer(object):
                 return sns.color_palette("Paired")[0]
             else:
                 palette_name = "Paired"        
-        elif len(self._levels[-1]) in (2, 4, 6, 8, 12):
+        elif len(self._levels[-1]) in (2, 4, 6):
             palette_name = "Paired"
         else:
             # use 'Set3', a quantitative palette, if there are two grouping
@@ -503,6 +500,20 @@ class Visualizer(object):
         if font_scale <= 1.5:
             return "talk"
         return "poster"
+    
+    def start_draw_thread(self):
+        """
+        Wrap a progress indicator around :func:`draw`.
+        
+        As drawing using matplotlib is not exactly lightning-fast, a progress
+        bar from :mod:`gui.QtProgress` is used to show that there is still 
+        activity.
+        """
+        
+        progress = ProgressIndicator(FUN=None, label="Drawing...")
+        
+        self.draw()
+        progress.close()
 
 class VisualizerDialog(QtGui.QWidget):
     """ Defines a QDialog that is used to visualize the data in the main 
@@ -571,7 +582,7 @@ class VisualizerDialog(QtGui.QWidget):
         else:
             self.visualizer.update_data()
             
-        self.visualizer.draw()
+        self.visualizer.start_draw_thread()
         if self.smooth:
             self.ui.spinner.valueChanged.connect(self.update_plot)
             self.ui.spinner.setEnabled(True)
@@ -598,22 +609,11 @@ class VisualizerDialog(QtGui.QWidget):
     def close(self, *args):
         """ Close the visualizer widget, disconnect the signals, and remove 
         the visualizer from the list of visualizers when closing."""
-        super(VisualizerDialog, self).close(*args)
-        try:
-            options.cfg.main_window.widget_list.remove(self)
-        except ValueError:
-            pass
-        try:
-            self.disconnect_signals()
-        except RuntimeError:
-            pass
+        self.disconnect_signals()
+        self.remove_matplot()
+        super(VisualizerDialog, self).close()
+        options.cfg.main_window.widget_list.remove(self)
         
-    def closeEvent(self, *args):
-        """ Catch close event so that the visualizer is disconnected and 
-        removed from the list of visualizers. """
-        self.close()
-        super(VisualizerDialog, self).closeEvent(*args)
-
     def keyPressEvent(self, event):
         """ Catch key events so that they can be passed on to the matplotlib
         toolbar. """
@@ -661,7 +661,7 @@ class VisualizerDialog(QtGui.QWidget):
     def plot_it(self):
         print("starting")
         self.visualizer.setup_figure()
-        self.visualizer.draw()
+        self.visualizer.start_draw_thread()
         print("done")
 
     def Plot(self, model, view, visualizer_class, parent=None, **kwargs):
@@ -680,7 +680,7 @@ class VisualizerDialog(QtGui.QWidget):
                 dialog.add_matplot()
                 #self.sub_process = multiprocessing.Process(target=self.plot_it, args=())
                 #self.sub_process.start()
-                self.visualizer.draw()
+                self.visualizer.start_draw_thread()
         except InvalidGraphLayout as e:
             QtGui.QMessageBox.critical(self, "Visualization error", e.error_message)
 if __name__ == "__main__":
