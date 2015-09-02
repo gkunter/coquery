@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'gui/coquery.ui'
 #
-# Created: Sun Aug 30 00:04:47 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created: Wed Sep  2 00:51:18 2015
+#      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(1222, 775)
+        MainWindow.resize(1222, 784)
         MainWindow.setDocumentMode(False)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
@@ -364,10 +364,39 @@ class Ui_MainWindow(object):
         self.output_columns.setSpacing(0)
         self.output_columns.setMargin(10)
         self.output_columns.setObjectName(_fromUtf8("output_columns"))
+        self.horizontalLayout_2 = QtGui.QHBoxLayout()
+        self.horizontalLayout_2.setSpacing(20)
+        self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
         self.label_2 = QtGui.QLabel(self.box_output_options)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
+        self.label_2.setSizePolicy(sizePolicy)
         self.label_2.setAlignment(QtCore.Qt.AlignBottom|QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft)
         self.label_2.setObjectName(_fromUtf8("label_2"))
-        self.output_columns.addWidget(self.label_2)
+        self.horizontalLayout_2.addWidget(self.label_2)
+        self.button_add_link = QtGui.QPushButton(self.box_output_options)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.button_add_link.sizePolicy().hasHeightForWidth())
+        self.button_add_link.setSizePolicy(sizePolicy)
+        self.button_add_link.setWhatsThis(_fromUtf8(""))
+        self.button_add_link.setText(_fromUtf8(""))
+        self.button_add_link.setObjectName(_fromUtf8("button_add_link"))
+        self.horizontalLayout_2.addWidget(self.button_add_link)
+        self.button_remove_link = QtGui.QPushButton(self.box_output_options)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.button_remove_link.sizePolicy().hasHeightForWidth())
+        self.button_remove_link.setSizePolicy(sizePolicy)
+        self.button_remove_link.setText(_fromUtf8(""))
+        self.button_remove_link.setObjectName(_fromUtf8("button_remove_link"))
+        self.horizontalLayout_2.addWidget(self.button_remove_link)
+        self.horizontalLayout_2.setStretch(0, 1)
+        self.output_columns.addLayout(self.horizontalLayout_2)
         self.options_list = QtGui.QVBoxLayout()
         self.options_list.setObjectName(_fromUtf8("options_list"))
         self.options_tree = QtGui.QTreeWidget(self.box_output_options)
@@ -629,6 +658,8 @@ class Ui_MainWindow(object):
         self.button_browse_file.setText(_translate("MainWindow", "&Open", None))
         self.button_browse_file.setShortcut(_translate("MainWindow", "Alt+B", None))
         self.label_2.setText(_translate("MainWindow", "Output columns", None))
+        self.button_add_link.setToolTip(_translate("MainWindow", "Link selected column to another corpus", None))
+        self.button_remove_link.setToolTip(_translate("MainWindow", "Remove selected link", None))
         self.label_4.setText(_translate("MainWindow", "Filter: ", None))
         self.edit_query_filter.setPlaceholderText(_translate("MainWindow", "(e.g. Year > 1999)", None))
         self.tabbed_views.setTabText(self.tabbed_views.indexOf(self.results_tab), _translate("MainWindow", "Query result", None))

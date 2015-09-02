@@ -129,6 +129,7 @@ class Options(object):
         group.add_argument("--memory-dump", help="list objects that consume much memory after queries", action="store_true", dest="memory_dump")
         group.add_argument("--experimental", help="use experimental features (may be buggy)", action="store_true")
         group.add_argument("--comment", help="a comment that is shown in the log file", type=str)
+        group.add_argument("--allow-links", help="enable experimental feature: corpus features can be linked to external tables", action="store_true", dest="allow_links")
 
         # Query options:
         group = self.parser.add_argument_group("Query options")

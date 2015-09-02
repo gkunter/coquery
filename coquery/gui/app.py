@@ -63,9 +63,13 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
     """ Define a tree element class that stores the output column options in
     the options tree. """
     
-    def __init__(self, *args):
-        super(CoqTreeItem, self).__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super(CoqTreeItem, self).__init__(*args, **kwargs)
         self._objectName = ""
+        self._link_by = None
+
+    def setLink(self, link):
+        self._link_by = link
         
     def setObjectName(self, name):
         """ Store resource variable name as object name. """
@@ -79,17 +83,31 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         """ Compare the check state of the item to that of all children.
         Returns True all children have the same check state, False if at 
         # least one child has a different check state than another. """
-
         child_states = set([])
         for child in [self.child(i) for i in range(self.childCount())]:
             child_states.add(child.checkState(column))
         return len(child_states) == 1
 
     def update_checkboxes(self, column, expand=False):
-        """ Propagate the check state of the item to its children. Also, 
-        adjust the check state of the parent accordingly. If the argument 
-        'expand' is True, the parents of items with checked children will be 
-        expanded. """
+        """ 
+        Propagate the check state of the item to the other tree items.
+        
+        This method propagates the check state of the current item to its 
+        children (e.g. if the current item is checked, all children are also 
+        checked). It also toggles the check state of the parent, but only if
+        the current item is a native feature of the parent, and not a linked 
+        table. 
+        
+        If the argument 'expand' is True, the parents of items with checked 
+        children will be expanded. 
+        
+        Parameters
+        ----------
+        column : int
+            The nubmer of the column
+        expand : bool
+            If True, a parent node will be expanded if the item is checked
+        """
         check_state = self.checkState(column)
 
         if check_state == QtCore.Qt.PartiallyChecked:
@@ -102,8 +120,8 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         # propagate check state to children:
         for child in [self.child(i) for i in range(self.childCount())]:
             child.setCheckState(column, check_state)
-        # adjust check state of parent:
-        if self.parent():
+        # adjust check state of parent, but not if linked:
+        if self.parent() and not self._link_by:
             if not self.parent().check_children():
                 self.parent().setCheckState(column, QtCore.Qt.PartiallyChecked)
             else:
@@ -118,8 +136,19 @@ class CoqTreeWidget(QtGui.QTreeWidget):
     def __init__(self, *args):
         super(CoqTreeWidget, self).__init__(*args)
         self.itemChanged.connect(self.update)
+        if options.cfg.allow_links:
+            self.itemActivated.connect(self.enable_button)
         self.setDragEnabled(True)
-            
+
+    def enable_button(self, *args):
+        self.selected_item = args
+        if self.selected_item[0]._link_by:
+            options.cfg.main_window.ui.button_add_link.setEnabled(False)
+            options.cfg.main_window.ui.button_remove_link.setEnabled(True)
+        elif str(self.selected_item[0]._objectName).rpartition("_")[-1] != "table":
+            options.cfg.main_window.ui.button_add_link.setEnabled(True)
+            options.cfg.main_window.ui.button_remove_link.setEnabled(False)
+
     def update(self, item, column):
         """ Update the checkboxes of parent and child items whenever an
         item has been changed. """
@@ -476,7 +505,19 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
-    
+
+        if options.cfg.allow_links:
+            self.ui.button_add_link.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_FileDialogNewFolder))
+            self.ui.button_add_link.setEnabled(False)
+            self.ui.button_add_link.clicked.connect(self.add_link)
+            
+            self.ui.button_remove_link.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogDiscardButton))
+            self.ui.button_remove_link.setEnabled(False)
+            self.ui.button_remove_link.clicked.connect(self.remove_link)
+        else:
+            self.ui.button_add_link.hide()
+            self.ui.button_remove_link.hide()
+            
     def result_column_resize(self, index, old, new):
         header = self.table_model.content.columns[index].lower()
         options.cfg.column_width[header] = new
@@ -1324,5 +1365,60 @@ class CoqueryApp(QtGui.QMainWindow):
             pass
         return True
 
+    def select_table(self):
+        """
+        Open a table select widget.
+        
+        The table select widget contains a QTreeWidget with all corpora 
+        except the currently active one as parents, and the respective tables
+        as children.
+        
+        The return tuple contains the corpus and the table name. 
+        
+        Returns
+        -------
+        (corpus, table) : tuple
+            The name of the corpus and the name of the table from that corpus
+            as feature strings. 
+        """
+        corpus = "bnc"
+        table = "word"
+        
+        return (corpus, table)
+
+    def add_link(self):
+        selected_item, column = self.ui.options_tree.selected_item
+        selected_item.setExpanded(True)
+
+        corpus, table = self.select_table()
+
+        child_table = CoqTreeItem()
+        selected_item.addChild(child_table)
+        
+        print(column, self.ui.options_tree.columnCount())
+        if column > self.ui.options_tree.columnCount():
+            self.ui.options_tree.setColumnCount(column + 2)
+        
+        child_table.setText(0, "{}.{}".format(corpus, table))
+        child_table.setLink(selected_item.objectName)
+        child_table.setCheckState(column, False)
+        for x in ["Word", "Lemma", "Lemma_pos", "C5_pos", "Type"]:
+            new_item = CoqTreeItem()
+            new_item.setText(0, x)
+            new_item.setObjectName("bmc.word_xxx")
+            new_item.setCheckState(column + 1, False)
+            child_table.addChild(new_item)
+            
+    def remove_link(self):
+        def remove_children(node):
+            for child in [node.child(i) for i in range(node.childCount())]:
+                remove_children(child)
+                node.removeChild(child)
+            node.close()
+        
+        selected_item, column = self.ui.options_tree.selected_item
+        #remove_children(selected_item)
+        selected_item.parent().removeChild(selected_item)
+        
     
 logger = logging.getLogger(__init__.NAME)
