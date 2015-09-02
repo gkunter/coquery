@@ -2,6 +2,11 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 try:
+    str = unicode
+except TypeError:
+    pass
+
+try:
     import MySQLdb as mysql
     import MySQLdb.cursors as mysql_cursors
 except ImportError:
