@@ -61,9 +61,20 @@ class InvalidGraphLayout(NoTraceException):
     factor or the column grouping factor contains more than 16 distinct values.
     The resulting plot would thus contain more than 16 rows or columns, which
     is too small to plot.</p>
-    <p>You may try to rearrange your data table by either hiding or moving 
+    <p>You may try to rearrange your results table by either hiding or moving 
     the column that causes this problem, or by selecting other output columns
     with less distinct values.</p>"""
+
+class VisualizationInvalidDataError(NoTraceException):
+    error_message = """<p><b>Your results table cannot be plotted by this visualizer.</b></p>
+    <p>The visualizer that you selected expects a particular type of data that
+    could not be found in the results table. For example, the 'Time Data' 
+    visualizers expect a data column that contains temporal data (e.g. Date
+    or Age).</p>
+    <p>You can either choose a different visualization for your results table,
+    or you can select those output columns which provide the required data. 
+    After you have re-run the query with these additional output columns, you
+    can try to visualize the results table again.</p>"""
     
 class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."

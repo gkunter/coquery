@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from errors import *
+
 class TimeSeriesVisualizer(vis.Visualizer):
     visualize_frequency = True
     dimensionality = 2
@@ -55,7 +57,8 @@ class TimeSeriesVisualizer(vis.Visualizer):
                     self._groupby[1] = self._time_column
                 else:
                     self._groupby.append(self._time_column)
-    
+        else:
+            raise VisualizationInvalidDataError
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
             super(TimeSeriesVisualizer, self).setup_figure()

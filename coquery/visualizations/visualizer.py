@@ -44,10 +44,10 @@ import pandas as pd
 import seaborn as sns
 
 from pyqt_compat import QtGui, QtCore, pyside
-from gui.QtProgress import ProgressIndicator
 
 import options
 sys.path.append(os.path.join(sys.path[0], "../gui/"))
+from QtProgress import ProgressIndicator
 import visualizerUi
 from defines import *
 from errors import *
@@ -683,6 +683,10 @@ class VisualizerDialog(QtGui.QWidget):
                 self.visualizer.start_draw_thread()
         except InvalidGraphLayout as e:
             QtGui.QMessageBox.critical(self, "Visualization error", e.error_message)
+        except VisualizationInvalidDataError as e:
+            QtGui.QMessageBox.critical(self, "Visualization error", e.error_message)
+            
+
 if __name__ == "__main__":
     unittest.main()
             
