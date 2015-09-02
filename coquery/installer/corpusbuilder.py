@@ -49,6 +49,8 @@ import logging
 import collections
 import os, os.path
 import string
+import imp
+import importlib
 
 import dbconnection
 import argparse
@@ -327,13 +329,13 @@ class BaseCorpusBuilder(object):
             self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
             self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
             self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
-            self.parser.add_argument("-w", help="Actually do something; default behaviour is simulation.", action="store_false", dest="dry_run")
             self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
             self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
             if nltk_available:
                 self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
             self.parser.add_argument("-l", help="load source files", action="store_true")
-            self.parser.add_argument("-c", help="Create database tables", action="store_true")
+            self.parser.add_argument("-c", help="create database tables", action="store_true")
+            self.parser.add_argument("-w", help="write corpus module", action="store_true")
             self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
             self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
             self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
@@ -388,7 +390,7 @@ class BaseCorpusBuilder(object):
             if not self.arguments.db_name:
                 self.arguments.db_name = self.arguments.name
             if not self.arguments.corpus_path:
-                self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../coquery/corpora"))
+                self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../corpora"))
             self.name = self.arguments.name
             
             in_memory = self.arguments.in_memory
@@ -1094,6 +1096,40 @@ class BaseCorpusBuilder(object):
         if show_progress and not self._widget:
             progress.finish()
     
+    def build_create_frequency_table(self):
+        """ 
+        Create a frequency table for all combinations of corpus features.
+        
+        This method creates a database table named 'coq_frequency_count' with 
+        all corpus features as columns, and a row for each comination of 
+        corpus features that occur in the corpus. The last column 'Count' 
+        gives the number of tokens in the corpus that occur in the corpus.
+        
+        The frequency table can be used to look up quickly the size of a 
+        subcorpus as well as the overall corpus. This is important for 
+        reporting frequency counts as per-million-word frequencies.
+        """
+
+        #print(self.module_content)
+        print(self.name)
+
+        module = importlib.import_module("..{}".format(self.name), "installer.{}".format(self.name))
+
+        #exec self.resource_content
+        ##print(self.resource_content)
+
+        #module_path = os.path.join(self.arguments.corpus_path, "{}.py".format(self.name))
+        #module_path = "/home/kunibert/Dev/coquery/coquery/corpora/ice_ng.py"
+        #print(module_path)
+        #print(sys.modules.keys())
+        #module = imp.load_source(self.name, module_path)
+        #print(module, dir(module))
+        ##resource = module.Resource
+        ##print(resource)
+        
+        
+        
+    
     def create_joined_table(self):
         pass
     
@@ -1263,11 +1299,9 @@ class BaseCorpusBuilder(object):
     def build_write_module(self, corpus_path):
         """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
-        if self.arguments.dry_run:
-            return
         
         base_variables = self.get_class_variables()
-        
+
         # all class variables that are defined in this class and which...
         # - are note stored in the base class
         # - do not start with an underscore '_'
@@ -1287,8 +1321,16 @@ class BaseCorpusBuilder(object):
         
         lexicon_provides = "[{}]".format(", ".join(self.lexicon_features))
         corpus_provides = "[{}]".format(", ".join(self.corpus_features))
-        
-        output_code = self.module_code.format(
+
+        self.resource_content = """
+class Resource(SQLResource):
+    name = '{name}'
+    db_name = '{db_name}'
+{variables}
+{resource_code}
+""".format(name=self.name, db_name=self.arguments.db_name, variables=variable_code, resource_code=self.get_resource_code())
+
+        self.module_content = self.module_code.format(
                 name=self.name,
                 db_name=self.arguments.db_name,
                 url=self.documentation_url,
@@ -1298,6 +1340,9 @@ class BaseCorpusBuilder(object):
                 corpus_code=self.get_corpus_code(),
                 lexicon_code=self.get_lexicon_code(),
                 resource_code=self.get_resource_code())
+
+        if not self.arguments.w:
+            return
         
         path = os.path.join(corpus_path, "{}.py".format(self.name))
         # Handle existing versions of the corpus module
@@ -1306,7 +1351,7 @@ class BaseCorpusBuilder(object):
             with codecs.open(path, "r") as input_file:
                 existing_code = input_file.read()
             # Keep if existing code is the same as the new code:
-            if existing_code == output_code:
+            if existing_code == self.module_content:
                 self.logger.info("Identical corpus module %s already exists." % path)
                 return
             # Ask if the existing code should be overwritten:
@@ -1316,13 +1361,13 @@ class BaseCorpusBuilder(object):
                     self.logger.warning(msq_module_exists)
                 except NameError:
                     pass
-                if self.ask_overwrite(msq_module_exists, existing_code, output_code):
+                if self.ask_overwrite(msq_module_exists, existing_code, self.module_content):
                     self.logger.warning("Overwriting existing corpus module.")
                 else:
                     return
         # write module code:
         with codecs.open(path, "w") as output_file:
-            output_file.write(output_code)
+            output_file.write(self.module_content)
             self.logger.info("Library %s written." % path)
             
     def setup_db(self):
@@ -1339,8 +1384,6 @@ class BaseCorpusBuilder(object):
         if not self.Con.has_database(self.arguments.db_name):
             self.Con.create_database(self.arguments.db_name)
         self.Con.use_database(self.arguments.db_name)
-        # if this is a dry run, database access will only be emulated:
-        self.Con.dry_run = self.arguments.dry_run
 
         cursor = self.Con.Con.cursor()
         self.Con.execute(cursor, "SET autocommit=0")
@@ -1354,7 +1397,20 @@ class BaseCorpusBuilder(object):
         indexed. More than one function can be added."""
         self.additional_stages.append(stage)
 
-    def get_description(self):
+    @staticmethod
+    def get_title():
+        return ""
+
+    @staticmethod
+    def get_description():
+        return []
+    
+    @staticmethod
+    def get_references():
+        return []
+
+    @staticmethod
+    def get_url():
         return ""
 
     def get_speaker_data(self, *args):
@@ -1363,14 +1419,11 @@ class BaseCorpusBuilder(object):
     def initialize_build(self):
         """ Start logging, start the timer."""
         self.start_time = time.time()
-        if self.arguments.dry_run:
-            self.logger.info("--- Starting (dry run) ---")
-        else:
-            self.logger.info("--- Starting ---")
+        self.logger.info("--- Starting ---")
         self.logger.info("Building corpus %s" % self.name)
         self.logger.info("Command line arguments: %s" % " ".join(sys.argv[1:]))
         if not self._widget:
-            print("\n%s\n" % textwrap.TextWrapper(width=79).fill(self.get_description()))
+            print("\n%s\n" % textwrap.TextWrapper(width=79).fill("\n".join(self.get_description())))
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """
@@ -1426,6 +1479,9 @@ class BaseCorpusBuilder(object):
         if self.verify_corpus():
             self.build_write_module(self.arguments.corpus_path)
             
+        self.build_create_frequency_table()
+        
+        
         self.build_finalize()
                 
 if use_gui:
@@ -1487,7 +1543,6 @@ if use_gui:
 
         def get_arguments_from_gui(self):
             namespace = argparse.Namespace()
-            namespace.dry_run = False
             namespace.verbose = False
             namespace.o = True
             namespace.i = True
@@ -1501,7 +1556,7 @@ if use_gui:
             namespace.name = str(self.ui.corpus_name.text())
             namespace.path = str(self.ui.input_path.text())
             namespace.use_nltk = self.ui.use_pos_tagging.checkState()
-            namespace.corpus_path = os.path.join(sys.path[0], "corpora/")
+            namespace.corpus_path = os.path.join(sys.path[0], "../corpora/")
             namespace.db_name = str(self.ui.corpus_name.text())
             namespace.db_host = options.cfg.db_host
             namespace.db_user = options.cfg.db_user
