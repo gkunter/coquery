@@ -31,11 +31,11 @@ class corpus_code():
             "other-language": "span style='font-style: italic;'",
             "quote": "span style='font-style: italic; color: darkgrey; '",
             "error": "s"}
-        if s in translate_dict:
-            return translate_dict[s]
+        if tag in translate_dict:
+            return translate_dict[tag]
         else:
-            print("unsupported tag: ", s)
-            return s
+            print("unsupported tag: ", tag)
+            return tag
 
     def renderer_open_element(self, tag, attributes):
         context = super(Corpus, self).renderer_open_element(tag, attributes)
@@ -54,7 +54,7 @@ class corpus_code():
                 anon_type = attributes["type"]
             except KeyError:
                 pass
-            context.append('<span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span>'.format(anon_type))
+            context.append(' <span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span> '.format(anon_type))
 
 
         return context
@@ -641,12 +641,16 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                         # strings. Therefore, encode the string first:
                         #file_buffer.write(line.encode("utf-8"))
                         #file_buffer.write("\n")
-                        file_buffer.write(line)
+                        try:
+                            file_buffer.write(line)
+                        except UnicodeEncodeError:
+                            file_buffer.write(line.encode("utf-8"))
+                            
                         file_buffer.write("\n")
                         last = line
 
         S = file_buffer.getvalue()
-        
+
         e = self.xml_parse_file(StringIO(S))
         self.xml_get_meta_information(e)
         self.xml_process_element(self.xml_get_body(e))
