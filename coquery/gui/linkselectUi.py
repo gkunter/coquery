@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'linkselect.ui'
 #
-# Created: Wed Sep  2 20:48:19 2015
+# Created: Thu Sep  3 00:18:32 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,10 +26,20 @@ except AttributeError:
 class Ui_LinkSelect(object):
     def setupUi(self, LinkSelect):
         LinkSelect.setObjectName(_fromUtf8("LinkSelect"))
-        LinkSelect.resize(640, 480)
+        LinkSelect.resize(655, 480)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(LinkSelect.sizePolicy().hasHeightForWidth())
+        LinkSelect.setSizePolicy(sizePolicy)
         self.verticalLayout_2 = QtGui.QVBoxLayout(LinkSelect)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.frame = QtGui.QFrame(LinkSelect)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
+        self.frame.setSizePolicy(sizePolicy)
         self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
@@ -38,6 +48,11 @@ class Ui_LinkSelect(object):
         self.verticalLayout_3.setMargin(10)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.label = QtGui.QLabel(self.frame)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
         self.label.setWordWrap(True)
         self.label.setObjectName(_fromUtf8("label"))
         self.verticalLayout_3.addWidget(self.label)

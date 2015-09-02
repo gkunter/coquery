@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
+    <width>655</width>
     <height>480</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Select link column – Coquery</string>
@@ -16,6 +22,12 @@
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <widget class="QFrame" name="frame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -31,6 +43,12 @@
       </property>
       <item>
        <widget class="QLabel" name="label">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can link a data table from another corpus to the currently selected corpus by choosing a link column from the selector below. The content in the link column is compared to the content of the column &lt;span style=&quot; font-weight:600;&quot;&gt;'{resource_feature}'&lt;/span&gt; from the currently selected corpus. If the contents match, the columns from the linked data table can be included in the results view by selecting them as additional output columns.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Note:&lt;/span&gt; If you select an external output column, query result from the currently selected corpus that does not match an entry in the linked external table are &lt;span style=&quot; font-weight:600;&quot;&gt;dropped&lt;/span&gt; from the results table. In other words, only complete records with data from the currently selected corpus and the external data table are queried.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Note:&lt;/span&gt;  If you select an external output column, the time needed to execute the query may increase significantly.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
