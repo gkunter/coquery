@@ -1383,8 +1383,9 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         corpus = "bnc"
         table = "word"
+        feature_name = "word_label"
         
-        return (corpus, table)
+        return (corpus, table, feature_name)
 
     def add_link(self):
         selected_item, column = self.ui.options_tree.selected_item
@@ -1393,20 +1394,20 @@ class CoqueryApp(QtGui.QMainWindow):
         if column > self.ui.options_tree.columnCount():
             self.ui.options_tree.setColumnCount(column + 2)
 
-        corpus, table_name = self.select_table()
+        corpus, table_name, feature_name = self.select_table()
         
         resource = get_available_resources()[corpus][0]
         table = resource.get_table_dict()[table_name]
         
         child_table = CoqTreeItem()
         selected_item.addChild(child_table)
-        child_table.setText(column, "{}.{}".format(corpus, table_name))
+        child_table.setText(column, "{}.{}".format(corpus.upper(), table_name.capitalize()))
         child_table.setObjectName("{}.{}".format(corpus, table_name))
         child_table.setLink(selected_item.objectName)
         child_table.setCheckState(column, False)
         
         for rc_feature in table:
-            if rc_feature.rpartition("_")[-1] not in ("id", "table"):
+            if rc_feature.rpartition("_")[-1] not in ("id", "table") and rc_feature != feature_name:
                 new_item = CoqTreeItem()
                 new_item.setText(0, resource.__getattribute__(resource, rc_feature))
                 new_item.setObjectName("{}.{}".format(corpus, rc_feature))
