@@ -64,6 +64,8 @@ import xml.etree.ElementTree as ET
 import difflib
 
 try:
+    sys.path.append(os.path.join(sys.path[0], "../gui"))
+    sys.path.append(os.path.join(sys.path[0], ".."))
     from pyqt_compat import QtCore, QtGui
     import options
     import corpusBuilderUi
@@ -320,29 +322,28 @@ class BaseCorpusBuilder(object):
         self._corpus_id = 0
         self._widget = gui
         
-        if not gui:        
-            # set up argument parser:
-            self.parser = argparse.ArgumentParser()
-            self.parser.add_argument("name", help="name of the corpus", type=str)
-            self.parser.add_argument("path", help="location of the text files", type=str)
-            self.parser.add_argument("--db_user", help="name of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_user")
-            self.parser.add_argument("--db_password", help="password of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_password")
-            self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="localhost", dest="db_host")
-            self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
-            self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
-            self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
-            self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
-            self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
-            if nltk_available:
-                self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
-            self.parser.add_argument("-l", help="load source files", action="store_true")
-            self.parser.add_argument("-c", help="create database tables", action="store_true")
-            self.parser.add_argument("-w", help="write corpus module", action="store_true")
-            self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
-            self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
-            self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
-            self.parser.add_argument("--in_memory", help="try to improve writing speed by retaining tables in working memory. May require a lot of memory for big corpora.", action="store_true")
-            self.additional_arguments()
+        # set up argument parser:
+        self.parser = argparse.ArgumentParser()
+        self.parser.add_argument("name", help="name of the corpus", type=str)
+        self.parser.add_argument("path", help="location of the text files", type=str)
+        self.parser.add_argument("--db_user", help="name of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_user")
+        self.parser.add_argument("--db_password", help="password of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_password")
+        self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="localhost", dest="db_host")
+        self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
+        self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
+        self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
+        self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
+        self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
+        if nltk_available:
+            self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
+        self.parser.add_argument("-l", help="load source files", action="store_true")
+        self.parser.add_argument("-c", help="create database tables", action="store_true")
+        self.parser.add_argument("-w", help="write corpus module", action="store_true")
+        self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
+        self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
+        self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
+        self.parser.add_argument("--in_memory", help="try to improve writing speed by retaining tables in working memory. May require a lot of memory for big corpora.", action="store_true")
+        self.additional_arguments()
 
     def add_tag_table(self):
         """ 
@@ -448,6 +449,7 @@ class BaseCorpusBuilder(object):
                 table_description["CREATE"][i] = "{} AUTO_INCREMENT".format(
                     table_description["CREATE"][i])
         table_description["CREATE"].append("PRIMARY KEY (`{}`)".format(primary_key))
+        
         self.table_description[table_name] = table_description
         
         self._tables[table_name] = {}
@@ -558,17 +560,14 @@ class BaseCorpusBuilder(object):
         self.add_tag_table()
         if self._widget:
             self._widget.ui.progress_bar.setFormat("Creating tables... (%v of %m)")
-            self._widget.ui.progress_bar.setMaximum(len(self.table_description))
+            self._widget.ui.progress_bar.setMaximum(len(self.new_tables))
             self._widget.ui.progress_bar.setValue(0)
         elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Creating tables ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(self.table_description))
+            progress = progressbar.ProgressBar(widgets=["Creating tables ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(self.new_tables))
             progress.start()
-        for i, current_table in enumerate(self.table_description):
+        for i, current_table in enumerate(self._new_tables):
             if not self.Con.has_table(current_table):
-                if self._new_tables:
-                    self.Con.create_table(current_table, self._new_tables[current_table].get_create_string())
-                else:
-                    self.Con.create_table(current_table, ", ".join(self.table_description[current_table]["CREATE"]), override=True)
+                self.Con.create_table(current_table, self._new_tables[current_table].get_create_string())
             if self._widget:
                 self._widget.ui.progress_bar.setValue(i)
             elif show_progress:
@@ -637,65 +636,64 @@ class BaseCorpusBuilder(object):
                  os.path.splitext(os.path.basename(file_name))[0]
                  })
 
-    def get_lemma(self, word):
-        """ Return a lemma for the word. By default, this is simply the
-        word in lower case, but this method can be overloaded with methods
-        that use e.g. lemma dictionaries. 
-        The method is used by the default file processing methods. If your
-        corpus implements a specific file processing method, get_lemma() may
-        be obsolete. """
-        return word.lower()
+    #def get_lemma(self, word):
+        #""" Return a lemma for the word. By default, this is simply the
+        #word in lower case, but this method can be overloaded with methods
+        #that use e.g. lemma dictionaries. 
+        #The method is used by the default file processing methods. If your
+        #corpus implements a specific file processing method, get_lemma() may
+        #be obsolete. """
+        #return word.lower()
     
-    def get_lemma_id(self, word):
-        """ Return a lemma identifier for the word. If there is a separate 
-        lemma table, the identifier is an index to that table. Otherwise, 
-        the identifier is the lemma label."""
+    #def get_lemma_id(self, word):
+        #""" Return a lemma identifier for the word. If there is a separate 
+        #lemma table, the identifier is an index to that table. Otherwise, 
+        #the identifier is the lemma label."""
+        #try:
+            #return self.table_get(self.lemma_table, 
+                #{self.lemma_label: self.get_lemma(word)})
+        #else:
+            #return self.get_lemma(word)
+    
+    #def get_pos(self, word):
+        #""" Return the part-of-speech for the word. By default, an empty
+        #string is returned, but this method may be overloaded with methods
+        #that use for example a pos-tagged dictionary.
+        #The method is used by the default file processing methods. If your
+        #corpus implements a specific file processing method, get_lemma() may
+        #be obsolete. """
+        #return ""
+    
+    #def get_pos_id(self, word):
+        #""" Return a part-of-speech identifier for the word. If there is a 
+        #separate part-of-speech table, the identifier is an index to that 
+        #table. Otherwise, the identifier is the part-of-speech label."""
         
-        if "lemma_table" in self.table_description:
-            return self.table_get(self.lemma_table, 
-                {self.lemma_label: self.get_lemma(word)})
-        else:
-            return self.get_lemma(word)
-    
-    def get_pos(self, word):
-        """ Return the part-of-speech for the word. By default, an empty
-        string is returned, but this method may be overloaded with methods
-        that use for example a pos-tagged dictionary.
-        The method is used by the default file processing methods. If your
-        corpus implements a specific file processing method, get_lemma() may
-        be obsolete. """
-        return ""
-    
-    def get_pos_id(self, word):
-        """ Return a part-of-speech identifier for the word. If there is a 
-        separate part-of-speech table, the identifier is an index to that 
-        table. Otherwise, the identifier is the part-of-speech label."""
-        
-        if "pos_table" in self.table_description:
-            return self.table_get(self.pos_table, 
-                {self.pos_label: self.get_pos(word)})
-        else:
-            return self.get_pos(word)        
+        #if "pos_table" in self.table_description:
+            #return self.table_get(self.pos_table, 
+                #{self.pos_label: self.get_pos(word)})
+        #else:
+            #return self.get_pos(word)        
 
-    def get_transcript(self, word):
-        """ Return the phonemic transcript for the word. By default, an 
-        empty string is returned, but this method may be overloaded with 
-        methods that use for example a pronunciation dictionary.
-        The method is used by the default file processing methods. If your
-        corpus implements a specific file processing method, get_lemma() may
-        be obsolete. """
-        return ""
+    #def get_transcript(self, word):
+        #""" Return the phonemic transcript for the word. By default, an 
+        #empty string is returned, but this method may be overloaded with 
+        #methods that use for example a pronunciation dictionary.
+        #The method is used by the default file processing methods. If your
+        #corpus implements a specific file processing method, get_lemma() may
+        #be obsolete. """
+        #return ""
     
-    def get_transcript_id(self, word):
-        """ Return a transcription identifier for the word. If there is a 
-        separate transcription table, the identifier is an index to that 
-        table. Otherwise, the identifier is the transcript label."""
+    #def get_transcript_id(self, word):
+        #""" Return a transcription identifier for the word. If there is a 
+        #separate transcription table, the identifier is an index to that 
+        #table. Otherwise, the identifier is the transcript label."""
         
-        if "transcript_table" in self.table_description:
-            return self.table_get(self.transcript_table, 
-                {self.transcript_label: self.get_transcript(word)})
-        else:
-            return self.get_transcript(word)        
+        #if "transcript_table" in self.table_description:
+            #return self.table_get(self.transcript_table, 
+                #{self.transcript_label: self.get_transcript(word)})
+        #else:
+            #return self.get_transcript(word)        
 
     def process_xlabel_file(self, file_name):
         """ 
@@ -840,11 +838,10 @@ class BaseCorpusBuilder(object):
                     self.add_token(current_token, current_pos)
     
     def add_token_to_corpus(self, values):
-        if len(values) != len(self.table_description[self.corpus_table]["CREATE"]) - 2:
-            print(self.table_description[self.corpus_table]["CREATE"])
-            print(len(values), values)
+        if len(values) < len(self._new_tables[self.corpus_table].columns) - 2:
+            print(values)
+            print(len(self._new_tables[self.corpus_table].columns))
             raise IndexError
-
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
         self._corpus_keys = values.keys()
@@ -894,7 +891,8 @@ class BaseCorpusBuilder(object):
             else:
                 start_line = 0
                 end_line = 999999
-            S = S.splitlines()
+            #S = S.splitlines()
+            S = []
             self.logger.error(e)
             for i, x in enumerate(S):                
                 if i > start_line:
@@ -1112,10 +1110,11 @@ class BaseCorpusBuilder(object):
         reporting frequency counts as per-million-word frequencies.
         """
 
+        pass
         #print(self.module_content)
-        print(self.name)
+        #print(self.name)
 
-        module = importlib.import_module("..{}".format(self.name), "installer.{}".format(self.name))
+        #module = importlib.import_module("..{}".format(self.name), "installer.{}".format(self.name))
 
         #exec self.resource_content
         ##print(self.resource_content)
