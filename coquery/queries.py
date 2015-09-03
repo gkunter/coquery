@@ -489,8 +489,7 @@ class StatisticsQuery(CorpusQuery):
         self.Results = {key: str(self.Results[key]) for key in self.Results}
 
     def write_results(self, output_file):
-        df = sorted(self.Results)
-
+        df = pd.DataFrame({"Variable": list(self.Results.keys()), "Value": list(self.Results.values())})[["Variable", "Value"]].sort("Variable")
         #for x in sorted(self.Results):
             #if options.cfg.gui:
                 #self.Session.output_storage.append([x, self.Results[x]])
@@ -502,9 +501,9 @@ class StatisticsQuery(CorpusQuery):
             self.Session.output_object = pd.concat([self.Session.output_object, df])
         else:
             # write data frame to output_file as a CSV file, using the 
-            # current output_separator. Encoding is always "utf-8".
-            df[vis_cols].to_csv(output_object, 
-                header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
+
+            df.to_csv(self.Session.output_object, 
+                header=None if self.Session.header_shown else df.columns.values, 
                 sep=options.cfg.output_separator,
                 encoding="utf-8",
                 index=False)
@@ -575,8 +574,6 @@ class CollocationQuery(TokenQuery):
 
         df = pd.DataFrame(self.Results)
 
-        print(df.head())
-
         # FIXME: Be more generic than always using coq_word_label!
         fix_col = ["coquery_invisible_corpus_id", 
                    "coquery_invisible_origin_id"]
@@ -588,13 +585,6 @@ class CollocationQuery(TokenQuery):
         left = left_context_span[left_cols].stack().value_counts()
         right = right_context_span[right_cols].stack().value_counts()
 
-        print(left_context_span.to_dict())
-        print(right_context_span.to_dict())
-
-        print(left_context_span)
-        print("LEFT")
-        print(left)
-
         all_words = set(left.index + right.index)
         
         left = left.reindex(all_words).fillna(0)
@@ -603,16 +593,11 @@ class CollocationQuery(TokenQuery):
         collocates = pd.concat([left, right], axis=1)
         collocates = collocates.reset_index()
         collocates.columns = ["coq_word_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
-        #print(collocates)
         collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
-        collocates["coq_frequency"] = collocates["coq_word_label"].apply(
-            lambda x: self.Corpus.get_frequency(self.token_class(x, self.Corpus.lexicon)))
+        collocates["coq_frequency"] = collocates["coq_word_label"].apply(self.Corpus.get_frequency)
         collocates["coquery_query_string"] = self._query_string
         
-        print(collocates.head())
-
         self.Session.output_order = collocates.columns.values
-        print(self.Session.output_order)
 
         if options.cfg.gui:
             # append the data frame to the existing data frame
