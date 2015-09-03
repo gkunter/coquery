@@ -129,6 +129,7 @@ from corpus import *
 class Resource(SQLResource):
     name = '{name}'
     db_name = '{db_name}'
+    documentation_url = '{url}'
 {variables}
 {resource_code}
     
@@ -305,6 +306,7 @@ class BaseCorpusBuilder(object):
     additional_stages = []
     start_time = None
     file_filter = None
+    encoding = "utf-8"
     
     def __init__(self, gui=False):
         self.module_code = module_code
@@ -341,7 +343,7 @@ class BaseCorpusBuilder(object):
         self.parser.add_argument("-w", help="write corpus module", action="store_true")
         self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
         self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
-        self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
+        self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
         self.parser.add_argument("--in_memory", help="try to improve writing speed by retaining tables in working memory. May require a lot of memory for big corpora.", action="store_true")
         self.additional_arguments()
 
@@ -1337,7 +1339,7 @@ class Resource(SQLResource):
         self.module_content = self.module_code.format(
                 name=self.name,
                 db_name=self.arguments.db_name,
-                url=self.documentation_url,
+                url=self.get_url(),
                 variables=variable_code,
                 lexicon_provides=lexicon_provides,
                 corpus_provides=corpus_provides,
@@ -1385,8 +1387,10 @@ class Resource(SQLResource):
             db_pass=self.arguments.db_password,
             db_port=self.arguments.db_port,
             local_infile=1)
-        if not self.Con.has_database(self.arguments.db_name):
-            self.Con.create_database(self.arguments.db_name)
+        if self.Con.has_database(self.arguments.db_name):
+            self.Con.drop_database(self.arguments.db_name)
+        self.Con.create_database(self.arguments.db_name)
+            
         self.Con.use_database(self.arguments.db_name)
 
         cursor = self.Con.Con.cursor()
