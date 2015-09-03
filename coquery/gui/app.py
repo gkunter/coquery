@@ -138,7 +138,6 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         self.setDragEnabled(True)
         self.setAnimated(True)
 
-
     def enable_button(self, *args):
         self.selected_item = args
         if not self.selected_item:
@@ -1422,9 +1421,13 @@ class CoqueryApp(QtGui.QMainWindow):
                 remove_children(child)
                 node.removeChild(child)
             node.close()
+
+        
+
         
         selected_item, column = self.ui.options_tree.selected_item
+        if selected_item.parent()._link_by:
+            selected_item = selected_item.parent()
         selected_item.parent().removeChild(selected_item)
-        
     
 logger = logging.getLogger(__init__.NAME)
