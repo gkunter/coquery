@@ -76,6 +76,13 @@ class VisualizationInvalidDataError(NoTraceException):
     After you have re-run the query with these additional output columns, you
     can try to visualize the results table again.</p>"""
     
+class CollocationNoContextError(NoTraceException):
+    error_message = """<p><b>Cannot calculate the collocations</b></p>
+    <p>In order to calculate the collocations of a word, a context span
+    has to be defined. Use the "Left context" and "Right context" field to 
+    set the span of words within which Coquery will search for collocates.
+    </p>"""
+    
 class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
 
