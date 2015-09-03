@@ -46,7 +46,6 @@ corpus-specific.
     def __init__(self, S, lexicon):
         self.lexicon = lexicon
         self.S = S.strip()
-        self.replace_wildcards()
         self.word_specifiers = []
         self.class_specifiers = []
         self.lemma_specifiers = []
@@ -71,14 +70,63 @@ corpus-specific.
         else:
             return self.S
     
-    def replace_wildcards(self):
+    @staticmethod
+    def has_wildcards(s, replace=False):
         """
-replace_wildcards() replaces the characters from self.lexicon.wildcards by
-the appropriate SQL correspondents.
+        Process wildcards and escaped characters in the string
+        
+        This method replaces any non-escaped occurrence of '*' and '?' by 
+        their MySQL equivalents '%' and '_', respectively. At the same time,
+        any occurrence of '%' and '?' is escaped so that these characters 
+        can be queried.
+        
+        Parameters
+        ----------
+        s : string
+            The string to be processed
+        
+        Returns
+        -------
+        s : string 
+            The string with proper replacements and escapes
         """
-        if self.lexicon and len(self.S) > 1:
-            for old, new in zip(["*", "?"], self.lexicon.resource.wildcards):
-                self.S = self.S.replace(old, new)
+        print(s)
+        rep = []
+        skip_next = False
+        
+        if s in set(["*", "?"]):
+            if not replace:
+                return True
+        print(1)
+        for x in s:
+            if skip_next:
+                rep.append(x)
+                skip_next = False
+            else:
+                if x == "\\":
+                    skip_next = True
+                else:
+                    if x == "*":
+                        if not replace:
+                            return True
+                        else:
+                            rep.append("%")
+                    elif x == "?":
+                        if not replace:
+                            return True
+                        else:
+                            rep.append("_")
+                    else:
+                        rep.append(x)
+        if not replace:
+            return False
+        else:
+            return "".join(rep)
+    
+    @staticmethod
+    def replace_wildcards(s):
+        print(s)
+        return COCAToken.has_wildcards(s, replace=T)
         
     def get_parse(self):
         if self.word_specifiers:
@@ -143,7 +191,7 @@ class COCAToken(QueryToken):
                 self.class_specifiers = self.lemma_specifiers
                 self.lemma_specifiers = []
         # special case: allow *.[POS]
-        if all([x in self.lexicon.resource.wildcards for x in self.word_specifiers]) and self.class_specifiers:
+        if all([x in set(["*", "?"]) for x in self.word_specifiers]) and self.class_specifiers:
             self.word_specifiers = []
 
 class COCAWord(COCAToken):
@@ -175,7 +223,7 @@ Examples:   FIC (equivalent to FIC.[*])
         """
         super(COCATextToken, self).parse()
         # Special case that allows '.[*]' as a year specifier:
-        if len(self.class_specifiers) == 1 and self.class_specifiers[0] in self.lexicon.resource.wildcards:
+        if len(self.class_specifiers) == 1 and self.class_specifiers[0] in ["*", "?"]:
             self.class_specifiers = []
         # Special case that allows the use of '[2003]' format (i.e. 
         # specification of year, but not of genre:
