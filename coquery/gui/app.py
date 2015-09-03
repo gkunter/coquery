@@ -531,7 +531,7 @@ class CoqueryApp(QtGui.QMainWindow):
         token_id = data["coquery_invisible_corpus_id"]
         origin_id = data["coquery_invisible_origin_id"]
         token_width = data["coquery_invisible_number_of_tokens"]
-        contextview.ContextView.display(self.Session.Corpus, token_id, origin_id, token_width, self)
+        contextview.ContextView.display(self.Session.Corpus, int(token_id), int(origin_id), int(token_width), self)
 
     def verify_file_name(self):
         file_name = self.ui.edit_file_name.text()
