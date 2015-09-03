@@ -662,8 +662,7 @@ class SQLLexicon(BaseLexicon):
     def sql_string_is_part_of_speech(self, pos):
         if LEX_POS not in self.provides:
             return False
-        #current_token = tokens.COCAToken(pos, self)
-        current_token = pos
+        current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
         if "pos_table" in dir(self.resource):
             return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
                 self.resource.pos_id, 
@@ -720,7 +719,7 @@ class SQLLexicon(BaseLexicon):
             dummy = self.get_other_wordforms(token)
         
         sub_clauses = []
-
+        
         if token.lemma_specifiers:
             if LEX_LEMMA not in self.provides:
                 raise LexiconUnsupportedFunctionError
@@ -741,18 +740,16 @@ class SQLLexicon(BaseLexicon):
 
         for CurrentWord in specifier_list:
             if CurrentWord != "%":
-                current_token = tokens.COCAWord(CurrentWord, self, False)
+                current_token = tokens.COCAWord(CurrentWord, self, replace=False, parse=False)
                 current_token.negated = token.negated
                 # take care of quotation marks:
-                S = str(current_token)
+                S = str(current_token.S)
                 S = S.replace('"', '""')
-                
-                
                 sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), S))
                 
         for current_transcript in token.transcript_specifiers:
             if current_transcript:
-                current_token = tokens.COCAWord(current_transcript, self)
+                current_token = tokens.COCAWord(current_transcript, self, replace=False, parse=False)
                 current_token.negated = token.negated
                 if "transcript_table" not in dir(self.resource):
                     target = "{}.{}".format(
@@ -790,7 +787,7 @@ class SQLLexicon(BaseLexicon):
         if LEX_LEMMA not in self.provides:
             raise LexiconUnsupportedFunctionError
         
-        current_word = tokens.COCAWord(Word, self)
+        current_word = tokens.COCAWord(Word, self, replace=False)
         # create an inner join of lexicon, containing all rows that match
         # the string stored in current_word:
         self.resource.DB.execute(self.sql_string_get_other_wordforms(current_word))
@@ -945,7 +942,9 @@ class SQLLexicon(BaseLexicon):
     def sql_string_get_matching_wordids(self, token):
         """ returns a string that may be used to query all word_ids that
         match the token specification."""
+        print(1)
         self.where_list = [self.sql_string_get_wordid_list_where(token)]
+        print(2, self.where_list)
         self.table_list = [self.resource.word_table]
         if token.lemma_specifiers:
             if "lemma_table" in dir(self.resource):
@@ -977,10 +976,11 @@ class SQLLexicon(BaseLexicon):
         return S
 
     def get_matching_wordids(self, token):
-        if token.S == "%":
+        if token.S == "%" or token.S == "":
             return []
-        self.resource.DB.execute(self.sql_string_get_matching_wordids(token))
-        query_results = self.resource.DB.fetch_all ()
+        S = self.sql_string_get_matching_wordids(token)
+        self.resource.DB.execute(S)
+        query_results = self.resource.DB.fetch_all()
         if not query_results:
             raise WordNotInLexiconError
         else:
@@ -1023,7 +1023,7 @@ class SQLCorpus(BaseCorpus):
         if not s:
             return 0
         
-        #token = tokens.COCAToken(s, self)
+        token = tokens.COCAToken(s, self, False)
         
         try:
             if "pos_table" not in dir(self.resource):
@@ -1034,7 +1034,7 @@ class SQLCorpus(BaseCorpus):
             word_pos_column = None
         try:
             where_clauses = self.get_whereclauses(token, self.resource.word_id, word_pos_column)
-        except WordNotInLexicon:
+        except WordNotInLexiconError:
             freq = 0
         else:
             S = "SELECT COUNT(*) FROM {0} WHERE {1}".format(
@@ -1490,14 +1490,20 @@ class SQLCorpus(BaseCorpus):
             query_string = self.sql_string_query(Query, self_joined)
         except WordNotInLexiconError:
             query_string = ""
-        
-        Query.Session.output_order.append("coquery_invisible_number_of_tokens")
+
         for rc_feature in options.cfg.selected_features:
             if rc_feature.startswith("coquery_"):
                 if rc_feature == "coquery_query_token": 
                     Query.Session.output_order += ["coquery_query_token_{}".format(x + 1) for x in range(Query.number_of_tokens)]
                 else:
                     Query.Session.output_order.append(rc_feature)
+
+        for x in list(Query.Session.output_order):
+            if x.startswith("coquery_invisible"):
+                Query.Session.output_order.remove(x)
+                Query.Session.output_order.append(x)
+        
+        Query.Session.output_order.append("coquery_invisible_number_of_tokens")
 
         
         if query_string:
