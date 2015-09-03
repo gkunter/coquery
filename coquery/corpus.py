@@ -71,28 +71,7 @@ def collapse_words(word_list):
 
 class BaseLexicon(object):
     """
-    CLASS
-    BaseLexicon(object)
-    
-    METHODS
-    __init__()
-        initialize the lexicon.
-    get_entry(word_id)
-        returns the lexicon entry of type Entity() corresoponding to word_id
-    is_part_of_speech(pos)
-        returns True if pos is a valid part-of-speech label, or False 
-        otherwise. Supports wildcards.
-    find_other_wordforms(word)
-        returns a list containing the word_id of all other entries sharing
-        the same lemma as the argument
-        
-    PROPERTIES
-    list(provides)
-        list of features provided by the lexicon. All lexicons should 
-        provide at least LEX_WORDID and LEX_ORTH (i.e. every entry should
-        have a unique identifier and an orthographic representation).
-    list(wildcards)
-        list of characters that are considered wild cards in the lexicon.
+    Define a base lexicon class.
     """
     provides = [LEX_WORDID, LEX_ORTH]
 
@@ -236,8 +215,6 @@ class BaseLexicon(object):
 
 
 class BaseResource(object):
-    wildcards = ["*", "?"]
-    
     # Add internal table that can be used to access system information:
     coquery_query_string = "Query string"
     coquery_expanded_query_string = "Expanded query string"
@@ -553,22 +530,12 @@ class BaseCorpus(object):
         raise CorpusUnsupportedFunctionError
     
 class SQLResource(BaseResource):
-    wildcards = ["%", "_"]
-    def has_wildcards(self, Token):
-        """ 
-        has_wildcards() returns True if the token string contains an SQL 
-        wildcard, i.e. either % or _. """
-        if len(Token.S) < 2:
-            return False
-        else:
-            return any([x in self.wildcards for x in Token.S])
-    
     def get_operator(self, Token):
         """ returns a string containing the appropriate operator for an 
         SQL query using the Token (considering wildcards and negation) """
         if options.cfg.regexp:
             return "REGEXP"
-        if self.has_wildcards(Token):
+        if Token.has_wildcards(Token.S):
             Operators = {True: "NOT LIKE", False: "LIKE"}
         else:
             Operators = {True: "!=", False: "="}
@@ -1040,11 +1007,19 @@ class SQLCorpus(BaseCorpus):
             self._corpus_size_cache = self.resource.DB.Cur.fetchone()[0]
         return self._corpus_size_cache
 
-    def get_frequency(self, token):
+    def get_frequency(self, s):
         """ Return a longint that gives the corpus frequency of the token,
         taking the filter list from options.cfg.filter_list into account."""
-        if token.S in self._frequency_cache:
-            return self._frequency_cache[token.S]
+        if s in self._frequency_cache:
+            return self._frequency_cache[s]
+        
+        if s in ["*", "?"]:
+            s = "\\" + s
+        
+        if not s:
+            return 0
+        
+        token = tokens.COCAToken(s, self)
         
         try:
             if "pos_table" not in dir(self.resource):
@@ -1062,7 +1037,7 @@ class SQLCorpus(BaseCorpus):
                 self.resource.corpus_table, " AND ".join(where_clauses))
             self.resource.DB.execute(S)
             freq = self.resource.DB.Cur.fetchone()[0]
-        self._frequency_cache[token.S] = freq
+        self._frequency_cache[s] = freq
         return freq
 
     def get_whereclauses(self, token, WordTarget, PosTarget):
@@ -1108,6 +1083,7 @@ class SQLCorpus(BaseCorpus):
                 s = "{}.{} BETWEEN {} AND {}".format(table, column, min(val_range), max(val_range))
             else:
                 if len(value_list) > 1:
+                    raise TypeError
                     if any([x in self.wildcards for x in value_list]):
                         s = " OR ".join(["{}.{} LIKE {}".format(table, column, x) for x in value_list])
                         
@@ -1153,8 +1129,7 @@ class SQLCorpus(BaseCorpus):
                 if op.upper() == "LIKE":
                     if "*" not in value_list[0]:
                         value_list[0] = "*{}*".format(value_list[0])
-                    value_list[0] = value_list[0].replace("*", "%")
-                    value_list[0] = value_list[0].replace("?", "_")
+                    value_list[0] = tokens.COCAToken.replace_wildcard(value_list[0])
 
                 if rc_feature not in requested_features:
                     requested_features.append(rc_feature)
@@ -1360,12 +1335,17 @@ class SQLCorpus(BaseCorpus):
             return [1]
         
         def calc_weight(s):
+            """ 
+            Calculates the weight of the query string s 
+            """
+            # word wildcards are strongly penalized:
             if s == "*":
                 w = -9999
             else:
                 w = len(s) * 2
-            if s.count("%"):
-                w = w - s.count("%")
+            # character wildcards are penalized also, but take escaping 
+            # into account:
+            w = w - (s.count("%") - s.count("\\%"))
             return w
         
         sort_list = list(enumerate(Query.tokens))
