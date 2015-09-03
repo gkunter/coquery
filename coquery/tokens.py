@@ -43,7 +43,7 @@ corpus-specific.
     transcript_close = "/"
     or_character = "|"
     
-    def __init__(self, S, lexicon, replace):
+    def __init__(self, S, lexicon, replace=True, parse=True):
         self.lexicon = lexicon
         self.S = S.strip()
         if replace:
@@ -53,12 +53,8 @@ corpus-specific.
         self.lemma_specifiers = []
         self.transcript_specifiers = []
         self.negated = False
-        self.parse()
-
-        if not self.lexicon:
-            self.check_part_of_speech = False
-        elif LEX_POS not in self.lexicon.provides:
-            self.check_part_of_speech = False
+        if parse:
+            self.parse()
         
     def __eq__(self, S):
         return self.S == S
@@ -156,10 +152,6 @@ class COCAToken(QueryToken):
     transcript_close = "/"
     NegationChar = "#"
     
-    def __init__(self, *args):
-        self.check_part_of_speech = True
-        super(COCAToken, self).__init__(*args)
-    
     def parse (self):
         self.word_specifiers = []
         self.class_specifiers = []
@@ -169,18 +161,24 @@ class COCAToken(QueryToken):
         while self.S.startswith(self.NegationChar):
             self.negated = not self.negated
             self.S = self.S[1:]
-
-        match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", self.S)
-        if not match:
-            match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}", self.S)
-
-        word_specification = match.groupdict()["word"]
-        lemma_specification = match.groupdict()["lemma"]
-        transcript_specification = match.groupdict()["trans"]
-        try:
-            class_specification = match.groupdict()["class"]
-        except KeyError:
+        
+        if self.S == "//" or self.S == "[]":
+            word_specification = self.S
+            lemma_specification = None
             class_specification = None
+            transcript_specification = None
+        else:
+            match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", self.S)
+            if not match:
+                match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}", self.S)
+
+            word_specification = match.groupdict()["word"]
+            lemma_specification = match.groupdict()["lemma"]
+            transcript_specification = match.groupdict()["trans"]
+            try:
+                class_specification = match.groupdict()["class"]
+            except KeyError:
+                class_specification = None
 
         if word_specification:
             self.word_specifiers = [x.strip() for x in word_specification.split("|") if x.strip()]
@@ -211,7 +209,6 @@ class COCAWord(COCAToken):
 class COCATextToken(COCAToken):
     # do not use the corpus to determine whether a token string like 
     # [xx] contains a part-of-speech tag:
-    check_part_of_speech = False
 
     def get_parse(self):
         return self.word_specifiers, self.class_specifiers, self.negated
