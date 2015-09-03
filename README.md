@@ -31,6 +31,9 @@ Coquery does not provide any corpus data. You can only use these corpora if you 
 
 See the (Installation guide)[INSTALLATION.md].
 
+### Syntax ###
+Coquery uses a syntax that is very similar to the syntax from the BYU corpus resources, with a few extensions and modifications. For example, it is not possible to query the asterisk '*' in COCA, because it is always interpreted as a placeholder for any number of characters. In a Coquery string, the asterisk ``*`` has also this interpretation, but in addition, the term ``\*`` (i.e. an asterisk preceded by a backslash) queries the asterisk.
+
 ### Examples ###
 
 Coquery is a command line tool (a graphical interface may be added at a later stage). Here are a view examples of how Coquery can be used:
