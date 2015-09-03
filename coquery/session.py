@@ -214,6 +214,7 @@ class Session(object):
             self.output_object.close()
         else:
             self.output_object.index = range(1, 1 + len(self.output_object))
+
 class StatisticsSession(Session):
     def __init__(self):
         super(StatisticsSession, self).__init__()
