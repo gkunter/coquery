@@ -942,9 +942,7 @@ class SQLLexicon(BaseLexicon):
     def sql_string_get_matching_wordids(self, token):
         """ returns a string that may be used to query all word_ids that
         match the token specification."""
-        print(1)
         self.where_list = [self.sql_string_get_wordid_list_where(token)]
-        print(2, self.where_list)
         self.table_list = [self.resource.word_table]
         if token.lemma_specifiers:
             if "lemma_table" in dir(self.resource):
@@ -1706,14 +1704,17 @@ class SQLCorpus(BaseCorpus):
         be displayed. The area in which the context is shown is a QLabel
         named widget.ui.context_area. """
 
-        tab = options.cfg.main_window.table_model.content
-        
+        try:
+            tab = options.cfg.main_window.Session.data_table
+        except AttributeError:
+            tab = options.cfg.main_window.table_model.content
+
         # create a list of all token ids that are also listed in the results
         # table:
         id_list = []
         for x in tab[tab.coquery_invisible_origin_id == source_id].index:
-            start = tab.iloc[x - 1].coquery_invisible_corpus_id
-            end = start + tab.iloc[x - 1].coquery_invisible_number_of_tokens
+            start = int(tab.iloc[x - 1].coquery_invisible_corpus_id)
+            end = int(start + tab.iloc[x - 1].coquery_invisible_number_of_tokens)
             id_list += [y for y in range(start, end)]
 
         start = max(0, token_id - context_width)
