@@ -43,9 +43,11 @@ corpus-specific.
     transcript_close = "/"
     or_character = "|"
     
-    def __init__(self, S, lexicon):
+    def __init__(self, S, lexicon, replace):
         self.lexicon = lexicon
         self.S = S.strip()
+        if replace:
+            self.S = self.replace_wildcards(self.S)
         self.word_specifiers = []
         self.class_specifiers = []
         self.lemma_specifiers = []
@@ -90,14 +92,28 @@ corpus-specific.
         s : string 
             The string with proper replacements and escapes
         """
-        print(s)
+        skip_next = False
+        
+        if s in set(["%", "_"]):
+                return True
+        for x in s:
+            if skip_next:
+                if x in ["%", "_"]:
+                    return True
+                skip_next = False
+            else:
+                if x == "\\":
+                    skip_next = True
+                else:
+                    if x in ["%", "_"]:
+                        return True
+        return False
+    
+    @staticmethod
+    def replace_wildcards(s):
         rep = []
         skip_next = False
         
-        if s in set(["*", "?"]):
-            if not replace:
-                return True
-        print(1)
         for x in s:
             if skip_next:
                 rep.append(x)
@@ -105,28 +121,19 @@ corpus-specific.
             else:
                 if x == "\\":
                     skip_next = True
+                    rep.append(x)
                 else:
                     if x == "*":
-                        if not replace:
-                            return True
-                        else:
-                            rep.append("%")
+                        rep.append("%")
                     elif x == "?":
-                        if not replace:
-                            return True
-                        else:
-                            rep.append("_")
+                        rep.append("_")
+                    elif x == "_":
+                        rep.append("\\_")
+                    elif x == "%":
+                        rep.append("\\%")
                     else:
                         rep.append(x)
-        if not replace:
-            return False
-        else:
-            return "".join(rep)
-    
-    @staticmethod
-    def replace_wildcards(s):
-        print(s)
-        return COCAToken.has_wildcards(s, replace=T)
+        return "".join(rep)
         
     def get_parse(self):
         if self.word_specifiers:
@@ -191,7 +198,7 @@ class COCAToken(QueryToken):
                 self.class_specifiers = self.lemma_specifiers
                 self.lemma_specifiers = []
         # special case: allow *.[POS]
-        if all([x in set(["*", "?"]) for x in self.word_specifiers]) and self.class_specifiers:
+        if all([x in set(["%", "_"]) for x in self.word_specifiers]) and self.class_specifiers:
             self.word_specifiers = []
 
 class COCAWord(COCAToken):

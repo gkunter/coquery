@@ -662,7 +662,8 @@ class SQLLexicon(BaseLexicon):
     def sql_string_is_part_of_speech(self, pos):
         if LEX_POS not in self.provides:
             return False
-        current_token = tokens.COCAToken(pos, self)
+        #current_token = tokens.COCAToken(pos, self)
+        current_token = pos
         if "pos_table" in dir(self.resource):
             return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
                 self.resource.pos_id, 
@@ -696,7 +697,8 @@ class SQLLexicon(BaseLexicon):
         comparing_operator = self.resource.get_operator(token)
         where_clauses = []
         for current_pos in token.class_specifiers:
-            current_token = tokens.COCAToken(current_pos, self)
+            #current_token = tokens.COCAToken(current_pos, self)
+            current_token = current_pos
             if "pos_label" in dir(self.resource):
                 pos_label = self.resource.pos_label
             else:
@@ -738,12 +740,14 @@ class SQLLexicon(BaseLexicon):
                 self.resource.word_label)
 
         for CurrentWord in specifier_list:
-            if CurrentWord != "*":
-                current_token = tokens.COCAWord(CurrentWord, self)
+            if CurrentWord != "%":
+                current_token = tokens.COCAWord(CurrentWord, self, False)
                 current_token.negated = token.negated
                 # take care of quotation marks:
-                S = unicode(current_token)
+                S = str(current_token)
                 S = S.replace('"', '""')
+                
+                
                 sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), S))
                 
         for current_transcript in token.transcript_specifiers:
@@ -762,7 +766,7 @@ class SQLLexicon(BaseLexicon):
                         self.resource.transcript_table,
                         self.resource.transcript_label)
                 # take care of quotation marks:
-                S = unicode(current_token)
+                S = str(current_token)
                 S = S.replace('"', '""')
                 sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), S))
         
@@ -973,7 +977,7 @@ class SQLLexicon(BaseLexicon):
         return S
 
     def get_matching_wordids(self, token):
-        if token.S == "*":
+        if token.S == "%":
             return []
         self.resource.DB.execute(self.sql_string_get_matching_wordids(token))
         query_results = self.resource.DB.fetch_all ()
@@ -1013,13 +1017,13 @@ class SQLCorpus(BaseCorpus):
         if s in self._frequency_cache:
             return self._frequency_cache[s]
         
-        if s in ["*", "?"]:
+        if s in ["%", "_"]:
             s = "\\" + s
         
         if not s:
             return 0
         
-        token = tokens.COCAToken(s, self)
+        #token = tokens.COCAToken(s, self)
         
         try:
             if "pos_table" not in dir(self.resource):
@@ -1339,13 +1343,13 @@ class SQLCorpus(BaseCorpus):
             Calculates the weight of the query string s 
             """
             # word wildcards are strongly penalized:
-            if s == "*":
+            if s == "%":
                 w = -9999
             else:
                 w = len(s) * 2
             # character wildcards are penalized also, but take escaping 
             # into account:
-            w = w - (s.count("%") - s.count("\\%"))
+            w = w - (s.count("_") - s.count("\\_"))
             return w
         
         sort_list = list(enumerate(Query.tokens))
