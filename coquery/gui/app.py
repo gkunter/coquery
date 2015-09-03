@@ -1014,6 +1014,9 @@ class CoqueryApp(QtGui.QMainWindow):
             <p>Open <b>MySQL settings</b> in the Settings menu to check whether
             the connection to the database server is working, and if the settings are correct.</p>""".format(e)
             QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        except CollocationNoContextError as e:
+            QtGui.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            
         except Exception as e:
             error_box.ErrorBox.show(sys.exc_info())
         else:
