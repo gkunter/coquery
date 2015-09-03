@@ -56,7 +56,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         pandas DataFrame object. """
         # create a pandas DataFrame for the provided data:
         if not isinstance(data, pd.DataFrame):
-            self.content = pd.DataFrame(data)
+            raise TypeError
         else:
             self.content = data
         
@@ -69,6 +69,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             self.dataChanged.emit(
                 self.createIndex(0, 0), 
                 self.createIndex(self.rowCount(), self.columnCount()))
+
 
     def column(self, i):
         """ Return the name of the column in the pandas data frame at index 
@@ -88,6 +89,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             value = self.content.iloc[index.row()][column] 
             if type(value) == np.int64:
                 value = int(value)
+            elif type(value) == np.float64:
+                value = float(value)
             return value
             
         # ForegroundRole: return the colour of the column, or the default if
