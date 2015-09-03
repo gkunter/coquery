@@ -3,7 +3,7 @@ from __future__ import print_function
 
 try:
     str = unicode
-except TypeError:
+except NameError:
     pass
 
 try:
@@ -57,12 +57,15 @@ class DBConnection(object):
     def create_database(self, database_name):
         cur = self.Con.cursor()
         self.execute(cur, "CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(database_name.split()[0]))
-        return
 
     def use_database(self, database_name):
         cur = self.Con.cursor()
         self.execute(cur, "USE {}".format(database_name.split()[0]))
         self.db_name = database_name
+        
+    def drop_database(self, database_name):
+        cur = self.Con.cursor()
+        self.execute(cur, "DROP DATABASE {}".format(database_name.split()[0]))
 
     def executemany(self, s, d):
         cur = self.Con.cursor()
