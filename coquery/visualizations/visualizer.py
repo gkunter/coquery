@@ -53,12 +53,11 @@ from defines import *
 from errors import *
 import error_box
 
-
+import matplotlib as mpl
 # Tell matplotlib if PySide is being used:
 if pyside:
-    import matplotlib
-    matplotlib.use("Qt4Agg")
-    matplotlib.rcParams["backend.qt4"] = "PySide"
+    mpl.use("Qt4Agg")
+    mpl.rcParams["backend.qt4"] = "PySide"
 
 # import required matplotlib classes
 from matplotlib.figure import Figure
@@ -138,21 +137,22 @@ class Visualizer(object):
     @_validate_layout
     def setup_figure(self):
         """ Prepare the matplotlib figure for plotting. """ 
-        with sns.plotting_context(
-            context=self.get_plot_context(), 
-            font_scale=self.get_font_scale()):
+        with mpl.rc_context({"legend.fontsize": 16}):
+            with sns.plotting_context(
+                context=self.get_plot_context(), 
+                font_scale=self.get_font_scale()):
 
-            print("col_factor: ", self._col_factor)
-            print("col_wrap:   ", self._col_wrap)
-            print("row_factor: ", self._row_factor)
-            self.g = sns.FacetGrid(self._table, 
-                                #xlim=self.get_xlim(),
-                                #ylim=self.get_ylim(),
-                                col=self._col_factor,
-                                col_wrap=self._col_wrap,
-                                row=self._row_factor,
-                                sharex=True,
-                                sharey=True)
+                print("col_factor: ", self._col_factor)
+                print("col_wrap:   ", self._col_wrap)
+                print("row_factor: ", self._row_factor)
+                self.g = sns.FacetGrid(self._table, 
+                                    #xlim=self.get_xlim(),
+                                    #ylim=self.get_ylim(),
+                                    col=self._col_factor,
+                                    col_wrap=self._col_wrap,
+                                    row=self._row_factor,
+                                    sharex=True,
+                                    sharey=True)
 
     def get_grid_layout(self, n):
         """ Return a tuple containing a nrows, ncols pair that can be used to
