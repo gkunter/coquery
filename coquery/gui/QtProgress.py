@@ -48,6 +48,7 @@ class ProgressIndicator(QtGui.QDialog):
 class ProgressThread(QtCore.QThread):
     taskFinished = QtCore.Signal()
     taskException = QtCore.Signal()
+    taskAbort = QtCore.Signal()
     
     def __init__(self, FUN, window, *args):
         super(ProgressThread, self).__init__()
@@ -59,6 +60,13 @@ class ProgressThread(QtCore.QThread):
     def __del__(self):
         self.exiting = True
         self.wait()
+    
+    def setInterrupt(self, fun):
+        self.INTERRUPT_FUN = fun
+    
+    def quit(self):
+        self.INTERRUPT_FUN()
+        super(ProgressThread, self).quit()
     
     def run(self):
         self.exiting = False
