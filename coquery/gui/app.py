@@ -386,6 +386,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_save_results.triggered.connect(self.save_results)
         self.ui.action_quit.triggered.connect(self.close)
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
+        self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
         self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
         self.ui.action_mySQL_settings.triggered.connect(self.mysql_settings)
         self.ui.action_statistics.triggered.connect(self.run_statistics)
@@ -713,6 +714,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.csv_options = None
         self.query_thread = None
         self.last_results_saved = True
+        self.corpus_manager = None
         
         self.widget_list = []
         
@@ -832,6 +834,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
         self.ui.statusbar.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
             len(self.Session.output_object.index), duration_str))
+        options.cfg.app.alert(self, 10)
         
     def show_header_menu(self, point ):
         header = self.ui.data_preview.horizontalHeader()
@@ -1130,41 +1133,44 @@ class CoqueryApp(QtGui.QMainWindow):
                 import webbrowser
                 webbrowser.open(url)
         
-    def remove_corpus(self):
-        if self.ui.combo_corpus.isEnabled():
-            current_corpus = str(self.ui.combo_corpus.currentText())
-            resource, _, _, module = get_available_resources()[current_corpus.lower()]
-            database = resource.db_name
+    def remove_corpus(self, corpus_name):
+        resource, _, _, module = get_available_resources()[corpus_name.lower()]
+        database = resource.db_name
+        try:
+            size = FileSize(sqlwrap.SqlDB(options.cfg.db_host, options.cfg.db_port, options.cfg.db_user, options.cfg.db_password).get_database_size(database))
+        except  TypeError:
+            size = FileSize(-1)
+        msg_corpus_remove = "<p><b>You have requested to remove the corpus '{0}'.</b></p><p>This step cannot be reverted. If you proceed, the corpus will not be available for further queries before you install it again.</p><p>Removing '{0}' will free approximately {1:.1S} of disk space.</p><p><p>Do you really want to remove the corpus?</p>".format(corpus_name, size)
+        
+        response = QtGui.QMessageBox.warning(
+            self, "Remove corpus", msg_corpus_remove, QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+        
+        if response == QtGui.QMessageBox.Yes:
             try:
-                size = FileSize(sqlwrap.SqlDB(options.cfg.db_host, options.cfg.db_port, options.cfg.db_user, options.cfg.db_password).get_database_size(database))
-            except  TypeError:
-                size = FileSize(-1)
-            msg_corpus_remove = "<p><b>You have requested to remove the corpus '{0}'.</b></p><p>This step cannot be reverted. If you proceed, the corpus will not be available for further queries before you install it again.</p><p>Removing '{0}' will free approximately {1:.1S} of disk space.</p><p><p>Do you really want to remove the corpus?</p>".format(current_corpus, size)
-            
-            response = QtGui.QMessageBox.warning(
-                self, "Remove corpus", msg_corpus_remove, QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
-            
-            if response == QtGui.QMessageBox.Yes:
-                try:
-                    self.Session.Corpus.resource.DB.close()
-                except AttributeError as e:
-                    pass
-                DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password)
-                self.start_progress_indicator()
-                try:
-                    DB.execute("DROP DATABASE {}".format(database))
-                except (sqlwrap.mysql.InternalError, sqlwrap.mysql.OperationalError) as e:
-                    QtGui.QMessageBox.critical(self, "Database error – Coquery", "<p>There was an error while deleting the corpus databases:</p><p>{}</p>".format(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                finally:
-                    DB.close()
-                try:
-                    os.remove(module)
-                except IOError:
-                    QtGui.QMessageBox.critical(self, "Storage error – Coquery", "<p>There was an error while deleting the corpus module.</p>", QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                self.stop_progress_indicator()
-                self.fill_combo_corpus()
-                logger.warning("Removed corpus {}.".format(current_corpus))
+                self.Session.Corpus.resource.DB.close()
+            except AttributeError as e:
+                pass
+            DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password)
+            self.start_progress_indicator()
+            try:
+                DB.execute("DROP DATABASE {}".format(database))
+            except (sqlwrap.mysql.InternalError, sqlwrap.mysql.OperationalError) as e:
+                QtGui.QMessageBox.critical(self, "Database error – Coquery", "<p>There was an error while deleting the corpus databases:</p><p>{}</p>".format(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            finally:
+                DB.close()
+            try:
+                os.remove(module)
+            except IOError:
+                QtGui.QMessageBox.critical(self, "Storage error – Coquery", "<p>There was an error while deleting the corpus module.</p>", QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            self.stop_progress_indicator()
+            self.fill_combo_corpus()
+            logger.warning("Removed corpus {}.".format(corpus_name))
         self.change_corpus()
+        try:
+            self.corpus_manager.close()
+        except AttributeError:
+            pass
+        self.corpus_manager = None
 
     def build_corpus(self):
         import coq_install_generic
@@ -1172,6 +1178,43 @@ class CoqueryApp(QtGui.QMainWindow):
         corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, self)
         self.fill_combo_corpus()
         self.change_corpus()
+        try:
+            self.corpus_manager.close()
+        except AttributeError:
+            pass
+        self.corpus_manager = None
+            
+    def install_corpus(self, builder_class):
+        import corpusbuilder
+        corpusbuilder.InstallerGui(builder_class, self)
+        self.fill_combo_corpus()
+        self.change_corpus()
+        try:
+            self.corpus_manager.close()
+        except AttributeError:
+            pass
+        self.corpus_manager = None
+            
+    def manage_corpus(self):
+        import corpusmanager
+        
+        path = os.path.join(sys.path[0], "installer")
+        
+        if self.corpus_manager:
+            self.corpus_manager.raise_()
+            self.corpus_manager.activateWindow()
+        else:
+            self.corpus_manager = corpusmanager.CorpusManager(parent=self)        
+            self.corpus_manager.show()
+            self.corpus_manager.read(path)
+            self.corpus_manager.installCorpus.connect(self.install_corpus)
+            self.corpus_manager.removeCorpus.connect(self.remove_corpus)
+            result = self.corpus_manager.exec_()
+            try:
+                self.corpus_manager.close()
+            except AttributeError:
+                pass
+            self.corpus_manager = None
             
     def shutdown(self):
         """ Shut down the application by removing all open widgets and saving

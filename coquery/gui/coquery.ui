@@ -899,6 +899,11 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="stopword_tab">
+       <attribute name="title">
+        <string>Stop-words</string>
+       </attribute>
+      </widget>
       <widget class="QWidget" name="log_tab">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -942,7 +947,7 @@
      <x>0</x>
      <y>0</y>
      <width>1222</width>
-     <height>34</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -967,8 +972,7 @@
      <string>&amp;Corpus</string>
     </property>
     <addaction name="action_build_corpus"/>
-    <addaction name="action_install_corpus"/>
-    <addaction name="action_remove_corpus"/>
+    <addaction name="action_manage_corpus"/>
     <addaction name="separator"/>
     <addaction name="action_statistics"/>
     <addaction name="action_corpus_documentation"/>
@@ -994,6 +998,22 @@
      <addaction name="action_stacked_area_plot"/>
      <addaction name="action_line_plot"/>
     </widget>
+    <widget class="QMenu" name="menuFrequencies">
+     <property name="title">
+      <string>&amp;Bar charts</string>
+     </property>
+     <addaction name="action_stacked_barchart_plot"/>
+     <addaction name="action_Stacked_bars"/>
+     <addaction name="action_barchart_plot"/>
+    </widget>
+    <widget class="QMenu" name="menuFrequency_maps">
+     <property name="title">
+      <string>Frequency maps</string>
+     </property>
+     <addaction name="action_tree_map"/>
+     <addaction name="action_heat_map"/>
+     <addaction name="action_word_cloud"/>
+    </widget>
     <widget class="QMenu" name="menuCorpus_locations">
      <property name="title">
       <string>&amp;Corpus locations</string>
@@ -1001,19 +1021,10 @@
      <addaction name="action_barcode_plot"/>
      <addaction name="action_beeswarm_plot"/>
     </widget>
-    <widget class="QMenu" name="menuFrequencies">
-     <property name="title">
-      <string>&amp;Frequencies</string>
-     </property>
-     <addaction name="action_barchart_plot"/>
-     <addaction name="action_stacked_barchart_plot"/>
-     <addaction name="action_heat_map"/>
-     <addaction name="action_tree_map"/>
-     <addaction name="action_word_cloud"/>
-    </widget>
     <addaction name="menuCorpus_locations"/>
     <addaction name="menuFrequencies"/>
     <addaction name="menuTime_data"/>
+    <addaction name="menuFrequency_maps"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1093,7 +1104,7 @@
      <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>Corpus statistics</string>
+    <string>Corpus &amp;statistics</string>
    </property>
   </action>
   <action name="action_mySQL_settings">
@@ -1132,13 +1143,16 @@
      <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>&amp;Build corpus...</string>
+    <string>&amp;Build new corpus...</string>
    </property>
    <property name="toolTip">
     <string>Build a new corpus from text files in a folder</string>
    </property>
   </action>
   <action name="action_remove_corpus">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset theme="edit-delete">
      <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
@@ -1150,13 +1164,13 @@
     <string>Permanently and irrevocably remove corpus database</string>
    </property>
   </action>
-  <action name="action_install_corpus">
+  <action name="action_manage_corpus">
    <property name="icon">
     <iconset theme="server-database">
      <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>&amp;Install corpus...</string>
+    <string>&amp;Manage corpora...</string>
    </property>
    <property name="toolTip">
     <string>Install a corpus into a MySQL database</string>
@@ -1195,7 +1209,7 @@
   </action>
   <action name="action_barchart_plot">
    <property name="text">
-    <string>&amp;Barchart</string>
+    <string>&amp;Bars</string>
    </property>
   </action>
   <action name="action_time_series_plot">
@@ -1210,7 +1224,7 @@
     </iconset>
    </property>
    <property name="text">
-    <string>Corpus documentation...</string>
+    <string>Corpus &amp;documentation...</string>
    </property>
   </action>
   <action name="action_percentage_area_plot">
@@ -1240,7 +1254,12 @@
   </action>
   <action name="action_stacked_barchart_plot">
    <property name="text">
-    <string>&amp;Stacked barchart</string>
+    <string>&amp;Percentage bars</string>
+   </property>
+  </action>
+  <action name="action_Stacked_bars">
+   <property name="text">
+    <string>&amp;Stacked bars</string>
    </property>
   </action>
  </widget>
