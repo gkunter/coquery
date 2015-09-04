@@ -96,7 +96,10 @@ msg_corpus_no_documentation = """<p>No corpus documentation available.</p>
 <p>The current corpus module does not provide a link to the corpus
 documentation. You may find help on how the corpus is structured by using an
 internet search engine.</p>"""
-
+msg_install_abort = """<p>You have requested to abort the installation.</p>
+<p>The installation has not been completed yet. If you abort now, the data 
+installed so far will be discarded, and the corpus will still not be available
+for queries.</p>"""
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
