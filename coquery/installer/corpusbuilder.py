@@ -67,9 +67,6 @@ try:
     sys.path.append(os.path.join(sys.path[0], "../gui"))
     sys.path.append(os.path.join(sys.path[0], ".."))
     from pyqt_compat import QtCore, QtGui
-    import options
-    import corpusBuilderUi
-    import error_box
     use_gui = True
 except ImportError:
     print("Import error; GUI will not be available.")
@@ -112,7 +109,7 @@ class NLTKTaggerError(Exception):
             error_box.ErrorBox.show(sys.exc_info(), self)
 
 class MethodNotImplementedError(Exception):
-    msg = "Function not impemented."
+    msg = "Function not implemented."
 
 # module_code contains the Python skeleton code that will be used to write
 # the Python corpus module."""
@@ -128,6 +125,7 @@ from corpus import *
 
 class Resource(SQLResource):
     name = '{name}'
+    display_name = '{display_name}'
     db_name = '{db_name}'
     documentation_url = '{url}'
 {variables}
@@ -317,6 +315,7 @@ class BaseCorpusBuilder(object):
         self._tables = {}
         self._id_count = {}
         self._primary_keys = {}
+        self._interrupted = False
         
         self._new_tables = {}
         
@@ -385,6 +384,23 @@ class BaseCorpusBuilder(object):
              Link(self.tag_corpus_id, self.corpus_table),
              Column(self.tag_attribute, "TINYTEXT NOT NULL", index=False)])
 
+    def interrupt(self):
+        """
+        Interrupt the builder.
+        
+        Calling this method will interrupt the current building or 
+        installation process. All data written so far to the database will 
+        be discarded, and no corpus module will be written.
+        
+        In particular, this method is called in the GUI if the Cancel button
+        is pressed.
+        """
+        self._interrupted = True
+        
+    @property
+    def interrupted(self):
+        return self._interrupted
+
     def check_arguments(self):
         global in_memory
         """ Check the command line arguments. Add defaults if necessary."""
@@ -406,6 +422,8 @@ class BaseCorpusBuilder(object):
         pass
     
     def commit_data(self):
+        if self.interrupted:
+            return
         if in_memory:
             for table in self._new_tables:
                 self._new_tables[table].commit(self.Con)
@@ -435,7 +453,7 @@ class BaseCorpusBuilder(object):
             The name of the MySQL table
         column_list : list
             A list of :class:`Column` instances
-        """        
+        """
         new_table = Table(table_name)
         for x in column_list:
             if isinstance(x, Link):
@@ -526,7 +544,6 @@ class BaseCorpusBuilder(object):
             last = self.Con.insert(table_name, values)
             self._tables[table_name][key] = last
             return last
-        
 
     def setup_logger(self):
         """ 
@@ -561,19 +578,24 @@ class BaseCorpusBuilder(object):
         self.Con.start_transaction()
         self.add_tag_table()
         if self._widget:
-            self._widget.ui.progress_bar.setFormat("Creating tables... (%v of %m)")
-            self._widget.ui.progress_bar.setMaximum(len(self.new_tables))
-            self._widget.ui.progress_bar.setValue(0)
+            self._widget.progressSet.emit(len(self._new_tables), "Creating tables... (%v of %m)")
+            self._widget.progressUpdate.emit(0)
+            #self._widget.ui.progress_bar.setFormat("Creating tables... (%v of %m)")
+            #self._widget.ui.progress_bar.setMaximum(len(self._new_tables))
+            #self._widget.ui.progress_bar.setValue(0)
         elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Creating tables ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(self.new_tables))
+            progress = progressbar.ProgressBar(widgets=["Creating tables ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(self._new_tables))
             progress.start()
         for i, current_table in enumerate(self._new_tables):
             if not self.Con.has_table(current_table):
                 self.Con.create_table(current_table, self._new_tables[current_table].get_create_string())
             if self._widget:
-                self._widget.ui.progress_bar.setValue(i)
+                self._widget.progressUpdate.emit(i + 1)
+                #self._widget.ui.progress_bar.setValue(i)
             elif show_progress:
                 progress.update(i + 1)
+            if self.interrupted:
+                return
         self.Con.commit()
 
         if show_progress and not self._widget:
@@ -581,8 +603,21 @@ class BaseCorpusBuilder(object):
 
     def get_file_list(self, path):
         """ 
-        Returns a list of file names from the given path that match
-        the file filter from self.file_filter.
+        Return a list of valid file names from the given path.
+        
+        This method recursively searches in the directory ``path`` and its
+        subdirectories for files that match the file filter specified in 
+        the class attribute ``file_filter``.
+        
+        Parameters
+        ----------
+        path : string
+            The path in which to look for files
+            
+        Returns
+        -------
+        l : list
+            A list of strings, each representing a file name        
         """
         L = []
         for source_path, folders, files in os.walk(path):
@@ -591,6 +626,35 @@ class BaseCorpusBuilder(object):
                 if not self.file_filter or fnmatch.fnmatch(current_file, self.file_filter):
                     L.append(full_name)
         return L
+    
+    def validate_path(self, path):
+        """
+        Validate that directory ``path`` contains corpus data files.
+        
+        Parameters
+        ----------
+        path : string
+            The path to be validated
+        
+        Returns
+        -------
+        valid : bool
+            True if the directory ``path`` contains valid corpus data files,
+            or False otherwise.
+        """
+        
+        # check if path exists:
+        if not os.path.isdir(path):
+            return False
+        # check if path contains any file:
+        for x in os.listdir(path):
+            if not self.file_filter:
+                if os.path.isfile(x):
+                    return True
+            else:
+                if os.path.isfile(os.path.join(path, x)) and fnmatch.fnmatch(x, self.file_filter):
+                    return True
+        return False
 
     def get_corpus_code(self):
         """ return a text string containing the Python source code from
@@ -1072,9 +1136,11 @@ class BaseCorpusBuilder(object):
             self.logger.warning("This script can use the NLTK library for automatic part-of-speech tagging. However, this library is not installed on this computer. Follow the steps from http://www.nltk.org/install.html to install this library.")
         
         if self._widget:
-            self._widget.ui.progress_bar.setFormat("Reading text files... (%v of %m)")
-            self._widget.ui.progress_bar.setMaximum(len(files))
-            self._widget.ui.progress_bar.setValue(0)
+            self._widget.progressSet.emit(len(files), "Reading text files... (%v of %m)")
+            self._widget.progressUpdate.emit(0)
+            #self._widget.ui.progress_bar.setFormat("Reading text files... (%v of %m)")
+            #self._widget.ui.progress_bar.setMaximum(len(files))
+            #self._widget.ui.progress_bar.setValue(0)
         elif show_progress:
             progress = progressbar.ProgressBar(widgets=["Reading data files ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(files))
             progress.start()
@@ -1086,13 +1152,17 @@ class BaseCorpusBuilder(object):
             if not self.Con.find(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
+                if self.interrupted:
+                    return
                 self.process_file(file_name)
                 
             if self._widget:
-                self._widget.ui.progress_bar.setValue(i)
+                self._widget.progressUpdate.emit(i + 1)
+                #self._widget.ui.progress_bar.setValue(i)
             elif show_progress:
                 progress.update(i + 1)
-
+            if self.interrupted:
+                return
             self.commit_data()
 
         if show_progress and not self._widget:
@@ -1145,9 +1215,11 @@ class BaseCorpusBuilder(object):
         totals -= 1
         
         if self._widget:
-            self._widget.ui.progress_bar.setFormat("Optimizing table columns... (%v of %m)")
-            self._widget.ui.progress_bar.setMaximum(totals)
-            self._widget.ui.progress_bar.setValue(0)
+            self._widget.progressSet.emit(totals, "Optimizing table columns... (%v of %m)")
+            self._widget.progressUpdate.emit(0)
+            #self._widget.ui.progress_bar.setFormat("Optimizing table columns... (%v of %m)")
+            #self._widget.ui.progress_bar.setMaximum(totals)
+            #self._widget.ui.progress_bar.setValue(0)
         elif show_progress:
             progress = progressbar.ProgressBar(widgets=["Optimizing table columns ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=totals)
             progress.start()
@@ -1155,6 +1227,8 @@ class BaseCorpusBuilder(object):
         column_count = 0
         self.Con.start_transaction()
         for current_table in self.table_description:
+            if self.interrupted:
+                return
             field_specs = self.table_description[current_table]["CREATE"]
             for current_spec in field_specs:
                 match = re.match ("`(\w+)`", current_spec)
@@ -1188,9 +1262,12 @@ class BaseCorpusBuilder(object):
                                 self.logger.warning(e)
                 column_count += 1
                 if self._widget:
-                    self._widget.ui.progress_bar.setValue(column_count)
+                    self._widget.progressUpdate.emit(column_count + 1)
+                    #self._widget.ui.progress_bar.setValue(column_count)
                 elif show_progress:
                     progress.update(column_count - 1)
+        if self.interrupted:
+            return
         self.Con.commit()
         if show_progress and not self._widget:
             progress.finish()
@@ -1216,17 +1293,20 @@ class BaseCorpusBuilder(object):
         for current_table in self.table_description:
             if "INDEX" in self.table_description[current_table]:
                 total_indices += len(self.table_description[current_table]["INDEX"])
-        
         if self._widget:
-            self._widget.ui.progress_bar.setFormat("Creating indices... (%v of %m)")
-            self._widget.ui.progress_bar.setMaximum(total_indices)
-            self._widget.ui.progress_bar.setValue(0)
+            self._widget.progressSet.emit(total_indices, "Creating indices... (%v of %m)")
+            self._widget.progressUpdate.emit(0)
+            #self._widget.ui.progress_bar.setFormat("Creating indices... (%v of %m)")
+            #self._widget.ui.progress_bar.setMaximum(total_indices)
+            #self._widget.ui.progress_bar.setValue(0)
         elif show_progress:
             progress = progressbar.ProgressBar(widgets=["Indexing ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=total_indices)
             progress.start()
         index_count = 0
         self.Con.start_transaction()
         for i, current_table in enumerate(self.table_description):
+            if self.interrupted:
+                return
             # only create indices for the corpus table in the final pass:
             description = self.table_description[current_table]
             if "INDEX" in description:
@@ -1242,9 +1322,12 @@ class BaseCorpusBuilder(object):
                                 self.logger.Warning(e)
                     index_count += 1
                     if self._widget:
-                        self._widget.ui.progress_bar.setValue(i)
+                        self._widget.progressUpdate.emit(i + 1)
+                        #self._widget.ui.progress_bar.setValue(i)
                     elif show_progress:
                         progress.update(index_count)
+        if self.interrupted:
+            return
         self.Con.commit()
         if show_progress and not self._widget:
             progress.finish()
@@ -1338,6 +1421,7 @@ class Resource(SQLResource):
 
         self.module_content = self.module_code.format(
                 name=self.name,
+                display_name=self.get_name(),
                 db_name=self.arguments.db_name,
                 url=self.get_url(),
                 variables=variable_code,
@@ -1406,20 +1490,28 @@ class Resource(SQLResource):
         self.additional_stages.append(stage)
 
     @staticmethod
+    def get_license():
+        return "(license not specified)"
+
+    @staticmethod
     def get_title():
         return "(no title)"
 
     @staticmethod
     def get_description():
-        return ["(no description)"]
+        return []
 
     @staticmethod
     def get_references():
-        return ["(no reference)"]
+        return []
 
     @staticmethod
     def get_url():
         return "(no URL)"
+    
+    @staticmethod
+    def get_name():
+        return "(unnamed)"
 
     def get_speaker_data(self, *args):
         return []
@@ -1435,8 +1527,16 @@ class Resource(SQLResource):
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """
-        self.Con.close()
-        self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
+        if self.interrupted:
+            try:
+                self.Con.drop_database(self.arguments.db_name)
+            except:
+                pass
+            self.Con.close()
+            self.logger.info("--- Interrupted (after %.3f seconds) ---" % (time.time() - self.start_time))
+        else:
+            self.Con.close()
+            self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
 
     def build(self):
         """ 
@@ -1466,33 +1566,176 @@ class Resource(SQLResource):
 
         self.initialize_build()
         
-        if self.arguments.c:
+        if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
+            raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
+        
+        if self.arguments.c and not self.interrupted:
             self.build_create_tables()
 
-        if self.arguments.l:
+        if self.arguments.l and not self.interrupted:
             self.build_load_files()
 
-        if self.arguments.self_join:
+        if self.arguments.self_join and not self.interrupted:
             self.build_self_joined()
             
-        for stage in self.additional_stages:
+        for stage in self.additional_stages and not self.interrupted:
             stage()
-            
-        if self.arguments.o:
+
+        if self.arguments.o and not self.interrupted:
             self.build_optimize()
 
-        if self.arguments.i:
+        if self.arguments.i and not self.interrupted:
             self.build_create_indices()
 
-        if self.verify_corpus():
+        if self.verify_corpus() and not self.interrupted:
             self.build_write_module(self.arguments.corpus_path)
             
-        self.build_create_frequency_table()
-        
+        if not self.interrupted:
+            self.build_create_frequency_table()
         
         self.build_finalize()
-                
+        
 if use_gui:
+    import options
+    import corpusBuilderUi
+    import corpusInstallerUi
+    import error_box
+    import QtProgress
+    from defines import * 
+    
+    class InstallerGui(QtGui.QDialog):
+        installStarted = QtCore.Signal()
+        progressSet = QtCore.Signal(int, str)
+        progressUpdate = QtCore.Signal(int)
+        def __init__(self, builder_class, parent=None):
+            super(InstallerGui, self).__init__(parent)
+
+            import __init__
+            self.logger = logging.getLogger(__init__.NAME)        
+            
+            self.ui = corpusInstallerUi.Ui_CorpusInstaller()
+            self.ui.setupUi(self)
+            self.ui.progress_box.hide()
+            self.ui.button_input_path.clicked.connect(self.select_path)
+            self.ui.radio_install_corpus.toggled.connect(self.changed_radio)
+            self.ui.radio_only_module.toggled.connect(self.changed_radio)
+            self.installStarted.connect(self.show_progress)
+            self.progressSet.connect(self.set_progress)
+            self.progressUpdate.connect(self.update_progress)
+            
+            self.accepted = False
+            self.builder_class = builder_class
+            
+            self.ui.corpus_description.setText(
+                self.ui.corpus_description.text().format(
+                    builder_class.get_title(), builder_class.get_name()))
+
+            self.exec_()
+
+        def set_progress(self, vmax, s):
+            self.ui.progress_bar.setFormat(s)
+            self.ui.progress_bar.setMaximum(vmax)
+            self.ui.progress_bar.setValue(0)
+            
+        def update_progress(self, i):
+            self.ui.progress_bar.setValue(i)
+
+        def select_path(self):
+            name = QtGui.QFileDialog.getExistingDirectory()
+            if type(name) == tuple:
+                name = name[0]
+            if name:
+                self.ui.input_path.setText(name)
+
+        def keyPressEvent(self, e):
+            if e.key() == QtCore.Qt.Key_Escape:
+                self.reject()
+                
+        def changed_radio(self):
+            if self.ui.radio_install_corpus.isChecked():
+                self.ui.box_build_options.setEnabled(True)
+            else:
+                self.ui.box_build_options.setEnabled(False)
+
+        def show_progress(self):
+            self.ui.progress_box.show()
+            self.ui.progress_box.update()
+                
+        def do_install(self):
+            S = "Installing {}...".format(self.builder.name)
+            self.parent().ui.statusbar.showMessage(S)
+            self.ui.frame.setEnabled(False)
+            self.builder.build()
+            
+        def finish_install(self):
+            S = "Finished installing {}.".format(self.builder.name)
+            self.parent().ui.statusbar.showMessage(S)
+            self.ui.frame.setEnabled(True)
+            super(InstallerGui, self).accept()
+            
+        def install_exception(self):
+            error_box.ErrorBox.show(sys.exc_info(), self)
+
+        def reject(self):
+            try:
+                if self.install_thread:
+                    response = QtGui.QMessageBox.warning(self,
+                        "Aborting installation", 
+                        msg_install_abort,
+                        QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+                    if response:
+                        self.install_thread.quit()
+                        super(InstallerGui, self).reject()
+            except AttributeError:
+                pass
+                
+        def accept(self):
+            self.installStarted.emit()
+            self.accepted = True
+            self.builder = self.builder_class(gui = self)
+            self.builder.logger = self.logger
+            self.builder.arguments = self.get_arguments_from_gui()
+            self.builder.name = self.builder.arguments.name
+            
+            #self.do_install()
+            #self.finish_install()
+            self.install_thread = QtProgress.ProgressThread(self.do_install, self)
+            self.install_thread.setInterrupt(self.builder.interrupt)
+            self.install_thread.taskFinished.connect(self.finish_install)
+            self.install_thread.taskException.connect(self.install_exception)
+            self.install_thread.start()
+            
+        def get_arguments_from_gui(self):
+            namespace = argparse.Namespace()
+            namespace.verbose = False
+            
+            if self.ui.radio_only_module.isChecked():
+                namespace.o = False
+                namespace.i = False
+                namespace.l = False
+                namespace.c = False
+                namespace.w = True
+                namespace.self_join = False
+            else:
+                namespace.w = True
+                namespace.o = True
+                namespace.i = True
+                namespace.l = True
+                namespace.c = True
+                namespace.self_join = False
+
+            namespace.encoding = self.builder_class.encoding
+            
+            namespace.name = self.builder_class.get_name()
+            namespace.path = str(self.ui.input_path.text())
+            namespace.corpus_path = os.path.join(sys.path[0], "corpora/")
+            namespace.db_name = self.builder_class.get_name()
+            namespace.db_host = options.cfg.db_host
+            namespace.db_user = options.cfg.db_user
+            namespace.db_password = options.cfg.db_password
+            namespace.db_port = options.cfg.db_port
+            
+            return namespace
 
     class BuilderGui(QtGui.QDialog):
         def __init__(self, builder_class, parent=None):
@@ -1559,7 +1802,7 @@ if use_gui:
             namespace.c = True
             namespace.self_join = False
 
-            namespace.encoding = "utf-8"
+            namespace.encoding = self.builder_class.encoding
             
             namespace.name = str(self.ui.corpus_name.text())
             namespace.path = str(self.ui.input_path.text())
@@ -1572,3 +1815,4 @@ if use_gui:
             namespace.db_port = options.cfg.db_port
             
             return namespace
+
