@@ -1,12 +1,23 @@
 """ Bar chart visualization """
 
+from __future__ import division
+from __future__ import print_function
+
 import visualizer as vis
 import seaborn as sns
 from seaborn.palettes import cubehelix_palette
 import pandas as pd
+import matplotlib.pyplot as plt
 
 class BarchartVisualizer(vis.Visualizer):
     dimensionality = 2
+
+    def __init__(self, *args, **kwargs):
+        try:
+            self.percentage = kwargs.pop("percentage")
+        except KeyError:
+            self.percentage = False
+        super(BarchartVisualizer, self).__init__(*args, **kwargs)
 
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
@@ -102,6 +113,60 @@ class BarchartVisualizer(vis.Visualizer):
             return ""
 
         def plot_facet(data, color):
+
+            if len(self._groupby) == 2:
+                if self.percentage:
+                    ct = pd.crosstab(
+                        data[self._groupby[0]], data[self._groupby[1]])
+                    df = pd.DataFrame(ct)
+                    df = df.reindex_axis(self._levels[1], axis=1).fillna(0)
+                    df = df[self._levels[1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
+                    df = df.reindex_axis(self._levels[0], axis=0).fillna(0)
+                    df = df.reset_index()
+                    pal = sns.color_palette(palette_name, n_colors=len(self._levels[1]))[::-1]
+                    for i, stack in enumerate(self._levels[1][::-1]):
+                        sns.barplot(
+                            x=stack,
+                            y=self._groupby[0],
+                            data = df, color=pal[i], ax=plt.gca())
+                else:
+                    ax = sns.countplot(
+                        y=data[self._groupby[0]],
+                        order=self._levels[0],
+                        hue=data[self._groupby[1]],
+                        hue_order=sorted(self._levels[1]),
+                        palette=palette_name,
+                        data=data)
+
+            else:
+                if self.percentage:
+                    ct = data[self._groupby[0]].value_counts()
+                    df = pd.DataFrame(ct)
+                    df = df.apply(lambda x: 100 * x / x.sum(), axis=0).cumsum(axis=0)
+                    #df = df.reset_index()
+                    df.columns = [self._groupby[0], "Percent"]
+                    df = df.transpose()
+                    df["YCat"] = self._groupby[0]
+                    print(df)
+                    pal = sns.color_palette(palette_name, n_colors=len(self._levels[0]))[::-1]
+                    for i, stack in enumerate(self._levels[0][::-1]):
+                        sns.barplot(
+                            x=stack,
+                            y="YCat",
+                            data = df, color=pal[i], ax=plt.gca())
+                else:
+                    # Don't use the 'hue' argument if there is only a single 
+                    # grouping factor:
+                    ax = sns.countplot(
+                        y=data[self._groupby[0]],
+                        order=self._levels[0],
+                        palette=palette_name,
+                        data=data)
+            return
+                
+                
+                
+                
             if len(self._groupby) == 1:
                 # Don't use the 'hue' argument if there is only a single 
                 # grouping factor:
@@ -123,20 +188,23 @@ class BarchartVisualizer(vis.Visualizer):
             ax.format_coord = lambda x, y: my_format_coord(x, y, ax.get_title())
             return ax
 
-        if self._row_factor:
-            self.ct = pd.crosstab(
-                [self._table[self._row_factor], self._table[self._groupby[0]]],
-                [self._table[self._col_factor], self._table[self._groupby[1]]])
-        elif self._col_factor:
-            self.ct = pd.crosstab(
-                self._table[self._groupby[0]],
-                [self._table[self._col_factor], self._table[self._groupby[1]]])
-        elif len(self._groupby) == 2:
-            self.ct = pd.crosstab(
-                self._table[self._groupby[0]],
-                self._table[self._groupby[1]])
-        else:
-            self.ct = self._table[self._groupby[0]].value_counts()
+        #if self._row_factor:
+            #self.ct = pd.crosstab(
+                #[self._table[self._row_factor], self._table[self._groupby[0]]],
+                #[self._table[self._col_factor], self._table[self._groupby[1]]])
+        #elif self._col_factor:
+            #self.ct = pd.crosstab(
+                #self._table[self._groupby[0]],
+                #[self._table[self._col_factor], self._table[self._groupby[1]]])
+        #elif len(self._groupby) == 2:
+            #self.ct = pd.crosstab(
+                #self._table[self._groupby[0]],
+                #self._table[self._groupby[1]])
+        #else:
+            #self.ct = self._table[self._groupby[0]].value_counts()
+                
+        if self.percentage:
+            self._levels[-1] = sorted(self._levels[-1])
                 
         sns.despine(self.g.fig,
                     left=False, right=False, top=False, bottom=False)
@@ -152,10 +220,32 @@ class BarchartVisualizer(vis.Visualizer):
 
         # plot FacetGrid:
         self.g.map_dataframe(plot_facet) 
+
         # Add axis labels:
-        self.g.set_axis_labels("Frequency", self._groupby[0])
+        if self.percentage:
+            self.g.set(xlim=(0, 100))
+            self.g.set_axis_labels("Percentage", self._groupby[0])
+        else:
+            self.g.set_axis_labels("Frequency", self._groupby[0])
+        
         # Add a legend if there are two grouping factors:
         if len(self._groupby) == 2:
-            self.g.fig.get_axes()[-1].legend(title=self._groupby[1], frameon=True, framealpha=0.7, loc="lower left").draggable()
+            if self.percentage:
+                pal = sns.color_palette(palette_name, n_colors=len(self._levels[1]))
+                legend_bar = [
+                    plt.Rectangle(
+                        (0, 0), 1, 1,
+                        fc=pal[i], 
+                        edgecolor="none") for i, _ in enumerate(self._levels[1])
+                    ]
+                self.g.fig.get_axes()[-1].legend(
+                    legend_bar, self._levels[1],
+                    ncol=1,
+                    title=self._groupby[1], 
+                    frameon=True, 
+                    framealpha=0.7, 
+                    loc="lower left").draggable()
+            else:
+                self.g.fig.get_axes()[-1].legend(title=self._groupby[1], frameon=True, framealpha=0.7, loc="lower left").draggable()
         # Try to make the figure fit into the area nicely:
         self.g.fig.tight_layout()
