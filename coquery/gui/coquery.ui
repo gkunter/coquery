@@ -979,6 +979,8 @@
     </property>
     <addaction name="action_mySQL_settings"/>
     <addaction name="action_options"/>
+    <addaction name="separator"/>
+    <addaction name="actionStop_words_2"/>
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
@@ -992,21 +994,22 @@
      <addaction name="action_stacked_area_plot"/>
      <addaction name="action_line_plot"/>
     </widget>
-    <widget class="QMenu" name="menuFrequencies">
-     <property name="title">
-      <string>&amp;Frequencies</string>
-     </property>
-     <addaction name="action_barchart_plot"/>
-     <addaction name="action_heat_map"/>
-     <addaction name="action_tree_map"/>
-     <addaction name="action_word_cloud"/>
-    </widget>
     <widget class="QMenu" name="menuCorpus_locations">
      <property name="title">
       <string>&amp;Corpus locations</string>
      </property>
      <addaction name="action_barcode_plot"/>
      <addaction name="action_beeswarm_plot"/>
+    </widget>
+    <widget class="QMenu" name="menuFrequencies">
+     <property name="title">
+      <string>&amp;Frequencies</string>
+     </property>
+     <addaction name="action_barchart_plot"/>
+     <addaction name="action_stacked_barchart_plot"/>
+     <addaction name="action_heat_map"/>
+     <addaction name="action_tree_map"/>
+     <addaction name="action_word_cloud"/>
     </widget>
     <addaction name="menuCorpus_locations"/>
     <addaction name="menuFrequencies"/>
@@ -1223,6 +1226,21 @@
   <action name="action_line_plot">
    <property name="text">
     <string>&amp;Lines</string>
+   </property>
+  </action>
+  <action name="actionStop_words">
+   <property name="text">
+    <string>Stop words...</string>
+   </property>
+  </action>
+  <action name="actionStop_words_2">
+   <property name="text">
+    <string>&amp;Stop words...</string>
+   </property>
+  </action>
+  <action name="action_stacked_barchart_plot">
+   <property name="text">
+    <string>&amp;Stacked barchart</string>
    </property>
   </action>
  </widget>

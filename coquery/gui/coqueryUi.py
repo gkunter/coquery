@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'gui/coquery.ui'
+# Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Wed Sep  2 00:51:18 2015
+# Created: Thu Sep  3 21:34:22 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -507,10 +507,10 @@ class Ui_MainWindow(object):
         self.menuAnalyse.setObjectName(_fromUtf8("menuAnalyse"))
         self.menuTime_data = QtGui.QMenu(self.menuAnalyse)
         self.menuTime_data.setObjectName(_fromUtf8("menuTime_data"))
-        self.menuFrequencies = QtGui.QMenu(self.menuAnalyse)
-        self.menuFrequencies.setObjectName(_fromUtf8("menuFrequencies"))
         self.menuCorpus_locations = QtGui.QMenu(self.menuAnalyse)
         self.menuCorpus_locations.setObjectName(_fromUtf8("menuCorpus_locations"))
+        self.menuFrequencies = QtGui.QMenu(self.menuAnalyse)
+        self.menuFrequencies.setObjectName(_fromUtf8("menuFrequencies"))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtGui.QStatusBar(MainWindow)
         self.statusbar.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
@@ -592,6 +592,12 @@ class Ui_MainWindow(object):
         self.action_stacked_area_plot.setObjectName(_fromUtf8("action_stacked_area_plot"))
         self.action_line_plot = QtGui.QAction(MainWindow)
         self.action_line_plot.setObjectName(_fromUtf8("action_line_plot"))
+        self.actionStop_words = QtGui.QAction(MainWindow)
+        self.actionStop_words.setObjectName(_fromUtf8("actionStop_words"))
+        self.actionStop_words_2 = QtGui.QAction(MainWindow)
+        self.actionStop_words_2.setObjectName(_fromUtf8("actionStop_words_2"))
+        self.action_stacked_barchart_plot = QtGui.QAction(MainWindow)
+        self.action_stacked_barchart_plot.setObjectName(_fromUtf8("action_stacked_barchart_plot"))
         self.menuFile.addAction(self.action_open_input_file)
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addSeparator()
@@ -607,15 +613,18 @@ class Ui_MainWindow(object):
         self.menuCorpus.addAction(self.action_corpus_documentation)
         self.menuSettings.addAction(self.action_mySQL_settings)
         self.menuSettings.addAction(self.action_options)
+        self.menuSettings.addSeparator()
+        self.menuSettings.addAction(self.actionStop_words_2)
         self.menuTime_data.addAction(self.action_percentage_area_plot)
         self.menuTime_data.addAction(self.action_stacked_area_plot)
         self.menuTime_data.addAction(self.action_line_plot)
+        self.menuCorpus_locations.addAction(self.action_barcode_plot)
+        self.menuCorpus_locations.addAction(self.action_beeswarm_plot)
         self.menuFrequencies.addAction(self.action_barchart_plot)
+        self.menuFrequencies.addAction(self.action_stacked_barchart_plot)
         self.menuFrequencies.addAction(self.action_heat_map)
         self.menuFrequencies.addAction(self.action_tree_map)
         self.menuFrequencies.addAction(self.action_word_cloud)
-        self.menuCorpus_locations.addAction(self.action_barcode_plot)
-        self.menuCorpus_locations.addAction(self.action_beeswarm_plot)
         self.menuAnalyse.addAction(self.menuCorpus_locations.menuAction())
         self.menuAnalyse.addAction(self.menuFrequencies.menuAction())
         self.menuAnalyse.addAction(self.menuTime_data.menuAction())
@@ -670,8 +679,8 @@ class Ui_MainWindow(object):
         self.menuSettings.setTitle(_translate("MainWindow", "&Settings", None))
         self.menuAnalyse.setTitle(_translate("MainWindow", "&Visualizations", None))
         self.menuTime_data.setTitle(_translate("MainWindow", "&Time data", None))
-        self.menuFrequencies.setTitle(_translate("MainWindow", "&Frequencies", None))
         self.menuCorpus_locations.setTitle(_translate("MainWindow", "&Corpus locations", None))
+        self.menuFrequencies.setTitle(_translate("MainWindow", "&Frequencies", None))
         self.action_open_input_file.setText(_translate("MainWindow", "&Open input file...", None))
         self.action_open_input_file.setShortcut(_translate("MainWindow", "Ctrl+O", None))
         self.action_save_results.setText(_translate("MainWindow", "&Save results...", None))
@@ -705,5 +714,8 @@ class Ui_MainWindow(object):
         self.action_percentage_area_plot.setText(_translate("MainWindow", "&Percentage areas", None))
         self.action_stacked_area_plot.setText(_translate("MainWindow", "&Stacked areas", None))
         self.action_line_plot.setText(_translate("MainWindow", "&Lines", None))
+        self.actionStop_words.setText(_translate("MainWindow", "Stop words...", None))
+        self.actionStop_words_2.setText(_translate("MainWindow", "&Stop words...", None))
+        self.action_stacked_barchart_plot.setText(_translate("MainWindow", "&Stacked barchart", None))
 
 
