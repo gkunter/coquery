@@ -12,8 +12,9 @@ except ImportError:
     
     
 from collections import defaultdict
-
 from corpusbuilder import *
+
+from bibliography import *
 
 class corpus_code():
     def get_tag_translate(self, tag):
@@ -319,9 +320,6 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
              Column(self.word_lemma, "VARCHAR(32) NOT NULL"),
              Column(self.word_pos, "VARCHAR(12) NOT NULL")])
              
-            
-                                       
-
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(32) NOT NULL"),
@@ -671,18 +669,33 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         return base.lower()
 
     @staticmethod
+    def get_name():
+        return "ICE_NG"
+
+    @staticmethod
     def get_title():
         return "International Corpus of English – Nigeria"
 
     @staticmethod
     def get_description():
         return [
-            "International Corpus of English – Nigeria"]
-        #return "This script makes ICE Nigeria available to Coquery by reading the corpus data files from {}/POS-Tagged into the MySQL database '{}' so that the database can be queried by Coquery.The required data file 'ICE-Nigeria-written-pos-tagged.zip' can be downloaded from http://sourceforge.net/projects/ice-nigeria/files/.".format(self.arguments.path, self.arguments.db_name)
+            "The International Corpus of English – Nigeria is a member of the ICE family of English corpora.",
+            "It contains approximately 460.000 tokens of spoken Nigerian English, dating mostly from the first decade of the 21st century. Where known, the corpus provides speaker information (age, gender, ethnicity). The corpus also contains some textual meta information on the layout of the texts."]
 
     @staticmethod
+    def get_license():
+        return "ICE Nigeria is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike license (<a href='https://creativecommons.org/licenses/by-nc-sa/3.0/'>CC BY-NC-SA 3.0</a> DE)."
+        
+    @staticmethod
     def get_references():
-        return ["(no reference)"]
+        return [Reference(
+                author=[Name(first = "Eva-Maria", last = "Wunder"), Name(first = "Holger", last = "Voormann"), Name(first = "Ulrike", last = "Gut")], 
+                title = "The ICE Nigeria corpus project: Creating an open, rich and accurate corpus",
+                year = 2009,
+                journal = "ICAME Journal",
+                volume = 34,
+                pages = "78-88",
+                pub_type = "article").get_html()]
 
     @staticmethod
     def get_url():
