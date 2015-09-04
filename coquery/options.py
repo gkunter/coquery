@@ -541,7 +541,7 @@ class Options(object):
                                                 self.args.column_width[column] = int(value)
                                     except ValueError:
                                         pass
-                            if name.startswith("context_view_") or name.startswith("error_box_"):
+                            if name.startswith("context_view_") or name.startswith("error_box_") or name.startswith("context_manager"):
                                 try:
                                     vars(self.args)[name] = int(value)
                                 except ValueError:
@@ -644,6 +644,15 @@ def save_configuration():
             pass
         try:
             config.set("gui", "context_view_words", cfg.context_view_words)
+        except AttributeError:
+            pass
+
+        try:
+            config.set("gui", "corpus_manager_view_width", cfg.corpus_manager_view_width)
+        except AttributeError:
+            pass
+        try:
+            config.set("gui", "corpus_manager_view_height", cfg.corpus_manager_view_height)
         except AttributeError:
             pass
         
