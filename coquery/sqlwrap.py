@@ -76,7 +76,7 @@ class SqlDB (object):
         try:
             self.Cur.close()
             self.Con.close()
-        except mysql.ProgrammingError:
+        except (mysql.ProgrammingError, mysql.Error):
             pass
         
     def explain(self, S):
