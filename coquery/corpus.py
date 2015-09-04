@@ -1131,7 +1131,7 @@ class SQLCorpus(BaseCorpus):
                 if op.upper() == "LIKE":
                     if "*" not in value_list[0]:
                         value_list[0] = "*{}*".format(value_list[0])
-                    value_list[0] = tokens.COCAToken.replace_wildcard(value_list[0])
+                    value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
 
                 if rc_feature not in requested_features:
                     requested_features.append(rc_feature)
