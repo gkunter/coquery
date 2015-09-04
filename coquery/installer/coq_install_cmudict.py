@@ -5,10 +5,11 @@ import codecs
 
 class CMUdictBuilder(BaseCorpusBuilder):
     encoding = "latin-1"
+    file_filter = "cmudict*.txt"
     
-    def __init__(self):
+    def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
-        super(CMUdictBuilder, self).__init__()
+        super(CMUdictBuilder, self).__init__(gui, *args)
         
         # Add table descriptions for the table used in this database.
         #
@@ -56,7 +57,13 @@ class CMUdictBuilder(BaseCorpusBuilder):
              Column(self.word_transcript, "VARCHAR(100) NOT NULL")])
 
     def build_load_files(self):
-        with codecs.open(self.arguments.path, "r", encoding = self.arguments.encoding) as input_file:
+        files = self.get_file_list(self.arguments.path)
+        if len(files) > 1:
+            raise RuntimeError("There seem to be more than one dictionary files in the directory {}:\n{}\nRemove the unrequired dictionary files, and try again to install.".format(
+                self.argument.paths, "\n\t".join(files)))
+        if self._widget:
+            self._widget.progressSet.emit(0, "Reading dictionary file")
+        with codecs.open(files[0], "r", encoding = self.arguments.encoding) as input_file:
             for word_id, current_line in enumerate(input_file):
                 current_line = current_line.strip()
                 if current_line and not current_line.startswith (";;;"):
@@ -67,14 +74,27 @@ class CMUdictBuilder(BaseCorpusBuilder):
                          self.word_transcript: transcript})
         self.Con.commit()
 
-    def get_title(self):
-        return "Carnegie Mellon Pronouncing Dictionary (CMUdict)"
+    @staticmethod
+    def get_title():
+        return "Carnegie Mellon Pronouncing Dictionary"
 
-    def get_url(self):
+    @staticmethod
+    def get_url():
         return 'http://www.speech.cs.cmu.edu/cgi-bin/cmudict'
-                    
-    def get_description(self):
-        return ["The Carnegie Mellon Pronouncing Dictionary (CMUdict) is a dictionary containing approximately 135.000 English word-forms and their phonemic transcriptions, using a variant of the Arpabet transcription system.", "CMUdict is freely available under a BSD license."]
+    
+    @staticmethod
+    def get_name():
+        return "CMUdict"
+    
+    @staticmethod
+    def get_license():
+        return "CMUdict is licensed under a modified FreeBSD license."
+    
+    @staticmethod
+    def get_description():
+        return ["The Carnegie Mellon Pronouncing Dictionary (CMUdict) is a dictionary containing approximately 135.000 English word-forms and their phonemic transcriptions, using a variant of the ARPAbet transcription system."]
+
+BuilderClass = CMUdictBuilder
 
 if __name__ == "__main__":
     CMUdictBuilder().build()
