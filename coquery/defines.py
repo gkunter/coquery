@@ -81,9 +81,10 @@ COLUMN_NAMES = {
 try:
     unicode()
 except NameError:
+    # Python 3 does not have unicode and long, so define them here:
     unicode = str
     long = int
-
+    
 # Error messages used by the GUI:
 msg_visualization_no_data = """<p>The 'Query results' view is empty, hence there is nothing to visualize.</p>
 <p>You have either not run a query in this session yet, or there are no tokens in the corpus that match your last query.</p>
