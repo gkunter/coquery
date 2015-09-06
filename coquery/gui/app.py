@@ -7,8 +7,9 @@ from session import *
 from defines import *
 from pyqt_compat import QtCore, QtGui
 import __init__
-import coqueryUi
 import QtProgress
+
+import coqueryUi, coqueryCompactUi
 
 import results 
 import error_box
@@ -65,9 +66,18 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         self._objectName = ""
         self._link_by = None
 
-    def setLink(self, from_item, link):
-        self._link_by = (from_item, link)
-        
+    def setText(self, column, text, *args):
+        super(CoqTreeItem, self).setText(column, text)
+        if self.parent():
+            parent = self.parent().objectName()
+        feature = self.objectName()
+        if self.objectName().endswith("_table"):
+            self.setToolTip(column, "Table: {}".format(text))
+        elif self.objectName().startswith("coquery_"):
+            self.setToolTip(column, "Special column:\n{}".format(text))
+        else:
+            self.setToolTip(column, "Data column:\n{}".format(text))
+
     def setObjectName(self, name):
         """ Store resource variable name as object name. """
         self._objectName = name
@@ -126,6 +136,19 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
             if expand:
                 if self.parent().checkState(column) in (QtCore.Qt.PartiallyChecked, QtCore.Qt.Checked):
                     self.parent().setExpanded(True)
+
+class CoqTreeLinkItem(CoqTreeItem):
+
+    def setLink(self, from_item, link):
+        self._link_by = (from_item, link)
+        
+    def setText(self, column, text, *args):
+        super(CoqTreeLinkItem, self).setText(column, text)
+        source, target = text.split(" ► ")
+        print(self._link_by)
+        
+        self.setToolTip(column, "External table:\n{},\nlinked by column:\n{}".format(target, source))
+
 
 class CoqTreeWidget(QtGui.QTreeWidget):
     """ Define a tree widget that stores the available output columns in a 
@@ -448,7 +471,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
         self.ui.edit_query_string.close()        
         edit_query_string = CoqTextEdit(self)
-        edit_query_string.setObjectName(coqueryUi._fromUtf8("edit_query_string"))
+        edit_query_string.setObjectName("edit_query_string")
         self.ui.gridLayout_2.addWidget(edit_query_string, 2, 1, 1, 1)
         self.ui.edit_query_string = edit_query_string
         
@@ -628,9 +651,9 @@ class CoqueryApp(QtGui.QMainWindow):
         # populate the tree with a root for each table:
         for table in tables:
             root = CoqTreeItem()
+            root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
             root.setText(0, table.capitalize())
-            root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setCheckState(0, QtCore.Qt.Unchecked)
             if table_dict[table]:
                 tree.addTopLevelItem(root)
@@ -638,10 +661,10 @@ class CoqueryApp(QtGui.QMainWindow):
             # add a leaf for each table variable:
             for var in table_dict[table]:
                 leaf = CoqTreeItem()
+                leaf.setObjectName(coqueryUi._fromUtf8(var))
                 root.addChild(leaf)
                 label = type(self.resource).__getattribute__(self.resource, var).capitalize()
                 leaf.setText(0, label)
-                leaf.setObjectName(coqueryUi._fromUtf8(var))
                 if var in last_checked: 
                     leaf.setCheckState(0, QtCore.Qt.Checked)
                 else:
@@ -707,7 +730,11 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.file_content = None
 
-        self.ui = coqueryUi.Ui_MainWindow()
+        size = QtGui.QApplication.desktop().screenGeometry()
+        if size.height() < 1024 or size.width() < 1024:
+            self.ui = coqueryCompactUi.Ui_MainWindow()
+        else:
+            self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
         
         self.setup_app()
@@ -1448,11 +1475,11 @@ class CoqueryApp(QtGui.QMainWindow):
         resource = get_available_resources()[corpus][0]
         table = resource.get_table_dict()[table_name]
         
-        child_table = CoqTreeItem()
-        selected_item.parent().addChild(child_table)
-        child_table.setText(column, "{} ► {}.{}".format(str(selected_item.text(0)).capitalize(), corpus.upper(), table_name.capitalize()))
+        child_table = CoqTreeLinkItem()
         child_table.setObjectName("{}.{}_table".format(corpus, table_name))
+        selected_item.parent().addChild(child_table)
         child_table.setLink("{}.{}".format(selected_item.parent().objectName(), selected_item.objectName()), feature_name)
+        child_table.setText(column, "{} ► {}.{}".format(str(selected_item.text(0)).capitalize(), corpus.upper(), table_name.capitalize()))
         child_table.setCheckState(column, False)
         
         for rc_feature in table:

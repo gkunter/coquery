@@ -444,6 +444,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             except ValueError:
                 pass
             else:
+                word_text = ICENigeriaBuilder.replace_encoding_errors(word_text)
+                lemma_text = ICENigeriaBuilder.replace_encoding_errors(word_text)
                 new_sentence = False
                 
                 if word_pos == "CD":
@@ -454,15 +456,16 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                     new_sentence = True
                     word_pos = "PUNCT"
                     
-                self._word_id = self.table_get(self.word_table, 
-                    {self.word_label: word_text, 
-                    self.word_lemma: lemma_text, 
-                    self.word_pos: word_pos}, case=True)
-                    
-                self.add_token_to_corpus(
-                    {self.corpus_word_id: self._word_id,
-                    self.corpus_file_id: self._file_id,
-                    self.corpus_source_id: self._source_id})
+                if word_text and lemma_text:
+                    self._word_id = self.table_get(self.word_table, 
+                        {self.word_label: word_text, 
+                        self.word_lemma: lemma_text, 
+                        self.word_pos: word_pos}, case=True)
+                        
+                    self.add_token_to_corpus(
+                        {self.corpus_word_id: self._word_id,
+                        self.corpus_file_id: self._file_id,
+                        self.corpus_source_id: self._source_id})
 
                 #if new_sentence:
                     #self._sentence_id = self.table_get(self.sentence_table,
@@ -667,6 +670,84 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         while "." in base:
             base, _= os.path.splitext(base)
         return base.lower()
+
+    @staticmethod
+    def replace_encoding_errors(s):
+        """
+        Replace erroneous character sequences by the correct character
+        
+        Unfortunately, some data files in ICE-NG have corrput character 
+        encodings, which can limit the usefulness of the corpus data. This
+        function attempts to reverse the faulty encoding by replacing any
+        character sequence that appears to be the result of an encdoing 
+        error by the character that was probably intended.
+        
+        Parameters
+        ----------
+        s : string
+            The character string
+            
+        Returns
+        -------
+        s : string
+            The input string with known encoding errors fixed.
+        """
+        
+        # apparently, tje character sequence â marks any faulty encoding,
+        # and the next character is the actual encoding error. The probelm
+        # is that in ICE_NG, this three-character sequence can be split up
+        # into two 'words', e.g. for the dash in Pr_13.txt, line 36 
+        # ('hereas others – notably top officials'). In Pr_13.xml.pos, this
+        # dash is represented in two separate rows in lines 381-382.
+        
+        # My solution is to find the two-character marker and replace it by
+        # an empty string. Then, the next character is replaced, using the
+        # lookup table.
+        # The installer has to check, then, if the string is empty after
+        # replacement. If so, it should discard the current line.
+        
+        replace_list = [
+            ("â", "‘"),
+            ("â", "’"),
+
+            ("â", "“"),
+            ("â", "”"),
+
+            ("â", "–"),
+            
+            ("Â°", "°"),
+            ("Â·", "·"),
+
+            ("Ã ", "à"),
+            ("Ãš", "è"),
+            ("Ã¬", "ì"),
+            ("Ã²", "ò"),
+            
+            ("Ä", "ĕ"),
+
+            ("Ã©", "é"),
+            ("Ã­", "í"),
+            ("Ãº", "ú"),
+
+            ("Ã€", "ä"),
+            
+            ("Ã", "Ì"),
+            
+            ("Ã±", "ñ"),
+
+            ("Ê€", "ʤ"),
+            ]
+        corrupt_replace_list = [
+            ("", "’"),
+            ("", "–"),
+        ]
+        for old, new in replace_list:
+            s = s.replace(old, new)
+
+        for old, new in corrupt_replace_list:
+            s = s.replace(old.replace("â", ""), new)
+            
+        return s
 
     @staticmethod
     def get_name():
