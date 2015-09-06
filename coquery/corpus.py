@@ -742,8 +742,11 @@ class SQLLexicon(BaseLexicon):
             if CurrentWord != "%":
                 current_token = tokens.COCAWord(CurrentWord, self, replace=False, parse=False)
                 current_token.negated = token.negated
+                if not isinstance(current_token.S, unicode):
+                    S = unicode(current_token.S)
+                else:
+                    S = current_token.S
                 # take care of quotation marks:
-                S = str(current_token.S)
                 S = S.replace('"', '""')
                 sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), S))
                 
