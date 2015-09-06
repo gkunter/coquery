@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 
+
 from pyqt_compat import QtCore, QtGui
 
 import sys
@@ -10,8 +11,10 @@ import corpusManagerUi
 import fnmatch
 import os
 import imp
+import logging
 
 sys.path.append(os.path.join(sys.path[0], ".."))
+import __init__
 sys.path.append(os.path.join(sys.path[0], "../installer"))
 
 import options
@@ -230,14 +233,20 @@ class CorpusManager(QtGui.QDialog):
                 basename, ext = os.path.splitext(os.path.basename(fullpath))
                 try:
                     module = imp.load_source(basename, module_path)
-                except ImportError as e:
-                    print(e)
+                except (ImportError, SyntaxError) as e:
+                    msg = msg_corpus_broken.format(
+                        name=basename,
+                        type=sys.exc_info()[0],
+                        code=sys.exc_info()[1])
+                    logger.error(msg)
+                    QtGui.QMessageBox.critical(
+                        None, "Corpus error – Coquery", 
+                        msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     continue
                 try:
                     builder_class = module.BuilderClass
                 except AttributeError:
                     continue
-
                 entry = CoqAccordionEntry(stack=self)
 
                 name = builder_class.get_name()
@@ -295,3 +304,4 @@ def main():
 if __name__ == "__main__":
     main()
 
+logger = logging.getLogger(__init__.NAME)
