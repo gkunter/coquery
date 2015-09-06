@@ -107,6 +107,14 @@ msg_install_abort = """<p>You have requested to abort the installation.</p>
 <p>The installation has not been completed yet. If you abort now, the data 
 installed so far will be discarded, and the corpus will still not be available
 for queries.</p>"""
+msg_corpus_broken = """Error reading the installer '{name}'
+
+The corpus installer stored in the file {name} could not be read. Most likely, there is a programming error in the installer, or the file could not be read. 
+
+Please inform the maintainer of this corpus installer of your problem. When doing so, include the following information in your message:
+
+{type}
+{code}"""
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
