@@ -84,14 +84,20 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             return None
         
         # DisplayRole: return the content of the cell in the data frame:
-        if role == QtCore.Qt.DisplayRole:
+        # ToolTipRole: also returns the cell content, but in a form suitable
+        # for QHTML:
+        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
             column = self.header[index.column()]
             value = self.content.iloc[index.row()][column] 
             if type(value) == np.int64:
                 value = int(value)
             elif type(value) == np.float64:
                 value = float(value)
-            return value
+            
+            if role == QtCore.Qt.ToolTipRole:
+                return "<div>{}</div>".format(QtCore.Qt.escape(value))
+            else:
+                return value
             
         # ForegroundRole: return the colour of the column, or the default if
         # no color is specified:
