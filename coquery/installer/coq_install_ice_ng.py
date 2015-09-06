@@ -205,12 +205,24 @@ class corpus_code():
         #widget.ui.context_area.setText(collapse_words(context))
 
 class ICENigeriaBuilder(BaseCorpusBuilder):
-    def __init__(self):
-        """ Initialize the corpus builder. The initialization includes a 
-        definition of the database schema. """
+    encoding = "latin-1"
+
+    def __init__(self, gui=False, *args):
+        """
+        Initialize the corpus builder.
         
-        # all corpus builders have to call the inherited __init__ function:
-        super(ICENigeriaBuilder, self).__init__()
+        During initialization, the database table structure is defined.
+        
+        All corpus installers have to call the inherited initializer
+        :func:`BaseCorpusBuilder.__init__`.
+        
+        Parameters
+        ----------
+        gui : bool
+            True if the graphical installer is used, and False if the 
+            installer runs on the console.
+        """
+        super(ICENigeriaBuilder, self).__init__(gui, *args)
 
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
@@ -444,8 +456,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             except ValueError:
                 pass
             else:
-                word_text = ICENigeriaBuilder.replace_encoding_errors(word_text)
-                lemma_text = ICENigeriaBuilder.replace_encoding_errors(word_text)
+                word_text = ICENigeriaBuilder._replace_encoding_errors(word_text)
+                lemma_text = ICENigeriaBuilder._replace_encoding_errors(word_text)
                 new_sentence = False
                 
                 if word_pos == "CD":
@@ -672,7 +684,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         return base.lower()
 
     @staticmethod
-    def replace_encoding_errors(s):
+    def _replace_encoding_errors(s):
         """
         Replace erroneous character sequences by the correct character
         
