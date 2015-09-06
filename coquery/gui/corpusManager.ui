@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>480</height>
+    <width>944</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,19 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
-    <number>20</number>
+    <number>16</number>
+   </property>
+   <property name="leftMargin">
+    <number>2</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>2</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
    </property>
    <item>
     <widget class="QScrollArea" name="scroll_area_corpus">
@@ -42,8 +54,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>626</width>
-        <height>351</height>
+        <width>934</width>
+        <height>458</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -68,8 +80,18 @@
           <number>-1</number>
          </property>
          <widget class="QWidget" name="page_3">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>924</width>
+            <height>406</height>
+           </rect>
+          </property>
           <attribute name="icon">
-           <iconset theme="server-database"/>
+           <iconset theme="server-database">
+            <normaloff/>
+           </iconset>
           </attribute>
           <attribute name="label">
            <string>Page</string>

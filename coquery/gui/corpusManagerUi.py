@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'corpusManager.ui'
 #
-# Created: Fri Sep  4 15:35:32 2015
+# Created: Sun Sep  6 10:37:06 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,9 +26,10 @@ except AttributeError:
 class Ui_corpusManager(object):
     def setupUi(self, corpusManager):
         corpusManager.setObjectName(_fromUtf8("corpusManager"))
-        corpusManager.resize(640, 480)
+        corpusManager.resize(944, 600)
         self.verticalLayout = QtGui.QVBoxLayout(corpusManager)
-        self.verticalLayout.setSpacing(20)
+        self.verticalLayout.setSpacing(16)
+        self.verticalLayout.setContentsMargins(2, 0, 2, 0)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.scroll_area_corpus = QtGui.QScrollArea(corpusManager)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.MinimumExpanding)
@@ -42,7 +43,7 @@ class Ui_corpusManager(object):
         self.scroll_area_corpus.setWidgetResizable(True)
         self.scroll_area_corpus.setObjectName(_fromUtf8("scroll_area_corpus"))
         self.scroll_area_content = QtGui.QWidget()
-        self.scroll_area_content.setGeometry(QtCore.QRect(0, 0, 626, 351))
+        self.scroll_area_content.setGeometry(QtCore.QRect(0, 0, 934, 458))
         self.scroll_area_content.setObjectName(_fromUtf8("scroll_area_content"))
         self.horizontalLayout_2 = QtGui.QHBoxLayout(self.scroll_area_content)
         self.horizontalLayout_2.setSpacing(0)
@@ -52,7 +53,7 @@ class Ui_corpusManager(object):
         self.corpus_stack.setFrameShape(QtGui.QFrame.NoFrame)
         self.corpus_stack.setFrameShadow(frameShadow)
         self.corpus_stack.setObjectName(_fromUtf8("corpus_stack"))
-
+        
         self.horizontalLayout_2.addWidget(self.corpus_stack)
         self.scroll_area_corpus.setWidget(self.scroll_area_content)
         self.verticalLayout.addWidget(self.scroll_area_corpus)
@@ -82,7 +83,7 @@ class Ui_corpusManager(object):
 
         self.retranslateUi(corpusManager)
         self.corpus_stack.setCurrentIndex(0)
-        self.corpus_stack.layout().setSpacing(10)
+        self.corpus_stack.layout().setSpacing(-1)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), corpusManager.accept)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), corpusManager.reject)
         QtCore.QMetaObject.connectSlotsByName(corpusManager)
