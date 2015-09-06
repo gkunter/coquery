@@ -7,7 +7,6 @@ import os.path
 from defines import *
 import options
 import resultsUi
-import logfile
 import sys
 import copy
 import QtProgress
@@ -115,7 +114,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
             # right-align the left context as well as columns with reverse 
             # sorting enabled:
-            if column == "coq_context_left" or self.sort_column[column] in set([SORT_REV_DEC, SORT_REV_INC]):
+            if column == "coq_context_left" or self.sort_columns.get(column, SORT_NONE) in set([SORT_REV_DEC, SORT_REV_INC]):
                 return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
         
         return None
