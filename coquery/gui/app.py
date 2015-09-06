@@ -776,6 +776,19 @@ class CoqueryApp(QtGui.QMainWindow):
             if column.lower() in options.cfg.column_width:
                 self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower()])
         
+        # set delegates:
+        header = self.ui.data_preview.horizontalHeader()
+        for i in range(header.count()):
+            column = self.table_model.header[header.logicalIndex(i)]
+
+            if column in ("coq_frequency"):
+                deleg = results.CoqResultCellDelegate(self.ui.data_preview)
+                self.ui.data_preview.setItemDelegateForColumn(i, deleg)
+            else:
+                deleg = results.CoqResultCellDelegate(self.ui.data_preview)
+                self.ui.data_preview.setItemDelegateForColumn(i, deleg)
+
+
         if self.table_model.rowCount():
             self.last_results_saved = False
             
