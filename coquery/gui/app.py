@@ -778,12 +778,11 @@ class CoqueryApp(QtGui.QMainWindow):
         for i in range(header.count()):
             column = self.table_model.header[header.logicalIndex(i)]
 
-            if column in ("coq_frequency"):
-                deleg = results.CoqResultCellDelegate(self.ui.data_preview)
-                self.ui.data_preview.setItemDelegateForColumn(i, deleg)
+            if column in ("coq_conditional_probability"):
+                deleg = results.CoqProbabilityDelegate(self.ui.data_preview)
             else:
                 deleg = results.CoqResultCellDelegate(self.ui.data_preview)
-                self.ui.data_preview.setItemDelegateForColumn(i, deleg)
+            self.ui.data_preview.setItemDelegateForColumn(i, deleg)
 
 
         if self.table_model.rowCount():

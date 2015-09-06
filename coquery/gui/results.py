@@ -83,14 +83,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
             column = self.header[index.column()]
             value = self.content.iloc[index.row()][column] 
-            if type(value) == np.int64:
-                value = int(value)
-            elif type(value) == np.float64:
-                value = float(value)
-            if role == QtCore.Qt.ToolTipRole:
-                return "<div>{}</div>".format(QtCore.Qt.escape("{}".format(value)))
+            
+            if isinstance(value, (float, np.float64)):
+                format_string = "{:.%if}" % options.cfg.digits
             else:
-                return value
+                format_string = "{}"
+            
+            if role == QtCore.Qt.ToolTipRole:
+                return "<div>{}</div>".format(QtCore.Qt.escape(format_string.format(value)))
+            else:
+                return format_string.format(value)
             
         # ForegroundRole: return the colour of the column, or the default if
         # no color is specified:
@@ -239,15 +241,15 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         error_box.ErrorBox.show(self.exc_info, self.exception)
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
-    #def paint(self, painter, option, index):
-        #super(CoqResultCellDelegate, self).paint(painter, option, index)
-        #print(index.column())
-        
-#class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
-    #def __init__(self, parent=None, *args):
-        #print(1)
-        #super(CoqResultCellDelegate, self).__init__(parent, *args)
-        
+    def get_background(self, option, index):
+        return index.data(QtCore.Qt.BackgroundRole)
+    
+    def get_foreground(self, option, index):
+        if option.state & QtGui.QStyle.State_MouseOver:
+            return options.cfg.app.palette().color(QtGui.QPalette().Link)
+        else:
+            return index.data(QtCore.Qt.ForegroundRole)
+    
     def paint(self, painter, option, index):
         """
         Paint the results cell.
@@ -264,16 +266,24 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
 
         # show content as a link on mouse-over:
         if option.state & QtGui.QStyle.State_MouseOver:
-            fg_color = options.cfg.app.palette().color(
-                QtGui.QPalette().Link)
             font = painter.font()
             font.setUnderline(True)
             painter.setFont(font)
-        else:
-            fg_color = index.data(QtCore.Qt.ForegroundRole)
 
-        painter.setPen(QtGui.QPen(fg_color))
+        fg = self.get_foreground(option, index)
+        bg = self.get_background(option, index)
+        if bg:
+            painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
+            painter.setBackground(bg)
+        painter.setPen(QtGui.QPen(fg))
         painter.drawText(option.rect, QtCore.Qt.AlignRight, unicode(value))
 
         painter.restore()
 
+class CoqProbabilityDelegate(CoqResultCellDelegate):
+    def get_background(self, option, index):
+        value = float(index.data(QtCore.Qt.DisplayRole))
+        if  value > 1:
+            return QtGui.QColor("lightyellow")
+        else:
+            return super(CoqProbabilityDelegate, self).get_background(option, index)

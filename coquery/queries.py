@@ -638,8 +638,8 @@ class CollocationQuery(TokenQuery):
 
         all_words = set(left.index + right.index)
         
-        left = left.reindex(all_words).fillna(0)
-        right = right.reindex(all_words).fillna(0)
+        left = left.reindex(all_words).fillna(0).astype(int)
+        right = right.reindex(all_words).fillna(0).astype(int)
         
         collocates = pd.concat([left, right], axis=1)
         collocates = collocates.reset_index()
