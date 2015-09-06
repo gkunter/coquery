@@ -281,12 +281,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                 "`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_word_id),
                 #"`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_sentence_id),                
                 "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_file_id),
-                "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_source_id)],
-            "INDEX": [
-                ([self.corpus_word_id], 0, "HASH"),
-                #([self.corpus_sentence_id], 0, "HASH"),
-                ([self.corpus_file_id], 0, "HASH"),
-                ([self.corpus_source_id], 0, "HASH")]})
+                "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_source_id)]})
 
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
@@ -385,7 +380,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         self.source_gender = "Gender"
         self.source_ethnicity = "Ethnicity"
         self.source_date = "Date"
-        self.source_register = "Register"
+        self.source_icetext = "ICE_text_category"
+        self.source_icetextcode = "ICE_text_code"
         self.source_place = "Place"
         
         self.add_table_description(self.source_table, self.source_id,
@@ -393,19 +389,12 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                 "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.source_id),
                 "`{}` TINYTEXT NOT NULL".format(self.source_mode),
                 "`{}` VARCHAR(15) NOT NULL".format(self.source_date),
-                "`{}` VARCHAR(30) NOT NULL".format(self.source_register),
+                "`{}` VARCHAR(30) NOT NULL".format(self.source_icetext),
+                "`{}` VARCHAR(30) NOT NULL".format(self.source_icetextcode),
                 "`{}` VARCHAR(30) NOT NULL".format(self.source_place),
                 "`{}` VARCHAR(5) NOT NULL".format(self.source_age),
                 "`{}` VARCHAR(1) NOT NULL".format(self.source_gender),
-                "`{}` VARCHAR(15) NOT NULL".format(self.source_ethnicity)],
-            "INDEX": [
-                ([self.source_mode], 0, "BTREE"),
-                ([self.source_register], 0, "BTREE"),
-                ([self.source_date], 0, "BTREE"),
-                ([self.source_place], 0, "BTREE"),
-                ([self.source_gender], 0, "BTREE"),
-                ([self.source_ethnicity], 0, "BTREE"),
-                ([self.source_ethnicity], 0, "BTREE")]})
+                "`{}` VARCHAR(15) NOT NULL".format(self.source_ethnicity)]})
 
         self.add_time_feature(self.source_date)
         self.add_time_feature(self.source_age)
@@ -414,7 +403,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
             Column(self.source_mode, "TINYTEXT NOT NULL"),
             Column(self.source_date, "VARCHAR(10) NOT NULL"), 
-            Column(self.source_register, "VARCHAR(30) NOT NULL"), 
+            Column(self.source_icetext, "VARCHAR(30) NOT NULL"), 
+            Column(self.source_icetextcode, "VARCHAR(30) NOT NULL"), 
             Column(self.source_place, "VARCHAR(30) NOT NULL"), 
             Column(self.source_age, "VARCHAR(5) NOT NULL"),  
             Column(self.source_gender, "VARCHAR(1) NOT NULL"),  
@@ -502,7 +492,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             try:
                 meta_info[x] = meta_xml.find(x).text.strip().split("\t")[0]
             except AttributeError:
-                meta_info[x] = "?"
+                meta_info[x] = ""
                 
         # get speaker/author information, enclosed in <author> tags:
         meta_xml = meta_xml.find("author")
@@ -511,26 +501,72 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             try:
                 meta_info[x] = meta_xml.find(x).text.strip().split("\t")[0]
             except AttributeError:
-                meta_info[x] = "?"
-                
-        meta_info["register"] = os.path.basename(os.path.dirname(self._current_file))
-        meta_info["mode"] = os.path.basename(os.path.normpath(os.path.join(os.path.dirname(self._current_file), "..")))
+                meta_info[x] = ""
+
+        # get text category, based on filename (see ICE-NG documentation):
+        meta_info["ice_text"], meta_info["ice_text_code"] = self._get_ice_text_category(self._current_file)
         
-        date = meta_info["date"].strip().strip("-")
-        if date in ["?", "TODO"]:
-            date = ""
+        # currently, only the written component is used:
+        meta_info["mode"] = "written"
+        
+        meta_info["date"] = meta_info["date"].strip().strip("-")
+        if meta_info["date"] in ["TODO"]:
+            meta_info["date"] = ""
 
         # all meta data gathered, store it:
         self._source_id = self.table_get(self.source_table,
             {self.source_age: meta_info["age"],
              self.source_gender: meta_info["gender"],
              self.source_ethnicity: meta_info["ethnic-group"],
-             self.source_date: date,
+             self.source_date: meta_info["date"],
              self.source_mode: meta_info["mode"],
-             self.source_register: meta_info["register"],
+             self.source_icetext: meta_info["ice_text"],
+             self.source_icetextcode: meta_info["ice_text_code"],
              self.source_place: meta_info["place"]})
                 
+    def _get_ice_text_category(self, file_name):
+        """
+        Retrieve the ICE text category for the file.
         
+        The ICE-Nigeria documentation contains a list that maps the file
+        names used in the corpus to ICE text categories. This list is used
+        here to return a tuple with the description and the code as values.
+        
+        Parameters
+        ----------
+        file_name : string
+            The name of the file
+            
+        Returns
+        -------
+        tup : tuple
+            A tuple containing two strings: first, the description of the 
+            category, second, the ICEtext category code.
+        """
+        
+        mapping = {
+            "ahum": ("Academic writing humanities", "W2A"),
+            "ansc": ("Academic writing natural sciences", "W2A"),
+            "assc": ("Academic writing social sciences", "W2A"),
+            "atec": ("Academic writing technical", "W2A"),
+            "adm":  ("Administrative/instructive writing", "W2D"),
+            "bl":   ("Business letters", "W1B"),
+            "ed":   ("Editorials", "W2E"),
+            "ex":   ("Exams", "W1A"),
+            "nov":  ("Novels", "W2F"),
+            "phum": ("Popular writing humanities", "W2B"),
+            "pnsc": ("Popular writing natural sciences", "W2B"),
+            "pssc": ("Popular writing social sciences", "W2B"),
+            "ptec": ("Popular writing technology", "W2B"),
+            "pr":   ("Press reportage", "W2C"),
+            "skho": ("Instructive writing/skills and hobbies", "W2D"),
+            "sl":   ("Social letters", "W1B"),
+            "ess":  ("Students essays", "W1A")}
+        
+        name = os.path.split(file_name)[1].lower()
+        desc, code = mapping.get(name.partition("_")[0], ("", ""))
+        return desc, code
+    
     def process_xml_file(self, current_file):
         """ Reads an XML file."""
 
