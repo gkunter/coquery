@@ -1631,8 +1631,19 @@ if use_gui:
             self.progressUpdate.connect(self.update_progress)
             
             self.accepted = False
-            self.builder_class = builder_class
-
+            try:
+                self.builder_class = builder_class
+            except Exception as e:
+                msg = msg_corpus_broken.format(
+                    name=basename,
+                    type=sys.exc_info()[0],
+                    code=sys.exc_info()[1])
+                logger.error(msg)
+                QtGui.QMessageBox.critical(
+                    None, "Corpus error – Coquery", 
+                    msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                return
+            
             self.ui.corpus_description.setText(
                 str(self.ui.corpus_description.text()).format(
                     builder_class.get_title(), builder_class.get_name()))
