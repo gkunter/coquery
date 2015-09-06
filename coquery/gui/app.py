@@ -145,8 +145,6 @@ class CoqTreeLinkItem(CoqTreeItem):
     def setText(self, column, text, *args):
         super(CoqTreeLinkItem, self).setText(column, text)
         source, target = text.split(" ► ")
-        print(self._link_by)
-        
         self.setToolTip(column, "External table:\n{},\nlinked by column:\n{}".format(target, source))
 
 
@@ -212,7 +210,6 @@ class CoqTreeWidget(QtGui.QTreeWidget):
                     check_list.append(str(child._objectName))
         return check_list
         
-
 class LogTableModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, *args):
         super(LogTableModel, self).__init__(parent, *args)
@@ -545,7 +542,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.button_remove_link.hide()
             
     def result_column_resize(self, index, old, new):
-        header = self.table_model.content.columns[index].lower()
+        header = self.table_model.header[index].lower()
         options.cfg.column_width[header] = new
 
     def result_cell_clicked(self, index):
@@ -772,7 +769,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setModel(self.table_model)
 
         # set column widths:
-        for i, column in enumerate(self.table_model.content.columns):
+        for i, column in enumerate(self.table_model.header):
             if column.lower() in options.cfg.column_width:
                 self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower()])
         
@@ -825,7 +822,7 @@ class CoqueryApp(QtGui.QMainWindow):
             name = name[0]
         if name:
             try:
-                columns = [x for x in self.table_model.content.columns if not x.startswith("coquery_invisible")]
+                columns = [x for x in self.table_model.header if not x.startswith("coquery_invisible")]
                 columns = [x for x in columns if options.cfg.column_visibility.get(x, True)]
                 tab = self.table_model.content[columns]
                 tab.to_csv(name,
@@ -879,11 +876,14 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_header_menu(self, point ):
         header = self.ui.data_preview.horizontalHeader()
         header.customContextMenuRequested.disconnect(self.show_header_menu)
-        column = header.logicalIndexAt(point.x())
         # show self.menu about the column
         self.menu = QtGui.QMenu("Column options", self)
 
-        display_name = options.cfg.main_window.Session.Corpus.resource.translate_header(self.table_model.content.columns[column])
+        index = header.logicalIndexAt(point.x())
+        column = self.table_model.header[index]
+        # this must simply be the most horrible object reference ever :(
+        display_name = options.cfg.main_window.Session.Corpus.resource.translate_header(column)
+        
         action = QtGui.QWidgetAction(self)
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
         label.setAlignment(QtCore.Qt.AlignCenter)
@@ -891,8 +891,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.menu.addAction(action)
         self.menu.addSeparator()
 
-        if not options.cfg.column_visibility.get(
-            self.table_model.content.columns[column].lower(), True):
+        if not options.cfg.column_visibility.get(column, True):
             action = QtGui.QAction("&Show column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
@@ -905,7 +904,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.menu.addAction(action)
             self.menu.addSeparator()
             
-            if self.table_model.content.columns[column].lower() in options.cfg.column_color:
+            if column in options.cfg.column_color:
                 action = QtGui.QAction("&Reset color", self)
                 action.triggered.connect(lambda: self.reset_color(column))
                 self.menu.addAction(action)
@@ -918,73 +917,65 @@ class CoqueryApp(QtGui.QMainWindow):
             group = QtGui.QActionGroup(self, exclusive=True)
             action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
             action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
-            if self.table_model.sort_state[column] == results.SORT_NONE:
+            if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_NONE:
                 action.setChecked(True)
             self.menu.addAction(action)
             
             action = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_INC))
-            if self.table_model.sort_state[column] == results.SORT_INC:
+            action.triggered.connect(lambda: self.change_sorting_order(column, SORT_INC))
+            if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_INC:
                 action.setChecked(True)
             self.menu.addAction(action)
             action = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_DEC))
-            if self.table_model.sort_state[column] == results.SORT_DEC:
+            action.triggered.connect(lambda: self.change_sorting_order(column, SORT_DEC))
+            if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_DEC:
                 action.setChecked(True)
             self.menu.addAction(action)
                                     
             if self.table_model.content[[column]].dtypes[0] == "object":
                 action = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
-                action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
-                if self.table_model.sort_state[column] == results.SORT_REV_INC:
+                action.triggered.connect(lambda: self.change_sorting_order(column, SORT_REV_INC))
+                if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_REV_INC:
                     action.setChecked(True)
 
                 self.menu.addAction(action)
                 action = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
-                action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_DEC))
-                if self.table_model.sort_state[column] == results.SORT_REV_DEC:
+                action.triggered.connect(lambda: self.change_sorting_order(column, SORT_REV_DEC))
+                if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_REV_DEC:
                     action.setChecked(True)
                 self.menu.addAction(action)
         
         self.menu.popup(header.mapToGlobal(point))
         header.customContextMenuRequested.connect(self.show_header_menu)
 
-    def toggle_visibility(self, index):
+    def toggle_visibility(self, column):
         """ Show again a hidden column, or hide a visible column."""
-        column = self.table_model.content.columns[index]
         options.cfg.column_visibility[column] = not options.cfg.column_visibility.get(column, True)
         self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
         # Resort the data if this is a sorting column:
-        if index in self.table_model.sort_columns:
+        if column in self.table_model.sort_columns:
             self.table_model.sort(0, QtCore.Qt.AscendingOrder)
         self.table_model.layoutChanged.emit()
 
-
     def reset_color(self, column):
-        header = self.table_model.content.columns[column].lower()
         try:
-            options.cfg.column_color.pop(header)
+            options.cfg.column_color.pop(column)
             self.table_model.layoutChanged.emit()
         except KeyError:
             pass
 
     def change_color(self, column):
         col = QtGui.QColorDialog.getColor()
-        header = self.table_model.content.columns[column].lower()
         if col.isValid():
-            options.cfg.column_color[header] = col.name()
+            options.cfg.column_color[column] = col.name()
             #self.table_model.layoutChanged.emit()
         
-    def change_sorting_order(self, index, mode):
+    def change_sorting_order(self, column, mode):
         self.menu.close()
-        if not mode:
-            try:
-                self.table_model.sort_columns.remove(index)
-            except IndexError:
-                pass
-        elif index not in self.table_model.sort_columns:
-            self.table_model.sort_columns.append(index)
-        self.table_model.sort_state[index] = mode
+        if mode == SORT_NONE:
+            self.table_model.sort_columns.pop(column)
+        else:
+            self.table_model.sort_columns[column] = mode
         self.table_model.sort(0, QtCore.Qt.AscendingOrder)
         
     def set_query_button(self):
