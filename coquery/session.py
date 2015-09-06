@@ -20,6 +20,8 @@ from errors import *
 from corpus import *
 from defines import *
 
+import pandas as pd
+
 import queries
 import tokens
 
@@ -44,16 +46,18 @@ class Session(object):
 
         # select the query class depending on the value of options.cfg.MODE, i.e.
         # which mode has been specified in the options:
-        if options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-            self.query_type = queries.FrequencyQuery
-        elif options.cfg.MODE == QUERY_MODE_TOKENS:
+        if options.cfg.MODE == QUERY_MODE_TOKENS:
             self.query_type = queries.TokenQuery
+        elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
+            self.query_type = queries.FrequencyQuery
         elif options.cfg.MODE == QUERY_MODE_DISTINCT:
-            self.query_type = queries.CorpusQuery
+            self.query_type = queries.DistinctQuery
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.query_type = queries.CollocationQuery
             
         logger.info("Corpus: %s" % options.cfg.corpus)
+        
+        self.data_object = pd.DataFrame()
         self.output_object = None
         self.output_order = []
         self.header_shown = False

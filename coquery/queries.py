@@ -210,7 +210,7 @@ class QueryFilter(object):
         except ValueError:
             return False
 
-class CorpusQuery(object):
+class TokenQuery(object):
     """ 
     This class manages the query string, and is responsible for the output 
     of the query results. 
@@ -343,24 +343,21 @@ class CorpusQuery(object):
                     if x.startswith("coq_word") or x.startswith("coq_lemma"):
                         df[x] = df[x].apply(lambda x: x.lower() if x else x)
 
-            # for DISTINCT query mode, duplicates are dropped from the dataframe:
-            if self.collapse_identical:
-                df.drop_duplicates(subset=vis_cols, inplace=True)
-                df.reset_index(drop=True, inplace=True)
         else:
             # create an empty data frame
             df = pd.DataFrame(columns=vis_cols)
 
-        df = self.aggregate_data(df)
-        df = self.filter_data(df)
+        agg = self.aggregate_data(df)
+        agg = self.filter_data(agg)
         if options.cfg.gui:
             # append the data frame to the existing data frame
-            self.Session.output_object = self.Session.output_object.append(df)
+            self.Session.data_table = df
+            self.Session.output_object = self.Session.output_object.append(agg)
             self.Session.output_object.fillna("", inplace=True)
         else:
             # write data frame to output_file as a CSV file, using the 
             # current output_separator. Encoding is always "utf-8".
-            df[vis_cols].to_csv(output_object, 
+            agg[vis_cols].to_csv(output_object, 
                 header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
                 sep=options.cfg.output_separator,
                 encoding="utf-8",
@@ -371,15 +368,19 @@ class CorpusQuery(object):
             self.Session.header_shown = True
         return
 
-class TokenQuery(CorpusQuery):
+class DistinctQuery(TokenQuery):
     """ 
-    TokenQuery is a subclass of CorpusQuery. 
+    DistinctQuery is a subclass of TokenQuery. 
     
-    In this subclass, the attribute collapse_identical is set to False so 
-    that :func:`write_results` does not remove the duplicate rows from the
-    data frame containing the query results.
+    This subclass reimplements :func:`aggregate_data` so that duplicate rows 
+    are removed.
     """
-    collapse_identical = False
+
+    def aggregate_data(self, df):
+        vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
+        df = df.drop_duplicates(subset=vis_cols)
+        df = df.reset_index(drop=True)
+        return df
 
 class FrequencyQuery(TokenQuery):
     """ 
@@ -480,7 +481,7 @@ class FrequencyQuery(TokenQuery):
                     pass
         return df
 
-class StatisticsQuery(CorpusQuery):
+class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session, None)
         self.Results = self.Session.Corpus.get_statistics()

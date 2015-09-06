@@ -220,7 +220,7 @@ class Visualizer(object):
 
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()
-        self._column_order = [self._model.content.columns[header.logicalIndex(section)] for section in range(header.count())]
+        self._column_order = [self._model.columns[header.logicalIndex(section)] for section in range(header.count())]
         # ... but make sure that the frequency is the last column:
         try:
             self._column_order.remove("coq_frequency")
@@ -242,7 +242,7 @@ class Visualizer(object):
         self._column_order = [x for x in self._column_order if 
             options.cfg.column_visibility.get(x, True)]
         
-        self._table = self._model.content.reindex(columns=self._column_order)
+        self._table = self._model.reindex(columns=self._column_order)
         
         self._table = self._table.sort(columns=self._column_order, axis="rows")
         self._table.columns = [
@@ -609,7 +609,12 @@ class VisualizerDialog(QtGui.QWidget):
     def close(self, *args):
         """ Close the visualizer widget, disconnect the signals, and remove 
         the visualizer from the list of visualizers when closing."""
-        self.disconnect_signals()
+        try:
+            self.disconnect_signals()
+        except TypeError:
+            # TypeErrors can be raised if there is no connected object. This
+            # can be ignored:
+            pass
         self.remove_matplot()
         super(VisualizerDialog, self).close()
         options.cfg.main_window.widget_list.remove(self)
@@ -674,7 +679,7 @@ class VisualizerDialog(QtGui.QWidget):
             self.add_smooth_spinner()
         try:
             visualizer = visualizer_class(model, view, **kwargs)
-            if visualizer._model:
+            if not visualizer._model.empty:
                 dialog.setVisible(True)
                 dialog.add_visualizer(visualizer)
                 dialog.add_matplot()

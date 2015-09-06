@@ -1076,10 +1076,10 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_tree_map(self):
         import visualizer
         import treemap
-        if not self.table_model.content.empty:
+        if not self.Session.data_table.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
-                self.table_model, 
+                self.Session.data_table, 
                 self.ui.data_preview, 
                 treemap.TreemapVisualizer, self)
         else:
@@ -1088,10 +1088,10 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_heatmap_plot(self):
         import visualizer
         import heatmap
-        if not self.table_model.content.empty:
+        if not self.Session.data_table.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
-                self.table_model, 
+                self.Session.data_table, 
                 self.ui.data_preview, 
                 heatmap.HeatmapVisualizer, self)
         else:
@@ -1100,10 +1100,10 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_beeswarm_plot(self):
         import visualizer
         import beeswarmplot
-        if not self.table_model.content.empty:
+        if not self.Session.data_table.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
-                self.table_model, 
+                self.Session.data_table, 
                 self.ui.data_preview, 
                 beeswarmplot.BeeswarmVisualizer, self)
         else:
@@ -1112,10 +1112,10 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_barchart_plot(self, percentage=False):
         import visualizer
         import barplot
-        if not self.table_model.content.empty:
+        if not self.Session.data_table.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
-                self.table_model, 
+                self.Session.data_table,
                 self.ui.data_preview, 
                 barplot.BarchartVisualizer, self, percentage=percentage)
         else:
@@ -1124,10 +1124,10 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_barcode_plot(self):
         import visualizer
         import barcodeplot
-        if not self.table_model.content.empty:
+        if not self.Session.data_table.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
-                self.table_model, 
+                self.Session.data_table,
                 self.ui.data_preview, 
                 barcodeplot.BarcodeVisualizer, self)
         else:
@@ -1136,10 +1136,10 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_time_series_plot(self, area, percentage):
         import visualizer
         import time_series
-        if not self.table_model.content.empty:
+        if not self.Session.data_table.empty:
             viz = visualizer.VisualizerDialog()
             viz.Plot(
-                self.table_model, 
+                self.Session.data_table,
                 self.ui.data_preview, 
                 time_series.TimeSeriesVisualizer, 
                 self, area=area, percentage=percentage, 
