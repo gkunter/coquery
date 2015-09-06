@@ -349,9 +349,28 @@ class TokenQuery(object):
 
         agg = self.aggregate_data(df)
         agg = self.filter_data(agg)
+        
+        df_cols = list(df.columns.values)
+        for col in list(df_cols):
+            if col.startswith("coquery_invisible"):
+                df_cols.remove(col)
+                df_cols.append(col)
+        df = df[df_cols]
+
+        agg_cols = list(agg.columns.values)
+        for col in list(agg_cols):
+            if col.startswith("coquery_invisible"):
+                agg_cols.remove(col)
+                agg_cols.append(col)
+        agg = agg[df_cols]
+        
         if options.cfg.gui:
             # append the data frame to the existing data frame
-            self.Session.data_table = df
+            if self.Session.data_table.empty:
+                self.Session.data_table = df
+            else:
+                self.Session.data_table = self.Session.data_table.append(df)
+
             self.Session.output_object = self.Session.output_object.append(agg)
             self.Session.output_object.fillna("", inplace=True)
         else:

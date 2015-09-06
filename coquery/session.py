@@ -57,7 +57,7 @@ class Session(object):
             
         logger.info("Corpus: %s" % options.cfg.corpus)
         
-        self.data_object = pd.DataFrame()
+        self.data_table = pd.DataFrame()
         self.output_object = None
         self.output_order = []
         self.header_shown = False
