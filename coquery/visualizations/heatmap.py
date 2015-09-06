@@ -27,7 +27,7 @@ class HeatmapVisualizer(vis.Visualizer):
             tab = pd.crosstab(
                 pd.Series([""] * len(self._table[self._groupby[0]]), name=""), 
                 self._table[self._groupby[0]])
-            FUN = lambda data, color: sns.heatmap(
+            plot_facet = lambda data, color: sns.heatmap(
                 tab,
                 robust=True,
                 annot=True,
@@ -35,7 +35,7 @@ class HeatmapVisualizer(vis.Visualizer):
                 fmt="g",
                 linewidths=1)
         else:
-            FUN = lambda data, color: sns.heatmap(
+            plot_facet = lambda data, color: sns.heatmap(
                 get_crosstab(
                     data, 
                     self._groupby[0], 
@@ -53,9 +53,13 @@ class HeatmapVisualizer(vis.Visualizer):
                 [self._table[x] for x in [self._row_factor, self._groupby[0]] if x != None],
                 [self._table[x] for x in [self._col_factor, self._groupby[1]] if x != None]).values.max()
 
-        self.g.map_dataframe(FUN)
+        self.map_data(plot_facet)
 
         self.setup_axis("Y")
         self.setup_axis("X")
-        
-        self.g.fig.tight_layout()
+
+        try:
+            self.g.fig.tight_layout()
+        except ValueError:
+            # A ValueError sometimes occurs with long labels. We ignore it:
+            pass
