@@ -1250,7 +1250,11 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Shut down the application by removing all open widgets and saving
         the configuration. """
         for x in self.widget_list:
-            x.close()
+            try:
+                x.close()
+            except:
+                pass
+            del x
         self.save_configuration()
             
     def closeEvent(self, event):
