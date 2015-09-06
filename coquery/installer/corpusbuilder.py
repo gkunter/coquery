@@ -43,6 +43,12 @@ version of the British National corpus.
 
 from __future__ import unicode_literals
 from __future__ import print_function
+
+try:
+    str = unicode
+except:
+    pass
+
 import codecs
 
 import logging
@@ -646,13 +652,14 @@ class BaseCorpusBuilder(object):
         # check if path exists:
         if not os.path.isdir(path):
             return False
+
         # check if path contains any file:
-        for x in os.listdir(path):
-            if not self.file_filter:
-                if os.path.isfile(x):
+        for source_path, folders, files in os.walk(path):
+            for current_file in files:
+                full_name = os.path.join(source_path, current_file)
+                if os.path.isfile(full_name):
                     return True
-            else:
-                if os.path.isfile(os.path.join(path, x)) and fnmatch.fnmatch(x, self.file_filter):
+                if not self.file_filter or fnmatch.fnmatch(current_file, self.file_filter):
                     return True
         return False
 
@@ -1625,9 +1632,9 @@ if use_gui:
             
             self.accepted = False
             self.builder_class = builder_class
-            
+
             self.ui.corpus_description.setText(
-                self.ui.corpus_description.text().format(
+                str(self.ui.corpus_description.text()).format(
                     builder_class.get_title(), builder_class.get_name()))
 
             self.exec_()
@@ -1697,13 +1704,16 @@ if use_gui:
             self.builder.arguments = self.get_arguments_from_gui()
             self.builder.name = self.builder.arguments.name
             
-            #self.do_install()
-            #self.finish_install()
-            self.install_thread = QtProgress.ProgressThread(self.do_install, self)
-            self.install_thread.setInterrupt(self.builder.interrupt)
-            self.install_thread.taskFinished.connect(self.finish_install)
-            self.install_thread.taskException.connect(self.install_exception)
-            self.install_thread.start()
+            try:
+                self.do_install()
+            except:
+                self.install_exception()
+            self.finish_install()
+            #self.install_thread = QtProgress.ProgressThread(self.do_install, self)
+            #self.install_thread.setInterrupt(self.builder.interrupt)
+            #self.install_thread.taskFinished.connect(self.finish_install)
+            #self.install_thread.taskException.connect(self.install_exception)
+            #self.install_thread.start()
             
         def get_arguments_from_gui(self):
             namespace = argparse.Namespace()
