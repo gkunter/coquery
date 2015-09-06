@@ -142,9 +142,10 @@ class Visualizer(object):
                 context=self.get_plot_context(), 
                 font_scale=self.get_font_scale()):
 
-                print("col_factor: ", self._col_factor)
-                print("col_wrap:   ", self._col_wrap)
-                print("row_factor: ", self._row_factor)
+                if options.cfg.verbose:
+                    print("col_factor: ", self._col_factor)
+                    print("col_wrap:   ", self._col_wrap)
+                    print("row_factor: ", self._row_factor)
                 self.g = sns.FacetGrid(self._table, 
                                     #xlim=self.get_xlim(),
                                     #ylim=self.get_ylim(),
@@ -154,6 +155,31 @@ class Visualizer(object):
                                     sharex=True,
                                     sharey=True)
 
+    def map_data(self, func):
+        """
+        Map the dataframe using :func:`func`.
+        
+        This method wraps the function :func:`func` so that a facet is 
+        plotted for the grouping variables. In order for this to work, 
+        :func:`func` has to take two values: `data`, which is a sub-
+        dataframe after grouping, and `color`, which is currently not
+        used, but which must be handled by `func` anyway.
+        
+        Technically, it calls :func:`FacetGrid.map_dataframe` from
+        `seaborn` with `func` as a parameter if more than one plot 
+        is required. Otherwise, it calls `func` directly, as `FacetGrid`
+        can have problems if only one plot is drawn.
+        
+        Parameters
+        ----------
+        func : function
+            The plotting function.
+        """
+        if self._col_factor:
+            self.g.map_dataframe(func) 
+        else:
+            func(self._table, None)
+    
     def get_grid_layout(self, n):
         """ Return a tuple containing a nrows, ncols pair that can be used to
         utilize the screen space more or less nicely for the number of grids
@@ -182,7 +208,6 @@ class Visualizer(object):
         """ Set the data for the the visualizer. Currently, the method takes
         two parameters, 'model' and 'view', which are expected to be instances
         of QAbstractDataModel and QTableView classes, respectively. """
-        
         self._model = model
         self._view = view
         self.update_data()
@@ -220,7 +245,8 @@ class Visualizer(object):
 
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()
-        self._column_order = [self._model.columns[header.logicalIndex(section)] for section in range(header.count())]
+        self._column_order = [
+            self._model.columns[header.logicalIndex(section)] for section in range(header.count())]
         # ... but make sure that the frequency is the last column:
         try:
             self._column_order.remove("coq_frequency")
@@ -231,7 +257,6 @@ class Visualizer(object):
             # data. The frequency column is stripped otherwise.
             if self.visualize_frequency:
                 self._column_order.append("coq_frequency")
-        
         self._column_order += [x for x in options.cfg.main_window.Session.output_order if x.startswith("coquery_invisible") and x not in self._column_order]
         try:
             self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
@@ -243,8 +268,6 @@ class Visualizer(object):
             options.cfg.column_visibility.get(x, True)]
         
         self._table = self._model.reindex(columns=self._column_order)
-        
-        self._table = self._table.sort(columns=self._column_order, axis="rows")
         self._table.columns = [
             options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in self._table.columns]
 
@@ -258,10 +281,11 @@ class Visualizer(object):
             self._groupby = []
         self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby]
         
-        print("grouping:   ", self._groupby)
-        print("levels:      ", self._levels)
-        print("factors:    ", self._factor_columns)
-        print("dimensions: ", self.dimensionality)
+        if options.cfg.verbose:
+            print("grouping:   ", self._groupby)
+            print("levels:      ", self._levels)
+            print("factors:    ", self._factor_columns)
+            print("dimensions: ", self.dimensionality)
         
         if len(self._factor_columns) > self.dimensionality:
             self._col_factor = self._factor_columns[-self.dimensionality - 1]
@@ -511,8 +535,10 @@ class Visualizer(object):
         """
         
         progress = ProgressIndicator(FUN=None, label="Drawing...")
-        
-        self.draw()
+        try:
+            self.draw()
+        except Exception as e:
+            error_box.ErrorBox.show(sys.exc_info())
         progress.close()
 
 class VisualizerDialog(QtGui.QWidget):
@@ -564,7 +590,7 @@ class VisualizerDialog(QtGui.QWidget):
         add a matplotlib canvas and a matplotlib navigation toolbar to the 
         dialog. """
         self.visualizer = visualizer
-        options.cfg.main_window.widget_list.append(self)
+        options.cfg.main_window.widget_list.append(self.visualizer)
 
     def update_plot(self):
         """ Update the plot. During the update, the canvas and the navigation
@@ -617,7 +643,8 @@ class VisualizerDialog(QtGui.QWidget):
             pass
         self.remove_matplot()
         super(VisualizerDialog, self).close()
-        options.cfg.main_window.widget_list.remove(self)
+        options.cfg.main_window.widget_list.remove(self.visualizer)
+        del self.visualizer
         
     def keyPressEvent(self, event):
         """ Catch key events so that they can be passed on to the matplotlib
