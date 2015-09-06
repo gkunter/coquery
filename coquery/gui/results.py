@@ -93,9 +93,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 value = int(value)
             elif type(value) == np.float64:
                 value = float(value)
-            
             if role == QtCore.Qt.ToolTipRole:
-                return "<div>{}</div>".format(QtCore.Qt.escape(value))
+                return "<div>{}</div>".format(QtCore.Qt.escape("{}".format(value)))
             else:
                 return value
             
@@ -238,4 +237,43 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         options.cfg.main_window.ui.progress_bar.setRange(0, 1)
         options.cfg.main_window.ui.statusbar.showMessage("Error during sorting.")
         error_box.ErrorBox.show(self.exc_info, self.exception)
+
+class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
+    #def paint(self, painter, option, index):
+        #super(CoqResultCellDelegate, self).paint(painter, option, index)
+        #print(index.column())
         
+#class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
+    #def __init__(self, parent=None, *args):
+        #print(1)
+        #super(CoqResultCellDelegate, self).__init__(parent, *args)
+        
+    def paint(self, painter, option, index):
+        """
+        Paint the results cell.
+        
+        The paint method of the cell delegates takes the representation
+        from the table's :func:`data` method, using the DecorationRole role.
+        On mouse-over, the cell is rendered like a clickable link.
+        """
+        
+        painter.save()
+
+        # get cell content:
+        value = index.data(QtCore.Qt.DisplayRole)
+
+        # show content as a link on mouse-over:
+        if option.state & QtGui.QStyle.State_MouseOver:
+            fg_color = options.cfg.app.palette().color(
+                QtGui.QPalette().Link)
+            font = painter.font()
+            font.setUnderline(True)
+            painter.setFont(font)
+        else:
+            fg_color = index.data(QtCore.Qt.ForegroundRole)
+
+        painter.setPen(QtGui.QPen(fg_color))
+        painter.drawText(option.rect, QtCore.Qt.AlignRight, str(value))
+
+        painter.restore()
+
