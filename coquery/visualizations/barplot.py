@@ -104,7 +104,6 @@ class BarchartVisualizer(vis.Visualizer):
                 try:
                     freq = self.ct[y_cat]
                 except KeyError:
-                    print(1)
                     return ""
                 else:
                     return "{} = {}, Freq: {}".format(
@@ -147,7 +146,6 @@ class BarchartVisualizer(vis.Visualizer):
                     df.columns = [self._groupby[0], "Percent"]
                     df = df.transpose()
                     df["YCat"] = self._groupby[0]
-                    print(df)
                     pal = sns.color_palette(palette_name, n_colors=len(self._levels[0]))[::-1]
                     for i, stack in enumerate(self._levels[0][::-1]):
                         sns.barplot(
@@ -218,9 +216,8 @@ class BarchartVisualizer(vis.Visualizer):
             # factors, or a palette diverging from Red to Purple otherwise:
             palette_name = "Set3" if len(self._groupby) == 2 else "RdPu"
 
-        # plot FacetGrid:
-        self.g.map_dataframe(plot_facet) 
-
+        self.map_data(plot_facet)
+            
         # Add axis labels:
         if self.percentage:
             self.g.set(xlim=(0, 100))
@@ -248,4 +245,4 @@ class BarchartVisualizer(vis.Visualizer):
             else:
                 self.g.fig.get_axes()[-1].legend(title=self._groupby[1], frameon=True, framealpha=0.7, loc="lower left").draggable()
         # Try to make the figure fit into the area nicely:
-        self.g.fig.tight_layout()
+        #self.g.fig.tight_layout()
