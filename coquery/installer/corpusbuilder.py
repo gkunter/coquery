@@ -318,7 +318,7 @@ class BaseCorpusBuilder(object):
         self.lexicon_features = []
         self.corpus_features = []
         self._time_features = []
-        self._tables = {}
+        #self._tables = {}
         self._id_count = {}
         self._primary_keys = {}
         self._interrupted = False
@@ -371,17 +371,17 @@ class BaseCorpusBuilder(object):
         self.tag_corpus_id = self.corpus_id
         self.tag_attribute = "Attribute"
         
-        self.add_table_description(self.tag_table, self.tag_id,
-            {"CREATE": [
-                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_id),
-                "`{}` ENUM('open', 'close', 'empty')".format(self.tag_type),
-                "`{}` TINYTEXT NOT NULL".format(self.tag_label),
-                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_corpus_id),
-                "`{}` TINYTEXT NOT NULL".format(self.tag_attribute)],
-            "INDEX": [
-                ([self.tag_corpus_id], 0, "HASH"),
-                ([self.tag_label], 0, "BTREE"),
-                ([self.tag_type], 0, "BTREE")]})
+        #self.add_table_description(self.tag_table, self.tag_id,
+            #{"CREATE": [
+                #"`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_id),
+                #"`{}` ENUM('open', 'close', 'empty')".format(self.tag_type),
+                #"`{}` TINYTEXT NOT NULL".format(self.tag_label),
+                #"`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_corpus_id),
+                #"`{}` TINYTEXT NOT NULL".format(self.tag_attribute)],
+            #"INDEX": [
+                #([self.tag_corpus_id], 0, "HASH"),
+                #([self.tag_label], 0, "BTREE"),
+                #([self.tag_type], 0, "BTREE")]})
             
         self.create_table_description(self.tag_table,
             [Primary(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
@@ -467,20 +467,20 @@ class BaseCorpusBuilder(object):
             new_table.add_column(x)
         self._new_tables[table_name] = new_table
                 
-    def add_table_description(self, table_name, primary_key, table_description):
-        """ Add a primary key to the table description and the internal
-        tables."""
-        for i, x in enumerate(table_description["CREATE"]):
-            if "`{}`".format(primary_key) in x:
-                table_description["CREATE"][i] = "{} AUTO_INCREMENT".format(
-                    table_description["CREATE"][i])
-        table_description["CREATE"].append("PRIMARY KEY (`{}`)".format(primary_key))
+    #def add_table_description(self, table_name, primary_key, table_description):
+        #""" Add a primary key to the table description and the internal
+        #tables."""
+        #for i, x in enumerate(table_description["CREATE"]):
+            #if "`{}`".format(primary_key) in x:
+                #table_description["CREATE"][i] = "{} AUTO_INCREMENT".format(
+                    #table_description["CREATE"][i])
+        #table_description["CREATE"].append("PRIMARY KEY (`{}`)".format(primary_key))
         
-        self.table_description[table_name] = table_description
+        #self.table_description[table_name] = table_description
         
-        self._tables[table_name] = {}
-        self._primary_keys[table_name] = primary_key
-        self._id_count[table_name] = 0
+        #self._tables[table_name] = {}
+        #self._primary_keys[table_name] = primary_key
+        #self._id_count[table_name] = 0
         
     def table_add(self, table_name, values):
         """ 

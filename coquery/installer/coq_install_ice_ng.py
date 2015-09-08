@@ -206,6 +206,7 @@ class corpus_code():
 
 class ICENigeriaBuilder(BaseCorpusBuilder):
     encoding = "latin-1"
+    file_filter = "*_??.xml.pos"
 
     def __init__(self, gui=False, *args):
         """
@@ -275,13 +276,13 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         self.corpus_file_id = "FileId"
         self.corpus_source_id = "SourceId"
         
-        self.add_table_description(self.corpus_table, self.corpus_id,
-            {"CREATE": [
-                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.corpus_id),
-                "`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_word_id),
-                #"`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_sentence_id),                
-                "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_file_id),
-                "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_source_id)]})
+        #self.add_table_description(self.corpus_table, self.corpus_id,
+            #{"CREATE": [
+                #"`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.corpus_id),
+                #"`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_word_id),
+                ##"`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_sentence_id),                
+                #"`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_file_id),
+                #"`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_source_id)]})
 
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
@@ -317,9 +318,9 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                 ([self.word_pos], 0, "BTREE"),
                 ([self.word_label], 0, "BTREE")]
 
-        self.add_table_description(self.word_table, self.word_id,
-            {"CREATE": create_columns,
-            "INDEX": index_columns})
+        #self.add_table_description(self.word_table, self.word_id,
+            #{"CREATE": create_columns,
+            #"INDEX": index_columns})
             
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
@@ -327,11 +328,6 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
              Column(self.word_lemma, "VARCHAR(32) NOT NULL"),
              Column(self.word_pos, "VARCHAR(12) NOT NULL")])
              
-        self.create_table_description(self.word_table,
-            [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-             Column(self.word_label, "VARCHAR(32) NOT NULL"),
-             Column(self.word_lemma, "VARCHAR(32) NOT NULL"),
-             Column(self.word_pos, "VARCHAR(12) NOT NULL")])
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
@@ -350,22 +346,17 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         self.file_name = "Filename"
         self.file_path = "Path"
         
-        self.add_table_description(self.file_table, self.file_id,
-            {"CREATE": [
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
-                "`{}` TINYTEXT NOT NULL".format(self.file_name),
-                "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
+        #self.add_table_description(self.file_table, self.file_id,
+            #{"CREATE": [
+                #"`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
+                #"`{}` TINYTEXT NOT NULL".format(self.file_name),
+                #"`{}` TINYTEXT NOT NULL".format(self.file_path)]})
 
         self.create_table_description(self.file_table,
             [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.file_name, "TINYTEXT NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
-        
-        self.create_table_description(self.file_table,
-            [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-             Column(self.file_name, "TINYTEXT NOT NULL"),
-             Column(self.file_path, "TINYTEXT NOT NULL")])
-        
+            
         #self.sentence_table = "sentence"
         #self.sentence_id = "SentenceId"
         
@@ -384,17 +375,17 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         self.source_icetextcode = "ICE_text_code"
         self.source_place = "Place"
         
-        self.add_table_description(self.source_table, self.source_id,
-            {"CREATE": [
-                "`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.source_id),
-                "`{}` TINYTEXT NOT NULL".format(self.source_mode),
-                "`{}` VARCHAR(15) NOT NULL".format(self.source_date),
-                "`{}` VARCHAR(30) NOT NULL".format(self.source_icetext),
-                "`{}` VARCHAR(30) NOT NULL".format(self.source_icetextcode),
-                "`{}` VARCHAR(30) NOT NULL".format(self.source_place),
-                "`{}` VARCHAR(5) NOT NULL".format(self.source_age),
-                "`{}` VARCHAR(1) NOT NULL".format(self.source_gender),
-                "`{}` VARCHAR(15) NOT NULL".format(self.source_ethnicity)]})
+        #self.add_table_description(self.source_table, self.source_id,
+            #{"CREATE": [
+                #"`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.source_id),
+                #"`{}` TINYTEXT NOT NULL".format(self.source_mode),
+                #"`{}` VARCHAR(15) NOT NULL".format(self.source_date),
+                #"`{}` VARCHAR(35) NOT NULL".format(self.source_icetext),
+                #"`{}` VARCHAR(33) NOT NULL".format(self.source_icetextcode),
+                #"`{}` VARCHAR(30) NOT NULL".format(self.source_place),
+                #"`{}` VARCHAR(5) NOT NULL".format(self.source_age),
+                #"`{}` VARCHAR(1) NOT NULL".format(self.source_gender),
+                #"`{}` VARCHAR(15) NOT NULL".format(self.source_ethnicity)]})
 
         self.add_time_feature(self.source_date)
         self.add_time_feature(self.source_age)
@@ -404,7 +395,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             Column(self.source_mode, "TINYTEXT NOT NULL"),
             Column(self.source_date, "VARCHAR(10) NOT NULL"), 
             Column(self.source_icetext, "VARCHAR(30) NOT NULL"), 
-            Column(self.source_icetextcode, "VARCHAR(30) NOT NULL"), 
+            Column(self.source_icetextcode, "VARCHAR(33) NOT NULL"), 
             Column(self.source_place, "VARCHAR(30) NOT NULL"), 
             Column(self.source_age, "VARCHAR(5) NOT NULL"),  
             Column(self.source_gender, "VARCHAR(1) NOT NULL"),  
