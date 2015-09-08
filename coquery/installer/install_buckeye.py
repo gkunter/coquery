@@ -21,12 +21,13 @@ class corpus_code():
         return ["Time"]
 
 class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
+    file_filter = "*.words"
+    
     def __init__(self):
        # all corpus builders have to call the inherited __init__ function:
         super(BuckeyeBuilder, self).__init__()
         
         # Read only .words files from the corpus path:
-        self.file_filter = "*.words"
         
         # specify which features are provided by this corpus and lexicon:
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_PHON", "LEX_POS"]
@@ -68,18 +69,18 @@ class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
         self.corpus_table = "corpus"
         self.corpus_id = "TokenId"
         self.corpus_word_id = "WordId"
-        self.corpus_source_id = "FileId"
+        self.corpus_file_id = "FileId"
         self.corpus_time = "Time"
 
         self.add_table_description(self.corpus_table, self.corpus_id,
             {"CREATE": [
                 "`{}` BIGINT(20) UNSIGNED NOT NULL".format(self.corpus_id),
                 "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_word_id),
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_source_id),
+                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_file_id),
                 "`{}` DECIMAL(11,6) UNSIGNED".format(self.corpus_time)],
             "INDEX": [
                 ([self.corpus_word_id], 0, "HASH"),
-                ([self.corpus_source_id], 0, "HASH")]})
+                ([self.corpus_file_id], 0, "HASH")]})
         
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
@@ -191,15 +192,24 @@ class BuckeyeBuilder(corpusbuilder.BaseCorpusBuilder):
         # is not available, so no separate source table is required. 
         # Instead, the corpus uses the file table as the source table:
         
-        self.source_table = "file"
-        self.source_id = "FileId"
-        
         # Specify that the corpus-specific code is contained in the dummy
         # class 'corpus_code' defined above:
         self._corpus_code = corpus_code
         
     def get_description(self):
         return "This script makes the Buckeye corpus available to Coquery by reading the corpus data files from {} into the MySQL database '{}'.".format(self.arguments.path, self.arguments.db_name)
+
+    @staticmethod
+    def get_references():
+        return "Pitt, M.A., Dilley, L., Johnson, K., Kiesling, S., Raymond, W., Hume, E. and Fosler-Lussier, E. (2007) Buckeye Corpus of Conversational Speech (2nd release) [www.buckeyecorpus.osu.edu] Columbus, OH: Department of Psychology, Ohio State University (Distributor)"
+
+    @staticmethod
+    def get_url():
+        return "http://buckeyecorpus.osu.edu/"
+
+    @staticmethod
+    def get_license():
+        return "Buckeye Corpus Content License"
 
     # Redefine the process_file method so that the .words files provided
     # by the Buckeye corpus are handled correctly:
