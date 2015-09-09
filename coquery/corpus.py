@@ -340,7 +340,8 @@ class BaseResource(object):
 
     @classmethod
     def get_table_structure(cls, rc_table, rc_feature_list=[]):
-        """ Return a table structure for the table 'rc_table'. 
+        """ 
+        Return a table structure for the table 'rc_table'. 
         
         The table structure is a dictionary with the following keys:
             'parent'        the resource name of the parent table
@@ -355,7 +356,8 @@ class BaseResource(object):
             'alias'         the string that is used to give a name to the 
                             table in the INNER JOIN string to avoid naming 
                             clashes with existing tables in the database, 
-                            i.e. the resource table string prefixed by COQ_"""
+                            i.e. the resource table string prefixed by COQ_
+        """
         D = {}
         D["parent"] = None
         rc_tab = rc_table.split("_")[0]
@@ -371,6 +373,9 @@ class BaseResource(object):
                     available_features.append(rc_feature)
                     if rc_feature in rc_feature_list:
                         requested_features.append(rc_feature)
+                    # allow functions:
+                    if "func.{}".format(rc_feature) in rc_feature_list:
+                        requested_features.append("func.{}".format(rc_feature))
                 if rc_feature.endswith("_id") and rc_feature.count("_") == 2:
                     children.append(
                         cls.get_table_structure(
@@ -1100,9 +1105,25 @@ class SQLCorpus(BaseCorpus):
         return L
 
     def get_sub_query_string(self, current_token, number, self_joined=False):
-        """ Return a MySQL string that selects a table matching the current
+        """ 
+        Return a MySQL string that selects a table matching the current
         token, and which includes all columns that are requested, or which
-        are required to join the tables. """
+        are required to join the tables. 
+        
+        Parameters
+        ----------
+        current_token : CorpusToken
+            An instance of CorpusToken as a part of a query string.
+        number : int
+            The number of current_token in the query string (starting with 0)
+        self_joined : bool
+            True if a self-joined table is used, or False otherwise.
+
+        Returns
+        -------
+        s : string
+            The partial MySQL string.
+        """
             
         # corpus variables will only be included in the subquery string if 
         # this is the first subquery.
@@ -1136,8 +1157,6 @@ class SQLCorpus(BaseCorpus):
                         value_list[0] = "*{}*".format(value_list[0])
                     value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
 
-                if rc_feature not in requested_features:
-                    requested_features.append(rc_feature)
                 rc_table = "{}_table".format(rc_feature.partition("_")[0])
                 rc_where_constraints[rc_table].add(
                     '{} {} "{}"'.format(
@@ -1186,14 +1205,22 @@ class SQLCorpus(BaseCorpus):
         required_tables = {}
         for rc_feature in requested_features:
             rc_table = "{}_table".format(rc_feature.split("_")[0])
+
+            if rc_feature.startswith("func."):
+                rc_table = rc_table.split("func.")[-1]
+                function = True
+            else:
+                function = False
+
             if rc_table == "coquery_table":
                 continue
             if rc_table == "tag_table":
                 continue
+
             if rc_table not in required_tables:
-                tree = self.resource.get_table_structure(rc_table, options.cfg.selected_features)
+                tree = self.resource.get_table_structure(rc_table,  options.cfg.selected_features)
                 parent = tree["parent"]
-                table_id = "{}_id".format(rc_feature.split("_")[0])
+                table_id = "{}_id".format(rc_feature.split("func.")[-1].split("_")[0])
                 required_tables[rc_table] = tree
                 requested_features.append(table_id)
                 if parent:
@@ -1204,11 +1231,12 @@ class SQLCorpus(BaseCorpus):
         external_links = []
         join_strings[self.resource.corpus_table] = "{} AS COQ_CORPUS_TABLE".format(self.resource.corpus_table)
         full_tree = self.resource.get_table_structure("corpus_table", requested_features)
-
         # create a list of the tables 
         select_list = set([])
         for rc_table in required_tables:
-            if "." in rc_table:
+            # FIXME: This section needs to be simplified!
+           # linked table?
+            if "." in rc_table and not rc_table.startswith("func."):
                 external_corpus, rc_table = rc_table.split(".")
                 resource = get_available_resources()[external_corpus][0]
                 table = resource.__getattribute__(resource, rc_table)
@@ -1237,7 +1265,6 @@ class SQLCorpus(BaseCorpus):
                 alias = "coq_{}_{}".format(external_corpus, table).upper()
                 S = "INNER JOIN (SELECT {columns} FROM {corpus}.{table}) AS {alias} ON coq_{internal_feature}_{n} = coq_{corpus}_{external_feature}_{n}".format(columns=columns, n=number+1, internal_feature=internal_feature, corpus=external_corpus, table=table, external_feature=external_feature, alias=alias)
                 external_links.append(S)
-
             else:
                 rc_tab = rc_table.split("_")[0]
                 sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
@@ -1250,16 +1277,19 @@ class SQLCorpus(BaseCorpus):
 
                 column_list = []
                 for rc_feature in sub_tree["rc_requested_features"]:
-                    name = "coq_{}_{}".format(
-                        rc_feature,
-                        number+1)
+                    if rc_feature.startswith("func."):
+                        name = "coq_func_{}_{}".format(
+                            rc_feature.split("func.")[-1], number+1)
+                    else:
+                        name = "coq_{}_{}".format(rc_feature, number+1)
+
                     variable_string = "{} AS {}".format(
-                        self.resource.__getattribute__(rc_feature),
+                        self.resource.__getattribute__(rc_feature.split("func.")[-1]),
                         name)
                     column_list.append(variable_string)
-                    #if not rc_feature.endswith("_id"):
                     select_list.add(name)
-                    
+                
+                
                 columns = ", ".join(column_list)
                 where_string = ""
                 if rc_table in rc_where_constraints:
@@ -1455,6 +1485,13 @@ class SQLCorpus(BaseCorpus):
         
         # construct the query string from the sub-query parts:
         query_string = " ".join(query_string_part)
+
+        func_counter = Counter()
+        for x in options.cfg.selected_functions:
+            resource = x.rpartition(".")[-1]
+            func_counter[resource] += 1
+            name = "coq_func_{}_{}".format(resource, func_counter[resource])
+            final_select.append(name)
 
         # include variables that are required to make entries in the result
         # table clickable, but only if a GUI is used:
