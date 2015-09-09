@@ -309,7 +309,6 @@ class TokenQuery(object):
     def apply_functions(self, df):
         func_counter = collections.Counter()
         for x in options.cfg.selected_functions:
-            print(x)
             resource = x.rpartition(".")[-1]
             func_counter[resource] += 1
             name = "coq_func_{}_{}".format(resource, func_counter[resource])
@@ -338,6 +337,16 @@ class TokenQuery(object):
         df = self.insert_static_data(df)
         return df
 
+    def add_output_columns(self):
+        """
+        Add any column that is specific to this query type to the list of 
+        output columns in Session.output_order.
+        
+        This is needed, for example, to add the frequency column in
+        FrequencyQuery.
+        """
+        return
+
     def write_results(self, output_object):
         """ Transform the query results to a pandas DataFrame that is either
         directly written to a CSV file, or stored for later processing in
@@ -345,6 +354,8 @@ class TokenQuery(object):
         # turn query results into a pandas DataFrame:
         df = pd.DataFrame(self.Results)
         df = self.insert_static_data(df)
+
+        self.add_output_columns()
 
         vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
         # check if the results table contains rows and columns
@@ -377,6 +388,7 @@ class TokenQuery(object):
                 agg_cols.remove(col)
                 agg_cols.append(col)
         agg = agg[df_cols]
+
         
         if options.cfg.gui:
             # append the data frame to the existing data frame
@@ -430,6 +442,10 @@ class FrequencyQuery(TokenQuery):
     frequency filters.
     """
     
+    def add_output_columns(self):
+        self.Session.output_order.append("coq_frequency")
+        
+    
     def aggregate_data(self, df):
         """
         Aggregate the data frame by obtaining the row frequencies for each
@@ -462,7 +478,6 @@ class FrequencyQuery(TokenQuery):
         
         # Add a frequency column:
         df["coq_frequency"] = 0
-        self.Session.output_order.append("coq_frequency")
         
         if len(df.index) == 0:
             df = self.no_result_data_frame()
