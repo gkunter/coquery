@@ -12,6 +12,20 @@ try:
 except ImportError:
     pass
 
+def func_regexp(x, s):
+    match = re.search("({})".format(s), x)
+    if match:
+        return match.group(1)
+    else:
+        return ""
+
+def func_match(x, s):
+    match = re.search("({})".format(s), x)
+    if match:
+        return "yes"
+    else:
+        return "no"
+
 class FunctionDialog(QtGui.QDialog):
     def __init__(self, table, feature, parent=None):
         
@@ -46,20 +60,15 @@ class FunctionDialog(QtGui.QDialog):
             elif dialog.ui.radio_length.isChecked():
                 label = "LENGTH({})".format(feature)
                 FUN = lambda x: len(x)
+            elif dialog.ui.radio_match.isChecked():
+                label = "MATCH('{}', {})".format(value, feature)
+                FUN = lambda x: func_match(x, value)
             elif dialog.ui.radio_regexp.isChecked():
                 label = "REGEXP('{}', {})".format(value, feature)
                 FUN = lambda x: func_regexp(x, value)
             return label, FUN
         else:
             return None
-
-def func_regexp(x, s):
-    match = re.match(r".*({}).*".format(s), x)
-    if match:
-        return match.groups()[0]
-    else:
-        return ""
-
 
 def main():
     app = QtGui.QApplication(sys.argv)
