@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coqueryCompact.ui'
 #
-# Created: Sun Sep  6 16:13:13 2015
+# Created: Tue Sep  8 22:02:28 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(927, 732)
+        MainWindow.resize(937, 732)
         MainWindow.setIconSize(QtCore.QSize(16, 16))
         MainWindow.setDocumentMode(False)
         self.centralwidget = QtGui.QWidget(MainWindow)
@@ -391,6 +391,10 @@ class Ui_MainWindow(object):
         self.button_add_link.setIconSize(QtCore.QSize(16, 16))
         self.button_add_link.setObjectName(_fromUtf8("button_add_link"))
         self.horizontalLayout_2.addWidget(self.button_add_link)
+        self.button_add_function = QtGui.QPushButton(self.box_output_options)
+        self.button_add_function.setText(_fromUtf8(""))
+        self.button_add_function.setObjectName(_fromUtf8("button_add_function"))
+        self.horizontalLayout_2.addWidget(self.button_add_function)
         self.button_remove_link = QtGui.QPushButton(self.box_output_options)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -517,7 +521,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.tabbed_views)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 927, 37))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 937, 37))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))

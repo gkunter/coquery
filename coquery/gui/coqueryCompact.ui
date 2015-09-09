@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>927</width>
+    <width>937</width>
     <height>732</height>
    </rect>
   </property>
@@ -640,7 +640,7 @@
              <number>0</number>
             </property>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,0,0">
+             <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,0,0,0">
               <property name="spacing">
                <number>10</number>
               </property>
@@ -682,6 +682,13 @@
                   <width>16</width>
                   <height>16</height>
                  </size>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_add_function">
+                <property name="text">
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -932,7 +939,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>927</width>
+     <width>937</width>
      <height>37</height>
     </rect>
    </property>
