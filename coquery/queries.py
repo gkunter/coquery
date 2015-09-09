@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 import math
+import re
 
 try:
     range = xrange
@@ -305,6 +306,17 @@ class TokenQuery(object):
                     df[df_col] = self.input_frame[input_col][0]
         return df
 
+    def apply_functions(self, df):
+        func_counter = collections.Counter()
+        for x in options.cfg.selected_functions:
+            print(x)
+            resource = x.rpartition(".")[-1]
+            func_counter[resource] += 1
+            name = "coq_func_{}_{}".format(resource, func_counter[resource])
+            if name in df.columns.values:
+                df[name] = df[name].apply(options.cfg.selected_functions[x])
+        return df
+
     def no_result_data_frame(self):
         """
         Return a data frame that represents a query without results.
@@ -346,6 +358,8 @@ class TokenQuery(object):
         else:
             # create an empty data frame
             df = pd.DataFrame(columns=vis_cols)
+
+        df = self.apply_functions(df)
 
         agg = self.aggregate_data(df)
         agg = self.filter_data(agg)
