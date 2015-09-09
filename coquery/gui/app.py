@@ -65,22 +65,23 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         super(CoqTreeItem, self).__init__(*args, **kwargs)
         self._objectName = ""
         self._link_by = None
-
+        self._func = None
+        
     def setText(self, column, text, *args):
         super(CoqTreeItem, self).setText(column, text)
         if self.parent():
             parent = self.parent().objectName()
-        feature = self.objectName()
-        if self.objectName().endswith("_table"):
+        feature = unicode(self.objectName())
+        if feature.endswith("_table"):
             self.setToolTip(column, "Table: {}".format(text))
-        elif self.objectName().startswith("coquery_"):
+        elif feature.startswith("coquery_"):
             self.setToolTip(column, "Special column:\n{}".format(text))
         else:
             self.setToolTip(column, "Data column:\n{}".format(text))
 
     def setObjectName(self, name):
         """ Store resource variable name as object name. """
-        self._objectName = name
+        self._objectName = unicode(name)
 
     def objectName(self):
         """ Retrieve resource variable name from object name. """
@@ -147,6 +148,12 @@ class CoqTreeLinkItem(CoqTreeItem):
         source, target = text.split(" ► ")
         self.setToolTip(column, "External table:\n{},\nlinked by column:\n{}".format(target, source))
 
+class CoqTreeFuncItem(CoqTreeItem):
+    def setFunction(self, func):
+        self._func = func
+        
+    def setText(self, column, label, *args):
+        super(CoqTreeFuncItem, self).setText(column, label)
 
 class CoqTreeWidget(QtGui.QTreeWidget):
     """ Define a tree widget that stores the available output columns in a 
@@ -163,11 +170,14 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         self.selected_item = args
         if not self.selected_item:
             return
-        if self.selected_item[0]._link_by or self.selected_item[0].parent()._link_by:
+        parent = self.selected_item[0].parent()
+        if self.selected_item[0]._link_by or self.selected_item[0]._func or (parent and parent._link_by):
             options.cfg.main_window.ui.button_add_link.setEnabled(False)
+            options.cfg.main_window.ui.button_add_function.setEnabled(False)
             options.cfg.main_window.ui.button_remove_link.setEnabled(True)
         elif str(self.selected_item[0]._objectName).rpartition("_")[-1] != "table":
             options.cfg.main_window.ui.button_add_link.setEnabled(True)
+            options.cfg.main_window.ui.button_add_function.setEnabled(True)
             options.cfg.main_window.ui.button_remove_link.setEnabled(False)
 
     def update(self, item, column):
@@ -533,6 +543,11 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.button_add_link.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_FileDialogNewFolder))
             self.ui.button_add_link.setEnabled(False)
             self.ui.button_add_link.clicked.connect(self.add_link)
+
+            self.ui.button_add_function.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogApplyButton))
+            self.ui.button_add_function.setEnabled(False)
+            self.ui.button_add_function.clicked.connect(self.apply_function)
+
             
             self.ui.button_remove_link.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogDiscardButton))
             self.ui.button_remove_link.setEnabled(False)
@@ -550,7 +565,6 @@ class CoqueryApp(QtGui.QMainWindow):
         model_index = index
         row = model_index.row()
         data = self.table_model.content.iloc[row]
-        print(data)
         token_id = data["coquery_invisible_corpus_id"]
         origin_id = data["coquery_invisible_origin_id"]
         token_width = data["coquery_invisible_number_of_tokens"]
@@ -1306,6 +1320,15 @@ class CoqueryApp(QtGui.QMainWindow):
                     output_features.update(d)
             return output_features
 
+        def get_functions(node):
+            functions = {}
+            for child in [node.child(i) for i in range(node.childCount())]:
+                functions.update(get_functions(child))
+            if node.checkState(0) == QtCore.Qt.Checked and node._func:
+                d = {node.objectName(): node._func}
+                functions.update(d)
+            return functions 
+
         if options.cfg:
             options.cfg.corpus = str(self.ui.combo_corpus.currentText()).lower()
         
@@ -1332,7 +1355,6 @@ class CoqueryApp(QtGui.QMainWindow):
             if self.ui.radio_context_mode_columns.isChecked():
                 options.cfg.context_mode  = CONTEXT_COLUMNS
 
-                
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
                 if type(self.ui.edit_query_string) == QtGui.QLineEdit:
@@ -1370,14 +1392,19 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             
-            # Go throw options tree widget to get all checked output columns:
             options.cfg.external_links = {}
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
                 options.cfg.external_links.update(get_external_links(root))
             
+            # Go throw options tree widget to get all checked output columns:
             options.cfg.selected_features = []
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
                 options.cfg.selected_features += traverse_output_columns(root)
+
+            options.cfg.selected_functions = {}
+            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
+                options.cfg.selected_functions.update(get_functions(root))
+
             return True
 
     def setGUIDefaults(self):
@@ -1465,10 +1492,6 @@ class CoqueryApp(QtGui.QMainWindow):
     def add_link(self):
         import linkselect
         selected_item, column = self.ui.options_tree.selected_item
-        selected_item.setExpanded(True)
-
-        if column > self.ui.options_tree.columnCount():
-            self.ui.options_tree.setColumnCount(column + 2)
 
         link = linkselect.LinkSelect.display(
             feature=selected_item.text(0),
@@ -1478,37 +1501,59 @@ class CoqueryApp(QtGui.QMainWindow):
             return
         else:
             corpus, table_name, feature_name, case = link
-        
-        resource = get_available_resources()[corpus][0]
-        table = resource.get_table_dict()[table_name]
-        
-        child_table = CoqTreeLinkItem()
-        child_table.setObjectName("{}.{}_table".format(corpus, table_name))
-        selected_item.parent().addChild(child_table)
-        child_table.setLink("{}.{}".format(selected_item.parent().objectName(), selected_item.objectName()), feature_name)
-        child_table.setText(column, "{} ► {}.{}".format(str(selected_item.text(0)).capitalize(), corpus.upper(), table_name.capitalize()))
-        child_table.setCheckState(column, False)
-        
-        for rc_feature in table:
-            if rc_feature.rpartition("_")[-1] not in ("id", "table") and rc_feature != feature_name:
-                new_item = CoqTreeItem()
-                new_item.setText(0, resource.__getattribute__(resource, rc_feature))
-                new_item.setObjectName("{}.{}".format(corpus, rc_feature))
-                new_item.setCheckState(column, False)
-                child_table.addChild(new_item)
+            selected_item.setExpanded(True)
             
+            resource = get_available_resources()[corpus][0]
+            table = resource.get_table_dict()[table_name]
+            
+            child_table = CoqTreeLinkItem()
+            child_table.setObjectName("{}.{}_table".format(corpus, table_name))
+            selected_item.parent().addChild(child_table)
+            child_table.setLink("{}.{}".format(selected_item.parent().objectName(), selected_item.objectName()), feature_name)
+            child_table.setText(column, "{} ► {}.{}".format(str(selected_item.text(0)).capitalize(), corpus.upper(), table_name.capitalize()))
+            child_table.setCheckState(column, False)
+            
+            for rc_feature in table:
+                if rc_feature.rpartition("_")[-1] not in ("id", "table") and rc_feature != feature_name:
+                    new_item = CoqTreeItem()
+                    new_item.setText(0, resource.__getattribute__(resource, rc_feature))
+                    new_item.setObjectName("{}.{}".format(corpus, rc_feature))
+                    new_item.setCheckState(column, False)
+                    child_table.addChild(new_item)
+            
+    def apply_function(self):
+        import functionapply
+
+        selected_item, column = self.ui.options_tree.selected_item
+        parent = selected_item.parent()
+        
+        response  = functionapply.FunctionDialog.display(
+            table=parent.text(0),
+            feature=selected_item.text(0))
+        
+        if not response:
+            return
+        else:
+            label, func = response
+            
+            child_func = CoqTreeFuncItem()
+            child_func.setObjectName("func.{}".format(selected_item.objectName()))
+            child_func.setFunction(func)
+            child_func.setText(column, label)
+            child_func.setCheckState(column, QtCore.Qt.Checked)
+
+            selected_item.parent().addChild(child_func)
+            selected_item.parent().setExpanded(True)
+
     def remove_link(self):
         def remove_children(node):
             for child in [node.child(i) for i in range(node.childCount())]:
                 remove_children(child)
                 node.removeChild(child)
             node.close()
-
-        
-
         
         selected_item, column = self.ui.options_tree.selected_item
-        if selected_item.parent()._link_by:
+        if selected_item.parent and selected_item.parent()._link_by:
             selected_item = selected_item.parent()
         selected_item.parent().removeChild(selected_item)
     
