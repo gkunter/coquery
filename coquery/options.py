@@ -81,6 +81,8 @@ class Options(object):
             self.args.parameter_string = " ".join([x for x in sys.argv [1:]])
 
         self.args.selected_features= []
+        self.args.external_links = {}
+        self.args.selected_functions = {}
         
         self.args.context_left = 0
         self.args.context_right = 0
