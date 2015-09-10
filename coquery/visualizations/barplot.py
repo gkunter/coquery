@@ -17,6 +17,10 @@ class BarchartVisualizer(vis.Visualizer):
             self.percentage = kwargs.pop("percentage")
         except KeyError:
             self.percentage = False
+        try:
+            self.stacked = kwargs.pop("stacked")
+        except KeyError:
+            self.stacked = False
         super(BarchartVisualizer, self).__init__(*args, **kwargs)
 
     def setup_figure(self):
