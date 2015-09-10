@@ -34,6 +34,11 @@ class FunctionDialog(QtGui.QDialog):
         self.ui = functionApplyUi.Ui_FunctionDialog()
         self.ui.setupUi(self)
         self.ui.label_description.setText(str(self.ui.label_description.text()).format(table, feature))
+
+        self.ui.label_func1.setText(str(self.ui.label_func1.text()).format("{}.{}".format(table, feature)))
+        self.ui.label_func2.setText(str(self.ui.label_func2.text()).format("{}.{}".format(table, feature)))
+        self.ui.label_func3.setText(str(self.ui.label_func3.text()).format("{}.{}".format(table, feature)))
+        self.ui.label_func4.setText(str(self.ui.label_func4.text()).format("{}.{}".format(table, feature)))
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
