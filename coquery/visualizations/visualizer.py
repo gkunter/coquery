@@ -95,6 +95,14 @@ import multiprocessing
             #i += tree_weight(tree[node])
     #return i
 
+class CoqNavigationToolbar(NavigationToolbar):
+    def __init__(self, canvas, parent, coordinates=True):
+        super(CoqNavigationToolbar, self).__init__(canvas, parent, coordinates)
+        self.check_freeze = QtGui.QCheckBox()
+        self.check_freeze.setText("Freeze visualization")
+        self.check_freeze.setObjectName("check_freeze")
+        self.addWidget(self.check_freeze)
+
 class Visualizer(object):
     """ 
     Define a class that contains the code to visualize data in several
@@ -533,7 +541,6 @@ class Visualizer(object):
         bar from :mod:`gui.QtProgress` is used to show that there is still 
         activity.
         """
-        
         progress = ProgressIndicator(FUN=None, label="Drawing...")
         try:
             self.draw()
@@ -565,25 +572,19 @@ class VisualizerDialog(QtGui.QWidget):
         # the results table:
         self.connect_signals()
         self.ui.button_close.clicked.connect(self.close)
-        self.ui.check_freeze.stateChanged.connect(self.toggle_freeze)
         self.frozen = False
-
-    def add_smooth_spinner(self):
-        self.ui.spinner = QtGui.QSpinBox()
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.ui.spinner.sizePolicy().hasHeightForWidth())
-        self.ui.spinner.setSizePolicy(sizePolicy)
-        self.ui.spinner.setFrame(True)
-        self.ui.spinner.setButtonSymbols(QtGui.QAbstractSpinBox.UpDownArrows)
-        self.ui.spinner.setMaximum(10)
-        self.ui.spinner.setMinimum(1)
-        self.ui.spinner.setSuffix(" year(s)")
-        self.ui.horizontalLayout_3.insertWidget(2, self.ui.spinner)
-        self.ui.horizontalLayout_3.insertWidget(2, QtGui.QLabel("Bins: "))
+        self.spinner = QtGui.QSpinBox()
+        self.spinner.setFrame(True)
+        self.spinner.setButtonSymbols(QtGui.QAbstractSpinBox.UpDownArrows)
+        self.spinner.setMaximum(10)
+        self.spinner.setMinimum(1)
+        self.spinner.setSuffix(" year(s)")
+        self.spinner_label = QtGui.QLabel("Buckets: ")
+        self.spinner.valueChanged.connect(self.update_plot)
         
-        self.ui.spinner.valueChanged.connect(self.update_plot)
+        self.toolbar = None
+        self.canvas = None
+
 
     def add_visualizer(self, visualizer):
         """ Add a Visualizer instance to the visualization dialog. Also, 
@@ -593,44 +594,60 @@ class VisualizerDialog(QtGui.QWidget):
         options.cfg.main_window.widget_list.append(self.visualizer)
 
     def update_plot(self):
-        """ Update the plot. During the update, the canvas and the navigation
-        toolbar are replaced by new instances, as is the figure used by the 
-        visualizer. Finally, the draw() method of the visualizer is called to
-        plot the visualization again. """
+        """ 
+        Update the plot. 
+        
+        During the update, the canvas and the navigation toolbar are 
+        replaced by new instances, as is the figure used by the visualizer.
+        Finally, the draw() method of the visualizer is called to plot the
+        visualization again. 
+        """
         if self.smooth:
-            self.ui.spinner.valueChanged.disconnect(self.update_plot)
-            self.ui.spinner.setEnabled(False)
-        self.visualizer.setup_figure()
-        self.remove_matplot()
-        self.add_matplot()
-        if self.smooth:
-            self.visualizer.update_data(bandwidth=self.ui.spinner.value())
+            self.spinner.setEnabled(False)
+            self.visualizer.update_data(bandwidth=self.spinner.value())
         else:
             self.visualizer.update_data()
-            
+
+        self.visualizer.setup_figure()
+        
+        self.remove_matplot()
+        self.add_matplot()
+
         self.visualizer.start_draw_thread()
+        self.canvas.draw()
         if self.smooth:
-            self.ui.spinner.valueChanged.connect(self.update_plot)
-            self.ui.spinner.setEnabled(True)
+            self.spinner.setEnabled(True)
 
     def add_matplot(self):
         """ Add a matplotlib canvas and a navigation bar to the dialog. """
-        self.canvas = FigureCanvas(self.visualizer.g.fig)
-        self.ui.verticalLayout.addWidget(self.canvas)
-        self.canvas.setParent(self.ui.box_visualize)
-        self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.canvas.setFocus()
-        self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
-        self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)
-        self.ui.navigation_layout.addWidget(self.toolbar)
+        if not self.canvas:
+            self.canvas = FigureCanvas(self.visualizer.g.fig)
+            self.ui.verticalLayout.addWidget(self.canvas)
+            self.canvas.setParent(self.ui.box_visualize)
+            self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
+            self.canvas.setFocus()
+            self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
+
+        #if self.toolbar:
+            #self.ui.navigation_layout.removeWidget(self.toolbar)
+            #self.toolbar.close()
+        
+        if not self.toolbar:
+            self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
+            self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
+            if self.smooth:
+                self.toolbar.addWidget(self.spinner)
+                self.toolbar.addWidget(self.spinner_label)
+            self.ui.navigation_layout.addWidget(self.toolbar)
 
     def remove_matplot(self):
-        """ Remove the matplotlib canvas and the navigation bar from the 
-        dialog. """
+        """ 
+        Remove the matplotlib canvas and the navigation bar from the 
+        dialog. 
+        """
         self.ui.verticalLayout.removeWidget(self.canvas)
         self.canvas.close()
-        self.ui.navigation_layout.removeWidget(self.toolbar)
-        self.toolbar.close()
+        self.canvas = None
         
     def close(self, *args):
         """ Close the visualizer widget, disconnect the signals, and remove 
@@ -702,8 +719,6 @@ class VisualizerDialog(QtGui.QWidget):
         view given in 'view'. """
         dialog = self
         self.smooth = kwargs.get("smooth", False)
-        if self.smooth:
-            self.add_smooth_spinner()
         try:
             visualizer = visualizer_class(model, view, **kwargs)
             if not visualizer._model.empty:
