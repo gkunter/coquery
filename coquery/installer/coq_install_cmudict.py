@@ -61,17 +61,22 @@ class CMUdictBuilder(BaseCorpusBuilder):
         if len(files) > 1:
             raise RuntimeError("There seem to be more than one dictionary files in the directory {}:\n{}\nRemove the unrequired dictionary files, and try again to install.".format(
                 self.argument.paths, "\n\t".join(files)))
-        if self._widget:
-            self._widget.progressSet.emit(0, "Reading dictionary file")
         with codecs.open(files[0], "r", encoding = self.arguments.encoding) as input_file:
-            for word_id, current_line in enumerate(input_file):
-                current_line = current_line.strip()
-                if current_line and not current_line.startswith (";;;"):
-                    word, transcript = current_line.split ("  ")
-                    self.table_add(self.word_table, 
-                        {self.word_id: word_id,
-                         self.word_label: word, 
-                         self.word_transcript: transcript})
+            content = input_file.readlines()
+        if self._widget:
+            self._widget.progressSet.emit(len(content) // 100, "Reading dictionary file...")
+            self._widget.progressUpdate.emit(0)
+
+        for word_id, current_line in enumerate(content):
+            current_line = current_line.strip()
+            if current_line and not current_line.startswith (";;;"):
+                word, transcript = current_line.split ("  ")
+                self.table_add(self.word_table, 
+                    {self.word_id: word_id,
+                        self.word_label: word, 
+                        self.word_transcript: transcript})
+            if self._widget and not word_id % 100:
+                self._widget.progressUpdate.emit(word_id // 100)
         self.Con.commit()
 
     @staticmethod
