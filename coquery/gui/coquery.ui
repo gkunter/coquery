@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1203</width>
-    <height>1105</height>
+    <width>866</width>
+    <height>703</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -208,7 +208,7 @@ summary:</string>
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_14">
               <property name="spacing">
-               <number>-1</number>
+               <number>1</number>
               </property>
               <item>
                <widget class="QRadioButton" name="radio_mode_tokens">
@@ -338,7 +338,7 @@ The number of occurrences of each token matching the query string is counted. Th
             <item row="0" column="1">
              <layout class="QVBoxLayout" name="verticalLayout_11">
               <property name="spacing">
-               <number>-1</number>
+               <number>1</number>
               </property>
               <item>
                <widget class="QRadioButton" name="radio_context_mode_kwic">
@@ -793,7 +793,7 @@ The number of occurrences of each token matching the query string is counted. Th
              <number>6</number>
             </property>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,0,0,0">
+             <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1">
               <property name="spacing">
                <number>10</number>
               </property>
@@ -810,54 +810,6 @@ The number of occurrences of each token matching the query string is counted. Th
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_add_link">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>Link selected column to another corpus</string>
-                </property>
-                <property name="whatsThis">
-                 <string/>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_add_function">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_remove_link">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>Remove selected link</string>
-                </property>
-                <property name="text">
-                 <string/>
                 </property>
                </widget>
               </item>
@@ -1234,8 +1186,8 @@ The number of occurrences of each token matching the query string is counted. Th
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1203</width>
-     <height>37</height>
+     <width>866</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Tue Sep  8 22:02:17 2015
+# Created: Thu Sep 10 10:29:00 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(1203, 1105)
+        MainWindow.resize(866, 703)
         MainWindow.setDocumentMode(False)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
@@ -110,7 +110,7 @@ class Ui_MainWindow(object):
         self.label_10.setObjectName(_fromUtf8("label_10"))
         self.horizontalLayout_8.addWidget(self.label_10)
         self.verticalLayout_14 = QtGui.QVBoxLayout()
-        self.verticalLayout_14.setSpacing(-1)
+        self.verticalLayout_14.setSpacing(1)
         self.verticalLayout_14.setObjectName(_fromUtf8("verticalLayout_14"))
         self.radio_mode_tokens = QtGui.QRadioButton(self.box_query_mode)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
@@ -173,7 +173,7 @@ class Ui_MainWindow(object):
         self.context_mode.setObjectName(_fromUtf8("context_mode"))
         self.gridLayout_6.addWidget(self.context_mode, 0, 0, 1, 1)
         self.verticalLayout_11 = QtGui.QVBoxLayout()
-        self.verticalLayout_11.setSpacing(-1)
+        self.verticalLayout_11.setSpacing(1)
         self.verticalLayout_11.setObjectName(_fromUtf8("verticalLayout_11"))
         self.radio_context_mode_kwic = QtGui.QRadioButton(self.box_context_mode)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
@@ -412,34 +412,6 @@ class Ui_MainWindow(object):
         self.label_2.setAlignment(QtCore.Qt.AlignBottom|QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft)
         self.label_2.setObjectName(_fromUtf8("label_2"))
         self.horizontalLayout_2.addWidget(self.label_2)
-        self.button_add_link = QtGui.QPushButton(self.box_output_options)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.button_add_link.sizePolicy().hasHeightForWidth())
-        self.button_add_link.setSizePolicy(sizePolicy)
-        self.button_add_link.setWhatsThis(_fromUtf8(""))
-        self.button_add_link.setText(_fromUtf8(""))
-        self.button_add_link.setObjectName(_fromUtf8("button_add_link"))
-        self.horizontalLayout_2.addWidget(self.button_add_link)
-        self.button_add_function = QtGui.QPushButton(self.box_output_options)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.button_add_function.sizePolicy().hasHeightForWidth())
-        self.button_add_function.setSizePolicy(sizePolicy)
-        self.button_add_function.setText(_fromUtf8(""))
-        self.button_add_function.setObjectName(_fromUtf8("button_add_function"))
-        self.horizontalLayout_2.addWidget(self.button_add_function)
-        self.button_remove_link = QtGui.QPushButton(self.box_output_options)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.button_remove_link.sizePolicy().hasHeightForWidth())
-        self.button_remove_link.setSizePolicy(sizePolicy)
-        self.button_remove_link.setText(_fromUtf8(""))
-        self.button_remove_link.setObjectName(_fromUtf8("button_remove_link"))
-        self.horizontalLayout_2.addWidget(self.button_remove_link)
         self.horizontalLayout_2.setStretch(0, 1)
         self.output_columns.addLayout(self.horizontalLayout_2)
         self.options_list = QtGui.QVBoxLayout()
@@ -621,7 +593,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.tabbed_views)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1203, 37))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 866, 21))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -813,8 +785,6 @@ class Ui_MainWindow(object):
         self.button_browse_file.setText(_translate("MainWindow", "&Open", None))
         self.button_browse_file.setShortcut(_translate("MainWindow", "Alt+B", None))
         self.label_2.setText(_translate("MainWindow", "Output columns:", None))
-        self.button_add_link.setToolTip(_translate("MainWindow", "Link selected column to another corpus", None))
-        self.button_remove_link.setToolTip(_translate("MainWindow", "Remove selected link", None))
         self.label_4.setText(_translate("MainWindow", "Filter:", None))
         self.edit_query_filter.setPlaceholderText(_translate("MainWindow", "(e.g. Year > 1999)", None))
         self.tabbed_views.setTabText(self.tabbed_views.indexOf(self.results_tab), _translate("MainWindow", "Query result", None))
