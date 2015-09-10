@@ -1750,7 +1750,7 @@ if use_gui:
             namespace.name = self.builder_class.get_name()
             namespace.path = str(self.ui.input_path.text())
             namespace.corpus_path = os.path.join(sys.path[0], "corpora/")
-            namespace.db_name = self.builder_class.get_name()
+            namespace.db_name = self.builder_class.get_name().lower()
             namespace.db_host = options.cfg.db_host
             namespace.db_user = options.cfg.db_user
             namespace.db_password = options.cfg.db_password
