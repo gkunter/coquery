@@ -10,7 +10,7 @@ class Visualizer(vis.BaseVisualizer):
     
     def setup_figure(self):
         with sns.axes_style("white"):
-            super(HeatmapVisualizer, self).setup_figure()
+            super(Visualizer, self).setup_figure()
 
     def draw(self):
         """ Draw a heat map. """

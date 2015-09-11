@@ -27,10 +27,10 @@ class Visualizer(vis.BaseVisualizer):
         except KeyError:
             self.smooth = False
             
-        super(TimeSeriesVisualizer, self).__init__(*args, **kwargs)
+        super(Visualizer, self).__init__(*args, **kwargs)
     
     def update_data(self, bandwidth=1):
-        super(TimeSeriesVisualizer, self).update_data()
+        super(Visualizer, self).update_data()
         
         for x in self._table.columns[::-1]:
             if x in self._time_columns:
@@ -61,7 +61,7 @@ class Visualizer(vis.BaseVisualizer):
             raise VisualizationInvalidDataError
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
-            super(TimeSeriesVisualizer, self).setup_figure()
+            super(Visualizer, self).setup_figure()
 
     def draw(self, **kwargs):
         """ Draw time series. """

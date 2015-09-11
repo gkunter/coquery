@@ -21,11 +21,11 @@ class Visualizer(vis.BaseVisualizer):
             self.stacked = kwargs.pop("stacked")
         except KeyError:
             self.stacked = False
-        super(BarchartVisualizer, self).__init__(*args, **kwargs)
+        super(Visualizer, self).__init__(*args, **kwargs)
 
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
-            super(BarchartVisualizer, self).setup_figure()
+            super(Visualizer, self).setup_figure()
 
     def draw(self):
         """ Plot bar charts. """
