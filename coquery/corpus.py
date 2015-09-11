@@ -1411,7 +1411,7 @@ class SQLCorpus(BaseCorpus):
                 sub_query_list[i+1] = s                
             elif i + 1 < referent_id:
                 if s:
-                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{i} >= {i1} AND coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
+                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{ref} > {i1} AND coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
                         s = s, 
                         i=i+1, 
                         i1=referent_id - i - 1, 
