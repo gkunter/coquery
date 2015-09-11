@@ -452,20 +452,27 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         
-        self.ui.action_tree_map.triggered.connect(self.show_tree_map)
-        self.ui.action_barcode_plot.triggered.connect(self.show_barcode_plot)
-        self.ui.action_beeswarm_plot.triggered.connect(self.show_beeswarm_plot)
-        self.ui.action_heat_map.triggered.connect(self.show_heatmap_plot)
-        self.ui.action_barchart_plot.triggered.connect(self.show_barchart_plot)
+        self.ui.action_barcode_plot.triggered.connect(
+            lambda: self.run_visualization(self.show_barcode_plot))
+        self.ui.action_beeswarm_plot.triggered.connect(
+            lambda: self.run_visualization(self.show_beeswarm_plot))
+
+        self.ui.action_tree_map.triggered.connect(
+            lambda: self.run_visualization(self.show_tree_map))
+        self.ui.action_heat_map.triggered.connect(
+            lambda: self.run_visualization(self.show_heatmap_plot))
+        
+        self.ui.action_barchart_plot.triggered.connect(
+            lambda: self.run_visualization(self.show_barchart_plot))
         self.ui.action_stacked_barchart_plot.triggered.connect(
-            lambda: self.show_barchart_plot(percentage=True))
+            lambda: self.run_visualization(self.show_barchart_plot, percentage=True))
         
         self.ui.action_percentage_area_plot.triggered.connect(
-            lambda: self.show_time_series_plot(area=True, percentage=True))
+            lambda: self.run_visualization(self.show_time_series_plot, area=True, percentage=True))
         self.ui.action_stacked_area_plot.triggered.connect(
-            lambda: self.show_time_series_plot(area=True, percentage=False))
+            lambda: self.run_visualization(self.show_time_series_plot, area=True, percentage=False))
         self.ui.action_line_plot.triggered.connect(
-            lambda: self.show_time_series_plot(area=False, percentage=False))
+            lambda: self.run_visualization(self.show_time_series_plot, area=False, percentage=False))
     
     def setup_hooks(self):
         """ Hook up signals so that the GUI can adequately react to user 
@@ -1109,86 +1116,76 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
         
-    def show_tree_map(self):
+    def run_visualization(self, visualizer_func, **kwargs):
         import visualizer
+        try:
+            if "Session" not in dir(self):
+                raise VisualizationNoDataError
+            else:
+                visualizer_func(**kwargs)
+        except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
+            QtGui.QMessageBox.critical(
+                self, "Visualization error – Coquery",
+                str(e))
+        except Exception as e:
+            error_box.ErrorBox.show(sys.exc_info())
+        
+    def show_tree_map(self):
         import treemap
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table, 
-                self.ui.data_preview, 
-                treemap.TreemapVisualizer, 
-                parent=self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        viz = visualizer.VisualizerDialog()
+        viz.Plot(
+            self.Session.data_table, 
+            self.ui.data_preview, 
+            treemap.TreemapVisualizer, 
+            parent=self)
 
     def show_heatmap_plot(self):
-        import visualizer
         import heatmap
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table, 
-                self.ui.data_preview, 
-                heatmap.HeatmapVisualizer,
-                parent=self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        viz = visualizer.VisualizerDialog()
+        viz.Plot(
+            self.Session.data_table, 
+            self.ui.data_preview, 
+            heatmap.HeatmapVisualizer,
+            parent=self)
         
     def show_beeswarm_plot(self):
-        import visualizer
         import beeswarmplot
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table, 
-                self.ui.data_preview, 
-                beeswarmplot.BeeswarmVisualizer,
-                parent=self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        viz = visualizer.VisualizerDialog()
+        viz.Plot(
+            self.Session.data_table, 
+            self.ui.data_preview, 
+            beeswarmplot.BeeswarmVisualizer,
+            parent=self)
 
     def show_barchart_plot(self, percentage=False, stacked=False):
-        import visualizer
         import barplot
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table,
-                self.ui.data_preview, 
-                barplot.BarchartVisualizer, 
-                stacked=stacked,
-                percentage=percentage,
-                parent=self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        viz = visualizer.VisualizerDialog()
+        viz.Plot(
+            self.Session.data_table,
+            self.ui.data_preview, 
+            barplot.BarchartVisualizer, 
+            stacked=stacked,
+            percentage=percentage,
+            parent=self)
 
     def show_barcode_plot(self):
-        import visualizer
         import barcodeplot
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table,
-                self.ui.data_preview, 
-                barcodeplot.BarcodeVisualizer, 
-                parent=self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        viz = visualizer.VisualizerDialog()
+        viz.Plot(
+            self.Session.data_table,
+            self.ui.data_preview, 
+            barcodeplot.BarcodeVisualizer, 
+            parent=self)
 
     def show_time_series_plot(self, area, percentage):
-        import visualizer
         import time_series
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table,
-                self.ui.data_preview, 
-                time_series.TimeSeriesVisualizer, 
-                parent=self, area=area, percentage=percentage, 
-                smooth=True)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        viz = visualizer.VisualizerDialog()
+        viz.Plot(
+            self.Session.data_table,
+            self.ui.data_preview, 
+            time_series.TimeSeriesVisualizer, 
+            parent=self, area=area, percentage=percentage, 
+            smooth=True)
 
     def save_configuration(self):
         self.getGuiValues()
