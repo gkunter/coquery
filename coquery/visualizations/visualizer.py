@@ -113,8 +113,11 @@ class Visualizer(object):
     
     def _validate_layout(func):
         def func_wrapper(self):
-            if self._col_wrap and self._col_wrap > 16:
-                raise InvalidGraphLayout
+            if self._col_wrap:
+                if self._col_wrap > 16:
+                    raise InvalidGraphLayout
+                else:
+                    return func(self)
             if self._col_factor and len(pd.unique(self._table[self._col_factor].values.ravel())) > 16:
                 raise InvalidGraphLayout
             if self._row_factor and len(pd.unique(self._table[self._row_factor].values.ravel())) > 16:
@@ -142,10 +145,6 @@ class Visualizer(object):
                 context=self.get_plot_context(), 
                 font_scale=self.get_font_scale()):
 
-                if options.cfg.verbose:
-                    print("col_factor: ", self._col_factor)
-                    print("col_wrap:   ", self._col_wrap)
-                    print("row_factor: ", self._row_factor)
                 self.g = sns.FacetGrid(self._table, 
                                     #xlim=self.get_xlim(),
                                     #ylim=self.get_ylim(),
@@ -302,6 +301,11 @@ class Visualizer(object):
                     len(pd.unique(self._table[self._col_factor].ravel())))
             else:
                 self._col_wrap = None
+        if options.cfg.verbose:
+            print("col_factor: ", self._col_factor)
+            print("col_wrap:   ", self._col_wrap)
+            print("row_factor: ", self._row_factor)
+
 
     def get_content_tree(self, table, label="count"):
         """ 
