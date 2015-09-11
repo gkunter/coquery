@@ -578,9 +578,13 @@ class CoqueryApp(QtGui.QMainWindow):
         model_index = index
         row = model_index.row()
         data = self.table_model.content.iloc[row]
-        token_id = data["coquery_invisible_corpus_id"]
-        origin_id = data["coquery_invisible_origin_id"]
-        token_width = data["coquery_invisible_number_of_tokens"]
+        try:
+            token_id = data["coquery_invisible_corpus_id"]
+            origin_id = data["coquery_invisible_origin_id"]
+            token_width = data["coquery_invisible_number_of_tokens"]
+        except KeyError:
+            QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
+
         contextview.ContextView.display(self.Session.Corpus, int(token_id), int(origin_id), int(token_width), self)
 
     def verify_file_name(self):

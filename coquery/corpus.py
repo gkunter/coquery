@@ -1143,6 +1143,8 @@ class SQLCorpus(BaseCorpus):
                 elif "corpus_file_id" in dir(self.resource):
                     requested_features.append("corpus_file_id")
                     options.cfg.context_source_id = "corpus_file_id"
+                else:
+                    options.cfg.context_source_id = None
         else:
             corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
@@ -1474,7 +1476,7 @@ class SQLCorpus(BaseCorpus):
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
         if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
-            if options.cfg.context_right or options.cfg.context_left:
+            if (options.cfg.context_right or options.cfg.context_left) and options.cfg.context_source_id:
                 if options.cfg.context_mode == CONTEXT_STRING:
                     final_select.append('NULL AS coq_context')
                 elif options.cfg.context_mode == CONTEXT_KWIC:
@@ -1551,7 +1553,7 @@ class SQLCorpus(BaseCorpus):
         for current_result in cursor:
             if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
                 # add contexts for each query match:
-                if (options.cfg.context_left or options.cfg.context_right):
+                if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
                     left, target, right = self.get_context(
                         current_result["coquery_invisible_corpus_id"], 
                         current_result["coquery_invisible_origin_id"], 
@@ -1755,8 +1757,8 @@ class SQLCorpus(BaseCorpus):
             axis=1)
         for x in tab.index:
             id_list += [y for y in range(
-                int(tab.iloc[x - 1].coquery_invisible_corpus_id), 
-                int(tab.iloc[x - 1].end))]
+                int(tab.loc[x].coquery_invisible_corpus_id), 
+                int(tab.loc[x].end))]
 
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1

@@ -92,6 +92,8 @@ except NameError:
     long = int
     
 # Error messages used by the GUI:
+msg_no_context_available = """<p>The selected corpos does not provide enough
+information to show the context of the token.</p>"""
 msg_visualization_no_data = """<p>The 'Query results' view is empty, hence there is nothing to visualize.</p>
 <p>You have either not run a query in this session yet, or there are no tokens in the corpus that match your last query.</p>
 <p>Try to run a visualization again once the Query results view is not empty anymore.</p>"""
