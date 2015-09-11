@@ -1163,6 +1163,12 @@ class SQLCorpus(BaseCorpus):
                 rc_where_constraints[rc_table].add(
                     '{} {} "{}"'.format(
                         self.resource.__getattribute__(rc_feature), op, value_list[0]))
+                    
+        for linked in options.cfg.external_links:
+            external, internal = options.cfg.external_links[linked]
+            internal_feature = internal.rpartition(".")[-1]
+            if internal_feature not in requested_features:
+                requested_features.append(internal_feature)
 
         # make sure that the word_id is always included in the query:
         requested_features.append("corpus_word_id")
@@ -1253,15 +1259,16 @@ class SQLCorpus(BaseCorpus):
                             name)
                         column_list.append(variable_string)
                         select_list.add(name)
-                        
+
                         external, internal = options.cfg.external_links[linked]
                         internal_feature = internal.rpartition(".")[-1]
                         external_feature = external.rpartition(".")[-1]
-                        column_list.append("{} AS coq_{}_{}_{}".format(
+                        linking_variable = "{} AS coq_{}_{}_{}".format(
                             resource.__getattribute__(resource, external_feature),
                             external_corpus,
-                            external_feature, number+1))
+                            external_feature, number+1)
                         
+                        column_list.append(linking_variable)
                                         
                 columns = ", ".join(set(column_list))
                 alias = "coq_{}_{}".format(external_corpus, table).upper()
@@ -1449,12 +1456,12 @@ class SQLCorpus(BaseCorpus):
                         else:
                             final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
 
-        # add any external feature:
+        # add any external feature that is linked to a lexicon feature:
         for linked in options.cfg.external_links:
             external, internal = options.cfg.external_links[linked]
             internal_feature = internal.split(".")[-1]
             external_corpus, external_feature = linked.split(".")
-            if internal_feature in [x for x, _ in lexicon_features]:
+            if internal_feature in [x for x, _ in self.resource.get_lexicon_features()]:
                 for i in range(Query.Session.max_number_of_tokens):
                     if i < Query.number_of_tokens:
                         final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
