@@ -1104,6 +1104,104 @@ class SQLCorpus(BaseCorpus):
             L.append(s)
         return L
 
+    def get_sub_query_string_self_joined(self, token, number):
+        
+        # get a list of all tables that are required to satisfy the 
+        # feature request:
+        lexicon_variables = [x for x, _ in self.resource.get_lexicon_features()]
+        requested_features = [x for x in options.cfg.selected_features if x in lexicon_variables]
+        
+        requested_features.append("word_id")
+
+        column_list = []
+        for rc_feature in requested_features:
+            column_list.append("{} AS coq_{}_{}".format(
+                self.resource.__getattribute__(rc_feature),
+                rc_feature, number + 1))
+
+        where_clauses = []
+        L = []
+        word_label = self.resource.__getattribute__("word_label")
+        for word in token.word_specifiers:
+            current_token = tokens.COCAWord(word, self, replace=False, parse=False)
+            current_token.negated = token.negated
+            if not isinstance(current_token.S, unicode):
+                S = unicode(current_token.S)
+            else:
+                S = current_token.S
+            # take care of quotation marks:
+            S = S.replace('"', '""')
+            L.append('%s %s "%s"' % (word_label, self.resource.get_operator(current_token), S))
+        if L:
+            where_clauses.append("({})".format(" OR ".join(L)))
+
+        L = []
+        lemma_label = self.resource.__getattribute__("word_lemma")
+        for lemma in token.lemma_specifiers:
+            current_token = tokens.COCAWord(lemma, self, replace=False, parse=False)
+            current_token.negated = token.negated
+            if not isinstance(current_token.S, unicode):
+                S = unicode(current_token.S)
+            else:
+                S = current_token.S
+            # take care of quotation marks:
+            S = S.replace('"', '""')
+            L.append('%s %s "%s"' % (lemma_label, self.resource.get_operator(current_token), S))
+        if L:
+            where_clauses.append("({})".format(" OR ".join(L)))
+            
+        L = []
+        pos_label = self.resource.__getattribute__("word_pos")
+        for pos in token.class_specifiers:
+            current_token = tokens.COCAWord(pos, self, replace=False, parse=False)
+            current_token.negated = token.negated
+            if not isinstance(current_token.S, unicode):
+                S = unicode(current_token.S)
+            else:
+                S = current_token.S
+            # take care of quotation marks:
+            S = S.replace('"', '""')
+            L.append('%s %s "%s"' % (pos_label, self.resource.get_operator(current_token), S))
+        if L:
+            where_clauses.append("({})".format(" OR ".join(L)))
+        
+        return """
+        SELECT  {columns}
+        FROM    {lexicon}
+        WHERE   {constraints}
+        """.format(
+            columns=", ".join(column_list),
+            lexicon=self.resource.__getattribute__("word_table"),
+            constraints=" AND ".join(where_clauses))
+        
+    def get_select_list(self, query):
+        """
+        Return a list of field names that can be used to extract the 
+        requested columns from the joined MySQL query table.
+        
+        Parameters
+        ----------
+        query : CorpusQuery
+            The query for which a select list is required
+            
+        Returns
+        -------
+        l : list
+            A list of strings representing the aliased columns in the joined
+            MySQL query table.
+        """
+        
+        corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+        lexicon_features = [x for x, _ in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+
+        select_list = []
+        for feature in options.cfg.selected_features:
+            if feature in lexicon_features:
+                select_list += ["coq_{}_{}".format(feature, x+1) for x in range(query.max_number_of_tokens)]
+            elif feature in corpus_features:
+                select_list.append("coq_{}_1".format(feature))
+        return select_list        
+
     def get_sub_query_string(self, current_token, number, self_joined=False):
         """ 
         Return a MySQL string that selects a table matching the current
@@ -1406,8 +1504,47 @@ class SQLCorpus(BaseCorpus):
         # name of that resource feature which that keeps track of the source 
         # of the first token of the query. 
         options.cfg.context_source_id = None
-        
         sub_query_list = {}
+
+        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+
+        if self_joined:
+            corpus_features = [x for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+            lexicon_features = [x for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+            for i, token in enumerate(Query.tokens):
+                s = self.get_sub_query_string_self_joined(token, i)
+                if s:
+                    join_string = "INNER JOIN ({s}) AS e{i}\nON coq_word_id_{i} = W{i}".format(
+                        s = s, 
+                        i=i+1)
+                    sub_query_list[i+1] = join_string
+            final_select = []
+            for select_feature in self.get_select_list(Query):
+                rc_feature = select_feature.partition("coq_")[-1].rpartition("_")[0]
+                if rc_feature in corpus_features or rc_feature in lexicon_features:
+                    final_select.append(select_feature)
+                else:
+                    final_select.append("NULL AS {}".format(select_feature))
+
+            # include variables that are required to make entries in the result
+            # table clickable, but only if a GUI is used:
+            if options.cfg.context_source_id:
+                final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.__getattribute__("corpus_denorm_token_id")))
+                final_select.append("{} AS coquery_invisible_origin_id".format(self.resource.__getattribute__("corpus_denorm_source_id")))
+
+            final_select.append("{} AS coquery_invisible_corpus_id".format(
+                self.resource.__getattribute__("corpus_denorm_id")))
+                
+            return """
+            SELECT  {}
+            FROM    {}
+            {}
+            """.format(
+                ", ".join(final_select),
+                self.resource.corpus_denorm_table,
+                "\n".join(sub_query_list.values())
+                )
 
         order = self.get_subquery_order(Query)
         logger.info("Token order: {}".format(", ".join([Query.tokens[x-1].S for x in order])))
@@ -1439,9 +1576,6 @@ class SQLCorpus(BaseCorpus):
         for x in order:
             query_string_part.append(sub_query_list[x])
 
-        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
-        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
-        
         # change the order of the output column so that output columns 
         # showing the same lexicon feature for different tokens are grouped
         # together, followed by all corpus features.
@@ -1532,11 +1666,15 @@ class SQLCorpus(BaseCorpus):
     def yield_query_results(self, Query, self_joined=False):
         """ Run the corpus query specified in the Query object on the corpus
         and yield the results. """
-        
         try:
+            Query.Session.output_order = []
             query_string = self.sql_string_query(Query, self_joined)
         except WordNotInLexiconError:
             query_string = ""
+            
+        if self_joined:
+            Query.Session.output_order += Query.Session.input_columns 
+            Query.Session.output_order += self.get_select_list(Query)
 
         for rc_feature in options.cfg.selected_features:
             if rc_feature.startswith("coquery_"):
@@ -1551,7 +1689,6 @@ class SQLCorpus(BaseCorpus):
                 Query.Session.output_order.append(x)
         
         Query.Session.output_order.append("coquery_invisible_number_of_tokens")
-
         
         if query_string:
             cursor = self.resource.DB.execute_cursor(query_string)
