@@ -865,9 +865,10 @@ class CoqueryApp(QtGui.QMainWindow):
             name = name[0]
         if name:
             try:
-                columns = [x for x in self.table_model.header if not x.startswith("coquery_invisible")]
-                columns = [x for x in columns if options.cfg.column_visibility.get(x, True)]
-                tab = self.table_model.content[columns]
+                header = self.ui.data_preview.horizontalHeader()
+                ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
+                ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
+                tab = self.table_model.content[ordered_headers]
                 tab.to_csv(name,
                            sep=options.cfg.output_separator,
                            index=False,
