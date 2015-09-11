@@ -18,6 +18,7 @@ import random
 import logging
 import sqlwrap
 import queries
+import importlib
 import os
 
 from queryfilter import *
@@ -453,7 +454,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         
         self.ui.action_barcode_plot.triggered.connect(
-            lambda: self.run_visualization(self.show_barcode_plot))
+            lambda: self.visualize_data("barcodeplot"))
+            #lambda: self.run_visualization(self.show_barcode_plot))
         self.ui.action_beeswarm_plot.triggered.connect(
             lambda: self.run_visualization(self.show_beeswarm_plot))
 
@@ -1115,7 +1117,37 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.taskFinished.connect(self.finalize_query)
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
+
+    def visualize_data(self, module, **kwargs):
+        try:
+            module = importlib.import_module(module)
+        except Exception as e:
+            msg = "<code style={text-color: 'red'}>{type}: {code}</code>".format(
+                type=type(e).__name__,
+                code=sys.exc_info()[1])
+            logger.error(msg)
+            
+            QtGui.QMessageBox.critical(
+                self, "Visualization error – Coquery",
+                VisualizationModuleError(module, msg).error_message)
+            
+            
+    def run_visualization(self, visualizer_func, **kwargs):
+        import visualizer
+        try:
+            if "Session" not in dir(self):
+                raise VisualizationNoDataError
+            else:
+                visualizer_func(**kwargs)
+        except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
+            QtGui.QMessageBox.critical(
+                self, "Visualization error – Coquery",
+                str(e))
+        except Exception as e:
+            error_box.ErrorBox.show(sys.exc_info())
         
+        
+
     def run_visualization(self, visualizer_func, **kwargs):
         import visualizer
         try:
