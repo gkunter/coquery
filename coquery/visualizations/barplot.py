@@ -9,7 +9,7 @@ from seaborn.palettes import cubehelix_palette
 import pandas as pd
 import matplotlib.pyplot as plt
 
-class BarchartVisualizer(vis.Visualizer):
+class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
 
     def __init__(self, *args, **kwargs):
@@ -17,11 +17,15 @@ class BarchartVisualizer(vis.Visualizer):
             self.percentage = kwargs.pop("percentage")
         except KeyError:
             self.percentage = False
-        super(BarchartVisualizer, self).__init__(*args, **kwargs)
+        try:
+            self.stacked = kwargs.pop("stacked")
+        except KeyError:
+            self.stacked = False
+        super(Visualizer, self).__init__(*args, **kwargs)
 
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
-            super(BarchartVisualizer, self).setup_figure()
+            super(Visualizer, self).setup_figure()
 
     def draw(self):
         """ Plot bar charts. """

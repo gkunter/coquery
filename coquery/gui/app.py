@@ -18,6 +18,7 @@ import random
 import logging
 import sqlwrap
 import queries
+import importlib
 import os
 
 from queryfilter import *
@@ -66,7 +67,7 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         self._objectName = ""
         self._link_by = None
         self._func = None
-        
+
     def setText(self, column, text, *args):
         super(CoqTreeItem, self).setText(column, text)
         if self.parent():
@@ -156,29 +157,19 @@ class CoqTreeFuncItem(CoqTreeItem):
         super(CoqTreeFuncItem, self).setText(column, label)
 
 class CoqTreeWidget(QtGui.QTreeWidget):
+    addLink = QtCore.Signal(CoqTreeItem)
+    addFunction = QtCore.Signal(CoqTreeItem)
+    removeItem = QtCore.Signal(CoqTreeItem)
+    
     """ Define a tree widget that stores the available output columns in a 
     tree with check boxes for each variable. """
     def __init__(self, *args):
         super(CoqTreeWidget, self).__init__(*args)
         self.itemChanged.connect(self.update)
-        if options.cfg.allow_links:
-            self.itemActivated.connect(self.enable_button)
         self.setDragEnabled(True)
         self.setAnimated(True)
-
-    def enable_button(self, *args):
-        self.selected_item = args
-        if not self.selected_item:
-            return
-        parent = self.selected_item[0].parent()
-        if self.selected_item[0]._link_by or self.selected_item[0]._func or (parent and parent._link_by):
-            options.cfg.main_window.ui.button_add_link.setEnabled(False)
-            options.cfg.main_window.ui.button_add_function.setEnabled(False)
-            options.cfg.main_window.ui.button_remove_link.setEnabled(True)
-        elif str(self.selected_item[0]._objectName).rpartition("_")[-1] != "table":
-            options.cfg.main_window.ui.button_add_link.setEnabled(True)
-            options.cfg.main_window.ui.button_add_function.setEnabled(True)
-            options.cfg.main_window.ui.button_remove_link.setEnabled(False)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_menu)
 
     def update(self, item, column):
         """ Update the checkboxes of parent and child items whenever an
@@ -219,6 +210,46 @@ class CoqTreeWidget(QtGui.QTreeWidget):
                 if child.checkState(column) == QtCore.Qt.Checked:
                     check_list.append(str(child._objectName))
         return check_list
+
+    def show_menu(self, point):
+        item = self.itemAt(point)
+        if not item:
+            return
+
+        # show self.menu about the column
+        self.menu = QtGui.QMenu("Output column options", self)
+        action = QtGui.QWidgetAction(self)
+        label = QtGui.QLabel("<b>{}</b>".format(item.text(0)), self)
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        action.setDefaultWidget(label)
+        self.menu.addAction(action)
+        self.menu.addSeparator()
+
+        add_link = QtGui.QAction("&Link to external table", self)
+        add_function = QtGui.QAction("&Add a function", self)
+        remove_link = QtGui.QAction("&Remove link", self)
+        remove_function = QtGui.QAction("&Remove function", self)
+        
+        parent = item.parent()
+        
+        if item._link_by or (parent and parent._link_by):
+            self.menu.addAction(remove_link)
+        elif item._func:
+            self.menu.addAction(remove_function)
+        else:
+            self.menu.addAction(add_link)
+            self.menu.addAction(add_function)
+        
+        self.menu.popup(self.mapToGlobal(point))
+        action = self.menu.exec_()
+
+        if action == add_link:
+            self.addLink.emit(item)
+        elif action == add_function:
+            self.addFunction.emit(item)
+        elif action in (remove_link, remove_function):
+            self.removeItem.emit(item)
+
         
 class LogTableModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, *args):
@@ -422,20 +453,27 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         
-        self.ui.action_tree_map.triggered.connect(self.show_tree_map)
-        self.ui.action_barcode_plot.triggered.connect(self.show_barcode_plot)
-        self.ui.action_beeswarm_plot.triggered.connect(self.show_beeswarm_plot)
-        self.ui.action_heat_map.triggered.connect(self.show_heatmap_plot)
-        self.ui.action_barchart_plot.triggered.connect(self.show_barchart_plot)
+        self.ui.action_barcode_plot.triggered.connect(
+            lambda: self.visualize_data("barcodeplot"))
+        self.ui.action_beeswarm_plot.triggered.connect(
+            lambda: self.visualize_data("beeswarmplot"))
+
+        self.ui.action_tree_map.triggered.connect(
+            lambda: self.visualize_data("treemap"))
+        self.ui.action_heat_map.triggered.connect(
+            lambda: self.visualize_data("heatmap"))
+        
+        self.ui.action_barchart_plot.triggered.connect(
+            lambda: self.visualize_data("barplot"))
         self.ui.action_stacked_barchart_plot.triggered.connect(
-            lambda: self.show_barchart_plot(percentage=True))
+            lambda: self.visualize_data("barplot", percentage=True, stacked=True))
         
         self.ui.action_percentage_area_plot.triggered.connect(
-            lambda: self.show_time_series_plot(area=True, percentage=True))
+            lambda: self.visualize_data("timeseries", area=True, percentage=True))
         self.ui.action_stacked_area_plot.triggered.connect(
-            lambda: self.show_time_series_plot(area=True, percentage=False))
+            lambda: self.visualize_data("timeseries", area=True, percentage=False))
         self.ui.action_line_plot.triggered.connect(
-            lambda: self.show_time_series_plot(area=False, percentage=False))
+            lambda: self.visualize_data("timeseries", area=False, percentage=False))
     
     def setup_hooks(self):
         """ Hook up signals so that the GUI can adequately react to user 
@@ -539,23 +577,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
 
-        if options.cfg.allow_links:
-            self.ui.button_add_link.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_FileDialogNewFolder))
-            self.ui.button_add_link.setEnabled(False)
-            self.ui.button_add_link.clicked.connect(self.add_link)
-
-            self.ui.button_add_function.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogApplyButton))
-            self.ui.button_add_function.setEnabled(False)
-            self.ui.button_add_function.clicked.connect(self.apply_function)
-
-            
-            self.ui.button_remove_link.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogDiscardButton))
-            self.ui.button_remove_link.setEnabled(False)
-            self.ui.button_remove_link.clicked.connect(self.remove_link)
-        else:
-            self.ui.button_add_link.hide()
-            self.ui.button_remove_link.hide()
-            
     def result_column_resize(self, index, old, new):
         header = self.table_model.header[index].lower()
         options.cfg.column_width[header] = new
@@ -565,9 +586,13 @@ class CoqueryApp(QtGui.QMainWindow):
         model_index = index
         row = model_index.row()
         data = self.table_model.content.iloc[row]
-        token_id = data["coquery_invisible_corpus_id"]
-        origin_id = data["coquery_invisible_origin_id"]
-        token_width = data["coquery_invisible_number_of_tokens"]
+        try:
+            token_id = data["coquery_invisible_corpus_id"]
+            origin_id = data["coquery_invisible_origin_id"]
+            token_width = data["coquery_invisible_number_of_tokens"]
+        except KeyError:
+            QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
+
         contextview.ContextView.display(self.Session.Corpus, int(token_id), int(origin_id), int(token_width), self)
 
     def verify_file_name(self):
@@ -598,6 +623,11 @@ class CoqueryApp(QtGui.QMainWindow):
         tree.setColumnCount(1)
         tree.setHeaderHidden(True)
         tree.setRootIsDecorated(True)
+        
+        tree.addLink.connect(self.add_link)
+        tree.addFunction.connect(self.add_function)
+        tree.removeItem.connect(self.remove_item)
+        
         self.ui.options_list.removeWidget(tree)
         self.ui.options_tree.close()
         self.ui.options_list.addWidget(tree)
@@ -1086,81 +1116,37 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.taskFinished.connect(self.finalize_query)
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
+
+    def visualize_data(self, module, **kwargs):
+        import visualizer
+        try:
+            module = importlib.import_module(module)
+        except Exception as e:
+            msg = "<code style='color: darkred'>{type}: {code}</code>".format(
+                type=type(e).__name__, code=sys.exc_info()[1])
+            logger.error(msg)
+            QtGui.QMessageBox.critical(
+                self, "Visualization error – Coquery",
+                VisualizationModuleError(module, msg).error_message)
+        else:
+            try:
+                if "Session" not in dir(self):
+                    raise VisualizationNoDataError
+                else:
+                    dialog = visualizer.VisualizerDialog()
+                    dialog.Plot(
+                        self.Session.data_table,
+                        self.ui.data_preview,
+                        module.Visualizer,
+                        parent=self,
+                        **kwargs)
+            except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
+                QtGui.QMessageBox.critical(
+                    self, "Visualization error – Coquery",
+                    str(e))
+            except Exception as e:
+                error_box.ErrorBox.show(sys.exc_info())
         
-    def show_tree_map(self):
-        import visualizer
-        import treemap
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table, 
-                self.ui.data_preview, 
-                treemap.TreemapVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
-    def show_heatmap_plot(self):
-        import visualizer
-        import heatmap
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table, 
-                self.ui.data_preview, 
-                heatmap.HeatmapVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-        
-    def show_beeswarm_plot(self):
-        import visualizer
-        import beeswarmplot
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table, 
-                self.ui.data_preview, 
-                beeswarmplot.BeeswarmVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
-    def show_barchart_plot(self, percentage=False):
-        import visualizer
-        import barplot
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table,
-                self.ui.data_preview, 
-                barplot.BarchartVisualizer, self, percentage=percentage)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
-    def show_barcode_plot(self):
-        import visualizer
-        import barcodeplot
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table,
-                self.ui.data_preview, 
-                barcodeplot.BarcodeVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
-    def show_time_series_plot(self, area, percentage):
-        import visualizer
-        import time_series
-        if not self.Session.data_table.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.Session.data_table,
-                self.ui.data_preview, 
-                time_series.TimeSeriesVisualizer, 
-                self, area=area, percentage=percentage, 
-                smooth=True)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
     def save_configuration(self):
         self.getGuiValues()
         options.save_configuration()
@@ -1219,7 +1205,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def build_corpus(self):
         import coq_install_generic
         import corpusbuilder
-        corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, self)
+        corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, parent=self)
         self.fill_combo_corpus()
         self.change_corpus()
         try:
@@ -1489,28 +1475,42 @@ class CoqueryApp(QtGui.QMainWindow):
         
         return (corpus, table, feature_name)
 
-    def add_link(self):
+    def add_link(self, item):
+        """
+        Link the selected output column to a column from an external table.
+        
+        The method opens a dialog from which a column in an external table 
+        can be selected. Then, a link is added from the argument to that 
+        column so that rows from the external table that have the same value
+        in the linked table as in the output column from the present corpus
+        can be included in the output.
+        
+        Parameters
+        ----------
+        item : CoqTreeItem
+            An entry in the output column list
+        """
         import linkselect
-        selected_item, column = self.ui.options_tree.selected_item
-
+        column = 0
         link = linkselect.LinkSelect.display(
-            feature=selected_item.text(0),
-            corpus_omit=str(self.ui.combo_corpus.currentText()).lower())
+            feature=item.text(0),
+            corpus_omit=str(self.ui.combo_corpus.currentText()).lower(),
+            parent=self)
         
         if not link:
             return
         else:
             corpus, table_name, feature_name, case = link
-            selected_item.setExpanded(True)
+            item.setExpanded(True)
             
             resource = get_available_resources()[corpus][0]
             table = resource.get_table_dict()[table_name]
             
             child_table = CoqTreeLinkItem()
             child_table.setObjectName("{}.{}_table".format(corpus, table_name))
-            selected_item.parent().addChild(child_table)
-            child_table.setLink("{}.{}".format(selected_item.parent().objectName(), selected_item.objectName()), feature_name)
-            child_table.setText(column, "{} ► {}.{}".format(str(selected_item.text(0)).capitalize(), corpus.upper(), table_name.capitalize()))
+            item.parent().addChild(child_table)
+            child_table.setLink("{}.{}".format(item.parent().objectName(), item.objectName()), feature_name)
+            child_table.setText(column, "{} ► {}.{}".format(str(item.text(0)).capitalize(), corpus.upper(), table_name.capitalize()))
             child_table.setCheckState(column, False)
             
             for rc_feature in table:
@@ -1521,15 +1521,27 @@ class CoqueryApp(QtGui.QMainWindow):
                     new_item.setCheckState(column, False)
                     child_table.addChild(new_item)
             
-    def apply_function(self):
-        import functionapply
+    def add_function(self, item):
+        """
+        Add an output column that applies a function to the selected item.
+        
+        This method opens a dialog that allows to choose a function that 
+        may be applied to the selected item. This function is added as an
+        additional output column to the list of output columns.
+        
+        Parameters
+        ----------
+        item : CoqTreeItem
+            An entry in the output column list
+        """
 
-        selected_item, column = self.ui.options_tree.selected_item
-        parent = selected_item.parent()
+        import functionapply
+        column = 0
+        parent = item.parent()
         
         response  = functionapply.FunctionDialog.display(
             table=parent.text(0),
-            feature=selected_item.text(0))
+            feature=item.text(0), parent=self)
         
         if not response:
             return
@@ -1537,24 +1549,32 @@ class CoqueryApp(QtGui.QMainWindow):
             label, func = response
             
             child_func = CoqTreeFuncItem()
-            child_func.setObjectName("func.{}".format(selected_item.objectName()))
+            child_func.setObjectName("func.{}".format(item.objectName()))
             child_func.setFunction(func)
             child_func.setText(column, label)
             child_func.setCheckState(column, QtCore.Qt.Checked)
 
-            selected_item.parent().addChild(child_func)
-            selected_item.parent().setExpanded(True)
+            item.parent().addChild(child_func)
+            item.parent().setExpanded(True)
 
-    def remove_link(self):
+    def remove_item(self, item):
+        """
+        Remove either a link or a function from the list of output columns.        
+        
+        Parameters
+        ----------
+        item : CoqTreeItem
+            An entry in the output column list
+        """
         def remove_children(node):
             for child in [node.child(i) for i in range(node.childCount())]:
                 remove_children(child)
                 node.removeChild(child)
             node.close()
         
-        selected_item, column = self.ui.options_tree.selected_item
-        if selected_item.parent and selected_item.parent()._link_by:
-            selected_item = selected_item.parent()
-        selected_item.parent().removeChild(selected_item)
+        column = 0
+        if item.parent and item.parent()._link_by:
+            item = item.parent()
+        item.parent().removeChild(item)
     
 logger = logging.getLogger(__init__.NAME)

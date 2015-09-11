@@ -1104,6 +1104,104 @@ class SQLCorpus(BaseCorpus):
             L.append(s)
         return L
 
+    def get_sub_query_string_self_joined(self, token, number):
+        
+        # get a list of all tables that are required to satisfy the 
+        # feature request:
+        lexicon_variables = [x for x, _ in self.resource.get_lexicon_features()]
+        requested_features = [x for x in options.cfg.selected_features if x in lexicon_variables]
+        
+        requested_features.append("word_id")
+
+        column_list = []
+        for rc_feature in requested_features:
+            column_list.append("{} AS coq_{}_{}".format(
+                self.resource.__getattribute__(rc_feature),
+                rc_feature, number + 1))
+
+        where_clauses = []
+        L = []
+        word_label = self.resource.__getattribute__("word_label")
+        for word in token.word_specifiers:
+            current_token = tokens.COCAWord(word, self, replace=False, parse=False)
+            current_token.negated = token.negated
+            if not isinstance(current_token.S, unicode):
+                S = unicode(current_token.S)
+            else:
+                S = current_token.S
+            # take care of quotation marks:
+            S = S.replace('"', '""')
+            L.append('%s %s "%s"' % (word_label, self.resource.get_operator(current_token), S))
+        if L:
+            where_clauses.append("({})".format(" OR ".join(L)))
+
+        L = []
+        lemma_label = self.resource.__getattribute__("word_lemma")
+        for lemma in token.lemma_specifiers:
+            current_token = tokens.COCAWord(lemma, self, replace=False, parse=False)
+            current_token.negated = token.negated
+            if not isinstance(current_token.S, unicode):
+                S = unicode(current_token.S)
+            else:
+                S = current_token.S
+            # take care of quotation marks:
+            S = S.replace('"', '""')
+            L.append('%s %s "%s"' % (lemma_label, self.resource.get_operator(current_token), S))
+        if L:
+            where_clauses.append("({})".format(" OR ".join(L)))
+            
+        L = []
+        pos_label = self.resource.__getattribute__("word_pos")
+        for pos in token.class_specifiers:
+            current_token = tokens.COCAWord(pos, self, replace=False, parse=False)
+            current_token.negated = token.negated
+            if not isinstance(current_token.S, unicode):
+                S = unicode(current_token.S)
+            else:
+                S = current_token.S
+            # take care of quotation marks:
+            S = S.replace('"', '""')
+            L.append('%s %s "%s"' % (pos_label, self.resource.get_operator(current_token), S))
+        if L:
+            where_clauses.append("({})".format(" OR ".join(L)))
+        
+        return """
+        SELECT  {columns}
+        FROM    {lexicon}
+        WHERE   {constraints}
+        """.format(
+            columns=", ".join(column_list),
+            lexicon=self.resource.__getattribute__("word_table"),
+            constraints=" AND ".join(where_clauses))
+        
+    def get_select_list(self, query):
+        """
+        Return a list of field names that can be used to extract the 
+        requested columns from the joined MySQL query table.
+        
+        Parameters
+        ----------
+        query : CorpusQuery
+            The query for which a select list is required
+            
+        Returns
+        -------
+        l : list
+            A list of strings representing the aliased columns in the joined
+            MySQL query table.
+        """
+        
+        corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+        lexicon_features = [x for x, _ in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+
+        select_list = []
+        for feature in options.cfg.selected_features:
+            if feature in lexicon_features:
+                select_list += ["coq_{}_{}".format(feature, x+1) for x in range(query.max_number_of_tokens)]
+            elif feature in corpus_features:
+                select_list.append("coq_{}_1".format(feature))
+        return select_list        
+
     def get_sub_query_string(self, current_token, number, self_joined=False):
         """ 
         Return a MySQL string that selects a table matching the current
@@ -1143,6 +1241,8 @@ class SQLCorpus(BaseCorpus):
                 elif "corpus_file_id" in dir(self.resource):
                     requested_features.append("corpus_file_id")
                     options.cfg.context_source_id = "corpus_file_id"
+                else:
+                    options.cfg.context_source_id = None
         else:
             corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
@@ -1161,6 +1261,12 @@ class SQLCorpus(BaseCorpus):
                 rc_where_constraints[rc_table].add(
                     '{} {} "{}"'.format(
                         self.resource.__getattribute__(rc_feature), op, value_list[0]))
+                    
+        for linked in options.cfg.external_links:
+            external, internal = options.cfg.external_links[linked]
+            internal_feature = internal.rpartition(".")[-1]
+            if internal_feature not in requested_features:
+                requested_features.append(internal_feature)
 
         # make sure that the word_id is always included in the query:
         requested_features.append("corpus_word_id")
@@ -1251,15 +1357,16 @@ class SQLCorpus(BaseCorpus):
                             name)
                         column_list.append(variable_string)
                         select_list.add(name)
-                        
+
                         external, internal = options.cfg.external_links[linked]
                         internal_feature = internal.rpartition(".")[-1]
                         external_feature = external.rpartition(".")[-1]
-                        column_list.append("{} AS coq_{}_{}_{}".format(
+                        linking_variable = "{} AS coq_{}_{}_{}".format(
                             resource.__getattribute__(resource, external_feature),
                             external_corpus,
-                            external_feature, number+1))
+                            external_feature, number+1)
                         
+                        column_list.append(linking_variable)
                                         
                 columns = ", ".join(set(column_list))
                 alias = "coq_{}_{}".format(external_corpus, table).upper()
@@ -1397,8 +1504,47 @@ class SQLCorpus(BaseCorpus):
         # name of that resource feature which that keeps track of the source 
         # of the first token of the query. 
         options.cfg.context_source_id = None
-        
         sub_query_list = {}
+
+        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+
+        if self_joined:
+            corpus_features = [x for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+            lexicon_features = [x for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+            for i, token in enumerate(Query.tokens):
+                s = self.get_sub_query_string_self_joined(token, i)
+                if s:
+                    join_string = "INNER JOIN ({s}) AS e{i}\nON coq_word_id_{i} = W{i}".format(
+                        s = s, 
+                        i=i+1)
+                    sub_query_list[i+1] = join_string
+            final_select = []
+            for select_feature in self.get_select_list(Query):
+                rc_feature = select_feature.partition("coq_")[-1].rpartition("_")[0]
+                if rc_feature in corpus_features or rc_feature in lexicon_features:
+                    final_select.append(select_feature)
+                else:
+                    final_select.append("NULL AS {}".format(select_feature))
+
+            # include variables that are required to make entries in the result
+            # table clickable, but only if a GUI is used:
+            if options.cfg.context_source_id:
+                final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.__getattribute__("corpus_denorm_token_id")))
+                final_select.append("{} AS coquery_invisible_origin_id".format(self.resource.__getattribute__("corpus_denorm_source_id")))
+
+            final_select.append("{} AS coquery_invisible_corpus_id".format(
+                self.resource.__getattribute__("corpus_denorm_id")))
+                
+            return """
+            SELECT  {}
+            FROM    {}
+            {}
+            """.format(
+                ", ".join(final_select),
+                self.resource.corpus_denorm_table,
+                "\n".join(sub_query_list.values())
+                )
 
         order = self.get_subquery_order(Query)
         logger.info("Token order: {}".format(", ".join([Query.tokens[x-1].S for x in order])))
@@ -1411,7 +1557,7 @@ class SQLCorpus(BaseCorpus):
                 sub_query_list[i+1] = s                
             elif i + 1 < referent_id:
                 if s:
-                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{i} >= {i1} AND coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
+                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{ref} > {i1} AND coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
                         s = s, 
                         i=i+1, 
                         i1=referent_id - i - 1, 
@@ -1430,9 +1576,6 @@ class SQLCorpus(BaseCorpus):
         for x in order:
             query_string_part.append(sub_query_list[x])
 
-        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
-        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
-        
         # change the order of the output column so that output columns 
         # showing the same lexicon feature for different tokens are grouped
         # together, followed by all corpus features.
@@ -1447,12 +1590,12 @@ class SQLCorpus(BaseCorpus):
                         else:
                             final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
 
-        # add any external feature:
+        # add any external feature that is linked to a lexicon feature:
         for linked in options.cfg.external_links:
             external, internal = options.cfg.external_links[linked]
             internal_feature = internal.split(".")[-1]
             external_corpus, external_feature = linked.split(".")
-            if internal_feature in [x for x, _ in lexicon_features]:
+            if internal_feature in [x for x, _ in self.resource.get_lexicon_features()]:
                 for i in range(Query.Session.max_number_of_tokens):
                     if i < Query.number_of_tokens:
                         final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
@@ -1474,7 +1617,7 @@ class SQLCorpus(BaseCorpus):
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
         if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
-            if options.cfg.context_right or options.cfg.context_left:
+            if (options.cfg.context_right or options.cfg.context_left) and options.cfg.context_source_id:
                 if options.cfg.context_mode == CONTEXT_STRING:
                     final_select.append('NULL AS coq_context')
                 elif options.cfg.context_mode == CONTEXT_KWIC:
@@ -1523,11 +1666,15 @@ class SQLCorpus(BaseCorpus):
     def yield_query_results(self, Query, self_joined=False):
         """ Run the corpus query specified in the Query object on the corpus
         and yield the results. """
-        
         try:
+            Query.Session.output_order = []
             query_string = self.sql_string_query(Query, self_joined)
         except WordNotInLexiconError:
             query_string = ""
+            
+        if self_joined:
+            Query.Session.output_order += Query.Session.input_columns 
+            Query.Session.output_order += self.get_select_list(Query)
 
         for rc_feature in options.cfg.selected_features:
             if rc_feature.startswith("coquery_"):
@@ -1542,7 +1689,6 @@ class SQLCorpus(BaseCorpus):
                 Query.Session.output_order.append(x)
         
         Query.Session.output_order.append("coquery_invisible_number_of_tokens")
-
         
         if query_string:
             cursor = self.resource.DB.execute_cursor(query_string)
@@ -1551,7 +1697,7 @@ class SQLCorpus(BaseCorpus):
         for current_result in cursor:
             if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
                 # add contexts for each query match:
-                if (options.cfg.context_left or options.cfg.context_right):
+                if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
                     left, target, right = self.get_context(
                         current_result["coquery_invisible_corpus_id"], 
                         current_result["coquery_invisible_origin_id"], 
@@ -1744,18 +1890,19 @@ class SQLCorpus(BaseCorpus):
         be displayed. The area in which the context is shown is a QLabel
         named widget.ui.context_area. """
 
-        try:
-            tab = options.cfg.main_window.Session.data_table
-        except AttributeError:
-            tab = options.cfg.main_window.table_model.content
+        tab = options.cfg.main_window.Session.data_table
 
         # create a list of all token ids that are also listed in the results
         # table:
         id_list = []
-        for x in tab[tab.coquery_invisible_origin_id == source_id].index:
-            start = int(tab.iloc[x - 1].coquery_invisible_corpus_id)
-            end = int(start + tab.iloc[x - 1].coquery_invisible_number_of_tokens)
-            id_list += [y for y in range(start, end)]
+        tab = tab[tab.coquery_invisible_origin_id == source_id]
+        tab["end"] = tab.apply(
+            lambda x: x["coquery_invisible_corpus_id"] + x["coquery_invisible_number_of_tokens"],
+            axis=1)
+        for x in tab.index:
+            id_list += [y for y in range(
+                int(tab.loc[x].coquery_invisible_corpus_id), 
+                int(tab.loc[x].end))]
 
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
@@ -1869,8 +2016,10 @@ class SQLCorpus(BaseCorpus):
                         attributes = dict([attr.split("=")])
                 else: 
                     attributes = {}
-                context += self.renderer_open_element(tag, attributes)
-                opened_elements.append(tag)
+                open_element = self.renderer_open_element(tag, attributes)
+                if open_element:
+                    context += open_element
+                    opened_elements.append(tag)
                 
             if word:
                 # process the context word:
@@ -1898,14 +2047,16 @@ class SQLCorpus(BaseCorpus):
                         attributes = dict([attr.split("=")])
                 else: 
                     attributes = {}
-                context += self.renderer_close_element(tag, attributes)
-
-                # remove the opening element if the current element closes it:
-                if opened_elements and tag == opened_elements[-1]:
-                    opened_elements.pop()
-                else:
-                    # otherwise, keep track of unmatched closing elements:
-                    closed_elements.append(tag)
+                    
+                close_element = self.renderer_close_element(tag, attributes)
+                if close_element:
+                    context += close_element
+                    # remove the opening element if the current element closes it:
+                    if opened_elements and tag == opened_elements[-1]:
+                        opened_elements.pop()
+                    else:
+                        # otherwise, keep track of unmatched closing elements:
+                        closed_elements.append(tag)
 
         # for all unmatchend opened elements, add a matching closing one:
         for tag in opened_elements[::-1]:

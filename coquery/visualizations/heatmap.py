@@ -4,13 +4,13 @@ import visualizer as vis
 import seaborn as sns
 import pandas as pd
 
-class HeatmapVisualizer(vis.Visualizer):
+class Visualizer(vis.BaseVisualizer):
     visualize_frequency = True
     dimensionality=2
     
     def setup_figure(self):
         with sns.axes_style("white"):
-            super(HeatmapVisualizer, self).setup_figure()
+            super(Visualizer, self).setup_figure()
 
     def draw(self):
         """ Draw a heat map. """

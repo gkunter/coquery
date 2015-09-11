@@ -12,7 +12,7 @@ import seaborn as sns
 import pandas as pd
 import matplotlib as mpl
 
-class StripplotVisualizer(vis.Visualizer):
+class Visualizer(vis.BaseVisualizer):
     visualize_frequency = False
     dimensionality = 1
     #def setup_figure(self):
