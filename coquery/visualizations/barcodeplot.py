@@ -43,6 +43,8 @@ def lineplot(a, level=0, start=0, end=1, axis="x", color="black", ax=None, **kwa
     vertical = kwargs.pop("vertical", axis == "y")
     func = ax.axhline if vertical else ax.axvline
     kwargs.setdefault("linewidth", 1)
+    a.reset_index(drop=True, inplace=True)
+    level.reset_index(drop=True, inplace=True)
     for i in a.index:
         func(a[i], start[level[i]], end[level[i]], color=color[level[i]], **kwargs)
     return ax
@@ -51,9 +53,9 @@ class Visualizer(vis.BaseVisualizer):
     visualize_frequency = False
     dimensionality = 1
 
-    def setup_figure(self)
+    def setup_figure(self):
         with sns.axes_style("white"):
-            super(BarcodeVisualizer, self).setup_figure()
+            super(Visualizer, self).setup_figure()
     
     def draw(self):
         """ Plot a vertical line for each token in the current data table.
@@ -62,12 +64,13 @@ class Visualizer(vis.BaseVisualizer):
         token id so that tokens that occur in the same part of the corpus
         will also have lines that are placed close to each other. """
         def plot_facet(data, color):
+            offset = 0.025 * (1 / len(self._levels[0]))
             starts = dict(zip(
                 self._levels[0],
-                [x / len(self._levels[0]) for x in range(len(self._levels[0]))]))
+                [offset + x / len(self._levels[0]) for x in range(len(self._levels[0]))]))
             ends = dict(zip(
                 self._levels[0],
-                [0.95 * ((x+1) / len(self._levels[0])) for x in range(len(self._levels[0]))]))
+                [(x+1) / len(self._levels[0]) - offset for x in range(len(self._levels[0]))]))
             colors = dict(zip(
                 self._levels[0],
                 sns.color_palette("Paired", len(self._levels[0]))))
@@ -80,7 +83,7 @@ class Visualizer(vis.BaseVisualizer):
 
         self._ticks = [(x+0.5) / len(self._levels[0]) for x in range(len(self._levels[0]))]
 
-        self.g.map_dataframe(plot_facet)
+        self.map_data(plot_facet)
 
         if not self._levels or len(self._levels[0]) < 2:
             self.g.set(yticks=[])
