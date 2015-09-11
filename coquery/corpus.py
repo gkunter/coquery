@@ -1744,18 +1744,19 @@ class SQLCorpus(BaseCorpus):
         be displayed. The area in which the context is shown is a QLabel
         named widget.ui.context_area. """
 
-        try:
-            tab = options.cfg.main_window.Session.data_table
-        except AttributeError:
-            tab = options.cfg.main_window.table_model.content
+        tab = options.cfg.main_window.Session.data_table
 
         # create a list of all token ids that are also listed in the results
         # table:
         id_list = []
-        for x in tab[tab.coquery_invisible_origin_id == source_id].index:
-            start = int(tab.iloc[x - 1].coquery_invisible_corpus_id)
-            end = int(start + tab.iloc[x - 1].coquery_invisible_number_of_tokens)
-            id_list += [y for y in range(start, end)]
+        tab = tab[tab.coquery_invisible_origin_id == source_id]
+        tab["end"] = tab.apply(
+            lambda x: x["coquery_invisible_corpus_id"] + x["coquery_invisible_number_of_tokens"],
+            axis=1)
+        for x in tab.index:
+            id_list += [y for y in range(
+                int(tab.iloc[x - 1].coquery_invisible_corpus_id), 
+                int(tab.iloc[x - 1].end))]
 
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
