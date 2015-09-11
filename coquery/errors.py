@@ -54,8 +54,31 @@ class NoTraceException(GenericException):
 
 class NoArgumentsError(NoTraceException):
     error_message = "No arguments given to script."
+
+class VisualizationNoDataError(NoTraceException):
+    error_message = """
+    <p><b>The 'Query results' view is empty.</b></p>
+    <p>You have either not run a query in this session yet, there are no 
+    tokens in the corpus that match your last query, or you have hidden all
+    output columns.</p>
+    <p>Try to run a visualization again once the Query results view is not 
+    empty anymore.</p>
+    """
+
+class VisualizationModuleError:
+    def __init__(self, module, msg):
+        self.error_message = """
+        <p><b>Could not load module '{module}'</b></p>
+        <p>There is a problem with the visualization module named '{module}'. If
+        you downloaded this module from an external source, you may want to
+        see if an updated version is available. Otherwise, either contact
+        the author of the module, or report this error on the Coquery bug
+        tracker.</p>
+        <p>Please include this error message:</p>
+        <p>{msg}</p>
+        """.format(module=module, msg=msg)
     
-class InvalidGraphLayout(NoTraceException):
+class VisualizationInvalidLayout(NoTraceException):
     error_message = """<p><b>The visualization grid layout is too large.</b></p>
     <p>The visualization could not be plotted because either the row grouping 
     factor or the column grouping factor contains more than 16 distinct values.
@@ -83,6 +106,12 @@ class CollocationNoContextError(NoTraceException):
     set the span of words within which Coquery will search for collocates.
     </p>"""
     
+class ContextUnvailableError(NoTraceException):
+    error_message = """
+    <p>The selected corpos does not provide enough information to show the
+    context of the token.</p>
+    """
+
 class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
 
