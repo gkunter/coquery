@@ -611,7 +611,7 @@ class CollocationQuery(TokenQuery):
         """
         try:
             MI = math.log((f_coll * size) / (f_1 * f_2 * span)) / math.log(2)
-        except ZeroDivisionError:
+        except (ZeroDivisionError, TypeError):
             return None
         return MI
 
@@ -699,15 +699,21 @@ class CollocationQuery(TokenQuery):
         collocates["coq_conditional_probability"] = collocates.apply(
             lambda x: self.conditional_propability(
                 x["coq_collocate_frequency_left"],
-                x["coq_frequency"]) if x["coq_frequency"] else None, axis=1)
+                x["coq_frequency"]) if x["coq_frequency"] else None, 
+            axis=1)
+        
         collocates["coq_mutual_information"] = collocates.apply(
             lambda x: self.mutual_information(
-                    len(df.index),
-                    x["coq_frequency"], 
-                    x["coq_collocate_frequency"],
-                    self.corpus_size, 
-                    self.left_span + self.right_span if x["coq_frequency"] and x["coq_word_label"] else None), axis=1)
+                    f_1=len(df.index),
+                    f_2=x["coq_frequency"], 
+                    f_coll=x["coq_collocate_frequency"],
+                    size=self.corpus_size, 
+                    span=self.left_span + self.right_span),
+            axis=1)
+
         collocates = collocates.merge(lookup, on="coq_word_label", how="left")
+        
+        collocates = collocates.dropna()
         
         self.Session.output_order = collocates.columns.values
 
