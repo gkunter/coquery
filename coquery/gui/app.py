@@ -455,26 +455,25 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.ui.action_barcode_plot.triggered.connect(
             lambda: self.visualize_data("barcodeplot"))
-            #lambda: self.run_visualization(self.show_barcode_plot))
         self.ui.action_beeswarm_plot.triggered.connect(
-            lambda: self.run_visualization(self.show_beeswarm_plot))
+            lambda: self.visualize_data("beeswarmplot"))
 
         self.ui.action_tree_map.triggered.connect(
-            lambda: self.run_visualization(self.show_tree_map))
+            lambda: self.visualize_data("treemap"))
         self.ui.action_heat_map.triggered.connect(
-            lambda: self.run_visualization(self.show_heatmap_plot))
+            lambda: self.visualize_data("heatmap"))
         
         self.ui.action_barchart_plot.triggered.connect(
-            lambda: self.run_visualization(self.show_barchart_plot))
+            lambda: self.visualize_data("barplot"))
         self.ui.action_stacked_barchart_plot.triggered.connect(
-            lambda: self.run_visualization(self.show_barchart_plot, percentage=True))
+            lambda: self.visualize_data("barplot", percentage=True, stacked=True))
         
         self.ui.action_percentage_area_plot.triggered.connect(
-            lambda: self.run_visualization(self.show_time_series_plot, area=True, percentage=True))
+            lambda: self.visualize_data("timeseries", area=True, percentage=True))
         self.ui.action_stacked_area_plot.triggered.connect(
-            lambda: self.run_visualization(self.show_time_series_plot, area=True, percentage=False))
+            lambda: self.visualize_data("timeseries", area=True, percentage=False))
         self.ui.action_line_plot.triggered.connect(
-            lambda: self.run_visualization(self.show_time_series_plot, area=False, percentage=False))
+            lambda: self.visualize_data("timeseries", area=False, percentage=False))
     
     def setup_hooks(self):
         """ Hook up signals so that the GUI can adequately react to user 
@@ -1119,106 +1118,35 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.start()
 
     def visualize_data(self, module, **kwargs):
+        import visualizer
         try:
             module = importlib.import_module(module)
         except Exception as e:
-            msg = "<code style={text-color: 'red'}>{type}: {code}</code>".format(
-                type=type(e).__name__,
-                code=sys.exc_info()[1])
+            msg = "<code style='color: darkred'>{type}: {code}</code>".format(
+                type=type(e).__name__, code=sys.exc_info()[1])
             logger.error(msg)
-            
             QtGui.QMessageBox.critical(
                 self, "Visualization error – Coquery",
                 VisualizationModuleError(module, msg).error_message)
-            
-            
-    def run_visualization(self, visualizer_func, **kwargs):
-        import visualizer
-        try:
-            if "Session" not in dir(self):
-                raise VisualizationNoDataError
-            else:
-                visualizer_func(**kwargs)
-        except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
-            QtGui.QMessageBox.critical(
-                self, "Visualization error – Coquery",
-                str(e))
-        except Exception as e:
-            error_box.ErrorBox.show(sys.exc_info())
+        else:
+            try:
+                if "Session" not in dir(self):
+                    raise VisualizationNoDataError
+                else:
+                    dialog = visualizer.VisualizerDialog()
+                    dialog.Plot(
+                        self.Session.data_table,
+                        self.ui.data_preview,
+                        module.Visualizer,
+                        parent=self,
+                        **kwargs)
+            except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
+                QtGui.QMessageBox.critical(
+                    self, "Visualization error – Coquery",
+                    str(e))
+            except Exception as e:
+                error_box.ErrorBox.show(sys.exc_info())
         
-        
-
-    def run_visualization(self, visualizer_func, **kwargs):
-        import visualizer
-        try:
-            if "Session" not in dir(self):
-                raise VisualizationNoDataError
-            else:
-                visualizer_func(**kwargs)
-        except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
-            QtGui.QMessageBox.critical(
-                self, "Visualization error – Coquery",
-                str(e))
-        except Exception as e:
-            error_box.ErrorBox.show(sys.exc_info())
-        
-    def show_tree_map(self):
-        import treemap
-        viz = visualizer.VisualizerDialog()
-        viz.Plot(
-            self.Session.data_table, 
-            self.ui.data_preview, 
-            treemap.TreemapVisualizer, 
-            parent=self)
-
-    def show_heatmap_plot(self):
-        import heatmap
-        viz = visualizer.VisualizerDialog()
-        viz.Plot(
-            self.Session.data_table, 
-            self.ui.data_preview, 
-            heatmap.HeatmapVisualizer,
-            parent=self)
-        
-    def show_beeswarm_plot(self):
-        import beeswarmplot
-        viz = visualizer.VisualizerDialog()
-        viz.Plot(
-            self.Session.data_table, 
-            self.ui.data_preview, 
-            beeswarmplot.BeeswarmVisualizer,
-            parent=self)
-
-    def show_barchart_plot(self, percentage=False, stacked=False):
-        import barplot
-        viz = visualizer.VisualizerDialog()
-        viz.Plot(
-            self.Session.data_table,
-            self.ui.data_preview, 
-            barplot.BarchartVisualizer, 
-            stacked=stacked,
-            percentage=percentage,
-            parent=self)
-
-    def show_barcode_plot(self):
-        import barcodeplot
-        viz = visualizer.VisualizerDialog()
-        viz.Plot(
-            self.Session.data_table,
-            self.ui.data_preview, 
-            barcodeplot.BarcodeVisualizer, 
-            parent=self)
-
-    def show_time_series_plot(self, area, percentage):
-        import time_series
-        viz = visualizer.VisualizerDialog()
-        viz.Plot(
-            self.Session.data_table,
-            self.ui.data_preview, 
-            time_series.TimeSeriesVisualizer, 
-            parent=self, area=area, percentage=percentage, 
-            smooth=True)
-
     def save_configuration(self):
         self.getGuiValues()
         options.save_configuration()
