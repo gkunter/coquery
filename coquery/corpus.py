@@ -1870,8 +1870,10 @@ class SQLCorpus(BaseCorpus):
                         attributes = dict([attr.split("=")])
                 else: 
                     attributes = {}
-                context += self.renderer_open_element(tag, attributes)
-                opened_elements.append(tag)
+                open_element = self.renderer_open_element(tag, attributes)
+                if open_element:
+                    context += open_element
+                    opened_elements.append(tag)
                 
             if word:
                 # process the context word:
@@ -1899,14 +1901,16 @@ class SQLCorpus(BaseCorpus):
                         attributes = dict([attr.split("=")])
                 else: 
                     attributes = {}
-                context += self.renderer_close_element(tag, attributes)
-
-                # remove the opening element if the current element closes it:
-                if opened_elements and tag == opened_elements[-1]:
-                    opened_elements.pop()
-                else:
-                    # otherwise, keep track of unmatched closing elements:
-                    closed_elements.append(tag)
+                    
+                close_element = self.renderer_close_element(tag, attributes)
+                if close_element:
+                    context += close_element
+                    # remove the opening element if the current element closes it:
+                    if opened_elements and tag == opened_elements[-1]:
+                        opened_elements.pop()
+                    else:
+                        # otherwise, keep track of unmatched closing elements:
+                        closed_elements.append(tag)
 
         # for all unmatchend opened elements, add a matching closing one:
         for tag in opened_elements[::-1]:
