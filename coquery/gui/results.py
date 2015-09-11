@@ -116,7 +116,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             # sorting enabled:
             if column == "coq_context_left" or self.sort_columns.get(column, SORT_NONE) in set([SORT_REV_DEC, SORT_REV_INC]):
                 return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
-        
+            return int(QtCore.Qt.AlignLeft)|int(QtCore.Qt.AlignVCenter)
         return None
         
     def headerData(self, index, orientation, role):
@@ -275,7 +275,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
         painter.setPen(QtGui.QPen(fg))
-        painter.drawText(option.rect, QtCore.Qt.AlignRight, unicode(value))
+        painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), unicode(value))
 
         painter.restore()
 
