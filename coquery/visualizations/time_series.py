@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from errors import *
 
-class TimeSeriesVisualizer(vis.Visualizer):
+class Visualizer(vis.BaseVisualizer):
     visualize_frequency = True
     dimensionality = 2
     vmax = 0

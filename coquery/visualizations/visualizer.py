@@ -51,7 +51,6 @@ from QtProgress import ProgressIndicator
 import visualizerUi
 from defines import *
 from errors import *
-import error_box
 
 import matplotlib as mpl
 # Tell matplotlib if PySide is being used:
@@ -103,7 +102,7 @@ class CoqNavigationToolbar(NavigationToolbar):
         self.check_freeze.setObjectName("check_freeze")
         self.addWidget(self.check_freeze)
 
-class Visualizer(object):
+class BaseVisualizer(object):
     """ 
     Define a class that contains the code to visualize data in several
     ways. 
@@ -122,11 +121,11 @@ class Visualizer(object):
     def _validate_layout(func):
         def func_wrapper(self):
             if self._col_wrap and self._col_wrap > 16:
-                raise InvalidGraphLayout
+                raise VisualizationInvalidLayout
             if self._col_factor and len(pd.unique(self._table[self._col_factor].values.ravel())) > 16:
-                raise InvalidGraphLayout
+                raise VisualizationInvalidLayout
             if self._row_factor and len(pd.unique(self._table[self._row_factor].values.ravel())) > 16:
-                raise InvalidGraphLayout
+                raise VisualizationInvalidLayout
             return func(self)
         return func_wrapper
     
@@ -310,6 +309,9 @@ class Visualizer(object):
                     len(pd.unique(self._table[self._col_factor].ravel())))
             else:
                 self._col_wrap = None
+                
+        if not self._groupby:
+            raise VisualizationNoDataError
 
     def get_content_tree(self, table, label="count"):
         """ 
@@ -542,10 +544,7 @@ class Visualizer(object):
         activity.
         """
         progress = ProgressIndicator(FUN=None, label="Drawing...")
-        try:
-            self.draw()
-        except Exception as e:
-            error_box.ErrorBox.show(sys.exc_info())
+        self.draw()
         progress.close()
 
 class VisualizerDialog(QtGui.QWidget):
@@ -719,19 +718,14 @@ class VisualizerDialog(QtGui.QWidget):
         view given in 'view'. """
         dialog = self
         self.smooth = kwargs.get("smooth", False)
-        try:
-            visualizer = visualizer_class(model, view, **kwargs)
-            if not visualizer._model.empty:
-                dialog.setVisible(True)
-                dialog.add_visualizer(visualizer)
-                dialog.add_matplot()
-                #self.sub_process = multiprocessing.Process(target=self.plot_it, args=())
-                #self.sub_process.start()
-                self.visualizer.start_draw_thread()
-        except InvalidGraphLayout as e:
-            QtGui.QMessageBox.critical(self, "Visualization error", e.error_message)
-        except VisualizationInvalidDataError as e:
-            QtGui.QMessageBox.critical(self, "Visualization error", e.error_message)
+        visualizer = visualizer_class(model, view, **kwargs)
+        if not visualizer._model.empty:
+            dialog.setVisible(True)
+            dialog.add_visualizer(visualizer)
+            dialog.add_matplot()
+            #self.sub_process = multiprocessing.Process(target=self.plot_it, args=())
+            #self.sub_process.start()
+            self.visualizer.start_draw_thread()
             
 
 if __name__ == "__main__":

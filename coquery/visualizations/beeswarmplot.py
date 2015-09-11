@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 from beeswarm import *
 
-class BeeswarmVisualizer(vis.Visualizer):
+class Visualizer(vis.BaseVisualizer):
     visualize_frequency = True
 
     def setup_figure(self):

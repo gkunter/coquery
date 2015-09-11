@@ -47,11 +47,11 @@ def lineplot(a, level=0, start=0, end=1, axis="x", color="black", ax=None, **kwa
         func(a[i], start[level[i]], end[level[i]], color=color[level[i]], **kwargs)
     return ax
 
-class BarcodeVisualizer(vis.Visualizer):
+class Visualizer(vis.BaseVisualizer):
     visualize_frequency = False
     dimensionality = 1
 
-    def setup_figure(self):
+    def setup_figure(self)
         with sns.axes_style("white"):
             super(BarcodeVisualizer, self).setup_figure()
     

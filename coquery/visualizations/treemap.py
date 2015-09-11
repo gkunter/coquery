@@ -15,9 +15,9 @@ import math
 from defines import *
 
 from matplotlib.patches import Rectangle
-from visualizer import Visualizer, color_categories
+import visualizer as vis
 
-class TreemapVisualizer(Visualizer):
+class Visualizer(vis.BaseVisualizer):
     def update_data(self):
         super(TreemapVisualizer, self).update_data()
 

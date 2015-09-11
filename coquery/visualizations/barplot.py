@@ -9,7 +9,7 @@ from seaborn.palettes import cubehelix_palette
 import pandas as pd
 import matplotlib.pyplot as plt
 
-class BarchartVisualizer(vis.Visualizer):
+class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
 
     def __init__(self, *args, **kwargs):

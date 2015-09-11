@@ -4,7 +4,7 @@ import visualizer as vis
 import seaborn as sns
 import pandas as pd
 
-class HeatmapVisualizer(vis.Visualizer):
+class Visualizer(vis.BaseVisualizer):
     visualize_frequency = True
     dimensionality=2
     
