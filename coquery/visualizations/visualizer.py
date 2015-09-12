@@ -207,7 +207,6 @@ class BaseVisualizer(object):
         
     def draw(self):
         """ Do the visualization."""
-        print("not implemented")
         pass
 
     def set_data_source(self, model, view):
@@ -314,6 +313,27 @@ class BaseVisualizer(object):
             print("row_factor: ", self._row_factor)
         if not self._groupby:
             raise VisualizationNoDataError
+
+    def adjust_fonts(self, size):
+        """
+        Adjust the fonts of the figure.
+        
+        This method adjusts all fonts in the figure. The axis labels are 
+        set to exactly the given size, and the axis tick labels are adjusted
+        to size * 0.8.
+        
+        Parameters
+        ----------
+        size : numeric
+            The base font size.
+        """
+        return
+        figure = self.g.fig
+        ax = plt.gca()
+        ax.xaxis.label.set_fontsize(size)
+        ax.yaxis.label.set_fontsize(size)
+        figure.get_xticklabels().set_fontsize(size * 0.8)
+        figure.get_yticklabels().set_fontsize(size * 0.8)
 
     def get_content_tree(self, table, label="count"):
         """ 
@@ -537,18 +557,6 @@ class BaseVisualizer(object):
             return "talk"
         return "poster"
     
-    def start_draw_thread(self):
-        """
-        Wrap a progress indicator around :func:`draw`.
-        
-        As drawing using matplotlib is not exactly lightning-fast, a progress
-        bar from :mod:`gui.QtProgress` is used to show that there is still 
-        activity.
-        """
-        progress = ProgressIndicator(FUN=None, label="Drawing...")
-        self.draw()
-        progress.close()
-
 class VisualizerDialog(QtGui.QWidget):
     """ Defines a QDialog that is used to visualize the data in the main 
     data preview area. It connects the dataChanged signal of the abstract 
@@ -571,7 +579,6 @@ class VisualizerDialog(QtGui.QWidget):
 
         # Connect the required signals so the plot is updated on changes to
         # the results table:
-        self.connect_signals()
         self.ui.button_close.clicked.connect(self.close)
         self.frozen = False
         self.spinner = QtGui.QSpinBox()
@@ -586,13 +593,13 @@ class VisualizerDialog(QtGui.QWidget):
         self.toolbar = None
         self.canvas = None
 
-
     def add_visualizer(self, visualizer):
         """ Add a Visualizer instance to the visualization dialog. Also, 
         add a matplotlib canvas and a matplotlib navigation toolbar to the 
         dialog. """
         self.visualizer = visualizer
-        options.cfg.main_window.widget_list.append(self.visualizer)
+        self.connect_signals()
+        options.cfg.main_window.widget_list.append(self)
 
     def update_plot(self):
         """ 
@@ -613,9 +620,9 @@ class VisualizerDialog(QtGui.QWidget):
         
         self.remove_matplot()
         self.add_matplot()
-
-        self.visualizer.start_draw_thread()
-        self.canvas.draw()
+            
+        self.draw()
+        #self.canvas.draw()
         if self.smooth:
             self.spinner.setEnabled(True)
 
@@ -646,9 +653,13 @@ class VisualizerDialog(QtGui.QWidget):
         Remove the matplotlib canvas and the navigation bar from the 
         dialog. 
         """
+        if self.canvas:
+            self.canvas.close()
         self.ui.verticalLayout.removeWidget(self.canvas)
-        self.canvas.close()
         self.canvas = None
+        
+    def closeEvent(self, event):
+        self.close()
         
     def close(self, *args):
         """ Close the visualizer widget, disconnect the signals, and remove 
@@ -661,7 +672,7 @@ class VisualizerDialog(QtGui.QWidget):
             pass
         self.remove_matplot()
         super(VisualizerDialog, self).close()
-        options.cfg.main_window.widget_list.remove(self.visualizer)
+        options.cfg.main_window.widget_list.remove(self)
         del self.visualizer
         
     def keyPressEvent(self, event):
@@ -677,10 +688,9 @@ class VisualizerDialog(QtGui.QWidget):
         sectionMoved signal of the header of the table view to the 
         update_plot() method so that the method is called whenever either the
         content of the results table changes, or the columns are moved."""
-
         options.cfg.main_window.table_model.dataChanged.connect(self.update_plot)
         options.cfg.main_window.table_model.layoutChanged.connect(self.update_plot)
-        options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.connect(self.update_plot)
+        self.visualizer._view.horizontalHeader().sectionMoved.connect(self.update_plot)
 
     def disconnect_signals(self):
         """ Disconnect the dataChanged signal of the abstract data table and 
@@ -689,7 +699,7 @@ class VisualizerDialog(QtGui.QWidget):
         results table changes or the columns are moved."""
         options.cfg.main_window.table_model.dataChanged.disconnect(self.update_plot)
         options.cfg.main_window.table_model.layoutChanged.disconnect(self.update_plot)
-        options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.disconnect(self.update_plot)
+        self.visualizer._view.horizontalHeader().sectionMoved.disconnect(self.update_plot)
         
     def toggle_freeze(self):
         """ Toggle the 'frozen' state of the visualization. This method is 
@@ -729,7 +739,6 @@ class VisualizerDialog(QtGui.QWidget):
             #self.sub_process.start()
             self.visualizer.start_draw_thread()
             
-
 if __name__ == "__main__":
     unittest.main()
             
