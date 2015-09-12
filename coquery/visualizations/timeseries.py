@@ -112,7 +112,6 @@ class Visualizer(vis.BaseVisualizer):
                     # Line plot:
                     self.vmax = max(self.vmax, ct.values.max())
                     ct.plot(ax=plt.gca(), color=self.get_palette())
-                    #ct.plot(ax=plt.gca(), stacked=False, color=self.get_palette(), **kwargs)
         
         self.g.map_dataframe(plot_facet)
         

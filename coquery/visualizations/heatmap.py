@@ -58,6 +58,8 @@ class Visualizer(vis.BaseVisualizer):
         self.setup_axis("Y")
         self.setup_axis("X")
 
+        self.adjust_fonts(16)
+
         try:
             self.g.fig.tight_layout()
         except ValueError:
