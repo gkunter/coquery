@@ -97,7 +97,7 @@ def main():
     # Run the Application GUI?
     if options.cfg.gui:
         sys.path.append(os.path.join(sys.path[0], "gui"))
-        from pyqt_compat import QtGui
+        from pyqt_compat import QtGui, QtCore
         from app import CoqueryApp
         from app import GuiHandler
 
@@ -108,8 +108,10 @@ def main():
         options.cfg.app = QtGui.QApplication(sys.argv)
         Coq = CoqueryApp()
         options.cfg.gui_logger.setGui(Coq)
+        Coq.logo = QtGui.QPixmap("{}/logo/title.png".format(sys.path[0]))
         Coq.show()
         Coq.setGUIDefaults()
+
         options.cfg.icon = QtGui.QIcon()
         options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_tiny.png".format(sys.path[0])))
         Coq.setWindowIcon(options.cfg.icon)

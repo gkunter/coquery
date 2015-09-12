@@ -29,3 +29,4 @@ THE SOFTWARE.
 
 __version__ = "0.9"
 NAME = "coquery"
+DATE = "2015"

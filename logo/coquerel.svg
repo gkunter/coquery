@@ -24,15 +24,15 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4"
-     inkscape:cx="174.42295"
-     inkscape:cy="526.4249"
+     inkscape:zoom="1.979899"
+     inkscape:cx="271.75256"
+     inkscape:cy="210.59087"
      inkscape:document-units="px"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="g3948"
      showgrid="false"
-     inkscape:window-width="1920"
-     inkscape:window-height="1180"
-     inkscape:window-x="1916"
+     inkscape:window-width="2880"
+     inkscape:window-height="1541"
+     inkscape:window-x="-8"
      inkscape:window-y="-3"
      inkscape:window-maximized="1" />
   <metadata
@@ -190,6 +190,112 @@
          id="path3775-4"
          d="m 431.86751,381.31431 c -9.28003,-15.59812 -27.92644,-18.60658 -27.92644,-18.60658 0,0 19.97282,12.99483 21.79511,20.918 -3.21436,3.4751 -11.9688,3.76886 -11.9688,3.76886 0,0 6.21062,5.57522 12.8721,2.47508 6.22623,-2.89758 5.22803,-8.55536 5.22803,-8.55536 z"
          style="fill:#ffcb00;fill-opacity:1;stroke:none" />
+    </g>
+    <g
+       id="g3948"
+       inkscape:export-filename="/home/kunibert/Dev/coquery/logo/title.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <text
+         transform="scale(0.99519252,1.0048307)"
+         sodipodi:linespacing="125%"
+         id="text2985"
+         y="851.61151"
+         x="91.083313"
+         style="font-size:151.31555176px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#00000f;fill-opacity:0.94117647;stroke:none;font-family:Asenine;-inkscape-font-specification:Asenine Bold"
+         xml:space="preserve"
+         inkscape:export-filename="/home/kunibert/Dev/coquery/logo/title.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"><tspan
+           dx="7.1378407 -5.6083016 -1.0196915 -0.25492287 -0.8152523 -0.30540574 -1.0196915"
+           style="font-size:151.31555176px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;fill:#00000f;fill-opacity:0.94117647;font-family:Asenine;-inkscape-font-specification:Asenine Bold"
+           y="851.61151"
+           x="91.083313"
+           id="tspan2987"
+           sodipodi:role="line"
+           dy="-0.50507629 0.50507629">Coquery</tspan></text>
+      <g
+         transform="translate(-32.074078,565.31079)"
+         id="g3105"
+         inkscape:export-filename="/home/kunibert/Dev/coquery/logo/title.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90">
+        <path
+           style="fill:#dc963c;fill-opacity:1;stroke:#ffffff;stroke-width:3.09689999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           d="m 262.14546,26.50914 c -9.58344,8.61398 -17.85714,34.28571 -17.85714,34.28571 l 41.42857,45.71429 -30.35714,33.57142 15,107.14286 15.35713,-31.07143 22.50001,33.21429 9.99999,-34.28572 23.92858,29.28572 3.92858,-23.21429 29.28571,22.5 -45.35714,-114.64286 C 324.11126,87.896016 345.37918,69.99571 345.0026,58.29485 341.77146,30.58309 332.20664,5.0093401 280.35975,19.36628 c 0,0 -13.36403,2.78325 -18.21429,7.14286 z"
+           id="path2987-72"
+           inkscape:connector-curvature="0"
+           sodipodi:nodetypes="scccccccccccccs"
+           inkscape:export-filename="/opt/coquery/logo/logo.png"
+           inkscape:export-xdpi="127.91716"
+           inkscape:export-ydpi="127.91716" />
+        <path
+           style="fill:#aa0000;stroke:#ffffff;stroke-width:2.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           d="m 287.71377,-13.58883 c 34.24179,29.66611 22.69551,-13.26767 33.848,-9.63084 12.0029,3.91415 23.31552,29.8479301 23.31552,29.8479301 0,0 12.4094,-24.9762401 22.41877,-21.9470101 8.30178,2.51244 5.3805,25.45853 5.3805,25.45853 0,0 26.30438,-7.8365399 30.93862,1.38806 4.30581,8.57084 -16.12533,23.83205 -16.12533,23.83205 0,0 26.39994,1.29069 27.89249,11.19764 1.58703,10.53403 -24.83361,20.11598 -24.83361,20.11598 0,0 24.04828,15.081286 19.43914,24.404176 -11.38704,23.032464 -77.06504,-1.55207 -77.06504,-1.55207 C 353.14488,23.17091 294.5431,6.4206201 261.92476,26.92883 c 0,0 0.87418,-62.10316 25.78901,-40.51766 z"
+           id="path2985-4"
+           inkscape:connector-curvature="0"
+           sodipodi:nodetypes="sacacacacaccs"
+           inkscape:export-filename="/opt/coquery/logo/logo.png"
+           inkscape:export-xdpi="127.91716"
+           inkscape:export-ydpi="127.91716" />
+        <path
+           style="fill:#aa0000;fill-opacity:1;stroke:#ffffff;stroke-width:2.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           d="m 253.27817,69.1063 c 0,0 5.33456,-25.74927 18.21428,-35.83684 9.20826,-7.21204 14.56157,-7.51379 24.93872,-7.11747 6.2429,0.23843 17.74012,6.82711 20.35715,12.5 6.89143,14.93845 5.73293,25.12925 -1.42857,37.500006 -7.34914,12.69488 -17.1107,18.00705 -30.55585,23.83139 0,0 10.87136,40.218684 5.13923,57.668964 -9.12681,27.78466 -20.18879,17.03837 -27.14466,29.79695 -6.17513,11.32654 -25.68638,22.36215 -36.01015,17.45269 -9.88275,-4.69973 -14.78416,-11.32379 -16.42858,-22.14285 -1.30601,-8.59261 2.74798,-15.85681 8.75001,-22.14286 7.70162,-8.06607 30.65083,-13.18057 30.65083,-13.18057 l 5.95631,-6.64086 19.81182,-34.79079 z"
+           id="path3757-4"
+           inkscape:connector-curvature="0"
+           sodipodi:nodetypes="csssscssssscccc"
+           inkscape:export-filename="/opt/coquery/logo/logo.png"
+           inkscape:export-xdpi="127.91716"
+           inkscape:export-ydpi="127.91716" />
+        <path
+           sodipodi:type="arc"
+           style="fill:#ffffff;fill-opacity:1;stroke:#fff7f7;stroke-width:0;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           id="path3765-1"
+           sodipodi:cx="224.46428"
+           sodipodi:cy="375.93362"
+           sodipodi:rx="33.035713"
+           sodipodi:ry="52.142857"
+           d="m 257.49999,375.93362 c 0,28.79771 -14.79059,52.14286 -33.03571,52.14286 -18.24512,0 -33.03571,-23.34515 -33.03571,-52.14286 0,-28.7977 14.79059,-52.14285 33.03571,-52.14285 18.24512,0 33.03571,23.34515 33.03571,52.14285 z"
+           transform="matrix(0.51105667,0.19710189,-0.22376284,0.43580569,252.80148,-145.619)"
+           inkscape:export-filename="/opt/coquery/logo/logo.png"
+           inkscape:export-xdpi="127.91716"
+           inkscape:export-ydpi="127.91716" />
+        <path
+           sodipodi:type="arc"
+           style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           id="path3767-91"
+           sodipodi:cx="210.53572"
+           sodipodi:cy="379.14789"
+           sodipodi:rx="13.392858"
+           sodipodi:ry="26.428572"
+           d="m 223.92858,379.14789 c 0,14.5961 -5.99619,26.42857 -13.39286,26.42857 -7.39667,0 -13.39286,-11.83247 -13.39286,-26.42857 0,-14.5961 5.99619,-26.42857 13.39286,-26.42857 7.39667,0 13.39286,11.83247 13.39286,26.42857 z"
+           transform="matrix(0.61745599,0.20186367,-0.23981091,0.51128674,241.72748,-172.30775)"
+           inkscape:export-filename="/opt/coquery/logo/logo.png"
+           inkscape:export-xdpi="127.91716"
+           inkscape:export-ydpi="127.91716" />
+        <path
+           transform="matrix(-0.77957663,-0.47822353,-0.50491181,0.68283961,603.56424,-82.55221)"
+           d="m 195.35714,340.57648 c 0,2.95867 -0.79949,5.35714 -1.78571,5.35714 -0.98623,0 -1.78572,-2.39847 -1.78572,-5.35714 0,-2.95867 0.79949,-5.35715 1.78572,-5.35715 0.98622,0 1.78571,2.39848 1.78571,5.35715 z"
+           sodipodi:ry="5.3571429"
+           sodipodi:rx="1.7857143"
+           sodipodi:cy="340.57648"
+           sodipodi:cx="193.57143"
+           id="path3773-6"
+           style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1.29105377;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           sodipodi:type="arc"
+           inkscape:export-filename="/opt/coquery/logo/logo.png"
+           inkscape:export-xdpi="127.91716"
+           inkscape:export-ydpi="127.91716" />
+        <path
+           style="fill:#ffcb00;fill-opacity:1;stroke:#ffffff;stroke-width:2.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           d="M 285.93077,99.706926 C 247.09064,34.6344 169.04893,22.08364 169.04893,22.08364 c 0,0 83.59321,54.212106 91.22011,87.26615 -13.45323,14.49747 -50.09357,15.72299 -50.09357,15.72299 0,0 25.9936,23.25881 53.8742,10.3256 26.05892,-12.08818 21.8811,-35.691454 21.8811,-35.691454 z"
+           id="path3775-0"
+           inkscape:connector-curvature="0"
+           sodipodi:nodetypes="ccccsc"
+           inkscape:export-filename="/opt/coquery/logo/logo.png"
+           inkscape:export-xdpi="127.91716"
+           inkscape:export-ydpi="127.91716" />
+      </g>
     </g>
   </g>
 </svg>

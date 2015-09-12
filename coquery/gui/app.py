@@ -452,6 +452,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_mySQL_settings.triggered.connect(self.mysql_settings)
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
+        self.ui.action_about_coquery.triggered.connect(self.show_about)
         
         self.ui.action_barcode_plot.triggered.connect(
             lambda: self.visualize_data("barcodeplot"))
@@ -1393,6 +1394,24 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.selected_functions.update(get_functions(root))
 
             return True
+
+    def show_about(self):
+        import aboutUi
+        dialog = QtGui.QDialog(self)
+        dialog.ui = aboutUi.Ui_AboutDialog()
+        dialog.ui.setupUi(dialog)
+
+        image = QtGui.QImage(self.logo)
+        painter = QtGui.QPainter(image)
+        painter.setPen(QtCore.Qt.black)
+        painter.drawText(image.rect(), QtCore.Qt.AlignBottom, "Version {}".format(__init__.__version__))
+        painter.end()
+        dialog.ui.label_pixmap.setPixmap(QtGui.QPixmap.fromImage(image))
+        dialog.ui.label_pixmap.setAlignment(QtCore.Qt.AlignCenter)
+
+        dialog.ui.label_description.setText(
+            unicode(dialog.ui.label_description.text()).format(version=__init__.__version__, date=__init__.DATE))
+        dialog.exec_()
 
     def setGUIDefaults(self):
         """ Set up the gui values based on the values in options.cfg.* """
