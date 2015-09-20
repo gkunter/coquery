@@ -1179,6 +1179,10 @@ class SQLCorpus(BaseCorpus):
         Return a list of field names that can be used to extract the 
         requested columns from the joined MySQL query table.
         
+        This list is usually stored in Session.output_order and determines
+        which columns appear in the output table. If a column is missing, 
+        it may be because it is not correctly included in this list.
+        
         Parameters
         ----------
         query : CorpusQuery
@@ -1191,15 +1195,47 @@ class SQLCorpus(BaseCorpus):
             MySQL query table.
         """
         
-        corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
         lexicon_features = [x for x, _ in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+        corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
 
-        select_list = []
-        for feature in options.cfg.selected_features:
-            if feature in lexicon_features:
-                select_list += ["coq_{}_{}".format(feature, x+1) for x in range(query.max_number_of_tokens)]
-            elif feature in corpus_features:
-                select_list.append("coq_{}_1".format(feature))
+        # the initial select list contains the columns from the input file
+        # (if present):
+        select_list = list(query.Session.input_columns)
+
+        # then, add an appropriately aliased name for each selected feature:
+        for rc_feature in options.cfg.selected_features:
+            if rc_feature in lexicon_features:
+                select_list += ["coq_{}_{}".format(rc_feature, x+1) for x in range(query.max_number_of_tokens)]
+            elif rc_feature in corpus_features:
+                select_list.append("coq_{}_1".format(rc_feature))
+            elif rc_feature.startswith("coquery_"):
+                if rc_feature == "coquery_query_token": 
+                    select_list += ["coquery_query_token_{}".format(x + 1) for x in range(query.number_of_tokens)]
+                else:
+                    select_list.append(rc_feature)
+
+        # MISSING:
+        # linked columns and functions
+
+        func_count =  Counter()
+        for rc_feature in options.cfg.selected_features:
+            #print(rc_feature)
+            if rc_feature.startswith("func."):
+                target = rc_feature.split("func.")[-1]
+                func_count[target] += 1
+                select_list.append("coq_func_{}_{}".format(target, func_count[target]))
+
+            if not rc_feature.startswith("coquery_") and "coq_{}_1".format(rc_feature) not in select_list:
+                if "." not in rc_feature:
+                    select_list.append("coq_{}_1".format(rc_feature.replace(".", "_")))
+
+        if options.cfg.context_source_id:
+            select_list.append("coquery_invisible_corpus_id")
+            select_list.append("coquery_invisible_origin_id")
+            select_list.append("coquery_invisible_number_of_tokens")
+
+        #print(select_list)
+
         return select_list        
 
     def get_sub_query_string(self, current_token, number, self_joined=False):
@@ -1520,8 +1556,7 @@ class SQLCorpus(BaseCorpus):
                         i=i+1)
                     sub_query_list[i+1] = join_string
             final_select = []
-            for select_feature in self.get_select_list(Query):
-                rc_feature = select_feature.partition("coq_")[-1].rpartition("_")[0]
+            for rc_feature in options.cfg.selected_features:
                 if rc_feature in corpus_features or rc_feature in lexicon_features:
                     final_select.append(select_feature)
                 else:
@@ -1608,7 +1643,6 @@ class SQLCorpus(BaseCorpus):
                 if rc_feature in [x for x, _ in corpus_features]:
                     final_select.append("coq_{}_1".format(rc_feature))
         
-        
         # Add any feature that is selected that is neither a corpus feature,
         # a lexicon feature nor a Coquery feature:
         for rc_feature in options.cfg.selected_features:
@@ -1660,36 +1694,18 @@ class SQLCorpus(BaseCorpus):
             query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
 
-        Query.Session.output_order = Query.Session.input_columns + [x.split(" AS ")[-1] for x in final_select]
         return query_string
         
     def yield_query_results(self, Query, self_joined=False):
         """ Run the corpus query specified in the Query object on the corpus
         and yield the results. """
         try:
-            Query.Session.output_order = []
             query_string = self.sql_string_query(Query, self_joined)
         except WordNotInLexiconError:
             query_string = ""
             
-        if self_joined:
-            Query.Session.output_order += Query.Session.input_columns 
-            Query.Session.output_order += self.get_select_list(Query)
+        Query.Session.output_order = self.get_select_list(Query)
 
-        for rc_feature in options.cfg.selected_features:
-            if rc_feature.startswith("coquery_"):
-                if rc_feature == "coquery_query_token": 
-                    Query.Session.output_order += ["coquery_query_token_{}".format(x + 1) for x in range(Query.number_of_tokens)]
-                else:
-                    Query.Session.output_order.append(rc_feature)
-
-        for x in list(Query.Session.output_order):
-            if x.startswith("coquery_invisible"):
-                Query.Session.output_order.remove(x)
-                Query.Session.output_order.append(x)
-        
-        Query.Session.output_order.append("coquery_invisible_number_of_tokens")
-        
         if query_string:
             cursor = self.resource.DB.execute_cursor(query_string)
         else:
