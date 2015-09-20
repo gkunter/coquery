@@ -53,12 +53,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def set_data(self, data=None):
         """ Set the content of the table model to the given data, using a
         pandas DataFrame object. """
-        # create a pandas DataFrame for the provided data:
-        if not isinstance(data, pd.DataFrame):
-            raise TypeError
-        else:
-            self.content = data
-        
+        self.content = data
         self.rownames = list(self.content.index.values)
         # try to set the columns to the output order of the current session
         try:
@@ -275,9 +270,10 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
         painter.setPen(QtGui.QPen(fg))
-        painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), unicode(value))
-
-        painter.restore()
+        try:
+            painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), unicode(value))
+        finally:
+            painter.restore()
 
 class CoqProbabilityDelegate(CoqResultCellDelegate):
     def get_background(self, option, index):
