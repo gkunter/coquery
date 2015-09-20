@@ -5,8 +5,8 @@ from pyqt_compat import QtCore, QtGui
 class CoqStopWord(QtGui.QListWidgetItem):
     def __init__(self, *args):
         super(CoqStopWord, self).__init__(*args)
-        #icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DockWidgetCloseButton)
-        #self.setIcon(icon)
+        icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DockWidgetCloseButton)
+        self.setIcon(icon)
         brush = QtGui.QBrush(QtGui.QColor("lightcyan"))
         self.setBackground(brush)
         
