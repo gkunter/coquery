@@ -259,8 +259,8 @@ class CorpusManager(QtGui.QDialog):
                     entry.setURL(builder_class.get_url())
                 
                 if builder_class.get_description():
-                    entry.setDescription("".join(["<p>{}</p>".format(x) for x in builder_class.get_description()]))
-
+                    entry.setDescription("<p>{}</p>".format(" ".join(builder_class.get_description())))
+                    
                 if builder_class.get_references():
                     references = "".join(["<p><span style='padding-left: 2em; text-indent: 2em;'>{}</span></p>".format(x) for x in builder_class.get_references()])
                     entry.setReferences("<p><b>References</b>{}".format(references))
