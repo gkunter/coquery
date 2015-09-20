@@ -105,7 +105,7 @@ class DBConnection(object):
         cur = self.Con.cursor()
         return self.execute(cur, 'SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table_name, index_name), override=True)
     
-    def create_index(self, table_name, index_name, variables, index_type, index_length):
+    def create_index(self, table_name, index_name, variables, index_type=None, index_length=None):
         cur = self.Con.cursor()
         self.execute(cur, "SELECT * FROM {} LIMIT 1".format(table_name))
         if not cur.fetchone():
