@@ -18,6 +18,7 @@ from matplotlib.patches import Rectangle
 import visualizer as vis
 
 class Visualizer(vis.BaseVisualizer):
+    dimensionality = 1
     def update_data(self):
         super(Visualizer, self).update_data()
 
