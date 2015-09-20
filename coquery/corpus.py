@@ -1688,6 +1688,8 @@ class SQLCorpus(BaseCorpus):
             query_string = "{} LIMIT {}".format(
                 query_string, options.cfg.number_of_tokens)
 
+        # if verbose, add some line breaks and tabs to the query string so
+        # that it is somewhat easier to read:
         if options.cfg.verbose:
             query_string = query_string.replace("INNER JOIN ", "\nINNER JOIN \n\t")
             query_string = query_string.replace("SELECT ", "SELECT \n\t")
