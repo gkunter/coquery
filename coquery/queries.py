@@ -307,13 +307,40 @@ class TokenQuery(object):
         return df
 
     def apply_functions(self, df):
+        """
+        Applies the selected functions to the data frame.
+        
+        This method applies the functions that were selected as output 
+        columns to the associated column from the data frame. The result of 
+        each function is added as a new column to the data frame. The name 
+        of this column takes the form
+        
+        coq_func_{resource}_{n},
+        
+        where 'resource' is the resource feature on which the function was 
+        applied, and 'n' is the count of that function. For example, the 
+        results from the first function that was applied on the resource 
+        feature 'word_label' is stored in the column 'coq_func_word_label_1',
+        the second function on that feature in 'coq_func_word_label_2', and
+        so on. 
+        
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame on which the selected function will be applied.
+        
+        Returns
+        -------
+        df : DataFrame
+            The data frame with new columns for each function.
+        """
+        
         func_counter = collections.Counter()
         for x in options.cfg.selected_functions:
             resource = x.rpartition(".")[-1]
             func_counter[resource] += 1
             name = "coq_func_{}_{}".format(resource, func_counter[resource])
-            if name in df.columns.values:
-                df[name] = df[name].apply(options.cfg.selected_functions[x])
+            df[name] = df[name].apply(options.cfg.selected_functions[x])
         return df
 
     def no_result_data_frame(self):
@@ -348,9 +375,15 @@ class TokenQuery(object):
         return
 
     def write_results(self, output_object):
-        """ Transform the query results to a pandas DataFrame that is either
+        """ 
+        Transform the query results to a pandas DataFrame that is either
         directly written to a CSV file, or stored for later processing in
-        the GUI. """
+        the GUI. 
+        
+        Parameters
+        ----------
+        
+        """
         # turn query results into a pandas DataFrame:
         df = pd.DataFrame(self.Results)
         df = self.insert_static_data(df)
