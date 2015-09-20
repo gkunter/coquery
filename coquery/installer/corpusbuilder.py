@@ -194,6 +194,7 @@ class Column(object):
         """
         return self._data_type
     
+    @property
     def base_type(self):
         """
         Return the base type of the column.
@@ -316,6 +317,25 @@ class Table(object):
         self.columns.append(column)
         if column.primary:
             self.primary = column
+
+    def get_column(self, name):
+        """
+        Return the specified column.
+        
+        Parameters
+        ----------
+        name : string
+            The name of the column
+            
+        Returns
+        -------
+        col : object or NoneType
+            The Column object matching the name, or None.
+        """
+        for x in self.columns:
+            if x.name == name:
+                return x
+        return None
             
     def get_create_string(self):
         str_list = []
@@ -1320,6 +1340,8 @@ class BaseCorpusBuilder(object):
                         dbconnection.mysql.ProgrammingError) as e:
                         if self.logger:
                             self.logger.warning(e)
+                    else:
+                        column.data_type = ot
                 column_count += 1
 
                 if self._widget:
@@ -1376,14 +1398,25 @@ class BaseCorpusBuilder(object):
                 self.logger.info("Creating index {} on table '{}'".format(
                     column, table))
                 try:
-                    if self._new_tables[table].columns[column].base_type in ("VARTEXT", "TINYTEXT", "TEXT", "MEDIUMTEXT", "LONGTEXT"):
-                        length = 10
+                    this_column = self._new_tables[table].get_column(column)
+                    
+                    # indices for TEXT/BLOB columns require a key length:
+                    if this_column.base_type.endswith("TEXT") or this_column.base_type.endswith("BLOB"):
+                        length = self.Con.get_index_length(table, column)
                     else:
                         length = None
-                    self.Con.create_index(table, column, [column], length=length)
-                except dbconnection.mysql.OperationalError as e:
+
+                    self.Con.create_index(table, column, [column], index_length=length)
+                except (
+                        dbconnection.mysql.InterfaceError, 
+                        dbconnection.mysql.DataError,
+                        dbconnection.mysql.DatabaseError, 
+                        dbconnection.mysql.OperationalError, 
+                        dbconnection.mysql.IntegrityError, 
+                        dbconnection.mysql.InternalError, 
+                        dbconnection.mysql.ProgrammingError) as e:
                     if self.logger:
-                        self.logger.Warning(e)
+                        self.logger.warning(e)
                 
                 i += 1
                 if self._widget:
@@ -1414,9 +1447,9 @@ class BaseCorpusBuilder(object):
         
         Returns
         -------
-            bool : boolean
-                True if the database and all tables in the table
-                descriptions exist, or False otherwise.
+        bool : boolean
+            True if the database and all tables in the table
+            descriptions exist, or False otherwise.
         """
         no_fail = True
         if not self.Con.has_database(self.arguments.db_name):
