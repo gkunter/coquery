@@ -182,9 +182,33 @@ class Column(object):
     
     @property
     def data_type(self):
+        """
+        Return the data type of the column.
+        
+        Returns
+        -------
+        data_type : string
+            The data type of the column in the same form as used by the 
+            MySQL CREATE TABLE command.
+        
+        """
         return self._data_type
     
     def base_type(self):
+        """
+        Return the base type of the column.
+        
+        This function does not return the field length, but only the base 
+        data type, i.e. VARCHAR, MEDIUMINT, etc.
+        
+        Use data_type for the full column specification.
+
+        Returns
+        -------
+        base_type : string
+            A MySQL base data type.
+
+        """
         return self._data_type.split()[0].partition("(")[0]
     
     @data_type.setter
@@ -222,6 +246,14 @@ class Table(object):
         self._add_cache = collections.OrderedDict()
         self._commited = {}
         self._col_names = None
+
+    @property
+    def name(self):
+        return self._name
+        
+    @name.setter
+    def name(self, s):
+        self._name = s
         
     def commit(self, db_connector):
         if self._add_cache:
@@ -239,7 +271,7 @@ class Table(object):
                     row_id, row_data = self._add_cache[row]
                     self._add_cache[row] = (row_id, None)        
     
-    def add_data(self, row):
+    def add(self, row):
         """ Add a valid primary key to the data in the 'row' dictionary, 
         and store the data in add cache of the table. """ 
         if not self._col_names:
@@ -249,15 +281,31 @@ class Table(object):
         self._add_cache[tuple([row[x] for x in sorted(row)])] = (self._current_id, row)
         return self._current_id
         
-    def get_or_insert(self, row):
-        """ Either return the id of the cached row, or insert the row as a
-        new entry and return the new id."""
+    def get_or_insert(self, values, case=False):
+        """ 
+        Returns the id of the first entry matching the values from the table.
         
-        try:
-            return self._add_cache[tuple([row[x] for x in sorted(row)])][0]
-        except KeyError:
-            return self.add_data(row)
+        If there is no entry matching the values in the table, a new entry is
+        added to the table based on the values. 
+        description.
         
+        Parameters
+        ----------
+        values : dict
+            A dictionary with column names as keys, and the entry content
+            as values.
+            
+        Returns
+        -------
+        id : int 
+            The id of the entry, as it is stored in the MySQL table.
+        """
+        row_id = self.get_data_id(values)
+        if row_id:
+            return row_id
+        else:
+            return self.add(values)
+
     def get_data_id(self, row):
         try:
             return self._add_cache[tuple([row[x] for x in sorted(row)])][0]
@@ -287,8 +335,6 @@ class Table(object):
                     column.name,
                     column.data_type))
         return ", ".join(str_list)
-    
-
     
 class BaseCorpusBuilder(object):
     """ 
@@ -428,12 +474,21 @@ class BaseCorpusBuilder(object):
         pass
     
     def commit_data(self):
+        """
+        Commit any corpus data that is still stored only in the internal 
+        tables to the database.
+        
+        :func:`commit_data` is usually called for each file after the content
+        has been processed. 
+        
+        """
         if self.interrupted:
             return
-        if in_memory:
-            for table in self._new_tables:
-                self._new_tables[table].commit(self.Con)
-        elif self._corpus_buffer:
+
+        for table in self._new_tables:
+            self._new_tables[table].commit(self.Con)
+
+        if self._corpus_buffer:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
                 self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["%s"] * (len(self._corpus_keys))))
             data = [list(row.values()) for row in self._corpus_buffer]
@@ -466,7 +521,26 @@ class BaseCorpusBuilder(object):
                 x.data_type = self._new_tables[x._link].primary.data_type
             new_table.add_column(x)
         self._new_tables[table_name] = new_table
-                
+
+    def table(self, table_name):
+        """
+        Return a Table object matching the specified name.
+        
+        Parameters
+        ----------
+        table_name : string
+            The name of the table
+            
+        Returns
+        -------
+        table : object
+            A Table object, or None if there is no table of the given name
+        """
+        try:
+            return self._new_tables[table_name]
+        except KeyError:
+            return None
+        
     #def add_table_description(self, table_name, primary_key, table_description):
         #""" Add a primary key to the table description and the internal
         #tables."""
@@ -482,75 +556,48 @@ class BaseCorpusBuilder(object):
         #self._primary_keys[table_name] = primary_key
         #self._id_count[table_name] = 0
         
-    def table_add(self, table_name, values):
-        """ 
-        Add an entry containing the values to the table. 
+    #def table_add(self, table_name, values):
+        #""" 
+        #Add an entry containing the values to the table. 
         
-        This method adds a row with the values to the specified table. A new
-        unique id is also provided, and the class counter is updated. 
-        """
-        return self.Con.insert(table_name, values)
+        #This method adds a row with the values to the specified table. A new
+        #unique id is also provided, and the class counter is updated. 
+        #"""
+        #return self.Con.insert(table_name, values)
     
-    def table_find(self, table_name, values):
-        """ 
-        Return the first row that matches the values, or None
-        otherwise.
-        """
+    #def table_find(self, table_name, values):
+        #""" 
+        #Return the first row that matches the values, or None
+        #otherwise.
+        #"""
         
-        if in_memory:
-            keys_values = set(values.keys())
-            table = self._new_tables[table_name]
-            keys_table = sorted(table._col_names)
-            lookup_list = {}
+        #if in_memory:
+            #keys_values = set(values.keys())
+            #table = self._new_tables[table_name]
+            #keys_table = sorted(table._col_names)
+            #lookup_list = {}
             
-            for key in values:
-                try:
-                    lookup_list[key] = keys_table.index(key)
-                except IndexError:
-                    pass
+            #for key in values:
+                #try:
+                    #lookup_list[key] = keys_table.index(key)
+                #except IndexError:
+                    #pass
 
-            if lookup_list:
-                for key in table._add_cache:
-                    for lookup in lookup_list:
-                        if values[lookup] != key[lookup_list[lookup]]:
-                            break
-                        else:
-                            row_id, _ = table._add_cache[key]
-                            return 
-            return None
-        else:
-            try:
-                return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
-            except IndexError:
-                return None
+            #if lookup_list:
+                #for key in table._add_cache:
+                    #for lookup in lookup_list:
+                        #if values[lookup] != key[lookup_list[lookup]]:
+                            #break
+                        #else:
+                            #row_id, _ = table._add_cache[key]
+                            #return 
+            #return None
+        #else:
+            #try:
+                #return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
+            #except IndexError:
+                #return None
     
-    def table_get(self, table_name, values, case=False):
-        """ 
-        Returns the id of the first entry matching the values from the table.
-        
-        If there is no entry matching the values in the table, a new entry is
-        added to the table based on the values. The values have to be given 
-        in the same order as the column specifications in the table
-        description.
-        """
-
-        # use new internal tables:
-        
-        if in_memory:
-            row_id = self._new_tables[table_name].get_data_id(values)
-            if row_id:
-                return row_id
-            else:
-                return self._new_tables[table_name].add_data(values)
-
-        key = tuple(values.values())
-        if key in self._tables[table_name]:
-            return self._tables[table_name][key]
-        else:
-            last = self.Con.insert(table_name, values)
-            self._tables[table_name][key] = last
-            return last
-
     def setup_logger(self):
         """ 
         Initialize the logger.
@@ -583,21 +630,20 @@ class BaseCorpusBuilder(object):
         
         self.Con.start_transaction()
         self.add_tag_table()
+
+        # initialize progress bars:
         if self._widget:
             self._widget.progressSet.emit(len(self._new_tables), "Creating tables... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-            #self._widget.ui.progress_bar.setFormat("Creating tables... (%v of %m)")
-            #self._widget.ui.progress_bar.setMaximum(len(self._new_tables))
-            #self._widget.ui.progress_bar.setValue(0)
         elif show_progress:
             progress = progressbar.ProgressBar(widgets=["Creating tables ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(self._new_tables))
             progress.start()
+
         for i, current_table in enumerate(self._new_tables):
             if not self.Con.has_table(current_table):
                 self.Con.create_table(current_table, self._new_tables[current_table].get_create_string())
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
-                #self._widget.ui.progress_bar.setValue(i)
             elif show_progress:
                 progress.update(i + 1)
             if self.interrupted:
@@ -703,11 +749,18 @@ class BaseCorpusBuilder(object):
 
     def store_filename(self, file_name):
         self._file_name = file_name
-        self._file_id = self.table_get(self.file_table, 
+        
+        self._file_id = self.table(self.file_table).get_or_insert(
             {self.file_path: file_name,
              self.file_name: 
                  os.path.splitext(os.path.basename(file_name))[0]
                  })
+        
+        #self._file_id = self.table_get(self.file_table, 
+            #{self.file_path: file_name,
+             #self.file_name: 
+                 #os.path.splitext(os.path.basename(file_name))[0]
+                 #})
 
     #def get_lemma(self, word):
         #""" Return a lemma for the word. By default, this is simply the
@@ -860,25 +913,32 @@ class BaseCorpusBuilder(object):
         tokens = []
         pos_map = []
 
+        # if possible, use NLTK for lemmatization, tokenization, and tagging:
         if self.arguments.use_nltk:
+            # the WordNet lemmatizer will be used to obtain the lemma for a
+            # given word:
             self.lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
-            self.pos_translate = lambda x:{'NN':nltk.corpus.wordnet.NOUN, 
-                 'JJ':nltk.corpus.wordnet.ADJ,
-                 'VB':nltk.corpus.wordnet.VERB,
-                 'RB':nltk.corpus.wordnet.ADV} [x.upper()[:2]]
+            
+            # The NLTK POS tagger produces some labels that are different from
+            # the labels used in WordNet. In order to use the WordNet 
+            # lemmatizer for all words, we need a function that translates 
+            # these labels:
+            self.pos_translate = lambda x: {'NN': nltk.corpus.wordnet.NOUN, 
+                'JJ': nltk.corpus.wordnet.ADJ,
+                'VB': nltk.corpus.wordnet.VERB,
+                'RB': nltk.corpus.wordnet.ADV} [x.upper()[:2]]
 
+            # Create a list of sentences from the content of the current file
+            # and process this list one by one:
             sentence_list = nltk.sent_tokenize(raw_text)
             for sentence in sentence_list:
+                # use NLTK tokenizer and POS tagger on this sentence:
                 tokens = nltk.word_tokenize(sentence)
                 pos_map = nltk.pos_tag(tokens)
-                if not sentence:
-                    print("empty")
+                    
                 for current_token, current_pos in pos_map:
-                    if current_token in string.punctuation:
-                        current_pos = "PUNCT"
-
+                    # store each token:
                     self.add_token(current_token.strip(), current_pos)
-            return
         else:
         # The default lemmatizer is pretty dumb and simply turns the 
         # word-form to lower case so that at least 'Dogs' and 'dogs' are 
@@ -889,9 +949,9 @@ class BaseCorpusBuilder(object):
         # which will result in much better results.
             self.lemmatize = lambda x: x.lower()
             self.pos_translate = lambda x: x
-            # create a list of all tokens, either using NLTK or using a 
-            # dumb tokenizer that simply splits by spaces.        
             
+            # use a dumb tokenizer that simply splits the file content by 
+            # spaces:            
             tokens = raw_text.split(" ")
             tokens = [x.strip() for x in tokens if x.strip()]
             if not pos_map:
@@ -1038,7 +1098,7 @@ class BaseCorpusBuilder(object):
             A dictionary containing the attributes of the opening tag.
             
         """
-        self.table_add(self.tag_table,
+        self.table(self.tag_table).add(
             {self.tag_label: "{}".format(tag),
                 self.tag_corpus_id: self._corpus_id + 1,
                 self.tag_type: "open",
@@ -1064,7 +1124,7 @@ class BaseCorpusBuilder(object):
             A dictionary containing the attributes of the closing tag.
         """
         
-        self.table_add(self.tag_table,
+        self.table(self.tag_table).add(
             {self.tag_label: "{}".format(tag),
                 self.tag_corpus_id: self._corpus_id,
                 self.tag_type: "close",
@@ -1145,31 +1205,27 @@ class BaseCorpusBuilder(object):
         if self._widget:
             self._widget.progressSet.emit(len(files), "Reading text files... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-            #self._widget.ui.progress_bar.setFormat("Reading text files... (%v of %m)")
-            #self._widget.ui.progress_bar.setMaximum(len(files))
-            #self._widget.ui.progress_bar.setValue(0)
         elif show_progress:
             progress = progressbar.ProgressBar(widgets=["Reading data files ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(files))
             progress.start()
             
-        for x in self.table_description:
-            self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
+        #for x in self.table_description:
+            #self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         
         for i, file_name in enumerate(files):
+            if self.interrupted:
+                return
+
             if not self.Con.find(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
-                if self.interrupted:
-                    return
                 self.process_file(file_name)
                 
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
-                #self._widget.ui.progress_bar.setValue(i)
             elif show_progress:
                 progress.update(i + 1)
-            if self.interrupted:
-                return
+
             self.commit_data()
 
         if show_progress and not self._widget:
@@ -1217,62 +1273,60 @@ class BaseCorpusBuilder(object):
         """ Optimizes the table columns so that they use a minimal amount
         of disk space."""
         totals = 0
-        for current_table in self.table_description:
-            totals += len(self.table_description[current_table]["CREATE"])
+        #for current_table in self.table_description:
+            #totals += len(self.table_description[current_table]["CREATE"])
+
+        for table in self._new_tables:
+            totals += len(self._new_tables[table].columns)
+
         totals -= 1
         
         if self._widget:
             self._widget.progressSet.emit(totals, "Optimizing table columns... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-            #self._widget.ui.progress_bar.setFormat("Optimizing table columns... (%v of %m)")
-            #self._widget.ui.progress_bar.setMaximum(totals)
-            #self._widget.ui.progress_bar.setValue(0)
         elif show_progress:
             progress = progressbar.ProgressBar(widgets=["Optimizing table columns ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=totals)
             progress.start()
             
         column_count = 0
         self.Con.start_transaction()
-        for current_table in self.table_description:
+        for table_name in self._new_tables:
+            table = self._new_tables[table_name]
             if self.interrupted:
                 return
-            field_specs = self.table_description[current_table]["CREATE"]
-            for current_spec in field_specs:
-                match = re.match ("`(\w+)`", current_spec)
-                if match:
-                    current_field = match.group(1)
-                    self.logger.info("Determine current and optimal type for column {}.{}".format(
-                        current_table, current_field))
+
+            for column in table.columns:
+                try:
+                    ot = self.Con.get_optimal_field_type(table.name, column.name)
+                except TypeError:
+                    continue
+                dt = column.data_type
+                if dt.lower() != ot.lower():
                     try:
-                        optimal_type = self.Con.get_optimal_field_type(current_table, current_field)
-                    except TypeError:
-                        continue
-                    current_type = self.Con.get_field_type(current_table, current_field)
-                    if current_type.lower() != optimal_type.lower():
-                        try:
-                            optimal_type = optimal_type.decode("utf-8")
-                        except AttributeError:
-                            pass
-                        self.logger.info("Optimising column {}.{} from {} to {}".format(
-                            current_table, current_field, current_type, optimal_type))
-                        try:
-                            self.Con.modify_field_type(current_table, current_field, optimal_type)
-                        except (
-                            dbconnection.mysql.InterfaceError, 
-                            dbconnection.mysql.DataError,
-                            dbconnection.mysql.DatabaseError, 
-                            dbconnection.mysql.OperationalError, 
-                            dbconnection.mysql.IntegrityError, 
-                            dbconnection.mysql.InternalError, 
-                            dbconnection.mysql.ProgrammingError) as e:
-                            if self.logger:
-                                self.logger.warning(e)
+                        ot = ot.decode("utf-8")
+                    except AttributeError:
+                        pass
+                    self.logger.info("Optimising column {}.{} from {} to {}".format(
+                        table.name, column.name, dt, ot))
+                    try:
+                        self.Con.modify_field_type(table.name, column.name, ot)
+                    except (
+                        dbconnection.mysql.InterfaceError, 
+                        dbconnection.mysql.DataError,
+                        dbconnection.mysql.DatabaseError, 
+                        dbconnection.mysql.OperationalError, 
+                        dbconnection.mysql.IntegrityError, 
+                        dbconnection.mysql.InternalError, 
+                        dbconnection.mysql.ProgrammingError) as e:
+                        if self.logger:
+                            self.logger.warning(e)
                 column_count += 1
+
                 if self._widget:
                     self._widget.progressUpdate.emit(column_count + 1)
-                    #self._widget.ui.progress_bar.setValue(column_count)
                 elif show_progress:
                     progress.update(column_count - 1)
+
         if self.interrupted:
             return
         self.Con.commit()
@@ -1296,46 +1350,52 @@ class BaseCorpusBuilder(object):
         However, the performance increase won by indexing usually clearly 
         outweighs these disadvantages.
         """
-        total_indices = 0
-        for current_table in self.table_description:
-            if "INDEX" in self.table_description[current_table]:
-                total_indices += len(self.table_description[current_table]["INDEX"])
+        index_list = []
+        
+        for table_name in self._new_tables:
+            table = self._new_tables[table_name]
+            for column in table.columns:
+                if not isinstance(column, Primary):
+                    index_list.append((table.name, column.name))
+
         if self._widget:
-            self._widget.progressSet.emit(total_indices, "Creating indices... (%v of %m)")
+            self._widget.progressSet.emit(len(index_list), "Creating indices... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-            #self._widget.ui.progress_bar.setFormat("Creating indices... (%v of %m)")
-            #self._widget.ui.progress_bar.setMaximum(total_indices)
-            #self._widget.ui.progress_bar.setValue(0)
         elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Indexing ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=total_indices)
+            progress = progressbar.ProgressBar(widgets=["Indexing ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(index_list))
             progress.start()
+
         index_count = 0
         self.Con.start_transaction()
-        for i, current_table in enumerate(self.table_description):
+        i = 0
+        for table, column in index_list:
             if self.interrupted:
                 return
-            # only create indices for the corpus table in the final pass:
-            description = self.table_description[current_table]
-            if "INDEX" in description:
-                for variables, length, index_type in description["INDEX"]:
-                    current_index = "_".join(variables)
-                    if not self.Con.has_index(current_table, current_index):
-                        self.logger.info("Creating index {} on table '{}'".format(
-                            current_index, current_table))
-                        try:
-                            self.Con.create_index(current_table, current_index, variables, index_type, length)
-                        except dbconnection.mysql.OperationalError as e:
-                            if self.logger:
-                                self.logger.Warning(e)
-                    index_count += 1
-                    if self._widget:
-                        self._widget.progressUpdate.emit(i + 1)
-                        #self._widget.ui.progress_bar.setValue(i)
-                    elif show_progress:
-                        progress.update(index_count)
+
+            if not self.Con.has_index(table, column):
+                self.logger.info("Creating index {} on table '{}'".format(
+                    column, table))
+                try:
+                    if self._new_tables[table].columns[column].base_type in ("VARTEXT", "TINYTEXT", "TEXT", "MEDIUMTEXT", "LONGTEXT"):
+                        length = 10
+                    else:
+                        length = None
+                    self.Con.create_index(table, column, [column], length=length)
+                except dbconnection.mysql.OperationalError as e:
+                    if self.logger:
+                        self.logger.Warning(e)
+                
+                i += 1
+                if self._widget:
+                    self._widget.progressUpdate.emit(i + 1)
+                elif show_progress:
+                    progress.update(index_count)
+
         if self.interrupted:
             return
+
         self.Con.commit()
+
         if show_progress and not self._widget:
             progress.finish()
     
@@ -1478,9 +1538,10 @@ class Resource(SQLResource):
             db_pass=self.arguments.db_password,
             db_port=self.arguments.db_port,
             local_infile=1)
-        if self.Con.has_database(self.arguments.db_name):
+        if self.Con.has_database(self.arguments.db_name) and self.arguments.l:
             self.Con.drop_database(self.arguments.db_name)
-        self.Con.create_database(self.arguments.db_name)
+        if self.arguments.c:
+            self.Con.create_database(self.arguments.db_name)
             
         self.Con.use_database(self.arguments.db_name)
 
@@ -1530,7 +1591,7 @@ class Resource(SQLResource):
         self.logger.info("Building corpus %s" % self.name)
         self.logger.info("Command line arguments: %s" % " ".join(sys.argv[1:]))
         if not self._widget:
-            print("\n%s\n" % textwrap.TextWrapper(width=79).fill("".join(self.get_description())))
+            print("\n%s\n" % textwrap.TextWrapper(width=79).fill(" ".join(self.get_description())))
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """
