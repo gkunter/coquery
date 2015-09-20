@@ -105,17 +105,72 @@ class DBConnection(object):
         cur = self.Con.cursor()
         return self.execute(cur, 'SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table_name, index_name), override=True)
     
+    def get_index_length(self, table_name, column_name, coverage=0.95):
+        """
+        Return the index length that is required for the given coverage.
+        
+        Parameters
+        ----------
+        table_name : string
+            The name of the table
+        
+        column_name : string
+            The name of the column for which an index is to be created 
+            
+        coverage : float
+            The coverage percentage that the index should cover. Default: 0.95
+        
+        Returns
+        -------
+        number : int 
+            The first character length that reaches the given coverage, or 
+            None if the coverage cannot be reached.
+        """
+        S = """
+        SELECT len,
+            COUNT(DISTINCT SUBSTR({column}, 1, len)) AS number,
+            total,
+            ROUND(COUNT(DISTINCT SUBSTR({column}, 1, len)) / total, 2) AS coverage 
+        FROM   {table}
+        INNER JOIN (
+            SELECT COUNT(DISTINCT {column}) total 
+            FROM   {table}
+            WHERE  {column} != "") count_total
+        INNER JOIN (
+            SELECT @x := @x + 1 AS len
+            FROM   {table}, (SELECT @x := 0) count_init
+            LIMIT  32) count_inc
+        GROUP BY len""".format(
+            table=table_name, column=column_name)
+        cur = self.Con.cursor()
+        self.execute(cur, S)
+        max_c = None
+        for x in cur.fetchall():
+            if not max_c or x[3] > max_c[3]:
+                max_c = x
+            if x[3] >= coverage:
+                return int(x[0])
+        if max_c:
+            return int(max_c[0])
+        return None
+    
     def create_index(self, table_name, index_name, variables, index_type=None, index_length=None):
         cur = self.Con.cursor()
+
+        # Do not create an index if the table is empty:
         self.execute(cur, "SELECT * FROM {} LIMIT 1".format(table_name))
         if not cur.fetchone():
             return
+        
         if index_length:
             variables = ["%s(%s)" % (variables[0], index_length)]
         if index_type:
-            self.execute(cur, 'CREATE INDEX {} ON {}({}) USING {}'.format(index_name, table_name, ",".join(variables), index_type))
+            S = 'CREATE INDEX {} ON {}({}) USING {}'.format(
+                index_name, table_name, ",".join(variables), index_type)
         else:
-            self.execute(cur, 'CREATE INDEX {} ON {}({})'.format(index_name, table_name, ",".join(variables)))
+            S = 'CREATE INDEX {} ON {}({})'.format(
+                index_name, table_name, ",".join(variables))
+        self.execute(cur, S)
             
     def get_field_type(self, table_name, column_name):
         cur = self.Con.cursor()
