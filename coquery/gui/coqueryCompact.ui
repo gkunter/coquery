@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>747</width>
-    <height>553</height>
+    <width>892</width>
+    <height>718</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -394,7 +394,7 @@
              </property>
              <property name="icon">
               <iconset theme="media-playback-start">
-               <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+               <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -524,7 +524,7 @@
               </property>
               <property name="icon">
                <iconset theme="document-properties">
-                <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+                <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
               </property>
               <property name="iconSize">
                <size>
@@ -595,7 +595,7 @@
               </property>
               <property name="icon">
                <iconset theme="document-open">
-                <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+                <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
               </property>
               <property name="iconSize">
                <size>
@@ -621,7 +621,7 @@
          <item>
           <widget class="QFrame" name="box_output_options">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -647,7 +647,7 @@
               <item>
                <widget class="QLabel" name="label_2">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -690,7 +690,7 @@
          <item>
           <widget class="QFrame" name="box_source_filter">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -711,7 +711,7 @@
             <item>
              <widget class="QWidget" name="tag_cloud" native="true">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+               <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -796,7 +796,7 @@
        </property>
        <attribute name="icon">
         <iconset theme="table">
-         <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+         <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
        </attribute>
        <attribute name="title">
         <string>Results</string>
@@ -885,8 +885,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>747</width>
-     <height>21</height>
+     <width>892</width>
+     <height>36</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -982,7 +982,7 @@
   <action name="action_open_input_file">
    <property name="icon">
     <iconset theme="document-open">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Open input file...</string>
@@ -994,7 +994,7 @@
   <action name="action_save_results">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Save results...</string>
@@ -1006,7 +1006,7 @@
   <action name="action_help">
    <property name="icon">
     <iconset theme="help-contents">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Help</string>
@@ -1043,7 +1043,7 @@
   <action name="action_statistics">
    <property name="icon">
     <iconset theme="view-statistics">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Corpus &amp;statistics</string>
@@ -1052,7 +1052,7 @@
   <action name="action_mySQL_settings">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;MySQL settings...</string>
@@ -1061,7 +1061,7 @@
   <action name="action_options">
    <property name="icon">
     <iconset theme="configure">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Options...</string>
@@ -1070,7 +1070,7 @@
   <action name="action_quit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -1082,7 +1082,7 @@
   <action name="action_build_corpus">
    <property name="icon">
     <iconset theme="document-new">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Build new corpus...</string>
@@ -1097,7 +1097,7 @@
    </property>
    <property name="icon">
     <iconset theme="edit-delete">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Remove corpus...</string>
@@ -1109,7 +1109,7 @@
   <action name="action_manage_corpus">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Manage corpora...</string>
@@ -1162,8 +1162,7 @@
   <action name="action_corpus_documentation">
    <property name="icon">
     <iconset theme="help-browser">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Corpus &amp;documentation...</string>

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>866</width>
-    <height>703</height>
+    <width>1071</width>
+    <height>791</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -208,7 +208,7 @@ summary:</string>
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_14">
               <property name="spacing">
-               <number>1</number>
+               <number>-1</number>
               </property>
               <item>
                <widget class="QRadioButton" name="radio_mode_tokens">
@@ -338,7 +338,7 @@ The number of occurrences of each token matching the query string is counted. Th
             <item row="0" column="1">
              <layout class="QVBoxLayout" name="verticalLayout_11">
               <property name="spacing">
-               <number>1</number>
+               <number>-1</number>
               </property>
               <item>
                <widget class="QRadioButton" name="radio_context_mode_kwic">
@@ -572,7 +572,7 @@ The number of occurrences of each token matching the query string is counted. Th
              </property>
              <property name="icon">
               <iconset theme="media-playback-start">
-               <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+               <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
              </property>
             </widget>
            </item>
@@ -725,7 +725,7 @@ The number of occurrences of each token matching the query string is counted. Th
               </property>
               <property name="icon">
                <iconset theme="document-properties">
-                <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+                <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
               </property>
               <property name="shortcut">
                <string>Alt+B</string>
@@ -745,7 +745,7 @@ The number of occurrences of each token matching the query string is counted. Th
               </property>
               <property name="icon">
                <iconset theme="document-open">
-                <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+                <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
               </property>
               <property name="shortcut">
                <string>Alt+B</string>
@@ -952,7 +952,7 @@ The number of occurrences of each token matching the query string is counted. Th
        </property>
        <attribute name="icon">
         <iconset theme="table">
-         <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+         <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
        </attribute>
        <attribute name="title">
         <string>Query result</string>
@@ -1012,138 +1012,6 @@ The number of occurrences of each token matching the query string is counted. Th
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="stopword_tab">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <attribute name="title">
-        <string>Stop-words</string>
-       </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_4">
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,0">
-          <property name="spacing">
-           <number>20</number>
-          </property>
-          <item>
-           <widget class="QListWidget" name="stopword_list">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="alternatingRowColors">
-             <bool>true</bool>
-            </property>
-            <property name="selectionMode">
-             <enum>QAbstractItemView::ExtendedSelection</enum>
-            </property>
-            <property name="flow">
-             <enum>QListView::TopToBottom</enum>
-            </property>
-            <property name="isWrapping" stdset="0">
-             <bool>true</bool>
-            </property>
-            <property name="resizeMode">
-             <enum>QListView::Adjust</enum>
-            </property>
-            <property name="spacing">
-             <number>10</number>
-            </property>
-            <property name="viewMode">
-             <enum>QListView::IconMode</enum>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-            <property name="selectionRectVisible">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout_6">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QPushButton" name="button_stopword_load">
-              <property name="text">
-               <string>Load stop-words</string>
-              </property>
-              <property name="icon">
-               <iconset theme="document-open">
-                <normaloff/>
-               </iconset>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_stopword_save">
-              <property name="text">
-               <string>Save stop-words</string>
-              </property>
-              <property name="icon">
-               <iconset theme="document-save">
-                <normaloff/>
-               </iconset>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="verticalSpacer_2">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-              <property name="sizeType">
-               <enum>QSizePolicy::MinimumExpanding</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>40</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout_10">
-              <property name="spacing">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QLabel" name="label_3">
-                <property name="text">
-                 <string>Add stop word:</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="edit_stopword">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_stopword_remove">
-                <property name="text">
-                 <string>Remove</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </widget>
       <widget class="QWidget" name="log_tab">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -1153,7 +1021,7 @@ The number of occurrences of each token matching the query string is counted. Th
        </property>
        <attribute name="icon">
         <iconset theme="utilities-log-viewer">
-         <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+         <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
        </attribute>
        <attribute name="title">
         <string>Query log</string>
@@ -1186,8 +1054,8 @@ The number of occurrences of each token matching the query string is counted. Th
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>866</width>
-     <height>21</height>
+     <width>1071</width>
+     <height>36</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1238,20 +1106,12 @@ The number of occurrences of each token matching the query string is counted. Th
      <addaction name="action_stacked_area_plot"/>
      <addaction name="action_line_plot"/>
     </widget>
-    <widget class="QMenu" name="menuFrequencies">
-     <property name="title">
-      <string>&amp;Bar charts</string>
-     </property>
-     <addaction name="action_stacked_barchart_plot"/>
-     <addaction name="action_Stacked_bars"/>
-     <addaction name="action_barchart_plot"/>
-    </widget>
     <widget class="QMenu" name="menuFrequency_maps">
      <property name="title">
       <string>Frequency maps</string>
      </property>
-     <addaction name="action_tree_map"/>
      <addaction name="action_heat_map"/>
+     <addaction name="action_tree_map"/>
      <addaction name="action_word_cloud"/>
     </widget>
     <widget class="QMenu" name="menuCorpus_locations">
@@ -1260,6 +1120,14 @@ The number of occurrences of each token matching the query string is counted. Th
      </property>
      <addaction name="action_barcode_plot"/>
      <addaction name="action_beeswarm_plot"/>
+    </widget>
+    <widget class="QMenu" name="menuFrequencies">
+     <property name="title">
+      <string>&amp;Bar charts</string>
+     </property>
+     <addaction name="action_stacked_barchart_plot"/>
+     <addaction name="action_Stacked_bars"/>
+     <addaction name="action_barchart_plot"/>
     </widget>
     <addaction name="menuCorpus_locations"/>
     <addaction name="menuFrequencies"/>
@@ -1283,7 +1151,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_open_input_file">
    <property name="icon">
     <iconset theme="document-open">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Open input file...</string>
@@ -1295,7 +1163,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_save_results">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Save results...</string>
@@ -1307,7 +1175,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_help">
    <property name="icon">
     <iconset theme="help-contents">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Help</string>
@@ -1344,7 +1212,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_statistics">
    <property name="icon">
     <iconset theme="view-statistics">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Corpus &amp;statistics</string>
@@ -1353,7 +1221,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_mySQL_settings">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;MySQL settings...</string>
@@ -1362,7 +1230,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_options">
    <property name="icon">
     <iconset theme="configure">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Options...</string>
@@ -1371,7 +1239,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_quit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -1383,7 +1251,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_build_corpus">
    <property name="icon">
     <iconset theme="document-new">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Build new corpus...</string>
@@ -1398,7 +1266,7 @@ The number of occurrences of each token matching the query string is counted. Th
    </property>
    <property name="icon">
     <iconset theme="edit-delete">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Remove corpus...</string>
@@ -1410,7 +1278,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_manage_corpus">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Manage corpora...</string>
@@ -1420,6 +1288,9 @@ The number of occurrences of each token matching the query string is counted. Th
    </property>
   </action>
   <action name="action_tree_map">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>&amp;Tree map</string>
    </property>
@@ -1463,8 +1334,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_corpus_documentation">
    <property name="icon">
     <iconset theme="help-browser">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Corpus &amp;documentation...</string>
@@ -1501,6 +1371,9 @@ The number of occurrences of each token matching the query string is counted. Th
    </property>
   </action>
   <action name="action_Stacked_bars">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>&amp;Stacked bars</string>
    </property>

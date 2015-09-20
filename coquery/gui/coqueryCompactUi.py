@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coqueryCompact.ui'
 #
-# Created: Thu Sep 10 10:27:43 2015
+# Created: Sun Sep 20 18:53:56 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(747, 553)
+        MainWindow.resize(892, 718)
         MainWindow.setIconSize(QtCore.QSize(16, 16))
         MainWindow.setDocumentMode(False)
         self.centralwidget = QtGui.QWidget(MainWindow)
@@ -356,7 +356,7 @@ class Ui_MainWindow(object):
         self.output_settings.setSpacing(4)
         self.output_settings.setObjectName(_fromUtf8("output_settings"))
         self.box_output_options = QtGui.QFrame(self.options_area)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.box_output_options.sizePolicy().hasHeightForWidth())
@@ -372,7 +372,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.setSpacing(10)
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
         self.label_2 = QtGui.QLabel(self.box_output_options)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
@@ -397,7 +397,7 @@ class Ui_MainWindow(object):
         self.output_columns.addLayout(self.options_list)
         self.output_settings.addWidget(self.box_output_options)
         self.box_source_filter = QtGui.QFrame(self.options_area)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.box_source_filter.sizePolicy().hasHeightForWidth())
@@ -410,7 +410,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.setMargin(0)
         self.verticalLayout_5.setObjectName(_fromUtf8("verticalLayout_5"))
         self.tag_cloud = QtGui.QWidget(self.box_source_filter)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tag_cloud.sizePolicy().hasHeightForWidth())
@@ -496,7 +496,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.tabbed_views)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 747, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 892, 36))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
