@@ -737,7 +737,8 @@ class VisualizerDialog(QtGui.QWidget):
             dialog.add_matplot()
             #self.sub_process = multiprocessing.Process(target=self.plot_it, args=())
             #self.sub_process.start()
-            self.visualizer.start_draw_thread()
+            self.visualizer.draw()
+            #self.visualizer.start_draw_thread()
             
 if __name__ == "__main__":
     unittest.main()
