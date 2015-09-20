@@ -24,9 +24,10 @@ class Visualizer(vis.BaseVisualizer):
         if len(self._groupby) < 2:
             # create a dummy cross tab with one dimension containing empty
             # values:
+            data_column = self._table[self._groupby[0]].reset_index(drop=True)
             tab = pd.crosstab(
-                pd.Series([""] * len(self._table[self._groupby[0]]), name=""), 
-                self._table[self._groupby[0]])
+                pd.Series([""] * len(data_column), name=""), 
+                data_column)
             plot_facet = lambda data, color: sns.heatmap(
                 tab,
                 robust=True,
