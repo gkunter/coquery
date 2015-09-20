@@ -226,8 +226,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         super(ICENigeriaBuilder, self).__init__(gui, *args)
 
         # specify which features are provided by this corpus and lexicon:
-        self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
-        self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS", "CORP_SOURCE"]
+        #self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
+        #self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS", "CORP_SOURCE"]
         self.documentation_url = ICENigeriaBuilder.get_url()
 
         self.check_arguments()
@@ -276,14 +276,6 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         self.corpus_file_id = "FileId"
         self.corpus_source_id = "SourceId"
         
-        #self.add_table_description(self.corpus_table, self.corpus_id,
-            #{"CREATE": [
-                #"`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.corpus_id),
-                #"`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_word_id),
-                ##"`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.corpus_sentence_id),                
-                #"`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_file_id),
-                #"`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.corpus_source_id)]})
-
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
         #
@@ -318,10 +310,6 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                 ([self.word_pos], 0, "BTREE"),
                 ([self.word_label], 0, "BTREE")]
 
-        #self.add_table_description(self.word_table, self.word_id,
-            #{"CREATE": create_columns,
-            #"INDEX": index_columns})
-            
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(32) NOT NULL"),
@@ -346,12 +334,6 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         self.file_name = "Filename"
         self.file_path = "Path"
         
-        #self.add_table_description(self.file_table, self.file_id,
-            #{"CREATE": [
-                #"`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
-                #"`{}` TINYTEXT NOT NULL".format(self.file_name),
-                #"`{}` TINYTEXT NOT NULL".format(self.file_path)]})
-
         self.create_table_description(self.file_table,
             [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.file_name, "TINYTEXT NOT NULL"),
@@ -375,18 +357,6 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         self.source_icetextcode = "ICE_text_code"
         self.source_place = "Place"
         
-        #self.add_table_description(self.source_table, self.source_id,
-            #{"CREATE": [
-                #"`{}` SMALLINT(3) UNSIGNED NOT NULL".format(self.source_id),
-                #"`{}` TINYTEXT NOT NULL".format(self.source_mode),
-                #"`{}` VARCHAR(15) NOT NULL".format(self.source_date),
-                #"`{}` VARCHAR(35) NOT NULL".format(self.source_icetext),
-                #"`{}` VARCHAR(33) NOT NULL".format(self.source_icetextcode),
-                #"`{}` VARCHAR(30) NOT NULL".format(self.source_place),
-                #"`{}` VARCHAR(5) NOT NULL".format(self.source_age),
-                #"`{}` VARCHAR(1) NOT NULL".format(self.source_gender),
-                #"`{}` VARCHAR(15) NOT NULL".format(self.source_ethnicity)]})
-
         self.add_time_feature(self.source_date)
         self.add_time_feature(self.source_age)
 
@@ -450,7 +420,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
                     word_pos = "PUNCT"
                     
                 if word_text and lemma_text:
-                    self._word_id = self.table_get(self.word_table, 
+                    self._word_id = self.table(self.word_table).get_or_insert(
                         {self.word_label: word_text, 
                         self.word_lemma: lemma_text, 
                         self.word_pos: word_pos}, case=True)
@@ -505,7 +475,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             meta_info["date"] = ""
 
         # all meta data gathered, store it:
-        self._source_id = self.table_get(self.source_table,
+        self._source_id = self.table(self.source_table).get_or_insert(
             {self.source_age: meta_info["age"],
              self.source_gender: meta_info["gender"],
              self.source_ethnicity: meta_info["ethnic-group"],
@@ -800,7 +770,9 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
     def get_description():
         return [
             "The International Corpus of English – Nigeria is a member of the ICE family of English corpora.",
-            "It contains approximately 460.000 tokens of spoken Nigerian English, dating mostly from the first decade of the 21st century. Where known, the corpus provides speaker information (age, gender, ethnicity). The corpus also contains some textual meta information on the layout of the texts."]
+            "It contains approximately 460.000 tokens of spoken Nigerian English, dating mostly from the first decade of the 21st century.",
+            "Where known, the corpus provides speaker information (age, gender, ethnicity).",
+            "The corpus also contains some textual meta information on the layout of the texts."]
 
     @staticmethod
     def get_license():
