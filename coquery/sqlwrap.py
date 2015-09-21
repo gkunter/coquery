@@ -50,7 +50,7 @@ class SqlDB (object):
                     passwd=Password,
                     charset=encoding)
 
-        except mysql.InternalError as e:
+        except (mysql.OperationalError, mysql.InternalError) as e:
              raise SQLInitializationError(e)
         self.Cur = self.Con.cursor()
         self.set_variable("NAMES", encoding)
