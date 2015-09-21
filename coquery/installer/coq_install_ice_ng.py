@@ -769,10 +769,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
     @staticmethod
     def get_description():
         return [
-            "The International Corpus of English – Nigeria is a member of the ICE family of English corpora.",
-            "It contains approximately 460.000 tokens of spoken Nigerian English, dating mostly from the first decade of the 21st century.",
-            "Where known, the corpus provides speaker information (age, gender, ethnicity).",
-            "The corpus also contains some textual meta information on the layout of the texts."]
+            "The International Corpus of English – Nigeria is a member of the ICE family of English corpora. It contains approximately 460.000 tokens of spoken Nigerian English, dating mostly from the first decade of the 21st century. Where known, the corpus provides speaker information (age, gender, ethnicity). The corpus also contains some textual meta information on the layout of the texts."]
 
     @staticmethod
     def get_license():
@@ -793,11 +790,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
     def get_url():
         return "http://ice-corpora.net/ice/index.htm"
 
-
 BuilderClass = ICENigeriaBuilder
 
-def main():
-    ICENigeriaBuilder().build()
-    
 if __name__ == "__main__":
-    main()
+    BuilderClass().build()

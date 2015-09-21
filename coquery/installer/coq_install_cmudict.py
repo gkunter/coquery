@@ -102,5 +102,5 @@ class CMUdictBuilder(BaseCorpusBuilder):
 BuilderClass = CMUdictBuilder
 
 if __name__ == "__main__":
-    CMUdictBuilder().build()
+    BuilderClass().build()
     
