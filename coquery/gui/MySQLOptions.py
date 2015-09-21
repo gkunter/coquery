@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -60,7 +62,7 @@ class MySQLOptions(QtGui.QDialog):
         
         self.ui = MySQLOptionsUi.Ui_Dialog()
         self.ui.setupUi(self)
-        if host == "localhost" or host == "127.0.0.1":
+        if host == "localhost":
             self.ui.radio_local.setChecked(True)
         else:
             self.ui.radio_remote.setChecked(True)
@@ -69,6 +71,8 @@ class MySQLOptions(QtGui.QDialog):
         self.ui.password.setText(password)
         self.ui.port.setValue(port)
         self.check_connection()
+        
+        self.ui.button_create_user.clicked.connect(self.create_user)
         
         self.ui.hostname.textChanged.connect(self.check_connection)
         self.ui.user.textChanged.connect(self.check_connection)
@@ -79,20 +83,68 @@ class MySQLOptions(QtGui.QDialog):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).clicked.connect(self.start_mysql_guide)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setText("MySQL server guide...")
 
+    def create_user(self):
+        import createuser
+        name = self.ui.user.text()
+        password = self.ui.password.text()
+        create_data = createuser.CreateUser.get(name, password, self)
+
+        if self.ui.radio_local.isChecked():
+            hostname = "localhost"
+        else:
+            hostname = str(self.ui.hostname.text())
+            if hostname == "127.0.0.1":
+                hostname = "localhost"
+
+        if create_data:
+            root_name, root_password, name, password = create_data
+            try:
+                DB = sqlwrap.SqlDB(
+                    hostname,
+                    self.ui.port.value(),
+                    root_name,
+                    root_password)
+            except SQLInitializationError:
+                QtGui.QMessageBox.critical(self, "Access as root failed", "<p>A root access to the MySQL server could not be established.</p><p>Please check the MySQL root name and the MySQL root password, and try again to create a user.") 
+                return
+            S = """
+            CREATE USER '{user}'@'{hostname}' IDENTIFIED BY '{password}';
+            GRANT ALL PRIVILEGES ON * . * TO '{user}'@'{hostname}';
+            FLUSH PRIVILEGES;""".format(
+                user=name, password=password, hostname=hostname)
+            try:
+                DB.Cur.execute(S)
+            except:
+                QtGui.QMessageBox.critical(self, "Error creating user", "Apologies – the user named '{}' could not be created on the MySQL server.".format(name))
+                return
+            else:
+                QtGui.QMessageBox.information(self, "User created", "The user named '{}' has successfully been created on the MySQL server.".format(name))
+            finally:
+                DB.close()
+            self.ui.user.setText(name)
+            self.ui.password.setText(password)
+            self.check_connection()
+            
     def check_connection(self):
         """ Check if a connection to a MySQL server can be established using
         the settings from the GUI. Return True if a connection can be
         established, or True if not. Also, set up the connection indicator
         accordingly."""
         def indicate_no_connection(self, e):
-            self.ui.label_connection.setText("Not connected: {}".format(e))
+            self.ui.label_connection.setText("Could not connect to a MySQL server ({}).".format(e))
             self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(True)
+        
+        def indicate_access_denied(self, e):
+            self.ui.label_connection.setText("A MySQL server was found, but the access was denied. Check the user name and password, or create a new MySQL user.")
+            self.ui.button_status.setStyleSheet('QPushButton {background-color: yellow; color: yellow;}')
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(True)
         
         def indicate_connection(self):
             self.ui.button_status.setStyleSheet('QPushButton {background-color: green; color: green;}')
-            self.ui.label_connection.setText("Connected ({})".format(x[0]))
+            self.ui.label_connection.setText("Coquery is successfully connected to the MySQL server.")
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(False)
         
@@ -102,6 +154,12 @@ class MySQLOptions(QtGui.QDialog):
         else:
             self.ui.hostname.setDisabled(False)
             hostname = str(self.ui.hostname.text())
+            if hostname == "127.0.0.1" or hostname == "localhost":
+                hostname = "localhost"
+                self.ui.radio_local.setChecked(True)
+                self.ui.hostname.setText("")
+                self.ui.hostname.setEnabled(False)
+                self.ui.radio_local.setFocus(True)
 
         if check_valid_host(hostname):
             try:
@@ -114,10 +172,16 @@ class MySQLOptions(QtGui.QDialog):
                 x = DB.Cur.fetchone()
                 DB.close()
             except SQLInitializationError as e:
-                indicate_no_connection(self, e)
+                if "access denied" in str(e).lower():
+                    indicate_access_denied(self, e)
+                    self.ui.button_create_user.setEnabled(True)
+                else:
+                    indicate_no_connection(self, e)
+                    self.ui.button_create_user.setEnabled(False)
                 return False
             else:
                 indicate_connection(self)
+                self.ui.button_create_user.setEnabled(False)
                 return True
         else:
             indicate_no_connection(self, "Invalid hostname or invalid IP address")
@@ -137,13 +201,13 @@ class MySQLOptions(QtGui.QDialog):
         result = dialog.exec_()
         if result:
             namespace = argparse.Namespace()
-            namespace.db_user = dialog.ui.user.text()
-            namespace.db_password = dialog.ui.password.text()
+            namespace.db_user = str(dialog.ui.user.text())
+            namespace.db_password = str(dialog.ui.password.text())
             if dialog.ui.radio_remote.isChecked():
-                namespace.db_host = dialog.ui.hostname.text()
+                namespace.db_host = str(dialog.ui.hostname.text())
             else:
                 namespace.db_host = "localhost"
-            namespace.db_port = dialog.ui.port.value()
+            namespace.db_port = int(dialog.ui.port.value())
             return namespace
         else:
             return None
