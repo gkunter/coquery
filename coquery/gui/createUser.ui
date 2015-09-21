@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>586</width>
-    <height>556</height>
+    <height>569</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -95,7 +95,7 @@
       <item>
        <widget class="QLabel" name="label_7">
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter a user name and a password. This user will be granted all privileges that are required to create, query, and delete MySQL databases.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter a user name and a password. This user will be granted all privileges that are required to create, query, modify, and delete MySQL databases and tables. This user will not have the privilege to create or modify the priviledges of other users.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>

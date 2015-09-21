@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'createUser.ui'
 #
-# Created: Mon Sep 21 18:48:19 2015
+# Created: Mon Sep 21 19:42:48 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_CreateUser(object):
     def setupUi(self, CreateUser):
         CreateUser.setObjectName(_fromUtf8("CreateUser"))
-        CreateUser.resize(586, 556)
+        CreateUser.resize(586, 569)
         self.verticalLayout_2 = QtGui.QVBoxLayout(CreateUser)
         self.verticalLayout_2.setSpacing(16)
         self.verticalLayout_2.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
@@ -145,7 +145,7 @@ class Ui_CreateUser(object):
         self.label.setText(_translate("CreateUser", "<html><head/><body><p>In order to create a new MySQL user and provide it with the required database privileges, you need to provide the <span style=\" font-weight:600;\">MySQL root user</span> and <span style=\" font-weight:600;\">MySQL root password</span>. Do not use your system root or administrator account credentials.</p></body></html>", None))
         self.label_2.setText(_translate("CreateUser", "Root password:", None))
         self.label_3.setText(_translate("CreateUser", "Root user:", None))
-        self.label_7.setText(_translate("CreateUser", "<html><head/><body><p>Enter a user name and a password. This user will be granted all privileges that are required to create, query, and delete MySQL databases.</p></body></html>", None))
+        self.label_7.setText(_translate("CreateUser", "<html><head/><body><p>Enter a user name and a password. This user will be granted all privileges that are required to create, query, modify, and delete MySQL databases and tables. This user will not have the privilege to create or modify the priviledges of other users.</p></body></html>", None))
         self.label_4.setText(_translate("CreateUser", "Password:", None))
         self.label_5.setText(_translate("CreateUser", "New user name:", None))
         self.label_6.setText(_translate("CreateUser", "Retype password::", None))
