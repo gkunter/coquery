@@ -257,20 +257,44 @@ class Table(object):
         self._name = s
         
     def commit(self, db_connector):
+        """
+        Commit the table content to the data base.
+        
+        This table commits the unsaved content of the table to the data base.
+        After commiting, the values of all table entries are set to None, and
+        only those data that have a value different from None will be 
+        commited the next time this method is called.
+        
+        As this method is usually called after a file has been processed, 
+        this ensures that all new table rows are commited, while at the same
+        time preserving some memory space.
+        """
+        
         if self._add_cache:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
                 self._name, ", ".join([self.primary.name] + self._col_names), ", ".join(["%s"] * (len(self._col_names) + 1)))
             data = []
+            new_keys = []
+            # build a list of all new entries, i.e. those for which the value
+            # is not Null
             for row in self._add_cache:
                 row_id, row_data = self._add_cache[row]
+                if len(row_data) == 1:
+                    for x in row_data:
+                        row_data[x] = ["", row_data[x][0], "u"]
                 if row_data:
                     data.append([row_id] + list(row_data.values()))
-            #data = [[row_id] + row.values() for row_id, row in self._add_cache if row]
+                    new_keys.append(row)
+
             if data: 
-                db_connector.executemany(sql_string, data)
-                for row in self._add_cache:
-                    row_id, row_data = self._add_cache[row]
-                    self._add_cache[row] = (row_id, None)        
+                try:
+                    db_connector.executemany(sql_string, data)
+                except TypeError as e:
+                    print(sql_string, data)
+                    print(e)
+                # Reset all new keys:
+                for row in new_keys:
+                    self._add_cache[row] = (self._add_cache[row][0], None)
     
     def add(self, row):
         """ Add a valid primary key to the data in the 'row' dictionary, 
@@ -306,6 +330,44 @@ class Table(object):
             return row_id
         else:
             return self.add(values)
+
+    def find(self, values):
+        """ 
+        Return the first row that matches the values, or None
+        otherwise.
+        """
+
+        self._add_cache[tuple([row[x] for x in sorted(row)])] = (self._current_id, row)
+
+        
+        if in_memory:
+            keys_values = set(values.keys())
+            table = self._new_tables[table_name]
+            keys_table = sorted(table._col_names)
+            lookup_list = {}
+            
+            for key in values:
+                try:
+                    lookup_list[key] = keys_table.index(key)
+                except IndexError:
+                    pass
+
+            if lookup_list:
+                for key in table._add_cache:
+                    for lookup in lookup_list:
+                        if values[lookup] != key[lookup_list[lookup]]:
+                            break
+                        else:
+                            row_id, _ = table._add_cache[key]
+                            return 
+            return None
+        else:
+            try:
+                return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
+            except IndexError:
+                return None
+
+
 
     def get_data_id(self, row):
         try:
@@ -896,10 +958,11 @@ class BaseCorpusBuilder(object):
                     word_dict[self.word_transcript_id] = self.get_transcript_id(word)
 
                 # get a word id for the current word:
-                word_id = self.table_get(self.word_table, word_dict)
+                word_id = self.table(self.word_table).get_or_insert(word_dict)
                 
                 # add the word as a new token to the corpus:
-                self.table_add(self.corpus_table, 
+                
+                self.add_token_to_corpus(
                     {self.corpus_word_id: word_id, 
                         self.corpus_file_id: self._file_id,
                         self.corpus_time: time})
@@ -1017,7 +1080,7 @@ class BaseCorpusBuilder(object):
                     self.word_label: token_string}
         if token_pos and "word_pos" in dir(self):
             word_dict[self.word_pos] = token_pos 
-        word_id = self.table_get(self.word_table, word_dict, case=True)
+        word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
 
         # store new token in corpus table:
         self.add_token_to_corpus(
@@ -1179,12 +1242,12 @@ class BaseCorpusBuilder(object):
         reimplementation of :func:`process_file` so that the method is 
         called the placeholder tag is encountered in the source files.
         """
-        self.table_add(self.tag_table,
+        self.table(self.tag_table).add(
             {self.tag_label: "{}".format(tag),
-                self.tag_corpus_id: self._corpus_id + 1,
-                self.tag_type: "empty",
-                self.tag_attribute: ", ".join(
-                    ["{}={}".format(x, attributes[x]) for x in attributes])})
+             self.tag_corpus_id: self._corpus_id + 1,
+             self.tag_type: "empty",
+             self.tag_attribute: ", ".join(
+                ["{}={}".format(x, attributes[x]) for x in attributes])})
 
     ### END XML
 
@@ -1613,9 +1676,6 @@ class Resource(SQLResource):
     @staticmethod
     def get_name():
         return "(unnamed)"
-
-    def get_speaker_data(self, *args):
-        return []
 
     def initialize_build(self):
         """ Start logging, start the timer."""
