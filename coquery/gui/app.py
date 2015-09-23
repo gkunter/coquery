@@ -216,6 +216,9 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         if not item:
             return
 
+        if str(item.objectName()).startswith("coquery"):
+            return
+
         # show self.menu about the column
         self.menu = QtGui.QMenu("Output column options", self)
         action = QtGui.QWidgetAction(self)
@@ -223,32 +226,42 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         label.setAlignment(QtCore.Qt.AlignCenter)
         action.setDefaultWidget(label)
         self.menu.addAction(action)
-        self.menu.addSeparator()
+        
+        if not str(item.objectName()).endswith("_table"):
+            view_unique = QtGui.QAction("View &unique values", self)
+            view_unique.triggered.connect(lambda: self.show_unique_values(item))
+            self.menu.addAction(view_unique)
+            self.menu.addSeparator()
 
-        add_link = QtGui.QAction("&Link to external table", self)
-        add_function = QtGui.QAction("&Add a function", self)
-        remove_link = QtGui.QAction("&Remove link", self)
-        remove_function = QtGui.QAction("&Remove function", self)
-        
-        parent = item.parent()
-        
-        if item._link_by or (parent and parent._link_by):
-            self.menu.addAction(remove_link)
-        elif item._func:
-            self.menu.addAction(remove_function)
-        else:
-            self.menu.addAction(add_link)
-            self.menu.addAction(add_function)
-        
-        self.menu.popup(self.mapToGlobal(point))
-        action = self.menu.exec_()
+            add_link = QtGui.QAction("&Link to external table", self)
+            add_function = QtGui.QAction("&Add a function", self)
+            remove_link = QtGui.QAction("&Remove link", self)
+            remove_function = QtGui.QAction("&Remove function", self)
+            
+            parent = item.parent()
+            
+            if item._link_by or (parent and parent._link_by):
+                self.menu.addAction(remove_link)
+            elif item._func:
+                self.menu.addAction(remove_function)
+            else:
+                self.menu.addAction(add_link)
+                self.menu.addAction(add_function)
+            
+            self.menu.popup(self.mapToGlobal(point))
+            action = self.menu.exec_()
 
-        if action == add_link:
-            self.addLink.emit(item)
-        elif action == add_function:
-            self.addFunction.emit(item)
-        elif action in (remove_link, remove_function):
-            self.removeItem.emit(item)
+            if action == add_link:
+                self.addLink.emit(item)
+            elif action == add_function:
+                self.addFunction.emit(item)
+            elif action in (remove_link, remove_function):
+                self.removeItem.emit(item)
+            
+
+    def show_unique_values(self, item):
+        import uniqueviewer
+        uniqueviewer.UniqueViewer.show(item.objectName(), options.cfg.main_window.resource)
 
         
 class LogTableModel(QtCore.QAbstractTableModel):
