@@ -708,6 +708,7 @@ class CoqueryApp(QtGui.QMainWindow):
             root = CoqTreeItem()
             root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
+            root.setText(0, table)
             root.setCheckState(0, QtCore.Qt.Unchecked)
             if table_dict[table]:
                 tree.addTopLevelItem(root)
