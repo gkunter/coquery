@@ -708,7 +708,6 @@ class CoqueryApp(QtGui.QMainWindow):
             root = CoqTreeItem()
             root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
-            root.setText(0, table.capitalize())
             root.setCheckState(0, QtCore.Qt.Unchecked)
             if table_dict[table]:
                 tree.addTopLevelItem(root)
@@ -718,7 +717,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 leaf = CoqTreeItem()
                 leaf.setObjectName(coqueryUi._fromUtf8(var))
                 root.addChild(leaf)
-                label = type(self.resource).__getattribute__(self.resource, var).capitalize()
+                label = type(self.resource).__getattribute__(self.resource, var)
                 leaf.setText(0, label)
                 if var in last_checked: 
                     leaf.setCheckState(0, QtCore.Qt.Checked)
@@ -1543,7 +1542,7 @@ class CoqueryApp(QtGui.QMainWindow):
             child_table.setObjectName("{}.{}_table".format(corpus, table_name))
             item.parent().addChild(child_table)
             child_table.setLink("{}.{}".format(item.parent().objectName(), item.objectName()), feature_name)
-            child_table.setText(column, "{} ► {}.{}".format(str(item.text(0)).capitalize(), corpus.upper(), table_name.capitalize()))
+            child_table.setText(column, "{} ► {}.{}".format(str(item.text(0)), corpus.upper(), table_name))
             child_table.setCheckState(column, False)
             
             for rc_feature in table:
