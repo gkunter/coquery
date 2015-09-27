@@ -708,7 +708,12 @@ class CoqueryApp(QtGui.QMainWindow):
             root = CoqTreeItem()
             root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
-            root.setText(0, table)
+            try:
+                label = type(self.resource).__getattribute__(self.resource, str("{}_table".format(table)))
+            except AttributeError:
+                label = table.capitalize()
+                
+            root.setText(0, label)
             root.setCheckState(0, QtCore.Qt.Unchecked)
             if table_dict[table]:
                 tree.addTopLevelItem(root)
@@ -865,7 +870,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Get CSV file options for current query input file. """
         import csvOptions
         results = csvOptions.CSVOptions.getOptions(
-            self.ui.edit_file_name.text(), 
+            str(self.ui.edit_file_name.text()), 
             self.csv_options, 
             self, icon=options.cfg.icon)
         
@@ -1064,7 +1069,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.statusbar.showMessage("Terminating query...")
             try:
                 self.Session.Corpus.resource.DB.kill_connection()
-            except AttributeError:
+            except (AttributeError, pymysql.err):
                 pass
             if self.query_thread:
                 self.query_thread.terminate()
@@ -1367,7 +1372,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
             # retrieve the CSV options for the current input file:
             if self.csv_options:
-                sep, col, head, skip = self.csv_options
+                sep, col, head, skip, quote = self.csv_options
                 if sep == "{tab}":
                     sep = "\t"
                 if sep == "{space}":
@@ -1376,6 +1381,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.query_column_number = col
                 options.cfg.file_has_headers = head
                 options.cfg.skip_lines = skip
+                options.cfg.quote_char = quote
 
             # get context options:
             try:
@@ -1466,7 +1472,7 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.radio_context_mode_kwic.setChecked(True)
             
-        self.csv_options = (options.cfg.input_separator, options.cfg.query_column_number, options.cfg.file_has_headers, options.cfg.skip_lines)
+        self.csv_options = (options.cfg.input_separator, options.cfg.query_column_number, options.cfg.file_has_headers, options.cfg.skip_lines, options.cfg.quote_char)
         
         for filt in list(options.cfg.filter_list):
             self.ui.filter_box.addTag(filt)
