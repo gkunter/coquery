@@ -117,6 +117,7 @@ class Options(object):
         group.add_argument("-n", "--number", help="use column NUMBER in INPUTFILE for queries", type=int, default=1, dest="query_column_number")
         group.add_argument("--is", "--input-separator", help="use CHARACTER as separator in input CSV file",  default=',', metavar="CHARACTER", dest="input_separator")
         group.add_argument("--os", "--output-separator", help="use CHARACTER as separator in output CSV file", default=',', metavar="CHARACTER", dest="output_separator")
+        group.add_argument("--quote-character", help="use CHARACTER as quoting character", default='"', metavar="CHARACTER", dest="quote_char")
         group.add_argument("--input-encoding", help="use INPUT-ENCODING as the encoding scheme for the input file (default: utf-8)", type=str, default="utf-8", dest="input_encoding")
         group.add_argument("--output-encoding", help="use OUTPUT-ENCODING as the encoding scheme for the output file (default: utf-8)", type=str, default="utf-8", dest="output_encoding")
 
