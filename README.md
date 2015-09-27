@@ -7,28 +7,15 @@ Coquery is a tool that can search a number of linguistic corpora using a unified
 
 The latest release is version 0.9. 
 
-### License ###
-Copyright (c) Gero Kunter (gero.kunter@coquery.org)
-
-Coquery is free software: you can redistribute it and/or modify
-it under the terms of the [GNU General Public License](http://www.gnu.org/licenses/), 
-either version 3 of the License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-"""
-
-
 ### Features ###
-* Uses MySQL database for fast searches on big corpora, much faster than processing textfiles
-* Corpora that are already stored in a database can easily be incorporated by writing a new corpus module
-* Many query strings can be stored in one input file that is processed in one go -- ideal for obtaining frequency lists
-* Frequency counts can be grouped by word, lemma, part-of-speech, text genre, ...
-* Supports the easy COCA query syntax, but is modular enough to support CQL or other query syntaxes
-* Provides a flexible framework that should allow retrieval of multi-level corpus information
-* Link data from different corpora -- for example, use the transcriptions from CMUdict to query the BNC
+* Different query modes: Frequency, Collocations, Token, Types
+* One query syntax for all supported corpora
+* Flexible selection of query output columns
+* Multiple queries can be read from an input file (useful for creating frequency lists)
+* Data columns from different corpora can be linked
+* Build-in graphical visualizations
+* Simple corpus creation from local text files (including lemmatization and tagging)
+* New corpora can be added quite easily
 
 ### Supported corpora ###
 * [Bostom University Radio Speech Corpus](https://catalog.ldc.upenn.edu/LDC96S36)
@@ -48,41 +35,20 @@ See the (Installation guide)[INSTALLATION.md].
 ### Syntax ###
 Coquery uses a syntax that is very similar to the syntax from the BYU corpus resources, with a few extensions and modifications. For example, it is not possible to query the asterisk '*' in COCA, because it is always interpreted as a placeholder for any number of characters. In a Coquery string, the asterisk ``*`` has also this interpretation, but in addition, the term ``\*`` (i.e. an asterisk preceded by a backslash) queries the asterisk.
 
-### Examples ###
+### Acknowledgements
+Initial development was supported by: 
 
-Coquery is a command line tool (a graphical interface may be added at a later stage). Here are a view examples of how Coquery can be used:
+Anglistik III, English Language and Linguistics
+Heinrich-Heine-Universität Düsseldorf
 
-**Get a word frequency list, based on orthographic form**
-```
-#!bash
-coquery -q "*" -O FREQ
-```
-**Get a bigram frequency list, based on orthographic form**
-```
-#!bash
-coquery -q "* *" -O FREQ
-```
-**Get a frequency list of the part-of-speech labels, and store results in file output.csv**
-```
-#!bash
-coquery -q "*" -p FREQ -o output.csv
-```
-**Get a list of all co-occurrences of the word 'residualized' followed by a noun**
-```
-#!bash
-coquery -q "residualized [n*]" -O
-```
-**Get all five-word contexts preceding and following an ART-NOUN sequence**
-```
-#!bash
-coquery -q "the|a|an [n*]" -c 5
-```
-**Run all queries given in the 3rd column (-n 3) of file input.csv. Output the orthographic form (-O), the part-of-speech tag (-p), a five-word context (-c 5) and the text information (-t) of all matches to file output.csv**
-```
-#!bash
-coquery -i input.csv -o output.csv -n 3 -O -p -t
-```
+### License ###
+Copyright (c) Gero Kunter (gero.kunter@coquery.org)
 
-### Maintainer ###
+Coquery is free software: you can redistribute it and/or modify
+it under the terms of the [GNU General Public License](http://www.gnu.org/licenses/), 
+either version 3 of the License, or any later version.
 
-[Gero Kunter](http://www.anglistik.hhu.de/sections/anglistik-iii-english-language-and-linguistics/facultystaff/detailseite-kunter.html)
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
