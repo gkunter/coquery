@@ -182,7 +182,7 @@ class LexiconUnknownPartOfSpeechTag(GenericException):
     def __init__(self, par):
         self.par = par
 
-class LexiconUnprovidedError(NoTraceException):
+class LexiconFeatureUnavailableError(NoTraceException):
     error_message = "Lexicon feature not provided by current lexicon"
     #def __init__(self, S):
         #self.par = S
