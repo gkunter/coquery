@@ -499,6 +499,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             self._value_source_gage = ""
         try:
             self._value_source_ethnicity = author.find("ethnic-group").text.strip().split("\t")[0]
+            self._value_source_ethnicity = self._value_source_ethnicity.strip("/")
+            
         except AttributeError:
             self._value_source_ethnicity = ""
 
