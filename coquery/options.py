@@ -1,29 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-FILENAME: options.py -- part of Coquery corpus query tool
+options.py is part of Coquery.
 
-This module handles command-line arguments and configuration files.
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
 
-LICENSE:
-Copyright (c) 2015 Gero Kunter
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
@@ -61,7 +44,6 @@ class Options(object):
             "help": "specify the corpus to use", 
             "choices": get_available_resources().keys(), 
             "type": type(str(""))}
-
 
         self.prog_name = __init__.NAME
         self.config_name = "%s.cfg" % __init__.NAME
@@ -155,17 +137,18 @@ class Options(object):
         group.add_argument("-P", "--show_parameters", help="include the parameter string in the output", action="store_true", dest="show_parameters")
         group.add_argument("-f", "--show_filter", help="include the filter strings in the output", action="store_true", dest="show_filter")
         group.add_argument("--freq-label", help="use this label in the heading line of the output (default: Freq)", default="Freq", type=str, dest="freq_label")
- 
 
     def get_options(self):
-        """ Read the values from the configuration file, and merge them with 
+        """ 
+        Read the values from the configuration file, and merge them with 
         the command-line options. Values set in the configuration file are
         overwritten by command-line arguments. 
         
         If a GUI is used, no corpus needs to be specified, and all values 
         from the configuration file are used. If the command-line interface 
         is used, both a corpus and a query mode have to be specified, and 
-        only the database settings from the configuration file are used."""
+        only the database settings from the configuration file are used.
+        """
         
         # Do a first argument parse to get the corpus to be used, and 
         # whether a GUI is requested. This parse doesn't raise an argument 
@@ -402,7 +385,6 @@ class Options(object):
         
         self.args.selected_features = set(self.args.selected_features)
 
-
         # the following lines are deprecated and should be removed once
         # feature selection is fully implemented:
         self.args.show_source = "source" in vars(self.args)
@@ -418,7 +400,6 @@ class Options(object):
             self.args.context_columns = False
             
         self.args.context_sentence = False
-        
 
         try:
             self.args.input_separator = self.args.input_separator.decode('string_escape')
@@ -558,7 +539,9 @@ class Options(object):
 cfg = None
 
 class UnicodeConfigParser(configparser.RawConfigParser):
-       
+    """
+    Define a subclass of RawConfigParser that works with Unicode (hopefully).
+    """
     def write(self, fp):
         """Fixed for Unicode output"""
         if self._defaults:
@@ -668,18 +651,14 @@ def save_configuration():
         except AttributeError:
             pass
 
-
     with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)
-
-
 
 def process_options():
     global cfg
     options = Options()
     options.get_options()
     cfg = options.cfg
-
 
 try:
     logger = logging.getLogger(__init__.NAME)
