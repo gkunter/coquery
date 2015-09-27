@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 """ 
+visualizer.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
+"""
 This module provides the base classes required for data visualization:
 
 * :class:`Visualizer`
@@ -65,7 +75,7 @@ from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as Navigatio
 from matplotlib.backend_bases import key_press_handler
 import matplotlib.pyplot as plt
 
-import multiprocessing
+
 
 #def table_to_tree(table, label="count"):
     #""" Return a tree that contains a tree representation of the table. It
@@ -735,10 +745,7 @@ class VisualizerDialog(QtGui.QWidget):
             dialog.setVisible(True)
             dialog.add_visualizer(visualizer)
             dialog.add_matplot()
-            #self.sub_process = multiprocessing.Process(target=self.plot_it, args=())
-            #self.sub_process.start()
             self.visualizer.draw()
-            #self.visualizer.start_draw_thread()
             
 if __name__ == "__main__":
     unittest.main()
