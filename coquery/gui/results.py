@@ -102,13 +102,24 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # no color is specified:
         elif role == QtCore.Qt.ForegroundRole:
             header = self.header[index.column()]
-            if options.cfg.column_visibility.get(header, True):
+            row = self.content.index[index.row()]
+            # Check if cell is in a visible row and visible column:
+            if options.cfg.column_visibility.get(header, True) and options.cfg.row_visibility.get(row, True):
+                # return row color if specified:
+                try:
+                    col = options.cfg.row_color[row]
+                    return QtGui.QColor(col)
+                except KeyError:
+                    pass
+                # return column color if specified:
                 try:
                     col = options.cfg.column_color[header]
                     return QtGui.QColor(col)
                 except KeyError:
+                    # return default color
                     return None
             else:
+                # return light grey for hidden cells:
                 return QtGui.QColor("lightgrey")
                 
         # TextAlignmentRole: return the alignment of the column:
@@ -245,11 +256,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         error_box.ErrorBox.show(self.exc_info, self.exception)
 
 def get_background(option, index):
-    return index.data(QtCore.Qt.BackgroundRole)
+    if option.state & QtGui.QStyle.State_Selected:
+        return options.cfg.app.palette().color(QtGui.QPalette().Highlight)
+    else:
+        return index.data(QtCore.Qt.BackgroundRole)
 
 def get_foreground(option, index):
     if option.state & QtGui.QStyle.State_MouseOver:
         return options.cfg.app.palette().color(QtGui.QPalette().Link)
+    elif option.state & QtGui.QStyle.State_Selected:
+        return options.cfg.app.palette().color(QtGui.QPalette().HighlightedText)
     else:
         return index.data(QtCore.Qt.ForegroundRole)
 
@@ -263,18 +279,22 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         On mouse-over, the cell is rendered like a clickable link.
         """
         painter.save()
+        
         # show content as a link on mouse-over:
-        if QtGui.QStyle.State_MouseOver & option.state:
+        if option.state & QtGui.QStyle.State_MouseOver:
             font = painter.font()
             font.setUnderline(True)
             painter.setFont(font)
-
+            
+        fg = get_foreground(option, index)
         bg = get_background(option, index)
         if bg:
             painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
-        painter.setPen(QtGui.QPen(get_foreground(option, index)))
+            painter.fillRect(option.rect, bg)
+        painter.setPen(QtGui.QPen(fg))
         try:
+            painter.translate(2, 0)
             painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), unicode(index.data(QtCore.Qt.DisplayRole)))
         finally:
             painter.restore()
