@@ -1,7 +1,25 @@
 # -*- coding: utf-8 -*-
 
+"""
+app.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
 from __future__ import print_function
+
+import importlib
+import os
+import codecs
+import random
+import logging
+
+import pandas as pd
 
 from session import *
 from defines import *
@@ -13,18 +31,10 @@ import coqueryUi, coqueryCompactUi
 
 import results 
 import error_box
-import codecs
-import random
-import logging
 import sqlwrap
 import queries
-import importlib
-import os
 
 from queryfilter import *
-
-# so, pandas:
-import pandas as pd
 
 # load visualizations
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
@@ -590,6 +600,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
+
+        self.ui.context_query_syntax.setPixmap(QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_TitleBarContextHelpButton))
+
 
     def result_column_resize(self, index, old, new):
         header = self.table_model.header[index].lower()
