@@ -234,15 +234,17 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         options.cfg.main_window.ui.statusbar.showMessage("Error during sorting.")
         error_box.ErrorBox.show(self.exc_info, self.exception)
 
+def get_background(option, index):
+    return index.data(QtCore.Qt.BackgroundRole)
+
+def get_foreground(option, index):
+    if option.state & QtGui.QStyle.State_MouseOver:
+        return options.cfg.app.palette().color(QtGui.QPalette().Link)
+    else:
+        return index.data(QtCore.Qt.ForegroundRole)
+
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
-    def get_background(self, option, index):
-        return index.data(QtCore.Qt.BackgroundRole)
     
-    def get_foreground(self, option, index):
-        if option.state & QtGui.QStyle.State_MouseOver:
-            return options.cfg.app.palette().color(QtGui.QPalette().Link)
-        else:
-            return index.data(QtCore.Qt.ForegroundRole)
     
     def paint(self, painter, option, index):
         """
@@ -252,26 +254,20 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         from the table's :func:`data` method, using the DecorationRole role.
         On mouse-over, the cell is rendered like a clickable link.
         """
-        
         painter.save()
-
-        # get cell content:
-        value = index.data(QtCore.Qt.DisplayRole)
-
         # show content as a link on mouse-over:
-        if option.state & QtGui.QStyle.State_MouseOver:
+        if QtGui.QStyle.State_MouseOver & option.state:
             font = painter.font()
             font.setUnderline(True)
             painter.setFont(font)
 
-        fg = self.get_foreground(option, index)
-        bg = self.get_background(option, index)
+        bg = get_background(option, index)
         if bg:
             painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
-        painter.setPen(QtGui.QPen(fg))
+        painter.setPen(QtGui.QPen(get_foreground(option, index)))
         try:
-            painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), unicode(value))
+            painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), unicode(index.data(QtCore.Qt.DisplayRole)))
         finally:
             painter.restore()
 
