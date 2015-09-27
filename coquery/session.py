@@ -222,10 +222,7 @@ class Session(object):
 class StatisticsSession(Session):
     def __init__(self):
         super(StatisticsSession, self).__init__()
-        if self.Corpus.provides_feature(CORP_STATISTICS):
-            self.query_list.append(queries.StatisticsQuery(self.Corpus, self))
-        else:
-            raise QueryModeError(options.cfg.corpus, options.cfg.MODE)
+        self.query_list.append(queries.StatisticsQuery(self.Corpus, self))
         self.header = ["Variable", "Value"]
         self.output_order = self.header
     
@@ -252,29 +249,33 @@ class SessionInputFile(Session):
         input_header = None
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
-            for current_line in UnicodeReader(InputFile, delimiter=options.cfg.input_separator, encoding=options.cfg.input_encoding):
-                if current_line:
-                    if options.cfg.query_column_number > len(current_line):
-                        raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)
-                    
-                    if options.cfg.file_has_headers and self.header == None:
-                        self.header = copy.copy(current_line)
-                        input_header = self.header
-                        input_header.pop(options.cfg.query_column_number - 1)
-                        
-                        self.input_columns = ["coq_{}".format(x) for x in input_header]
-                        
-                    else:
-                        if read_lines >= options.cfg.skip_lines:
-                            query_string = current_line.pop(options.cfg.query_column_number - 1)
-                            new_query = self.query_type(query_string, self, tokens.COCAToken)
-                            new_query.InputLine = copy.copy(current_line)
-                            new_query.input_frame = pd.DataFrame(
-                                [current_line], columns=input_header)
-                            self.query_list.append(new_query)
-                            self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
-                    self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
+            input_file = pd.DataFrame.from_csv(
+                InputFile,
+                sep=options.cfg.input_separator,
+                encoding=options.cfg.input_encoding)
+            if options.cfg.file_has_headers and self.header == None:
+                self.header = input_file.columns.values.tolist()
+                input_header = self.header
+                input_header.pop(options.cfg.query_column_number - 1)
+            for current_line in input_file.iterrows():
+                current_line = list(current_line[1])
+                if options.cfg.query_column_number > len(current_line):
+                    raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)
+                
+                if read_lines >= options.cfg.skip_lines:
+                    query_string = current_line.pop(options.cfg.query_column_number - 1)
+                    new_query = self.query_type(query_string, self, tokens.COCAToken)
+                    new_query.InputLine = copy.copy(current_line)
+                    new_query.input_frame = pd.DataFrame(
+                        [current_line], columns=input_header)
+                    self.query_list.append(new_query)
+                    self.max_number_of_tokens = max(new_query.max_number_of_tokens, self.max_number_of_tokens)
+                self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
                 read_lines += 1
+            
+            self.input_columns = ["coq_{}".format(x) for x in input_header]
+            
+
         logger.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
             logger.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
