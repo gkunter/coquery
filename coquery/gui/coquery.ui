@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1071</width>
+    <width>1112</width>
     <height>791</height>
    </rect>
   </property>
@@ -625,22 +625,6 @@ The number of occurrences of each token matching the query string is counted. Th
               </property>
              </widget>
             </item>
-            <item row="0" column="1">
-             <widget class="QLabel" name="label_12">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>&amp;Enter query strings:</string>
-              </property>
-              <property name="buddy">
-               <cstring>edit_query_string</cstring>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="0">
              <widget class="QRadioButton" name="radio_query_string">
               <property name="sizePolicy">
@@ -656,6 +640,45 @@ The number of occurrences of each token matching the query string is counted. Th
                <bool>true</bool>
               </property>
              </widget>
+            </item>
+            <item row="0" column="1">
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <item>
+               <widget class="QLabel" name="label">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string/>
+                </property>
+                <property name="text">
+                 <string>&amp;Enter query strings:</string>
+                </property>
+                <property name="buddy">
+                 <cstring>edit_query_string</cstring>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="context_query_syntax">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter your query strings in this field. Coquery uses a syntax for query strings that is compatible to the syntax used by the BYU web corpora (e.g. COCA). For details, see &lt;a href=&quot;http://corpus.byu.edu/coca/help/syntax_e.asp&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;http://corpus.byu.edu/coca/help/syntax_e.asp&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>?</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </item>
@@ -1054,8 +1077,8 @@ The number of occurrences of each token matching the query string is counted. Th
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1071</width>
-     <height>36</height>
+     <width>1112</width>
+     <height>37</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

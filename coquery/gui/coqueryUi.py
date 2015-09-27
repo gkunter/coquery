@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Sat Sep 26 18:30:52 2015
+# Created: Sun Sep 27 12:30:44 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(1071, 791)
+        MainWindow.resize(1112, 791)
         MainWindow.setDocumentMode(False)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
@@ -311,14 +311,6 @@ class Ui_MainWindow(object):
         self.edit_query_string.setSizePolicy(sizePolicy)
         self.edit_query_string.setObjectName(_fromUtf8("edit_query_string"))
         self.gridLayout_2.addWidget(self.edit_query_string, 2, 1, 1, 1)
-        self.label_12 = QtGui.QLabel(self.box_input_settings)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_12.sizePolicy().hasHeightForWidth())
-        self.label_12.setSizePolicy(sizePolicy)
-        self.label_12.setObjectName(_fromUtf8("label_12"))
-        self.gridLayout_2.addWidget(self.label_12, 0, 1, 1, 1)
         self.radio_query_string = QtGui.QRadioButton(self.box_input_settings)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -329,6 +321,26 @@ class Ui_MainWindow(object):
         self.radio_query_string.setChecked(True)
         self.radio_query_string.setObjectName(_fromUtf8("radio_query_string"))
         self.gridLayout_2.addWidget(self.radio_query_string, 0, 0, 1, 1)
+        self.horizontalLayout_3 = QtGui.QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
+        self.label = QtGui.QLabel(self.box_input_settings)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
+        self.label.setToolTip(_fromUtf8(""))
+        self.label.setObjectName(_fromUtf8("label"))
+        self.horizontalLayout_3.addWidget(self.label)
+        self.context_query_syntax = QtGui.QLabel(self.box_input_settings)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.context_query_syntax.sizePolicy().hasHeightForWidth())
+        self.context_query_syntax.setSizePolicy(sizePolicy)
+        self.context_query_syntax.setObjectName(_fromUtf8("context_query_syntax"))
+        self.horizontalLayout_3.addWidget(self.context_query_syntax)
+        self.gridLayout_2.addLayout(self.horizontalLayout_3, 0, 1, 1, 1)
         self.verticalLayout.addLayout(self.gridLayout_2)
         self.gridLayout_3 = QtGui.QGridLayout()
         self.gridLayout_3.setSpacing(0)
@@ -531,7 +543,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.tabbed_views)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1071, 36))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1112, 37))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -684,7 +696,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuSettings.menuAction())
         self.menubar.addAction(self.menuHilfe.menuAction())
         self.label_5.setBuddy(self.combo_corpus)
-        self.label_12.setBuddy(self.edit_query_string)
+        self.label.setBuddy(self.edit_query_string)
         self.label_8.setBuddy(self.edit_file_name)
         self.label_4.setBuddy(self.edit_query_filter)
 
@@ -718,7 +730,9 @@ class Ui_MainWindow(object):
         self.context_right_span.setSuffix(_translate("MainWindow", " words", None))
         self.button_stopwords.setText(_translate("MainWindow", "Stop-words...", None))
         self.button_run_query.setText(_translate("MainWindow", "&Query", None))
-        self.label_12.setText(_translate("MainWindow", "&Enter query strings:", None))
+        self.label.setText(_translate("MainWindow", "&Enter query strings:", None))
+        self.context_query_syntax.setToolTip(_translate("MainWindow", "<html><head/><body><p>Enter your query strings in this field. Coquery uses a syntax for query strings that is compatible to the syntax used by the BYU web corpora (e.g. COCA). For details, see <a href=\"http://corpus.byu.edu/coca/help/syntax_e.asp\"><span style=\" text-decoration: underline; color:#0057ae;\">http://corpus.byu.edu/coca/help/syntax_e.asp</span></a></p></body></html>", None))
+        self.context_query_syntax.setText(_translate("MainWindow", "?", None))
         self.label_8.setText(_translate("MainWindow", "&Use query file:", None))
         self.button_file_options.setText(_translate("MainWindow", "O&ptions...", None))
         self.button_file_options.setShortcut(_translate("MainWindow", "Alt+B", None))
