@@ -605,7 +605,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
 
-        self.ui.data_preview.clicked.connect(self.result_cell_clicked)
+        #self.ui.data_preview.clicked.connect(self.result_cell_clicked)
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
 
@@ -1052,46 +1052,56 @@ class CoqueryApp(QtGui.QMainWindow):
         for x in self.ui.data_preview.selectionModel().selectedRows():
             selection.append(self.table_model.content.index[x.row()])
 
-        if len(selection) > 1:
+        length = len(selection)
+        if length > 1:
             display_name = "{} rows selected".format(len(selection))
-        else:
+        elif length == 1:
             display_name = "Row menu"
+        else:
+            display_name = "(no row selected)"
         action = QtGui.QWidgetAction(self)
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
         label.setAlignment(QtCore.Qt.AlignCenter)
         action.setDefaultWidget(label)
         self.menu.addAction(action)
-        self.menu.addSeparator()
         
-        # Check if any row is hidden
-        if any([not options.cfg.row_visibility.get(x, True) for x in selection]):
-            if len(selection) > 1:
-                action = QtGui.QAction("&Show hidden rows", self)
-            else:
-                action = QtGui.QAction("&Show row", self)
-            action.triggered.connect(lambda: self.set_row_visibility(selection, True))
-            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
-            self.menu.addAction(action)
-        # Check if any row is visible
-        if any([options.cfg.row_visibility.get(x, True) for x in selection]):
-            if len(selection) > 1:
-                action = QtGui.QAction("&Hide visible rows", self)
-            else:
-                action = QtGui.QAction("&Hide row", self)
-            action.triggered.connect(lambda: self.set_row_visibility(selection, False))
-            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
-            self.menu.addAction(action)
-        self.menu.addSeparator()
-        
-        # Check if any row has a custom color:
-        if any([x in options.cfg.row_color for x in selection]):
-            action = QtGui.QAction("&Reset color", self)
-            action.triggered.connect(lambda: self.reset_row_color(selection))
-            self.menu.addAction(action)
+        if length:
+            self.menu.addSeparator()
+            # Check if any row is hidden
+            if any([not options.cfg.row_visibility.get(x, True) for x in selection]):
+                if length > 1:
+                    if all([not options.cfg.row_visibility.get(x, True) for x in selection]):
+                        action = QtGui.QAction("&Show rows", self)
+                    else:
+                        action = QtGui.QAction("&Show hidden rows", self)
+                else:
+                    action = QtGui.QAction("&Show row", self)
+                action.triggered.connect(lambda: self.set_row_visibility(selection, True))
+                action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
+                self.menu.addAction(action)
+            # Check if any row is visible
+            if any([options.cfg.row_visibility.get(x, True) for x in selection]):
+                if length:
+                    if all([options.cfg.row_visibility.get(x, True) for x in selection]):
+                        action = QtGui.QAction("&Hide rows", self)
+                    else:
+                        action = QtGui.QAction("&Hide visible rows", self)
+                else:
+                    action = QtGui.QAction("&Hide row", self)
+                action.triggered.connect(lambda: self.set_row_visibility(selection, False))
+                action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
+                self.menu.addAction(action)
+            self.menu.addSeparator()
+            
+            # Check if any row has a custom color:
+            if any([x in options.cfg.row_color for x in selection]):
+                action = QtGui.QAction("&Reset color", self)
+                action.triggered.connect(lambda: self.reset_row_color(selection))
+                self.menu.addAction(action)
 
-        action = QtGui.QAction("&Change color...", self)
-        action.triggered.connect(lambda: self.change_row_color(selection))
-        self.menu.addAction(action)
+            action = QtGui.QAction("&Change color...", self)
+            action.triggered.connect(lambda: self.change_row_color(selection))
+            self.menu.addAction(action)
         
         self.menu.popup(header.mapToGlobal(point))
         self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
