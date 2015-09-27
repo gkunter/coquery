@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+from __future__ import print_function
+
 """
 corpusbuilder.py is part of Coquery.
 
@@ -50,9 +53,6 @@ collection of text files in a directiory into a query-able corpus, and
 :mod:`coq_bnc.py` contains an installer that reads and processes the XML 
 version of the British National corpus.
 """
-
-from __future__ import unicode_literals
-from __future__ import print_function
 
 try:
     str = unicode
@@ -161,8 +161,6 @@ class Corpus(SQLCorpus):
 # For example, COCA should have a table with Genre, Year and Frequency,
 # with 5 x 23 rows (5 Genres, 23 Years). 
 
-in_memory = False
-
 class Column(object):
     """ Define an object that stores the description of a column in one 
     MySQL table."""
@@ -252,7 +250,8 @@ class Table(object):
         self.columns = list()
         self.primary = None
         self._current_id = 0
-        self._add_cache = collections.OrderedDict()
+        self._row_order = []
+        self._add_cache = dict()
         self._commited = {}
         self._col_names = None
 
@@ -307,18 +306,19 @@ class Table(object):
     def add_next(self, row):
         """ Add a valid primary key to the data in the 'row' dictionary, 
         and store the data in add cache of the table. """ 
+        #print(row)
         self._current_id += 1
-        self._add_cache[tuple([row[x] for x in sorted(row)])] = (self._current_id, row)
+        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
         return self._current_id
-        
     
     def add(self, row):
         """ Add a valid primary key to the data in the 'row' dictionary, 
         and store the data in add cache of the table. """ 
+
         if not self._col_names:
             self._col_names = row.keys()
         self._current_id += 1
-        self._add_cache[tuple([row[x] for x in sorted(row)])] = (self._current_id, row)
+        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
 
         self.add = self.add_next
         return self._current_id
@@ -343,7 +343,7 @@ class Table(object):
             The id of the entry, as it is stored in the MySQL table.
         """
         try:
-            row_id = self._add_cache[tuple([values[x] for x in sorted(values)])][0]
+            row_id = self._add_cache[tuple([values[x] for x in self._row_order])][0]
         except KeyError:
             return self.add(values)
         else:
@@ -354,41 +354,19 @@ class Table(object):
         Return the first row that matches the values, or None
         otherwise.
         """
-
-        self._add_cache[tuple([row[x] for x in sorted(row)])] = (self._current_id, row)
-
-        
-        if in_memory:
-            keys_values = set(values.keys())
-            table = self._new_tables[table_name]
-            keys_table = sorted(table._col_names)
-            lookup_list = {}
-            
-            for key in values:
-                try:
-                    lookup_list[key] = keys_table.index(key)
-                except IndexError:
-                    pass
-
-            if lookup_list:
-                for key in table._add_cache:
-                    for lookup in lookup_list:
-                        if values[lookup] != key[lookup_list[lookup]]:
-                            break
-                        else:
-                            row_id, _ = table._add_cache[key]
-                            return 
+        raise RuntimeError("The method Table.find() is not supported anymore.")
+        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        try:
+            return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
+        except IndexError:
             return None
-        else:
-            try:
-                return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
-            except IndexError:
-                return None
         
     def add_column(self, column):
         self.columns.append(column)
         if column.primary:
             self.primary = column
+        else:
+            self._row_order.append(column.name)
 
     def get_column(self, name):
         """
@@ -413,15 +391,10 @@ class Table(object):
         str_list = []
         for column in self.columns:
             if column.primary:
-                if in_memory:
-                    str_list.insert(0, "`{}` {}".format(
-                        column.name,
-                        column.data_type))
-                else:
-                    str_list.insert(0, "`{}` {} AUTO_INCREMENT".format(
-                        column.name,
-                        column.data_type))
-                    str_list.append("PRIMARY KEY (`{}`)".format(column.name))
+                str_list.insert(0, "`{}` {} AUTO_INCREMENT".format(
+                    column.name,
+                    column.data_type))
+                str_list.append("PRIMARY KEY (`{}`)".format(column.name))
             else:
                 str_list.append("`{}` {}".format(
                     column.name,
@@ -489,7 +462,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
         self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
         self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
-        self.parser.add_argument("--in_memory", help="try to improve writing speed by retaining tables in working memory. May require a lot of memory for big corpora.", action="store_true")
         self.additional_arguments()
 
     def add_tag_table(self):
@@ -541,7 +513,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         return self._interrupted
 
     def check_arguments(self):
-        global in_memory
         """ Check the command line arguments. Add defaults if necessary."""
         if not self._widget:
             self.arguments, unknown = self.parser.parse_known_args()
@@ -552,8 +523,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if not self.arguments.corpus_path:
                 self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../corpora"))
             self.name = self.arguments.name
-            
-            in_memory = self.arguments.in_memory
             
     def additional_arguments(self):
         """ Use this function if your corpus installer requires additional
@@ -1767,7 +1736,11 @@ if use_gui:
             S = "Installing {}...".format(self.builder.name)
             self.parent().ui.statusbar.showMessage(S)
             self.ui.frame.setEnabled(False)
-            self.builder.build()
+            try:
+                self.builder.build()
+            except RuntimeError as e:
+                QtGui.QMessageBox.critical(self, "Error during installation",
+                                        str(e))
             
         def finish_install(self):
             S = "Finished installing {}.".format(self.builder.name)
