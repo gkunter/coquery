@@ -208,6 +208,34 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
     encoding = "latin-1"
     file_filter = "*_??.xml.pos"
 
+    corpus_table = "Corpus"
+    corpus_id = "TokenId"
+    corpus_word_id = "WordId"
+    corpus_file_id = "FileId"
+    corpus_source_id = "SourceId"
+
+    word_table = "Word"
+    word_id = "WordId"
+    word_lemma = "Lemma"
+    word_label = "Text"
+    word_pos = "Pos"
+
+    file_table = "File"
+    file_id = "FileId"
+    file_name = "Filename"
+    file_path = "Path"
+    
+    source_table = "Source"
+    source_id = "SourceId"
+    source_mode = "Mode"
+    source_age = "Age"
+    source_gender = "Gender"
+    source_ethnicity = "Ethnicity"
+    source_date = "Date"
+    source_icetext = "ICE_text_category"
+    source_icetextcode = "ICE_text_code"
+    source_place = "Place"
+
     def __init__(self, gui=False, *args):
         """
         Initialize the corpus builder.
@@ -228,7 +256,6 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         # specify which features are provided by this corpus and lexicon:
         #self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
         #self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS", "CORP_SOURCE"]
-        self.documentation_url = ICENigeriaBuilder.get_url()
 
         self.check_arguments()
         
@@ -270,11 +297,11 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         # An int value containing the unique identifier of the data file 
         # that contains this token.
         
-        self.corpus_table = "corpus"
-        self.corpus_id = "TokenId"
-        self.corpus_word_id = "WordId"
-        self.corpus_file_id = "FileId"
-        self.corpus_source_id = "SourceId"
+        #self.corpus_table = "corpus"
+        #self.corpus_id = "TokenId"
+        #self.corpus_word_id = "WordId"
+        #self.corpus_file_id = "FileId"
+        #self.corpus_source_id = "SourceId"
         
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
@@ -296,25 +323,17 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         # A text value containing the part-of-speech label of this 
         # word-form.
         
-        self.word_table = "word"
-        self.word_id = "WordId"
-        self.word_lemma = "Lemma"
-        self.word_label = "Text"
-        self.word_pos = "Pos"
+        #self.word_table = "word"
+        #self.word_id = "WordId"
+        #self.word_lemma = "Lemma"
+        #self.word_label = "Text"
+        #self.word_pos = "Pos"
         
-        create_columns = ["`{}` SMALLINT(5) UNSIGNED NOT NULL".format(self.word_id),
-                "`{}` VARCHAR(32) NOT NULL".format(self.word_label),
-                "`{}` VARCHAR(32) NOT NULL".format(self.word_lemma),
-                "`{}` VARCHAR(12) NOT NULL".format(self.word_pos)]
-        index_columns = [([self.word_lemma], 0, "HASH"),
-                ([self.word_pos], 0, "BTREE"),
-                ([self.word_label], 0, "BTREE")]
-
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-             Column(self.word_label, "VARCHAR(32) NOT NULL"),
-             Column(self.word_lemma, "VARCHAR(32) NOT NULL"),
-             Column(self.word_pos, "VARCHAR(12) NOT NULL")])
+             Column(self.word_label, "VARCHAR(36) NOT NULL"),
+             Column(self.word_lemma, "VARCHAR(36) NOT NULL"),
+             Column(self.word_pos, "ENUM('CC','CD','DT','EX','FW','IN','JJ','JJR','JJS','LS','MD','NN','NNS','NP','NPS','PDT','POS','PP','PP$','PUNCT','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBN','VBP','VBZ','WDT','WP','WP$','WRB') NOT NULL")])
              
 
         # Add the file table. Each row in this table represents a data file
@@ -329,13 +348,13 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         # Path
         # A text value containing the path that points to this data file.
         
-        self.file_table = "file"
-        self.file_id = "FileId"
-        self.file_name = "Filename"
-        self.file_path = "Path"
+        #self.file_table = "file"
+        #self.file_id = "FileId"
+        #self.file_name = "Filename"
+        #self.file_path = "Path"
         
         self.create_table_description(self.file_table,
-            [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+            [Primary(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "TINYTEXT NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
             
@@ -346,16 +365,16 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             #{"CREATE" : [
                 #"`{}` MEDIUMINT(5) UNSIGNED NOT NULL".format(self.sentence_id)]})
         
-        self.source_table = "source"
-        self.source_id = "SourceId"
-        self.source_mode = "Mode"
-        self.source_age = "Age"
-        self.source_gender = "Gender"
-        self.source_ethnicity = "Ethnicity"
-        self.source_date = "Date"
-        self.source_icetext = "ICE_text_category"
-        self.source_icetextcode = "ICE_text_code"
-        self.source_place = "Place"
+        #self.source_table = "source"
+        #self.source_id = "SourceId"
+        #self.source_mode = "Mode"
+        #self.source_age = "Age"
+        #self.source_gender = "Gender"
+        #self.source_ethnicity = "Ethnicity"
+        #self.source_date = "Date"
+        #self.source_icetext = "ICE_text_category"
+        #self.source_icetextcode = "ICE_text_code"
+        #self.source_place = "Place"
         
         self.add_time_feature(self.source_date)
         self.add_time_feature(self.source_age)
@@ -364,8 +383,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
             Column(self.source_mode, "TINYTEXT NOT NULL"),
             Column(self.source_date, "VARCHAR(10) NOT NULL"), 
-            Column(self.source_icetext, "VARCHAR(30) NOT NULL"), 
-            Column(self.source_icetextcode, "VARCHAR(33) NOT NULL"), 
+            Column(self.source_icetext, "ENUM('Academic writing humanities','Academic writing natural sciences','Academic writing social sciences','Academic writing technical','Administrative/instructive writing','Business letters','Editorials','Exams','Instructive writing/skills and hobbies','Novels','Popular writing humanities','Popular writing natural sciences','Popular writing social sciences','Popular writing technology','Press reportage','Social letters','Students essays') NOT NULL"), 
+            Column(self.source_icetextcode, "ENUM('W1A','W1B','W2A','W2B','W2C','W2D','W2E','W2F') NOT NULL"), 
             Column(self.source_place, "VARCHAR(30) NOT NULL"), 
             Column(self.source_age, "VARCHAR(5) NOT NULL"),  
             Column(self.source_gender, "VARCHAR(1) NOT NULL"),  
@@ -403,27 +422,27 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
     def process_text(self, text):
         for row in text.splitlines():
             try:
-                word_text, word_pos, lemma_text = [x.strip() for x in row.split("\t")]
+                self._value_word_label, self._value_word_pos, self._value_word_lemma = [x.strip() for x in row.split("\t")]
             except ValueError:
                 pass
             else:
-                word_text = ICENigeriaBuilder._replace_encoding_errors(word_text)
-                lemma_text = ICENigeriaBuilder._replace_encoding_errors(word_text)
+                self._value_word_label = ICENigeriaBuilder._replace_encoding_errors(self._value_word_label)
+                self._value_word_lemma = ICENigeriaBuilder._replace_encoding_errors(self._value_word_label)
                 new_sentence = False
                 
-                if word_pos == "CD":
-                    lemma_text = word_text
-                if word_pos in string.punctuation:
-                    word_pos = "PUNCT"
-                if word_pos == "SENT":
+                if self._value_word_pos == "CD":
+                    self._value_word_lemma = self._value_word_label
+                if self._value_word_pos in string.punctuation or self._value_word_pos == "''":
+                    self._value_word_pos = "PUNCT"
+                if self._value_word_pos == "SENT":
                     new_sentence = True
-                    word_pos = "PUNCT"
+                    self._value_word_pos = "PUNCT"
                     
-                if word_text and lemma_text:
+                if self._value_word_label and self._value_word_lemma:
                     self._word_id = self.table(self.word_table).get_or_insert(
-                        {self.word_label: word_text, 
-                        self.word_lemma: lemma_text, 
-                        self.word_pos: word_pos}, case=True)
+                        {self.word_label: self._value_word_label, 
+                        self.word_lemma: self._value_word_lemma, 
+                        self.word_pos: self._value_word_pos}, case=True)
                         
                     self.add_token_to_corpus(
                         {self.corpus_word_id: self._word_id,
@@ -446,44 +465,53 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             self.process_text(element_tail_text)
         
     def xml_get_meta_information(self, root):
-        meta_info_keys = ["date", "place"]
-        meta_info = {}        
-        meta_xml = root.find("meta")
-        for x in meta_info_keys:
-            try:
-                meta_info[x] = meta_xml.find(x).text.strip().split("\t")[0]
-            except AttributeError:
-                meta_info[x] = ""
-                
-        # get speaker/author information, enclosed in <author> tags:
-        meta_xml = meta_xml.find("author")
-        meta_info_keys = ["gender", "age", "ethnic-group"]
-        for x in meta_info_keys:
-            try:
-                meta_info[x] = meta_xml.find(x).text.strip().split("\t")[0]
-            except AttributeError:
-                meta_info[x] = ""
+        meta = root.find("meta")
+
+        try:
+            self._value_source_date = meta.find("date").text.strip().split("\t")[0]
+        except AttributeError:
+            self._value_source_date = ""
+        self._value_source_date = self._value_source_date.strip().strip("-")
+        
+        if self._value_source_date in ["TODO"]:
+            self._value_source_date = ""
+
+        try:
+            self._value_source_place = meta.find("place").text.strip().split("\t")[0]
+        except AttributeError:
+            self._value_source_place = ""
+            
+        author = meta.find("author")
+
+        try:
+            self._value_source_gender = author.find("gender").text.strip().split("\t")[0]
+        except AttributeError:
+            self._value_source_gender = ""
+        try:
+            self._value_source_age = author.find("age").text.strip().split("\t")[0]
+        except AttributeError:
+            self._value_source_gage = ""
+        try:
+            self._value_source_ethnicity = author.find("ethnic-group").text.strip().split("\t")[0]
+        except AttributeError:
+            self._value_source_ethnicity = ""
 
         # get text category, based on filename (see ICE-NG documentation):
-        meta_info["ice_text"], meta_info["ice_text_code"] = self._get_ice_text_category(self._current_file)
+        self._value_source_icetext, self._value_source_icetextcode = self._get_ice_text_category(self._current_file)
         
         # currently, only the written component is used:
-        meta_info["mode"] = "written"
-        
-        meta_info["date"] = meta_info["date"].strip().strip("-")
-        if meta_info["date"] in ["TODO"]:
-            meta_info["date"] = ""
+        self._value_source_mode = "written"
 
         # all meta data gathered, store it:
         self._source_id = self.table(self.source_table).get_or_insert(
-            {self.source_age: meta_info["age"],
-             self.source_gender: meta_info["gender"],
-             self.source_ethnicity: meta_info["ethnic-group"],
-             self.source_date: meta_info["date"],
-             self.source_mode: meta_info["mode"],
-             self.source_icetext: meta_info["ice_text"],
-             self.source_icetextcode: meta_info["ice_text_code"],
-             self.source_place: meta_info["place"]})
+            {self.source_age: self._value_source_age,
+             self.source_gender: self._value_source_gender,
+             self.source_ethnicity: self._value_source_ethnicity,
+             self.source_date: self._value_source_date,
+             self.source_mode: self._value_source_mode,
+             self.source_icetext: self._value_source_icetext,
+             self.source_icetextcode: self._value_source_icetextcode,
+             self.source_place: self._value_source_place})
                 
     def _get_ice_text_category(self, file_name):
         """
@@ -525,7 +553,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             "ess":  ("Students essays", "W1A")}
         
         name = os.path.split(file_name)[1].lower()
-        desc, code = mapping.get(name.partition("_")[0], ("", ""))
+        desc, code = mapping[name.partition("_")[0]]
         return desc, code
     
     def process_xml_file(self, current_file):
