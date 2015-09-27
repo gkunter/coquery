@@ -1,11 +1,12 @@
 from __future__ import unicode_literals
+from __future__ import print_function
 
 from corpusbuilder import *
 import codecs
 
 class CMUdictBuilder(BaseCorpusBuilder):
     encoding = "latin-1"
-    file_filter = "cmudict*.txt"
+    file_filter = "cmudict*"
     
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
@@ -59,25 +60,23 @@ class CMUdictBuilder(BaseCorpusBuilder):
     def build_load_files(self):
         files = self.get_file_list(self.arguments.path)
         if len(files) > 1:
-            raise RuntimeError("There seem to be more than one dictionary files in the directory {}:\n{}\nRemove the unrequired dictionary files, and try again to install.".format(
-                self.argument.paths, "\n\t".join(files)))
+            raise RuntimeError("<p>There is more than one file in the selected directory.</p><p>{}</p><p>Please remove the unneeded files, and try again to install.".format("<br/>".join(files)))
         with codecs.open(files[0], "r", encoding = self.arguments.encoding) as input_file:
             content = input_file.readlines()
         if self._widget:
             self._widget.progressSet.emit(len(content) // 100, "Reading dictionary file...")
             self._widget.progressUpdate.emit(0)
 
-        for word_id, current_line in enumerate(content):
+        for i, current_line in enumerate(content):
             current_line = current_line.strip()
             if current_line and not current_line.startswith (";;;"):
                 word, transcript = current_line.split ("  ")
-                self.table_add(self.word_table, 
-                    {self.word_id: word_id,
-                        self.word_label: word, 
-                        self.word_transcript: transcript})
-            if self._widget and not word_id % 100:
-                self._widget.progressUpdate.emit(word_id // 100)
-        self.Con.commit()
+                self.table(self.word_table).add(
+                    {self.word_label: word, 
+                    self.word_transcript: transcript})
+            if self._widget and not i % 100:
+                self._widget.progressUpdate.emit(i // 100)
+        self.commit_data()
 
     @staticmethod
     def get_title():
