@@ -73,6 +73,8 @@ class Options(object):
         self.args.column_width = {}
         self.args.column_color = {}
         self.args.column_visibility = {}
+        self.args.row_visibility = {}
+        self.args.row_color = {}
 
     @property
     def cfg(self):

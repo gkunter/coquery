@@ -19,6 +19,7 @@ import codecs
 import random
 import logging
 
+import numpy as np
 import pandas as pd
 
 from session import *
@@ -33,6 +34,7 @@ import results
 import error_box
 import sqlwrap
 import queries
+import contextview
 
 from queryfilter import *
 
@@ -596,20 +598,28 @@ class CoqueryApp(QtGui.QMainWindow):
         header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_header_menu)
 
-        self.ui.data_preview.setStyleSheet('::item:hover { color: blue; text-decoration: underline }')
+        header = self.ui.data_preview.verticalHeader()
+        header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.show_row_header_menu)
+
+        self.ui.data_preview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
+
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
 
         self.ui.context_query_syntax.setPixmap(QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_TitleBarContextHelpButton))
 
-
     def result_column_resize(self, index, old, new):
         header = self.table_model.header[index].lower()
         options.cfg.column_width[header] = new
 
     def result_cell_clicked(self, index):
-        import contextview
+        """
+        Launch the context viewer.
+        """
+        
         model_index = index
         row = model_index.row()
         data = self.table_model.content.iloc[row]
@@ -844,12 +854,16 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.data_preview.setModel(self.table_model)
 
+        # drop row colors and row visibility:
+        options.cfg.row_visibility = {}
+        options.cfg.row_color = {}
+
         # set column widths:
         for i, column in enumerate(self.table_model.header):
             if column.lower() in options.cfg.column_width:
                 self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower()])
         
-        # set delegates:
+        #set delegates:
         header = self.ui.data_preview.horizontalHeader()
         for i in range(header.count()):
             column = self.table_model.header[header.logicalIndex(i)]
@@ -859,7 +873,6 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 deleg = results.CoqResultCellDelegate(self.ui.data_preview)
             self.ui.data_preview.setItemDelegateForColumn(i, deleg)
-
 
         if self.table_model.rowCount():
             self.last_results_saved = False
@@ -901,6 +914,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
                 ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
                 tab = self.table_model.content[ordered_headers]
+                # exclude invisble rows:
+                tab = tab.iloc[~tab.index.isin(pd.Series(options.cfg.row_visibility.keys()))]
                 tab.to_csv(name,
                            sep=options.cfg.output_separator,
                            index=False,
@@ -1024,13 +1039,100 @@ class CoqueryApp(QtGui.QMainWindow):
         self.menu.popup(header.mapToGlobal(point))
         header.customContextMenuRequested.connect(self.show_header_menu)
 
+    def show_row_header_menu(self, point):
+        self.ui.data_preview.customContextMenuRequested.disconnect(self.show_row_header_menu)
+        header = self.ui.data_preview.verticalHeader()
+        # show self.menu about the column
+        self.menu = QtGui.QMenu("Row options", self)
+
+        index = header.logicalIndexAt(point.y())
+        row = self.table_model.content.index[index]
+        
+        selection = []
+        for x in self.ui.data_preview.selectionModel().selectedRows():
+            selection.append(self.table_model.content.index[x.row()])
+
+        if len(selection) > 1:
+            display_name = "{} rows selected".format(len(selection))
+        else:
+            display_name = "Row menu"
+        action = QtGui.QWidgetAction(self)
+        label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        action.setDefaultWidget(label)
+        self.menu.addAction(action)
+        self.menu.addSeparator()
+        
+        # Check if any row is hidden
+        if any([not options.cfg.row_visibility.get(x, True) for x in selection]):
+            if len(selection) > 1:
+                action = QtGui.QAction("&Show hidden rows", self)
+            else:
+                action = QtGui.QAction("&Show row", self)
+            action.triggered.connect(lambda: self.set_row_visibility(selection, True))
+            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
+            self.menu.addAction(action)
+        # Check if any row is visible
+        if any([options.cfg.row_visibility.get(x, True) for x in selection]):
+            if len(selection) > 1:
+                action = QtGui.QAction("&Hide visible rows", self)
+            else:
+                action = QtGui.QAction("&Hide row", self)
+            action.triggered.connect(lambda: self.set_row_visibility(selection, False))
+            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
+            self.menu.addAction(action)
+        self.menu.addSeparator()
+        
+        # Check if any row has a custom color:
+        if any([x in options.cfg.row_color for x in selection]):
+            action = QtGui.QAction("&Reset color", self)
+            action.triggered.connect(lambda: self.reset_row_color(selection))
+            self.menu.addAction(action)
+
+        action = QtGui.QAction("&Change color...", self)
+        action.triggered.connect(lambda: self.change_row_color(selection))
+        self.menu.addAction(action)
+        
+        self.menu.popup(header.mapToGlobal(point))
+        self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
+
     def toggle_visibility(self, column):
-        """ Show again a hidden column, or hide a visible column."""
+        """ 
+        Show again a hidden column, or hide a visible column.
+        
+        Parameters
+        ----------
+        column : column index
+        """
         options.cfg.column_visibility[column] = not options.cfg.column_visibility.get(column, True)
         self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
         # Resort the data if this is a sorting column:
         if column in self.table_model.sort_columns:
             self.table_model.sort(0, QtCore.Qt.AscendingOrder)
+        self.table_model.layoutChanged.emit()
+
+    def set_row_visibility(self, selection, state):
+        """ 
+        Set the visibility of the selected rows.
+        
+        Parameters
+        ----------
+        selection : list
+            A list of row indices
+        
+        state : bool
+            True if the rows should be visible, or False to hide the rows
+        """
+        if state:
+            for x in selection:
+                try:
+                    options.cfg.row_visibility.pop(np.int64(x))
+                except KeyError:
+                    pass
+        else:
+            for x in selection:
+                options.cfg.row_visibility[np.int64(x)] = False 
+        self.ui.data_preview.verticalHeader().geometriesChanged.emit()
         self.table_model.layoutChanged.emit()
 
     def reset_color(self, column):
@@ -1044,7 +1146,20 @@ class CoqueryApp(QtGui.QMainWindow):
         col = QtGui.QColorDialog.getColor()
         if col.isValid():
             options.cfg.column_color[column] = col.name()
-            #self.table_model.layoutChanged.emit()
+        
+    def reset_row_color(self, selection):
+        for x in selection:
+            try:
+                options.cfg.row_color.pop(np.int64(x))
+            except KeyError:
+                pass
+        #self.table_model.layoutChanged.emit()
+
+    def change_row_color(self, selection):
+        col = QtGui.QColorDialog.getColor()
+        if col.isValid():
+            for x in selection:
+                options.cfg.row_color[np.int64(x)] = col.name()
         
     def change_sorting_order(self, column, mode):
         self.menu.close()
@@ -1053,6 +1168,10 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.table_model.sort_columns[column] = mode
         self.table_model.sort(0, QtCore.Qt.AscendingOrder)
+        # make sure that the table is updated if there are no sort columns
+        # left anymore:
+        if not self.table_model.sort_columns:
+            self.table_model.layoutChanged.emit()
         
     def set_query_button(self):
         """ Set the action button to start queries. """
