@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 """ 
 visualizer.py is part of Coquery.
 
@@ -36,10 +41,6 @@ folder of the Coquery installation. For instance,
 the current results table in the form of one or more barcharts, and  :mod:`visualizations/barcodeplot.py` contains the subclass :class:`BarcodeVisualizer` which draws a barcode plot where vertical lines 
 indicate the position within the corpus for each token in the result table.
 """
-
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import sys
 import os
@@ -285,6 +286,13 @@ class BaseVisualizer(object):
         self._table = self._model.reindex(columns=self._column_order)
         self._table.columns = [
             options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in self._table.columns]
+
+        # Remove hidden rows. 
+        # Note that the row numbers in the data view start at 1, but in the
+        # internal visualization table at 0 (as is the default for data 
+        # frames).
+
+        self._table = self._table.iloc[~self._table.index.isin(pd.Series(options.cfg.row_visibility.keys())-1)]
 
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
