@@ -1,3 +1,13 @@
+"""
+dbconnection.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals 
 from __future__ import print_function
 
@@ -6,12 +16,8 @@ try:
 except NameError:
     pass
 
-try:
-    import MySQLdb as mysql
-    import MySQLdb.cursors as mysql_cursors
-except ImportError:
-    import pymysql as mysql
-    import pymysql.cursors as mysql_cursors
+import pymysql as mysql
+import pymysql.cursors as mysql_cursors
 
 import logging
 import copy
