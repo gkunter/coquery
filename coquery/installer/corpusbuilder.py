@@ -66,7 +66,11 @@ import sys
 import textwrap
 import fnmatch
 import inspect
-import xml.etree.ElementTree as ET
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
+        
 import difflib
 
 try:
@@ -97,6 +101,7 @@ try:
 except ImportError:
     show_progress = False
 
+import corpus
 
 insert_cache = collections.defaultdict(list)
 
@@ -133,7 +138,6 @@ class Resource(SQLResource):
     name = '{name}'
     display_name = '{display_name}'
     db_name = '{db_name}'
-    documentation_url = '{url}'
 {variables}
 {resource_code}
     
@@ -279,10 +283,10 @@ class Table(object):
             # is not Null
             for row in self._add_cache:
                 row_id, row_data = self._add_cache[row]
-                if len(row_data) == 1:
-                    for x in row_data:
-                        row_data[x] = ["", row_data[x][0], "u"]
                 if row_data:
+                    if len(row_data) == 1:
+                        for x in row_data:
+                            row_data[x] = ["", row_data[x][0], "u"]
                     data.append([row_id] + list(row_data.values()))
                     new_keys.append(row)
 
@@ -296,14 +300,23 @@ class Table(object):
                 for row in new_keys:
                     self._add_cache[row] = (self._add_cache[row][0], None)
     
+    def add_next(self, row):
+        """ Add a valid primary key to the data in the 'row' dictionary, 
+        and store the data in add cache of the table. """ 
+        self._current_id += 1
+        self._add_cache[tuple([row[x] for x in sorted(row)])] = (self._current_id, row)
+        return self._current_id
+        
+    
     def add(self, row):
         """ Add a valid primary key to the data in the 'row' dictionary, 
         and store the data in add cache of the table. """ 
         if not self._col_names:
             self._col_names = row.keys()
         self._current_id += 1
-        
         self._add_cache[tuple([row[x] for x in sorted(row)])] = (self._current_id, row)
+
+        self.add = self.add_next
         return self._current_id
         
     def get_or_insert(self, values, case=False):
@@ -325,11 +338,12 @@ class Table(object):
         id : int 
             The id of the entry, as it is stored in the MySQL table.
         """
-        row_id = self.get_data_id(values)
-        if row_id:
-            return row_id
-        else:
+        try:
+            row_id = self._add_cache[tuple([values[x] for x in sorted(values)])][0]
+        except KeyError:
             return self.add(values)
+        else:
+            return row_id
 
     def find(self, values):
         """ 
@@ -366,14 +380,6 @@ class Table(object):
                 return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
             except IndexError:
                 return None
-
-
-
-    def get_data_id(self, row):
-        try:
-            return self._add_cache[tuple([row[x] for x in sorted(row)])][0]
-        except KeyError:
-            return None
         
     def add_column(self, column):
         self.columns.append(column)
@@ -418,7 +424,7 @@ class Table(object):
                     column.data_type))
         return ", ".join(str_list)
     
-class BaseCorpusBuilder(object):
+class BaseCorpusBuilder(corpus.BaseResource):
     """ 
     This class is the base class used to build and install a corpus for 
     Coquery. For corpora currently not supported by Coquery, new builders 
@@ -429,7 +435,7 @@ class BaseCorpusBuilder(object):
     name = None
     table_description = None
     lexicon_features = None
-    corpus_features = None
+    #corpus_features = None
     arguments = None
     name = None
     additional_arguments = None
@@ -444,18 +450,20 @@ class BaseCorpusBuilder(object):
         self.module_code = module_code
         self.table_description = {}
         self.lexicon_features = []
-        self.corpus_features = []
+        #self.corpus_features = []
         self._time_features = []
         #self._tables = {}
         self._id_count = {}
         self._primary_keys = {}
         self._interrupted = False
-        
+        self._blocklist = set()
         self._new_tables = {}
         
         self._corpus_buffer = []
         self._corpus_id = 0
         self._widget = gui
+        
+        self._source_count = collections.Counter()
         
         # set up argument parser:
         self.parser = argparse.ArgumentParser()
@@ -487,10 +495,10 @@ class BaseCorpusBuilder(object):
         Corpora should usually have a tag table that is used to store
         text information. This method is called during :func:`build` and
         adds a tag table if none is present yet.
-        """
         
-        if "tag_table" in dir(self):
-            return
+        Currently, the tag table cannot be queried, so no indices will be
+        created for the data columns.
+        """
         
         self.tag_table = "tags"
         self.tag_id = "TagId"
@@ -499,24 +507,17 @@ class BaseCorpusBuilder(object):
         self.tag_corpus_id = self.corpus_id
         self.tag_attribute = "Attribute"
         
-        #self.add_table_description(self.tag_table, self.tag_id,
-            #{"CREATE": [
-                #"`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_id),
-                #"`{}` ENUM('open', 'close', 'empty')".format(self.tag_type),
-                #"`{}` TINYTEXT NOT NULL".format(self.tag_label),
-                #"`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_corpus_id),
-                #"`{}` TINYTEXT NOT NULL".format(self.tag_attribute)],
-            #"INDEX": [
-                #([self.tag_corpus_id], 0, "HASH"),
-                #([self.tag_label], 0, "BTREE"),
-                #([self.tag_type], 0, "BTREE")]})
-            
         self.create_table_description(self.tag_table,
             [Primary(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
              Column(self.tag_label, "TINYTEXT NOT NULL"),
              Link(self.tag_corpus_id, self.corpus_table),
              Column(self.tag_attribute, "TINYTEXT NOT NULL", index=False)])
+
+        self.add_index_to_blocklist(("tags", self.tag_label))
+        self.add_index_to_blocklist(("tags", self.tag_type))
+        self.add_index_to_blocklist(("tags", self.tag_type))
+        self.add_index_to_blocklist(("tags", self.tag_attribute))
 
     def interrupt(self):
         """
@@ -622,64 +623,7 @@ class BaseCorpusBuilder(object):
             return self._new_tables[table_name]
         except KeyError:
             return None
-        
-    #def add_table_description(self, table_name, primary_key, table_description):
-        #""" Add a primary key to the table description and the internal
-        #tables."""
-        #for i, x in enumerate(table_description["CREATE"]):
-            #if "`{}`".format(primary_key) in x:
-                #table_description["CREATE"][i] = "{} AUTO_INCREMENT".format(
-                    #table_description["CREATE"][i])
-        #table_description["CREATE"].append("PRIMARY KEY (`{}`)".format(primary_key))
-        
-        #self.table_description[table_name] = table_description
-        
-        #self._tables[table_name] = {}
-        #self._primary_keys[table_name] = primary_key
-        #self._id_count[table_name] = 0
-        
-    #def table_add(self, table_name, values):
-        #""" 
-        #Add an entry containing the values to the table. 
-        
-        #This method adds a row with the values to the specified table. A new
-        #unique id is also provided, and the class counter is updated. 
-        #"""
-        #return self.Con.insert(table_name, values)
-    
-    #def table_find(self, table_name, values):
-        #""" 
-        #Return the first row that matches the values, or None
-        #otherwise.
-        #"""
-        
-        #if in_memory:
-            #keys_values = set(values.keys())
-            #table = self._new_tables[table_name]
-            #keys_table = sorted(table._col_names)
-            #lookup_list = {}
-            
-            #for key in values:
-                #try:
-                    #lookup_list[key] = keys_table.index(key)
-                #except IndexError:
-                    #pass
 
-            #if lookup_list:
-                #for key in table._add_cache:
-                    #for lookup in lookup_list:
-                        #if values[lookup] != key[lookup_list[lookup]]:
-                            #break
-                        #else:
-                            #row_id, _ = table._add_cache[key]
-                            #return 
-            #return None
-        #else:
-            #try:
-                #return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
-            #except IndexError:
-                #return None
-    
     def setup_logger(self):
         """ 
         Initialize the logger.
@@ -792,9 +736,12 @@ class BaseCorpusBuilder(object):
         return False
 
     def get_corpus_code(self):
-        """ return a text string containing the Python source code from
-        the class attribute self._corpus_code. This function is needed
-        to add corpus-specifc to the Python corpus module."""
+        """ 
+        Return a text string containing the Python source code for the 
+        Corpus class of this module.
+        
+        The code is obtained from the the class attribute self._corpus_code.
+        """
         try:
             lines = [x for x in inspect.getsourcelines(self._corpus_code)[0] if not x.strip().startswith("class")]
         except AttributeError:
@@ -831,18 +778,12 @@ class BaseCorpusBuilder(object):
 
     def store_filename(self, file_name):
         self._file_name = file_name
-        
+        self._value_file_name = file_name
+        self._value_file_path = os.path.splitext(os.path.basename(file_name))[0]
+
         self._file_id = self.table(self.file_table).get_or_insert(
-            {self.file_path: file_name,
-             self.file_name: 
-                 os.path.splitext(os.path.basename(file_name))[0]
-                 })
-        
-        #self._file_id = self.table_get(self.file_table, 
-            #{self.file_path: file_name,
-             #self.file_name: 
-                 #os.path.splitext(os.path.basename(file_name))[0]
-                 #})
+            {self.file_path: self._value_file_name,
+             self.file_name: self._value_file_path})
 
     #def get_lemma(self, word):
         #""" Return a lemma for the word. By default, this is simply the
@@ -1053,6 +994,11 @@ class BaseCorpusBuilder(object):
                     # add the token to the corpus:
                     self.add_token(current_token, current_pos)
     
+    def add_next_token_to_corpus(self, values):
+        self._corpus_id += 1
+        values[self.corpus_id] = self._corpus_id
+        self._corpus_buffer.append(values)
+        
     def add_token_to_corpus(self, values):
         if len(values) < len(self._new_tables[self.corpus_table].columns) - 2:
             print(values)
@@ -1062,6 +1008,7 @@ class BaseCorpusBuilder(object):
         values[self.corpus_id] = self._corpus_id
         self._corpus_keys = values.keys()
         self._corpus_buffer.append(values)
+        self.add_token_to_corpus = self.add_next_token_to_corpus
     
     def add_token(self, token_string, token_pos):
         # get lemma string:
@@ -1418,6 +1365,12 @@ class BaseCorpusBuilder(object):
         if show_progress and not self._widget:
             progress.finish()
         
+    def add_index_to_blocklist(self, index):
+        self._blocklist.add(index)
+        
+    def remove_index_from_blocklist(self, index):
+        self._blocklist.remove(index)
+        
     def build_create_indices(self):
         """ 
         Create a MySQL index for each column in the database. 
@@ -1436,11 +1389,10 @@ class BaseCorpusBuilder(object):
         outweighs these disadvantages.
         """
         index_list = []
-        
         for table_name in self._new_tables:
             table = self._new_tables[table_name]
             for column in table.columns:
-                if not isinstance(column, Primary):
+                if not isinstance(column, Primary) and (table.name, column.name) not in self._blocklist:
                     index_list.append((table.name, column.name))
 
         if self._widget:
@@ -1495,7 +1447,8 @@ class BaseCorpusBuilder(object):
         if show_progress and not self._widget:
             progress.finish()
     
-    def get_class_variables(self):
+    @staticmethod
+    def get_class_variables():
         return dir(BaseCorpusBuilder)
 
     def verify_corpus(self):
@@ -1552,7 +1505,7 @@ class BaseCorpusBuilder(object):
         """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
         
-        base_variables = self.get_class_variables()
+        base_variables = type(self).get_class_variables()
 
         # all class variables that are defined in this class and which...
         # - are note stored in the base class
@@ -1567,12 +1520,17 @@ class BaseCorpusBuilder(object):
                           and not inspect.ismethod(self.__getattribute__(x))]
         variable_strings = []
         for variable_name in sorted(variable_names):
-            variable_strings.append("    {} = '{}'".format(
-                variable_name, self.__dict__[variable_name]))
+            try:
+                variable_strings.append("    {} = '{}'".format(
+                    variable_name, type(self).__dict__[variable_name]))
+            except KeyError:
+                variable_strings.append("    {} = '{}'".format(
+                    variable_name, self.__dict__[variable_name]))
         variable_code = "\n".join(variable_strings)
         
         lexicon_provides = "[{}]".format(", ".join(self.lexicon_features))
-        corpus_provides = "[{}]".format(", ".join(self.corpus_features))
+        #corpus_provides = "[{}]".format(", ".join(self.corpus_features))
+        corpus_provides = "[]"
 
         self.resource_content = """
 class Resource(SQLResource):
@@ -1586,7 +1544,6 @@ class Resource(SQLResource):
                 name=self.name,
                 display_name=self.get_name(),
                 db_name=self.arguments.db_name,
-                url=self.get_url(),
                 variables=variable_code,
                 lexicon_provides=lexicon_provides,
                 corpus_provides=corpus_provides,
