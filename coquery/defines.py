@@ -6,6 +6,8 @@ This module defines several constants used in different other modules.
 
 """
 
+from __future__ import unicode_literals
+
 import glob
 import os, inspect
 import importlib
@@ -111,68 +113,6 @@ Please inform the maintainer of this corpus installer of your problem. When doin
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
-
-# from https://docs.python.org/2.7/library/csv.html#csv-examples
-class UTF8Recoder:
-    """
-    Iterator that reads an encoded stream and reencodes the input to UTF-8
-    """
-    def __init__(self, f, encoding):
-        self.reader = codecs.getreader(encoding)(f)
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        return self.reader.next().encode("utf-8")
-
-class UnicodeReader:
-    """
-    A CSV reader which will iterate over lines in the CSV file "f",
-    which is encoded in the given encoding.
-    """
-
-    def __init__(self, f, encoding="utf-8", types=None, **kwds):
-        f = UTF8Recoder(f, encoding)
-        if "delimiter" in kwds:
-            kwds["delimiter"] = str(kwds["delimiter"])
-        self.reader = csv.reader(f, **kwds)
-        self.types = types
-        self.encoding = encoding
-
-    def next(self):
-        row = self.reader.next()
-        if not self.types:
-            return [unicode(s, self.encoding) for s in row]
-        else:
-            try:
-                return [unicode(x, self.encoding) if var_type == unicode else var_type(x) for x, var_type in zip(row, self.types)]
-            except ValueError:
-                return [unicode(s, self.encoding) for s in row]
-    def __iter__(self):
-        return self
-
-class UnicodeWriter(object):
-    """ Define a class that substitutes the csv writer object in order to
-    be friendly to Unicode strings."""
-    
-    def __init__(self, f, encoding="utf-8", **kwds):
-        self.writer = csv.writer(f, **kwds)
-        self.encoding = encoding
-
-    def writerow(self, row):
-        def encode_string(s):
-            if isinstance(s, unicode):
-                return s.encode(self.encoding)
-            elif isinstance(s, (int, float, long, complex)):
-                return s
-            elif not isinstance(s, str):
-                try:
-                    return str(s)
-                except UnicodeEncodeError as e:
-                    raise e
-            return s
-        return self.writer.writerow([encode_string(x) for x in row])
 
 class FileSize(long):
     """ Define a long class that can store file sizes, and which allows
