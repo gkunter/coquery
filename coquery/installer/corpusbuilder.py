@@ -1679,6 +1679,11 @@ if use_gui:
             self.ui.button_input_path.clicked.connect(self.select_path)
             self.ui.radio_install_corpus.toggled.connect(self.changed_radio)
             self.ui.radio_only_module.toggled.connect(self.changed_radio)
+            self.ui.input_path.textChanged.connect(self.check_input)
+
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setText("&Install")
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+            
             self.installStarted.connect(self.show_progress)
             self.progressSet.connect(self.set_progress)
             self.progressUpdate.connect(self.update_progress)
@@ -1725,8 +1730,10 @@ if use_gui:
         def changed_radio(self):
             if self.ui.radio_install_corpus.isChecked():
                 self.ui.box_build_options.setEnabled(True)
+                self.check_input()
             else:
                 self.ui.box_build_options.setEnabled(False)
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
 
         def show_progress(self):
             self.ui.progress_box.show()
@@ -1734,13 +1741,9 @@ if use_gui:
                 
         def do_install(self):
             S = "Installing {}...".format(self.builder.name)
-            self.parent().ui.statusbar.showMessage(S)
+            #self.parent().ui.statusbar.showMessage(S)
             self.ui.frame.setEnabled(False)
-            try:
-                self.builder.build()
-            except RuntimeError as e:
-                QtGui.QMessageBox.critical(self, "Error during installation",
-                                        str(e))
+            self.builder.build()
             
         def finish_install(self):
             S = "Finished installing {}.".format(self.builder.name)
@@ -1762,8 +1765,21 @@ if use_gui:
                         self.install_thread.quit()
                         super(InstallerGui, self).reject()
             except AttributeError:
-                pass
+                super(InstallerGui, self).reject()
                 
+        def check_input(self):
+            if self.ui.radio_only_module.isChecked():
+                self.ui.input_path.setStyleSheet('')
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+            else:
+                path = str(self.ui.input_path.text())
+                if os.path.isdir(path):
+                    self.ui.input_path.setStyleSheet('')
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                else:
+                    self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+            
         def accept(self):
             self.installStarted.emit()
             self.accepted = True
@@ -1771,18 +1787,13 @@ if use_gui:
             self.builder.logger = self.logger
             self.builder.arguments = self.get_arguments_from_gui()
             self.builder.name = self.builder.arguments.name
-            
-            try:
-                self.do_install()
-            except:
-                self.install_exception()
-            self.finish_install()
-            #self.install_thread = QtProgress.ProgressThread(self.do_install, self)
-            #self.install_thread.setInterrupt(self.builder.interrupt)
-            #self.install_thread.taskFinished.connect(self.finish_install)
-            #self.install_thread.taskException.connect(self.install_exception)
-            #self.install_thread.start()
-            
+
+            self.install_thread = QtProgress.ProgressThread(self.do_install, self)
+            self.install_thread.setInterrupt(self.builder.interrupt)
+            self.install_thread.taskFinished.connect(self.finish_install)
+            self.install_thread.taskException.connect(self.install_exception)
+            self.install_thread.start()
+        
         def get_arguments_from_gui(self):
             namespace = argparse.Namespace()
             namespace.verbose = False
