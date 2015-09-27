@@ -621,7 +621,7 @@ class VisualizerDialog(QtGui.QWidget):
         self.remove_matplot()
         self.add_matplot()
             
-        self.draw()
+        self.visualizer.draw()
         #self.canvas.draw()
         if self.smooth:
             self.spinner.setEnabled(True)
