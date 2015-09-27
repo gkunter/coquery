@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
-""" session.py -- part of Coquery corpus query tool
+"""
+session.py is part of Coquery.
 
-This module defines the Session class. """
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -11,6 +17,7 @@ import copy
 import time, datetime
 import fileinput
 import codecs
+import logging
 
 import pandas as pd
 
@@ -19,13 +26,9 @@ import options
 from errors import *
 from corpus import *
 from defines import *
-
-import pandas as pd
-
 import queries
 import tokens
 
-import logging
 
 class Session(object):
     def __init__(self):
@@ -249,10 +252,13 @@ class SessionInputFile(Session):
         input_header = None
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
-            input_file = pd.DataFrame.from_csv(
-                InputFile,
+            
+            input_file = pd.read_table(
+                filepath=InputFile,
                 sep=options.cfg.input_separator,
+                quotechar=options.cfg.quotechar,
                 encoding=options.cfg.input_encoding)
+
             if options.cfg.file_has_headers and self.header == None:
                 self.header = input_file.columns.values.tolist()
                 input_header = self.header
