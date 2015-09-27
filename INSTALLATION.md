@@ -1,3 +1,4 @@
+~~
 # Installation #
 
 ## Quick Guide: Installing Coquery on Windows ##
@@ -174,3 +175,4 @@ Note that NLTK may depend on other Python packages, such as the numpy package. I
 #!bash
 pip install numpy
 ```
+~~
