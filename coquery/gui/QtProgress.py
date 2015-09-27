@@ -1,5 +1,14 @@
+"""
+QtProgress.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from pyqt_compat import QtCore, QtGui
-import threading
 import time
 import sys, os
 from errors import *
