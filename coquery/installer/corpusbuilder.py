@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 
+"""
+corpusbuilder.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 """ 
 The module :mod:`corpusbuilder.py` provides the framework for corpus module
 installers.
@@ -53,7 +63,7 @@ import codecs
 
 import logging
 import collections
-import os, os.path
+import os.path
 import string
 import imp
 import importlib
