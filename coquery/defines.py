@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-FILENAME: defines.py -- part of Coquery corpus query tool
+defines.py is part of Coquery.
 
-This module defines several constants used in different other modules.
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
 
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
 
 import glob
-import os, inspect
+import os
 import importlib
 import sys
 import warnings
-import csv, codecs
 import math
 import itertools
-
 import gc
-import sys
 
 # The following flags are used to indicate which fields are provided by the 
 # lexicon of a corpus, and also to access the fields of the value of 
