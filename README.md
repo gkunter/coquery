@@ -7,6 +7,20 @@ Coquery is a tool that can search a number of linguistic corpora using a unified
 
 The latest release is version 0.9. 
 
+### License ###
+Copyright (c) Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is free software: you can redistribute it and/or modify
+it under the terms of the [GNU General Public License](http://www.gnu.org/licenses/), 
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
+
 ### Features ###
 * Uses MySQL database for fast searches on big corpora, much faster than processing textfiles
 * Corpora that are already stored in a database can easily be incorporated by writing a new corpus module
