@@ -105,12 +105,6 @@ except ImportError:
 else:
     nltk_available = True
 
-try:
-    import progressbar
-    show_progress = True
-except ImportError:
-    show_progress = False
-
 import corpus
 
 insert_cache = collections.defaultdict(list)
@@ -671,23 +665,15 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self._widget:
             self._widget.progressSet.emit(len(self._new_tables), "Creating tables... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-        elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Creating tables ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(self._new_tables))
-            progress.start()
 
         for i, current_table in enumerate(self._new_tables):
             if not self.Con.has_table(current_table):
                 self.Con.create_table(current_table, self._new_tables[current_table].get_create_string())
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
-            elif show_progress:
-                progress.update(i + 1)
             if self.interrupted:
                 return
         self.Con.commit()
-
-        if show_progress and not self._widget:
-            progress.finish()
 
     def get_file_list(self, path):
         """ 
@@ -1245,9 +1231,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self._widget:
             self._widget.progressSet.emit(len(files), "Reading text files... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-        elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Reading data files ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(files))
-            progress.start()
             
         #for x in self.table_description:
             #self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
@@ -1263,14 +1246,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
-            elif show_progress:
-                progress.update(i + 1)
 
             self.commit_data()
 
-        if show_progress and not self._widget:
-            progress.finish()
-    
     def build_create_frequency_table(self):
         """ 
         Create a frequency table for all combinations of corpus features.
@@ -1324,9 +1302,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self._widget:
             self._widget.progressSet.emit(totals, "Optimizing table columns... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-        elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Optimizing table columns ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=totals)
-            progress.start()
             
         column_count = 0
         self.Con.start_transaction()
@@ -1366,14 +1341,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
                 if self._widget:
                     self._widget.progressUpdate.emit(column_count + 1)
-                elif show_progress:
-                    progress.update(column_count - 1)
 
         if self.interrupted:
             return
         self.Con.commit()
-        if show_progress and not self._widget:
-            progress.finish()
         
     def add_index_to_blocklist(self, index):
         self._blocklist.add(index)
@@ -1408,9 +1379,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self._widget:
             self._widget.progressSet.emit(len(index_list), "Creating indices... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-        elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Indexing ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(index_list))
-            progress.start()
 
         index_count = 0
         self.Con.start_transaction()
@@ -1446,17 +1414,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 i += 1
                 if self._widget:
                     self._widget.progressUpdate.emit(i + 1)
-                elif show_progress:
-                    progress.update(index_count)
 
         if self.interrupted:
             return
 
         self.Con.commit()
 
-        if show_progress and not self._widget:
-            progress.finish()
-    
     @staticmethod
     def get_class_variables():
         return dir(BaseCorpusBuilder)
