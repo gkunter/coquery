@@ -115,7 +115,11 @@ def main():
         options.cfg.icon = QtGui.QIcon()
         options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_tiny.png".format(sys.path[0])))
         Coq.setWindowIcon(options.cfg.icon)
-        options.cfg.app.exec_()
+        if options.cfg.profile:
+            import cProfile
+            cProfile.runctx("options.cfg.app.exec_()", globals(), locals())
+        else:
+            options.cfg.app.exec_()
         logger.info("--- Finished program (after %.3f seconds) ---" % (time.time() - start_time))
 
     # Otherwise, run program as a command-line tool:
