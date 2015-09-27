@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
-""" FILENAME: sqlwrap.py -- part of Coquery corpus query tool
+"""
+sqlwrap.py is part of Coquery.
 
-This module defines a wrapper to access a MySQL database. """
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from __future__ import unicode_literals
 import __init__
@@ -17,16 +23,10 @@ from errors import *
 import options
 
 try:
-    try:
-        import MySQLdb as mysql
-        import MySQLdb.cursors as mysql_cursors
-        print("Using MySQLdb")
-    except ImportError:
-        import pymysql as mysql
-        import pymysql.cursors as mysql_cursors
-        print("Using pymysql")
+    import pymysql as mysql
+    import pymysql.cursors as mysql_cursors
 except ImportError:
-    raise DependencyError(["MySQLdb", "pymysql"])
+    raise DependencyError("pymysql")
 
 class SqlDB (object):
     """ A wrapper for MySQL. """
