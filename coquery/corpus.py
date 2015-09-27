@@ -154,9 +154,6 @@ class BaseLexicon(object):
     
     def is_part_of_speech(self, pos):
         """ 
-        CALL
-        BaseLexicon.is_part_of_speech(pos)
-        
         DESCRIPTION
         is_part_of_speech(pos) returns True if the content of the argument
         pos is considered a valid part-of-speech label for the lexicon. 
@@ -165,10 +162,10 @@ class BaseLexicon(object):
         VALUE
         <type 'bool'>
         """
-        if LEX_POS not in self.provides:
-            raise LexiconUnprovidedError(LEX_POS)
-        else:
+        if self.pos_dict:
             return pos in self.pos_dict
+        else:
+            raise LexiconFeatureUnavailableError(LEX_POS)
 
     def check_pos_list(self, L):
         """ Returns the number of elements for which 
@@ -280,7 +277,6 @@ class BaseResource(object):
         
         #return d.keys()
 
-    
     @classmethod
     def get_table_dict(cls):
         """ Return a dictionary with the table names specified in this
@@ -665,23 +661,31 @@ class SQLLexicon(BaseLexicon):
     entry_cache = {}
     
     def sql_string_is_part_of_speech(self, pos):
-        if LEX_POS not in self.provides:
-            return False
         current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
-        if "pos_table" in dir(self.resource):
+        lexicon_features = [x for x, _ in self.resource.get_lexicon_features()]
+        if "pos_table" in lexicon_features:
             return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
                 self.resource.pos_id, 
                 self.resource.pos_table, 
                 self.resource.pos_label,
                 self.resource.get_operator(current_token),
                 pos)
-        else:
+        elif "word_pos" in lexicon_features:
             return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
                 self.resource.word_pos,
                 self.resource.word_table,
                 self.resource.word_pos,
                 self.resource.get_operator(current_token),
                 pos)
+        elif "corpus_pos" in lexicon_features:
+            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+                self.resource.corpus_pos,
+                self.resource.corpus_table,
+                self.resource.corpus_pos,
+                self.resource.get_operator(current_token),
+                pos)
+        else:
+            raise LexiconFeatureUnavailableError
 
     def sql_string_get_other_wordforms(self, match):
         if "lemma_table" not in dir(self.resource):
@@ -725,8 +729,10 @@ class SQLLexicon(BaseLexicon):
         
         sub_clauses = []
         
+        lexicon_features = [x for x, _ in self.resource.get_lexicon_features()]
+        
         if token.lemma_specifiers:
-            if LEX_LEMMA not in self.provides:
+            if not ("lemma_label" in lexicon_features or "word_lemma" in lexicon_features or "corpus_lemma" in lexicon_feature):
                 raise LexiconUnsupportedFunctionError
             
             specifier_list = token.lemma_specifiers
@@ -825,6 +831,7 @@ class SQLLexicon(BaseLexicon):
     def sql_string_get_entry(self, word_id, requested):
         """ Return a MySQL string that can be used to query the requested
         fields for the lexical entry 'word_id. """        
+        print("IS THIS CALLED ANYWAY?")
         if word_id == "NA":
             word_id = -1
         
@@ -1219,7 +1226,6 @@ class SQLCorpus(BaseCorpus):
 
         func_count =  Counter()
         for rc_feature in options.cfg.selected_features:
-            #print(rc_feature)
             if rc_feature.startswith("func."):
                 target = rc_feature.split("func.")[-1]
                 func_count[target] += 1
@@ -1229,12 +1235,22 @@ class SQLCorpus(BaseCorpus):
                 if "." not in rc_feature:
                     select_list.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
+        if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
+            # add contexts for each query match:
+            if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
+                if options.cfg.context_left:
+                    select_list.append("coq_context_left")
+                if options.cfg.context_right:
+                    select_list.append("coq_context_right")
+            elif options.cfg.context_mode == CONTEXT_STRING:
+                select_list.append("coq_context")
+            elif options.cfg.context_mode == CONTEXT_SENTENCE:
+                select_list.append("coq_context")
+
         if options.cfg.context_source_id:
             select_list.append("coquery_invisible_corpus_id")
             select_list.append("coquery_invisible_origin_id")
             select_list.append("coquery_invisible_number_of_tokens")
-
-        #print(select_list)
 
         return select_list        
 
@@ -1774,6 +1790,8 @@ class SQLCorpus(BaseCorpus):
             #span = options.cfg.context_span
         #elif options.cfg.context_columns:
             #span = options.cfg.context_columns
+        token_id = int(token_id)
+        source_id = int(source_id)
 
         old_verbose = options.cfg.verbose
         options.cfg.verbose = False
