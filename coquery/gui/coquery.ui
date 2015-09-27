@@ -208,7 +208,7 @@ summary:</string>
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_14">
               <property name="spacing">
-               <number>-1</number>
+               <number>0</number>
               </property>
               <item>
                <widget class="QRadioButton" name="radio_mode_tokens">
@@ -338,7 +338,7 @@ The number of occurrences of each token matching the query string is counted. Th
             <item row="0" column="1">
              <layout class="QVBoxLayout" name="verticalLayout_11">
               <property name="spacing">
-               <number>-1</number>
+               <number>0</number>
               </property>
               <item>
                <widget class="QRadioButton" name="radio_context_mode_kwic">

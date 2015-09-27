@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coqueryCompact.ui'
 #
-# Created: Sun Sep 20 18:53:56 2015
+# Created: Sat Sep 26 18:45:50 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -33,7 +33,7 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.verticalLayout_4 = QtGui.QVBoxLayout(self.centralwidget)
         self.verticalLayout_4.setSpacing(4)
-        self.verticalLayout_4.setContentsMargins(1, 0, 1, 0)
+        self.verticalLayout_4.setContentsMargins(2, 0, 2, 0)
         self.verticalLayout_4.setObjectName(_fromUtf8("verticalLayout_4"))
         self.options_area = QtGui.QFrame(self.centralwidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.MinimumExpanding)
@@ -496,7 +496,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.tabbed_views)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 892, 36))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 892, 29))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))

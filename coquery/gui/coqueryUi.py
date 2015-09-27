@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Sun Sep 20 18:53:39 2015
+# Created: Sat Sep 26 18:30:52 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -110,7 +110,7 @@ class Ui_MainWindow(object):
         self.label_10.setObjectName(_fromUtf8("label_10"))
         self.horizontalLayout_8.addWidget(self.label_10)
         self.verticalLayout_14 = QtGui.QVBoxLayout()
-        self.verticalLayout_14.setSpacing(-1)
+        self.verticalLayout_14.setSpacing(0)
         self.verticalLayout_14.setObjectName(_fromUtf8("verticalLayout_14"))
         self.radio_mode_tokens = QtGui.QRadioButton(self.box_query_mode)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
@@ -173,7 +173,7 @@ class Ui_MainWindow(object):
         self.context_mode.setObjectName(_fromUtf8("context_mode"))
         self.gridLayout_6.addWidget(self.context_mode, 0, 0, 1, 1)
         self.verticalLayout_11 = QtGui.QVBoxLayout()
-        self.verticalLayout_11.setSpacing(-1)
+        self.verticalLayout_11.setSpacing(0)
         self.verticalLayout_11.setObjectName(_fromUtf8("verticalLayout_11"))
         self.radio_context_mode_kwic = QtGui.QRadioButton(self.box_context_mode)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
