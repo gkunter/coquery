@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-FILENAME: corpus.py -- part of Coquery corpus query tool
+corpus.py is part of Coquery.
 
-This module defines classes BaseLexicon and BaseCorpus.
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
 
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+
 from __future__ import unicode_literals
 from __future__ import print_function
 
@@ -15,8 +19,6 @@ import tokens
 import options
 import sqlwrap
 from defines import *
-
-import json
 
 def collapse_words(word_list):
     
