@@ -31,7 +31,6 @@ class Visualizer(vis.BaseVisualizer):
     
     def update_data(self, bandwidth=1):
         super(Visualizer, self).update_data()
-        
         for x in self._table.columns[::-1]:
             if x in self._time_columns:
                 self._time_column = x
@@ -41,8 +40,10 @@ class Visualizer(vis.BaseVisualizer):
 
         self.bandwidth = bandwidth
 
+        # Found column with temporal data?
         if self._time_column:
             if  self._time_column in self._groupby:
+                # make sure that column is last in the internal data frame
                 if self._groupby[-1] != self._time_column:
                     self._groupby = self._groupby[::-1]
                     self._levels = self._levels[::-1]
@@ -59,6 +60,8 @@ class Visualizer(vis.BaseVisualizer):
                     self._groupby.append(self._time_column)
         else:
             raise VisualizationInvalidDataError
+        print(self._groupby)
+        
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
@@ -67,7 +70,6 @@ class Visualizer(vis.BaseVisualizer):
         """ Draw time series. """
         
         def plot_facet(data, color, **kwargs):
-            
             if len(self._groupby) == 2:
                 num = []
                 date = []
@@ -85,11 +87,11 @@ class Visualizer(vis.BaseVisualizer):
                         date.append(pd.NaT)
                 if pd.isnull(num).sum() <= pd.isnull(date).sum():
                     data[self._time_column] = num
-                    time_range = [pd.datetime((int(x) // self.bandwidth) * self.bandwidth, 1, 1) for x in (self._table[self._time_column].min(), self._table[self._time_column].max())]
+                    #time_range = [pd.datetime((int(x) // self.bandwidth) * self.bandwidth, 1, 1) for x in (self._table[self._time_column].min(), self._table[self._time_column].max())]
                 else:
                     data[self._time_column] = date
-                    time_range = [pd.Timestamp("{}".format(
-                        (pd.Timestamp(x).year // self.bandwidth) * self.bandwidth)) for x in (self._table[self._time_column].min(), self._table[self._time_column].max())]
+                    #time_range = [pd.Timestamp("{}".format(
+                        #(pd.Timestamp(x).year // self.bandwidth) * self.bandwidth)) for x in (self._table[self._time_column].min(), self._table[self._time_column].max())]
 
                 ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
                 ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
