@@ -254,10 +254,11 @@ class SessionInputFile(Session):
             read_lines = 0
             
             input_file = pd.read_table(
-                filepath=InputFile,
+                filepath_or_buffer=InputFile,
                 sep=options.cfg.input_separator,
-                quotechar=options.cfg.quotechar,
-                encoding=options.cfg.input_encoding)
+                quotechar=options.cfg.quote_char,
+                encoding=options.cfg.input_encoding,
+                na_filter=False)
 
             if options.cfg.file_has_headers and self.header == None:
                 self.header = input_file.columns.values.tolist()
