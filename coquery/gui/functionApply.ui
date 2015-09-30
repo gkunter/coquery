@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
+    <width>691</width>
     <height>480</height>
    </rect>
   </property>
@@ -57,6 +57,9 @@
          </sizepolicy>
         </property>
         <layout class="QGridLayout" name="gridLayout">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetMinimumSize</enum>
+         </property>
          <property name="leftMargin">
           <number>8</number>
          </property>
@@ -123,6 +126,12 @@
          </item>
          <item row="5" column="1">
           <widget class="QLabel" name="label_func4">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Match '{}' with the parameter as a &lt;a href=&quot;https://docs.python.org/2/howto/regex.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;regular expression&lt;/span&gt;&lt;/a&gt;, and show the matching string.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
@@ -150,11 +159,17 @@
          </item>
          <item row="4" column="1">
           <widget class="QLabel" name="label_func3">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
             <string>Show 'yes' if the parameter matches '{}' as a &lt;a href=&quot;https://docs.python.org/2/howto/regex.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;regular expression&lt;/span&gt;&lt;/a&gt;, otherwise 'no'</string>
            </property>
            <property name="wordWrap">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="textInteractionFlags">
             <set>Qt::TextBrowserInteraction</set>

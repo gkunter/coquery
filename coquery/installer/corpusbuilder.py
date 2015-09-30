@@ -1752,7 +1752,7 @@ if use_gui:
             
         def finish_install(self):
             S = "Finished installing {}.".format(self.builder.name)
-            self.parent().ui.statusbar.showMessage(S)
+            #self.parent().ui.statusbar.showMessage(S)
             self.ui.frame.setEnabled(True)
             super(InstallerGui, self).accept()
             
@@ -1794,6 +1794,7 @@ if use_gui:
             self.builder.name = self.builder.arguments.name
 
             self.do_install()
+            super(InstallerGui, self).accept()
 
             #self.install_thread = QtProgress.ProgressThread(self.do_install, self)
             #self.install_thread.setInterrupt(self.builder.interrupt)

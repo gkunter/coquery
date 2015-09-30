@@ -796,7 +796,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
 
     @staticmethod
     def get_name():
-        return "ICE_NG"
+        return "ice_ng"
 
     @staticmethod
     def get_title():
