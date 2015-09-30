@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'functionApply.ui'
 #
-# Created: Thu Sep 10 10:35:57 2015
+# Created: Mon Sep 28 23:19:03 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_FunctionDialog(object):
     def setupUi(self, FunctionDialog):
         FunctionDialog.setObjectName(_fromUtf8("FunctionDialog"))
-        FunctionDialog.resize(640, 480)
+        FunctionDialog.resize(691, 480)
         self.verticalLayout_2 = QtGui.QVBoxLayout(FunctionDialog)
         self.verticalLayout_2.setSpacing(16)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
@@ -49,6 +49,7 @@ class Ui_FunctionDialog(object):
         self.frame1.setSizePolicy(sizePolicy)
         self.frame1.setObjectName(_fromUtf8("frame1"))
         self.gridLayout = QtGui.QGridLayout(self.frame1)
+        self.gridLayout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
         self.gridLayout.setContentsMargins(8, 6, 8, 6)
         self.gridLayout.setHorizontalSpacing(16)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
@@ -74,6 +75,11 @@ class Ui_FunctionDialog(object):
         self.radio_count.setObjectName(_fromUtf8("radio_count"))
         self.gridLayout.addWidget(self.radio_count, 2, 0, 1, 1)
         self.label_func4 = QtGui.QLabel(self.frame1)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_func4.sizePolicy().hasHeightForWidth())
+        self.label_func4.setSizePolicy(sizePolicy)
         self.label_func4.setWordWrap(True)
         self.label_func4.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
         self.label_func4.setObjectName(_fromUtf8("label_func4"))
@@ -85,6 +91,11 @@ class Ui_FunctionDialog(object):
         self.radio_match.setObjectName(_fromUtf8("radio_match"))
         self.gridLayout.addWidget(self.radio_match, 4, 0, 1, 1)
         self.label_func3 = QtGui.QLabel(self.frame1)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_func3.sizePolicy().hasHeightForWidth())
+        self.label_func3.setSizePolicy(sizePolicy)
         self.label_func3.setWordWrap(False)
         self.label_func3.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
         self.label_func3.setObjectName(_fromUtf8("label_func3"))
