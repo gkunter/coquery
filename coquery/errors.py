@@ -196,6 +196,7 @@ def get_error_repr(exc_info):
     Trace = traceback.extract_tb(exc_tb)
     trace_string = ""
     Indent = ""
+    Text = ""
     for FileName, LineNo, FunctionName, Text in Trace:
         ModuleName = os.path.split(FileName) [1]
         trace_string += "%s %s, line %s: %s\n" % (Indent, ModuleName, LineNo, FunctionName)
