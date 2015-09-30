@@ -605,7 +605,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
 
-        #self.ui.data_preview.clicked.connect(self.result_cell_clicked)
+        self.ui.data_preview.clicked.connect(self.result_cell_clicked)
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
 
