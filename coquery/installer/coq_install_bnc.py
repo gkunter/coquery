@@ -76,7 +76,8 @@ class BNCBuilder(BaseCorpusBuilder):
             [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(133) NOT NULL"),
              Column(self.word_lemma, "VARCHAR(133) NOT NULL"),
-             Column(self.word_pos, "ENUM('AJ0','AJ0-AV0','AJ0-NN1','AJ0-VVD','AJ0-VVG','AJ0-VVN','AJC','AJS','AT0','AV0','AV0-AJ0','AVP','AVP-PRP','AVQ','AVQ-CJS','CJC','CJS','CJS-AVQ','CJS-PRP','CJT','CJT-DT0','CRD','CRD-PNI','DPS','DT0','DT0-CJT','DTQ','EX0','ITJ','NN0','NN1','NN1-AJ0','NN1-NP0','NN1-VVB','NN1-VVG','NN2','NN2-VVZ','None','NP0','NP0-NN1','ORD','PNI','PNI-CRD','PNP','PNQ','PNX','POS','PRF','PRP','PRP-AVP','PRP-CJS','PUL','PUN','PUQ','PUR','TO0','UNC','VBB','VBD','VBG','VBI','VBN','VBZ','VDB','VDD','VDG','VDI','VDN','VDZ','VHB','VHD','VHG','VHI','VHN','VHZ','VM0','VVB','VVB-NN1','VVD','VVD-AJ0','VVD-VVN','VVG','VVG-AJ0','VVG-NN1','VVI','VVN','VVN-AJ0','VVN-VVD','VVZ','VVZ-NN2','XX0','ZZ0')"),
+             Column(self.word_pos, "VARCHAR(7) NOT NULL"), 
+             #Column(self.word_pos, "ENUM('AJ0','AJ0-AV0','AJ0-NN1','AJ0-VVD','AJ0-VVG','AJ0-VVN','AJC','AJS','AT0','AV0','AV0-AJ0','AVP','AVP-PRP','AVQ','AVQ-CJS','CJC','CJS','CJS-AVQ','CJS-PRP','CJT','CJT-DT0','CRD','CRD-PNI','DPS','DT0','DT0-CJT','DTQ','EX0','ITJ','NN0','NN1','NN1-AJ0','NN1-NP0','NN1-VVB','NN1-VVG','NN2','NN2-VVZ','None','NP0','NP0-NN1','ORD','PNI','PNI-CRD','PNP','PNQ','PNX','POS','PRF','PRP','PRP-AVP','PRP-CJS','PUL','PUN','PUQ','PUR','TO0','UNC','VBB','VBD','VBG','VBI','VBN','VBZ','VDB','VDD','VDG','VDI','VDN','VDZ','VHB','VHD','VHG','VHI','VHN','VHZ','VM0','VVB','VVB-NN1','VVD','VVD-AJ0','VVD-VVN','VVG','VVG-AJ0','VVG-NN1','VVI','VVN','VVN-AJ0','VVN-VVD','VVZ','VVZ-NN2','XX0','ZZ0')"),
              Column(self.word_lemma_pos, "ENUM('ADJ','ADV','ART','CONJ','INTERJ','PREP','PRON','SUBST','UNC','VERB', 'PUNCT')"),
              Column(self.word_type, "ENUM('c', 'w')")])
 
@@ -137,8 +138,10 @@ class BNCBuilder(BaseCorpusBuilder):
         self.create_table_description(self.speaker_table,
             [Primary(self.speaker_id, "SMALLINT(4) UNSIGNED NOT NULL"),
              Column(self.speaker_label, "TINYTEXT NOT NULL"),
-             Column(self.speaker_age, "ENUM('-82+','0','1','10','10+','11','12','13','13+','14','14+','15','16','17','17+','18','19','2','20','20+','21','21+','22','23','24','25','25+','26','27','28','29','3','3+','30','30+','31','32','33','34','35','35+','36','37','38','39','4','40','40+','41','42','43','44','45','45+','46','46+','47','48','48+','49','5','50','50+','51','52','53','54','55','55+','56','57','58','59','6','60','60+','61','62','63','64','65','65+','66','67','68','69','7','70','70+','71','72','73','74','75','75+','76','77','78','79','8','80','80+','81','82','84','86','87','89','9','92','93','95','unknown')"),
-             Column(self.speaker_sex, "ENUM('f','m','u')")])
+             Column(self.speaker_age, "TINYTEXT NOT NULL"),
+             #Column(self.speaker_age, "ENUM('-82+','0','1','10','10+','11','12','13','13+','14','14+','15','16','17','17+','18','19','2','20','20+','21','21+','22','23','24','25','25+','26','27','28','29','3','3+','30','30+','31','32','33','34','35','35+','36','37','38','39','4','40','40+','41','42','43','44','45','45+','46','46+','47','48','48+','49','5','50','50+','51','52','53','54','55','55+','56','57','58','59','6','60','60+','61','62','63','64','65','65+','66','67','68','69','7','70','70+','71','72','73','74','75','75+','76','77','78','79','8','80','80+','81','82','84','86','87','89','9','92','93','95','unknown')"),
+             #Column(self.speaker_sex, "ENUM('f','m','u')")])
+             Column(self.speaker_sex, "TINYTEXT NOT NULL")])
        
         # Add the sentence table. Each row in this table represents a 
         # sentence from the XML file. Each token in the corpus table is 
@@ -273,8 +276,17 @@ class BNCBuilder(BaseCorpusBuilder):
             if lookup:
                 self._speaker_id = lookup
             else:
-                self._speaker_id = self.table(self.speaker_table).get_or_insert(
-                    {self.speaker_label: who})
+                self._speaker_id = self.table(self.speaker_table).find(
+                    {self.speaker_label: who}, self.Con)
+                if not self._speaker_id:
+                    self._speaker_id = self.table(
+                        self.speaker_table).get_or_insert(
+                            {self.speaker_label: who,
+                                self.speaker_age: "",
+                                self.speaker_sex: "u"})
+                    self._speaker_dict[who] = self._speaker_id
+
+                        
 
         # <s> is a sentence:
         elif tag == "s":
@@ -282,7 +294,10 @@ class BNCBuilder(BaseCorpusBuilder):
         
         #other supported elements:
         elif tag in set(("w", "c")):
-            word_text = element.text.strip()
+            if element.text:
+                word_text = element.text.strip()
+            else:
+                word_text = ""
             
             if tag == "w":
                 lemma_text = element.attrib.get("hw", word_text).strip()
