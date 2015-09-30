@@ -226,7 +226,7 @@ class TokenQuery(object):
         repeated_queries = set(tokens.preprocess_query(S))
         if len(repeated_queries) > 1:
             for current_string in repeated_queries:
-                current_query = self.__class__(current_string, Session, token_class, source_filter)
+                current_query = self.__class__(current_string, Session, token_class)
                 self.query_list.append(current_query)
                 self.max_number_of_tokens = max(self.max_number_of_tokens, current_query.number_of_tokens)
         else:
