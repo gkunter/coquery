@@ -690,7 +690,10 @@ class VisualizerDialog(QtGui.QWidget):
             pass
         self.remove_matplot()
         super(VisualizerDialog, self).close()
-        options.cfg.main_window.widget_list.remove(self)
+        try:
+            options.cfg.main_window.widget_list.remove(self)
+        except ValueError:
+            pass
         del self.visualizer
         
     def keyPressEvent(self, event):
