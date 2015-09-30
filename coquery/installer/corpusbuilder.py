@@ -316,7 +316,7 @@ class Table(object):
         and store the data in add cache of the table. """ 
 
         if not self._col_names:
-            self._col_names = row.keys()
+            self._col_names = list(row.keys())
         self._current_id += 1
         self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
 
@@ -349,17 +349,22 @@ class Table(object):
         else:
             return row_id
 
-    def find(self, values):
+    def find(self, values, db_connector):
         """ 
         Return the first row that matches the values, or None
         otherwise.
         """
-        raise RuntimeError("The method Table.find() is not supported anymore.")
-        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
-        try:
-            return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
-        except IndexError:
+        x = db_connector.find(self.name, values, [self.primary.name])
+        if x:
+            return x[0]
+        else:
             return None
+        
+        #self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        #try:
+            #return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
+        #except IndexError:
+            #return None
         
     def add_column(self, column):
         self.columns.append(column)
@@ -1788,11 +1793,13 @@ if use_gui:
             self.builder.arguments = self.get_arguments_from_gui()
             self.builder.name = self.builder.arguments.name
 
-            self.install_thread = QtProgress.ProgressThread(self.do_install, self)
-            self.install_thread.setInterrupt(self.builder.interrupt)
-            self.install_thread.taskFinished.connect(self.finish_install)
-            self.install_thread.taskException.connect(self.install_exception)
-            self.install_thread.start()
+            self.do_install()
+
+            #self.install_thread = QtProgress.ProgressThread(self.do_install, self)
+            #self.install_thread.setInterrupt(self.builder.interrupt)
+            #self.install_thread.taskFinished.connect(self.finish_install)
+            #self.install_thread.taskException.connect(self.install_exception)
+            #self.install_thread.start()
         
         def get_arguments_from_gui(self):
             namespace = argparse.Namespace()
