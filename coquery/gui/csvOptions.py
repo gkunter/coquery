@@ -125,7 +125,8 @@ class CSVOptions(QtGui.QDialog):
             header=header,
             sep=str(self.separator),
             quoting=3 if not quote else 0,
-            quotechar=quote if quote else "#")
+            quotechar=quote if quote else "#",
+            na_filter=False)
             
     def update_content(self):
         self.split_file_content()
