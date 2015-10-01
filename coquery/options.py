@@ -264,6 +264,11 @@ class Options(object):
         if args.help:
             self.parser.print_help()
             sys.exit(0)
+
+        if args.input_path:
+            self.args.input_path_provided = True
+        else:
+            self.args.input_path_provided = False
         
         # merge the newly-parsed command-line arguments with those read from
         # the configation file.
@@ -425,6 +430,7 @@ class Options(object):
                 self.args.query_list = [x.decode("utf8") for x in self.args.query_list]
             except AttributeError:
                 pass
+        
         logger.info("Command line parameters: " + self.args.parameter_string)
         
     def read_configuration(self):
@@ -476,6 +482,11 @@ class Options(object):
                             vars(self.args)["query_list"] = [last_query.strip('"')]
                         except configparser.NoOptionError:
                             pass
+                        try:
+                            vars(self.args)["input_path"] = config_file.get("main", "query_file")
+                        except configparser.NoOptionError:
+                            pass
+
                     elif section == "output":
                         for variable, value in config_file.items("output"):
                             if value:
@@ -507,7 +518,7 @@ class Options(object):
                             vars(self.args)["height"] = int(config_file.get("gui", "height"))
                         except (configparser.NoOptionError, ValueError):
                             vars(self.args)["height"] = None
-                        
+
                         context_dict = {}
                         # get column defaults:
                         for name, value in config_file.items("gui"):
@@ -577,7 +588,7 @@ def save_configuration():
     if cfg.query_list:
         config.set("main", "last_query_string", ",".join(['"{}"'.format(x) for x in cfg.query_list]))
     if cfg.input_path:
-        config.set("main", "last_query_file", cfg.input_path)
+        config.set("main", "query_file", cfg.input_path)
     
     if not "sql" in config.sections():
         config.add_section("sql")
