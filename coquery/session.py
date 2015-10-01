@@ -37,6 +37,7 @@ class Session(object):
         self.max_number_of_tokens = 0
         self.query_list = []
         self.requested_fields = []
+        options.cfg.query_label = ""
             
         # load current corpus module depending on the value of options.cfg.corpus,
         # i.e. the corpus specified as an argumment:        
@@ -263,7 +264,6 @@ class SessionInputFile(Session):
                 self.header = input_file.columns.values.tolist()
                 input_header = self.header
                 options.cfg.query_label = input_header.pop(options.cfg.query_column_number - 1)
-                print(options.cfg.query_label)
             for current_line in input_file.iterrows():
                 current_line = list(current_line[1])
                 if options.cfg.query_column_number > len(current_line):
