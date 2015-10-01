@@ -254,15 +254,16 @@ class SessionInputFile(Session):
             read_lines = 0
             
             input_file = pd.read_table(
-                filepath=InputFile,
+                filepath_or_buffer=InputFile,
                 sep=options.cfg.input_separator,
-                quotechar=options.cfg.quotechar,
+                quotechar=options.cfg.quote_char,
                 encoding=options.cfg.input_encoding)
 
             if options.cfg.file_has_headers and self.header == None:
                 self.header = input_file.columns.values.tolist()
                 input_header = self.header
-                input_header.pop(options.cfg.query_column_number - 1)
+                options.cfg.query_label = input_header.pop(options.cfg.query_column_number - 1)
+                print(options.cfg.query_label)
             for current_line in input_file.iterrows():
                 current_line = list(current_line[1])
                 if options.cfg.query_column_number > len(current_line):

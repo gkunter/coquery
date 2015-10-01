@@ -477,6 +477,10 @@ class BaseResource(object):
         suffix, determines the resource feature from the remaining string,
         translates it to its display name, and returns the display name
         together with the numerical suffix attached."""
+            
+        # Retain the column header if the query string was from an input file
+        if header == "coquery_query_string" and options.cfg.query_label:
+            return options.cfg.query_label
         
         if header in COLUMN_NAMES:
             return COLUMN_NAMES[header]
@@ -497,17 +501,6 @@ class BaseResource(object):
                     return "{}{}".format(COLUMN_NAMES[rc_feature], number)
                 else:
                     return header
-                    
-        #header_fields = header.split("_")
-        #if len(header_fields) == 1:
-            #try:
-                #return COLUMN_NAMES[header_fields[0]]
-            #except KeyError:
-                #return header_fields[0].capitalize()
-
-        #if "_".join(header_fields[:-1]) in cls.get_resource_features():
-            #rc_feature = "_".join(header_fields[:-1])
-            #return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
         return header
 
 class BaseCorpus(object):
