@@ -313,6 +313,16 @@ class TestQuantification(unittest.TestCase):
             self.assertItemsEqual(tokens.preprocess_query(S), L)
         except AttributeError:
             self.assertCountEqual(tokens.preprocess_query(S), L)
+            
+    def test_preprocess_string5(self):
+        S = "prove that"
+        L = [
+            [(1, "prove"), (2, "that")]
+            ]
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
 
 #class TestQueryTokenCQL(unittest.TestCase):
     #token_type = tokens.CQLToken
