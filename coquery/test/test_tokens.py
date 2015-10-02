@@ -1,5 +1,7 @@
 """ This model tests the Coquery token parsers."""
 
+from __future__ import print_function
+
 import unittest
 import os.path
 import sys
@@ -131,8 +133,132 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.lemma_specifiers, [])
         self.assertEqual(token.transcript_specifiers, [])
         self.assertEqual(token.class_specifiers, [])
-        self.assertEqual(token.word_specifiers, ["*"])
+        self.assertEqual(token.word_specifiers, ["%"])
         
+    def test_wildcards2(self):
+        token = self.token_type("\\*", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["*"])
+
+    def test_wildcards3(self):
+        token = self.token_type("%", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["\\%"])
+        
+    def test_wildcards4(self):
+        token = self.token_type("?", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["_"])
+        
+    def test_wildcards5(self):
+        token = self.token_type("\\?", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["?"])
+        
+    def test_wildcards6(self):
+        token = self.token_type("_", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["\\_"])
+        
+    def test_wildcards7(self):
+        token = self.token_type("*e??r", self.lexicon)
+        token.parse()
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["%e__r"])
+
+class TestQuantification(unittest.TestCase):
+    def test_no_quantifiers(self):
+        self.assertEqual(tokens.get_quantifiers("xxx"), ("xxx", 1, 1))
+        
+    def test_quantifiers(self):
+        self.assertEqual(tokens.get_quantifiers("xxx{0,1}"), ("xxx", 0, 1))
+        
+    def test_single_zero_quantifier(self):
+        self.assertEqual(tokens.get_quantifiers("xxx{0}"), ("xxx", 0, 0))
+        
+    def test_single_nonzero_quantifier(self):
+        self.assertEqual(tokens.get_quantifiers("xxx{1}"), ("xxx", 1, 1))
+        
+    def test_corrupt_quantifiers(self):
+        self.assertEqual(tokens.get_quantifiers("xxx{0,1"), ("xxx{0,1", 1, 1))
+        self.assertEqual(tokens.get_quantifiers("xxx0,1}"), ("xxx0,1}", 1, 1))
+        self.assertEqual(tokens.get_quantifiers("xxx{a,1}"), ("xxx{a,1}", 1, 1))
+        self.assertEqual(tokens.get_quantifiers("xxx{0,b}"), ("xxx{0,b}", 1, 1))
+        self.assertEqual(tokens.get_quantifiers("xxx{a,b}"), ("xxx{a,b}", 1, 1))
+        self.assertEqual(tokens.get_quantifiers("xxx{a}"), ("xxx{a}", 1, 1))
+    
+    def test_preprocess_string1(self):
+        S = "[dt]{0,1} more [j*] [n*]"
+        
+        L = [
+            [(1, '[dt]'), (2, 'more'), (3, '[j*]'), (4, '[n*]')],
+            [             (2, 'more'), (3, '[j*]'), (4, '[n*]')], 
+            ]
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
+
+    def test_preprocess_string2(self):
+        S = "[dt]{0,1} [jjr] [n*]"
+        
+        L = [
+            [(1, '[dt]'), (2, '[jjr]'), (3, '[n*]')],
+            [             (2, '[jjr]'), (3, '[n*]')], 
+            ]
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
+
+    def test_preprocess_string3(self):
+        S = "[dt]{0,1} more [j*]{1,2} [n*]"
+        L = [
+            [(1, '[dt]'), (2, 'more'), (3, '[j*]'),              (5, '[n*]')], 
+            [(1, '[dt]'), (2, 'more'), (3, '[j*]'), (3, '[j*]'), (5, '[n*]')],
+            [             (2, 'more'), (3, '[j*]'),              (5, '[n*]')], 
+            [             (2, 'more'), (3, '[j*]'), (3, '[j*]'), (5, '[n*]')], 
+            ]
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
+
+    def test_preprocess_string4(self):
+        S = "more [j*]{0,4} [n*]{1,2}"
+        L = [
+            [(1, 'more'),                                                     (6, '[n*]')], 
+            [(1, 'more'), (2, '[j*]'),                                        (6, '[n*]')], 
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'),                           (6, '[n*]')], 
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'),              (6, '[n*]')], 
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (6, '[n*]')], 
+            [(1, 'more'),                                                     (6, '[n*]'), (6, '[n*]')],
+            [(1, 'more'), (2, '[j*]'),                                        (6, '[n*]'), (6, '[n*]')], 
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'),                           (6, '[n*]'), (6, '[n*]')], 
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'),              (6, '[n*]'), (6, '[n*]')], 
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (6, '[n*]'), (6, '[n*]')],
+            ]
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
 
 #class TestQueryTokenCQL(unittest.TestCase):
     #token_type = tokens.CQLToken
@@ -268,5 +394,10 @@ if __name__ == '__main__':
     import timeit
     
     suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestQueryTokenCOCA)])
+        unittest.TestLoader().loadTestsFromTestCase(TestQueryTokenCOCA),
+        unittest.TestLoader().loadTestsFromTestCase(TestQuantification)])
+    
+    print()
+    print(" ----- START ----- ")
+    print()
     unittest.TextTestRunner().run(suite)
