@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Sun Sep 27 12:30:44 2015
+# Created: Fri Oct  2 11:49:12 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -543,7 +543,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.tabbed_views)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1112, 37))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1112, 21))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -602,10 +602,10 @@ class Ui_MainWindow(object):
         icon = QtGui.QIcon.fromTheme(_fromUtf8("server-database"))
         self.action_mySQL_settings.setIcon(icon)
         self.action_mySQL_settings.setObjectName(_fromUtf8("action_mySQL_settings"))
-        self.action_options = QtGui.QAction(MainWindow)
+        self.action_settings = QtGui.QAction(MainWindow)
         icon = QtGui.QIcon.fromTheme(_fromUtf8("configure"))
-        self.action_options.setIcon(icon)
-        self.action_options.setObjectName(_fromUtf8("action_options"))
+        self.action_settings.setIcon(icon)
+        self.action_settings.setObjectName(_fromUtf8("action_settings"))
         self.action_quit = QtGui.QAction(MainWindow)
         icon = QtGui.QIcon.fromTheme(_fromUtf8("application-exit"))
         self.action_quit.setIcon(icon)
@@ -672,9 +672,8 @@ class Ui_MainWindow(object):
         self.menuCorpus.addAction(self.action_statistics)
         self.menuCorpus.addAction(self.action_corpus_documentation)
         self.menuSettings.addAction(self.action_mySQL_settings)
-        self.menuSettings.addAction(self.action_options)
+        self.menuSettings.addAction(self.action_settings)
         self.menuSettings.addSeparator()
-        self.menuSettings.addAction(self.actionStop_words_2)
         self.menuTime_data.addAction(self.action_percentage_area_plot)
         self.menuTime_data.addAction(self.action_stacked_area_plot)
         self.menuTime_data.addAction(self.action_line_plot)
@@ -746,7 +745,7 @@ class Ui_MainWindow(object):
         self.menuFile.setTitle(_translate("MainWindow", "&File", None))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help", None))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus", None))
-        self.menuSettings.setTitle(_translate("MainWindow", "&Settings", None))
+        self.menuSettings.setTitle(_translate("MainWindow", "&Preferences", None))
         self.menuAnalyse.setTitle(_translate("MainWindow", "&Visualizations", None))
         self.menuTime_data.setTitle(_translate("MainWindow", "&Time data", None))
         self.menuFrequency_maps.setTitle(_translate("MainWindow", "Frequency maps", None))
@@ -765,7 +764,7 @@ class Ui_MainWindow(object):
         self.action_all_tokens.setText(_translate("MainWindow", "All tokens", None))
         self.action_statistics.setText(_translate("MainWindow", "Corpus &statistics", None))
         self.action_mySQL_settings.setText(_translate("MainWindow", "&MySQL settings...", None))
-        self.action_options.setText(_translate("MainWindow", "&Options...", None))
+        self.action_settings.setText(_translate("MainWindow", "&Settings", None))
         self.action_quit.setText(_translate("MainWindow", "&Quit", None))
         self.action_quit.setShortcut(_translate("MainWindow", "Ctrl+Q", None))
         self.action_build_corpus.setText(_translate("MainWindow", "&Build new corpus...", None))

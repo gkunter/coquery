@@ -1078,7 +1078,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <x>0</x>
      <y>0</y>
      <width>1112</width>
-     <height>37</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1110,12 +1110,11 @@ The number of occurrences of each token matching the query string is counted. Th
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
-     <string>&amp;Settings</string>
+     <string>&amp;Preferences</string>
     </property>
     <addaction name="action_mySQL_settings"/>
-    <addaction name="action_options"/>
+    <addaction name="action_settings"/>
     <addaction name="separator"/>
-    <addaction name="actionStop_words_2"/>
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
@@ -1250,13 +1249,13 @@ The number of occurrences of each token matching the query string is counted. Th
     <string>&amp;MySQL settings...</string>
    </property>
   </action>
-  <action name="action_options">
+  <action name="action_settings">
    <property name="icon">
     <iconset theme="configure">
      <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>&amp;Options...</string>
+    <string>&amp;Settings</string>
    </property>
   </action>
   <action name="action_quit">

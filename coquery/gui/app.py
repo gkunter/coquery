@@ -474,6 +474,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
         self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
         self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
+        self.ui.action_settings.triggered.connect(self.settings)
         self.ui.action_mySQL_settings.triggered.connect(self.mysql_settings)
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
@@ -1431,6 +1432,10 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.shutdown()
             event.accept()
+        
+    def settings(self):
+        import settings
+        settings.Settings.manage(options.cfg, self)
         
     def mysql_settings(self):
         import MySQLOptions
