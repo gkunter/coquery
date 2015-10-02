@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>917</width>
-    <height>526</height>
+    <width>640</width>
+    <height>480</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -30,7 +30,7 @@
     <number>4</number>
    </property>
    <item>
-    <widget class="QFrame" name="">
+    <widget class="QFrame" name="frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
@@ -65,23 +65,23 @@
       <item row="4" column="1">
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QCheckBox" name="checkBox">
+         <widget class="QCheckBox" name="check_ask_on_quit">
           <property name="text">
-           <string>Ask if unsaved results should be saved upon exit</string>
+           <string>Ask if &amp;unsaved results should be saved upon exit</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkBox_4">
+         <widget class="QCheckBox" name="check_save_query_string">
           <property name="text">
-           <string>Save configuration on exit</string>
+           <string>Save last query &amp;string in configuration file</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkBox_5">
+         <widget class="QCheckBox" name="check_save_query_file">
           <property name="text">
-           <string>Save last query string in configuration file</string>
+           <string>Save last query &amp;file in configuration file</string>
           </property>
          </widget>
         </item>
@@ -96,7 +96,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>During queries</string>
+         <string>During queries:</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -106,94 +106,25 @@
       <item row="1" column="1">
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QCheckBox" name="checkBox_6">
+         <widget class="QCheckBox" name="check_ignore_case">
           <property name="text">
-           <string>Ignore case in queries</string>
+           <string>Ignore &amp;case</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkBox_2">
+         <widget class="QCheckBox" name="check_ignore_punctuation">
           <property name="text">
-           <string>Ignore punctuation in contexts</string>
+           <string>Ignore &amp;punctuation in contexts</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkBox_3">
+         <widget class="QCheckBox" name="check_experimental">
           <property name="text">
-           <string>Use experimental features (MAY BE UNSTABLE!)</string>
+           <string>Use &amp;experimental features (MAY BE UNSTABLE!)</string>
           </property>
          </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="checkBox_7">
-          <property name="text">
-           <string>Allow column links</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="2" column="1">
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <property name="spacing">
-         <number>0</number>
-        </property>
-        <item>
-         <widget class="QLabel" name="label">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Display </string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="spin_digits">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="suffix">
-           <string> digit(s)</string>
-          </property>
-          <property name="value">
-           <number>3</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_3">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>after decimal point</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
         </item>
        </layout>
       </item>
@@ -208,7 +139,10 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Corpus installers: </string>
+           <string>Corpus &amp;installers: </string>
+          </property>
+          <property name="buddy">
+           <cstring>edit_installer_path</cstring>
           </property>
          </widget>
         </item>
@@ -221,7 +155,7 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Browse</string>
+           <string>&amp;Browse</string>
           </property>
           <property name="icon">
            <iconset theme="folder">
@@ -234,7 +168,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="lineEdit"/>
+         <widget class="QLineEdit" name="edit_installer_path"/>
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_9">
@@ -245,12 +179,15 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Visualizers </string>
+           <string>&amp;Visualizers </string>
+          </property>
+          <property name="buddy">
+           <cstring>edit_visualizer_path</cstring>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLineEdit" name="lineEdit_3"/>
+         <widget class="QLineEdit" name="edit_visualizer_path"/>
         </item>
         <item row="1" column="2">
          <widget class="QPushButton" name="button_lemma_path_3">
@@ -261,7 +198,7 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Browse</string>
+           <string>B&amp;rowse</string>
           </property>
           <property name="icon">
            <iconset theme="folder">
@@ -287,7 +224,7 @@
          <string>Query results:</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
         </property>
        </widget>
       </item>
@@ -322,6 +259,82 @@
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
         </property>
        </widget>
+      </item>
+      <item row="2" column="1">
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>&amp;Display </string>
+            </property>
+            <property name="buddy">
+             <cstring>spin_digits</cstring>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spin_digits">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="suffix">
+             <string> digit(s)</string>
+            </property>
+            <property name="value">
+             <number>3</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_3">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>after decimal point</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="check_align_quantified_tokens">
+          <property name="text">
+           <string>Align &amp;quantified token columns</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
