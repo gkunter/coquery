@@ -18,11 +18,19 @@ import __init__
 import collections
 import datetime
 
+try:
+    from numba import jit
+except ImportError:
+    def jit(f):
+        def inner(f, *args):
+            return f(*args)
+        return lambda *args: inner(f, *args)
+        
+import pandas as pd
+
 from errors import *
 import tokens
 import options
-
-import pandas as pd
 
 class QueryFilter(object):
     """ Define a class that stores a query filter. 
@@ -477,6 +485,7 @@ class DistinctQuery(TokenQuery):
     are removed.
     """
 
+    #@jit
     def aggregate_data(self, df):
         vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
         df = df.drop_duplicates(subset=vis_cols)
@@ -501,6 +510,10 @@ class FrequencyQuery(TokenQuery):
     def add_output_columns(self):
         self.Session.output_order.append("coq_frequency")
         
+    @jit
+    def do_the_grouping(self, df, group_columns, aggr_dict):
+        gp = df.groupby(group_columns)
+        return gp.agg(aggr_dict).reset_index()
     
     def aggregate_data(self, df):
         """
@@ -559,8 +572,7 @@ class FrequencyQuery(TokenQuery):
             # group the data frame by the group columns, apply the aggregate
             # functions to each group, and return the aggregated data frame:
 
-            gp = df.groupby(group_columns)
-            return gp.agg(aggr_dict).reset_index()
+            return self.do_the_grouping(df, group_columns, aggr_dict)
 
     def filter_data(self, df):
         """ 
@@ -704,9 +716,9 @@ class CollocationQuery(TokenQuery):
 
         df = pd.DataFrame(self.Results)
 
+        fix_col = ["coquery_invisible_corpus_id"]
+
         # FIXME: Be more generic than always using coq_word_label!
-        fix_col = ["coquery_invisible_corpus_id", 
-                   "coquery_invisible_origin_id"]
         left_cols = ["coq_word_label_{}".format(x + 1) for x in range(options.cfg.context_left)]
         right_cols = ["coq_word_label_{}".format(x + self.number_of_tokens - options.cfg.context_right + 1) for x in range(options.cfg.context_right)]
         left_context_span = df[fix_col + left_cols]
@@ -721,20 +733,20 @@ class CollocationQuery(TokenQuery):
         right = right_context_span[right_cols].stack().value_counts()
 
         # Build a lookup table for contexts. This table is used to provide
-        # the corpus_id and the source_id to the collocations table so that
-        # the entries can be clicked to see an example of that collocation.
+        # the corpus_id to the collocations table so that # the entries can 
+        # be clicked to see an example of that collocation.
         # The lookup table is basically a long data frame containing all
         # collocate words 
-        lookup_header = ["coq_word_label", "coquery_invisible_corpus_id", "coquery_invisible_origin_id"]
+        lookup_header = ["coq_word_label", "coquery_invisible_corpus_id"]
         lookup = pd.DataFrame(columns=lookup_header)
         for i in range(1, left_span + 1):
-            tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id", "coquery_invisible_origin_id"]]
+            tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id"]]
             col = tmp_table.columns.values
             col[0] = "coq_word_label"
             tmp_table.columns = col
             lookup = lookup.append(tmp_table)
         for i in range(self.number_of_tokens + 1 - right_span, self.number_of_tokens + 1):
-            tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id", "coquery_invisible_origin_id"]]
+            tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id"]]
             col = tmp_table.columns.values
             col[0] = "coq_word_label"
             tmp_table.columns = col
