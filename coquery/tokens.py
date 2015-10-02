@@ -34,9 +34,10 @@ from errors import *
 
 class QueryToken(object):
     """ 
-A QueryToken is one element in a corpus query. The syntax is 
-corpus-specific. 
+    Define the QueryToken class. A query token is one element in a query
+    string.
     """
+    
     bracket_open = "("
     bracket_close = ")"
     transcript_open = "/"
@@ -108,16 +109,15 @@ corpus-specific.
     @staticmethod
     def replace_wildcards(s):
         rep = []
-        skip_next = False
+        parse_next = False
         
         for x in s:
-            if skip_next:
+            if parse_next:
                 rep.append(x)
-                skip_next = False
+                parse_next = False
             else:
                 if x == "\\":
-                    skip_next = True
-                    rep.append(x)
+                    parse_next = True
                 else:
                     if x == "*":
                         rep.append("%")
