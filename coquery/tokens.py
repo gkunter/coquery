@@ -288,27 +288,80 @@ def parse_query_string(S, token_type):
         tokens.append(current_word)
     return tokens
 
-def preprocess_query(S):
-    def preprocess_token(T):
-        L = []
-        match = re.match("(?P<token>.*)(\{(?P<start>\d+)(,(?P<end>\d+))?\})+", T)
-        if match:
-            start = int(match.groupdict()["start"])
-            try:
-                end = int(match.groupdict()["end"])
-            except TypeError:
-                end = start
-            token = match.groupdict()["token"]
-            for x in range(start, end + 1):
-                L.append([token] * x)
-        else:
-            L.append([T])
-        return L
+def get_quantifiers(S):
+    """
+    Analyze the upper and lower quantification in the token string.
     
+    In token strings, quantification is realized by attaching {n,m} to the
+    query string, where n is the lower and m is the upper number of
+    repetitions of that string.
+    
+    This function analyzes the passed string, and tries to determine n and
+    m. If successful, it returns a tuple containing the token string without
+    the quantification suffix, the lower value, and the upper value.
+    
+    If no quantifier is specified, or if the quantification syntax is 
+    invalid, the unchanged query token string is returned, as well as n and 
+    m set to 1.
+    
+    Parameters
+    ----------
+    S : string
+        A query token string
+        
+    Returns
+    -------
+    tup : tuple
+        A tuple containing three elements: the stripped token string, plus 
+        the lower and upper number of repetions (in order)
+    """
+    match = re.match("(?P<token>.*)(\{\s*(?P<start>\d+)(,\s*(?P<end>\d+))?\s*\})+", S)
+    if match:
+        start = int(match.groupdict()["start"])
+        try:
+            end = int(match.groupdict()["end"])
+        except TypeError:
+            end = start
+        token = match.groupdict()["token"]
+        return (token, start, end)
+    else:
+        return (S, 1, 1)
+
+def preprocess_query(S):
+    """ 
+    Analyze the quantification in S, and return a list of strings so that 
+    all permutations are included.
+    
+    This function splits the string, analyzes the quantification of each
+    token, and produces a query string for all quantified token combinations.
+    
+    Parameters
+    ----------
+    S : string
+        A string that could be used as a query string
+        
+    Returns
+    -------
+    L : list
+        A list of query strings
+    """
     tokens = S.split(" ")
     token_lists = []
-    for current_token in tokens:
-        token_lists.append(preprocess_token(current_token))
-    
-    return [" ".join(list(itertools.chain.from_iterable(x))) for x in itertools.product(*token_lists)]
-
+    token_map = []
+    current_pos = 1
+    for i, current_token in enumerate(tokens):
+        L = []
+        token, start, end = get_quantifiers(current_token)
+        for x in range(start, end + 1):
+            if not x:
+                L.append([(current_pos, "")])
+            else:
+                L.append([(current_pos, token)] * x)
+        current_pos += end
+        token_lists.append(L)    
+    L = []
+    for x in itertools.product(*token_lists):
+        l = [(number, token) for number, token in list(itertools.chain.from_iterable(x)) if token]
+        L.append(l)
+    return L
+  
