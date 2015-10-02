@@ -55,6 +55,13 @@ class Session(object):
             self.query_type = queries.DistinctQuery
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.query_type = queries.CollocationQuery
+
+        if any([x.startswith("frequency_") for x in options.cfg.selected_features]):
+            try:
+                options.cfg.selected_features.pop(options.cfg.selected_features.index("frequency_absolute_frequency"))
+            except ValueError:
+                pass
+            self.query_type = queries.FrequencyQuery
             
         logger.info("Corpus: %s" % options.cfg.corpus)
         
@@ -127,6 +134,8 @@ class Session(object):
         if not options.cfg.gui:
             self.output_object.close()
         else:
+            self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
+            self.output_object.fillna("", inplace=True)
             self.output_object.reset_index(drop=True, inplace=True)
 
 class StatisticsSession(Session):

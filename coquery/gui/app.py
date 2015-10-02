@@ -1598,7 +1598,8 @@ class CoqueryApp(QtGui.QMainWindow):
         if options.cfg.MODE == QUERY_MODE_DISTINCT:
             self.ui.radio_mode_context.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-            self.ui.radio_mode_frequency.setChecked(True)
+            self.ui.options_tree.setCheckState("frequency_absolute_frequency", True)
+            #self.ui.radio_mode_frequency.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_TOKENS:
             self.ui.radio_mode_tokens.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:

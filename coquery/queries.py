@@ -239,7 +239,7 @@ class TokenQuery(object):
     def __len__(self):
         return len(self.tokens)
 
-    def aggregate_data(self, df):
+    def aggregate_data(self, df, resource):
         """ Aggregate the data frame. """
         return df
     
@@ -435,9 +435,6 @@ class TokenQuery(object):
 
         df = self.apply_functions(df)
 
-        agg = self.aggregate_data(df)
-        agg = self.filter_data(agg)
-        
         df_cols = list(df.columns.values)
         for col in list(df_cols):
             if col.startswith("coquery_invisible"):
@@ -446,12 +443,12 @@ class TokenQuery(object):
         df = df[df_cols]
 
 
-        agg_cols = list(agg.columns.values)
-        for col in list(agg_cols):
-            if col.startswith("coquery_invisible"):
-                agg_cols.remove(col)
-                agg_cols.append(col)
-        agg = agg[agg_cols]
+        #agg_cols = list(agg.columns.values)
+        #for col in list(agg_cols):
+            #if col.startswith("coquery_invisible"):
+                #agg_cols.remove(col)
+                #agg_cols.append(col)
+        #agg = agg[agg_cols]
 
         
         if options.cfg.gui:
@@ -461,8 +458,8 @@ class TokenQuery(object):
             else:
                 self.Session.data_table = self.Session.data_table.append(df)
 
-            self.Session.output_object = self.Session.output_object.append(agg)
-            self.Session.output_object.fillna("", inplace=True)
+            #self.Session.output_object = self.Session.output_object.append(agg)
+            #self.Session.output_object.fillna("", inplace=True)
         else:
             # write data frame to output_file as a CSV file, using the 
             # current output_separator. Encoding is always "utf-8".
@@ -476,6 +473,21 @@ class TokenQuery(object):
             # produce multiple headers:
             self.Session.header_shown = True
         return
+    
+    @classmethod
+    def aggregate_it(cls, df, resource):
+        agg = cls.aggregate_data(cls, df, resource)
+        agg = cls.filter_data(cls, agg)
+        
+        agg_cols = list(agg.columns.values)
+        for col in list(agg_cols):
+            if col.startswith("coquery_invisible"):
+                agg_cols.remove(col)
+                agg_cols.append(col)
+        agg = agg[agg_cols]
+
+        return agg
+        
 
 class DistinctQuery(TokenQuery):
     """ 
@@ -486,7 +498,7 @@ class DistinctQuery(TokenQuery):
     """
 
     #@jit
-    def aggregate_data(self, df):
+    def aggregate_data(self, df, resource):
         vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
         df = df.drop_duplicates(subset=vis_cols)
         df = df.reset_index(drop=True)
@@ -510,12 +522,12 @@ class FrequencyQuery(TokenQuery):
     def add_output_columns(self):
         self.Session.output_order.append("coq_frequency")
         
-    @jit
-    def do_the_grouping(self, df, group_columns, aggr_dict):
-        gp = df.groupby(group_columns)
+    @staticmethod
+    def do_the_grouping(df, group_columns, aggr_dict):
+        gp = df.fillna("").groupby(group_columns, sort=False)
         return gp.agg(aggr_dict).reset_index()
     
-    def aggregate_data(self, df):
+    def aggregate_data(self, df, resource):
         """
         Aggregate the data frame by obtaining the row frequencies for each
         group specified by the visible data columns.
@@ -539,8 +551,8 @@ class FrequencyQuery(TokenQuery):
             except ValueError:
                 columns.append(x)
             else:
-                if n <= self._current_number_of_tokens:
-                    columns.append(x)
+                #if n <= self._current_number_of_tokens:
+                columns.append(x)
 
         group_columns = [x for x in columns if not x.startswith("coquery_invisible")]
         sample_columns = [x for x in columns if x not in group_columns]
@@ -549,17 +561,16 @@ class FrequencyQuery(TokenQuery):
         df["coq_frequency"] = 0
         
         if len(df.index) == 0:
-            df = self.no_result_data_frame()
-            df["coq_frequency"] = 0
-            return df
+            result = self.no_result_data_frame()
+            result["coq_frequency"] = 0
         elif len(group_columns) == 0:
             # if no grouping variables are selected, simply return the first
             # row of the data frame together with the total length of the 
             # data frame as the frequency:
             freq = len(df.index)
             df = df.iloc[[0]]
-            df["coq_frequency"] = freq
-            return df
+            result = df 
+            result["coq_frequency"] = freq
         else:
             # create a dictionary that contains the aggregate functions for
             # the different columns. For the sampling columns, this function
@@ -572,7 +583,19 @@ class FrequencyQuery(TokenQuery):
             # group the data frame by the group columns, apply the aggregate
             # functions to each group, and return the aggregated data frame:
 
-            return self.do_the_grouping(df, group_columns, aggr_dict)
+            result = self.do_the_grouping(df, group_columns, aggr_dict)
+        
+        if "frequency_relative_frequency" in options.cfg.selected_features:
+            total_frequency = result.coq_frequency.sum()
+            result["frequency_relative_frequency"] = result["coq_frequency"].apply(
+                lambda x: x / total_frequency)
+
+        if "frequency_per_million_words" in options.cfg.selected_features:
+            corpus_size = resource.get_corpus_size()
+            result["frequency_per_million_words"] = result["coq_frequency"].apply(
+                lambda x: x / (corpus_size / 1000000))
+        
+        return result
 
     def filter_data(self, df):
         """ 

@@ -190,6 +190,20 @@ class BaseResource(object):
     coquery_current_time = "Current time"
     coquery_query_token = "Query token"
 
+    # add internal table that can be used to access frequency information:
+    coquery_query_string = "Query string"
+    coquery_expanded_query_string = "Expanded query string"
+    coquery_query_file = "Input file"
+    coquery_current_date = "Current date"
+    coquery_current_time = "Current time"
+    coquery_query_token = "Query token"
+
+    frequency_absolute_frequency = "Absolute frequency"
+    frequency_relative_frequency = "Relative frequency"
+    frequency_per_million_words = "Per million words"
+
+    special_table_list = ["coquery", "frequency", "tag"]
+
     render_token_style = "background: lightyellow"
 
         
@@ -260,7 +274,7 @@ class BaseResource(object):
                     table_dict[table] = []
                 table_dict[table].append(x)
         for x in list(table_dict.keys()):
-            if x != "coquery" and not "{}_table".format(x) in table_dict[x]:
+            if x not in cls.special_table_list and not "{}_table".format(x) in table_dict[x]:
                 table_dict.pop(x)
         try:
             table_dict.pop("tag")
@@ -392,7 +406,7 @@ class BaseResource(object):
 
         corpus_variables = []
         for x in table_dict:
-            if x not in lexicon_tables and x != "coquery":
+            if x not in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
                     if not y.endswith("_id") and not y.startswith("{}_table".format(x)):
                         corpus_variables.append((y, type(cls).__getattribute__(cls, y)))    
@@ -410,7 +424,7 @@ class BaseResource(object):
         lexicon_tables = cls.get_table_tree("word")
         lexicon_variables = []
         for x in table_dict:
-            if x in lexicon_tables and x not in ("tags", "coquery"):
+            if x in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
                     if not y.endswith("_id") and not y.startswith("{}_table".format(x)):
                         lexicon_variables.append((y, type(cls).__getattribute__(cls, y)))    
@@ -1203,6 +1217,8 @@ class SQLCorpus(BaseCorpus):
                     select_list += ["coquery_query_token_{}".format(x + 1) for x in range(query.Session.get_max_token_count())]
                 else:
                     select_list.append(rc_feature)
+            elif rc_feature.startswith("frequency_"):
+                select_list.append(rc_feature)
 
         # MISSING:
         # linked columns and functions
@@ -1214,7 +1230,7 @@ class SQLCorpus(BaseCorpus):
                 func_count[target] += 1
                 select_list.append("coq_func_{}_{}".format(target, func_count[target]))
 
-            if not rc_feature.startswith("coquery_") and "coq_{}_1".format(rc_feature) not in select_list:
+            if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_") and "coq_{}_1".format(rc_feature) not in select_list:
                 if "." not in rc_feature:
                     select_list.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
@@ -1352,9 +1368,7 @@ class SQLCorpus(BaseCorpus):
             else:
                 function = False
 
-            if rc_table == "coquery_table":
-                continue
-            if rc_table == "tag_table":
+            if rc_table in ("coquery_table", "frequency_table", "tag_table"):
                 continue
 
             if rc_table not in required_tables:
@@ -1690,7 +1704,7 @@ class SQLCorpus(BaseCorpus):
         # Add any feature that is selected that is neither a corpus feature,
         # a lexicon feature nor a Coquery feature:
         for rc_feature in options.cfg.selected_features:
-            if not rc_feature.startswith("coquery_") and "coq_{}_1".format(rc_feature) not in final_select:
+            if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_") and "coq_{}_1".format(rc_feature) not in final_select:
                 if "." not in rc_feature:
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
