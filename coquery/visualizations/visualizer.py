@@ -694,7 +694,10 @@ class VisualizerDialog(QtGui.QWidget):
             options.cfg.main_window.widget_list.remove(self)
         except ValueError:
             pass
-        del self.visualizer
+        try:
+            del self.visualizer
+        except AttributeError:
+            pass
         
     def keyPressEvent(self, event):
         """ Catch key events so that they can be passed on to the matplotlib
