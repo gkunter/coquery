@@ -72,12 +72,10 @@ class QueryToken(object):
     @staticmethod
     def has_wildcards(s, replace=False):
         """
-        Process wildcards and escaped characters in the string
+        Check if there are MySQL wildcards in the given string.
         
-        This method replaces any non-escaped occurrence of '*' and '?' by 
-        their MySQL equivalents '%' and '_', respectively. At the same time,
-        any occurrence of '%' and '?' is escaped so that these characters 
-        can be queried.
+        This method considers non-escaped occurrence of '%' and '_' as
+        wildcards.
         
         Parameters
         ----------
@@ -92,11 +90,9 @@ class QueryToken(object):
         skip_next = False
         
         if s in set(["%", "_"]):
-                return True
+            return True
         for x in s:
             if skip_next:
-                if x in ["%", "_"]:
-                    return True
                 skip_next = False
             else:
                 if x == "\\":
