@@ -87,7 +87,7 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         feature = unicode(self.objectName())
         if feature.endswith("_table"):
             self.setToolTip(column, "Table: {}".format(text))
-        elif feature.startswith("coquery_"):
+        elif feature.startswith("coquery_") or feature.startswith("frequency_"):
             self.setToolTip(column, "Special column:\n{}".format(text))
         else:
             self.setToolTip(column, "Data column:\n{}".format(text))
@@ -228,7 +228,7 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         if not item:
             return
 
-        if str(item.objectName()).startswith("coquery"):
+        if str(item.objectName()).startswith("coquery") or str(item.objectName()).startswith("frequency_"):
             return
 
         # show self.menu about the column
@@ -627,7 +627,7 @@ class CoqueryApp(QtGui.QMainWindow):
         data = self.table_model.content.iloc[row]
         try:
             token_id = data["coquery_invisible_corpus_id"]
-            origin_id = data["coquery_invisible_origin_id"]
+            origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
             token_width = data["coquery_invisible_number_of_tokens"]
         except KeyError:
             QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
@@ -720,6 +720,8 @@ class CoqueryApp(QtGui.QMainWindow):
             if x in tables:
                 tables.remove(x)
                 tables.insert(0, x)
+        tables.remove("frequency")
+        tables.append("frequency")
         tables.remove("coquery")
         tables.append("coquery")
 
