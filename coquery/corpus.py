@@ -983,6 +983,18 @@ class SQLCorpus(BaseCorpus):
         self._frequency_cache = {}
         self._corpus_size_cache = None
 
+    def get_source_id(self, token_id):
+        if "corpus_source_id" in dir(self.resource):
+            origin_column = self.resource.__getattribute__("corpus_source_id")
+        elif "corpus_file_id" in dir(self.resource):
+            origin_column = self.resource.__getattribute__("corpus_file_id")
+        else:
+            raise NotImplementedError("Cannot determine token source.")
+        S = "SELECT {} FROM {} WHERE {} = {}".format(
+            origin_column, self.resource.corpus_table, self.resource.corpus_id, token_id)
+        self.resource.DB.execute(S)
+        return self.resource.DB.Cur.fetchone()[0]
+
     def get_corpus_size(self):
         """ Return the number of tokens in the corpus, taking the current 
         filter restrictions into account."""
@@ -1209,18 +1221,18 @@ class SQLCorpus(BaseCorpus):
         if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
             # add contexts for each query match:
             if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
-                if options.cfg.context_left:
-                    select_list.append("coq_context_left")
-                if options.cfg.context_right:
-                    select_list.append("coq_context_right")
-            elif options.cfg.context_mode == CONTEXT_STRING:
-                select_list.append("coq_context")
-            elif options.cfg.context_mode == CONTEXT_SENTENCE:
-                select_list.append("coq_context")
+                if options.cfg.context_mode == CONTEXT_KWIC:
+                    if options.cfg.context_left:
+                        select_list.append("coq_context_left")
+                    if options.cfg.context_right:
+                        select_list.append("coq_context_right")
+                elif options.cfg.context_mode == CONTEXT_STRING:
+                    select_list.append("coq_context")
+                elif options.cfg.context_mode == CONTEXT_SENTENCE:
+                    select_list.append("coq_context")
 
         if options.cfg.context_source_id:
             select_list.append("coquery_invisible_corpus_id")
-            select_list.append("coquery_invisible_origin_id")
             select_list.append("coquery_invisible_number_of_tokens")
         return select_list        
 
@@ -1564,14 +1576,7 @@ class SQLCorpus(BaseCorpus):
                 else:
                     final_select.append("NULL AS {}".format(select_feature))
 
-            # include variables that are required to make entries in the result
-            # table clickable, but only if a GUI is used:
-            if options.cfg.context_source_id:
-                final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.__getattribute__("corpus_denorm_token_id")))
-                final_select.append("{} AS coquery_invisible_origin_id".format(self.resource.__getattribute__("corpus_denorm_source_id")))
-
-            final_select.append("{} AS coquery_invisible_corpus_id".format(
-                self.resource.__getattribute__("corpus_denorm_id")))
+            final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.__getattribute__("corpus_denorm_id")))
                 
             return """
             SELECT  {}
@@ -1599,12 +1604,12 @@ class SQLCorpus(BaseCorpus):
             number, token = tup
             i = count
             if options.cfg.align_quantified:
-                positions_lexical_items.append(token_counter)
                 if number != last_offset:
                     token_counter = number - 1
                     last_offset = number
                 else:
                     token_counter += 1
+                positions_lexical_items.append(token_counter)
                 s = self.get_sub_query_string(tokens.COCAToken(token, self.lexicon), token_counter, self_joined)
             else:
                 s = self.get_sub_query_string(tokens.COCAToken(token, self.lexicon), i, self_joined)
@@ -1632,7 +1637,6 @@ class SQLCorpus(BaseCorpus):
                             s = s, i=i - referent_id + 1,
                             i1=i+1, token=self.resource.corpus_id, ref=referent_id)
                     sub_query_list[i+1] = join_string
-
         query_string_part = [
             "SELECT COQ_OUTPUT_FIELDS FROM ({}) AS e{}".format(sub_query_list.pop(referent_id), referent_id)]
         for x in order:
@@ -1648,7 +1652,6 @@ class SQLCorpus(BaseCorpus):
                 if rc_feature in [x for x, _ in lexicon_features]:
                     for i in range(Query.Session.get_max_token_count()):
                         if options.cfg.align_quantified:
-                            print(i, positions_lexical_items)
                             last_offset = 0
                             if i in positions_lexical_items:
                                 final_select.append("coq_{}_{}".format(rc_feature, i+1))
@@ -1711,17 +1714,9 @@ class SQLCorpus(BaseCorpus):
             name = "coq_func_{}_{}".format(resource, func_counter[resource])
             final_select.append(name)
 
-        # include variables that are required to make entries in the result
-        # table clickable, but only if a GUI is used:
-        if options.cfg.context_source_id:
+        if options.cfg.context_source_id or not final_select:
             final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
-            final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.context_source_id))
 
-        # if nothing is selected at all, add at least the corpus id to the 
-        # list:
-        if not final_select:
-            final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
-            
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(final_select))
         
         # add LIMIT clause if necessary:
@@ -1761,8 +1756,7 @@ class SQLCorpus(BaseCorpus):
                 if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
                     left, target, right = self.get_context(
                         current_result["coquery_invisible_corpus_id"], 
-                        current_result["coquery_invisible_origin_id"], 
-                        Query.number_of_tokens, True)
+                        Query._current_number_of_tokens, True)
                     if options.cfg.context_mode == CONTEXT_KWIC:
                         if options.cfg.context_left:
                             current_result["coq_context_left"] = collapse_words(left)
@@ -1810,7 +1804,7 @@ class SQLCorpus(BaseCorpus):
                 start=start, end=end,
                 verbose=" -- sql_string_get_wordid_in_range" if options.cfg.verbose else "")
 
-    def get_context(self, token_id, source_id, number_of_tokens, case_sensitive):
+    def get_context(self, token_id, number_of_tokens, case_sensitive):
         if options.cfg.context_sentence:
             asd
         #if options.cfg.context_span:
@@ -1818,7 +1812,7 @@ class SQLCorpus(BaseCorpus):
         #elif options.cfg.context_columns:
             #span = options.cfg.context_columns
         token_id = int(token_id)
-        source_id = int(source_id)
+        source_id = self.get_source_id(token_id)
 
         old_verbose = options.cfg.verbose
         options.cfg.verbose = False
@@ -1958,14 +1952,14 @@ class SQLCorpus(BaseCorpus):
         # create a list of all token ids that are also listed in the results
         # table:
         id_list = []
-        tab = tab[tab.coquery_invisible_origin_id == source_id]
-        tab["end"] = tab.apply(
-            lambda x: x["coquery_invisible_corpus_id"] + x["coquery_invisible_number_of_tokens"],
-            axis=1)
-        for x in tab.index:
-            id_list += [y for y in range(
-                int(tab.loc[x].coquery_invisible_corpus_id), 
-                int(tab.loc[x].end))]
+        #tab = tab[tab.coquery_invisible_origin_id == source_id]
+        #tab["end"] = tab.apply(
+            #lambda x: x["coquery_invisible_corpus_id"] + x["coquery_invisible_number_of_tokens"],
+            #axis=1)
+        #for x in tab.index:
+            #id_list += [y for y in range(
+                #int(tab.loc[x].coquery_invisible_corpus_id), 
+                #int(tab.loc[x].end))]
 
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
