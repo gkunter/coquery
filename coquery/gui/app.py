@@ -1421,7 +1421,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.save_configuration()
             
     def closeEvent(self, event):
-        if not self.last_results_saved:
+        if not self.last_results_saved and options.cfg.ask_on_quit:
             msg_query_running = "<p>The last query results have not been saved. If you quit now, they will be lost.</p><p>Do you really want to quit?</p>"
             response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:

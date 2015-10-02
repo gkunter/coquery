@@ -19,36 +19,61 @@ class Settings(QtGui.QDialog):
         self.ui = settingsUi.Ui_SettingsDialog()
         self.ui.setupUi(self)
         self.ui.check_ignore_punctuation.setEnabled(False)
+        self.ui.check_experimental.setEnabled(False)
+        self.ui.frame_addon_paths.setEnabled(False)
+        self.set_ui_options()
         
     def set_ui_options(self):
         try:
-            self.ui.check_ignore_case.setChecked(not options.case_sensitive)
+            self.ui.check_ignore_case.setChecked(not bool(self.options.case_sensitive))
         except AttributeError:
             pass
         try:
-            self.ui.check_ignore_punctuation.setChecked(options.ignore_punctuation)
+            self.ui.check_ignore_punctuation.setChecked(bool(self.options.ignore_punctuation))
         except AttributeError:
             pass
         try:
-            self.ui.check_experimental.setChecked(not options.experimental)
+            self.ui.check_experimental.setChecked(bool(self.options.experimental))
         except AttributeError:
             pass
         try:
-            self.ui.spin_digits.setValue(not options.digits)
+            self.ui.check_align_quantified.setChecked(bool(self.options.align_quantified))
         except AttributeError:
             pass
         try:
-            self.ui.edit_installer_path.setText(options.installer_path)
+            self.ui.spin_digits.setValue(int(self.options.digits))
         except AttributeError:
             pass
         try:
-            self.ui.edit_visualizer_path.setText(options.visualizer_path)
+            self.ui.edit_installer_path.setText(self.options.installer_path)
         except AttributeError:
             pass
         try:
-            self.ui.check_ask_on_quit.setChecked(options.ask_on_quit)
+            self.ui.edit_visualizer_path.setText(self.options.visualizer_path)
         except AttributeError:
             pass
+        try:
+            self.ui.check_ask_on_quit.setChecked(bool(self.options.ask_on_quit))
+        except AttributeError:
+            pass
+        try:
+            self.ui.check_save_query_string.setChecked(bool(self.options.save_query_string))
+        except AttributeError:
+            pass
+        try:
+            self.ui.check_save_query_file.setChecked(bool(self.options.save_query_file))
+        except AttributeError:
+            pass
+
+    def change_options(self):
+        self.options.case_sensitive = not bool(self.ui.check_ignore_case.isChecked())
+        self.options.ignore_punctuation = bool(self.ui.check_ignore_punctuation.isChecked())
+        self.options.experimental = bool(self.ui.check_experimental.isChecked())
+        self.options.align_quantified = bool(self.ui.check_align_quantified.isChecked())
+        self.options.ask_on_quit = bool(self.ui.check_ask_on_quit.isChecked())
+        self.options.save_query_file = bool(self.ui.check_save_query_file.isChecked())
+        self.options.save_query_string = bool(self.ui.check_save_query_string.isChecked())
+        self.options.digits = int(self.ui.spin_digits.value())
         
 
     @staticmethod

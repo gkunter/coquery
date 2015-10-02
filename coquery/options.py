@@ -501,7 +501,7 @@ class Options(object):
 
                     elif section == "gui":
                         try:
-                            self.args.ask_on_quit = config_file.get("gui", "ask_on_quit")
+                            self.args.ask_on_quit = bool(config_file.get("gui", "ask_on_quit"))
                         except configparser.NoOptionError:
                             self.args.ask_on_quit = True
                         try:
