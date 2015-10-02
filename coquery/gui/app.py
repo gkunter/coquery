@@ -524,6 +524,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)#self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
+        self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -903,6 +904,10 @@ class CoqueryApp(QtGui.QMainWindow):
         if results:
             self.csv_options = results
             self.switch_to_file()
+
+    def manage_stopwords(self):
+        import stopwords 
+        result = stopwords.Stopwords.manage(self, options.cfg.icon)
     
     def save_results(self):
         name = QtGui.QFileDialog.getSaveFileName(directory="~")
