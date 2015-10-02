@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from pyqt_compat import QtCore, QtGui
+import stopwordsUi
 
 class CoqStopWord(QtGui.QListWidgetItem):
     def __init__(self, *args):
@@ -89,4 +90,23 @@ class CoqStopwordList(QtGui.QListWidget):
     def addAddItem(self, item, *args):
         super(CoqStopwordList, self).addItem(item, *args)
         self.add_item = item
+
+class Stopwords(QtGui.QDialog):
+    def __init__(self, filename, default=None, parent=None, icon=None):
+        super(Stopwords, self).__init__(parent)
+        
+        self.ui = stopwordsUi.Ui_Stopwords()
+        self.ui.setupUi(self)
+        self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
+        self.ui.stopword_list.close()
+        self.ui.stopword_list = CoqStopwordList()
+        self.ui.horizontalLayout.insertWidget(0, self.ui.stopword_list)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setAutoDefault(False)
+        print(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).autoDefault())
+        print(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).isDefault())
+        
+    @staticmethod
+    def manage(parent=None, icon=None):
+        dialog = Stopwords(parent, icon)
+        result = dialog.exec_()
         

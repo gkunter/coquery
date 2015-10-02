@@ -116,44 +116,12 @@ class BaseLexicon(object):
                     self.__dict__[current_attribute] = value_list[i]
     
     def __init__(self, resource):
-        """
-        CALL
-        BaseLexicon.__init__(lexicon, resource)
-        
-        DESCRIPTION
-        __init__() initializes the lexicon. After initialization, the
-        method get_entry(word_id) can be used to obtain an Entity() object
-        that contains the lexicon entry specified by word_id.
-        
-        ARGUMENTS
-        lexicon, resource
-        
-        VALUE
-        None
-        """
         self.resource = resource
         self._query_cache = {}
         
         if self.resource.provides_pos():
             self.pos_dict = {}
 
-    def get_entry(self, word_id, requested):
-        """
-        CALL
-        BaseLexicon.get_entry(word_id)
-        
-        DESCRIPTION
-        get_entry(word_id) returns an object of type Entity() corresoponding 
-        to the lexicon entry indexed by the value of word_id. This function
-        sets all properties of Entity() to the correct values from the
-        lexicon.
-        
-        VALUE
-        <class 'Entity'>
-        """        
-        entry = self.Entry(word_id)
-        return entry
-    
     def is_part_of_speech(self, pos):
         """ 
         DESCRIPTION
@@ -477,6 +445,10 @@ class BaseResource(object):
         suffix, determines the resource feature from the remaining string,
         translates it to its display name, and returns the display name
         together with the numerical suffix attached."""
+            
+        # Retain the column header if the query string was from an input file
+        if header == "coquery_query_string" and options.cfg.query_label:
+            return options.cfg.query_label
         
         if header in COLUMN_NAMES:
             return COLUMN_NAMES[header]
@@ -497,17 +469,6 @@ class BaseResource(object):
                     return "{}{}".format(COLUMN_NAMES[rc_feature], number)
                 else:
                     return header
-                    
-        #header_fields = header.split("_")
-        #if len(header_fields) == 1:
-            #try:
-                #return COLUMN_NAMES[header_fields[0]]
-            #except KeyError:
-                #return header_fields[0].capitalize()
-
-        #if "_".join(header_fields[:-1]) in cls.get_resource_features():
-            #rc_feature = "_".join(header_fields[:-1])
-            #return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), header_fields[-1])
         return header
     
     @classmethod
@@ -839,111 +800,111 @@ class SQLLexicon(BaseLexicon):
             else:
                 return "<NA>"
 
-    def sql_string_get_entry(self, word_id, requested):
-        """ Return a MySQL string that can be used to query the requested
-        fields for the lexical entry 'word_id. """        
-        print("IS THIS CALLED ANYWAY?")
-        if word_id == "NA":
-            word_id = -1
+    #def sql_string_get_entry(self, word_id, requested):
+        #""" Return a MySQL string that can be used to query the requested
+        #fields for the lexical entry 'word_id. """        
+        #print("IS THIS CALLED ANYWAY?")
+        #if word_id == "NA":
+            #word_id = -1
         
-        select_variable_list = []
-        self.where_list = ["{}.{} = {}".format(
-            self.resource.word_table,
-            self.resource.word_id,
-            word_id)]
-        self.table_list = [self.resource.word_table]
-        for current_attribute in requested:
-            if current_attribute == LEX_WORDID:
-                select_variable_list.append("{}.{}".format(
-                    self.resource.word_table,
-                    self.resource.word_id))
+        #select_variable_list = []
+        #self.where_list = ["{}.{} = {}".format(
+            #self.resource.word_table,
+            #self.resource.word_id,
+            #word_id)]
+        #self.table_list = [self.resource.word_table]
+        #for current_attribute in requested:
+            #if current_attribute == LEX_WORDID:
+                #select_variable_list.append("{}.{}".format(
+                    #self.resource.word_table,
+                    #self.resource.word_id))
             
-            if current_attribute == LEX_LEMMA:
-                if "lemma_table" in dir(self.resource):
-                    select_variable_list.append("COQ_LEMMA_TABLE.{}".format(
-                        self.resource.lemma_label))
-                    self.table_list.append("LEFT JOIN {} AS COQ_LEMMA_TABLE ON {}.{} = COQ_LEMMA_TABLE.{}".format(
-                        self.resource.lemma_table,
-                        self.resource.word_table,
-                        self.resource.word_lemma_id,
-                        self.resource.lemma_id))
-                else:
-                    select_variable_list.append("{}.{}".format(
-                        self.resource.word_table,
-                        self.resource.word_lemma))
+            #if current_attribute == LEX_LEMMA:
+                #if "lemma_table" in dir(self.resource):
+                    #select_variable_list.append("COQ_LEMMA_TABLE.{}".format(
+                        #self.resource.lemma_label))
+                    #self.table_list.append("LEFT JOIN {} AS COQ_LEMMA_TABLE ON {}.{} = COQ_LEMMA_TABLE.{}".format(
+                        #self.resource.lemma_table,
+                        #self.resource.word_table,
+                        #self.resource.word_lemma_id,
+                        #self.resource.lemma_id))
+                #else:
+                    #select_variable_list.append("{}.{}".format(
+                        #self.resource.word_table,
+                        #self.resource.word_lemma))
             
-            if current_attribute == LEX_ORTH:
-                select_variable_list.append("{}.{}".format(
-                    self.resource.word_table,
-                    self.resource.word_label))
+            #if current_attribute == LEX_ORTH:
+                #select_variable_list.append("{}.{}".format(
+                    #self.resource.word_table,
+                    #self.resource.word_label))
             
-            if current_attribute == LEX_POS:
-                if "pos_table" in dir(self.resource):
-                    select_variable_list.append("PARTOFSPEECH.{}".format(
-                        self.resource.pos_label))
-                    self.table_list.append("LEFT JOIN {} AS PARTOFSPEECH ON {}.{} = PARTOFSPEECH.{}".format(
-                        self.resource.pos_table,
-                        self.resource.word_table,
-                        self.resource.word_pos_id,
-                        self.resource.pos_id))
-                else:
-                    select_variable_list.append("{}.{}".format(
-                        self.resource.word_table,
-                        self.resource.word_pos))
+            #if current_attribute == LEX_POS:
+                #if "pos_table" in dir(self.resource):
+                    #select_variable_list.append("PARTOFSPEECH.{}".format(
+                        #self.resource.pos_label))
+                    #self.table_list.append("LEFT JOIN {} AS PARTOFSPEECH ON {}.{} = PARTOFSPEECH.{}".format(
+                        #self.resource.pos_table,
+                        #self.resource.word_table,
+                        #self.resource.word_pos_id,
+                        #self.resource.pos_id))
+                #else:
+                    #select_variable_list.append("{}.{}".format(
+                        #self.resource.word_table,
+                        #self.resource.word_pos))
             
-            if current_attribute == LEX_PHON:
-                if "transcript_table" in dir(self.resource):
-                    select_variable_list.append("TRANSCRIPT.{}".format(
-                        self.resource.transcript_label))
-                    self.table_list.append("LEFT JOIN {} AS TRANSCRIPT ON {}.{} = TRANSCRIPT.{}".format(
-                        self.resource.transcript_table,
-                        self.resource.word_table,
-                        self.resource.word_transcript_id,
-                        self.resource.transcript_id))
-                else:
-                    select_variable_list.append("{}.{}".format(
-                        self.resource.word_table,
-                        self.resource.word_transcript))
+            #if current_attribute == LEX_PHON:
+                #if "transcript_table" in dir(self.resource):
+                    #select_variable_list.append("TRANSCRIPT.{}".format(
+                        #self.resource.transcript_label))
+                    #self.table_list.append("LEFT JOIN {} AS TRANSCRIPT ON {}.{} = TRANSCRIPT.{}".format(
+                        #self.resource.transcript_table,
+                        #self.resource.word_table,
+                        #self.resource.word_transcript_id,
+                        #self.resource.transcript_id))
+                #else:
+                    #select_variable_list.append("{}.{}".format(
+                        #self.resource.word_table,
+                        #self.resource.word_transcript))
                 
-        select_string = ("SELECT {0} FROM {1}{2}".format(
-            ", ".join(select_variable_list),
-            " ".join(self.table_list),
-            (" WHERE " + " AND ".join(self.where_list)) if self.where_list else ""))
-        return select_string
+        #select_string = ("SELECT {0} FROM {1}{2}".format(
+            #", ".join(select_variable_list),
+            #" ".join(self.table_list),
+            #(" WHERE " + " AND ".join(self.where_list)) if self.where_list else ""))
+        #return select_string
     
-    def get_entry(self, word_id, requested):
-        """ Return a Entry() instance that contains the requested fields for 
-        the lexicon entry with 'word_id'.
+    #def get_entry(self, word_id, requested):
+        #""" Return a Entry() instance that contains the requested fields for 
+        #the lexicon entry with 'word_id'.
         
-        This function is deprecated, and may be removed in future versions if
-        no obvious usecase emerges. It is the only place where the Entry()
-        class is used, it makes use of the old feature specification, it is 
-        not very much aware of more complex database hierarchies, and it 
-        contains code that is redundant with sql_string_get_matching_wordids().
-        """
+        #This function is deprecated, and may be removed in future versions if
+        #no obvious usecase emerges. It is the only place where the Entry()
+        #class is used, it makes use of the old feature specification, it is 
+        #not very much aware of more complex database hierarchies, and it 
+        #contains code that is redundant with sql_string_get_matching_wordids().
+        #"""
         
-        if not tuple(requested) in self.entry_cache:
-            self.entry_cache[tuple(requested)] = {}
-        try:
-            return self.entry_cache[tuple(requested)][word_id]
-        except KeyError:
-            pass
+        #if not tuple(requested) in self.entry_cache:
+            #self.entry_cache[tuple(requested)] = {}
+        #try:
+            #return self.entry_cache[tuple(requested)][word_id]
+        #except KeyError:
+            #pass
 
-        # an entry has to provide at least LEX_ORTH:
-        provide_fields = set(self.provides) & set(requested) | set([LEX_ORTH])
-        error_value = ["<NA>"] * (len(self.provides) - 1)
-        entry = self.Entry(provide_fields)
-        S = self.sql_string_get_entry(word_id, provide_fields)
-        self.resource.DB.execute(S)
-        query_results = self.resource.DB.Cur.fetchone()
-        if query_results:
-            entry.set_values(query_results)
-        else:
-            entry.set_values(error_value)
+        ## an entry has to provide at least LEX_ORTH:
+        #provide_fields = set(self.provides) & set(requested) | set([LEX_ORTH])
+        #error_value = ["<NA>"] * (len(self.provides) - 1)
+        #entry = self.Entry(provide_fields)
+        #S = self.sql_string_get_entry(word_id, provide_fields)
+        #self.resource.DB.execute(S)
+        #query_results = self.resource.DB.Cur.fetchone()
+        #if query_results:
+            #entry.set_values(query_results)
+        #else:
+            #entry.set_values(error_value)
             
-        # add entry to cache:
-        self.entry_cache[tuple(requested)][word_id] = entry
-        return entry
+        ## add entry to cache:
+        #self.entry_cache[tuple(requested)][word_id] = entry
+        #return entry
 
     def sql_string_get_posid_list(self, token):
         where_string = self.sql_string_get_posid_list_where(token)
@@ -1826,9 +1787,9 @@ class SQLCorpus(BaseCorpus):
             verbose=" -- sql_string_get_sentence_wordid" if options.cfg.verbose else "")
 
     def get_context_sentence(self, sentence_id):
-        S = self.sql_string_get_sentence_wordid(sentence_id)
-        self.resource.DB.execute(S)
-        return [self.lexicon.get_entry(x, [LEX_ORTH]).orth for (x, ) in self.resource.DB.Cur]
+        raise NotImplementedError
+        #S = self.sql_string_get_sentence_wordid(sentence_id)
+        #self.resource.DB.execute(S)
 
     def sql_string_get_wordid_in_range(self, start, end, source_id):
         if options.cfg.context_source_id and source_id:

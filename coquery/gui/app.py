@@ -525,6 +525,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)#self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
+        self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -904,6 +905,10 @@ class CoqueryApp(QtGui.QMainWindow):
         if results:
             self.csv_options = results
             self.switch_to_file()
+
+    def manage_stopwords(self):
+        import stopwords 
+        result = stopwords.Stopwords.manage(self, options.cfg.icon)
     
     def save_results(self):
         name = QtGui.QFileDialog.getSaveFileName(directory="~")
@@ -1514,8 +1519,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     options.cfg.query_list = [str(self.ui.edit_query_string.text())]
                 else:
                     options.cfg.query_list = [str(self.ui.edit_query_string.toPlainText())]
-            elif self.ui.radio_query_file.isChecked():
-                options.cfg.input_path = str(self.ui.edit_file_name.text())
+            options.cfg.input_path = str(self.ui.edit_file_name.text())
 
             # retrieve the CSV options for the current input file:
             if self.csv_options:
@@ -1598,13 +1602,13 @@ class CoqueryApp(QtGui.QMainWindow):
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.ui.radio_mode_collocations.setChecked(True)
 
+        self.ui.edit_file_name.setText(options.cfg.input_path)
         # either fill query string or query file input:
         if options.cfg.query_list:
-            self.ui.radio_query_string.setChecked(True)
             self.ui.edit_query_string.setText(options.cfg.query_list[0])
-        elif options.cfg.input_path:
+            self.ui.radio_query_string.setChecked(True)
+        if options.cfg.input_path_provided:
             self.ui.radio_query_file.setChecked(True)
-            self.ui.edit_file_name.setText(options.cfg.input_path)
             
         for rc_feature in options.cfg.selected_features:
             self.ui.options_tree.setCheckState(rc_feature, True)
