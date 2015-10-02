@@ -216,31 +216,13 @@ class TokenQuery(object):
     This class manages the query string, and is responsible for the output 
     of the query results. 
     """
-    
-    collapse_identical = True
-
     def __init__(self, S, Session, token_class):
         self.token_class = token_class
-        self.query_list = []
-        self.max_number_of_tokens = 0
-        repeated_queries = set(tokens.preprocess_query(S))
-        if len(repeated_queries) > 1:
-            for current_string in repeated_queries:
-                current_query = self.__class__(current_string, Session, token_class)
-                self.query_list.append(current_query)
-                self.max_number_of_tokens = max(self.max_number_of_tokens, current_query.number_of_tokens)
-        else:
-            self.tokens = [token_class(x, Session.Corpus.lexicon, True) for x in tokens.parse_query_string(S, token_class)]
-            self.number_of_tokens = len(self.tokens)
-            self.max_number_of_tokens = len(self.tokens)
-            
+        self.query_list = tokens.preprocess_query(S)
         self.query_string = S
-        self._current = 0
         self.Session = Session
         self.Corpus = Session.Corpus
         self.Results = []
-        self.InputLine = []
-        self.input_header = []
         self.input_frame = pd.DataFrame()
 
     def __str__(self):
@@ -256,6 +238,46 @@ class TokenQuery(object):
     def filter_data(self, df):
         """ Apply filters to the data frame. """
         return df
+    
+    def get_max_tokens(self):
+        """
+        Return the maximum number of tokens that this query produces.
+        
+        The maximum number of tokens is determined by the number of token
+        strings, modified by the quantifiers. For each query, query_list 
+        contains the quantified sub-queries. The maximum number of tokens is
+        the maximum of number_of_tokens for these sub-queris.
+        
+        Returns
+        -------
+        maximum : int
+            The maximum number of tokens that may be produced by this query.
+        """
+        maximum = 0
+        for token_list in self.query_list:
+            maximum = max(maximum, len(token_list))
+        return maximum
+    
+    def get_max_token_length(self, n):
+        """
+        Return the maximum number of tokens produced by the specified token
+        string.
+        
+        For token strings that do not contain a quantifier, the maximum 
+        number of tokens is always 1. For token strings with a quantifier,
+        it is the upper end of the specified range.
+        
+        Parameters
+        ----------
+        n : int
+            The number of the token string
+        
+        Returns
+        -------
+        maximum : int
+            The maximum number of tokens that this token string can produce
+        """
+        return 1
     
     def insert_static_data(self, df):
         """ 
@@ -278,7 +300,7 @@ class TokenQuery(object):
         
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
-                df[column] = self.number_of_tokens
+                df[column] = self._current_number_of_tokens
             if column == "coquery_query_string":
                 df[column] = self.Session.literal_query_string
             elif column == "coquery_expanded_query_string":
@@ -415,12 +437,13 @@ class TokenQuery(object):
                 df_cols.append(col)
         df = df[df_cols]
 
+
         agg_cols = list(agg.columns.values)
         for col in list(agg_cols):
             if col.startswith("coquery_invisible"):
                 agg_cols.remove(col)
                 agg_cols.append(col)
-        agg = agg[df_cols]
+        agg = agg[agg_cols]
 
         
         if options.cfg.gui:
@@ -503,7 +526,7 @@ class FrequencyQuery(TokenQuery):
             except ValueError:
                 columns.append(x)
             else:
-                if n <= self.number_of_tokens:
+                if n <= self._current_number_of_tokens:
                     columns.append(x)
 
         group_columns = [x for x in columns if not x.startswith("coquery_invisible")]
