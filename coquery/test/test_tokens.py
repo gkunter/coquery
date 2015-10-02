@@ -182,6 +182,60 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.transcript_specifiers, [])
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.word_specifiers, ["%e__r"])
+        
+    def test_has_wildcards1(self):
+        token = self.token_type("", self.lexicon)
+        token.parse()
+        self.assertFalse(token.has_wildcards("abc"))
+        
+    def test_has_wildcards2(self):
+        token = self.token_type("", self.lexicon)
+        token.parse()
+        self.assertFalse(token.has_wildcards("*"))
+        self.assertFalse(token.has_wildcards("*abc"))
+        self.assertFalse(token.has_wildcards("abc*abc"))
+        self.assertFalse(token.has_wildcards("abc*"))
+
+    def test_has_wildcards3(self):
+        token = self.token_type("", self.lexicon)
+        token.parse()
+        self.assertTrue(token.has_wildcards("%"))
+        self.assertTrue(token.has_wildcards("%abc"))
+        self.assertTrue(token.has_wildcards("abc%abc"))
+        self.assertTrue(token.has_wildcards("abc%"))
+
+    def test_has_wildcards4(self):
+        token = self.token_type("", self.lexicon)
+        token.parse()
+        self.assertFalse(token.has_wildcards("\\%"))
+        self.assertFalse(token.has_wildcards("\\%abc"))
+        self.assertFalse(token.has_wildcards("abc\\%abc"))
+        self.assertFalse(token.has_wildcards("abc\\%"))
+        
+    def test_has_wildcards5(self):
+        token = self.token_type("", self.lexicon)
+        token.parse()
+        self.assertFalse(token.has_wildcards("?"))
+        self.assertFalse(token.has_wildcards("?abc"))
+        self.assertFalse(token.has_wildcards("abc?abc"))
+        self.assertFalse(token.has_wildcards("abc?"))
+
+    def test_has_wildcards6(self):
+        token = self.token_type("", self.lexicon)
+        token.parse()
+        self.assertTrue(token.has_wildcards("_"))
+        self.assertTrue(token.has_wildcards("_abc"))
+        self.assertTrue(token.has_wildcards("abc_abc"))
+        self.assertTrue(token.has_wildcards("abc_"))
+        
+    def test_has_wildcards7(self):
+        token = self.token_type("", self.lexicon)
+        token.parse()
+        self.assertFalse(token.has_wildcards("\\_"))
+        self.assertFalse(token.has_wildcards("\\_abc"))
+        self.assertFalse(token.has_wildcards("abc\\_abc"))
+        self.assertFalse(token.has_wildcards("abc\\_"))
+        
 
 class TestQuantification(unittest.TestCase):
     def test_no_quantifiers(self):
