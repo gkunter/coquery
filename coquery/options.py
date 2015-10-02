@@ -139,6 +139,7 @@ class Options(object):
         group.add_argument("-P", "--show_parameters", help="include the parameter string in the output", action="store_true", dest="show_parameters")
         group.add_argument("-f", "--show_filter", help="include the filter strings in the output", action="store_true", dest="show_filter")
         group.add_argument("--freq-label", help="use this label in the heading line of the output (default: Freq)", default="Freq", type=str, dest="freq_label")
+        group.add_argument("--no_align", help="Control if quantified token columns are aligned. If not set (the default), the columns in the result table are aligned so that row cells belonging to the same query token are placed in the same column. If set, this alignment is disabled. In that case, row cells are padded to the right.", action="store_false", dest="align_quantified")
 
     def get_options(self):
         """ 
@@ -500,6 +501,19 @@ class Options(object):
 
                     elif section == "gui":
                         try:
+                            self.args.ask_on_quit = config_file.get("gui", "ask_on_quit")
+                        except configparser.NoOptionError:
+                            self.args.ask_on_quit = True
+                        try:
+                            self.args.save_query_string = config_file.get("gui", "save_query_string")
+                        except configparser.NoOptionError:
+                            self.args.save_query_string = True
+                        try:
+                            self.args.save_query_file = config_file.get("gui", "save_query_file")
+                        except configparser.NoOptionError:
+                            self.args.save_query_file = True
+
+                        try:
                             vars(self.args)["width"] = int(config_file.get("gui", "width"))
                         except (configparser.NoOptionError, ValueError):
                             vars(self.args)["width"] = None
@@ -574,9 +588,9 @@ def save_configuration():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
     config.set("main", "query_mode", cfg.MODE)
-    if cfg.query_list:
+    if cfg.query_list and cfg.save_query_string:
         config.set("main", "last_query_string", ",".join(['"{}"'.format(x) for x in cfg.query_list]))
-    if cfg.input_path:
+    if cfg.input_path and cfg.save_query_file:
         config.set("main", "last_query_file", cfg.input_path)
     
     if not "sql" in config.sections():
@@ -621,6 +635,21 @@ def save_configuration():
             config.set("gui", 
                        "column_{}_color".format(x), 
                        cfg.column_color[x])
+
+        try:
+            config.set("gui", "ask_on_quit", cfg.ask_on_quit)
+        except AttributeError:
+            config.set("gui", "ask_on_quit", True)
+            
+        try:
+            config.set("gui", "save_query_file", cfg.save_query_file)
+        except AttributeError:
+            config.set("gui", "save_query_file", True)
+
+        try:
+            config.set("gui", "save_query_string", cfg.save_query_string)
+        except AttributeError:
+            config.set("gui", "save_query_string", True)
 
         try:
             config.set("gui", "context_view_width", cfg.context_view_width)
