@@ -163,6 +163,8 @@ class Session(object):
         if header == "coquery_query_string" and options.cfg.query_label:
             return options.cfg.query_label
         
+        # COLUMN_NAMES is defined in defines.py, which should help 
+        # localization:
         if header in COLUMN_NAMES:
             return COLUMN_NAMES[header]
         
@@ -172,6 +174,9 @@ class Session(object):
 
         rc_feature, _, number = header.rpartition("_")
 
+        if rc_feature == "coquery_query_token":
+            number = self.quantified_number_labels[int(number) - 1]
+            return "{}{}".format(COLUMN_NAMES[rc_feature], number)
         if rc_feature in [x for x, _ in self.Corpus.resource.get_lexicon_features()]:
             number = self.quantified_number_labels[int(number) - 1]
             return "{}{}".format(self.Corpus.resource.__getattribute__(str(rc_feature)), number)

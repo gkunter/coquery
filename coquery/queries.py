@@ -369,7 +369,6 @@ class TokenQuery(object):
             The data frame containing also the static data.
         """
 
-        tokens = self._current_subquery_string.split(" ")
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
                 df[column] = self._current_number_of_tokens
@@ -387,11 +386,16 @@ class TokenQuery(object):
             elif column == "coquery_current_time":
                 df[column] = datetime.datetime.now().strftime("%H:%M:%S")
             elif column.startswith("coquery_query_token"):
+                token_list = self.query_string.split() 
                 n = int(column.rpartition("_")[-1])
-                try:
-                    df[column] = tokens[n - 1]
-                except IndexError:
-                    df[column] = ""
+                # construct a list with the maximum number of quantified
+                # token repetitions. This is used to look up the query token 
+                # string.
+                L = []
+                for x in token_list:
+                    token, _, length = tokens.get_quantifiers(x)
+                    L += [token] * length
+                df[column] = L[n-1]
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
