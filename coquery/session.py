@@ -123,6 +123,7 @@ class Session(object):
         
         self.end_time = datetime.datetime.now()
 
+        self.data_table.reset_index(drop=True, inplace=True)
         self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
         self.output_object.fillna("", inplace=True)
         self.output_object.reset_index(drop=True, inplace=True)
