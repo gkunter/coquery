@@ -85,7 +85,6 @@ COLUMN_NAMES = {
     "coquery_expanded_query_string": "Expanded query string",
     "coquery_query_string": "Query string",
     
-    "frequency_absolute_frequency": "Frequency",
     "frequency_relative_frequency": "Proportion",
     "frequency_per_million_words": "pmw"
         }
