@@ -345,7 +345,7 @@ def preprocess_query(S):
     token_lists = []
     token_map = []
     current_pos = 1
-    for i, current_token in enumerate(tokens):
+    for i, current_token in enumerate([x for x in tokens if x]):
         L = []
         token, start, end = get_quantifiers(current_token)
         for x in range(start, end + 1):
@@ -360,4 +360,3 @@ def preprocess_query(S):
         l = [(number, token) for number, token in list(itertools.chain.from_iterable(x)) if token]
         L.append(l)
     return L
-  
