@@ -105,7 +105,14 @@ class Visualizer(vis.BaseVisualizer):
 
             # percentage area plot:
             if self.percentage:
-                ct = ct.apply(lambda x: (100 * x) / sum(x), axis=1)
+                # if there is only one grouping variable (the time column), 
+                # the cross table produces a Series, not a data frame. It 
+                # isn't really very informative to plot it, but we provide 
+                # for this special case anyway_
+                if type(ct) == pd.Series:
+                    ct = ct.apply(lambda x: 100)
+                else:
+                    ct = ct.apply(lambda x: (100 * x) / sum(x), axis=1)
                 ct.plot(kind="area", ax=plt.gca(), stacked=True, color=self.get_palette(), **kwargs)
             else:
                 if self.area:
