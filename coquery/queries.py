@@ -263,6 +263,7 @@ class TokenQuery(object):
         for self._sub_query in self.query_list:
             self._current_number_of_tokens = len(self._sub_query)
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
+            
             df = pd.DataFrame(
                 self.Corpus.yield_query_results(self, self._sub_query))
             df = self.insert_static_data(df)
@@ -337,7 +338,7 @@ class TokenQuery(object):
             A string representing a suitable number label
         """
         if not options.cfg.align_quantified:
-            return "{}".format(n)
+            return "{}".format(n + 1)
         L = []
         current_pos = 0
         for i, x in enumerate(self.query_string.split(" ")):
