@@ -1188,9 +1188,20 @@ class SQLCorpus(BaseCorpus):
                 else:
                     select_list.append(rc_feature)
 
-        # MISSING:
-        # linked columns and functions
+        # linked columns
+        for rc_feature in options.cfg.external_links:
+            external, internal = options.cfg.external_links[rc_feature]
+            internal_feature = internal.split(".")[-1]
 
+            external_table, external_feature = rc_feature.split(".")
+            linked_feature = "{}_{}".format(external_table, external_feature)
+
+            if rc_feature in lexicon_features:
+                select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
+            else:
+                select_list.append("coq_{}_1".format(linked_feature))
+
+        # functions:
         func_counter =  Counter()
         for rc_feature in options.cfg.selected_features:
             if rc_feature.startswith("func."):

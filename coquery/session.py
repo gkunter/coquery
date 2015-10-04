@@ -203,6 +203,10 @@ class Session(object):
         except AttributeError:
             pass
 
+        # treat linked columns:
+        if "." in rc.feature:
+            pass
+
         # treat functions:
         if rc_feature.startswith("func_"):
             func_counter = collections.Counter()
