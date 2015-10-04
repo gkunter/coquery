@@ -438,13 +438,25 @@ class TokenQuery(object):
         df : DataFrame
             The data frame with new columns for each function.
         """
-        
+
         func_counter = collections.Counter()
-        for x in options.cfg.selected_functions:
-            resource = x.rpartition(".")[-1]
+        for res, fun, _ in options.cfg.selected_functions:
+            resource = res.rpartition(".")[-1]
             func_counter[resource] += 1
-            name = "coq_func_{}_{}".format(resource, func_counter[resource])
-            df[name] = df[name].apply(options.cfg.selected_functions[x])
+            fc = func_counter[resource]
+            
+            # handle functions added to lexicon features:
+            if resource in [x for x, _ in self.Corpus.resource.get_lexicon_features()]:
+                for n in range(self.get_max_tokens()):
+                    new_name = "coq_func_{}_{}_{}".format(resource, fc, n + 1)
+                    col_name = "coq_{}_{}".format(resource, n + 1)
+                    df[new_name] = df[col_name].apply(fun)
+            # handle other functions:
+            else:
+                new_name = "coq_func_{}_{}_1".format(resource, fc)
+                col_name = "coq_{}_1".format(resource)
+                df[new_name] = df[col_name].apply(fun)
+
         return df
 
     def add_output_columns(self):
@@ -728,7 +740,7 @@ class CollocationQuery(TokenQuery):
 
         # FIXME: Be more generic than always using coq_word_label!
         left_cols = ["coq_word_label_{}".format(x + 1) for x in range(options.cfg.context_left)]
-        right_cols = ["coq_word_label_{}".format(x + self.number_of_tokens - options.cfg.context_right + 1) for x in range(options.cfg.context_right)]
+        right_cols = ["coq_word_label_{}".format(x + self.get_max_tokens() - options.cfg.context_right + 1) for x in range(options.cfg.context_right)]
         left_context_span = df[fix_col + left_cols]
         right_context_span = df[fix_col + right_cols]
         if not options.cfg.case_sensitive:
@@ -753,13 +765,13 @@ class CollocationQuery(TokenQuery):
             col[0] = "coq_word_label"
             tmp_table.columns = col
             lookup = lookup.append(tmp_table)
-        for i in range(self.number_of_tokens + 1 - right_span, self.number_of_tokens + 1):
+        for i in range(self.get_max_tokens() + 1 - right_span, self.get_max_tokens() + 1):
             tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id"]]
             col = tmp_table.columns.values
             col[0] = "coq_word_label"
             tmp_table.columns = col
             lookup = lookup.append(tmp_table)
-        lookup["coquery_invisible_number_of_tokens"] = self.number_of_tokens
+        lookup["coquery_invisible_number_of_tokens"] = self.get_max_tokens()
 
         all_words = set(left.index + right.index)
         

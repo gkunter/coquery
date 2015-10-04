@@ -1505,12 +1505,11 @@ class CoqueryApp(QtGui.QMainWindow):
             return output_features
 
         def get_functions(node):
-            functions = {}
+            functions = []
             for child in [node.child(i) for i in range(node.childCount())]:
-                functions.update(get_functions(child))
+                functions += get_functions(child)
             if node.checkState(0) == QtCore.Qt.Checked and node._func:
-                d = {node.objectName(): node._func}
-                functions.update(d)
+                functions.append((node.objectName(), node._func, node.text(0)))
             return functions 
 
         if options.cfg:
@@ -1585,9 +1584,10 @@ class CoqueryApp(QtGui.QMainWindow):
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
                 options.cfg.selected_features += traverse_output_columns(root)
 
-            options.cfg.selected_functions = {}
+            options.cfg.selected_functions = []
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                options.cfg.selected_functions.update(get_functions(root))
+                func = get_functions(root)
+                options.cfg.selected_functions += func
 
             return True
 

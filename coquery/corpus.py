@@ -1171,7 +1171,7 @@ class SQLCorpus(BaseCorpus):
         
         lexicon_features = [x for x, _ in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
         corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
-
+        max_token_count = query.Session.get_max_token_count()
         # the initial select list contains the columns from the input file
         # (if present):
         select_list = list(query.Session.input_columns)
@@ -1179,24 +1179,29 @@ class SQLCorpus(BaseCorpus):
         # then, add an appropriately aliased name for each selected feature:
         for rc_feature in options.cfg.selected_features:
             if rc_feature in lexicon_features:
-                select_list += ["coq_{}_{}".format(rc_feature, x+1) for x in range(query.Session.get_max_token_count())]
+                select_list += ["coq_{}_{}".format(rc_feature, x+1) for x in range(max_token_count)]
             elif rc_feature in corpus_features:
                 select_list.append("coq_{}_1".format(rc_feature))
             elif rc_feature.startswith("coquery_"):
                 if rc_feature == "coquery_query_token": 
-                    select_list += ["coquery_query_token_{}".format(x + 1) for x in range(query.Session.get_max_token_count())]
+                    select_list += ["coquery_query_token_{}".format(x + 1) for x in range(max_token_count)]
                 else:
                     select_list.append(rc_feature)
 
         # MISSING:
         # linked columns and functions
 
-        func_count =  Counter()
+        func_counter =  Counter()
         for rc_feature in options.cfg.selected_features:
             if rc_feature.startswith("func."):
-                target = rc_feature.split("func.")[-1]
-                func_count[target] += 1
-                select_list.append("coq_func_{}_{}".format(target, func_count[target]))
+                resource = rc_feature.rpartition(".")[-1]
+                func_counter[resource] += 1
+                fc = func_counter[resource]
+                
+                if resource in lexicon_features:
+                    select_list += ["coq_func_{}_{}_{}".format(resource, fc, x + 1) for x in range(max_token_count)]
+                else:
+                    select_list.append("coq_func_{}_{}_1".format(resource, fc))
 
             if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_") and "coq_{}_1".format(rc_feature) not in select_list:
                 if "." not in rc_feature:
@@ -1218,7 +1223,7 @@ class SQLCorpus(BaseCorpus):
         if options.cfg.context_source_id:
             select_list.append("coquery_invisible_corpus_id")
             select_list.append("coquery_invisible_number_of_tokens")
-        return select_list        
+        return set(select_list)
 
     def get_token_query_string(self, current_token, number, self_joined=False):
         """ 
@@ -1398,10 +1403,10 @@ class SQLCorpus(BaseCorpus):
                 else:
                     rc_parent = None
 
-                column_list = []
+                column_list = set()
                 for rc_feature in sub_tree["rc_requested_features"]:
                     if rc_feature.startswith("func."):
-                        name = "coq_func_{}_{}".format(
+                        name = "coq_{}_{}".format(
                             rc_feature.split("func.")[-1], number+1)
                     else:
                         name = "coq_{}_{}".format(rc_feature, number+1)
@@ -1409,9 +1414,8 @@ class SQLCorpus(BaseCorpus):
                     variable_string = "{} AS {}".format(
                         self.resource.__getattribute__(rc_feature.split("func.")[-1]),
                         name)
-                    column_list.append(variable_string)
+                    column_list.add(variable_string)
                     select_list.add(name)
-                
                 
                 columns = ", ".join(column_list)
                 where_string = ""
@@ -1676,13 +1680,13 @@ class SQLCorpus(BaseCorpus):
                         last_offset = 0
                         if i + 1 in positions_lexical_items:
                             final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
-                        else:
-                            final_select.append("NULL AS coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
+                        #else:
+                            #final_select.append("NULL AS coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
                     else:
                         if i < len(token_list):
                             final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
-                        else:
-                            final_select.append("NULL AS coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
+                        #else:
+                            #final_select.append("NULL AS coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
 
         # add the corpus features in the preferred order:
         for rc_feature in self.resource.get_preferred_output_order():
@@ -1701,30 +1705,21 @@ class SQLCorpus(BaseCorpus):
                 if "." not in rc_feature:
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
-        if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
-            if (options.cfg.context_right or options.cfg.context_left) and options.cfg.context_source_id:
-                if options.cfg.context_mode == CONTEXT_STRING:
-                    final_select.append('NULL AS coq_context')
-                elif options.cfg.context_mode == CONTEXT_KWIC:
-                    if options.cfg.context_left:
-                        final_select.append('NULL AS coq_context_left')
-                    if options.cfg.context_right:
-                        final_select.append('NULL AS coq_context_right')
-        
+        # add any resource feature that is required by a function:
+        for res, fun, _ in options.cfg.selected_functions:
+            rc_feature = res.rpartition(".")[-1]
+            if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
+                final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
+            else:
+                final_select.append("coq_{}_1".format(rc_feature))
+
         # construct the query string from the token query parts:
         query_string = " ".join(query_string_part)
-
-        func_counter = Counter()
-        for x in options.cfg.selected_functions:
-            resource = x.rpartition(".")[-1]
-            func_counter[resource] += 1
-            name = "coq_func_{}_{}".format(resource, func_counter[resource])
-            final_select.append(name)
 
         if options.cfg.context_source_id or not final_select:
             final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
 
-        query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(final_select))
+        query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(set(final_select)))
         
         # add LIMIT clause if necessary:
         if options.cfg.number_of_tokens:

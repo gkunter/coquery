@@ -64,7 +64,7 @@ class Options(object):
 
         self.args.selected_features= []
         self.args.external_links = {}
-        self.args.selected_functions = {}
+        self.args.selected_functions = []
         
         self.args.context_left = 0
         self.args.context_right = 0

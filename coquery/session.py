@@ -17,6 +17,7 @@ import time, datetime
 import fileinput
 import codecs
 import logging
+import collections
 
 import pandas as pd
 
@@ -204,7 +205,25 @@ class Session(object):
 
         # treat functions:
         if rc_feature.startswith("func_"):
-            print(options.cfg.selected_functions)
+            func_counter = collections.Counter()
+            for res, _, label in options.cfg.selected_functions:
+                resource = res.rpartition(".")[-1]
+                func_counter[resource] += 1
+                fc = func_counter[resource]
+                
+                new_name = "func_{}_{}".format(resource, fc)
+                if new_name == rc_feature:
+                    column_name = self.Corpus.resource.__getattribute__(str(resource))
+                    function_label = label
+                    break
+            else:
+                column_name = resource
+                function_label = rc_feature
+            try:
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
+                pass
+            return str(function_label).replace(column_name, "{}{}".format(column_name, number))
 
         # other features:
         if rc_feature in COLUMN_NAMES:
@@ -216,8 +235,6 @@ class Session(object):
         else:
             return header
         return header
-    
-
 
 class StatisticsSession(Session):
     def __init__(self):
