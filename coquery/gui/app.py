@@ -101,9 +101,20 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         return self._objectName
 
     def check_children(self, column=0):
-        """ Compare the check state of the item to that of all children.
-        Returns True all children have the same check state, False if at 
-        # least one child has a different check state than another. """
+        """ 
+        Compare the check state of all children.
+        
+        Parameters
+        ----------
+        column : int (default=0)
+            The column of the tree widget
+            
+        Returns
+        -------
+        state : bool
+            True if all children have the same check state, False if at least
+            one child has a different check state than another.
+        """
         child_states = set([])
         for child in [self.child(i) for i in range(self.childCount())]:
             child_states.add(child.checkState(column))
@@ -527,6 +538,11 @@ class CoqueryApp(QtGui.QMainWindow):
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         
+        self.ui.radio_mode_collocations.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_mode_frequency.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_mode_tokens.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_mode_context.toggled.connect(self.toggle_frequency_columns)
+        
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
@@ -673,6 +689,16 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.options_tree = tree
         return tree
     
+    def toggle_frequency_columns(self):
+        for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
+            if root.objectName().startswith("coquery"):
+                for child in [root.child(i) for i in range(root.childCount())]:
+                    if child.objectName() in ("coquery_relative_frequency", "coquery_per_million_words"):
+                        if self.ui.radio_mode_frequency.isChecked():
+                            child.setDisabled(False)
+                        else:
+                            child.setDisabled(True)
+                
     def change_corpus(self):
         """ Change the output options list depending on the features available
         in the current corpus. If no corpus is avaiable, disable the options
@@ -720,8 +746,6 @@ class CoqueryApp(QtGui.QMainWindow):
             if x in tables:
                 tables.remove(x)
                 tables.insert(0, x)
-        tables.remove("frequency")
-        tables.append("frequency")
         tables.remove("coquery")
         tables.append("coquery")
 
@@ -1465,7 +1489,7 @@ class CoqueryApp(QtGui.QMainWindow):
             output_features = []
             for child in [node.child(i) for i in range(node.childCount())]:
                 output_features += traverse_output_columns(child)
-            if node.checkState(0) == QtCore.Qt.Checked and not node.objectName().rpartition("_")[-1] == "table":
+            if node.checkState(0) == QtCore.Qt.Checked and not node.objectName().rpartition("_")[-1] == "table" and not node.isDisabled():
                 output_features.append(node.objectName())
             return output_features
         
@@ -1598,8 +1622,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if options.cfg.MODE == QUERY_MODE_DISTINCT:
             self.ui.radio_mode_context.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-            self.ui.options_tree.setCheckState("frequency_absolute_frequency", True)
-            #self.ui.radio_mode_frequency.setChecked(True)
+            self.ui.radio_mode_frequency.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_TOKENS:
             self.ui.radio_mode_tokens.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
@@ -1640,7 +1663,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.data_preview.setModel(self.table_model)
         except AttributeError:
             pass
-        return True
+        
+        self.toggle_frequency_columns()
 
     def select_table(self):
         """
