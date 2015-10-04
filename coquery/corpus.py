@@ -198,15 +198,13 @@ class BaseResource(object):
     coquery_current_time = "Current time"
     coquery_query_token = "Query token"
 
-    frequency_absolute_frequency = "Absolute frequency"
-    frequency_relative_frequency = "Relative frequency"
-    frequency_per_million_words = "Per million words"
+    coquery_relative_frequency = "Relative frequency"
+    coquery_per_million_words = "Per million words"
 
     special_table_list = ["coquery", "frequency", "tag"]
 
     render_token_style = "background: lightyellow"
 
-        
     @classmethod
     def get_preferred_output_order(cls):
         prefer = ["corpus_word", "word_label", "word_pos", "pos_label", "word_transcript", "transcript_label", "word_lemma", "lemma_label"]
@@ -1217,8 +1215,6 @@ class SQLCorpus(BaseCorpus):
                     select_list += ["coquery_query_token_{}".format(x + 1) for x in range(query.Session.get_max_token_count())]
                 else:
                     select_list.append(rc_feature)
-            elif rc_feature.startswith("frequency_"):
-                select_list.append(rc_feature)
 
         # MISSING:
         # linked columns and functions
@@ -1820,11 +1816,7 @@ class SQLCorpus(BaseCorpus):
 
     def get_context(self, token_id, number_of_tokens, case_sensitive):
         if options.cfg.context_sentence:
-            asd
-        #if options.cfg.context_span:
-            #span = options.cfg.context_span
-        #elif options.cfg.context_columns:
-            #span = options.cfg.context_columns
+            raise NotImplementedError("Sentence contexts are currently not supported.")
         token_id = int(token_id)
         source_id = self.get_source_id(token_id)
 
