@@ -137,7 +137,7 @@ class MySQLOptions(QtGui.QDialog):
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(True)
         
         def indicate_access_denied(self, e):
-            self.ui.label_connection.setText("A MySQL server was found, but the access was denied. Check the user name and password, or create a new MySQL user.")
+            self.ui.label_connection.setText("A MySQL server was found, but access was denied. Check the user name and password, or create a new MySQL user.")
             self.ui.button_status.setStyleSheet('QPushButton {background-color: yellow; color: yellow;}')
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Help).setEnabled(True)
