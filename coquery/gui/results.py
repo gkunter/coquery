@@ -270,6 +270,19 @@ def get_foreground(option, index):
         return index.data(QtCore.Qt.ForegroundRole)
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
+    margin = 2
+    
+    #def sizeHint(self, option, index):
+        
+        #return QtGui.QFontMetrics().
+        
+        #options = QtGui.QStyleOptionViewItemV4(option)
+        #self.initStyleOption(options,index)
+
+        #content = QtGui.QLabel(unicode(index.data(QtCore.Qt.DisplayRole)))
+        #content.setTextWidth(options.rect.width())
+        #return QtCore.QSize(content.idealWidth() + self.margin * 2, content.size().height())
+    
     def paint(self, painter, option, index):
         """
         Paint the results cell.
@@ -298,7 +311,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             painter.fillRect(option.rect, bg)
         painter.setPen(QtGui.QPen(fg))
         try:
-            painter.translate(2, 0)
+            painter.translate(self.margin, 0)
             painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), content)
         finally:
             painter.restore()
