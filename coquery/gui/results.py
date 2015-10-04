@@ -195,7 +195,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
     def rowCount(self, parent=None):
         """ Return the number of rows. """
-        return len(self.content.index)
+        try:
+            return len(self.content.index)
+        except AttributeError:
+            return 0
         
     def columnCount(self, parent=None):
         """ Return the number of columns, ignoring all invisible columns. """
