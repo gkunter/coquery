@@ -111,7 +111,10 @@ class Session(object):
             self.storage_created = False
         
         self.data_table = pd.DataFrame()
+        self.quantified_number_labels = []
         for current_query in self.query_list:
+            if not self.quantified_number_labels:
+                self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
             start_time = time.time()
             logger.info("Start query: '{}'".format(current_query.query_string))
             current_query.run()
@@ -140,10 +143,49 @@ class Session(object):
 
             self.output_object.to_csv(
                 output_file,
-                header = [self.Corpus.resource.translate_header(x) for x in self.output_object.columns.values], 
+                header = [self.translate_header(x) for x in self.output_object.columns.values], 
                 sep=options.cfg.output_separator,
                 encoding="utf-8",
                 index=False)
+
+    def translate_header(self, header):
+        """ 
+        Return a string that contains the display name for the header 
+        string. 
+        
+        Translation removes the 'coq_' prefix and any numerical suffix, 
+        determines the resource feature from the remaining string, translates 
+        it to its display name, and returns the display name together with 
+        the numerical suffix attached.
+        """
+            
+        # Retain the column header if the query string was from an input file
+        if header == "coquery_query_string" and options.cfg.query_label:
+            return options.cfg.query_label
+        
+        if header in COLUMN_NAMES:
+            return COLUMN_NAMES[header]
+        
+        # strip coq_ prefix:
+        if header.startswith("coq_"):
+            header = header.partition("coq_")[2]
+
+        rc_feature, _, number = header.rpartition("_")
+
+        if rc_feature in [x for x, _ in self.Corpus.resource.get_lexicon_features()]:
+            number = self.quantified_number_labels[int(number) - 1]
+            return "{}{}".format(self.Corpus.resource.__getattribute__(str(rc_feature)), number)
+        else:
+            try:
+                return "{}".format(self.Corpus.resource.__getattribute__(str(rc_feature)))
+            except AttributeError:
+                if rc_feature in COLUMN_NAMES:
+                    return "{}{}".format(COLUMN_NAMES[rc_feature], number)
+                else:
+                    return header
+        return header
+    
+
 
 class StatisticsSession(Session):
     def __init__(self):

@@ -449,40 +449,7 @@ class BaseResource(object):
                 table_name = type(cls).__getattribute__(cls, table)
                 filter_list.append((variable, column_name, table_name, filt._op, filt._value_list, filt._value_range))
         return filter_list
-    
-    @classmethod
-    def translate_header(cls, header):
-        """ Return a string that contains the display name for the header 
-        string. Translation removes the 'coq_' prefix and any numerical 
-        suffix, determines the resource feature from the remaining string,
-        translates it to its display name, and returns the display name
-        together with the numerical suffix attached."""
-            
-        # Retain the column header if the query string was from an input file
-        if header == "coquery_query_string" and options.cfg.query_label:
-            return options.cfg.query_label
-        
-        if header in COLUMN_NAMES:
-            return COLUMN_NAMES[header]
-        
-        # strip coq_ prefix:
-        if header.startswith("coq_"):
-            header = header.partition("coq_")[2]
 
-        rc_feature, _, number = header.rpartition("_")
-
-        if rc_feature in [x for x, _ in cls.get_lexicon_features()]:
-            return "{}{}".format(type(cls).__getattribute__(cls, str(rc_feature)), number)
-        else:
-            try:
-                return "{}".format(type(cls).__getattribute__(cls, str(rc_feature)))
-            except AttributeError:
-                if rc_feature in COLUMN_NAMES:
-                    return "{}{}".format(COLUMN_NAMES[rc_feature], number)
-                else:
-                    return header
-        return header
-    
     @classmethod
     def provides_pos(cls):
         """

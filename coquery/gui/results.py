@@ -157,7 +157,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if column.startswith("coquery_invisible"):
                 return None
 
-            display_name = options.cfg.main_window.Session.Corpus.resource.translate_header(column)
+            display_name = options.cfg.main_window.Session.translate_header(column)
             # Return normal header if not a sort column:
             if column not in self.sort_columns:
                 return display_name

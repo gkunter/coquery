@@ -951,7 +951,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 tab.to_csv(name,
                            sep=options.cfg.output_separator,
                            index=False,
-                           header=[options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in tab.columns],
+                           header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
                            encoding=options.cfg.output_encoding)
             except IOError as e:
                 QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. <b>The results have not been saved.</b>")
@@ -1004,8 +1004,8 @@ class CoqueryApp(QtGui.QMainWindow):
 
         index = header.logicalIndexAt(point.x())
         column = self.table_model.header[index]
-        # this must simply be the most horrible object reference ever :(
-        display_name = options.cfg.main_window.Session.Corpus.resource.translate_header(column)
+
+        display_name = options.cfg.main_window.Session.translate_header(column)
         
         action = QtGui.QWidgetAction(self)
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)

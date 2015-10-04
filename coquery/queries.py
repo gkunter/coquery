@@ -260,11 +260,11 @@ class TokenQuery(object):
         """
         self.results_frame = pd.DataFrame()
         
-        for sub_query in self.query_list:
-            self._current_number_of_tokens = len(sub_query)
-            self._current_subquery_string = " ".join(["%s" % x for _, x in sub_query])
+        for self._sub_query in self.query_list:
+            self._current_number_of_tokens = len(self._sub_query)
+            self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
             df = pd.DataFrame(
-                self.Corpus.yield_query_results(self, sub_query))
+                self.Corpus.yield_query_results(self, self._sub_query))
             df = self.insert_static_data(df)
             self.add_output_columns()
 
@@ -312,6 +312,43 @@ class TokenQuery(object):
             maximum = max(maximum, len(token_list))
         return maximum
     
+    def get_token_numbering(self, n):
+        """
+        Create a suitable number label for the nth lexical column.
+
+        If the specified column was not created by a quantified query token,
+        or if the maximum quantificatin of that query token was 1, the label
+        will correspond to the query token number. Otherwise, it will take
+        the form "x.y", where x is the query token number, and y is the 
+        repetition number of that query token.
+        
+        If the quantified columns are not aligned (i.e. if 
+        options.cfg.align_quantified is not set), this function simply 
+        returns a string representation of n.
+        
+        Parameters
+        ----------
+        n : int 
+            An lexical output column number
+        
+        Returns
+        -------
+        s : string
+            A string representing a suitable number label
+        """
+        if not options.cfg.align_quantified:
+            return "{}".format(n)
+        L = []
+        current_pos = 0
+        for i, x in enumerate(self.query_string.split(" ")):
+            _, _, length = tokens.get_quantifiers(x)
+            if length == 1:
+                L.append("{}".format(i+1))
+            else:
+                for y in range(length):
+                    L.append("{}.{}".format(i + 1, y + 1))
+        return L[n]
+    
     def insert_static_data(self, df):
         """ 
         Insert columns that are constant for each query result in the query.
@@ -331,7 +368,7 @@ class TokenQuery(object):
             The data frame containing also the static data.
         """
 
-        tokens = self.query_string.split(" ")
+        tokens = self._current_subquery_string.split(" ")
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
                 df[column] = self._current_number_of_tokens
@@ -759,7 +796,7 @@ class CollocationQuery(TokenQuery):
             # write data frame to output_file as a CSV file, using the 
             # current output_separator. Encoding is always "utf-8".
             collocates[vis_cols].to_csv(output_object, 
-                header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
+                header=None if self.Session.header_shown else [self.Session.translate_header(x) for x in vis_cols], 
                 sep=options.cfg.output_separator,
                 encoding=options.cfg.output_encoding,
                 index=False)
