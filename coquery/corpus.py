@@ -1074,8 +1074,13 @@ class SQLCorpus(BaseCorpus):
             L.append(s)
         return L
 
-    def get_sub_query_string_self_joined(self, token, number):
-       # get a list of all tables that are required to satisfy the 
+    def get_token_query_string_self_joined(self, token, number):
+        """
+        Return a MySQL SELECT string that queries one token in a query on an 
+        n-gram corpus table.
+        """
+        
+        # get a list of all tables that are required to satisfy the 
         # feature request:
         lexicon_variables = [x for x, _ in self.resource.get_lexicon_features()]
         requested_features = [x for x in options.cfg.selected_features if x in lexicon_variables]
@@ -1215,11 +1220,11 @@ class SQLCorpus(BaseCorpus):
             select_list.append("coquery_invisible_number_of_tokens")
         return select_list        
 
-    def get_sub_query_string(self, current_token, number, self_joined=False):
+    def get_token_query_string(self, current_token, number, self_joined=False):
         """ 
-        Return a MySQL string that selects a table matching the current
-        token, and which includes all columns that are requested, or which
-        are required to join the tables. 
+        Return a MySQL SELECT string that selects a table matching the 
+        current token, and which includes all columns that are requested, or 
+        which are required to join the tables. 
         
         Parameters
         ----------
@@ -1236,8 +1241,8 @@ class SQLCorpus(BaseCorpus):
             The partial MySQL string.
         """
             
-        # corpus variables will only be included in the subquery string if 
-        # this is the first subquery.
+        # corpus variables will only be included in the token query string if 
+        # this is the first query token.
         if number == 0:
             requested_features = [x for x in options.cfg.selected_features]
             
@@ -1461,12 +1466,14 @@ class SQLCorpus(BaseCorpus):
 
         return "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
     
-    def get_subquery_order(self, token_list):
-        """ Return an order list in which the subqueries should be executed. 
-        Ideally, the order corresponds to the number of rows in the corpus
-        that match the subquery, from small to large. This increases query
-        performance because it reduces the number of rows that need to be 
-        scanned once all tables have been joined.
+    def get_token_query_order(self, token_list):
+        """ 
+        Return an order list in which the token queries should be executed. 
+        
+        Ideally, the order corresponds to the number of rows in the 
+        corpus that match the token query, from small to large. This 
+        increases query performance because it reduces the number of rows 
+        that need to be scanned once all tables have been joined.
         
         The optimal order would be in decreasing frequency order for the 
         subcorpus specified by all source filters, but this is not 
@@ -1481,11 +1488,24 @@ class SQLCorpus(BaseCorpus):
         
         The second criterion is the number of asterisks in the query string:
         a query string containing a '*' should be joined later than a query 
-        string of the same length without '*'. """
+        string of the same length without '*'. 
+        
+        Parameters
+        ----------
+        token_list : list
+            A list of token tuples, the first element stating the position of 
+            the target output column, the second the token string
+            
+        Returns
+        -------
+        L : list
+            A list of tuples. The first element contains the token number, 
+            the second element contains the target output column
+        """
         # FIXME: improve the heuristic.
         
         if len(token_list) == 1:
-            return [1]
+            return [(1, 1)]
         
         def calc_weight(s):
             """ 
@@ -1505,7 +1525,7 @@ class SQLCorpus(BaseCorpus):
         # first, sort in reverse length:
         sort_list = sorted(sort_list, 
                            key=lambda x: calc_weight(x[1][1]), reverse=True)
-        return [x+1 for x, _ in sort_list]
+        #return [x+1 for x, _ in sort_list]
         if options.cfg.align_quantified:
             L = []
             last_number = 0
@@ -1515,22 +1535,23 @@ class SQLCorpus(BaseCorpus):
                     last_number = number
                 else:
                     token_counter += 1
-                L.append(token_counter + 1)
+                L.append((x+1, token_counter + 1))
             return L
         else:
-            return [x+1 for x, _ in sort_list]
-    
+            return [(x+1, x+1) for x, _ in sort_list]
+
     def sql_string_query(self, Query, token_list, self_joined):
         """ 
         Return a string that is sufficient to run the query on the
         MySQL database. 
         """
 
-        # the next variable is set in get_sub_query_string() to store the 
+        # the next variable is set in get_token_query_string() to store the 
         # name of that resource feature which that keeps track of the source 
         # of the first token of the query. 
+        # FIXME: Is this still really necessary?
         options.cfg.context_source_id = None
-        sub_query_list = {}
+        token_query_list = {}
 
         corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
         lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
@@ -1540,12 +1561,12 @@ class SQLCorpus(BaseCorpus):
             lexicon_features = [x for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
             for i, tup in enumerate(token_list):
                 number, token = tup
-                s = self.get_sub_query_string_self_joined(token, i)
+                s = self.get_token_query_string_self_joined(token, i)
                 if s:
                     join_string = "INNER JOIN ({s}) AS e{i}\nON coq_word_id_{i} = W{i}".format(
                         s = s, 
                         i=i+1)
-                    sub_query_list[i+1] = join_string
+                    token_query_list[i+1] = join_string
             final_select = []
             for rc_feature in options.cfg.selected_features:
                 if rc_feature in corpus_features or rc_feature in lexicon_features:
@@ -1562,62 +1583,66 @@ class SQLCorpus(BaseCorpus):
             """.format(
                 ", ".join(final_select),
                 self.resource.corpus_denorm_table,
-                "\n".join(sub_query_list.values())
+                "\n".join(token_query_list.values())
                 )
 
-        order = self.get_subquery_order(token_list)
+        order = self.get_token_query_order(token_list)
         if not order:
             return
             
-        #logger.info("Token order: {}".format(", ".join([Query.tokens[x-1].S for x in order])))
-        referent_id = order.pop(0)
+        referent_id, referent_column = order.pop(0)
 
         # get a partial query string for each token:
         last_offset = 0
-        tmp = 0
-        token_counter = 0
+        token_counter = None
         positions_lexical_items = []
-        for count, tup in enumerate(token_list):
-            number, token = tup
-            i = count
+        
+        # column_number
+        # sub_select_number
+        last_pffset = None
+        for i, tup in enumerate(token_list):
+            offset, token = tup
+
             if options.cfg.align_quantified:
-                if number != last_offset:
-                    token_counter = number - 1
-                    last_offset = number
-                else:
-                    token_counter += 1
-                positions_lexical_items.append(token_counter)
-                s = self.get_sub_query_string(tokens.COCAToken(token, self.lexicon), token_counter, self_joined)
+                if offset != last_offset:
+                    token_count = 0
+                    last_offset = offset
+                column_number = offset + token_count - 1
+                token_count += 1
             else:
-                s = self.get_sub_query_string(tokens.COCAToken(token, self.lexicon), i, self_joined)
+                column_number = i
+
+            positions_lexical_items.append(column_number)
+
+            s = self.get_token_query_string(
+                tokens.COCAToken(token, self.lexicon), 
+                column_number, 
+                self_joined)
+
             if i + 1 == referent_id:
-                sub_query_list[i+1] = s                
+                token_query_list[i+1] = s                
             elif i + 1 < referent_id:
                 if s:
-                    join_string = "INNER JOIN ({s}) AS e{i} ON coq_corpus_id_{ref} > {i1} AND coq_corpus_id_{i} = coq_corpus_id_{ref} - {i1}".format(
-                        s = s, 
-                        i=i+1, 
-                        i1=referent_id - i - 1, 
-                        ref=referent_id,
-                        token=self.resource.corpus_id)
-                    sub_query_list[i+1] = join_string
+                    join_string = "INNER JOIN ({s}) AS e{num} ON coq_corpus_id_{ref_col} > {offset} AND coq_corpus_id_{col_number} = coq_corpus_id_{ref_col} - {offset}".format(
+                        s=s, 
+                        num=i+1, 
+                        col_number=column_number + 1,
+                        offset=referent_id - i - 1, 
+                        ref_col=referent_column)
+                    token_query_list[i+1] = join_string
             else:
                 if s:
-                    if options.cfg.align_quantified:
-                            join_string = "INNER JOIN ({s}) AS e{i1} ON coq_corpus_id_{token_count} = coq_corpus_id_{ref} + {i}".format(
-                                s = s, i=i - referent_id + 1,
-                                i1=i+1, 
-                                token_count=token_counter + 1,
-                                token=self.resource.corpus_id, ref=referent_id)
-                    else:
-                        join_string = "INNER JOIN ({s}) AS e{i1} ON coq_corpus_id_{i1} = coq_corpus_id_{ref} + {i}".format(
-                            s = s, i=i - referent_id + 1,
-                            i1=i+1, token=self.resource.corpus_id, ref=referent_id)
-                    sub_query_list[i+1] = join_string
+                    join_string = "INNER JOIN ({s}) AS e{num} ON coq_corpus_id_{col_number} = coq_corpus_id_{ref_col} + {offset}".format(
+                        s = s,
+                        num=i+1,
+                        offset=i - referent_id + 1,
+                        col_number=column_number + 1,
+                        ref_col=referent_column)
+                    token_query_list[i+1] = join_string
         query_string_part = [
-            "SELECT COQ_OUTPUT_FIELDS FROM ({}) AS e{}".format(sub_query_list.pop(referent_id), referent_id)]
-        for x in order:
-            query_string_part.append(sub_query_list[x])
+            "SELECT COQ_OUTPUT_FIELDS FROM ({}) AS e{}".format(token_query_list.pop(referent_id), referent_id)]
+        for referent_id, _ in order:
+            query_string_part.append(token_query_list[referent_id])
 
         # change the order of the output column so that output columns 
         # showing the same lexicon feature for different tokens are grouped
@@ -1639,6 +1664,7 @@ class SQLCorpus(BaseCorpus):
                                 final_select.append("coq_{}_{}".format(rc_feature, i+1))
                             else:
                                 final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
+
         # add any external feature that is linked to a lexicon feature:
         for linked in options.cfg.external_links:
             external, internal = options.cfg.external_links[linked]
@@ -1663,11 +1689,15 @@ class SQLCorpus(BaseCorpus):
             if rc_feature in options.cfg.selected_features:
                 if rc_feature in [x for x, _ in corpus_features]:
                     final_select.append("coq_{}_1".format(rc_feature))
-        
+
         # Add any feature that is selected that is neither a corpus feature,
         # a lexicon feature nor a Coquery feature:
         for rc_feature in options.cfg.selected_features:
-            if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_") and "coq_{}_1".format(rc_feature) not in final_select:
+            if any([x == rc_feature for x, _ in self.resource.get_corpus_features()]):
+                break
+            if any([x == rc_feature for x, _ in self.resource.get_lexicon_features()]):
+                break
+            if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_"):
                 if "." not in rc_feature:
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
@@ -1681,7 +1711,7 @@ class SQLCorpus(BaseCorpus):
                     if options.cfg.context_right:
                         final_select.append('NULL AS coq_context_right')
         
-        # construct the query string from the sub-query parts:
+        # construct the query string from the token query parts:
         query_string = " ".join(query_string_part)
 
         func_counter = Counter()
