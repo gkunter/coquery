@@ -60,39 +60,42 @@ class Visualizer(vis.BaseVisualizer):
                     self._groupby.append(self._time_column)
         else:
             raise VisualizationInvalidDataError
-        print(self._groupby)
         
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
 
+    def convert_to_datetime(self, x):
+        try:
+            return (int(x) // self.bandwidth) * self.bandwidth
+        except ValueError:
+            return np.NaN
+        
+    def convert_to_timeseries(self, x):
+        try:
+             return pd.Timestamp("{}".format(
+                (pd.Timestamp("{}".format(x)).year // self.bandwidth) * self.bandwidth)).year
+        except ValueError:
+            return pd.NaT
+
     def draw(self, **kwargs):
         """ Draw time series. """
         
+        
         def plot_facet(data, color, **kwargs):
-            if len(self._groupby) == 2:
-                num = []
-                date = []
-                time = data[self._time_column]
-                for x in time:
-                    # try to convert the time column to a useful time object
-                    try:
-                        num.append(pd.datetime((int(x) // self.bandwidth) * self.bandwidth, 1, 1))
-                    except ValueError:
-                        num.append(np.NaN)
-                    try:
-                        date.append(pd.Timestamp("{}".format(
-                            (pd.Timestamp(x).year // self.bandwidth) * self.bandwidth)))
-                    except ValueError:
-                        date.append(pd.NaT)
-                if pd.isnull(num).sum() <= pd.isnull(date).sum():
-                    data[self._time_column] = num
-                    #time_range = [pd.datetime((int(x) // self.bandwidth) * self.bandwidth, 1, 1) for x in (self._table[self._time_column].min(), self._table[self._time_column].max())]
-                else:
-                    data[self._time_column] = date
-                    #time_range = [pd.Timestamp("{}".format(
-                        #(pd.Timestamp(x).year // self.bandwidth) * self.bandwidth)) for x in (self._table[self._time_column].min(), self._table[self._time_column].max())]
+            num = []
+            date = []
+            time = data[self._time_column]
+            num = data[self._time_column].apply(self.convert_to_datetime)
+            date = data[self._time_column].apply(self.convert_to_timeseries)
+            if pd.isnull(num).sum() <= pd.isnull(date).sum():
+                data[self._time_column] = num
+            else:
+                data[self._time_column] = date
 
+            data.dropna(inplace=True)
+            print(data)
+            if len(self._groupby) == 2:
                 ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
                 ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
                 ct = ct[pd.notnull(ct.index)]
@@ -100,6 +103,8 @@ class Visualizer(vis.BaseVisualizer):
                 ct = pd.crosstab(
                     data[self._time_column],
                     pd.Series([""] * len(self._table[self._time_column]), name="")                    )
+                print(ct)
+
             # percentage area plot:
             if self.percentage:
                 ct = ct.apply(lambda x: (100 * x) / sum(x), axis=1)
@@ -115,7 +120,7 @@ class Visualizer(vis.BaseVisualizer):
                     self.vmax = max(self.vmax, ct.values.max())
                     ct.plot(ax=plt.gca(), color=self.get_palette())
         
-        self.g.map_dataframe(plot_facet)
+        self.map_data(plot_facet)
         
         if self.percentage:
             self.g.set(ylim=(0, 100))
