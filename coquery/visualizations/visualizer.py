@@ -129,6 +129,18 @@ class BaseVisualizer(object):
     
     visualize_frequency = True
     
+    def __init__(self, data_model, data_view):
+        self._model = None
+        self._view = None
+        self.set_data_source(data_model, data_view)
+        self.setup_figure()
+    
+    #def get_xlim(self):
+        #return (0, options.cfg.main_window.Session.Corpus.get_corpus_size())
+    
+    #def get_ylim(self):
+        #return (0, 1)
+
     def _validate_layout(func):
         def func_wrapper(self):
             if self._col_wrap:
@@ -143,18 +155,6 @@ class BaseVisualizer(object):
             return func(self)
         return func_wrapper
     
-    def __init__(self, data_model, data_view):
-        self._model = None
-        self._view = None
-        self.set_data_source(data_model, data_view)
-        self.setup_figure()
-    
-    #def get_xlim(self):
-        #return (0, options.cfg.main_window.Session.Corpus.get_corpus_size())
-    
-    #def get_ylim(self):
-        #return (0, 1)
-
     @_validate_layout
     def setup_figure(self):
         """ Prepare the matplotlib figure for plotting. """ 
@@ -164,8 +164,6 @@ class BaseVisualizer(object):
                 font_scale=self.get_font_scale()):
 
                 self.g = sns.FacetGrid(self._table, 
-                                    #xlim=self.get_xlim(),
-                                    #ylim=self.get_ylim(),
                                     col=self._col_factor,
                                     col_wrap=self._col_wrap,
                                     row=self._row_factor,
@@ -232,7 +230,6 @@ class BaseVisualizer(object):
         """ 
         Return a palette that is suitable for the data. 
         """
-        
         # choose the "Paired" palette if the number of grouping factor
         # levels is even and below 13, or the "Set3" palette otherwise:
         if len(self._levels) == 0:
@@ -261,8 +258,11 @@ class BaseVisualizer(object):
 
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()
+        vis_cols = [x for x in self._model.columns if not x.startswith("coquery_invisible")]
+        
         self._column_order = [
-            self._model.columns[header.logicalIndex(section)] for section in range(header.count())]
+            vis_cols[header.logicalIndex(section)] for section in range(header.count())]
+
         # ... but make sure that the frequency is the last column:
         try:
             self._column_order.remove("coq_frequency")
@@ -302,7 +302,7 @@ class BaseVisualizer(object):
             self._groupby = self._factor_columns[-self.dimensionality:]
         else:
             self._groupby = []
-        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby]
+        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby if not x in self._time_columns]
         
         if options.cfg.verbose:
             print("grouping:   ", self._groupby)
