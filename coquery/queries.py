@@ -232,6 +232,7 @@ class TokenQuery(object):
         self.Corpus = Session.Corpus
         self.Results = []
         self.input_frame = pd.DataFrame()
+        self.results_frame = pd.DataFrame()
 
     def __str__(self):
         return " ".join(["{}".format(x) for x in self.tokens])
@@ -239,14 +240,59 @@ class TokenQuery(object):
     def __len__(self):
         return len(self.tokens)
 
-    def aggregate_data(self, df, resource):
+    @staticmethod
+    def aggregate_data(df, resource):
         """ Aggregate the data frame. """
         return df
     
-    def filter_data(self, df):
+    @staticmethod
+    def filter_data(df):
         """ Apply filters to the data frame. """
         return df
     
+    def run(self):
+        """
+        Run the query, and store the results in an internal data frame.
+        
+        This method runs all required subqueries for the query string, e.g.
+        the quantified queries if quantified tokens are used. The results are 
+        stored in self.results_frame.
+        """
+        self.results_frame = pd.DataFrame()
+        
+        for sub_query in self.query_list:
+            self._current_number_of_tokens = len(sub_query)
+            self._current_subquery_string = " ".join(["%s" % x for _, x in sub_query])
+            df = pd.DataFrame(
+                self.Corpus.yield_query_results(self, sub_query))
+            df = self.insert_static_data(df)
+            self.add_output_columns()
+
+            if not options.cfg.case_sensitive and len(df.index) > 0:
+                for x in df.columns:
+                    if x.startswith("coq_word") or x.startswith("coq_lemma"):
+                        df[x] = df[x].apply(lambda x: x.lower() if x else x)
+            df = self.apply_functions(df)
+
+            if self.results_frame.empty:
+                self.results_frame = df
+            else:
+                self.results_frame = self.results_frame.append(df)
+
+    def append_results(self, df):
+        """
+        Append the last results to the data frame.
+        
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The data frame to which the last query results will be added.
+        """
+        if df.empty:
+            return self.results_frame
+        else:
+            return df.append(self.results_frame)
+
     def get_max_tokens(self):
         """
         Return the maximum number of tokens that this query produces.
@@ -266,27 +312,6 @@ class TokenQuery(object):
             maximum = max(maximum, len(token_list))
         return maximum
     
-    def get_max_token_length(self, n):
-        """
-        Return the maximum number of tokens produced by the specified token
-        string.
-        
-        For token strings that do not contain a quantifier, the maximum 
-        number of tokens is always 1. For token strings with a quantifier,
-        it is the upper end of the specified range.
-        
-        Parameters
-        ----------
-        n : int
-            The number of the token string
-        
-        Returns
-        -------
-        maximum : int
-            The maximum number of tokens that this token string can produce
-        """
-        return 1
-    
     def insert_static_data(self, df):
         """ 
         Insert columns that are constant for each query result in the query.
@@ -305,14 +330,15 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-        
+
+        tokens = self.query_string.split(" ")
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
                 df[column] = self._current_number_of_tokens
             if column == "coquery_query_string":
-                df[column] = self.Session.literal_query_string
-            elif column == "coquery_expanded_query_string":
                 df[column] = self.query_string
+            elif column == "coquery_expanded_query_string":
+                df[column] = self._current_subquery_string
             elif column == "coquery_query_file":
                 if options.cfg.input_path:
                     df[column] = options.cfg.input_path
@@ -324,7 +350,10 @@ class TokenQuery(object):
                 df[column] = datetime.datetime.now().strftime("%H:%M:%S")
             elif column.startswith("coquery_query_token"):
                 n = int(column.rpartition("_")[-1])
-                df[column] = self.tokens[n - 1].S
+                try:
+                    df[column] = tokens[n - 1]
+                except IndexError:
+                    df[column] = ""
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
@@ -373,27 +402,6 @@ class TokenQuery(object):
             df[name] = df[name].apply(options.cfg.selected_functions[x])
         return df
 
-    def no_result_data_frame(self):
-        """
-        Return a data frame that represents a query without results.
-        
-        This method creates a new data frame that contains '<NA>' for all
-        output columns that would be filled by data from the data base if the
-        query matched any token from the corpus. Columns that contain static
-        data, i.e. values that are not provided by the data base, but by 
-        Coquery itself (e.g. the query string, the name of the input file),
-        the data frame contains the appropriate values.
-        
-        Returns
-        -------
-        df : DataFrame
-            A data frame with strings '<NA>' in data columns, and appropriate
-            values for the static columns.
-        """
-        df = pd.DataFrame([["<NA>"] * len(self.Session.output_order)], columns=self.Session.output_order)
-        df = self.insert_static_data(df)
-        return df
-
     def add_output_columns(self):
         """
         Add any column that is specific to this query type to the list of 
@@ -403,81 +411,11 @@ class TokenQuery(object):
         FrequencyQuery.
         """
         return
-
-    def write_results(self, output_object):
-        """ 
-        Transform the query results to a pandas DataFrame that is either
-        directly written to a CSV file, or stored for later processing in
-        the GUI. 
-        
-        Parameters
-        ----------
-        
-        """
-        # turn query results into a pandas DataFrame:
-        df = pd.DataFrame(self.Results)
-        df = self.insert_static_data(df)
-
-        self.add_output_columns()
-
-        vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
-        # check if the results table contains rows and columns
-        if len(df.index) and len(vis_cols):
-            # word and lemma columns are lower-cased, unless requested otherwise:
-            if not options.cfg.case_sensitive and len(df.index) > 0:
-                for x in df.columns:
-                    if x.startswith("coq_word") or x.startswith("coq_lemma"):
-                        df[x] = df[x].apply(lambda x: x.lower() if x else x)
-
-        else:
-            # create an empty data frame
-            df = pd.DataFrame(columns=vis_cols)
-
-        df = self.apply_functions(df)
-
-        df_cols = list(df.columns.values)
-        for col in list(df_cols):
-            if col.startswith("coquery_invisible"):
-                df_cols.remove(col)
-                df_cols.append(col)
-        df = df[df_cols]
-
-
-        #agg_cols = list(agg.columns.values)
-        #for col in list(agg_cols):
-            #if col.startswith("coquery_invisible"):
-                #agg_cols.remove(col)
-                #agg_cols.append(col)
-        #agg = agg[agg_cols]
-
-        
-        if options.cfg.gui:
-            # append the data frame to the existing data frame
-            if self.Session.data_table.empty:
-                self.Session.data_table = df
-            else:
-                self.Session.data_table = self.Session.data_table.append(df)
-
-            #self.Session.output_object = self.Session.output_object.append(agg)
-            #self.Session.output_object.fillna("", inplace=True)
-        else:
-            # write data frame to output_file as a CSV file, using the 
-            # current output_separator. Encoding is always "utf-8".
-            agg[vis_cols].to_csv(output_object, 
-                header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
-                sep=options.cfg.output_separator,
-                encoding="utf-8",
-                index=False)
-            # remember that the header columns have already been included in
-            # the output so that multiple queries in a single session do not
-            # produce multiple headers:
-            self.Session.header_shown = True
-        return
-    
+ 
     @classmethod
     def aggregate_it(cls, df, resource):
-        agg = cls.aggregate_data(cls, df, resource)
-        agg = cls.filter_data(cls, agg)
+        agg = cls.aggregate_data(df, resource)
+        agg = cls.filter_data(agg)
         
         agg_cols = list(agg.columns.values)
         for col in list(agg_cols):
@@ -485,9 +423,7 @@ class TokenQuery(object):
                 agg_cols.remove(col)
                 agg_cols.append(col)
         agg = agg[agg_cols]
-
         return agg
-        
 
 class DistinctQuery(TokenQuery):
     """ 
@@ -498,8 +434,10 @@ class DistinctQuery(TokenQuery):
     """
 
     #@jit
-    def aggregate_data(self, df, resource):
-        vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
+    @classmethod
+    def aggregate_data(cls, df, resource):
+        vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible")]
+        #vis_cols = [x for x in cls.Session.output_order if not x.startswith("coquery_invisible")]
         df = df.drop_duplicates(subset=vis_cols)
         df = df.reset_index(drop=True)
         return df
@@ -527,7 +465,8 @@ class FrequencyQuery(TokenQuery):
         gp = df.fillna("").groupby(group_columns, sort=False)
         return gp.agg(aggr_dict).reset_index()
     
-    def aggregate_data(self, df, resource):
+    @classmethod
+    def aggregate_data(cls, df, resource):
         """
         Aggregate the data frame by obtaining the row frequencies for each
         group specified by the visible data columns.
@@ -561,8 +500,8 @@ class FrequencyQuery(TokenQuery):
         df["coq_frequency"] = 0
         
         if len(df.index) == 0:
-            result = self.no_result_data_frame()
-            result["coq_frequency"] = 0
+            result = pd.DataFrame({"coq_frequency": [0]})
+            #result = self.insert_static_data(pd.DataFrame(), resource)
         elif len(group_columns) == 0:
             # if no grouping variables are selected, simply return the first
             # row of the data frame together with the total length of the 
@@ -583,21 +522,21 @@ class FrequencyQuery(TokenQuery):
             # group the data frame by the group columns, apply the aggregate
             # functions to each group, and return the aggregated data frame:
 
-            result = self.do_the_grouping(df, group_columns, aggr_dict)
-        
-        if "frequency_relative_frequency" in options.cfg.selected_features:
+            result = cls.do_the_grouping(df, group_columns, aggr_dict)
+        if "coquery_relative_frequency" in options.cfg.selected_features:
             total_frequency = result.coq_frequency.sum()
-            result["frequency_relative_frequency"] = result["coq_frequency"].apply(
+            result["coquery_relative_frequency"] = result["coq_frequency"].apply(
                 lambda x: x / total_frequency)
 
-        if "frequency_per_million_words" in options.cfg.selected_features:
+        if "coquery_per_million_words" in options.cfg.selected_features:
             corpus_size = resource.get_corpus_size()
-            result["frequency_per_million_words"] = result["coq_frequency"].apply(
+            result["coquery_per_million_words"] = result["coq_frequency"].apply(
                 lambda x: x / (corpus_size / 1000000))
-        
+            
         return result
 
-    def filter_data(self, df):
+    @staticmethod
+    def filter_data(df):
         """ 
         Apply the frequency filters to the frequency column. 
         
@@ -649,7 +588,8 @@ class StatisticsQuery(TokenQuery):
         return
 
 class CollocationQuery(TokenQuery):
-    def filter_data(self, df):
+    @staticmethod
+    def filter_data(df):
         """ 
         Apply the frequency filters to the collocate frequency column. 
         

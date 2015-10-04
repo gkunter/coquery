@@ -56,13 +56,6 @@ class Session(object):
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.query_type = queries.CollocationQuery
 
-        if any([x.startswith("frequency_") for x in options.cfg.selected_features]):
-            try:
-                options.cfg.selected_features.pop(options.cfg.selected_features.index("frequency_absolute_frequency"))
-            except ValueError:
-                pass
-            self.query_type = queries.FrequencyQuery
-            
         logger.info("Corpus: %s" % options.cfg.corpus)
         
         self.data_table = pd.DataFrame()
@@ -117,26 +110,40 @@ class Session(object):
         if options.cfg.gui:
             self.storage_created = False
         
-        self.open_output_file()
-
+        self.data_table = pd.DataFrame()
         for current_query in self.query_list:
-            self.literal_query_string = current_query.query_string
             start_time = time.time()
             logger.info("Start query: '{}'".format(current_query.query_string))
-            for sub_query in current_query.query_list:
-                current_query._current_number_of_tokens = len(sub_query)
-                current_query.Results = self.Corpus.yield_query_results(current_query, sub_query)
-                current_query.write_results(self.output_object)
+            current_query.run()
+            self.data_table = current_query.append_results(self.data_table)
             logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
         
         self.end_time = datetime.datetime.now()
-        
+
+        self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
+        self.output_object.fillna("", inplace=True)
+        self.output_object.reset_index(drop=True, inplace=True)
+
         if not options.cfg.gui:
-            self.output_object.close()
-        else:
-            self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
-            self.output_object.fillna("", inplace=True)
-            self.output_object.reset_index(drop=True, inplace=True)
+            if not options.cfg.output_path:
+                output_file = sys.stdout
+            else:
+                if options.cfg.append:
+                    file_mode = "a"
+                else:
+                    file_mode = "w"
+                
+                output_file = codecs.open(
+                    options.cfg.output_path, 
+                    file_mode, 
+                    encoding=options.cfg.output_encoding)
+
+            self.output_object.to_csv(
+                output_file,
+                header = [self.Corpus.resource.translate_header(x) for x in self.output_object.columns.values], 
+                sep=options.cfg.output_separator,
+                encoding="utf-8",
+                index=False)
 
 class StatisticsSession(Session):
     def __init__(self):
