@@ -278,6 +278,10 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         from the table's :func:`data` method, using the DecorationRole role.
         On mouse-over, the cell is rendered like a clickable link.
         """
+        
+        content = unicode(index.data(QtCore.Qt.DisplayRole))
+        if not content:
+            return
         painter.save()
         
         # show content as a link on mouse-over:
@@ -295,7 +299,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         painter.setPen(QtGui.QPen(fg))
         try:
             painter.translate(2, 0)
-            painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), unicode(index.data(QtCore.Qt.DisplayRole)))
+            painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), content)
         finally:
             painter.restore()
 
