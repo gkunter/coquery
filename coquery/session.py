@@ -174,21 +174,47 @@ class Session(object):
             header = header.partition("coq_")[2]
 
         rc_feature, _, number = header.rpartition("_")
+        
+        # If there is only one query token, number is set to "" so that no
+        # number suffix is added to the labels in this case:
+        if self.get_max_token_count() == 1:
+            number = ""
 
+        # special treatment of query tokens:
         if rc_feature == "coquery_query_token":
-            number = self.quantified_number_labels[int(number) - 1]
-            return "{}{}".format(COLUMN_NAMES[rc_feature], number)
-        if rc_feature in [x for x, _ in self.Corpus.resource.get_lexicon_features()]:
-            number = self.quantified_number_labels[int(number) - 1]
-            return "{}{}".format(self.Corpus.resource.__getattribute__(str(rc_feature)), number)
-        else:
             try:
-                return "{}".format(self.Corpus.resource.__getattribute__(str(rc_feature)))
-            except AttributeError:
-                if rc_feature in COLUMN_NAMES:
-                    return "{}{}".format(COLUMN_NAMES[rc_feature], number)
-                else:
-                    return header
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
+                pass
+            return "{}{}".format(COLUMN_NAMES[rc_feature], number)
+        
+        # special treatment of lexicon freatures:
+        if rc_feature in [x for x, _ in self.Corpus.resource.get_lexicon_features()]:
+            try:
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
+                pass
+            return "{}{}".format(self.Corpus.resource.__getattribute__(str(rc_feature)), number)
+
+        # treat any other feature that is provided by the corpus:
+        try:
+            return "{}".format(self.Corpus.resource.__getattribute__(str(rc_feature)))
+        except AttributeError:
+            pass
+
+        # treat functions:
+        if rc_feature.startswith("func_"):
+            print(options.cfg.selected_functions)
+
+        # other features:
+        if rc_feature in COLUMN_NAMES:
+            try:
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
+                pass
+            return "{}{}".format(COLUMN_NAMES[rc_feature], number)
+        else:
+            return header
         return header
     
 
