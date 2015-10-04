@@ -285,7 +285,7 @@ class BaseVisualizer(object):
         
         self._table = self._model.reindex(columns=self._column_order)
         self._table.columns = [
-            options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in self._table.columns]
+            options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
 
         # Remove hidden rows. 
         # Note that the row numbers in the data view start at 1, but in the
