@@ -94,7 +94,6 @@ class Visualizer(vis.BaseVisualizer):
                 data[self._time_column] = date
 
             data.dropna(inplace=True)
-            print(data)
             if len(self._groupby) == 2:
                 ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
                 ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
@@ -102,8 +101,7 @@ class Visualizer(vis.BaseVisualizer):
             else:
                 ct = pd.crosstab(
                     data[self._time_column],
-                    pd.Series([""] * len(self._table[self._time_column]), name="")                    )
-                print(ct)
+                    pd.Series([""] * len(self._table[self._time_column]), name=""))
 
             # percentage area plot:
             if self.percentage:
