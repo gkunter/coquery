@@ -395,7 +395,10 @@ class TokenQuery(object):
                 for x in token_list:
                     token, _, length = tokens.get_quantifiers(x)
                     L += [token] * length
-                df[column] = L[n-1]
+                try:
+                    df[column] = L[n-1]
+                except IndexError:
+                    df[column] = ""
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
