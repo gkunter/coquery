@@ -60,7 +60,9 @@ class CMUdictBuilder(BaseCorpusBuilder):
     def build_load_files(self):
         files = self.get_file_list(self.arguments.path)
         if len(files) > 1:
-            raise RuntimeError("<p>There is more than one file in the selected directory.</p><p>{}</p><p>Please remove the unneeded files, and try again to install.".format("<br/>".join(files)))
+            raise RuntimeError("<p><b>There is more than one file in the selected directory.</b></p><p>{}</p><p>Please remove the unneeded files, and try again to install.".format("<br/>".join(files)))
+        if len(files) == 0:
+            raise RuntimeError("<p><b>No dictionary file could be found in the selected directory.</p><p>{}</p><p>The file name of dictionary files has to start with the sequence <code>cmudict</code>. If you have saved the CMUdict file under a different name, rename it so that its file name matches this sequence.</p><p>If you have not downloaded andictionary file yet, please go to the CMUdict website and follow the download instructions there.</p> ".format("<br/>".join(files)))
         with codecs.open(files[0], "r", encoding = self.arguments.encoding) as input_file:
             content = input_file.readlines()
         if self._widget:
