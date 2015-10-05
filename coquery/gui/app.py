@@ -22,10 +22,10 @@ import logging
 import numpy as np
 import pandas as pd
 
+import __init__
 from session import *
 from defines import *
 from pyqt_compat import QtCore, QtGui
-import __init__
 import QtProgress
 
 import coqueryUi, coqueryCompactUi
@@ -475,10 +475,6 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Show a non-modal message box informing the user that no corpus
         module is available. This message box will be automatically closed 
         if a corpus resource is available."""
-        msg_no_corpus = "Coquery could not find a corpus module. Without a corpus module, you cannot run any query."
-        msg_details = """<p>To build a new corpus module from a selection of text files, select <b>Build corpus...</b> from the Corpus menu.</p>
-            <p>To install the corpus module for one of the corpora that are
-            supported by Coquery, select <b>Install corpus...</b> from the Corpus menu.</p>"""
         self.msg_box_no_corpus = QtGui.QMessageBox(self)
         self.msg_box_no_corpus.setWindowTitle("No corpus available – Coquery")
         self.msg_box_no_corpus.setText(msg_no_corpus)
@@ -949,7 +945,7 @@ class CoqueryApp(QtGui.QMainWindow):
             try:
                 url = resource.documentation_url
             except AttributeError:
-                QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation.format(corpus=current_corpus), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             else:
                 import webbrowser
                 webbrowser.open(url)

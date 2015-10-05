@@ -99,8 +99,8 @@ except NameError:
     
 # Error messages used by the GUI:
 msg_corpus_no_documentation = """
-<p><b>The corpus documentation is not available.</b></p>
-<p>The current corpus module does not provide a link to the corpus
+<p><b>Corpus documentation for corpus '{corpus}' is not available.</b></p>
+<p>The corpus module '{corpus}' does not provide a link to the corpus
 documentation. You may find help on how the corpus is structured by using an
 internet search engine.</p>"""
 msg_install_abort = """
@@ -132,8 +132,8 @@ offending character is not in the output anymore.</p>
 authors about it so that the problem may be fixed in a future 
 version.</p>"""
 msg_query_running = """
-<p>The last query has not finished yet.</p>
-<p>f you interrupt it, the results that have been retrieved so far will be discarded.</p>
+<p><b>The last query is still running.</b></p>
+<p>If you interrupt it, the results that have been retrieved so far will be discarded.</p>
 <p>Do you really want to interrupt this query?</p>"""
 msg_filename_error = """
 <p><b>The file name is not valid.</b></p>
@@ -172,6 +172,14 @@ msg_unsaved_data = """
 <p><b>The last query results have not been saved.</b></p>
 <p>If you quit now, they will be lost.</p>
 <p>Do you really want to quit?</p>"""
+msg_no_corpus = """
+Coquery could not find a corpus module. Without a corpus module, you cannot 
+run any query."""
+msg_details = """
+<p>To build a new corpus module from a selection of text files, select 
+<b>Build corpus...</b> from the Corpus menu.</p>
+<p>To install the corpus module for one of the corpora that are supported by
+Coquery, select <b>Install corpus...</b> from the Corpus menu.</p>"""
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
