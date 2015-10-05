@@ -1289,9 +1289,10 @@ class CoqueryApp(QtGui.QMainWindow):
             QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except CollocationNoContextError as e:
             QtGui.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-            
+        except RunTimeError as e:
+            error_box.ErrorBox.show(sys.exc_info(), no_trace=True)
         except Exception as e:
-            error_box.ErrorBox.show(sys.exc_info())
+            error_box.ErrorBox.show(sys.exc_info(), e)
         else:
             self.set_stop_button()
             self.ui.statusbar.showMessage("Running query...")
@@ -1389,12 +1390,13 @@ class CoqueryApp(QtGui.QMainWindow):
             self.stop_progress_indicator()
             self.fill_combo_corpus()
             logger.warning("Removed corpus {}.".format(corpus_name))
-        self.change_corpus()
-        try:
-            self.corpus_manager.close()
-        except AttributeError:
-            pass
-        self.corpus_manager = None
+
+            self.change_corpus()
+            try:
+                self.corpus_manager.close()
+            except AttributeError:
+                pass
+            self.corpus_manager = None
 
     def build_corpus(self):
         import coq_install_generic
@@ -1410,14 +1412,19 @@ class CoqueryApp(QtGui.QMainWindow):
             
     def install_corpus(self, builder_class):
         import corpusbuilder
-        corpusbuilder.InstallerGui(builder_class, self)
-        self.fill_combo_corpus()
-        self.change_corpus()
+        builder = corpusbuilder.InstallerGui(builder_class, self)
         try:
-            self.corpus_manager.close()
-        except AttributeError:
-            pass
-        self.corpus_manager = None
+            result = builder.display()
+        except Exception as e:
+            error_box.ErrorBox.show(sys.exc_info())
+        if result:
+            self.fill_combo_corpus()
+            self.change_corpus()
+            try:
+                self.corpus_manager.close()
+            except AttributeError:
+                pass
+            self.corpus_manager = None
             
     def manage_corpus(self):
         import corpusmanager

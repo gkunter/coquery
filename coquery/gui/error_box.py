@@ -8,7 +8,7 @@ from errors import *
 import sys
 
 class ErrorBox(QtGui.QDialog):
-    def __init__(self, exc_info, exception, message="", parent=None):
+    def __init__(self, exc_info, exception, no_trace=False, message="", parent=None):
         
         super(ErrorBox, self).__init__(parent)
         
@@ -22,8 +22,12 @@ class ErrorBox(QtGui.QDialog):
         
         if message:
             exc_message = "<p>{}</p><p>{}</p>".format(exc_message, message)
-        error_text = "<table><tr><td>Type</td><td><b>{}</b></td></tr><tr><td>Message</td><td><b>{}</b></td></tr></table><p>{}</p>".format(
+        if not no_trace:
+            error_text = "<table><tr><td>Type</td><td><b>{}</b></td></tr><tr><td>Message</td><td><b>{}</b></td></tr></table><p>{}</p>".format(
             exc_type, exc_message, exc_trace.replace("\n", "<br>").replace(" ", "&nbsp;"))
+        else:
+            error_text = "<table><tr><td>Type</td><td><b>{}</b></td></tr><tr><td>Message</td><td><b>{}</b></td></tr></table>".format(exc_type, exc_message)
+            
         self.ui.trace_area.setText(error_text)
         
     def keyPressEvent(self, e):
@@ -31,8 +35,8 @@ class ErrorBox(QtGui.QDialog):
             self.accept()
             
     @staticmethod
-    def show(exc_info, parent=None):
-        dialog = ErrorBox(exc_info, parent)
+    def show(exc_info, exception=None, no_trace=False, parent=None):
+        dialog = ErrorBox(exc_info, exception, no_trace=no_trace, parent=parent)
         try:
             dialog.resize(dialog.width(), options.cfg.error_box_height)
         except AttributeError:

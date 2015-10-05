@@ -1711,7 +1711,8 @@ if use_gui:
                 str(self.ui.corpus_description.text()).format(
                     builder_class.get_title(), builder_class.get_name()))
 
-            self.exec_()
+        def display(self):
+            return self.exec_()
 
         def set_progress(self, vmax, s):
             self.ui.progress_bar.setFormat(s)
@@ -1793,7 +1794,13 @@ if use_gui:
             self.builder.arguments = self.get_arguments_from_gui()
             self.builder.name = self.builder.arguments.name
 
-            self.do_install()
+            try:
+                self.do_install()
+            except RuntimeError as e:
+                error_box.ErrorBox.show(sys.exc_info(), e, no_trace=True)
+            except Exception as e:
+                error_box.ErrorBox.show(sys.exc_info(), e)
+
             super(InstallerGui, self).accept()
 
             #self.install_thread = QtProgress.ProgressThread(self.do_install, self)
