@@ -13,6 +13,9 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 
+import logging
+
+import __init__
 from pyqt_compat import QtCore, QtGui
 import queryfilter
 import options
@@ -410,3 +413,5 @@ class QueryFilterBox(queryfilter.CoqTagBox):
         else:
             super(QueryFilterBox, self).addTag(filt.text)
             options.cfg.filter_list.append(filt)
+
+logger = logging.getLogger(__init__.NAME)
