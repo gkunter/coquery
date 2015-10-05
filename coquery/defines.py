@@ -98,22 +98,80 @@ except NameError:
     long = int
     
 # Error messages used by the GUI:
-msg_corpus_no_documentation = """<p>No corpus documentation available.</p>
+msg_corpus_no_documentation = """
+<p><b>The corpus documentation is not available.</b></p>
 <p>The current corpus module does not provide a link to the corpus
 documentation. You may find help on how the corpus is structured by using an
 internet search engine.</p>"""
-msg_install_abort = """<p>You have requested to abort the installation.</p>
+msg_install_abort = """
+<p><b>You have requested to abort the installation.</b></p>
 <p>The installation has not been completed yet. If you abort now, the data 
-installed so far will be discarded, and the corpus will still not be available
-for queries.</p>"""
-msg_corpus_broken = """Error reading the installer '{name}'
-
-The corpus installer stored in the file {name} could not be read. Most likely, there is a programming error in the installer, or the file could not be read. 
-
-Please inform the maintainer of this corpus installer of your problem. When doing so, include the following information in your message:
-
+installed so far will be discarded, and the corpus will still not be 
+available for queries.</p>"""
+msg_corpus_broken = """
+<p><b>An error occurred while reading the installer '{name}'</b></p>
+<p>The corpus installer stored in the file {name} could not be read. Most 
+likely, there is a programming error in the installer, or the file could 
+not be read.</p>
+<p>Please inform the maintainer of this corpus installer of your problem. 
+When doing so, include the following information in your message:/p>
 {type}
 {code}"""
+msg_disk_error = """
+<p><b>An error occurred while accessing the disk storage.</b></p><p>The 
+results have not been saved. Please try again. If the error persists, try 
+saving to a different location</p>"""
+msg_encoding_error = """
+<p><b>An encoding error occurred while trying to save the results.</b></p>
+<p><span color="darkred">The save file is probably incomplete.</span></p>
+<p>At least one column contains special characters which could not be 
+translated to a format that can be written to a file. You may try to work 
+around this issue by reducing the number of output columns so that the 
+offending character is not in the output anymore.</p>
+<p>We apologize for this problem. Please do not hesitate to contact the 
+authors about it so that the problem may be fixed in a future 
+version.</p>"""
+msg_query_running = """
+<p>The last query has not finished yet.</p>
+<p>f you interrupt it, the results that have been retrieved so far will be discarded.</p>
+<p>Do you really want to interrupt this query?</p>"""
+msg_filename_error = """
+<p><b>The file name is not valid.</b></p>
+<p>You have chosen to read the query strings from a file, but the query file 
+name that you have entered is not valid. Please enter a valid query file 
+name, or select a file by pressing the Open button.</p>"""
+msg_initialization_error = """
+<p><b>An error occurred while initializing the database</p>
+<p>{code}</p>
+<p>Possible reasons include:
+<ul><li>The database server is not running.</li>
+<li>The host name or the server port are incorrect.</li>
+<li>The user name or password are incorrect, or the user has insufficient
+privileges.</li>
+<li>You are trying to access a local database on a remote server, or vice
+versa.</li>
+</ul></p>
+<p>Open <b>MySQL settings</b> in the Settings menu to check whether the
+connection to the database server is working, and if the settings are 
+correct.</p>"""
+msg_corpus_remove = """
+<p><b>You have requested to remove the corpus '{corpus}'.</b></p>
+<p>This step cannot be reverted. If you proceed, the corpus will not be 
+available for further queries before you install it again.</p>
+<p>Removing '{corpus}' will free approximately {size:.1S} of disk space.</p>
+<p>Do you really want to remove the corpus?</p>"""
+msg_remove_corpus_error = """
+"<p><b>An error occurred while deleting the corpus database:</b></p>
+<p>{code}</p>"""
+msg_remove_corpus_disk_error = """
+<p><b>A disk error occurred while deleting the corpus database.</b></p>
+<p>Please try removing the corpus another time. If the problem persists, 
+use your system tools to ensure that the storage device is fully
+operational.</p>"""
+msg_unsaved_data = """
+<p><b>The last query results have not been saved.</b></p>
+<p>If you quit now, they will be lost.</p>
+<p>Do you really want to quit?</p>"""
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
