@@ -15,7 +15,7 @@ from errors import *
 from error_box import ErrorBox 
 
 class ProgressIndicator(QtGui.QDialog):
-    def __init__(self, FUN, label="", parent=None, *args):
+    def __init__(self, FUN, finalize=None, label="", parent=None, *args):
         super(ProgressIndicator, self).__init__(parent)
  
         vbox = QtGui.QVBoxLayout()
@@ -30,7 +30,7 @@ class ProgressIndicator(QtGui.QDialog):
         self.setLayout(vbox) 
         self.setGeometry(300, 300, 300, 50)
         self.progress_bar.setRange(0, 1)
-        
+        self.finalize = finalize
         self.show()
         if FUN:
             self.thread = ProgressThread(FUN, self, *args)
@@ -48,6 +48,8 @@ class ProgressIndicator(QtGui.QDialog):
         self.progress_bar.setRange(0,1)
         self.progress_bar.setValue(1)
         self.close()
+        if self.finalize:
+            self.finalize()
         
     @staticmethod
     def RunThread(FUN, label="", parent=None):
