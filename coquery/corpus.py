@@ -735,7 +735,7 @@ class SQLLexicon(BaseLexicon):
         where_clauses = []
         if sub_clauses:
             where_clauses.append("(%s)" % " OR ".join (sub_clauses))
-        if token.class_specifiers and self.provides_pos():
+        if token.class_specifiers and self.resource.provides_pos():
             where_clauses.append(self.sql_string_get_posid_list_where(token))
         return " AND ".join(where_clauses)
             
