@@ -229,7 +229,7 @@ class TokenQuery(object):
         self.query_list = tokens.preprocess_query(S)
         self.query_string = S
         self.Session = Session
-        self.Resource = Session.Corpus.resource
+        self.Resource = Session.Resource
         self.Corpus = Session.Corpus
         self.Results = []
         self.input_frame = pd.DataFrame()
@@ -447,7 +447,7 @@ class TokenQuery(object):
             fc = func_counter[resource]
             
             # handle functions added to lexicon features:
-            if resource in [x for x, _ in self.Corpus.resource.get_lexicon_features()]:
+            if resource in [x for x, _ in self.Resource.get_lexicon_features()]:
                 for n in range(self.get_max_tokens()):
                     new_name = "coq_func_{}_{}_{}".format(resource, fc, n + 1)
                     col_name = "coq_{}_{}".format(resource, n + 1)
@@ -726,7 +726,7 @@ class CollocationQuery(TokenQuery):
         right_span = options.cfg.context_right
 
         features = []
-        lexicon_features = self.Corpus.resource.get_lexicon_features()
+        lexicon_features = self.Resource.get_lexicon_features()
         for rc_feature in options.cfg.selected_features:
             if rc_feature in [x for x, _ in lexicon_features]:
                 features.append("coq_{}".format(rc_feature))

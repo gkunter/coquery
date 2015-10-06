@@ -112,7 +112,7 @@ class Session(object):
                 new_list.append(filt)
             else:
                 new_filt = queries.QueryFilter()
-                new_filt.resource = self.Corpus.resource
+                new_filt.resource = self.Resource
                 new_filt.text = filt
                 new_list.append(new_filt)
         options.cfg.filter_list = new_list
@@ -201,21 +201,21 @@ class Session(object):
             return "{}{}".format(COLUMN_NAMES[rc_feature], number)
         
         # special treatment of lexicon freatures:
-        if rc_feature in [x for x, _ in self.Corpus.resource.get_lexicon_features()]:
+        if rc_feature in [x for x, _ in self.Resource.get_lexicon_features()]:
             try:
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
                 pass
-            return "{}{}".format(self.Corpus.resource.__getattribute__(str(rc_feature)), number)
+            return "{}{}".format(self.Resource.__getattribute__(str(rc_feature)), number)
 
         # treat any other feature that is provided by the corpus:
         try:
-            return "{}".format(self.Corpus.resource.__getattribute__(str(rc_feature)))
+            return "{}".format(self.Resource.__getattribute__(str(rc_feature)))
         except AttributeError:
             pass
 
         # treat linked columns:
-        if "." in rc.feature:
+        if "." in rc_feature:
             pass
 
         # treat functions:
@@ -228,7 +228,7 @@ class Session(object):
                 
                 new_name = "func_{}_{}".format(resource, fc)
                 if new_name == rc_feature:
-                    column_name = self.Corpus.resource.__getattribute__(str(resource))
+                    column_name = self.Resource.__getattribute__(str(resource))
                     function_label = label
                     break
             else:
