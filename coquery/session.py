@@ -40,9 +40,20 @@ class Session(object):
         # load current corpus module depending on the value of options.cfg.corpus,
         # i.e. the corpus specified as an argumment:        
         ResourceClass, CorpusClass, LexiconClass, Path = get_available_resources()[options.cfg.corpus]
-        current_resource = ResourceClass()
-        current_resource.connect_to_database()
-        self.Corpus  = CorpusClass(LexiconClass(current_resource), current_resource)
+        
+        current_lexicon = LexiconClass()
+        current_corpus = CorpusClass()
+        current_resource = ResourceClass(current_lexicon, current_corpus)
+
+        self.Corpus = current_corpus
+        self.Corpus.lexicon = current_lexicon
+        self.Corpus.resource = current_resource
+        
+        self.Lexicon = current_lexicon
+        self.Lexicon.corpus = current_corpus
+        self.Lexicon.resource= current_resource
+        
+        self.Resource = current_resource
 
         self.show_header = options.cfg.show_header
 

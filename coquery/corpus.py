@@ -77,51 +77,10 @@ class BaseLexicon(object):
     """
     provides = [LEX_WORDID, LEX_ORTH]
 
-    class Entry(object):
-        """ 
-        CLASS 
-        Entry(object)
-
-        METHODS
-        __init__()
-            initialize the Entry. Creates a property for every feature 
-            provided by the current lexicon. Entities should therefore have
-            at least the properties Entity.word_id and Entity.orth. 
-            Properties created in this way are always initialized with 
-            value None. 
-        """
-        def __init__(self, provides, features = None):
-            """
-            CALL
-            Entity.__init__(word_id=None)
-            
-            DESCRIPTION
-            __init__() initializes the lexicon entry object. For each 
-            property in BaseLexicon.provides, a new object attribute is
-            created. The initial value of the these attributes is None.
-            
-            VALUE
-            None
-            """
-
-            # deprecated code:
-            for current_attribute in provides:
-                self.__setattr__(current_attribute, None)
-            self.attributes = provides
-                
-        def set_values(self, value_list, feature_list=None):
-            # deprecated:
-            for i, current_attribute in enumerate(self.attributes):
-                if current_attribute in self.__dict__:
-                    self.__dict__[current_attribute] = value_list[i]
-    
-    def __init__(self, resource):
-        self.resource = resource
-        self._query_cache = {}
+    def __init__(self):
+        self.resource = None
+        self._word_cache = {}
         
-        if self.resource.provides_pos():
-            self.pos_dict = {}
-
     def is_part_of_speech(self, pos):
         """ 
         DESCRIPTION
@@ -132,10 +91,7 @@ class BaseLexicon(object):
         VALUE
         <type 'bool'>
         """
-        if self.resource.provides_pos():
-            return pos in self.pos_dict
-        else:
-            raise LexiconFeatureUnavailableError("Part-of-speech")
+        raise LexiconFeatureUnavailableError("Part-of-speech")
 
     def check_pos_list(self, L):
         """ Returns the number of elements for which 
@@ -182,6 +138,8 @@ class BaseLexicon(object):
 
 
 class BaseResource(object):
+    """
+    """
     # Add internal table that can be used to access system information:
     coquery_query_string = "Query string"
     coquery_expanded_query_string = "Expanded query string"
@@ -225,39 +183,6 @@ class BaseResource(object):
     @classmethod
     def get_resource_features(cls):
         return [x for x in dir(cls) if "_" in x and not x.startswith("_")]
-    
-    #@classmethod
-    #def get_link_dictionary(self, dictionary):
-        #""" Try to link a dictionary to the word table of this resource. The
-        #argument 'dictionary' is a valid Resource class.
-        
-        #A dictionary is a corpus module that does not contain a sequential 
-        #list of tokens. Instead, every entry in the corpus table represents
-        #one dictionary entry.
-        
-        #Note that using linked dictionaries can slow down queries very
-        #significantly.
-        
-        #"""
-        
-        #d = {}
-        
-        #word_label = ""
-        #if "word_label" in dir(cls):
-            #word_label = self.word_label
-        #elif "corpus_word" in dir(cls):
-            #word_label = cls.corpus_word
-
-        #d["word_{}_id".format(dictionary.name)] = word_label
-        #d["{}_table".format(dictionary.name)] = "{}.{}".format(dictionary.db_name, dictionary.corpus_table)
-        #d["{}_id".format(dictionary.name)] = dictionary.word_label
-            
-        #try:
-            #d["{}_id".format(dictionary.name)] = dictionary.word_transcript
-        #except AttributeError:
-            #pass
-        
-        #return d.keys()
 
     @classmethod
     def get_table_dict(cls):
@@ -462,9 +387,9 @@ class BaseResource(object):
 class BaseCorpus(object):
     provides = []
     
-    def __init__(self, lexicon, resource):
-        self.lexicon = lexicon
-        self.resource = resource
+    def __init__(self):
+        self.lexicon = None
+        self.resource = None
         
     def get_corpus_size(self):
         """ Return the number of tokens in the corpus, taking the current 
@@ -493,8 +418,11 @@ class SQLResource(BaseResource):
             Operators = {True: "!=", False: "="}
         return Operators [False]
     
-    def __init__(self):
+    def __init__(self, lexicon, corpus):
         super(SQLResource, self).__init__()
+        self.lexicon = lexicon
+        self.corpus = corpus
+        self.connect_to_database()
 
     def connect_to_database(self):
         self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=self.db_name)
@@ -508,105 +436,176 @@ class SQLResource(BaseResource):
                     self.__setattr__("{}_alias".format(x), self.__getattribute__(x))
                 if "{}_construct".format(x) not in dir(self):
                     self.__setattr__("{}_construct".format(x), self.__getattribute__(x))
-                  
-    #@classmethod
-    #def get_select_list(cls, base, rc_features):
-        #""" Return a list of strings that contain all joins that are needed
-        #to query the features in the list rc_features."""
 
-        ## get a list of all tables that are required to query the requested
-        ## features:
-        #required_tables = {}
-        #for rc_feature in [ResFeature(x) for x in rc_features]:
-            #if rc_feature.table == "coquery_table":
-                #continue
-            #if rc_table not in required_tables and rc_table != corpus:
-                #tree = cls.resource.get_table_structure(rc_table, options.cfg.selected_features)
-                #parent = tree["parent"]
-                #table_id = "{}_id".format(rc_feature.split("_")[0])
-                #required_tables[rc_table] = tree
-                #requested_features.append(table_id)
-                #if parent:
-                    #parent_id = "{}_{}".format(parent.split("_")[0], table_id)
-                    #requested_features.append(parent_id)
-        
-        #join_strings = {}
-        #join_strings[corpus] = "{} AS COQ_CORPUS_TABLE".format(corpus)
-        #full_tree = cls.resource.get_table_structure("corpus_table", requested_features)
-        #select_list = []
-        #for rc_table in required_tables:
-            #rc_tab = rc_table.split("_")[0]
-            #sub_tree = cls.resource.get_sub_tree(rc_table, full_tree)
-            #parent_tree = cls.resource.get_sub_tree(sub_tree["parent"], full_tree)
-            #table = cls.resource.__getattribute__(rc_table)
-            #if parent_tree:
-                #rc_parent = parent_tree["rc_table_name"]
-            #else:
-                #rc_parent = None
-
-            #column_list = []
-            #for rc_feature in sub_tree["rc_requested_features"]:
-                #name = "coq_{}_{}".format(
-                    #rc_feature,
-                    #number+1)
-                #variable_string = "{} AS {}".format(
-                    #cls.resource.__getattribute__(rc_feature),
-                    #name)
-                #column_list.append(variable_string)
-                #if not rc_feature.endswith("_id"):
-                    #select_list.append(name)
-                
-            #columns = ", ".join(column_list)
+    def yield_query_results(self, Query, token_list, self_joined=False):
+        """
+        Run the corpus query specified in the token_list on the corpus
+        and yield the results.
+        """
+        try:
+            query_string = self.corpus.sql_string_query(Query, token_list, self_joined)
+        except WordNotInLexiconError:
+            query_string = ""
             
-            #where_string = ""
-            #if rc_table in rc_where_constraints:
-            ##if rc_table == "word_table" and where_constraints:
-                #where_string = "WHERE {}".format(" AND ".join(list(rc_where_constraints[rc_table])))
+        Query.Session.output_order = self.get_select_list(Query)
 
-            #if rc_parent:
-                #parent_id = "coq_{}_{}_id_{}".format(
-                    #rc_parent.split("_")[0], 
-                    #rc_table.split("_")[0],
-                    #number+1)
-                #child_id = "coq_{}_id_{}".format(
-                    #rc_table.split("_")[0],
-                    #number+1)
+        if query_string:
+            cursor = self.DB.execute_cursor(query_string)
+        else:
+            cursor = {}
+        for current_result in cursor:
+            if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
+                # add contexts for each query match:
+                if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
+                    left, target, right = self.get_context(
+                        current_result["coquery_invisible_corpus_id"], 
+                        Query._current_number_of_tokens, True)
+                    if options.cfg.context_mode == CONTEXT_KWIC:
+                        if options.cfg.context_left:
+                            current_result["coq_context_left"] = collapse_words(left)
+                        if options.cfg.context_right:
+                            current_result["coq_context_right"] = collapse_words(right)
+                    elif options.cfg.context_mode == CONTEXT_STRING:
+                        current_result["coq_context"] = collapse_words(left + target + right)
+                    elif options.cfg.context_mode == CONTEXT_SENTENCE:
+                        current_result["coq_context"] = collapse_word(self.get_context_sentence())
+            yield current_result
+
+    def get_context(self, token_id, number_of_tokens, case_sensitive):
+        if options.cfg.context_sentence:
+            raise NotImplementedError("Sentence contexts are currently not supported.")
+        token_id = int(token_id)
+        source_id = self.corpus.get_source_id(token_id)
+
+        old_verbose = options.cfg.verbose
+        options.cfg.verbose = False
+
+        left_span = options.cfg.context_left
+        if left_span > token_id:
+            start = 1
+        else:
+            start = token_id - left_span
+
+        S = self.corpus.sql_string_get_wordid_in_range(
+                start, 
+                token_id - 1, source_id)
+        self.DB.execute(S)
+        left_context_words = self.lexicon.get_orth([x for x, in self.DB.Cur])
+        left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
+
+        S = self.corpus.sql_string_get_wordid_in_range(
+                token_id + number_of_tokens, 
+                token_id + number_of_tokens + options.cfg.context_right - 1, source_id)
+        self.DB.execute(S)
+        right_context_words = self.lexicon.get_orth([x for x, in self.DB.Cur])
+        right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
+
+        options.cfg.verbose = old_verbose
+
+        if options.cfg.context_mode == CONTEXT_STRING:
+            S = self.corpus.sql_string_get_wordid_in_range(
+                    token_id,
+                    token_id + number_of_tokens - 1,
+                    source_id)
+            self.DB.execute(S)
+            target_words = self.lexicon.get_orth([x for (x, ) in self.DB.Cur])
+        else:
+            target_words = []
+        return (left_context_words, target_words, right_context_words)
+
+    def get_context_sentence(self, sentence_id):
+        raise NotImplementedError
+        #S = self.sql_string_get_sentence_wordid(sentence_id)
+        #self.resource.DB.execute(S)
+
+    @classmethod
+    def get_select_list(cls, query):
+        """
+        Return a set of field names that can be used to extract the 
+        requested columns from the joined MySQL query table.
+        
+        This set is usually stored in Session.output_order and determines
+        which columns appear in the output table. If a column is missing, 
+        it may be because it is not correctly included in this set.
+        
+        Parameters
+        ----------
+        query : CorpusQuery
+            The query for which a select set is required
+            
+        Returns
+        -------
+        select_list : set
+            A set of strings representing the aliased columns in the joined
+            MySQL query table.
+        """
+        
+        lexicon_features = [x for x, _ in cls.get_lexicon_features() if x in options.cfg.selected_features]
+        corpus_features = [x for x, _ in cls.get_corpus_features() if x in options.cfg.selected_features]
+        max_token_count = query.Session.get_max_token_count()
+        # the initial select list contains the columns from the input file
+        # (if present):
+        select_list = list(query.Session.input_columns)
+
+        # then, add an appropriately aliased name for each selected feature:
+        for rc_feature in options.cfg.selected_features:
+            if rc_feature in lexicon_features:
+                select_list += ["coq_{}_{}".format(rc_feature, x+1) for x in range(max_token_count)]
+            elif rc_feature in corpus_features:
+                select_list.append("coq_{}_1".format(rc_feature))
+            elif rc_feature.startswith("coquery_"):
+                if rc_feature == "coquery_query_token": 
+                    select_list += ["coquery_query_token_{}".format(x + 1) for x in range(max_token_count)]
+                else:
+                    select_list.append(rc_feature)
+
+        # linked columns
+        for rc_feature in options.cfg.external_links:
+            external, internal = options.cfg.external_links[rc_feature]
+            internal_feature = internal.split(".")[-1]
+
+            external_table, external_feature = rc_feature.split(".")
+            linked_feature = "{}_{}".format(external_table, external_feature)
+
+            if rc_feature in lexicon_features:
+                select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
+            else:
+                select_list.append("coq_{}_1".format(linked_feature))
+
+        # functions:
+        func_counter =  Counter()
+        for rc_feature in options.cfg.selected_features:
+            if rc_feature.startswith("func."):
+                resource = rc_feature.rpartition(".")[-1]
+                func_counter[resource] += 1
+                fc = func_counter[resource]
                 
-                #join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {parent_id} = {child_id}".format(
-                    #columns = columns, 
-                    #table = table,
-                    #alias = sub_tree["alias"],
-                    #parent = parent_tree["alias"],
-                    #where = where_string,
-                    #number = number+1,
-                    #parent_id = parent_id,
-                    #child_id = child_id)
-            #else:
-                #join_strings[rc_table] = "(SELECT {columns} FROM {table} {where}) AS {alias}".format(
-                    #columns = columns, 
-                    #table = table,
-                    #alias = sub_tree["alias"],
-                    #where = where_string)
+                if resource in lexicon_features:
+                    select_list += ["coq_func_{}_{}_{}".format(resource, fc, x + 1) for x in range(max_token_count)]
+                else:
+                    select_list.append("coq_func_{}_{}_1".format(resource, fc))
 
-        #output_columns = []
-        #for x in options.cfg.selected_features:
-            #if x in corpus_variables and number > 0:
-                #break
-            #rc_table = "{}_table".format(x.split("_")[0])
-            #if rc_table == "coquery_table":
-                #continue
-            #tree = required_tables[rc_table]
-            #output_columns.append("{}.{}{}".format(tree["alias"], cls.resource.__getattribute__(x), number + 1))
-        
-        #table_order = cls.resource.get_table_order(full_tree)
-        #L = []
-        #for x in table_order:
-            #if x in join_strings:
-                #if join_strings[x] not in L:
-                    #L.append(join_strings[x])
-        
-        #if not select_list:
-            #return "", None, None
+            if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_") and "coq_{}_1".format(rc_feature) not in select_list:
+                if "." not in rc_feature:
+                    select_list.append("coq_{}_1".format(rc_feature.replace(".", "_")))
+
+        if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
+            # add contexts for each query match:
+            if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
+                if options.cfg.context_mode == CONTEXT_KWIC:
+                    if options.cfg.context_left:
+                        select_list.append("coq_context_left")
+                    if options.cfg.context_right:
+                        select_list.append("coq_context_right")
+                elif options.cfg.context_mode == CONTEXT_STRING:
+                    select_list.append("coq_context")
+                elif options.cfg.context_mode == CONTEXT_SENTENCE:
+                    select_list.append("coq_context")
+
+        if options.cfg.context_source_id:
+            select_list.append("coquery_invisible_corpus_id")
+            select_list.append("coquery_invisible_number_of_tokens")
+        return set(select_list)
 
 class SQLLexicon(BaseLexicon):
     entry_cache = {}
@@ -758,133 +757,59 @@ class SQLLexicon(BaseLexicon):
         self.resource.DB.execute(self.sql_string_get_other_wordforms(current_word))
         return [result[0] for result in self.resource.DB.Cur]
 
-    def sql_string_get_orth(self, word_id):
-        return     
     def get_orth(self, word_id):
-        """ Return the orthographic form of the lexicon entry 'word_id'. """
-        try:
-            return self._query_cache[word_id]
-        except KeyError:
-            self.resource.DB.execute(
-                "SELECT {} FROM {} WHERE {} = {} LIMIT 1".format(
-                self.resource.word_label, 
-                self.resource.word_table,
-                self.resource.word_id,
-                word_id))
-            orth = self.resource.DB.Cur.fetchone()
-            if orth:
-                orth = orth[0]
-                self._query_cache[word_id] = orth
-                return orth
-            else:
-                return "<NA>"
-
-    #def sql_string_get_entry(self, word_id, requested):
-        #""" Return a MySQL string that can be used to query the requested
-        #fields for the lexical entry 'word_id. """        
-        #print("IS THIS CALLED ANYWAY?")
-        #if word_id == "NA":
-            #word_id = -1
+        """ 
+        Return the orthographic forms of the word_ids.
         
-        #select_variable_list = []
-        #self.where_list = ["{}.{} = {}".format(
-            #self.resource.word_table,
-            #self.resource.word_id,
-            #word_id)]
-        #self.table_list = [self.resource.word_table]
-        #for current_attribute in requested:
-            #if current_attribute == LEX_WORDID:
-                #select_variable_list.append("{}.{}".format(
-                    #self.resource.word_table,
-                    #self.resource.word_id))
-            
-            #if current_attribute == LEX_LEMMA:
-                #if "lemma_table" in dir(self.resource):
-                    #select_variable_list.append("COQ_LEMMA_TABLE.{}".format(
-                        #self.resource.lemma_label))
-                    #self.table_list.append("LEFT JOIN {} AS COQ_LEMMA_TABLE ON {}.{} = COQ_LEMMA_TABLE.{}".format(
-                        #self.resource.lemma_table,
-                        #self.resource.word_table,
-                        #self.resource.word_lemma_id,
-                        #self.resource.lemma_id))
-                #else:
-                    #select_variable_list.append("{}.{}".format(
-                        #self.resource.word_table,
-                        #self.resource.word_lemma))
-            
-            #if current_attribute == LEX_ORTH:
-                #select_variable_list.append("{}.{}".format(
-                    #self.resource.word_table,
-                    #self.resource.word_label))
-            
-            #if current_attribute == LEX_POS:
-                #if "pos_table" in dir(self.resource):
-                    #select_variable_list.append("PARTOFSPEECH.{}".format(
-                        #self.resource.pos_label))
-                    #self.table_list.append("LEFT JOIN {} AS PARTOFSPEECH ON {}.{} = PARTOFSPEECH.{}".format(
-                        #self.resource.pos_table,
-                        #self.resource.word_table,
-                        #self.resource.word_pos_id,
-                        #self.resource.pos_id))
-                #else:
-                    #select_variable_list.append("{}.{}".format(
-                        #self.resource.word_table,
-                        #self.resource.word_pos))
-            
-            #if current_attribute == LEX_PHON:
-                #if "transcript_table" in dir(self.resource):
-                    #select_variable_list.append("TRANSCRIPT.{}".format(
-                        #self.resource.transcript_label))
-                    #self.table_list.append("LEFT JOIN {} AS TRANSCRIPT ON {}.{} = TRANSCRIPT.{}".format(
-                        #self.resource.transcript_table,
-                        #self.resource.word_table,
-                        #self.resource.word_transcript_id,
-                        #self.resource.transcript_id))
-                #else:
-                    #select_variable_list.append("{}.{}".format(
-                        #self.resource.word_table,
-                        #self.resource.word_transcript))
-                
-        #select_string = ("SELECT {0} FROM {1}{2}".format(
-            #", ".join(select_variable_list),
-            #" ".join(self.table_list),
-            #(" WHERE " + " AND ".join(self.where_list)) if self.where_list else ""))
-        #return select_string
-    
-    #def get_entry(self, word_id, requested):
-        #""" Return a Entry() instance that contains the requested fields for 
-        #the lexicon entry with 'word_id'.
+        If word_id_list is not a list, it is converted into one.
         
-        #This function is deprecated, and may be removed in future versions if
-        #no obvious usecase emerges. It is the only place where the Entry()
-        #class is used, it makes use of the old feature specification, it is 
-        #not very much aware of more complex database hierarchies, and it 
-        #contains code that is redundant with sql_string_get_matching_wordids().
-        #"""
-        
-        #if not tuple(requested) in self.entry_cache:
-            #self.entry_cache[tuple(requested)] = {}
-        #try:
-            #return self.entry_cache[tuple(requested)][word_id]
-        #except KeyError:
-            #pass
-
-        ## an entry has to provide at least LEX_ORTH:
-        #provide_fields = set(self.provides) & set(requested) | set([LEX_ORTH])
-        #error_value = ["<NA>"] * (len(self.provides) - 1)
-        #entry = self.Entry(provide_fields)
-        #S = self.sql_string_get_entry(word_id, provide_fields)
-        #self.resource.DB.execute(S)
-        #query_results = self.resource.DB.Cur.fetchone()
-        #if query_results:
-            #entry.set_values(query_results)
-        #else:
-            #entry.set_values(error_value)
+        Parameters
+        ----------
+        word_id : value or list
+            A value or list of value designating the words_ids that are to 
+            be looked up.
             
-        ## add entry to cache:
-        #self.entry_cache[tuple(requested)][word_id] = entry
-        #return entry
+        Returns
+        -------
+        L : list
+            A list of strings, giving the orthographic representation of the
+            words.
+        """
+        if not hasattr(word_id, "__iter__"):
+            word_id = [word_id]
+        
+        # if there is no attribute "corpus_word_id" in the resource, we have
+        # to assume that the identifies provided are already all the 
+        # information that we have on the words. This makes sense for 
+        # example in the case of dictionaries. So, in that case, we simply
+        # return the list:
+        if not "corpus_word_id" in dir(self.resource):
+            return word_id
+        
+        # prepare a partial MySQL query:
+        S = "SELECT {} FROM {} WHERE {} = ".format(
+                    self.resource.word_label, 
+                    self.resource.word_table,
+                    self.resource.word_id)
 
+        # build the word list:
+        L = []
+        for x in word_id:
+            # check the word cache:
+            try:
+                L.append(self._word_cache[x])
+            except KeyError:
+                self.resource.DB.execute("{}{}".format(S, x))
+                try:
+                    orth = self.resource.DB.Cur.fetchone()[0]
+                except IndexError:
+                    # no entry for this word_id -- return default value:
+                    L.append("<NA>")
+                else:
+                    L.append(orth)
+                    # add to cache:
+                    self._word_cache[x] = orth
+        return L
     def sql_string_get_posid_list(self, token):
         where_string = self.sql_string_get_posid_list_where(token)
 
@@ -957,8 +882,8 @@ class SQLLexicon(BaseLexicon):
         return stats
 
 class SQLCorpus(BaseCorpus):
-    def __init__(self, lexicon, resource):
-        super(SQLCorpus, self).__init__(lexicon, resource)
+    def __init__(self):
+        super(SQLCorpus, self).__init__()
         self._frequency_cache = {}
         self._corpus_size_cache = None
 
@@ -1148,94 +1073,6 @@ class SQLCorpus(BaseCorpus):
             lexicon=self.resource.__getattribute__("word_table"),
             constraints=" AND ".join(where_clauses))
         
-    def get_select_list(self, query):
-        """
-        Return a list of field names that can be used to extract the 
-        requested columns from the joined MySQL query table.
-        
-        This list is usually stored in Session.output_order and determines
-        which columns appear in the output table. If a column is missing, 
-        it may be because it is not correctly included in this list.
-        
-        Parameters
-        ----------
-        query : CorpusQuery
-            The query for which a select list is required
-            
-        Returns
-        -------
-        l : list
-            A list of strings representing the aliased columns in the joined
-            MySQL query table.
-        """
-        
-        lexicon_features = [x for x, _ in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
-        corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
-        max_token_count = query.Session.get_max_token_count()
-        # the initial select list contains the columns from the input file
-        # (if present):
-        select_list = list(query.Session.input_columns)
-
-        # then, add an appropriately aliased name for each selected feature:
-        for rc_feature in options.cfg.selected_features:
-            if rc_feature in lexicon_features:
-                select_list += ["coq_{}_{}".format(rc_feature, x+1) for x in range(max_token_count)]
-            elif rc_feature in corpus_features:
-                select_list.append("coq_{}_1".format(rc_feature))
-            elif rc_feature.startswith("coquery_"):
-                if rc_feature == "coquery_query_token": 
-                    select_list += ["coquery_query_token_{}".format(x + 1) for x in range(max_token_count)]
-                else:
-                    select_list.append(rc_feature)
-
-        # linked columns
-        for rc_feature in options.cfg.external_links:
-            external, internal = options.cfg.external_links[rc_feature]
-            internal_feature = internal.split(".")[-1]
-
-            external_table, external_feature = rc_feature.split(".")
-            linked_feature = "{}_{}".format(external_table, external_feature)
-
-            if rc_feature in lexicon_features:
-                select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
-            else:
-                select_list.append("coq_{}_1".format(linked_feature))
-
-        # functions:
-        func_counter =  Counter()
-        for rc_feature in options.cfg.selected_features:
-            if rc_feature.startswith("func."):
-                resource = rc_feature.rpartition(".")[-1]
-                func_counter[resource] += 1
-                fc = func_counter[resource]
-                
-                if resource in lexicon_features:
-                    select_list += ["coq_func_{}_{}_{}".format(resource, fc, x + 1) for x in range(max_token_count)]
-                else:
-                    select_list.append("coq_func_{}_{}_1".format(resource, fc))
-
-            if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_") and "coq_{}_1".format(rc_feature) not in select_list:
-                if "." not in rc_feature:
-                    select_list.append("coq_{}_1".format(rc_feature.replace(".", "_")))
-
-        if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
-            # add contexts for each query match:
-            if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
-                if options.cfg.context_mode == CONTEXT_KWIC:
-                    if options.cfg.context_left:
-                        select_list.append("coq_context_left")
-                    if options.cfg.context_right:
-                        select_list.append("coq_context_right")
-                elif options.cfg.context_mode == CONTEXT_STRING:
-                    select_list.append("coq_context")
-                elif options.cfg.context_mode == CONTEXT_SENTENCE:
-                    select_list.append("coq_context")
-
-        if options.cfg.context_source_id:
-            select_list.append("coquery_invisible_corpus_id")
-            select_list.append("coquery_invisible_number_of_tokens")
-        return set(select_list)
-
     def get_token_query_string(self, current_token, number, self_joined=False):
         """ 
         Return a MySQL SELECT string that selects a table matching the 
@@ -1747,40 +1584,6 @@ class SQLCorpus(BaseCorpus):
 
         return query_string
         
-    def yield_query_results(self, Query, token_list, self_joined=False):
-        """
-        Run the corpus query specified in the token_list on the corpus
-        and yield the results.
-        """
-        try:
-            query_string = self.sql_string_query(Query, token_list, self_joined)
-        except WordNotInLexiconError:
-            query_string = ""
-            
-        Query.Session.output_order = self.get_select_list(Query)
-
-        if query_string:
-            cursor = self.resource.DB.execute_cursor(query_string)
-        else:
-            cursor = {}
-        for current_result in cursor:
-            if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
-                # add contexts for each query match:
-                if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
-                    left, target, right = self.get_context(
-                        current_result["coquery_invisible_corpus_id"], 
-                        Query._current_number_of_tokens, True)
-                    if options.cfg.context_mode == CONTEXT_KWIC:
-                        if options.cfg.context_left:
-                            current_result["coq_context_left"] = collapse_words(left)
-                        if options.cfg.context_right:
-                            current_result["coq_context_right"] = collapse_words(right)
-                    elif options.cfg.context_mode == CONTEXT_STRING:
-                        current_result["coq_context"] = collapse_words(left + target + right)
-                    elif options.cfg.context_mode == CONTEXT_SENTENCE:
-                        current_result["coq_context"] = collapse_word(self.get_context_sentence())
-            yield current_result
-
     def sql_string_get_sentence_wordid(self,  source_id):
         return "SELECT {corpus_wordid} FROM {corpus} INNER JOIN {source} ON {corpus}.{corpus_source} = {source_alias}.{source_id} WHERE {source_alias}.{source_id} = {this_source}{verbose}".format(
             corpus_wordid=self.resource.corpus_word_id,
@@ -1792,11 +1595,6 @@ class SQLCorpus(BaseCorpus):
             corpus_token=self.resource.corpus_id,
             this_source=source_id,
             verbose=" -- sql_string_get_sentence_wordid" if options.cfg.verbose else "")
-
-    def get_context_sentence(self, sentence_id):
-        raise NotImplementedError
-        #S = self.sql_string_get_sentence_wordid(sentence_id)
-        #self.resource.DB.execute(S)
 
     def sql_string_get_wordid_in_range(self, start, end, source_id):
         if options.cfg.context_source_id and source_id:
@@ -1816,51 +1614,6 @@ class SQLCorpus(BaseCorpus):
                 corpus_token=self.resource.corpus_id,
                 start=start, end=end,
                 verbose=" -- sql_string_get_wordid_in_range" if options.cfg.verbose else "")
-
-    def get_context(self, token_id, number_of_tokens, case_sensitive):
-        if options.cfg.context_sentence:
-            raise NotImplementedError("Sentence contexts are currently not supported.")
-        token_id = int(token_id)
-        source_id = self.get_source_id(token_id)
-
-        old_verbose = options.cfg.verbose
-        options.cfg.verbose = False
-
-        left_span = options.cfg.context_left
-        if left_span > token_id:
-            start = 1
-        else:
-            start = token_id - left_span
-
-        S = self.sql_string_get_wordid_in_range(
-                start, 
-                token_id - 1, source_id)
-        self.resource.DB.execute(S)
-        results = list(self.resource.DB.Cur)
-        left_context_words = [self.lexicon.get_orth(x) for (x, ) in results]
-        left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
-
-        S = self.sql_string_get_wordid_in_range(
-                token_id + number_of_tokens, 
-                token_id + number_of_tokens + options.cfg.context_right - 1, source_id)
-        self.resource.DB.execute(S)
-        results = list(self.resource.DB.Cur)
-        right_context_words = [self.lexicon.get_orth(x) for (x, ) in results]
-        right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
-
-        options.cfg.verbose = old_verbose
-
-        if options.cfg.context_mode == CONTEXT_STRING:
-            S = self.sql_string_get_wordid_in_range(
-                    token_id,
-                    token_id + number_of_tokens - 1,
-                    source_id)
-            self.resource.DB.execute(S)
-            results = list(self.resource.DB.Cur)
-            target_words = [self.lexicon.get_orth(x) for (x, ) in results]
-        else:
-            target_words = []
-        return (left_context_words, target_words, right_context_words)
 
     def get_statistics(self):
         stats = self.lexicon.get_statistics()
@@ -2136,54 +1889,3 @@ class SQLCorpus(BaseCorpus):
 
         #print(context)
         widget.ui.context_area.setText(collapse_words(context))
-
-    
-""" Revised query for self-joins?
-
-
-
-SELECT coq_corpus_id_1, coq_word_label_1, coq_word_label_2, coq_word_label_3, coq_frequency, coq_source_genre_1, coq_source_genre_1 FROM 
-
-(SELECT 
-    TokenId AS coq_corpus_id_1, TextId AS coq_corpus_source_id_1, W1 AS coq_corpus_word_id_1, W2 AS coq_corpus_word_id_2, W3 AS coq_corpus_word_id_3, COUNT(*) AS coq_frequency 
-FROM 
-    corpusBig
-WHERE 
-    W1 IN 
-        (4454405, 306695, 286733, 22, 354855, 28201, 4618797, 1313838, 6704, 3405879, 3866688, 1305014, 458310, 72775, 309326, 745039, 46674, 1081615, 4574812, 463967, 113254, 1420920, 22141, 640, 641158, 802442, 161932, 20113, 551570, 4071070, 41643, 267951, 176, 689, 3262, 830655, 9937, 119507, 166625, 3756771, 309493, 5370, 540420, 614666, 40718, 389391, 4312852, 2609953, 608573, 447809, 2844997, 919373, 1411402, 16205, 19278, 73551, 5465, 355, 3943, 52073, 85866, 126866, 1378159, 429713, 551811, 745348, 42889, 4770192, 19858, 320405, 138665, 68522, 4616775, 152492, 438, 33730, 76739, 67532, 843726, 2511, 1055703, 3046, 2958316, 195154, 2491375, 358388, 555004, 1312255) 
-    AND
-    W2 IN 
-        (15012, 13542, 1959, 1540457, 214411, 23468, 155823, 43892, 125174, 4617, 5000760, 101564, 4249533) 
-    AND 
-    W3 IN 
-        (24, 1345)
-
-GROUP BY 
-    coq_corpus_word_id_1, coq_corpus_word_id_2, coq_corpus_word_id_3
-) AS coq_master
-
-INNER JOIN 
-    (SELECT Word as coq_word_label_1, WordId AS coq_word_id_1 FROM lex) AS e1
-    ON coq_word_id_1 = coq_corpus_word_id_1
-
-INNER JOIN 
-    (SELECT Word as coq_word_label_2, WordId AS coq_word_id_2 FROM lex) AS e2
-    ON coq_word_id_2 = coq_corpus_word_id_2
-
-INNER JOIN
-    (SELECT Word as coq_word_label_3, WordId AS coq_word_id_3 FROM lex) AS e3
-    ON coq_word_id_3 = coq_corpus_word_id_3
-
-INNER JOIN
-    (SELECT TextId AS coq_source_id_1, Genre AS coq_source_genre_1, Year AS coq_source_year_1 FROM sources) AS coq_source_table
-    ON coq_corpus_source_id_1 = coq_source_id_1
-    
-OLD :
-
-
-SELECT corpusBig.TokenId AS TokenId,
-        corpusBig.W1,
-        corpusBig.W3,
-        corpusBig.W2 FROM corpusBig WHERE W1 IN (4454405, 306695, 286733, 22, 354855, 28201, 4618797, 1313838, 6704, 3405879, 3866688, 1305014, 458310, 72775, 309326, 745039, 46674, 1081615, 4574812, 463967, 113254, 1420920, 22141, 640, 641158, 802442, 161932, 20113, 551570, 4071070, 41643, 267951, 176, 689, 3262, 830655, 9937, 119507, 166625, 3756771, 309493, 5370, 540420, 614666, 40718, 389391, 4312852, 2609953, 608573, 447809, 2844997, 919373, 1411402, 16205, 19278, 73551, 5465, 355, 3943, 52073, 85866, 126866, 1378159, 429713, 551811, 745348, 42889, 4770192, 19858, 320405, 138665, 68522, 4616775, 152492, 438, 33730, 76739, 67532, 843726, 2511, 1055703, 3046, 2958316, 195154, 2491375, 358388, 555004, 1312255) AND
-        W2 IN (15012, 13542, 1959, 1540457, 214411, 23468, 155823, 43892, 125174, 4617, 5000760, 101564, 4249533) AND
-        W3 IN (17408, 771, 8581, 1545478, 28481, 32392, 56331, 372876, 2551949, 84878, 126352, 1400387, 407, 24, 398617, 979354, 706715, 418972, 14493, 1316383, 146208, 33, 23074, 283, 700319, 783833, 4521, 341639, 40620, 557, 260189, 72992, 343841, 753864, 2357301, 487862, 3632312, 73204, 2875066, 573791, 857916, 276543, 1345, 103875, 89412, 2923719, 15176, 622220, 6346, 1941964, 3704738, 54048, 3325520, 2162971, 51026, 440547, 68308, 20666, 3775320, 133977, 40026, 3429616, 223644, 148575, 482016, 1783163, 474855, 738792, 8553, 806123, 884205, 71022, 3364891, 41164, 208114, 262739, 1017204, 52086, 204137, 2485371, 382, 196735) """

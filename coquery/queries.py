@@ -229,6 +229,7 @@ class TokenQuery(object):
         self.query_list = tokens.preprocess_query(S)
         self.query_string = S
         self.Session = Session
+        self.Resource = Session.Corpus.resource
         self.Corpus = Session.Corpus
         self.Results = []
         self.input_frame = pd.DataFrame()
@@ -265,7 +266,7 @@ class TokenQuery(object):
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
             
             df = pd.DataFrame(
-                self.Corpus.yield_query_results(self, self._sub_query))
+                self.Resource.yield_query_results(self, self._sub_query))
             df = self.insert_static_data(df)
             self.add_output_columns()
 
