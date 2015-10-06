@@ -1289,7 +1289,7 @@ class CoqueryApp(QtGui.QMainWindow):
             QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except CollocationNoContextError as e:
             QtGui.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-        except RunTimeError as e:
+        except RuntimeError as e:
             error_box.ErrorBox.show(sys.exc_info(), no_trace=True)
         except Exception as e:
             error_box.ErrorBox.show(sys.exc_info(), e)
