@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'uniqueViewer.ui'
 #
-# Created: Thu Sep 24 00:01:33 2015
+# Created: Mon Oct  5 17:34:57 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -41,6 +41,7 @@ class Ui_UniqueViewer(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
         self.label.setSizePolicy(sizePolicy)
+        self.label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.label.setWordWrap(True)
         self.label.setObjectName(_fromUtf8("label"))
         self.verticalLayout.addWidget(self.label)
@@ -51,7 +52,7 @@ class Ui_UniqueViewer(object):
         self.treeWidget.setExpandsOnDoubleClick(False)
         self.treeWidget.setObjectName(_fromUtf8("treeWidget"))
         self.treeWidget.headerItem().setText(0, _fromUtf8("1"))
-        self.treeWidget.header().setSortIndicatorShown(True)
+        self.treeWidget.header().setSortIndicatorShown(False)
         self.verticalLayout.addWidget(self.treeWidget)
         self.verticalLayout_2.addWidget(self.frame)
         self.horizontalLayout = QtGui.QHBoxLayout()
@@ -59,6 +60,11 @@ class Ui_UniqueViewer(object):
         self.label_2 = QtGui.QLabel(UniqueViewer)
         self.label_2.setObjectName(_fromUtf8("label_2"))
         self.horizontalLayout.addWidget(self.label_2)
+        self.progress_bar = QtGui.QProgressBar(UniqueViewer)
+        self.progress_bar.setMaximum(0)
+        self.progress_bar.setProperty("value", 0)
+        self.progress_bar.setObjectName(_fromUtf8("progress_bar"))
+        self.horizontalLayout.addWidget(self.progress_bar)
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
         self.buttonBox = QtGui.QDialogButtonBox(UniqueViewer)
@@ -73,7 +79,6 @@ class Ui_UniqueViewer(object):
     def retranslateUi(self, UniqueViewer):
         UniqueViewer.setWindowTitle(_translate("UniqueViewer", "View unique values – Coquery", None))
         self.label.setText(_translate("UniqueViewer", "<html><head/><body><p>Corpus: {}</p></body></html>", None))
-        self.treeWidget.setSortingEnabled(True)
         self.label_2.setText(_translate("UniqueViewer", "Number of values: {}", None))
 
 
