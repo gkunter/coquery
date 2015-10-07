@@ -57,6 +57,7 @@ class Options(object):
         self.args.filter_list = []
         self.args.program_location = self.base_path
         self.args.version = self.version
+        self.args.query_label = ""
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
         except AttributeError:
