@@ -174,15 +174,9 @@ class Session(object):
         it to its display name, and returns the display name together with 
         the numerical suffix attached.
         """
-            
         # Retain the column header if the query string was from an input file
         if header == "coquery_query_string" and options.cfg.query_label:
             return options.cfg.query_label
-        
-        # COLUMN_NAMES is defined in defines.py, which should help 
-        # localization:
-        if header in COLUMN_NAMES:
-            return COLUMN_NAMES[header]
         
         # strip coq_ prefix:
         if header.startswith("coq_"):
@@ -243,6 +237,12 @@ class Session(object):
                 pass
             return str(function_label).replace(column_name, "{}{}".format(column_name, number))
 
+        # treat frequency columns:
+        if header == "frequency":
+            if options.cfg.query_label:
+                return "Frequency({})".format(options.cfg.query_label)
+            else:
+                return "Frequency"
         # other features:
         if rc_feature in COLUMN_NAMES:
             try:
@@ -250,8 +250,7 @@ class Session(object):
             except ValueError:
                 pass
             return "{}{}".format(COLUMN_NAMES[rc_feature], number)
-        else:
-            return header
+
         return header
 
 class StatisticsSession(Session):
