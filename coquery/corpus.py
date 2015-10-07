@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 from collections import *
+import pandas as pd
 
 from errors import *
 import tokens
@@ -436,6 +437,34 @@ class SQLResource(BaseResource):
                     self.__setattr__("{}_alias".format(x), self.__getattribute__(x))
                 if "{}_construct".format(x) not in dir(self):
                     self.__setattr__("{}_construct".format(x), self.__getattribute__(x))
+
+    def get_statistics(self):
+        lexicon_features = [x for x, _ in self.get_lexicon_features()]
+        corpus_features = [x for x, _ in self.get_corpus_features()]
+        resource_features = lexicon_features + corpus_features
+        stats = [["Corpus", "Tokens", self.corpus.get_corpus_size(), self.corpus.get_corpus_size()]]
+
+        table_sizes = {}
+
+        for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table")]:
+            table = getattr(self, rc_table)
+            S = "SELECT COUNT(*) FROM {}".format(table)
+            self.DB.execute(S)
+            table_sizes[table] = self.DB.Cur.fetchone()[0]
+
+        for rc_feature in resource_features:
+            rc_table = "{}_table".format(rc_feature.split("_")[0])
+            table = getattr(self, rc_table)
+            column = getattr(self, rc_feature)
+
+            S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
+            self.DB.execute(S)
+            stats.append([table, column, table_sizes[table], self.DB.Cur.fetchone()[0]])
+
+        df = pd.DataFrame(stats)
+        df[4] = df[2] / df[3]
+        print(df)
+        return df
 
     def yield_query_results(self, Query, token_list, self_joined=False):
         """
@@ -1614,26 +1643,6 @@ class SQLCorpus(BaseCorpus):
                 corpus_token=self.resource.corpus_id,
                 start=start, end=end,
                 verbose=" -- sql_string_get_wordid_in_range" if options.cfg.verbose else "")
-
-    def get_statistics(self):
-        stats = self.lexicon.get_statistics()
-        stats["corpus_variables"] = " ".join([x for x, _ in self.resource.get_corpus_features()])
-        for table in [x for x in dir(self.resource) if not x.startswith("_")]:
-            if table.endswith("_table"):
-                tab, _, _ = table.partition("_table")
-                S = "SELECT COUNT(*) FROM {}".format(getattr(self.resource, table))
-                self.resource.DB.execute(S)
-                if tab == TABLE_CORPUS:
-                    var_name = "{}_tokens".format(tab)
-                else:
-                    var_name = "{}_entries".format(tab)
-                stats[var_name] = self.resource.DB.Cur.fetchone()[0]
-                for variable in [x for x in dir(self.resource) if x.startswith(tab) and not x.startswith(table)]:
-                    if not variable.endswith("_id"):
-                        S = "SELECT COUNT(DISTINCT {}) FROM {}".format(getattr(self.resource, variable), getattr(self.resource, table))
-                        self.resource.DB.execute(S)
-                        stats["{}_distinct".format(variable)] = self.resource.DB.Cur.fetchone()[0]
-        return stats
 
     def get_tag_translate(self, s):
         # Define some TEI tags:

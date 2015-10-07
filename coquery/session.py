@@ -67,6 +67,8 @@ class Session(object):
             self.query_type = queries.DistinctQuery
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.query_type = queries.CollocationQuery
+        elif options.cfg.MODE == QUERY_MODE_STATISTICS:
+            self.query_type = queries.StatisticsQuery
 
         logger.info("Corpus: %s" % options.cfg.corpus)
         
@@ -159,6 +161,7 @@ class Session(object):
                 header = [self.translate_header(x) for x in self.output_object.columns.values], 
                 sep=options.cfg.output_separator,
                 encoding="utf-8",
+                float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
 
     def translate_header(self, header):

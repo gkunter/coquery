@@ -620,30 +620,26 @@ class FrequencyQuery(TokenQuery):
 class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session, None)
-        self.Results = self.Session.Corpus.get_statistics()
         
-        # convert all values to strings (the Unicode writer needs that):
-        self.Results = {key: str(self.Results[key]) for key in self.Results}
+    def add_output_columns(self):
+        self.Session.output_order = set(["Variable", "Value"])
 
-    def write_results(self, output_file):
-        df = pd.DataFrame({"Variable": list(self.Results.keys()), "Value": list(self.Results.values())})[["Variable", "Value"]].sort("Variable")
-
-        if options.cfg.gui:
-            # append the data frame to the existing data frame
-            self.Session.output_object = pd.concat([self.Session.output_object, df])
+    def append_results(self, df):
+        """
+        Append the last results to the data frame.
+        
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The data frame to which the last query results will be added.
+        """
+        self.results_frame = self.Session.Resource.get_statistics()
+        self.results_frame.columns=["Table", "Column", "Entries", "Uniques", "Ratio"]
+        if df.empty:
+            return self.results_frame
         else:
-            # write data frame to output_file as a CSV file, using the 
+            return df.append(self.results_frame)
 
-            df.to_csv(self.Session.output_object, 
-                header=None if self.Session.header_shown else df.columns.values, 
-                sep=options.cfg.output_separator,
-                encoding="utf-8",
-                index=False)
-            # remember that the header columns have already been included in
-            # the output so that multiple queries in a single session do not
-            # produce multiple headers:
-            self.Session.header_shown = True
-        return
 
 class CollocationQuery(TokenQuery):
     @staticmethod
