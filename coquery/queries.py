@@ -621,9 +621,6 @@ class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session, None)
         
-    def add_output_columns(self):
-        self.Session.output_order = set(["Variable", "Value"])
-
     def append_results(self, df):
         """
         Append the last results to the data frame.
@@ -634,7 +631,8 @@ class StatisticsQuery(TokenQuery):
             The data frame to which the last query results will be added.
         """
         self.results_frame = self.Session.Resource.get_statistics()
-        self.results_frame.columns=["Table", "Column", "Entries", "Uniques", "Ratio"]
+        self.Session.output_order = ["Table", "Column", "Entries", "Uniques", "Ratio"]
+        self.results_frame.columns = self.Session.output_order
         if df.empty:
             return self.results_frame
         else:
