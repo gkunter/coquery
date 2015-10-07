@@ -235,9 +235,6 @@ class TokenQuery(object):
         self.input_frame = pd.DataFrame()
         self.results_frame = pd.DataFrame()
 
-    def __str__(self):
-        return " ".join(["{}".format(x) for x in self.tokens])
-    
     def __len__(self):
         return len(self.tokens)
 
