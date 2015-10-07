@@ -442,16 +442,19 @@ class SQLResource(BaseResource):
         lexicon_features = [x for x, _ in self.get_lexicon_features()]
         corpus_features = [x for x, _ in self.get_corpus_features()]
         resource_features = lexicon_features + corpus_features
+
+        # first row contains corpus size:
         stats = [["Corpus", "Tokens", self.corpus.get_corpus_size(), self.corpus.get_corpus_size()]]
 
+        # determine table size for all columns
         table_sizes = {}
-
         for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table")]:
             table = getattr(self, rc_table)
             S = "SELECT COUNT(*) FROM {}".format(table)
             self.DB.execute(S)
             table_sizes[table] = self.DB.Cur.fetchone()[0]
 
+        # get distinct values for each feature:
         for rc_feature in resource_features:
             rc_table = "{}_table".format(rc_feature.split("_")[0])
             table = getattr(self, rc_table)
@@ -462,8 +465,8 @@ class SQLResource(BaseResource):
             stats.append([table, column, table_sizes[table], self.DB.Cur.fetchone()[0]])
 
         df = pd.DataFrame(stats)
+        # calculate ratio:
         df[4] = df[2] / df[3]
-        print(df)
         return df
 
     def yield_query_results(self, Query, token_list, self_joined=False):
