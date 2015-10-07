@@ -1445,7 +1445,8 @@ class SQLCorpus(BaseCorpus):
             lexicon_features = [x for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
             for i, tup in enumerate(token_list):
                 number, token = tup
-                s = self.get_token_query_string_self_joined(token, i)
+                s = self.get_token_query_string_self_joined(
+                    tokens.COCAToken(token, self.lexicon), i)
                 if s:
                     join_string = "INNER JOIN ({s}) AS e{i}\nON coq_word_id_{i} = W{i}".format(
                         s = s, 
@@ -1453,6 +1454,7 @@ class SQLCorpus(BaseCorpus):
                     token_query_list[i+1] = join_string
             final_select = []
             for rc_feature in options.cfg.selected_features:
+                select_feature = "coq_{}_1".format(rc_feature)
                 if rc_feature in corpus_features or rc_feature in lexicon_features:
                     final_select.append(select_feature)
                 else:
