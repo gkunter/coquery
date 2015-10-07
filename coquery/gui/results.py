@@ -13,7 +13,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import division
 
-from pyqt_compat import QtCore, QtGui
+from pyqt_compat import QtCore, QtGui, pyside
 import os.path
 from defines import *
 import options
@@ -273,12 +273,9 @@ def get_foreground(option, index):
         return index.data(QtCore.Qt.ForegroundRole)
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
-    margin = 2
-    @staticmethod
-    def sizeHint(option, index):
+    def sizeHint(self, option, index):
         rect = options.cfg.metrics.boundingRect(unicode(index.data(QtCore.Qt.DisplayRole)))
-        rect.adjust(0, 0, 2 * CoqResultCellDelegate.margin, 0)
-        return rect.size()
+        return rect.adjusted(0, 0, 15, 0).size()
     
     def paint(self, painter, option, index):
         """
@@ -292,13 +289,14 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         if not content:
             return
         painter.save()
+
+        align = index.data(QtCore.Qt.TextAlignmentRole)
         
         # show content as a link on mouse-over:
         if option.state & QtGui.QStyle.State_MouseOver:
             font = painter.font()
             font.setUnderline(True)
             painter.setFont(font)
-            
         fg = get_foreground(option, index)
         bg = get_background(option, index)
         if bg:
@@ -307,7 +305,10 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             painter.fillRect(option.rect, bg)
         painter.setPen(QtGui.QPen(fg))
         try:
-            painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), content)
+            if align & QtCore.Qt.AlignLeft:
+                painter.drawText(option.rect.adjusted(2, 0, 2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
+            else:
+                painter.drawText(option.rect.adjusted(-2, 0, -2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
         finally:
             painter.restore()
 
