@@ -53,13 +53,6 @@ SORT_DEC = 2
 SORT_REV_INC = 3
 SORT_REV_DEC = 4
 
-TABLE_CORPUS = "corpus"
-TABLE_WORD = "word"
-TABLE_LEMMA = "lemma"
-TABLE_SOURCE = "source"
-TABLE_FILE = "file"
-TABLE_SPEAKER = "speaker"
-
 CONTEXT_KWIC = "KWIC"
 CONTEXT_STRING = "String"
 CONTEXT_COLUMNS = "Columns"
