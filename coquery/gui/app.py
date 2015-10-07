@@ -31,7 +31,7 @@ import QtProgress
 import coqueryUi, coqueryCompactUi
 
 import classes
-import results 
+#import results 
 import error_box
 import sqlwrap
 import queries
@@ -200,7 +200,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.log_proxy.sortCaseSensitivity = False
         self.ui.log_table.setModel(self.log_proxy)
 
-        self.table_model = results.CoqTableModel(self)
+        self.table_model = classes.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
         header = self.ui.data_preview.horizontalHeader()
         header.sectionResized.connect(self.result_column_resize)
@@ -506,9 +506,9 @@ class CoqueryApp(QtGui.QMainWindow):
             column = self.table_model.header[header.logicalIndex(i)]
 
             if column in ("coq_conditional_probability"):
-                deleg = results.CoqProbabilityDelegate(self.ui.data_preview)
+                deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
             else:
-                deleg = results.CoqResultCellDelegate(self.ui.data_preview)
+                deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
             self.ui.data_preview.setItemDelegateForColumn(i, deleg)
 
         if self.table_model.rowCount():
@@ -648,7 +648,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
             group = QtGui.QActionGroup(self, exclusive=True)
             action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
+            action.triggered.connect(lambda: self.change_sorting_order(column, SORT_NONE))
             if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_NONE:
                 action.setChecked(True)
             self.menu.addAction(action)
