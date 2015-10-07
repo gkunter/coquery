@@ -274,17 +274,11 @@ def get_foreground(option, index):
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     margin = 2
-    
-    #def sizeHint(self, option, index):
-        
-        #return QtGui.QFontMetrics().
-        
-        #options = QtGui.QStyleOptionViewItemV4(option)
-        #self.initStyleOption(options,index)
-
-        #content = QtGui.QLabel(unicode(index.data(QtCore.Qt.DisplayRole)))
-        #content.setTextWidth(options.rect.width())
-        #return QtCore.QSize(content.idealWidth() + self.margin * 2, content.size().height())
+    @staticmethod
+    def sizeHint(option, index):
+        rect = options.cfg.metrics.boundingRect(unicode(index.data(QtCore.Qt.DisplayRole)))
+        rect.adjust(0, 0, 2 * CoqResultCellDelegate.margin, 0)
+        return rect.size()
     
     def paint(self, painter, option, index):
         """
@@ -294,7 +288,6 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         from the table's :func:`data` method, using the DecorationRole role.
         On mouse-over, the cell is rendered like a clickable link.
         """
-        
         content = unicode(index.data(QtCore.Qt.DisplayRole))
         if not content:
             return
@@ -314,7 +307,6 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             painter.fillRect(option.rect, bg)
         painter.setPen(QtGui.QPen(fg))
         try:
-            painter.translate(self.margin, 0)
             painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), content)
         finally:
             painter.restore()

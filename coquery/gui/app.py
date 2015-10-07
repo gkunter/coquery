@@ -842,6 +842,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.file_content = None
 
         size = QtGui.QApplication.desktop().screenGeometry()
+        
+        # Retrieve font and metrics for the CoqItemDelegates
+        options.cfg.font = options.cfg.app.font()
+        options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
+        
         if size.height() < 1024 or size.width() < 1024:
             self.ui = coqueryCompactUi.Ui_MainWindow()
         else:
