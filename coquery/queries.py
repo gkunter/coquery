@@ -25,7 +25,8 @@ except ImportError:
         def inner(f, *args):
             return f(*args)
         return lambda *args: inner(f, *args)
-        
+
+import numpy as np        
 import pandas as pd
 
 from errors import *
@@ -366,7 +367,8 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-
+        if "coquery_invisible_corpus_id" not in list(df.columns.values):
+            df["coquery_invisible_corpus_id"] = np.NaN
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
                 df[column] = self._current_number_of_tokens
@@ -513,7 +515,7 @@ class FrequencyQuery(TokenQuery):
     """
     
     def add_output_columns(self):
-        self.Session.output_order.add("coq_frequency")
+        self.Session.output_order.append("coq_frequency")
         
     @staticmethod
     def do_the_grouping(df, group_columns, aggr_dict):

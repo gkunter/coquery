@@ -134,9 +134,9 @@ class Session(object):
             current_query.run()
             self.data_table = current_query.append_results(self.data_table)
             logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
-        
-        self.end_time = datetime.datetime.now()
 
+        self.end_time = datetime.datetime.now()
+        self.data_table = self.data_table[self.output_order]
         self.data_table.reset_index(drop=True, inplace=True)
         self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
         self.output_object.fillna("", inplace=True)
@@ -177,6 +177,10 @@ class Session(object):
         # Retain the column header if the query string was from an input file
         if header == "coquery_query_string" and options.cfg.query_label:
             return options.cfg.query_label
+
+        # other features:
+        if header in COLUMN_NAMES:
+            return COLUMN_NAMES[rc_feature]
         
         # strip coq_ prefix:
         if header.startswith("coq_"):
