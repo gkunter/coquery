@@ -136,11 +136,10 @@ class Session(object):
             logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
 
         self.end_time = datetime.datetime.now()
-        self.data_table = self.data_table[self.output_order]
-        self.data_table.reset_index(drop=True, inplace=True)
+        self.data_table.index = range(1, len(self.data_table.index) + 1)
         self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
         self.output_object.fillna("", inplace=True)
-        self.output_object.reset_index(drop=True, inplace=True)
+        self.output_object.index = range(1, len(self.output_object.index) + 1)
 
         if not options.cfg.gui:
             if not options.cfg.output_path:
@@ -180,7 +179,7 @@ class Session(object):
 
         # other features:
         if header in COLUMN_NAMES:
-            return COLUMN_NAMES[rc_feature]
+            return COLUMN_NAMES[header]
         
         # strip coq_ prefix:
         if header.startswith("coq_"):
