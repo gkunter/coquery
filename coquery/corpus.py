@@ -553,10 +553,10 @@ class SQLResource(BaseResource):
     @classmethod
     def get_select_list(cls, query):
         """
-        Return a set of field names that can be used to extract the 
+        Return a list of field names that can be used to extract the 
         requested columns from the joined MySQL query table.
         
-        This set is usually stored in Session.output_order and determines
+        This list is usually stored in Session.output_order and determines
         which columns appear in the output table. If a column is missing, 
         it may be because it is not correctly included in this set.
         
@@ -567,8 +567,8 @@ class SQLResource(BaseResource):
             
         Returns
         -------
-        select_list : set
-            A set of strings representing the aliased columns in the joined
+        select_list : list
+            A list of strings representing the aliased columns in the joined
             MySQL query table.
         """
         
@@ -637,7 +637,7 @@ class SQLResource(BaseResource):
         if options.cfg.context_source_id:
             select_list.append("coquery_invisible_corpus_id")
             select_list.append("coquery_invisible_number_of_tokens")
-        return set(select_list)
+        return select_list
 
 class SQLLexicon(BaseLexicon):
     entry_cache = {}
