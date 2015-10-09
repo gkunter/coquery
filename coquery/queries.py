@@ -234,6 +234,7 @@ class TokenQuery(object):
         self.Results = []
         self.input_frame = pd.DataFrame()
         self.results_frame = pd.DataFrame()
+        TokenQuery.filter_list = Session.filter_list
 
     def __len__(self):
         return len(self.tokens)
@@ -471,7 +472,7 @@ class TokenQuery(object):
     @classmethod
     def aggregate_it(cls, df, resource):
         agg = cls.aggregate_data(df, resource)
-        agg = cls.filter_data(agg)
+        agg = cls.filter_data(agg, cls.filter_list)
         agg_cols = list(agg.columns.values)
         for col in list(agg_cols):
             if col.startswith("coquery_invisible"):
@@ -604,7 +605,7 @@ class FrequencyQuery(TokenQuery):
         return result
 
     @staticmethod
-    def filter_data(df):
+    def filter_data(df, filter_list):
         """ 
         Apply the frequency filters to the frequency column. 
         
@@ -619,7 +620,7 @@ class FrequencyQuery(TokenQuery):
             A new data frame that contains the filtered rows from the 
             argument data frame.
         """
-        for filt in options.cfg.filter_list:
+        for filt in filter_list:
             if filt.var == options.cfg.freq_label:
                 try:
                     df = df[df["coq_frequency"].apply(filt.check_number)]
@@ -651,7 +652,7 @@ class StatisticsQuery(TokenQuery):
 
 class CollocationQuery(TokenQuery):
     @staticmethod
-    def filter_data(df):
+    def filter_data(df, filter_list):
         """ 
         Apply the frequency filters to the collocate frequency column. 
         
@@ -666,7 +667,7 @@ class CollocationQuery(TokenQuery):
             A new data frame that contains the filtered rows from the 
             argument data frame.
         """
-        for filt in options.cfg.filter_list:
+        for filt in filter_list:
             if filt.var == options.cfg.freq_label:
                 try:
                     df = df[df["coq_collocate_frequency"].apply(filt.check_number)]
@@ -810,7 +811,7 @@ class CollocationQuery(TokenQuery):
         
         self.Session.output_order = collocates.columns.values
 
-        collocates = self.filter_data(collocates)
+        collocates = self.filter_data(collocates, self.Session.filter_list)
         aggregate = collocates.drop_duplicates(subset="coq_word_label")
 
         if options.cfg.gui:

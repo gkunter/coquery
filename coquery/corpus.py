@@ -946,7 +946,7 @@ class SQLCorpus(BaseCorpus):
 
     def get_frequency(self, s):
         """ Return a longint that gives the corpus frequency of the token,
-        taking the filter list from options.cfg.filter_list into account."""
+        taking the filter list from self.resource.filter_list into account."""
         if s in self._frequency_cache:
             return self._frequency_cache[s]
         
@@ -1013,7 +1013,7 @@ class SQLCorpus(BaseCorpus):
     def sql_string_run_query_filter_list(self, self_joined):
         print("FILTER")
         """ Return an SQL string that contains the result filters."""
-        filter_list = self.resource.translate_filters(options.cfg.filter_list)
+        filter_list = self.resource.translate_filters(self.resource.filter_list)
         L = []
         for column, corpus_feature, table, operator, value_list, val_range in filter_list:
             s = ""
@@ -1154,7 +1154,7 @@ class SQLCorpus(BaseCorpus):
         # add all features that are required for the query filters:
         rc_where_constraints = defaultdict(set)
         if number == 0:
-            for filt in self.resource.translate_filters(options.cfg.filter_list):
+            for filt in self.resource.translate_filters(self.resource.filter_list):
                 variable, rc_feature, table_name, op, value_list, _value_range = filt
                 if op.upper() == "LIKE":
                     if "*" not in value_list[0]:
@@ -1467,7 +1467,7 @@ class SQLCorpus(BaseCorpus):
             # FIXME: What happens if the filter does not apply to something
             # in the ngram table, but to a linked table?
             where_string_list = []
-            for filt in self.resource.translate_filters(options.cfg.filter_list):
+            for filt in self.resource.translate_filters(self.resource.filter_list):
                 variable, rc_feature, table_name, op, value_list, _value_range = filt
                 if op.upper() == "LIKE":
                     if "*" not in value_list[0]:

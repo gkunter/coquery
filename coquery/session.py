@@ -77,6 +77,21 @@ class Session(object):
         self.output_order = []
         self.header_shown = False
         self.input_columns = []
+
+        # verify filter list:
+        new_list = []
+        for filt in options.cfg.filter_list:
+            if isinstance(filt, queries.QueryFilter):
+                new_list.append(filt)
+            else:
+                new_filt = queries.QueryFilter()
+                new_filt.resource = self.Resource
+                new_filt.text = filt
+                new_list.append(new_filt)
+        self.filter_list = new_list
+        self.Resource.filter_list = new_list
+
+
         
     def get_max_token_count(self):
         """
@@ -106,18 +121,6 @@ class Session(object):
         """ Process all queries. For each query, go through the entries in 
         query_list() and yield the results for that subquery. Then, write
         all results to the output file. """
-
-        # verify filter list:
-        new_list = []
-        for filt in options.cfg.filter_list:
-            if isinstance(filt, queries.QueryFilter):
-                new_list.append(filt)
-            else:
-                new_filt = queries.QueryFilter()
-                new_filt.resource = self.Resource
-                new_filt.text = filt
-                new_list.append(new_filt)
-        options.cfg.filter_list = new_list
 
         self.start_time = datetime.datetime.now()
         self.end_time = None
