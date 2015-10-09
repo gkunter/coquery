@@ -1160,12 +1160,12 @@ class SQLCorpus(BaseCorpus):
                     if "*" not in value_list[0]:
                         value_list[0] = "*{}*".format(value_list[0])
                     value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
-
+                requested_features.append(rc_feature)
                 rc_table = "{}_table".format(rc_feature.partition("_")[0])
                 rc_where_constraints[rc_table].add(
                     '{} {} "{}"'.format(
                         self.resource.__getattribute__(rc_feature), op, value_list[0]))
-                    
+
         for linked in options.cfg.external_links:
             external, internal = options.cfg.external_links[linked]
             internal_feature = internal.rpartition(".")[-1]
