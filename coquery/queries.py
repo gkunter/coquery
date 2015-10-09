@@ -181,8 +181,7 @@ class QueryFilter(object):
         if var.lower() not in variable_names:
             return False
         if variable_names.count(var.lower()) > 1:
-            print("ambiguous!")
-            print(variable_names, var.lower())
+            logger.warning("Query filter may be ambiguous: {}".format(s))
             return True
         if op.lower() not in [x.lower() for x in self.operators]:
             return False
@@ -473,7 +472,6 @@ class TokenQuery(object):
     def aggregate_it(cls, df, resource):
         agg = cls.aggregate_data(df, resource)
         agg = cls.filter_data(agg)
-        
         agg_cols = list(agg.columns.values)
         for col in list(agg_cols):
             if col.startswith("coquery_invisible"):
@@ -522,6 +520,13 @@ class FrequencyQuery(TokenQuery):
         gp = df.fillna("").groupby(group_columns, sort=False)
         return gp.agg(aggr_dict).reset_index()
     
+    def run(self):
+        super(FrequencyQuery, self).run()
+        if self.results_frame.empty:
+            df = pd.DataFrame(index=[0])
+            df = self.insert_static_data(df)
+            self.results_frame = df
+
     @classmethod
     def aggregate_data(cls, df, resource):
         """
@@ -540,6 +545,7 @@ class FrequencyQuery(TokenQuery):
             row frequencies of the aggregated groups.
         """
         # get a list of grouping and sampling columns:
+        
         columns = []
         for x in df.columns.values:
             try:
@@ -547,7 +553,6 @@ class FrequencyQuery(TokenQuery):
             except ValueError:
                 columns.append(x)
             else:
-                #if n <= self._current_number_of_tokens:
                 columns.append(x)
 
         group_columns = [x for x in columns if not x.startswith("coquery_invisible")]
@@ -558,7 +563,6 @@ class FrequencyQuery(TokenQuery):
         
         if len(df.index) == 0:
             result = pd.DataFrame({"coq_frequency": [0]})
-            #result = self.insert_static_data(pd.DataFrame(), resource)
         elif len(group_columns) == 0:
             # if no grouping variables are selected, simply return the first
             # row of the data frame together with the total length of the 
@@ -578,8 +582,8 @@ class FrequencyQuery(TokenQuery):
                 {col: lambda x: x.head(1) for col in sample_columns})
             # group the data frame by the group columns, apply the aggregate
             # functions to each group, and return the aggregated data frame:
-
             result = cls.do_the_grouping(df, group_columns, aggr_dict)
+
         if "coquery_relative_frequency" in options.cfg.selected_features:
             total_frequency = result.coq_frequency.sum()
             result["coquery_relative_frequency"] = result["coq_frequency"].apply(
@@ -589,7 +593,14 @@ class FrequencyQuery(TokenQuery):
             corpus_size = resource.get_corpus_size()
             result["coquery_per_million_words"] = result["coq_frequency"].apply(
                 lambda x: x / (corpus_size / 1000000))
-            
+
+        # entries with no corpus_id are the result of empty frequency 
+        # queries. Their frequency is set to zero:
+        try:
+            result.coq_frequency[result.coquery_invisible_corpus_id == ""] = 0
+        except TypeError:
+            pass
+        
         return result
 
     @staticmethod
