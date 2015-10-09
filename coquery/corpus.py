@@ -1011,6 +1011,7 @@ class SQLCorpus(BaseCorpus):
         return where_clauses
     
     def sql_string_run_query_filter_list(self, self_joined):
+        print("FILTER")
         """ Return an SQL string that contains the result filters."""
         filter_list = self.resource.translate_filters(options.cfg.filter_list)
         L = []
@@ -1461,15 +1462,31 @@ class SQLCorpus(BaseCorpus):
                     final_select.append("NULL AS {}".format(select_feature))
 
             final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.__getattribute__("corpus_denorm_id")))
-                
+
+            # Add filters:
+            # FIXME: What happens if the filter does not apply to something
+            # in the ngram table, but to a linked table?
+            where_string_list = []
+            for filt in self.resource.translate_filters(options.cfg.filter_list):
+                variable, rc_feature, table_name, op, value_list, _value_range = filt
+                if op.upper() == "LIKE":
+                    if "*" not in value_list[0]:
+                        value_list[0] = "*{}*".format(value_list[0])
+                    value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
+
+                rc_table = "{}_table".format(rc_feature.partition("_")[0])
+                s = '{} {} "{}"'.format(getattr(self.resource, rc_feature), op, value_list[0])
+                where_string_list.append(s)
             return """
             SELECT  {}
             FROM    {}
             {}
+            {}
             """.format(
                 ", ".join(final_select),
                 self.resource.corpus_denorm_table,
-                "\n".join(token_query_list.values())
+                "\n".join(token_query_list.values()),
+                "WHERE {}".format(" AND ".join(where_string_list)) if where_string_list else "",
                 )
 
         order = self.get_token_query_order(token_list)
