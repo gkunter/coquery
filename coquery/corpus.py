@@ -593,6 +593,8 @@ class SQLResource(BaseResource):
 
         # linked columns
         for rc_feature in options.cfg.external_links:
+            if rc_feature.startswith("func"):
+                continue
             external, internal = options.cfg.external_links[rc_feature]
             internal_feature = internal.split(".")[-1]
 
@@ -616,9 +618,9 @@ class SQLResource(BaseResource):
                 else:
                     select_list.append("coq_func_{}_{}_1".format(resource, fc))
 
-            if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_") and "coq_{}_1".format(rc_feature) not in select_list:
-                if "." not in rc_feature:
-                    select_list.append("coq_{}_1".format(rc_feature.replace(".", "_")))
+            #if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_") and "coq_{}_1".format(rc_feature) not in select_list:
+                #if "." not in rc_feature:
+                    #select_list.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
         if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
             # add contexts for each query match:
@@ -1249,7 +1251,10 @@ class SQLCorpus(BaseCorpus):
                 
                 column_list = []
                 for linked in options.cfg.external_links:
-                    rc_corpus, rc_feature = linked.split(".")
+                    if linked.startswith("func"):
+                        _, rc_corpus, rc_feature = linked.split(".")
+                    else:
+                        rc_corpus, rc_feature = linked.split(".")
                     if rc_corpus == external_corpus:
                         name = "coq_{}_{}_{}".format(external_corpus, rc_feature, number +1)
                         variable_string = "{} AS {}".format(
@@ -1568,6 +1573,8 @@ class SQLCorpus(BaseCorpus):
 
         # add any external feature that is linked to a lexicon feature:
         for linked in options.cfg.external_links:
+            if linked.startswith("func"):
+                continue
             external, internal = options.cfg.external_links[linked]
             internal_feature = internal.split(".")[-1]
             external_corpus, external_feature = linked.split(".")
@@ -1599,7 +1606,11 @@ class SQLCorpus(BaseCorpus):
 
         # add any resource feature that is required by a function:
         for res, fun, _ in options.cfg.selected_functions:
-            rc_feature = res.rpartition(".")[-1]
+            # check if the function is applied to an external link:
+            if res.count(".") > 1:
+                rc_feature = "_".join(res.split(".")[1:])
+            else:
+                rc_feature = res.split(".")[-1]
             if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
                 final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
             else:

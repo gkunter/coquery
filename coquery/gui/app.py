@@ -265,6 +265,7 @@ class CoqTreeWidget(QtGui.QTreeWidget):
             
             if item._link_by or (parent and parent._link_by):
                 self.menu.addAction(remove_link)
+                self.menu.addAction(add_function)
             elif item._func:
                 self.menu.addAction(remove_function)
             else:

@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+functionapply.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -33,7 +44,11 @@ class FunctionDialog(QtGui.QDialog):
         self.omit_tables = ["coquery", "corpus"]
         self.ui = functionApplyUi.Ui_FunctionDialog()
         self.ui.setupUi(self)
-        self.ui.label_description.setText(str(self.ui.label_description.text()).format(table, feature))
+        try:
+            table = str(table)
+        except:
+            table = "Linked table"
+        self.ui.label_description.setText(str(self.ui.label_description.text()).format(str(table), str(feature)))
 
         self.ui.label_func1.setText(str(self.ui.label_func1.text()).format("{}.{}".format(table, feature)))
         self.ui.label_func2.setText(str(self.ui.label_func2.text()).format("{}.{}".format(table, feature)))
