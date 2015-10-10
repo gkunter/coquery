@@ -91,6 +91,14 @@ except NameError:
     long = int
     
 # Error messages used by the GUI:
+msg_warning_statistics = """
+<p><b>You have unsaved data in the results table.</b><p>
+<p>The corpus statistics will discard the results table from your last 
+query.</p>
+<p>If you want to retrieve that results table later, you will have to 
+run the query again.</p>
+<p>Do you wish to continue?</p>
+"""
 msg_corpus_no_documentation = """<p>No corpus documentation available.</p>
 <p>The current corpus module does not provide a link to the corpus
 documentation. You may find help on how the corpus is structured by using an

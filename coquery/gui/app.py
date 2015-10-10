@@ -1311,6 +1311,12 @@ class CoqueryApp(QtGui.QMainWindow):
             self.query_thread.start()
 
     def run_statistics(self):
+        if not self.last_results_saved:
+            response = QtGui.QMessageBox.warning(
+            self, "Discard unsaved data", msg_warning_statistics, QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+            if response == QtGui.QMessageBox.No:
+                return
+        
         self.getGuiValues()
         self.Session = StatisticsSession()
         self.ui.statusbar.showMessage("Gathering corpus statistics...")
