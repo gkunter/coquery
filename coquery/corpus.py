@@ -476,22 +476,12 @@ class SQLResource(BaseResource):
         logger.debug("Connected to database %s@%s:%s."  % (self.db_name, options.cfg.db_host, options.cfg.db_port))
         logger.debug("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))
         
-        #create aliases for all tables for which no alias is specified:
-        for x in dir(self):
-            if x.endswith("_table"):
-                if "{}_alias".format(x) not in dir(self):
-                    self.__setattr__("{}_alias".format(x), self.__getattribute__(x))
-                if "{}_construct".format(x) not in dir(self):
-                    self.__setattr__("{}_construct".format(x), self.__getattribute__(x))
-
     def get_statistics(self):
         lexicon_features = [x for x, _ in self.get_lexicon_features()]
         corpus_features = [x for x, _ in self.get_corpus_features()]
         resource_features = lexicon_features + corpus_features
 
-        # first row contains corpus size:
-        stats = [["Corpus", "Tokens", self.corpus.get_corpus_size(), self.corpus.get_corpus_size()]]
-
+        stats = []
         # determine table size for all columns
         table_sizes = {}
         for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table")]:
@@ -500,15 +490,33 @@ class SQLResource(BaseResource):
             self.DB.execute(S)
             table_sizes[table] = self.DB.Cur.fetchone()[0]
 
+        print(table_sizes)
         # get distinct values for each feature:
-        for rc_feature in resource_features:
+        for rc_feature in dir(self):
+            print(rc_feature)
+            if rc_feature.endswith("_table") or "_" not in rc_feature:
+                continue
             rc_table = "{}_table".format(rc_feature.split("_")[0])
-            table = getattr(self, rc_table)
-            column = getattr(self, rc_feature)
-
-            S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
-            self.DB.execute(S)
-            stats.append([table, column, table_sizes[table], self.DB.Cur.fetchone()[0]])
+            try:
+                if getattr(self, rc_table) not in table_sizes:
+                    continue
+            except AttributeError:
+                continue
+            if rc_feature == "{}_id".format(rc_feature.split("_")[0]):
+                continue
+            print("features: ", rc_table, rc_feature)
+            try:
+                table = getattr(self, rc_table)
+                column = getattr(self, rc_feature)
+            except AttributeError:
+                pass
+            else:
+                print("names: ", table, column)
+                S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
+                self.DB.execute(S)
+                stats.append([table, column, table_sizes[table], self.DB.Cur.fetchone()[0]])
+        
+        print(stats)
 
         df = pd.DataFrame(stats)
         # calculate ratio:
@@ -1700,11 +1708,10 @@ class SQLCorpus(BaseCorpus):
         return query_string
         
     def sql_string_get_sentence_wordid(self,  source_id):
-        return "SELECT {corpus_wordid} FROM {corpus} INNER JOIN {source} ON {corpus}.{corpus_source} = {source_alias}.{source_id} WHERE {source_alias}.{source_id} = {this_source}{verbose}".format(
+        return "SELECT {corpus_wordid} FROM {corpus} INNER JOIN {source} ON {corpus}.{corpus_source} = {source}.{source_id} WHERE {source}.{source_id} = {this_source}{verbose}".format(
             corpus_wordid=self.resource.corpus_word_id,
             corpus=self.resource.corpus_table,
             source=self.resource.source_table,
-            source_alias=self.resource.source_table_alias,
             corpus_source=self.resource.corpus_source_id,
             source_id=self.resource.source_id,
             corpus_token=self.resource.corpus_id,
