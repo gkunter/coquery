@@ -27,14 +27,14 @@ class CELEXBuilder(BaseCorpusBuilder):
 
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.word_label, "CHAR(20) NOT NULL"),
-             Column(self.word_cob, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.word_label, "VARCHAR(35) NOT NULL"),
+             Column(self.word_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              #Link(self.word_lemma_id, "MEDIUMINT(5) UNSIGNED NOT NULL"),
              Column(self.word_proncnt, "SMALLINT(2) UNSIGNED NOT NULL"),
              Column(self.word_pronstatus, "ENUM('P','S')"),
-             Column(self.word_phonstrsdisc, "CHAR(29) NOT NULL"),
-             Column(self.word_phoncvbr, "CHAR(35) NOT NULL"),
-             Column(self.word_phonsylbclx, "CHAR(36) NOT NULL")])
+             Column(self.word_phonstrsdisc, "VARCHAR(41) NOT NULL"),
+             Column(self.word_phoncvbr, "VARCHAR(53) NOT NULL"),
+             Column(self.word_phonsylbclx, "VARCHAR(53) NOT NULL")])
 
     def build_load_files(self):
         files = self.get_file_list(self.arguments.path)
@@ -89,7 +89,7 @@ class CELEXBuilder(BaseCorpusBuilder):
     
     @staticmethod
     def get_name():
-        return "CELEX_Eng"
+        return "celex"
     
     @staticmethod
     def get_license():
