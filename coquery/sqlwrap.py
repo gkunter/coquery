@@ -58,7 +58,7 @@ class SqlDB (object):
     def kill_connection(self):
         try:
             self.Con.kill(self.Con.thread_id())
-        except mysql.OperationalError:
+        except (mysql.OperationalError, mysql.InternalError):
             pass
 
     def set_variable(self, variable, value):
