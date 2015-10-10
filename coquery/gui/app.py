@@ -1251,7 +1251,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.statusbar.showMessage("Terminating query...")
             try:
                 self.Session.Corpus.resource.DB.kill_connection()
-            except (AttributeError, mysql.err):
+            except (AttributeError, sqlwrap.mysql.err):
                 pass
             if self.query_thread:
                 self.query_thread.terminate()
