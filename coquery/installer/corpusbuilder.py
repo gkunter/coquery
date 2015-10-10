@@ -278,8 +278,12 @@ class Table(object):
         """
         
         if self._add_cache:
+            if self.primary.name not in self._col_names:
+                fields = [self.primary.name] + self._col_names
+            else:
+                fields = self._col_names
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self._name, ", ".join([self.primary.name] + self._col_names), ", ".join(["%s"] * (len(self._col_names) + 1)))
+                self._name, ", ".join(fields), ", ".join(["%s"] * len(fields)))
             data = []
             new_keys = []
             # build a list of all new entries, i.e. those for which the value
@@ -290,10 +294,20 @@ class Table(object):
                     if len(row_data) == 1:
                         for x in row_data:
                             row_data[x] = ["", row_data[x][0], "u"]
-                    data.append([row_id] + list(row_data.values()))
+                    if self.primary.name in self._col_names:
+                        data.append(list(row_data.values()))
+                    else:
+                        data.append([row_id] + list(row_data.values()))
                     new_keys.append(row)
 
             if data: 
+                #print(sql_string)
+                #for x in data:
+                    #print(x)
+                ##data = db_connector.escape_string(data)
+                #for x in data:
+                    #print(x)
+                #return
                 try:
                     db_connector.executemany(sql_string, data)
                 except TypeError as e:
@@ -303,11 +317,17 @@ class Table(object):
                 for row in new_keys:
                     self._add_cache[row] = (self._add_cache[row][0], None)
     
-    def add_next(self, row):
+    def _add_next_with_primary(self, row):
         """ Add a valid primary key to the data in the 'row' dictionary, 
         and store the data in add cache of the table. """ 
-        #print(row)
         self._current_id += 1
+        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        return self._current_id
+
+    def _add_next_no_primary(self, row):
+        """ Sotre the row in the add cache of the table. The primary key is 
+        expected to be already in the row, so it is not added."""
+        self._current_id = row[self.primary.name]
         self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
         return self._current_id
     
@@ -317,10 +337,16 @@ class Table(object):
 
         if not self._col_names:
             self._col_names = list(row.keys())
-        self._current_id += 1
-        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        if self.primary.name in self._col_names:
+            # if the primary key is in the row, use it:
+            self._current_id = row[self.primary.name]
+            self.add = self._add_next_no_primary
+        else:
+            # otherwise, the primary key is created:
+            self._current_id += 1
+            self.add = self._add_next_with_primary
 
-        self.add = self.add_next
+        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
         return self._current_id
         
     def get_or_insert(self, values, case=False):
