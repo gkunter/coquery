@@ -245,7 +245,7 @@ class TokenQuery(object):
         return df
     
     @staticmethod
-    def filter_data(df):
+    def filter_data(df, filter_list):
         """ Apply filters to the data frame. """
         return df
     
@@ -439,14 +439,17 @@ class TokenQuery(object):
             The data frame with new columns for each function.
         """
 
+        lexicon_features = [x for x, _ in self.Resource.get_lexicon_features()]
+
         func_counter = collections.Counter()
-        for res, fun, _ in options.cfg.selected_functions:
-            resource = res.rpartition(".")[-1]
+        for rc_feature, fun, _ in options.cfg.selected_functions:
+            resource = self.Resource.get_feature_from_function(rc_feature)
+
             func_counter[resource] += 1
             fc = func_counter[resource]
-            
+                        
             # handle functions added to lexicon features:
-            if resource in [x for x, _ in self.Resource.get_lexicon_features()]:
+            if self.Resource.is_lexical(rc_feature):
                 for n in range(self.get_max_tokens()):
                     new_name = "coq_func_{}_{}_{}".format(resource, fc, n + 1)
                     col_name = "coq_{}_{}".format(resource, n + 1)
@@ -456,7 +459,6 @@ class TokenQuery(object):
                 new_name = "coq_func_{}_{}_1".format(resource, fc)
                 col_name = "coq_{}_1".format(resource)
                 df[new_name] = df[col_name].apply(fun)
-
         return df
 
     def add_output_columns(self):

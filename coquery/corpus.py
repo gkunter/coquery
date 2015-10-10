@@ -354,6 +354,52 @@ class BaseResource(object):
                         lexicon_variables.append((y, type(cls).__getattribute__(cls, y)))    
         return lexicon_variables
     
+    @staticmethod
+    def get_feature_from_function(func):
+        if func.count(".") > 1:
+            return "_".join(func.split(".")[1:])
+        else:
+            return func.split(".")[-1]
+
+    @staticmethod
+    def get_referent_feature(rc_feature):
+        """
+        Get the referent feature name of a rc_feature.
+        
+        For normal output columns, the referent feautre name is identical 
+        to the rc_feature string. 
+        
+        For functions, it is the rc_feature minus the prefix "func.". 
+        
+        For columns from an external table, or for functions applied to such 
+        columns, it is the feature name of the column that the label is 
+        linked to.
+        
+        Parameters
+        ----------
+        rc_feature : string
+        
+        Returns
+        -------
+        resource : string
+        """
+        
+        if "." not in rc_feature:
+            return rc_feature
+        elif rc_feature.startswith("func.") and rc_feature.count(".") == 1:
+            return rc_feature.rpartition("func.")[-1]
+        else:
+            prefix_stripped = rc_feature.rpartition("func.")[-1]
+            external, internal = options.cfg.external_links[prefix_stripped]
+            internal_table, internal_feature = internal.split(".")
+            return internal_feature
+
+    @classmethod
+    def is_lexical(cls, rc_feature):
+        lexicon_features = [x for x, _ in cls.get_lexicon_features()]
+        resource = cls.get_referent_feature(rc_feature)
+        return resource in lexicon_features
+    
     @classmethod
     def translate_filters(cls, filters):
         """ Return a translation list that contains the corpus feature names
@@ -592,35 +638,45 @@ class SQLResource(BaseResource):
                     select_list.append(rc_feature)
 
         # linked columns
+        print("----")
+        print(options.cfg.selected_features)
+        print("----")
+        print(options.cfg.external_links)
+        print("----")
         for rc_feature in options.cfg.external_links:
+            if rc_feature not in options.cfg.selected_features:
+                continue
             if rc_feature.startswith("func"):
                 continue
-            external, internal = options.cfg.external_links[rc_feature]
-            internal_feature = internal.split(".")[-1]
-
             external_table, external_feature = rc_feature.split(".")
             linked_feature = "{}_{}".format(external_table, external_feature)
-            if internal_feature in lexicon_features:
+            if cls.is_lexical(rc_feature):
                 select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
             else:
                 select_list.append("coq_{}_1".format(linked_feature))
+        print(select_list)
+        print("----")
 
         # functions:
-        func_counter =  Counter()
+        func_counter = Counter()
         for rc_feature in options.cfg.selected_features:
             if rc_feature.startswith("func."):
-                resource = rc_feature.rpartition(".")[-1]
+                if rc_feature.count(".") > 1:
+                    resource = "_".join(rc_feature.split(".")[1:])
+                    #external, internal = options.cfg.external_links[rc_feature]
+                    #is_lexical = internal.split(".")[-1] in lexicon_features
+                else:
+                    resource = rc_feature.split(".")[-1]
+                    #is_lexical = resource in lexicon_features
+
                 func_counter[resource] += 1
                 fc = func_counter[resource]
                 
-                if resource in lexicon_features:
+                if cls.is_lexical(rc_feature):
                     select_list += ["coq_func_{}_{}_{}".format(resource, fc, x + 1) for x in range(max_token_count)]
                 else:
                     select_list.append("coq_func_{}_{}_1".format(resource, fc))
-
-            #if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_") and "coq_{}_1".format(rc_feature) not in select_list:
-                #if "." not in rc_feature:
-                    #select_list.append("coq_{}_1".format(rc_feature.replace(".", "_")))
+        print(select_list)
 
         if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
             # add contexts for each query match:
@@ -1571,21 +1627,25 @@ class SQLCorpus(BaseCorpus):
                             else:
                                 final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
 
-        # add any external feature that is linked to a lexicon feature:
+        # add any external feature that is not a function:
         for linked in options.cfg.external_links:
-            if linked.startswith("func"):
+            if linked.startswith("func."):
                 continue
+
             external, internal = options.cfg.external_links[linked]
             internal_feature = internal.split(".")[-1]
             external_corpus, external_feature = linked.split(".")
-            
-            if internal_feature in [x for x, _ in self.resource.get_lexicon_features()]:
+
+            if self.resource.is_lexical(linked):
                 for i in range(Query.Session.get_max_token_count()):
                     if options.cfg.align_quantified:
                         if i in positions_lexical_items:
                             final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
                     else:
                         final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
+            else:
+                final_select.append("coq_{}_{}_1".format(external_corpus, external_feature))
+
 
         # add the corpus features in the preferred order:
         for rc_feature in self.resource.get_preferred_output_order():
