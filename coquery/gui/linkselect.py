@@ -51,12 +51,13 @@ class LinkSelect(QtGui.QDialog):
             corpusItem.setText(0, corpus.upper())
             corpusItem.setObjectName(corpus)
             for table in [x for x in table_dict if x not in self.omit_tables]:
+                table_string = getattr(resource, "{}_table".format(table))
                 tableItem = CoqTreeItem()
-                tableItem.setText(0, table.capitalize())
+                tableItem.setText(0, table_string)
                 tableItem.setObjectName(table)
                 for feature in [x for x in table_dict[table] if not x.rpartition("_")[-1] in ("table", "id")]:
                     featureItem = CoqTreeItem()
-                    featureItem.setText(0, resource.__getattribute__(resource, feature))
+                    featureItem.setText(0, getattr(resource, feature))
                     featureItem.setObjectName(feature)
                     tableItem.addChild(featureItem)
                 if tableItem.childCount():
