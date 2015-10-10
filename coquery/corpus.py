@@ -598,8 +598,7 @@ class SQLResource(BaseResource):
 
             external_table, external_feature = rc_feature.split(".")
             linked_feature = "{}_{}".format(external_table, external_feature)
-
-            if rc_feature in lexicon_features:
+            if internal_feature in lexicon_features:
                 select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
             else:
                 select_list.append("coq_{}_1".format(linked_feature))
@@ -1011,7 +1010,6 @@ class SQLCorpus(BaseCorpus):
         return where_clauses
     
     def sql_string_run_query_filter_list(self, self_joined):
-        print("FILTER")
         """ Return an SQL string that contains the result filters."""
         filter_list = self.resource.translate_filters(self.resource.filter_list)
         L = []
@@ -1573,19 +1571,14 @@ class SQLCorpus(BaseCorpus):
             external, internal = options.cfg.external_links[linked]
             internal_feature = internal.split(".")[-1]
             external_corpus, external_feature = linked.split(".")
+            
             if internal_feature in [x for x, _ in self.resource.get_lexicon_features()]:
                 for i in range(Query.Session.get_max_token_count()):
                     if options.cfg.align_quantified:
-                        last_offset = 0
-                        if i + 1 in positions_lexical_items:
+                        if i in positions_lexical_items:
                             final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
-                        #else:
-                            #final_select.append("NULL AS coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
                     else:
-                        if i < len(token_list):
-                            final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
-                        #else:
-                            #final_select.append("NULL AS coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
+                        final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
 
         # add the corpus features in the preferred order:
         for rc_feature in self.resource.get_preferred_output_order():
