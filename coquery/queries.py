@@ -516,7 +516,7 @@ class FrequencyQuery(TokenQuery):
     """
     
     def add_output_columns(self):
-        self.Session.output_order.append("coq_frequency")
+        self.Session.output_order.add("coq_frequency")
         
     @staticmethod
     def do_the_grouping(df, group_columns, aggr_dict):

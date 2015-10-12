@@ -91,7 +91,7 @@ class CollocationNoContextError(NoTraceException):
     
 class ContextUnvailableError(NoTraceException):
     error_message = """
-    <p>The selected corpos does not provide enough information to show the
+    <p>The selected corpus does not provide enough information to show the
     context of the token.</p>
     """
 
@@ -189,7 +189,19 @@ class SQLProgrammingError(GenericException):
     error_message = "SQL programming error"
 
 class SQLNoConnectorError(GenericException):
-    error_message = "Could not load a MySQL connector module for your Python configuration.\nPlease install such a module on your system.\nCurrently supported are: MySQLdb, pymysql."
+    error_message = """The MySQL connector module 'pymysql' was not found for 
+    your current Python configuration.
+    
+    Please install this module, and try again. On many systems, you can use
+    the Python package installer 'pip' to do this. The command to install
+    pymysql using pip is:
+    
+    pip install pymysql
+    
+    If your receive an error message which states that the command 'pip' 
+    could not be found, you need to install it first. Please refer to 
+    https://pip.pypa.io/ for instructions.
+    """
 
 def get_error_repr(exc_info):
     exc_type, exc_obj, exc_tb = exc_info
