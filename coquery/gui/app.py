@@ -930,11 +930,6 @@ class CoqueryApp(QtGui.QMainWindow):
     def file_options(self):
         """ Get CSV file options for current query input file. """
         import csvOptions
-        print((options.cfg.input_separator,
-             options.cfg.query_column_number,
-             options.cfg.file_has_headers,
-             options.cfg.skip_lines,
-             options.cfg.quote_char))
         results = csvOptions.CSVOptions.getOptions(
             str(self.ui.edit_file_name.text()), 
             (options.cfg.input_separator,
@@ -956,11 +951,6 @@ class CoqueryApp(QtGui.QMainWindow):
             elif options.cfg.input_separator == "{space}":
                 options.cfg.input_separator = " "
             self.switch_to_file()
-        print((options.cfg.input_separator,
-             options.cfg.query_column_number,
-             options.cfg.file_has_headers,
-             options.cfg.skip_lines,
-             options.cfg.quote_char))
 
     def manage_stopwords(self):
         import stopwords 
