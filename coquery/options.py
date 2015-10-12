@@ -80,6 +80,14 @@ class Options(object):
         self.args.column_visibility = {}
         self.args.row_visibility = {}
         self.args.row_color = {}
+        
+        # Set defaults for CSV files:
+        self.args.query_column_number = 1
+        self.args.skip_lines = 0
+        self.args.input_separator = ','
+        self.args.output_separator = ","
+        self.args.quote_char = '"'
+        
 
     @property
     def cfg(self):
@@ -101,12 +109,12 @@ class Options(object):
         # File options:
         group = self.parser.add_argument_group("File options")
         group.add_argument("-a", "--append", help="append output to OUTPUTFILE, if specified (default: overwrite)", action="store_true")
-        group.add_argument("-k", "--skip", help="skip SKIP lines in INPUTFILE (default: 0)", type=int, default=0, dest="skip_lines")
+        group.add_argument("-k", "--skip", help="skip SKIP lines in INPUTFILE (default: 0)", type=int, dest="skip_lines")
         group.add_argument("-H", "--header", help="use first row of INPUTFILE as headers", action="store_true", dest="file_has_headers")
-        group.add_argument("-n", "--number", help="use column NUMBER in INPUTFILE for queries", type=int, default=1, dest="query_column_number")
-        group.add_argument("--is", "--input-separator", help="use CHARACTER as separator in input CSV file",  default=',', metavar="CHARACTER", dest="input_separator")
-        group.add_argument("--os", "--output-separator", help="use CHARACTER as separator in output CSV file", default=',', metavar="CHARACTER", dest="output_separator")
-        group.add_argument("--quote-character", help="use CHARACTER as quoting character", default='"', metavar="CHARACTER", dest="quote_char")
+        group.add_argument("-n", "--number", help="use column NUMBER in INPUTFILE for queries", type=int, dest="query_column_number")
+        group.add_argument("--is", "--input-separator", help="use CHARACTER as separator in input CSV file",  metavar="CHARACTER", dest="input_separator")
+        group.add_argument("--os", "--output-separator", help="use CHARACTER as separator in output CSV file", metavar="CHARACTER", dest="output_separator")
+        group.add_argument("--quote-character", help="use CHARACTER as quoting character", metavar="CHARACTER", dest="quote_char")
         group.add_argument("--input-encoding", help="use INPUT-ENCODING as the encoding scheme for the input file (default: utf-8)", type=str, default="utf-8", dest="input_encoding")
         group.add_argument("--output-encoding", help="use OUTPUT-ENCODING as the encoding scheme for the output file (default: utf-8)", type=str, default="utf-8", dest="output_encoding")
 
@@ -493,7 +501,6 @@ class Options(object):
                         except (configparser.NoOptionError, ValueError):
                             pass
                         else:
-                            print("read")
                             # Read CSV options, but only if a CSV file name
                             # is also in the configuration. If the file name
                             # was provided as an argument, we shouldn't use
@@ -593,7 +600,6 @@ class Options(object):
         vars(self.args) ["db_password"] = db_password
         vars(self.args) ["db_port"] = db_port
         vars(self.args) ["db_host"] = db_host
-        print(self.args)
 
 cfg = None
 
