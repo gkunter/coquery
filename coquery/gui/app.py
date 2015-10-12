@@ -857,7 +857,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.setupUi(self)
         
         self.setup_app()
-        self.csv_options = None
         self.query_thread = None
         self.last_results_saved = True
         self.corpus_manager = None
@@ -931,14 +930,37 @@ class CoqueryApp(QtGui.QMainWindow):
     def file_options(self):
         """ Get CSV file options for current query input file. """
         import csvOptions
+        print((options.cfg.input_separator,
+             options.cfg.query_column_number,
+             options.cfg.file_has_headers,
+             options.cfg.skip_lines,
+             options.cfg.quote_char))
         results = csvOptions.CSVOptions.getOptions(
             str(self.ui.edit_file_name.text()), 
-            self.csv_options, 
+            (options.cfg.input_separator,
+             options.cfg.query_column_number,
+             options.cfg.file_has_headers,
+             options.cfg.skip_lines,
+             options.cfg.quote_char),
             self, icon=options.cfg.icon)
         
         if results:
-            self.csv_options = results
+            (options.cfg.input_separator,
+             options.cfg.query_column_number,
+             options.cfg.file_has_headers,
+             options.cfg.skip_lines,
+             options.cfg.quote_char) = results
+            
+            if options.cfg.input_separator == "{tab}":
+                options.cfg.input_separator = "\t"
+            elif options.cfg.input_separator == "{space}":
+                options.cfg.input_separator = " "
             self.switch_to_file()
+        print((options.cfg.input_separator,
+             options.cfg.query_column_number,
+             options.cfg.file_has_headers,
+             options.cfg.skip_lines,
+             options.cfg.quote_char))
 
     def manage_stopwords(self):
         import stopwords 
@@ -1564,19 +1586,6 @@ class CoqueryApp(QtGui.QMainWindow):
                     options.cfg.query_list = [str(self.ui.edit_query_string.toPlainText())]
             options.cfg.input_path = str(self.ui.edit_file_name.text())
 
-            # retrieve the CSV options for the current input file:
-            if self.csv_options:
-                sep, col, head, skip, quote = self.csv_options
-                if sep == "{tab}":
-                    sep = "\t"
-                if sep == "{space}":
-                    sep = " "
-                options.cfg.input_separator = sep
-                options.cfg.query_column_number = col
-                options.cfg.file_has_headers = head
-                options.cfg.skip_lines = skip
-                options.cfg.quote_char = quote
-
             # get context options:
             try:
                 options.cfg.context_left = self.ui.context_left_span.value()
@@ -1666,8 +1675,6 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.radio_context_mode_kwic.setChecked(True)
             
-        self.csv_options = (options.cfg.input_separator, options.cfg.query_column_number, options.cfg.file_has_headers, options.cfg.skip_lines, options.cfg.quote_char)
-        
         for filt in list(options.cfg.filter_list):
             self.ui.filter_box.addTag(filt)
             options.cfg.filter_list.remove(filt)

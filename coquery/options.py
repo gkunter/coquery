@@ -453,19 +453,19 @@ class Options(object):
             if "sql" in config_file.sections():
                 try:
                     db_user = config_file.get("sql", "db_user")
-                except configparser.NoOptionError:
+                except (configparser.NoOptionError, ValueError):
                     pass
                 try:
                     db_password = config_file.get("sql", "db_password")
-                except configparser.NoOptionError:
+                except (configparser.NoOptionError, ValueError):
                     pass
                 try:
                     db_port = int(config_file.get("sql", "db_port"))
-                except configparser.NoOptionError:
+                except (configparser.NoOptionError, ValueError):
                     pass
                 try:
                     db_host = config_file.get("sql", "db_host")
-                except configparser.NoOptionError:
+                except (configparser.NoOptionError, ValueError):
                     pass
                 
             # only use the other settings from the configuration file if a 
@@ -475,23 +475,49 @@ class Options(object):
                     if section == "main":
                         try:
                             default_corpus = config_file.get("main", "default_corpus")
-                        except configparser.NoOptionError:
+                        except (configparser.NoOptionError, ValueError):
                             default_corpus = self.corpora_dict.keys()[0]
                         vars(self.args) ["corpus"] = default_corpus
                         try:
                             mode = config_file.get("main", "query_mode")
                             vars(self.args)["MODE"] = mode
-                        except configparser.NoOptionError:
+                        except (configparser.NoOptionError, ValueError):
                             default_corpus = QUERY_MODE_DISTINCT
                         try:
                             last_query = config_file.get("main", "query_string")
                             vars(self.args)["query_list"] = [last_query.strip('"')]
-                        except configparser.NoOptionError:
+                        except (configparser.NoOptionError, ValueError):
                             pass
                         try:
-                            vars(self.args)["input_path"] = config_file.get("main", "query_file")
-                        except configparser.NoOptionError:
+                            vars(self.args)["input_path"] = config_file.get("main", "csv_file")
+                        except (configparser.NoOptionError, ValueError):
                             pass
+                        else:
+                            print("read")
+                            # Read CSV options, but only if a CSV file name
+                            # is also in the configuration. If the file name
+                            # was provided as an argument, we shouldn't use
+                            # the saved values.
+                            try:
+                                self.args.input_separator = config_file.get("main", "csv_separator")
+                            except (configparser.NoOptionError, ValueError):
+                                pass
+                            try:
+                                self.args.query_column_number = config_file.getint("main", "csv_column")
+                            except (configparser.NoOptionError, ValueError):
+                                pass
+                            try:
+                                self.args.file_has_headers = config_file.getboolean("main", "csv_has_header")
+                            except (configparser.NoOptionError, ValueError):
+                                pass
+                            try:
+                                self.args.skip_lines = config_file.getint("main", "csv_line_skip")
+                            except (configparser.NoOptionError, ValueError):
+                                pass
+                            try:
+                                self.args.quote_char = config_file.get("main", "csv_quote_char")
+                            except (configparser.NoOptionError, ValueError):
+                                pass
 
                     elif section == "output":
                         for variable, value in config_file.items("output"):
@@ -518,15 +544,15 @@ class Options(object):
                     elif section == "gui":
                         try:
                             self.args.ask_on_quit = bool(config_file.get("gui", "ask_on_quit"))
-                        except configparser.NoOptionError:
+                        except (configparser.NoOptionError, ValueError):
                             self.args.ask_on_quit = True
                         try:
                             self.args.save_query_string = config_file.get("gui", "save_query_string")
-                        except configparser.NoOptionError:
+                        except (configparser.NoOptionError, ValueError):
                             self.args.save_query_string = True
                         try:
                             self.args.save_query_file = config_file.get("gui", "save_query_file")
-                        except configparser.NoOptionError:
+                        except (configparser.NoOptionError, ValueError):
                             self.args.save_query_file = True
 
                         try:
@@ -567,6 +593,7 @@ class Options(object):
         vars(self.args) ["db_password"] = db_password
         vars(self.args) ["db_port"] = db_port
         vars(self.args) ["db_host"] = db_host
+        print(self.args)
 
 cfg = None
 
@@ -607,7 +634,12 @@ def save_configuration():
     if cfg.query_list and cfg.save_query_string:
         config.set("main", "query_string", ",".join(['"{}"'.format(x) for x in cfg.query_list]))
     if cfg.input_path and cfg.save_query_file:
-        config.set("main", "query_file", cfg.input_path)
+        config.set("main", "csv_file", cfg.input_path)
+        config.set("main", "csv_separator", cfg.input_separator)
+        config.set("main", "csv_column", cfg.query_column_number)
+        config.set("main", "csv_has_header", cfg.file_has_headers)
+        config.set("main", "csv_line_skip", cfg.skip_lines)
+        config.set("main", "csv_quote_char", cfg.quote_char)
     
     if not "sql" in config.sections():
         config.add_section("sql")
