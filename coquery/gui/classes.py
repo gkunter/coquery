@@ -446,6 +446,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.last_header = self.header
 
     def reorder_data(self, new_order):
+        if "coquery_invisible_corpus_id" not in new_order:
+            new_order.append("coquery_invisible_corpus_id")
+        if "coquery_invisible_number_of_tokens" not in new_order:
+            new_order.append("coquery_invisible_number_of_tokens")
         self.content = self.content.reindex(columns=new_order)
         # notify the GUI that the whole data frame has changed:
         self.dataChanged.emit(

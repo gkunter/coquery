@@ -91,6 +91,10 @@ except NameError:
     long = int
     
 # Error messages used by the GUI:
+msg_no_context_available = """
+<p><b>Context information is not available.</b><p>
+<p>There is no context information available for the item that you have 
+selected.</p>"""
 msg_corpus_no_documentation = """
 <p><b>Corpus documentation for corpus '{corpus}' is not available.</b></p>
 <p>The corpus module '{corpus}' does not provide a link to the corpus
