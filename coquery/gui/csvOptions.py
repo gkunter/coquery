@@ -5,6 +5,8 @@ import sys
 import pandas as pd
 import numpy as np
 
+from errors import *
+
 class MyTableModel(QtCore.QAbstractTableModel):
 
     def __init__(self, parent, df, skip, *args):
@@ -119,14 +121,18 @@ class CSVOptions(QtGui.QDialog):
         quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
             str(self.ui.quote_char.currentText())]
         header=0 if self.ui.file_has_headers.isChecked() else None
-
-        self.file_table = pd.read_table(
-            self.filename,
-            header=header,
-            sep=str(self.separator),
-            quoting=3 if not quote else 0,
-            quotechar=quote if quote else "#",
-            na_filter=False)
+        try:
+            self.file_table = pd.read_table(
+                self.filename,
+                header=header,
+                sep=str(self.separator),
+                quoting=3 if not quote else 0,
+                quotechar=quote if quote else "#",
+                na_filter=False)
+        except ValueError as e:
+            exception = EmptyInputFileError(self.filename)
+            QtGui.QMessageBox.critical(self.parent(), "Query file error", str(exception))
+            raise exception
             
     def update_content(self):
         self.split_file_content()

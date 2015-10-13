@@ -130,6 +130,12 @@ class IllegalArgumentError(NoTraceException):
     def __init__(self, par):
         self.par = par
 
+class EmptyInputFileError(NoTraceException):
+    error_message = "The query input file {} is empty or cannot be read."
+    def __init__(self, par):
+        self.par = ""
+        self.error_message = self.error_message.format(par)
+
 class TokenPartOfSpeechError(NoTraceException):
     error_message = "Illegal part of speech specification"
 

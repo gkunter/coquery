@@ -285,12 +285,15 @@ class SessionInputFile(Session):
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
             
-            input_file = pd.read_table(
-                filepath_or_buffer=InputFile,
-                sep=options.cfg.input_separator,
-                quotechar=options.cfg.quote_char,
-                encoding=options.cfg.input_encoding,
-                na_filter=False)
+            try:
+                input_file = pd.read_table(
+                    filepath_or_buffer=InputFile,
+                    sep=options.cfg.input_separator,
+                    quotechar=options.cfg.quote_char,
+                    encoding=options.cfg.input_encoding,
+                    na_filter=False)
+            except ValueError:
+                raise EmptyInputFileError(InputFile)
 
             if options.cfg.file_has_headers and self.header == None:
                 self.header = input_file.columns.values.tolist()
