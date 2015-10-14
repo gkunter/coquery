@@ -106,12 +106,20 @@ import matplotlib.pyplot as plt
     #return i
 
 class CoqNavigationToolbar(NavigationToolbar):
+    
     def __init__(self, canvas, parent, coordinates=True):
         super(CoqNavigationToolbar, self).__init__(canvas, parent, coordinates)
         self.check_freeze = QtGui.QCheckBox()
         self.check_freeze.setText("Freeze visualization")
         self.check_freeze.setObjectName("check_freeze")
         self.addWidget(self.check_freeze)
+
+    def edit_parameters(self, *args):
+        import figureoptions
+        new_values = figureoptions.FigureOptions.manage(self.parent.visualizer.options)
+        if new_values:
+            self.parent.visualizer.options.update(new_values)
+            self.parent.update_plot()
 
 class BaseVisualizer(object):
     """ 
@@ -132,15 +140,30 @@ class BaseVisualizer(object):
     def __init__(self, data_model, data_view):
         self._model = None
         self._view = None
+        self.options = {}
         self.set_data_source(data_model, data_view)
+        self.set_defaults()
         self.setup_figure()
     
-    #def get_xlim(self):
-        #return (0, options.cfg.main_window.Session.Corpus.get_corpus_size())
-    
-    #def get_ylim(self):
-        #return (0, 1)
-
+    def set_defaults(self):
+        if not self.options.get("color_palette", ""):
+            if len(self._levels) == 0:
+                self.options["color_palette"] = "Paired"
+                self.options["color_number"] = 1
+            elif len(self._levels[-1]) in (2, 4, 6):
+                self.options["color_palette"] = "Paired"
+                self.options["color_number"] = len(self._levels[-1])
+            elif len(self._groupby) == 2:
+                self.options["color_palette"] = "Paired"
+                self.options["color_number"] = len(self._levels[-1])
+            else:
+                self.options["color_palette"] = "RdPu"
+                self.options["color_number"] = len(self._levels[-1])
+            
+        self.options["color_palette_values"] = sns.color_palette(
+            self.options["color_palette"],
+            self.options["color_number"])
+                                                                                                                            
     def _validate_layout(func):
         def func_wrapper(self):
             if self._col_wrap:
