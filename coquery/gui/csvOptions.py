@@ -1,4 +1,15 @@
-#from pyqt_compat import QtCore, QtGui
+# -*- coding: utf-8 -*-
+
+"""
+csvOptions.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from pyqt_compat import QtGui, QtCore
 import csvOptionsUi
 import sys
