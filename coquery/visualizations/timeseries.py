@@ -1,4 +1,13 @@
-""" Time series visualization """
+# -*- coding: utf-8 -*-
+""" 
+timeseries.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 import visualizer as vis
 import seaborn as sns
@@ -7,6 +16,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from errors import *
+import logging
+import __init__
 
 class Visualizer(vis.BaseVisualizer):
     visualize_frequency = True
@@ -28,6 +39,17 @@ class Visualizer(vis.BaseVisualizer):
             self.smooth = False
             
         super(Visualizer, self).__init__(*args, **kwargs)
+
+    def set_defaults(self):
+        if self.percentage:
+            self.options["label_y_axis"] = "Percentage!"
+        else:
+            if self.area:
+                self.options["label_y_axis"] = "Cummulative frequency"
+            else:
+                self.options["label_y_axis"] = "Frequency"
+        self.options["label_x_axis"] = self._groupby[-1]
+        super(Visualizer, self).set_defaults()
     
     def update_data(self, bandwidth=1):
         super(Visualizer, self).update_data()
@@ -72,6 +94,12 @@ class Visualizer(vis.BaseVisualizer):
             return np.NaN
         
     def convert_to_timeseries(self, x):
+        # FIXME:
+        # pandas >= 0.17.0 has changed the Timestamp API. Check that this
+        # is still working!
+        version = [int(x) for x in pd.version.version.split(".")]
+        if version[0] >= 0 and version[1] > 15:
+            logger.warning("Behaviour of Timeseries has changed in pandas 0.17.0. This may cause problems in Coquery.")
         try:
              return pd.Timestamp("{}".format(
                 (pd.Timestamp("{}".format(x)).year // self.bandwidth) * self.bandwidth)).year
@@ -131,16 +159,12 @@ class Visualizer(vis.BaseVisualizer):
             self.g.set(ylim=(0, 100))
         else:
             self.g.set(ylim=(0, self.vmax))
-        if self.percentage:
-            self.g.set_axis_labels(self._groupby[-1], "Percentage")
-        else:
-            if self.area:
-                self.g.set_axis_labels(self._groupby[-1], "Cummulative frequency")                
-            else:
-                self.g.set_axis_labels(self._groupby[-1], "Frequency")                
+        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         
         #self.setup_axis("Y")
         #self.setup_axis("X")
         if len(self._groupby) == 2:
             self.g.fig.get_axes()[-1].legend(title=self._groupby[0], framealpha=0.7, frameon=True, loc="lower left").draggable()
         self.g.fig.tight_layout()
+
+logger = logging.getLogger(__init__.NAME)
