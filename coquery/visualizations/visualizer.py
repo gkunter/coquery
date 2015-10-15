@@ -109,10 +109,11 @@ class CoqNavigationToolbar(NavigationToolbar):
     
     def __init__(self, canvas, parent, coordinates=True):
         super(CoqNavigationToolbar, self).__init__(canvas, parent, coordinates)
-        self.check_freeze = QtGui.QCheckBox()
-        self.check_freeze.setText("Freeze visualization")
-        self.check_freeze.setObjectName("check_freeze")
-        self.addWidget(self.check_freeze)
+        if options.cfg.experimental:
+            self.check_freeze = QtGui.QCheckBox()
+            self.check_freeze.setText("Freeze visualization")
+            self.check_freeze.setObjectName("check_freeze")
+            self.addWidget(self.check_freeze)
 
     def edit_parameters(self, *args):
         import figureoptions
@@ -683,7 +684,8 @@ class VisualizerDialog(QtGui.QWidget):
         
         if not self.toolbar:
             self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
-            self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
+            if options.cfg.experimental:
+                self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
             if self.smooth:
                 self.toolbar.addWidget(self.spinner)
                 self.toolbar.addWidget(self.spinner_label)
@@ -735,6 +737,8 @@ class VisualizerDialog(QtGui.QWidget):
         sectionMoved signal of the header of the table view to the 
         update_plot() method so that the method is called whenever either the
         content of the results table changes, or the columns are moved."""
+        if not options.cfg.experimental:
+            return
         options.cfg.main_window.table_model.dataChanged.connect(self.update_plot)
         options.cfg.main_window.table_model.layoutChanged.connect(self.update_plot)
         self.visualizer._view.horizontalHeader().sectionMoved.connect(self.update_plot)
@@ -744,6 +748,8 @@ class VisualizerDialog(QtGui.QWidget):
         the sectionMoved signal of the header of the table view so that the 
         update_plot() method is not called anymore when the content of the 
         results table changes or the columns are moved."""
+        if not options.cfg.experimental:
+            return
         options.cfg.main_window.table_model.dataChanged.disconnect(self.update_plot)
         options.cfg.main_window.table_model.layoutChanged.disconnect(self.update_plot)
         self.visualizer._view.horizontalHeader().sectionMoved.disconnect(self.update_plot)
@@ -759,6 +765,8 @@ class VisualizerDialog(QtGui.QWidget):
         
         If the box is unchecked (the default), the visualization is not 
         frozen, and the plot is updated on changes to the results table. """
+        if not options.cfg.experimental:
+            return
         self.frozen = not self.frozen
         if self.frozen:
             self.disconnect_signals()
