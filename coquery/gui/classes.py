@@ -627,10 +627,19 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             sort_order.append(name)
             
         if sort_order:
-            # sort the data frame:
-            self.content.sort(
-                columns=sort_order, ascending=directions,
-                axis="index", inplace=True)
+            # sort the data frame. Note that pandas 0.17.0 changed the 
+            # API for sorting, so we need to catch that:
+            try:
+                # pandas <= 0.16.2:
+                self.content.sort(
+                    columns=sort_order, ascending=directions,
+                    axis="index", inplace=True)
+            except AttributeError:
+                # pandas >= 0.17.0
+                self.content.sort_values(
+                    by=sort_order, ascending=directions,
+                    axis="index", inplace=True)
+                
             # remove all temporary columns:
         self.content.drop(labels=del_columns, axis="columns", inplace=True)
             
