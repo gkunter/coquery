@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'functionApply.ui'
 #
-# Created: Thu Oct 15 21:18:47 2015
+# Created: Thu Oct 15 21:21:16 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_FunctionDialog(object):
     def setupUi(self, FunctionDialog):
         FunctionDialog.setObjectName(_fromUtf8("FunctionDialog"))
-        FunctionDialog.resize(691, 480)
+        FunctionDialog.resize(489, 480)
         self.verticalLayout_2 = QtGui.QVBoxLayout(FunctionDialog)
         self.verticalLayout_2.setSpacing(16)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
@@ -42,7 +42,7 @@ class Ui_FunctionDialog(object):
         self.label_description.setObjectName(_fromUtf8("label_description"))
         self.verticalLayout.addWidget(self.label_description)
         self.frame1 = QtGui.QFrame(self.frame)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame1.sizePolicy().hasHeightForWidth())
