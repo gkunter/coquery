@@ -90,8 +90,6 @@ class Session(object):
                 new_list.append(new_filt)
         self.filter_list = new_list
         self.Resource.filter_list = new_list
-
-
         
     def get_max_token_count(self):
         """
@@ -281,39 +279,43 @@ class SessionCommandLine(Session):
 class SessionInputFile(Session):
     def __init__(self):
         super(SessionInputFile, self).__init__()
-        input_header = None
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
             
             try:
                 input_file = pd.read_table(
                     filepath_or_buffer=InputFile,
+                    header=0 if options.cfg.file_has_headers else None,
                     sep=options.cfg.input_separator,
                     quotechar=options.cfg.quote_char,
                     encoding=options.cfg.input_encoding,
                     na_filter=False)
             except ValueError:
                 raise EmptyInputFileError(InputFile)
-
-            if options.cfg.file_has_headers and self.header == None:
-                self.header = input_file.columns.values.tolist()
-                input_header = self.header
-                options.cfg.query_label = input_header.pop(options.cfg.query_column_number - 1)
+            if self.header == None:
+                if options.cfg.file_has_headers:
+                    self.header = input_file.columns.values.tolist()
+                else:
+                    self.header = ["X{}".format(i+1) for i, _ in enumerate(input_file.columns)]
+                    input_file.columns = self.header
+                options.cfg.query_label = self.header.pop(options.cfg.query_column_number - 1)
             for current_line in input_file.iterrows():
                 current_line = list(current_line[1])
                 if options.cfg.query_column_number > len(current_line):
                     raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)
                 
                 if read_lines >= options.cfg.skip_lines:
-                    query_string = current_line.pop(options.cfg.query_column_number - 1)
+                    try:
+                        query_string = current_line.pop(options.cfg.query_column_number - 1)
+                    except AttributeError:
+                        continue
                     new_query = self.query_type(query_string, self, tokens.COCAToken)
                     new_query.input_frame = pd.DataFrame(
-                        [current_line], columns=input_header)
+                        [current_line], columns=self.header)
                     self.query_list.append(new_query)
                 self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
                 read_lines += 1
-            
-            self.input_columns = ["coq_{}".format(x) for x in input_header]
+            self.input_columns = ["coq_{}".format(x) for x in self.header]
             
 
         logger.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
