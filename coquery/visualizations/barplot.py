@@ -23,6 +23,27 @@ class Visualizer(vis.BaseVisualizer):
             self.stacked = False
         super(Visualizer, self).__init__(*args, **kwargs)
 
+    def set_defaults(self):
+        # choose the "Paired" palette if the number of grouping factor
+        # levels is even and below 13, or the "Set3" palette otherwise:
+        if len(self._levels[1 if len(self._groupby) == 2 else 0]) in (2, 4, 6, 8, 12):
+            self.options["color_palette"] = "Paired"
+        else:
+            # use 'Set3', a quantitative palette, if there are two grouping
+            # factors, or a palette diverging from Red to Purple otherwise:
+            if len(self._groupby) == 2:
+                self.options["color_palette"] = "Set3"
+            else:
+                self.options["color_palette"] = "RdPu"
+        super(Visualizer, self).set_defaults()
+        if self.percentage:
+            self.options["label_x_axis"] = "Percentage"
+        else:
+            self.options["label_x_axis"] = "Frequency"
+        self.options["label_y_axis"] = self._groupby[0]
+        if len(self._groupby) == 2:
+            self.options["label_legend"] = self._groupby[1]
+
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
@@ -126,19 +147,19 @@ class Visualizer(vis.BaseVisualizer):
                     df = df[self._levels[1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
                     df = df.reindex_axis(self._levels[0], axis=0).fillna(0)
                     df = df.reset_index()
-                    pal = sns.color_palette(palette_name, n_colors=len(self._levels[1]))[::-1]
+                    #pal = sns.color_palette(palette_name, n_colors=len(self._levels[1]))[::-1]
                     for i, stack in enumerate(self._levels[1][::-1]):
                         sns.barplot(
                             x=stack,
                             y=self._groupby[0],
-                            data = df, color=pal[i], ax=plt.gca())
+                            data = df, color=self.options["color_palette_values"][i], ax=plt.gca())
                 else:
                     ax = sns.countplot(
                         y=data[self._groupby[0]],
                         order=self._levels[0],
                         hue=data[self._groupby[1]],
                         hue_order=sorted(self._levels[1]),
-                        palette=palette_name,
+                        palette=self.options["color_palette_values"],
                         data=data)
 
             else:
@@ -150,45 +171,42 @@ class Visualizer(vis.BaseVisualizer):
                     df.columns = [self._groupby[0], "Percent"]
                     df = df.transpose()
                     df["YCat"] = self._groupby[0]
-                    pal = sns.color_palette(palette_name, n_colors=len(self._levels[0]))[::-1]
+                    #pal = sns.color_palette(palette_name, n_colors=len(self._levels[0]))[::-1]
                     for i, stack in enumerate(self._levels[0][::-1]):
                         sns.barplot(
                             x=stack,
                             y="YCat",
-                            data = df, color=pal[i], ax=plt.gca())
+                            data = df, color=self.options["color_palette_values"][i], ax=plt.gca())
                 else:
                     # Don't use the 'hue' argument if there is only a single 
                     # grouping factor:
                     ax = sns.countplot(
                         y=data[self._groupby[0]],
                         order=self._levels[0],
-                        palette=palette_name,
+                        palette=self.options["color_palette_values"],
                         data=data)
             return
                 
-                
-                
-                
-            if len(self._groupby) == 1:
-                # Don't use the 'hue' argument if there is only a single 
-                # grouping factor:
-                ax = sns.countplot(
-                    y=data[self._groupby[0]],
-                    order=self._levels[0],
-                    palette=palette_name,
-                    data=data)
-            else:
-                # Use the 'hue' argument if there are two grouping factors:
-                ax = sns.countplot(
-                    y=data[self._groupby[0]],
-                    order=self._levels[0],
-                    hue=data[self._groupby[1]],
-                    hue_order=sorted(self._levels[1]),
-                    palette=palette_name,
-                    data=data)
-            # add a custom annotator for this axes:
-            ax.format_coord = lambda x, y: my_format_coord(x, y, ax.get_title())
-            return ax
+            #if len(self._groupby) == 1:
+                ## Don't use the 'hue' argument if there is only a single 
+                ## grouping factor:
+                #ax = sns.countplot(
+                    #y=data[self._groupby[0]],
+                    #order=self._levels[0],
+                    #palette=self.options["color_palette_values"],
+                    #data=data)
+            #else:
+                ## Use the 'hue' argument if there are two grouping factors:
+                #ax = sns.countplot(
+                    #y=data[self._groupby[0]],
+                    #order=self._levels[0],
+                    #hue=data[self._groupby[1]],
+                    #hue_order=sorted(self._levels[1]),
+                    #palette=palette_name,
+                    #data=data)
+            ## add a custom annotator for this axes:
+            #ax.format_coord = lambda x, y: my_format_coord(x, y, ax.get_title())
+            #return ax
 
         #if self._row_factor:
             #self.ct = pd.crosstab(
@@ -211,42 +229,37 @@ class Visualizer(vis.BaseVisualizer):
         sns.despine(self.g.fig,
                     left=False, right=False, top=False, bottom=False)
 
-        # choose the "Paired" palette if the number of grouping factor
-        # levels is even and below 13, or the "Set3" palette otherwise:
-        if len(self._levels[1 if len(self._groupby) == 2 else 0]) in (2, 4, 6, 8, 12):
-            palette_name = "Paired"
-        else:
-            # use 'Set3', a quantitative palette, if there are two grouping
-            # factors, or a palette diverging from Red to Purple otherwise:
-            palette_name = "Set3" if len(self._groupby) == 2 else "RdPu"
-
         self.map_data(plot_facet)
             
         # Add axis labels:
         if self.percentage:
             self.g.set(xlim=(0, 100))
-            self.g.set_axis_labels("Percentage", self._groupby[0])
-        else:
-            self.g.set_axis_labels("Frequency", self._groupby[0])
+
+        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         
         # Add a legend if there are two grouping factors:
         if len(self._groupby) == 2:
             if self.percentage:
-                pal = sns.color_palette(palette_name, n_colors=len(self._levels[1]))
+                #pal = sns.color_palette(palette_name, n_colors=len(self._levels[1]))
                 legend_bar = [
                     plt.Rectangle(
                         (0, 0), 1, 1,
-                        fc=pal[i], 
+                        fc=self.options["color_palette_values"][i], 
                         edgecolor="none") for i, _ in enumerate(self._levels[1])
                     ]
                 self.g.fig.get_axes()[-1].legend(
                     legend_bar, self._levels[1],
-                    ncol=1,
-                    title=self._groupby[1], 
+                    ncol=self.options["label_legend_columns"],
+                    title=self.options["label_legend"], 
                     frameon=True, 
                     framealpha=0.7, 
                     loc="lower left").draggable()
             else:
-                self.g.fig.get_axes()[-1].legend(title=self._groupby[1], frameon=True, framealpha=0.7, loc="lower left").draggable()
+                self.g.fig.get_axes()[-1].legend(
+                    title=self.options["label_legend"], 
+                    ncol=self.options["label_legend_columns"],
+                    frameon=True, 
+                    framealpha=0.7, 
+                    loc="lower left").draggable()
         # Try to make the figure fit into the area nicely:
         #self.g.fig.tight_layout()

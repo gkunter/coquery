@@ -1,9 +1,22 @@
-#from pyqt_compat import QtCore, QtGui
+# -*- coding: utf-8 -*-
+
+"""
+csvOptions.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from pyqt_compat import QtGui, QtCore
 import csvOptionsUi
 import sys
 import pandas as pd
 import numpy as np
+
+from errors import *
 
 class MyTableModel(QtCore.QAbstractTableModel):
 
@@ -119,14 +132,18 @@ class CSVOptions(QtGui.QDialog):
         quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
             str(self.ui.quote_char.currentText())]
         header=0 if self.ui.file_has_headers.isChecked() else None
-
-        self.file_table = pd.read_table(
-            self.filename,
-            header=header,
-            sep=str(self.separator),
-            quoting=3 if not quote else 0,
-            quotechar=quote if quote else "#",
-            na_filter=False)
+        try:
+            self.file_table = pd.read_table(
+                self.filename,
+                header=header,
+                sep=str(self.separator),
+                quoting=3 if not quote else 0,
+                quotechar=quote if quote else "#",
+                na_filter=False)
+        except ValueError as e:
+            exception = EmptyInputFileError(self.filename)
+            QtGui.QMessageBox.critical(self.parent(), "Query file error", str(exception))
+            raise exception
             
     def update_content(self):
         self.split_file_content()

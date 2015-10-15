@@ -106,12 +106,21 @@ import matplotlib.pyplot as plt
     #return i
 
 class CoqNavigationToolbar(NavigationToolbar):
+    
     def __init__(self, canvas, parent, coordinates=True):
         super(CoqNavigationToolbar, self).__init__(canvas, parent, coordinates)
-        self.check_freeze = QtGui.QCheckBox()
-        self.check_freeze.setText("Freeze visualization")
-        self.check_freeze.setObjectName("check_freeze")
-        self.addWidget(self.check_freeze)
+        if options.cfg.experimental:
+            self.check_freeze = QtGui.QCheckBox()
+            self.check_freeze.setText("Freeze visualization")
+            self.check_freeze.setObjectName("check_freeze")
+            self.addWidget(self.check_freeze)
+
+    def edit_parameters(self, *args):
+        import figureoptions
+        new_values = figureoptions.FigureOptions.manage(self.parent.visualizer.options)
+        if new_values:
+            self.parent.visualizer.options.update(new_values)
+            self.parent.update_plot()
 
 class BaseVisualizer(object):
     """ 
@@ -132,15 +141,32 @@ class BaseVisualizer(object):
     def __init__(self, data_model, data_view):
         self._model = None
         self._view = None
+        self.options = {}
         self.set_data_source(data_model, data_view)
+        self.set_defaults()
         self.setup_figure()
     
-    #def get_xlim(self):
-        #return (0, options.cfg.main_window.Session.Corpus.get_corpus_size())
-    
-    #def get_ylim(self):
-        #return (0, 1)
-
+    def set_defaults(self):
+        if not self.options.get("color_number", ""):
+            self.options["color_number"] = len(self._levels[-1])
+        if not self.options.get("label_legend_columns", 0):
+            self.options["label_legend_columns"] = 1
+        if not self.options.get("color_palette", ""):
+            if len(self._levels) == 0:
+                self.options["color_palette"] = "Paired"
+                self.options["color_number"] = 1
+            elif len(self._levels[-1]) in (2, 4, 6):
+                self.options["color_palette"] = "Paired"
+            elif len(self._groupby) == 2:
+                self.options["color_palette"] = "Paired"
+            else:
+                self.options["color_palette"] = "RdPu"
+            
+        if not self.options.get("color_palette_values", ""):
+            self.options["color_palette_values"] = sns.color_palette(
+                self.options["color_palette"],
+                self.options["color_number"])
+                                                                                                                            
     def _validate_layout(func):
         def func_wrapper(self):
             if self._col_wrap:
@@ -640,7 +666,6 @@ class VisualizerDialog(QtGui.QWidget):
         self.add_matplot()
             
         self.visualizer.draw()
-        #self.canvas.draw()
         if self.smooth:
             self.spinner.setEnabled(True)
 
@@ -654,17 +679,16 @@ class VisualizerDialog(QtGui.QWidget):
             self.canvas.setFocus()
             self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
 
-        #if self.toolbar:
-            #self.ui.navigation_layout.removeWidget(self.toolbar)
-            #self.toolbar.close()
-        
         if not self.toolbar:
             self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
-            self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
+            if options.cfg.experimental:
+                self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
             if self.smooth:
                 self.toolbar.addWidget(self.spinner)
                 self.toolbar.addWidget(self.spinner_label)
             self.ui.navigation_layout.addWidget(self.toolbar)
+        else:
+            self.toolbar.canvas = self.canvas
 
     def remove_matplot(self):
         """ 
@@ -712,6 +736,8 @@ class VisualizerDialog(QtGui.QWidget):
         sectionMoved signal of the header of the table view to the 
         update_plot() method so that the method is called whenever either the
         content of the results table changes, or the columns are moved."""
+        if not options.cfg.experimental:
+            return
         options.cfg.main_window.table_model.dataChanged.connect(self.update_plot)
         options.cfg.main_window.table_model.layoutChanged.connect(self.update_plot)
         self.visualizer._view.horizontalHeader().sectionMoved.connect(self.update_plot)
@@ -721,6 +747,8 @@ class VisualizerDialog(QtGui.QWidget):
         the sectionMoved signal of the header of the table view so that the 
         update_plot() method is not called anymore when the content of the 
         results table changes or the columns are moved."""
+        if not options.cfg.experimental:
+            return
         options.cfg.main_window.table_model.dataChanged.disconnect(self.update_plot)
         options.cfg.main_window.table_model.layoutChanged.disconnect(self.update_plot)
         self.visualizer._view.horizontalHeader().sectionMoved.disconnect(self.update_plot)
@@ -736,6 +764,8 @@ class VisualizerDialog(QtGui.QWidget):
         
         If the box is unchecked (the default), the visualization is not 
         frozen, and the plot is updated on changes to the results table. """
+        if not options.cfg.experimental:
+            return
         self.frozen = not self.frozen
         if self.frozen:
             self.disconnect_signals()

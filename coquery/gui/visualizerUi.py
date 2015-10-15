@@ -2,12 +2,12 @@
 
 # Form implementation generated from reading ui file 'visualizer.ui'
 #
-# Created: Tue Aug 18 00:16:39 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created: Wed Oct 14 18:08:30 2015
+#      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui
+from pyqt_compat import QtCore, QtGui, frameShadow
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -37,7 +37,7 @@ class Ui_Visualizer(object):
         sizePolicy.setHeightForWidth(self.box_visualize.sizePolicy().hasHeightForWidth())
         self.box_visualize.setSizePolicy(sizePolicy)
         self.box_visualize.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.box_visualize.setFrameShadow(QtGui.QFrame.Raised)
+        self.box_visualize.setFrameShadow(frameShadow)
         self.box_visualize.setObjectName(_fromUtf8("box_visualize"))
         self.verticalLayout = QtGui.QVBoxLayout(self.box_visualize)
         self.verticalLayout.setSizeConstraint(QtGui.QLayout.SetNoConstraint)
@@ -46,14 +46,11 @@ class Ui_Visualizer(object):
         self.verticalLayout_2.addWidget(self.box_visualize)
         self.frame = QtGui.QFrame(Visualizer)
         self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.frame.setFrameShadow(QtGui.QFrame.Raised)
+        self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.horizontalLayout_3 = QtGui.QHBoxLayout(self.frame)
         self.horizontalLayout_3.setSpacing(10)
         self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
-        self.check_freeze = QtGui.QCheckBox(self.frame)
-        self.check_freeze.setObjectName(_fromUtf8("check_freeze"))
-        self.horizontalLayout_3.addWidget(self.check_freeze)
         self.frame_2 = QtGui.QFrame(self.frame)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -82,6 +79,6 @@ class Ui_Visualizer(object):
 
     def retranslateUi(self, Visualizer):
         Visualizer.setWindowTitle(_translate("Visualizer", "Data visualization – Coquery", None))
-        self.check_freeze.setText(_translate("Visualizer", "&Freeze visualization", None))
         self.button_close.setText(_translate("Visualizer", "&Close", None))
+
 

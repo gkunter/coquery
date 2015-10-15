@@ -52,6 +52,19 @@ def lineplot(a, level=0, start=0, end=1, axis="x", color="black", ax=None, **kwa
 class Visualizer(vis.BaseVisualizer):
     visualize_frequency = False
     dimensionality = 1
+    
+    def __init__(self, *args):
+        super(Visualizer, self).__init__(*args)
+        
+    def set_defaults(self):
+        self.options["color_palette"] = "Paired"
+        self.options["color_number"] = len(self._levels[0])
+        super(Visualizer, self).set_defaults()
+        self.options["label_x_axis"] = "Corpus position"
+        if not self._levels or len(self._levels[0]) < 2:
+            self.options["label_y_axis"] = ""
+        else:
+            self.options["label_y_axis"] = self._groupby[0]
 
     def setup_figure(self):
         with sns.axes_style("white"):
@@ -71,9 +84,10 @@ class Visualizer(vis.BaseVisualizer):
             ends = dict(zip(
                 self._levels[0],
                 [(x+1) / len(self._levels[0]) - offset for x in range(len(self._levels[0]))]))
+                #sns.color_palette("Paired", len(self._levels[0]))))
             colors = dict(zip(
                 self._levels[0],
-                sns.color_palette("Paired", len(self._levels[0]))))
+                self.options["color_palette_values"]))
             lineplot(data.coquery_invisible_corpus_id,
                      level=data[self._groupby[-1]],
                      start=starts, end=ends, color=colors, ax=plt.gca())
@@ -87,11 +101,10 @@ class Visualizer(vis.BaseVisualizer):
 
         if not self._levels or len(self._levels[0]) < 2:
             self.g.set(yticks=[])
-            self.g.set_axis_labels("Corpus position", "")
         else:
             self.g.set(yticks=self._ticks)
             self.g.set(yticklabels=self._levels[0])
-            self.g.set_axis_labels("Corpus position", self._groupby[0])
+        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
         self.g.set_titles(fontweight="bold", size=options.cfg.app.font().pointSize() * self.get_font_scale())
         self.g.fig.tight_layout()

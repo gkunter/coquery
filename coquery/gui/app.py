@@ -22,15 +22,16 @@ import logging
 import numpy as np
 import pandas as pd
 
+import __init__
 from session import *
 from defines import *
 from pyqt_compat import QtCore, QtGui
-import __init__
 import QtProgress
 
 import coqueryUi, coqueryCompactUi
 
-import results 
+import classes
+#import results 
 import error_box
 import sqlwrap
 import queries
@@ -70,350 +71,6 @@ class clickFilter(QtCore.QObject):
             return super(clickFilter, self).eventFilter(obj, event)
         return super(clickFilter, self).eventFilter(obj, event)
 
-class CoqTreeItem(QtGui.QTreeWidgetItem):
-    """ Define a tree element class that stores the output column options in
-    the options tree. """
-    
-    def __init__(self, *args, **kwargs):
-        super(CoqTreeItem, self).__init__(*args, **kwargs)
-        self._objectName = ""
-        self._link_by = None
-        self._func = None
-
-    def setText(self, column, text, *args):
-        super(CoqTreeItem, self).setText(column, text)
-        if self.parent():
-            parent = self.parent().objectName()
-        feature = unicode(self.objectName())
-        if feature.endswith("_table"):
-            self.setToolTip(column, "Table: {}".format(text))
-        elif feature.startswith("coquery_") or feature.startswith("frequency_"):
-            self.setToolTip(column, "Special column:\n{}".format(text))
-        else:
-            self.setToolTip(column, "Data column:\n{}".format(text))
-
-    def setObjectName(self, name):
-        """ Store resource variable name as object name. """
-        self._objectName = unicode(name)
-
-    def objectName(self):
-        """ Retrieve resource variable name from object name. """
-        return self._objectName
-
-    def check_children(self, column=0):
-        """ 
-        Compare the check state of all children.
-        
-        Parameters
-        ----------
-        column : int (default=0)
-            The column of the tree widget
-            
-        Returns
-        -------
-        state : bool
-            True if all children have the same check state, False if at least
-            one child has a different check state than another.
-        """
-        child_states = set([])
-        for child in [self.child(i) for i in range(self.childCount())]:
-            child_states.add(child.checkState(column))
-        return len(child_states) == 1
-
-    def update_checkboxes(self, column, expand=False):
-        """ 
-        Propagate the check state of the item to the other tree items.
-        
-        This method propagates the check state of the current item to its 
-        children (e.g. if the current item is checked, all children are also 
-        checked). It also toggles the check state of the parent, but only if
-        the current item is a native feature of the parent, and not a linked 
-        table. 
-        
-        If the argument 'expand' is True, the parents of items with checked 
-        children will be expanded. 
-        
-        Parameters
-        ----------
-        column : int
-            The nubmer of the column
-        expand : bool
-            If True, a parent node will be expanded if the item is checked
-        """
-        check_state = self.checkState(column)
-
-        if check_state == QtCore.Qt.PartiallyChecked:
-            # do not propagate a partially checked state
-            return
-        
-        if str(self._objectName).endswith("_table") and check_state:
-            self.setExpanded(True)
-        
-        # propagate check state to children:
-        for child in [self.child(i) for i in range(self.childCount())]:
-            child.setCheckState(column, check_state)
-        # adjust check state of parent, but not if linked:
-        if self.parent() and not self._link_by:
-            if not self.parent().check_children():
-                self.parent().setCheckState(column, QtCore.Qt.PartiallyChecked)
-            else:
-                self.parent().setCheckState(column, check_state)
-            if expand:
-                if self.parent().checkState(column) in (QtCore.Qt.PartiallyChecked, QtCore.Qt.Checked):
-                    self.parent().setExpanded(True)
-
-class CoqTreeLinkItem(CoqTreeItem):
-    def setLink(self, from_item, link):
-        self._link_by = (from_item, link)
-        
-    def setText(self, column, text, *args):
-        super(CoqTreeLinkItem, self).setText(column, text)
-        source, target = text.split(" ► ")
-        self.setToolTip(column, "External table:\n{},\nlinked by column:\n{}".format(target, source))
-
-class CoqTreeFuncItem(CoqTreeItem):
-    def setFunction(self, func):
-        self._func = func
-        
-    def setText(self, column, label, *args):
-        super(CoqTreeFuncItem, self).setText(column, label)
-
-class CoqTreeWidget(QtGui.QTreeWidget):
-    addLink = QtCore.Signal(CoqTreeItem)
-    addFunction = QtCore.Signal(CoqTreeItem)
-    removeItem = QtCore.Signal(CoqTreeItem)
-    
-    """ Define a tree widget that stores the available output columns in a 
-    tree with check boxes for each variable. """
-    def __init__(self, *args):
-        super(CoqTreeWidget, self).__init__(*args)
-        self.itemChanged.connect(self.update)
-        self.setDragEnabled(True)
-        self.setAnimated(True)
-        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.show_menu)
-
-    def update(self, item, column):
-        """ Update the checkboxes of parent and child items whenever an
-        item has been changed. """
-        item.update_checkboxes(column)
-
-    def setCheckState(self, object_name, state, column=0):
-        """ Set the checkstate of the item that matches the object_name. If
-        the state is Checked, also expand the parent of the item. """
-        if type(state) != QtCore.Qt.CheckState:
-            if state:
-                state = QtCore.Qt.Checked
-            else:
-                state = QtCore.Qt.Unchecked
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
-            if root.objectName() == object_name:
-                root.setChecked(column, state)
-                self.update(root, column)
-            for child in [root.child(i) for i in range(root.childCount())]:
-                if child.objectName() == object_name:
-                    child.setCheckState(column, state)
-                    if state == QtCore.Qt.Checked:
-                        root.setExpanded(True)
-                    self.update(child, column)
-                    return
-                
-    def mimeData(self, *args):
-        """ Add the resource variable name to the MIME data (for drag and 
-        drop). """
-        value = super(CoqTreeWidget, self).mimeData(*args)
-        value.setText(", ".join([x.objectName() for x in args[0]]))
-        return value
-    
-    def get_checked(self, column = 0):
-        check_list = []
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
-            for child in [root.child(i) for i in range(root.childCount())]:
-                if child.checkState(column) == QtCore.Qt.Checked:
-                    check_list.append(str(child._objectName))
-        return check_list
-
-    def show_menu(self, point):
-        item = self.itemAt(point)
-        if not item:
-            return
-
-        if str(item.objectName()).startswith("coquery") or str(item.objectName()).startswith("frequency_"):
-            return
-
-        # show self.menu about the column
-        self.menu = QtGui.QMenu("Output column options", self)
-        action = QtGui.QWidgetAction(self)
-        label = QtGui.QLabel("<b>{}</b>".format(item.text(0)), self)
-        label.setAlignment(QtCore.Qt.AlignCenter)
-        action.setDefaultWidget(label)
-        self.menu.addAction(action)
-        
-        if not str(item.objectName()).endswith("_table"):
-            add_link = QtGui.QAction("&Link to external table", self)
-            add_function = QtGui.QAction("&Add a function", self)
-            remove_link = QtGui.QAction("&Remove link", self)
-            remove_function = QtGui.QAction("&Remove function", self)
-            
-            parent = item.parent()
-
-            if not item._func and not (parent and parent._link_by):
-                view_unique = QtGui.QAction("View &unique values", self)
-                view_unique.triggered.connect(lambda: self.show_unique_values(item))
-                self.menu.addAction(view_unique)
-                self.menu.addSeparator()
-            
-            if item._func:
-                self.menu.addAction(remove_function)
-            else:
-                if item._link_by or (parent and parent._link_by):
-                    self.menu.addAction(remove_link)
-                else:
-                    self.menu.addAction(add_link)
-                self.menu.addAction(add_function)
-            
-            self.menu.popup(self.mapToGlobal(point))
-            action = self.menu.exec_()
-
-            if action == add_link:
-                self.addLink.emit(item)
-            elif action == add_function:
-                self.addFunction.emit(item)
-            elif action in (remove_link, remove_function):
-                self.removeItem.emit(item)
-            
-
-    def show_unique_values(self, item):
-        import uniqueviewer
-        uniqueviewer.UniqueViewer.show(item.objectName(), options.cfg.main_window.resource)
-
-        
-class LogTableModel(QtCore.QAbstractTableModel):
-    def __init__(self, parent, *args):
-        super(LogTableModel, self).__init__(parent, *args)
-        self.content = options.cfg.gui_logger.log_data
-        self.header = ["Date", "Time", "Level", "Message"]
-        
-    def data(self, index, role):
-        if not index.isValid():
-            return None
-        row = index.row()
-        column = index.column()
-        
-        record = self.content[row]
-        if role == QtCore.Qt.DisplayRole:
-            if column == 0:
-                return record.asctime.split()[0]
-            elif column == 1:
-                return record.asctime.split()[1]
-            elif column == 2:
-                return record.levelname
-            elif column == 3:
-                return record.message            
-        elif role == QtCore.Qt.ForegroundRole:
-            if record.levelno in [logging.ERROR, logging.CRITICAL]:
-                return QtGui.QBrush(QtCore.Qt.white)
-            else:
-                return None
-        elif role == QtCore.Qt.BackgroundRole:
-            if record.levelno == logging.WARNING:
-                return QtGui.QBrush(QtCore.Qt.yellow)
-            elif record.levelno in [logging.ERROR, logging.CRITICAL]:
-                return QtGui.QBrush(QtCore.Qt.red)
-        else:
-            return None
-        
-    def rowCount(self, parent):
-        return len(self.content)
-
-    def columnCount(self, parent):
-        return len(self.header)
-
-class LogProxyModel(QtGui.QSortFilterProxyModel):
-    def headerData(self, index, orientation, role):
-        # column names:
-        if orientation == QtCore.Qt.Vertical:
-            return None
-        header = self.sourceModel().header
-        if not header or index > len(header):
-            return None
-        
-        if role == QtCore.Qt.DisplayRole:
-            return header[index]
-
-class CoqTextEdit(QtGui.QTextEdit):
-    def __init__(self, *args):
-        super(CoqTextEdit, self).__init__(*args)
-        self.setAcceptDrops(True)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-        self.setAcceptDrops(True)
-        
-    def dragEnterEvent(self, e):
-        e.acceptProposedAction()
-
-    def dragMoveEvent(self, e):
-        e.acceptProposedAction()
-
-    def dropEvent(self, e):
-        # get the relative position from the mime data
-        mime = e.mimeData().text()
-        
-        if "application/x-qabstractitemmodeldatalist" in e.mimeData().formats():
-            label = e.mimeData().text()
-            if label == "word_label":
-                self.insertPlainText("*")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-            elif label == "word_pos":
-                self.insertPlainText(".[*]")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-            elif label == "lemma_label":
-                self.insertPlainText("[*]")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-            elif label == "lemma_transcript":
-                self.insertPlainText("[/*/]")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-            elif label == "word_transcript":
-                self.insertPlainText("/*/")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-        elif e.mimeData().hasText():
-            self.insertPlainText(e.mimeData().text())
-            e.setDropAction(QtCore.Qt.CopyAction)
-            e.accept()
-        #x, y = map(int, mime.split(','))
-
-        #if e.keyboardModifiers() & QtCore.Qt.ShiftModifier:
-            ## copy
-            ## so create a new button
-            #button = Button('Button', self)
-            ## move it to the position adjusted with the cursor position at drag
-            #button.move(e.pos()-QtCore.QPoint(x, y))
-            ## show it
-            #button.show()
-            ## store it
-            #self.buttons.append(button)
-            ## set the drop action as Copy
-            #e.setDropAction(QtCore.Qt.CopyAction)
-        #else:
-            ## move
-            ## so move the dragged button (i.e. event.source())
-            #e.source().move(e.pos()-QtCore.QPoint(x, y))
-            ## set the drop action as Move
-            #e.setDropAction(QtCore.Qt.MoveAction)
-        # tell the QDrag we accepted it
-        e.accept()
-
-    def setAcceptDrops(self, *args):
-        super(CoqTextEdit, self).setAcceptDrops(*args)
-        
 class GuiHandler(logging.StreamHandler):
     def __init__(self, *args):
         super(GuiHandler, self).__init__(*args)
@@ -432,53 +89,137 @@ class GuiHandler(logging.StreamHandler):
             self.app.ui.log_table.horizontalHeader().setStretchLastSection(True)
         self.app.log_table.layoutChanged.emit()
 
-class QueryFilterBox(CoqTagBox):
-    def destroyTag(self, tag):
-        """ Remove the tag from the tag cloud as well as the filter from 
-        the global filter list. """
-        options.cfg.filter_list = [x for x in options.cfg.filter_list if x.text != str(tag.text())]
-        super(QueryFilterBox, self).destroyTag(tag)
-    
-    def addTag(self, *args):
-        """ Add the tag to the tag cloud and the global filter list. """
-        filt = queries.QueryFilter()
-        try:
-            filt.resource = self.resource
-        except AttributeError:
-            return
-        try:
-            if args:
-                filt.text = args[0]
-            else:
-                filt.text = str(self.edit_tag.text())
-        except InvalidFilterError:
-            self.edit_tag.setStyleSheet('CoqTagEdit { border-radius: 5px; font: condensed;background-color: rgb(255, 255, 192); }')
-        else:
-            super(QueryFilterBox, self).addTag(filt.text)
-            options.cfg.filter_list.append(filt)
-
-#class CoqFileSystemModel(QtGui.QFileSystemModel):
-    #def lessThan(self, left, right):
-        #print(123)
-        #return self.data(left, QtCore.Qt.DisplayRole) < self.data(right, QtCore.Qt.DisplayRole)
-    
-    #def sort(self, *args):
-        #print("sort")
-        #super(CoqFileSystemModel, self).sort(*args)
-    
-    #def data(self, index, role):
-        #if role == QtCore.Qt.DisplayRole and index.column() == 0:
-            #file_name = self.filePath(index)
-            #if self.isDir(index):
-                #return super(CoqFileSystemModel, self).data(index, role) + QtCore.QDir.separator()
-            #else:
-                #return super(CoqFileSystemModel, self).data(index, role).upper()
-
-        #return super(CoqFileSystemModel, self).data(index, role)
-
 class CoqueryApp(QtGui.QMainWindow):
     """ Coquery as standalone application. """
-    
+
+    def __init__(self, parent=None):
+        """ Initialize the main window. This sets up any widget that needs
+        spetial care, and also sets up some special attributes that relate
+        to the GUI, including default appearances of the columns."""
+        QtGui.QMainWindow.__init__(self, parent)
+        
+        self.file_content = None
+
+        size = QtGui.QApplication.desktop().screenGeometry()
+        if size.height() < 1024 or size.width() < 1024:
+            self.ui = coqueryCompactUi.Ui_MainWindow()
+        else:
+            self.ui = coqueryUi.Ui_MainWindow()
+        self.ui.setupUi(self)
+        
+        self.setup_app()
+        self.csv_options = None
+        self.query_thread = None
+        self.last_results_saved = True
+        self.corpus_manager = None
+        
+        self.widget_list = []
+        
+        # the dictionaries column_width and column_color store default
+        # attributes of the columns by display name. This means that problems
+        # may arise if several columns have the same name!
+        # FIXME: Make sure that the columns are identified correctly.
+        self.column_width = {}
+        self.column_color = {}
+        
+        # A non-modal dialog is shown if no corpus resource is available.
+        # The dialog contains some assistance on how to build a new corpus.
+        if not get_available_resources():
+            self.show_no_corpus_message()
+        
+        options.cfg.main_window = self
+        # Resize the window if a previous size is available
+        try:
+            if options.cfg.height and options.cfg.width:
+                self.resize(options.cfg.width, options.cfg.height)
+        except AttributeError:
+            pass
+        
+    def setup_app(self):
+        """ Initialize all widgets with suitable data """
+
+        self.create_output_options_tree()
+        
+        QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
+        self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
+
+        # add available resources to corpus dropdown box:
+        corpora = [x.upper() for x in sorted(get_available_resources().keys())]
+
+        self.ui.combo_corpus.addItems(corpora)
+        
+        # chamge the default query string edit to the sublassed edit class:
+        self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
+        self.ui.edit_query_string.close()        
+        edit_query_string = classes.CoqTextEdit(self)
+        edit_query_string.setObjectName("edit_query_string")
+        self.ui.gridLayout_2.addWidget(edit_query_string, 2, 1, 1, 1)
+        self.ui.edit_query_string = edit_query_string
+        
+        self.ui.filter_box = classes.QueryFilterBox(self)
+        
+        self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
+        self.ui.tag_cloud.close()
+        self.ui.horizontalLayout.removeWidget(self.ui.edit_query_filter)
+        self.ui.horizontalLayout.removeWidget(self.ui.label_4)
+        self.ui.edit_query_filter.close()
+        self.ui.label_4.close()
+
+        self.ui.verticalLayout_5.addWidget(self.ui.filter_box)
+
+        # set auto-completer for the filter edit:
+        self.filter_variable_model = QtGui.QStringListModel()
+        self.completer = QtGui.QCompleter()
+        self.completer.setModel(self.filter_variable_model)
+        self.completer.setCompletionMode(QtGui.QCompleter.InlineCompletion)
+        self.completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        self.ui.filter_box.edit_tag.setCompleter(self.completer)
+
+        # use a file system model for the file name auto-completer::
+        self.dirModel = QtGui.QFileSystemModel()
+        # make sure that the model is updated on changes to the file system:
+        self.dirModel.setRootPath(QtCore.QDir.currentPath())
+        self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
+
+        # set auto-completer for the input file edit:
+        self.path_completer = QtGui.QCompleter()
+        self.path_completer.setModel(self.dirModel)
+        self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
+        self.ui.edit_file_name.setCompleter(self.path_completer)
+
+        self.stop_progress_indicator()
+
+        self.setup_hooks()
+        self.setup_menu_actions()
+        
+        self.change_corpus()
+        
+        self.log_table = classes.LogTableModel(self)
+        self.log_proxy = classes.LogProxyModel()
+        self.log_proxy.setSourceModel(self.log_table)
+        self.log_proxy.sortCaseSensitivity = False
+        self.ui.log_table.setModel(self.log_proxy)
+
+        self.table_model = classes.CoqTableModel(self)
+        self.table_model.dataChanged.connect(self.table_model.sort)
+        header = self.ui.data_preview.horizontalHeader()
+        header.sectionResized.connect(self.result_column_resize)
+        header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.show_header_menu)
+
+        header = self.ui.data_preview.verticalHeader()
+        header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.show_row_header_menu)
+
+        self.ui.data_preview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
+
+        self.ui.data_preview.clicked.connect(self.result_cell_clicked)
+        self.ui.data_preview.horizontalHeader().setMovable(True)
+        self.ui.data_preview.setSortingEnabled(False)
+
+        self.ui.context_query_syntax.setPixmap(QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_TitleBarContextHelpButton))
+
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
         self.ui.action_save_results.triggered.connect(self.save_results)
@@ -544,92 +285,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_mode_tokens.toggled.connect(self.toggle_frequency_columns)
         self.ui.radio_mode_context.toggled.connect(self.toggle_frequency_columns)
         
-    def setup_app(self):
-        """ Initialize all widgets with suitable data """
-
-        self.create_output_options_tree()
-        
-        QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
-        self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
-
-        # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(get_available_resources().keys())]
-
-        self.ui.combo_corpus.addItems(corpora)
-        
-        # chamge the default query string edit to the sublassed edit class:
-        self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
-        self.ui.edit_query_string.close()        
-        edit_query_string = CoqTextEdit(self)
-        edit_query_string.setObjectName("edit_query_string")
-        self.ui.gridLayout_2.addWidget(edit_query_string, 2, 1, 1, 1)
-        self.ui.edit_query_string = edit_query_string
-        
-        self.ui.filter_box = QueryFilterBox(self)
-        
-        
-        self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
-        self.ui.tag_cloud.close()
-        self.ui.horizontalLayout.removeWidget(self.ui.edit_query_filter)
-        self.ui.horizontalLayout.removeWidget(self.ui.label_4)
-        self.ui.edit_query_filter.close()
-        self.ui.label_4.close()
-
-        self.ui.verticalLayout_5.addWidget(self.ui.filter_box)
-
-        # set auto-completer for the filter edit:
-        self.filter_variable_model = QtGui.QStringListModel()
-        self.completer = QtGui.QCompleter()
-        self.completer.setModel(self.filter_variable_model)
-        self.completer.setCompletionMode(QtGui.QCompleter.InlineCompletion)
-        self.completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
-        self.ui.filter_box.edit_tag.setCompleter(self.completer)
-
-        # use a file system model for the file name auto-completer::
-        self.dirModel = QtGui.QFileSystemModel()
-        # make sure that the model is updated on changes to the file system:
-        self.dirModel.setRootPath(QtCore.QDir.currentPath())
-        self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
-
-        # set auto-completer for the input file edit:
-        self.path_completer = QtGui.QCompleter()
-        self.path_completer.setModel(self.dirModel)
-        self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
-        self.ui.edit_file_name.setCompleter(self.path_completer)
-
-        self.stop_progress_indicator()
-
-        self.setup_hooks()
-        self.setup_menu_actions()
-        
-        self.change_corpus()
-        
-        self.log_table = LogTableModel(self)
-        self.log_proxy = LogProxyModel()
-        self.log_proxy.setSourceModel(self.log_table)
-        self.log_proxy.sortCaseSensitivity = False
-        self.ui.log_table.setModel(self.log_proxy)
-
-        self.table_model = results.CoqTableModel(self)
-        self.table_model.dataChanged.connect(self.table_model.sort)
-        header = self.ui.data_preview.horizontalHeader()
-        header.sectionResized.connect(self.result_column_resize)
-        header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        header.customContextMenuRequested.connect(self.show_header_menu)
-
-        header = self.ui.data_preview.verticalHeader()
-        header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        header.customContextMenuRequested.connect(self.show_row_header_menu)
-
-        self.ui.data_preview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
-
-        self.ui.data_preview.clicked.connect(self.result_cell_clicked)
-        self.ui.data_preview.horizontalHeader().setMovable(True)
-        self.ui.data_preview.setSortingEnabled(False)
-
-        self.ui.context_query_syntax.setPixmap(QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_TitleBarContextHelpButton))
-
     def result_column_resize(self, index, old, new):
         header = self.table_model.header[index].lower()
         options.cfg.column_width[header] = new
@@ -675,7 +330,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Remove any existing tree widget for the output options, create a
         new, empty tree, add it to the layout, and return it. """
         # replace old tree widget by a new, still empty tree:
-        tree = CoqTreeWidget()
+        tree = classes.CoqTreeWidget()
         tree.setColumnCount(1)
         tree.setHeaderHidden(True)
         tree.setRootIsDecorated(True)
@@ -757,7 +412,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # populate the tree with a root for each table:
         for table in tables:
-            root = CoqTreeItem()
+            root = classes.CoqTreeItem()
             root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
             try:
@@ -772,7 +427,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
             # add a leaf for each table variable:
             for var in table_dict[table]:
-                leaf = CoqTreeItem()
+                leaf = classes.CoqTreeItem()
                 leaf.setObjectName(coqueryUi._fromUtf8(var))
                 root.addChild(leaf)
                 label = type(self.resource).__getattribute__(self.resource, var)
@@ -820,10 +475,6 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Show a non-modal message box informing the user that no corpus
         module is available. This message box will be automatically closed 
         if a corpus resource is available."""
-        msg_no_corpus = "Coquery could not find a corpus module. Without a corpus module, you cannot run any query."
-        msg_details = """<p>To build a new corpus module from a selection of text files, select <b>Build corpus...</b> from the Corpus menu.</p>
-            <p>To install the corpus module for one of the corpora that are
-            supported by Coquery, select <b>Install corpus...</b> from the Corpus menu.</p>"""
         self.msg_box_no_corpus = QtGui.QMessageBox(self)
         self.msg_box_no_corpus.setWindowTitle("No corpus available – Coquery")
         self.msg_box_no_corpus.setText(msg_no_corpus)
@@ -833,56 +484,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.msg_box_no_corpus.setWindowModality(QtCore.Qt.NonModal)
         self.msg_box_no_corpus.setIcon(QtGui.QMessageBox.Warning)
         self.msg_box_no_corpus.show()
-        
-    def __init__(self, parent=None):
-        """ Initialize the main window. This sets up any widget that needs
-        spetial care, and also sets up some special attributes that relate
-        to the GUI, including default appearances of the columns."""
-        QtGui.QMainWindow.__init__(self, parent)
-        
-        self.file_content = None
-
-        size = QtGui.QApplication.desktop().screenGeometry()
-        
-        # Retrieve font and metrics for the CoqItemDelegates
-        options.cfg.font = options.cfg.app.font()
-        info = QtGui.QFontInfo(options.cfg.font)
-        options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
-        options.cfg.cell_margin = options.cfg.metrics.boundingRect(" ").width()
-
-        if size.height() < 1024 or size.width() < 1024:
-            self.ui = coqueryCompactUi.Ui_MainWindow()
-        else:
-            self.ui = coqueryUi.Ui_MainWindow()
-        self.ui.setupUi(self)
-        
-        self.setup_app()
-        self.csv_options = None
-        self.query_thread = None
-        self.last_results_saved = True
-        self.corpus_manager = None
-        
-        self.widget_list = []
-        
-        # the dictionaries column_width and column_color store default
-        # attributes of the columns by display name. This means that problems
-        # may arise if several columns have the same name!
-        # FIXME: Make sure that the columns are identified correctly.
-        self.column_width = {}
-        self.column_color = {}
-        
-        # A non-modal dialog is shown if no corpus resource is available.
-        # The dialog contains some assistance on how to build a new corpus.
-        if not get_available_resources():
-            self.show_no_corpus_message()
-        
-        options.cfg.main_window = self
-        # Resize the window if a previous size is available
-        try:
-            if options.cfg.height and options.cfg.width:
-                self.resize(options.cfg.width, options.cfg.height)
-        except AttributeError:
-            pass
         
     def display_results(self):
         self.table_model.set_data(self.Session.output_object)
@@ -905,9 +506,9 @@ class CoqueryApp(QtGui.QMainWindow):
             column = self.table_model.header[header.logicalIndex(i)]
 
             if column in ("coq_conditional_probability"):
-                deleg = results.CoqProbabilityDelegate(self.ui.data_preview)
+                deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
             else:
-                deleg = results.CoqResultCellDelegate(self.ui.data_preview)
+                deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
             self.ui.data_preview.setItemDelegateForColumn(i, deleg)
 
         if self.table_model.rowCount():
@@ -933,11 +534,24 @@ class CoqueryApp(QtGui.QMainWindow):
         import csvOptions
         results = csvOptions.CSVOptions.getOptions(
             str(self.ui.edit_file_name.text()), 
-            self.csv_options, 
+            (options.cfg.input_separator,
+             options.cfg.query_column_number,
+             options.cfg.file_has_headers,
+             options.cfg.skip_lines,
+             options.cfg.quote_char),
             self, icon=options.cfg.icon)
         
         if results:
-            self.csv_options = results
+            (options.cfg.input_separator,
+             options.cfg.query_column_number,
+             options.cfg.file_has_headers,
+             options.cfg.skip_lines,
+             options.cfg.quote_char) = results
+            
+            if options.cfg.input_separator == "{tab}":
+                options.cfg.input_separator = "\t"
+            elif options.cfg.input_separator == "{space}":
+                options.cfg.input_separator = " "
             self.switch_to_file()
 
     def manage_stopwords(self):
@@ -962,9 +576,9 @@ class CoqueryApp(QtGui.QMainWindow):
                            header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
                            encoding=options.cfg.output_encoding)
             except IOError as e:
-                QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. <b>The results have not been saved.</b>")
+                QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
             except (UnicodeEncodeError, UnicodeDecodeError):
-                QtGui.QMessageBox.critical(self, "Encoding error", "<p>Unfortunatenly, there was an error while encoding the characters in the results view. <b>The save file is probably incomplete.</b></p><p>At least one column contains special characters which could not be translated to a format that can be written to a file. You may try to work around this issue by reducing the number of output columns so that the offending character is not in the output anymore.</p><p>We apologize for this inconvenience. Please do not hesitate to contact the authors about it so that the problem may be fixed in a future version.</p>")
+                QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
             else:
                 self.last_results_saved = True
     
@@ -1047,7 +661,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
             group = QtGui.QActionGroup(self, exclusive=True)
             action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
+            action.triggered.connect(lambda: self.change_sorting_order(column, SORT_NONE))
             if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_NONE:
                 action.setChecked(True)
             self.menu.addAction(action)
@@ -1242,7 +856,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-stop")))
     
     def stop_query(self):
-        msg_query_running = "<p>The last query has not finished yet. If you interrupt it, the results that have been retrieved so far will be discarded.</p><p>Do you really want to interrupt this query?</p>"
         response = QtGui.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
         if response == QtGui.QMessageBox.Yes:
             logger.warning("Last query is incomplete.")
@@ -1275,26 +888,11 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.Session = SessionCommandLine()
             else:
                 if not self.verify_file_name():
-                    msg_filename_error = """<p><b>File name not valid.</b></p>
-                    <p>You have chosen to read the query strings from a file, but
-                    the query file name that you have entered is not valid. Please enter a
-                    valid query file name, or select a file by pressing the Open
-                    button.</p>"""
                     QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     return
                 self.Session = SessionInputFile()
         except SQLInitializationError as e:
-            msg_initialization_error = """<p>An error occurred while
-            initializing the database:</p><p>{}</p>
-            <p>Possible reasons include:
-            <ul><li>The database server is not running.</li>
-            <li>The host name or the server port are incorrect.</li>
-            <li>The user name or password are incorrect, or the user has insufficient privileges.</li>
-            <li>You are trying to access a local database on a remote server, or vice versa.</li>
-            </ul></p>
-            <p>Open <b>MySQL settings</b> in the Settings menu to check whether
-            the connection to the database server is working, and if the settings are correct.</p>""".format(e)
-            QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error.format(code=e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except CollocationNoContextError as e:
             QtGui.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except RuntimeError as e:
@@ -1367,7 +965,7 @@ class CoqueryApp(QtGui.QMainWindow):
             try:
                 url = resource.documentation_url
             except AttributeError:
-                QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation.format(corpus=current_corpus), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             else:
                 import webbrowser
                 webbrowser.open(url)
@@ -1379,10 +977,8 @@ class CoqueryApp(QtGui.QMainWindow):
             size = FileSize(sqlwrap.SqlDB(options.cfg.db_host, options.cfg.db_port, options.cfg.db_user, options.cfg.db_password).get_database_size(database))
         except  TypeError:
             size = FileSize(-1)
-        msg_corpus_remove = "<p><b>You have requested to remove the corpus '{0}'.</b></p><p>This step cannot be reverted. If you proceed, the corpus will not be available for further queries before you install it again.</p><p>Removing '{0}' will free approximately {1:.1S} of disk space.</p><p><p>Do you really want to remove the corpus?</p>".format(corpus_name, size)
-        
         response = QtGui.QMessageBox.warning(
-            self, "Remove corpus", msg_corpus_remove, QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+            self, "Remove corpus", msg_corpus_remove.format(corpus=corpus_name, size=size), QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
         
         if response == QtGui.QMessageBox.Yes:
             try:
@@ -1394,13 +990,13 @@ class CoqueryApp(QtGui.QMainWindow):
             try:
                 DB.execute("DROP DATABASE {}".format(database))
             except (sqlwrap.mysql.InternalError, sqlwrap.mysql.OperationalError) as e:
-                QtGui.QMessageBox.critical(self, "Database error – Coquery", "<p>There was an error while deleting the corpus databases:</p><p>{}</p>".format(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                QtGui.QMessageBox.critical(self, "Database error – Coquery", msg_remove_corpus_error.format(code=e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             finally:
                 DB.close()
             try:
                 os.remove(module)
             except IOError:
-                QtGui.QMessageBox.critical(self, "Storage error – Coquery", "<p>There was an error while deleting the corpus module.</p>", QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                QtGui.QMessageBox.critical(self, "Storage error – Coquery", msg_remove_corpus_disk_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             self.stop_progress_indicator()
             self.fill_combo_corpus()
             logger.warning("Removed corpus {}.".format(corpus_name))
@@ -1474,8 +1070,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
     def closeEvent(self, event):
         if not self.last_results_saved and options.cfg.ask_on_quit:
-            msg_query_running = "<p>The last query results have not been saved. If you quit now, they will be lost.</p><p>Do you really want to quit?</p>"
-            response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+            response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_unsaved_data, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
                 self.shutdown()
                 event.accept()
@@ -1570,19 +1165,6 @@ class CoqueryApp(QtGui.QMainWindow):
                     options.cfg.query_list = [str(self.ui.edit_query_string.toPlainText())]
             options.cfg.input_path = str(self.ui.edit_file_name.text())
 
-            # retrieve the CSV options for the current input file:
-            if self.csv_options:
-                sep, col, head, skip, quote = self.csv_options
-                if sep == "{tab}":
-                    sep = "\t"
-                if sep == "{space}":
-                    sep = " "
-                options.cfg.input_separator = sep
-                options.cfg.query_column_number = col
-                options.cfg.file_has_headers = head
-                options.cfg.skip_lines = skip
-                options.cfg.quote_char = quote
-
             # get context options:
             try:
                 options.cfg.context_left = self.ui.context_left_span.value()
@@ -1654,7 +1236,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.edit_file_name.setText(options.cfg.input_path)
         # either fill query string or query file input:
         if options.cfg.query_list:
-            self.ui.edit_query_string.setText(options.cfg.query_list[0])
+            self.ui.edit_query_string.setText("\n".join(options.cfg.query_list))
             self.ui.radio_query_string.setChecked(True)
         if options.cfg.input_path_provided:
             self.ui.radio_query_file.setChecked(True)
@@ -1672,8 +1254,6 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.radio_context_mode_kwic.setChecked(True)
             
-        self.csv_options = (options.cfg.input_separator, options.cfg.query_column_number, options.cfg.file_has_headers, options.cfg.skip_lines, options.cfg.quote_char)
-        
         for filt in list(options.cfg.filter_list):
             self.ui.filter_box.addTag(filt)
             options.cfg.filter_list.remove(filt)
@@ -1757,7 +1337,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
             for rc_feature in table:
                 if rc_feature.rpartition("_")[-1] not in ("id", "table") and rc_feature != feature_name:
-                    new_item = CoqTreeItem()
+                    new_item = classes.CoqTreeItem()
                     new_item.setText(0, resource.__getattribute__(resource, rc_feature))
                     new_item.setObjectName("{}.{}".format(corpus, rc_feature))
                     new_item.setCheckState(column, False)
@@ -1790,7 +1370,7 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             label, func = response
             
-            child_func = CoqTreeFuncItem()
+            child_func = classes.CoqTreeFuncItem()
             child_func.setObjectName("func.{}".format(item.objectName()))
             child_func.setFunction(func)
             child_func.setText(column, label)

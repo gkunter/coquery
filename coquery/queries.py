@@ -347,6 +347,8 @@ class TokenQuery(object):
             else:
                 for y in range(length):
                     L.append("{}.{}".format(i + 1, y + 1))
+        if n > len(L) - 1:
+            return n
         return L[n]
     
     def insert_static_data(self, df):
