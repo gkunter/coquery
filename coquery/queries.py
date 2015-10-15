@@ -347,6 +347,8 @@ class TokenQuery(object):
             else:
                 for y in range(length):
                     L.append("{}.{}".format(i + 1, y + 1))
+        if n > len(L) - 1:
+            return n
         return L[n]
     
     def insert_static_data(self, df):
@@ -516,7 +518,7 @@ class FrequencyQuery(TokenQuery):
     """
     
     def add_output_columns(self):
-        self.Session.output_order.add("coq_frequency")
+        self.Session.output_order.append("coq_frequency")
         
     @staticmethod
     def do_the_grouping(df, group_columns, aggr_dict):
