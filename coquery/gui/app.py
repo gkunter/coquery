@@ -18,6 +18,7 @@ import os
 import codecs
 import random
 import logging
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -612,6 +613,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.table_model = results.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
+        self.table_model.columnVisibilityChanged.connect(self.reaggregate)
         header = self.ui.data_preview.horizontalHeader()
         header.sectionResized.connect(self.result_column_resize)
         header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -699,7 +701,17 @@ class CoqueryApp(QtGui.QMainWindow):
                             child.setDisabled(False)
                         else:
                             child.setDisabled(True)
-                
+    
+    def reaggregate(self):
+        """
+        Reaggregate the current data table when changing the visibility of
+        the table columns.
+        """
+        if options.cfg.reaggregate_data:
+            self.Session.aggregate_data()
+            self.table_model.set_data(self.Session.output_object)
+            self.table_model.set_header()
+
     def change_corpus(self):
         """ Change the output options list depending on the features available
         in the current corpus. If no corpus is avaiable, disable the options
@@ -1160,6 +1172,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if column in self.table_model.sort_columns:
             self.table_model.sort(0, QtCore.Qt.AscendingOrder)
         self.table_model.layoutChanged.emit()
+        self.table_model.columnVisibilityChanged.emit()
 
     def set_row_visibility(self, selection, state):
         """ 
@@ -1526,6 +1539,11 @@ class CoqueryApp(QtGui.QMainWindow):
                             "{}.{}".format(node.parent().objectName(),
                             node.parent()._link_by[1]),
                             node.parent()._link_by[0])})
+
+                    #output_features[link_name].append(
+                        #("{}.{}".format(node.parent().objectName(),
+                        #node.parent()._link_by[1]),
+                        #node.parent()._link_by[0]))
             return output_features
 
         def get_functions(node):
@@ -1600,8 +1618,13 @@ class CoqueryApp(QtGui.QMainWindow):
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             
             options.cfg.external_links = {}
+            #options.cfg.external_links = defaultdict(list)
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
                 options.cfg.external_links.update(get_external_links(root))
+            #print("External links:")
+            #for x in options.cfg.external_links:
+                #print(x, options.cfg.external_links[x])
+            
             # Go throw options tree widget to get all checked output columns:
             options.cfg.selected_features = []
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:

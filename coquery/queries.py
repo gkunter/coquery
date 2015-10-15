@@ -494,8 +494,7 @@ class DistinctQuery(TokenQuery):
     #@jit
     @classmethod
     def aggregate_data(cls, df, resource):
-        vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible")]
-        #vis_cols = [x for x in cls.Session.output_order if not x.startswith("coquery_invisible")]
+        vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
         df = df.drop_duplicates(subset=vis_cols)
         df = df.reset_index(drop=True)
         return df
@@ -549,6 +548,11 @@ class FrequencyQuery(TokenQuery):
         """
         # get a list of grouping and sampling columns:
         
+        # Drop frequency column if it is already in the data frame (this is
+        # needed for re-aggregation):
+        if "coq_frequency" in list(df.columns.values):
+            df.drop("coq_frequency", axis=1, inplace=True)
+
         columns = []
         for x in df.columns.values:
             try:
@@ -558,7 +562,9 @@ class FrequencyQuery(TokenQuery):
             else:
                 columns.append(x)
 
-        group_columns = [x for x in columns if not x.startswith("coquery_invisible")]
+        # Group by those columns which are neither intrinsically invisible 
+        # nor currently hidden:
+        group_columns = [x for x in columns if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
         sample_columns = [x for x in columns if x not in group_columns]
         
         # Add a frequency column:

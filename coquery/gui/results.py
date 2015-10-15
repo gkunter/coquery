@@ -31,6 +31,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     """ Define a QAbstractTableModel class that stores the query results in a 
     pandas DataFrame object. It provides the required methods so that they 
     can be shown in the results view. """
+
+    columnVisibilityChanged = QtCore.Signal()
     
     def __init__(self, parent, *args):
         super(CoqTableModel, self).__init__(parent, *args)

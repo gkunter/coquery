@@ -140,9 +140,8 @@ class Session(object):
 
         self.end_time = datetime.datetime.now()
         self.data_table.index = range(1, len(self.data_table.index) + 1)
-        self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
-        self.output_object.fillna("", inplace=True)
-        self.output_object.index = range(1, len(self.output_object.index) + 1)
+        
+        self.aggregate_data()
 
         if not options.cfg.gui:
             if not options.cfg.output_path:
@@ -165,6 +164,15 @@ class Session(object):
                 encoding="utf-8",
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
+
+    def aggregate_data(self):
+        """
+        Apply the aggegate function from the current query type to the 
+        data table produced in this session.
+        """
+        self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
+        self.output_object.fillna("", inplace=True)
+        self.output_object.index = range(1, len(self.output_object.index) + 1)
 
     def translate_header(self, header):
         """ 

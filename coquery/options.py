@@ -29,6 +29,7 @@ import argparse
 import logging
 import codecs
 import tokens
+from collections import defaultdict
 
 from defines import *
 from errors import *
@@ -62,6 +63,7 @@ class Options(object):
         self.args.query_string = ""
         self.args.save_query_string = True
         self.args.save_query_file = True
+        self.args.reaggregate_data = True
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
         except AttributeError:
@@ -69,6 +71,7 @@ class Options(object):
 
         self.args.selected_features= []
         self.args.external_links = {}
+        #self.args.external_links = defaultdict(list)
         self.args.selected_functions = []
         
         self.args.context_left = 0
@@ -528,6 +531,10 @@ class Options(object):
                             self.args.save_query_file = config_file.get("gui", "save_query_file")
                         except configparser.NoOptionError:
                             self.args.save_query_file = True
+                        try:
+                            self.args.reaggregate_data = config_file.get("gui", "reaggregate_data")
+                        except configparser.NoOptionError:
+                            self.args.reaggregate_data = True
 
                         try:
                             vars(self.args)["width"] = int(config_file.get("gui", "width"))
@@ -661,6 +668,11 @@ def save_configuration():
             config.set("gui", "save_query_file", cfg.save_query_file)
         except AttributeError:
             config.set("gui", "save_query_file", True)
+
+        try:
+            config.set("gui", "reaggregate_data", cfg.reaggregate_data)
+        except AttributeError:
+            config.set("gui", "reaggregate_data", True)
 
         try:
             config.set("gui", "save_query_string", cfg.save_query_string)
