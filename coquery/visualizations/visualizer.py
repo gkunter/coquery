@@ -660,6 +660,7 @@ class VisualizerDialog(QtGui.QWidget):
 
         self.visualizer.setup_figure()
         
+        print("remove and add")
         self.remove_matplot()
         self.add_matplot()
             
