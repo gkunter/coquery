@@ -147,23 +147,25 @@ class BaseVisualizer(object):
         self.setup_figure()
     
     def set_defaults(self):
+        if not self.options.get("color_number", ""):
+            self.options["color_number"] = len(self._levels[-1])
+        if not self.options.get("label_legend_columns", 0):
+            self.options["label_legend_columns"] = 1
         if not self.options.get("color_palette", ""):
             if len(self._levels) == 0:
                 self.options["color_palette"] = "Paired"
                 self.options["color_number"] = 1
             elif len(self._levels[-1]) in (2, 4, 6):
                 self.options["color_palette"] = "Paired"
-                self.options["color_number"] = len(self._levels[-1])
             elif len(self._groupby) == 2:
                 self.options["color_palette"] = "Paired"
-                self.options["color_number"] = len(self._levels[-1])
             else:
                 self.options["color_palette"] = "RdPu"
-                self.options["color_number"] = len(self._levels[-1])
             
-        self.options["color_palette_values"] = sns.color_palette(
-            self.options["color_palette"],
-            self.options["color_number"])
+        if not self.options.get("color_palette_values", ""):
+            self.options["color_palette_values"] = sns.color_palette(
+                self.options["color_palette"],
+                self.options["color_number"])
                                                                                                                             
     def _validate_layout(func):
         def func_wrapper(self):
