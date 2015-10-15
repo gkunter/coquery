@@ -638,11 +638,6 @@ class SQLResource(BaseResource):
                     select_list.append(rc_feature)
 
         # linked columns
-        print("----")
-        print(options.cfg.selected_features)
-        print("----")
-        print(options.cfg.external_links)
-        print("----")
         for rc_feature in options.cfg.external_links:
             if rc_feature not in options.cfg.selected_features:
                 continue
@@ -654,8 +649,6 @@ class SQLResource(BaseResource):
                 select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
             else:
                 select_list.append("coq_{}_1".format(linked_feature))
-        print(select_list)
-        print("----")
 
         # functions:
         func_counter = Counter()
@@ -676,7 +669,6 @@ class SQLResource(BaseResource):
                     select_list += ["coq_func_{}_{}_{}".format(resource, fc, x + 1) for x in range(max_token_count)]
                 else:
                     select_list.append("coq_func_{}_{}_1".format(resource, fc))
-        print(select_list)
 
         if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
             # add contexts for each query match:
@@ -1513,12 +1505,30 @@ class SQLCorpus(BaseCorpus):
                         i=i+1)
                     token_query_list[i+1] = join_string
             final_select = []
-            for rc_feature in options.cfg.selected_features:
-                select_feature = "coq_{}_1".format(rc_feature)
-                if rc_feature in corpus_features or rc_feature in lexicon_features:
-                    final_select.append(select_feature)
-                else:
-                    final_select.append("NULL AS {}".format(select_feature))
+
+
+            # FIXME:
+            # Not working: 
+            # - align_quantified
+
+            for rc_feature in self.resource.get_preferred_output_order():
+                if rc_feature in options.cfg.selected_features:
+                    if rc_feature in lexicon_features:
+                        for i in range(Query.Session.get_max_token_count()):
+                            if i < len(token_list):
+                                final_select.append("coq_{}_{}".format(rc_feature, i+1))
+                            else:
+                                final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
+                    elif rc_feature in corpus_features:
+                        final_select.append("coq_{}_1".format(rc_feature))
+
+
+            #for rc_feature in options.cfg.selected_features:
+                #select_feature = "coq_{}_1".format(rc_feature)
+                #if rc_feature in corpus_features or rc_feature in lexicon_features:
+                    #final_select.append(select_feature)
+                #else:
+                    #final_select.append("NULL AS {}".format(select_feature))
 
             final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.__getattribute__("corpus_denorm_id")))
 
@@ -1982,5 +1992,4 @@ class SQLCorpus(BaseCorpus):
             if tag:
                 context.appendleft("<{}>".format(self.tag_to_html(tag)))
 
-        #print(context)
         widget.ui.context_area.setText(collapse_words(context))
