@@ -1230,7 +1230,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.edit_file_name.setText(options.cfg.input_path)
         # either fill query string or query file input:
         if options.cfg.query_list:
-            self.ui.edit_query_string.setText(options.cfg.query_list[0])
+            self.ui.edit_query_string.setText("\n".join(options.cfg.query_list))
             self.ui.radio_query_string.setChecked(True)
         if options.cfg.input_path_provided:
             self.ui.radio_query_file.setChecked(True)
