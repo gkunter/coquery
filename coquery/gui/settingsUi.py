@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'settings.ui'
 #
-# Created: Mon Oct  5 01:16:41 2015
+# Created: Thu Oct 15 23:43:21 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_SettingsDialog(object):
     def setupUi(self, SettingsDialog):
         SettingsDialog.setObjectName(_fromUtf8("SettingsDialog"))
-        SettingsDialog.resize(667, 649)
+        SettingsDialog.resize(667, 737)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -57,6 +57,9 @@ class Ui_SettingsDialog(object):
         self.horizontalLayout_5.setObjectName(_fromUtf8("horizontalLayout_5"))
         self.verticalLayout = QtGui.QVBoxLayout()
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        self.check_reaggregate_data = QtGui.QCheckBox(self.groupBox)
+        self.check_reaggregate_data.setObjectName(_fromUtf8("check_reaggregate_data"))
+        self.verticalLayout.addWidget(self.check_reaggregate_data)
         self.check_ignore_punctuation = QtGui.QCheckBox(self.groupBox)
         self.check_ignore_punctuation.setObjectName(_fromUtf8("check_ignore_punctuation"))
         self.verticalLayout.addWidget(self.check_ignore_punctuation)
@@ -205,6 +208,7 @@ class Ui_SettingsDialog(object):
     def retranslateUi(self, SettingsDialog):
         SettingsDialog.setWindowTitle(_translate("SettingsDialog", "Settings – Coquery", None))
         self.groupBox.setTitle(_translate("SettingsDialog", "Query options", None))
+        self.check_reaggregate_data.setText(_translate("SettingsDialog", "&Reaggregate data when toggling column visibility", None))
         self.check_ignore_punctuation.setText(_translate("SettingsDialog", "Ignore &punctuation in contexts", None))
         self.check_experimental.setText(_translate("SettingsDialog", "Use &experimental features (MAY BE UNSTABLE!)", None))
         self.groupBox1.setTitle(_translate("SettingsDialog", "Output options", None))

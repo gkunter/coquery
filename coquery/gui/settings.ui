@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>667</width>
-    <height>649</height>
+    <height>737</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -82,6 +82,13 @@
          </property>
          <item>
           <layout class="QVBoxLayout" name="verticalLayout">
+           <item>
+            <widget class="QCheckBox" name="check_reaggregate_data">
+             <property name="text">
+              <string>&amp;Reaggregate data when toggling column visibility</string>
+             </property>
+            </widget>
+           </item>
            <item>
             <widget class="QCheckBox" name="check_ignore_punctuation">
              <property name="text">

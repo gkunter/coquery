@@ -29,6 +29,10 @@ class Settings(QtGui.QDialog):
         except AttributeError:
             pass
         try:
+            self.ui.check_reaggregate_data.setChecked(bool(self.options.reaggregate_data))
+        except AttributeError:
+            pass
+        try:
             self.ui.check_ignore_punctuation.setChecked(bool(self.options.ignore_punctuation))
         except AttributeError:
             pass
@@ -67,6 +71,7 @@ class Settings(QtGui.QDialog):
 
     def change_options(self):
         self.options.case_sensitive = not bool(self.ui.check_ignore_case.isChecked())
+        self.options.reaggregate_data = bool(self.ui.check_reaggregate_data.isChecked())
         self.options.ignore_punctuation = bool(self.ui.check_ignore_punctuation.isChecked())
         self.options.experimental = bool(self.ui.check_experimental.isChecked())
         self.options.align_quantified = bool(self.ui.check_align_quantified.isChecked())
