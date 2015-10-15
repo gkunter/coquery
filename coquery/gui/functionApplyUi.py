@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'functionApply.ui'
 #
-# Created: Mon Sep 28 23:19:03 2015
+# Created: Thu Oct 15 21:18:47 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -81,7 +81,7 @@ class Ui_FunctionDialog(object):
         sizePolicy.setHeightForWidth(self.label_func4.sizePolicy().hasHeightForWidth())
         self.label_func4.setSizePolicy(sizePolicy)
         self.label_func4.setWordWrap(True)
-        self.label_func4.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
+        self.label_func4.setOpenExternalLinks(True)
         self.label_func4.setObjectName(_fromUtf8("label_func4"))
         self.gridLayout.addWidget(self.label_func4, 5, 1, 1, 1)
         self.radio_regexp = QtGui.QRadioButton(self.frame1)
@@ -96,8 +96,8 @@ class Ui_FunctionDialog(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_func3.sizePolicy().hasHeightForWidth())
         self.label_func3.setSizePolicy(sizePolicy)
-        self.label_func3.setWordWrap(False)
-        self.label_func3.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
+        self.label_func3.setWordWrap(True)
+        self.label_func3.setOpenExternalLinks(True)
         self.label_func3.setObjectName(_fromUtf8("label_func3"))
         self.gridLayout.addWidget(self.label_func3, 4, 1, 1, 1)
         self.verticalLayout.addWidget(self.frame1)

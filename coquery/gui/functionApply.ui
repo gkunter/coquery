@@ -138,8 +138,8 @@
            <property name="wordWrap">
             <bool>true</bool>
            </property>
-           <property name="textInteractionFlags">
-            <set>Qt::TextBrowserInteraction</set>
+           <property name="openExternalLinks">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -171,8 +171,8 @@
            <property name="wordWrap">
             <bool>true</bool>
            </property>
-           <property name="textInteractionFlags">
-            <set>Qt::TextBrowserInteraction</set>
+           <property name="openExternalLinks">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
