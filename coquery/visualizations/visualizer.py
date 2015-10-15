@@ -660,12 +660,10 @@ class VisualizerDialog(QtGui.QWidget):
 
         self.visualizer.setup_figure()
         
-        print("remove and add")
         self.remove_matplot()
         self.add_matplot()
             
         self.visualizer.draw()
-        #self.canvas.draw()
         if self.smooth:
             self.spinner.setEnabled(True)
 
@@ -679,10 +677,6 @@ class VisualizerDialog(QtGui.QWidget):
             self.canvas.setFocus()
             self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
 
-        #if self.toolbar:
-            #self.ui.navigation_layout.removeWidget(self.toolbar)
-            #self.toolbar.close()
-        
         if not self.toolbar:
             self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
             if options.cfg.experimental:
@@ -691,6 +685,8 @@ class VisualizerDialog(QtGui.QWidget):
                 self.toolbar.addWidget(self.spinner)
                 self.toolbar.addWidget(self.spinner_label)
             self.ui.navigation_layout.addWidget(self.toolbar)
+        else:
+            self.toolbar.canvas = self.canvas
 
     def remove_matplot(self):
         """ 
