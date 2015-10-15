@@ -17,6 +17,21 @@ import matplotlib as mpl
 from pyqt_compat import QtGui, QtCore
 import figureOptionsUi
 
+class CoqColorListItem(QtGui.QListWidgetItem):
+    def __init__(self, color):
+        super(CoqColorListItem, self).__init__()
+        self.set_color(color)
+        self.color = color
+        
+    def set_color(self, color):
+        self.setText("#{:02X}{:02X}{:02X}".format(*color))
+        self.color = color
+        self.setBackground(QtGui.QBrush(QtGui.QColor(*color)))
+        if sum(color) > (255 * 3) / 2:
+            self.setForeground(QtGui.QBrush(QtGui.QColor("black")))
+        else:
+            self.setForeground(QtGui.QBrush(QtGui.QColor("white")))
+
 class FigureOptions(QtGui.QDialog):
     def __init__(self, default=dict(), parent=None, icon=None):
         super(FigureOptions, self).__init__(parent)
@@ -31,6 +46,7 @@ class FigureOptions(QtGui.QDialog):
         self.ui.label_x_axis.setText(self.options.get("label_x_axis", ""))
         self.ui.label_y_axis.setText(self.options.get("label_y_axis", ""))
         self.ui.label_legend.setText(self.options.get("label_legend", ""))
+        self.ui.spin_columns.setValue(self.options.get("label_legend_columns", 1))
 
         # Color editing is currently not implemented, so hide all widgets 
         # that relate to that:
@@ -39,7 +55,7 @@ class FigureOptions(QtGui.QDialog):
         self.ui.button_edit_diverging.hide()
         self.ui.button_edit_custom.hide()
         self.ui.button_remove_custom.hide()
-        self.ui.radio_custom.hide()
+        #self.ui.radio_custom.hide()
         self.ui.combo_custom.hide()        
         
         # set up colors tab:
@@ -52,22 +68,26 @@ class FigureOptions(QtGui.QDialog):
         self.ui.radio_qualitative.clicked.connect(self.change_palette)
         self.ui.radio_sequential.clicked.connect(self.change_palette)
         self.ui.radio_diverging.clicked.connect(self.change_palette)
-        if self.ui.combo_custom.count():
-            self.ui.radio_custom.clicked.connect(self.change_palette)
-        else:
-            self.ui.radio_custom.setEnabled(False)            
+        #if self.ui.combo_custom.count():
+            #self.ui.radio_custom.clicked.connect(self.change_palette)
+        #else:
+            #self.ui.radio_custom.setEnabled(False)            
         self.ui.combo_qualitative.currentIndexChanged.connect(lambda x: self.change_palette(True))
         self.ui.combo_sequential.currentIndexChanged.connect(lambda x: self.change_palette(True))
         self.ui.combo_diverging.currentIndexChanged.connect(lambda x: self.change_palette(True))
-        self.ui.combo_custom.currentIndexChanged.connect(lambda x: self.change_palette(True))
+        #self.ui.combo_custom.currentIndexChanged.connect(lambda x: self.change_palette(True))
         self.ui.check_reverse.clicked.connect(self.change_palette)
         self.ui.spin_number.valueChanged.connect(self.change_palette_length)
         self.change_palette()
+
+        if self.current_palette != "custom":
+            self.ui.radio_custom.setDisabled(True)
         
         # set up signals so that a dragged color is unselected after drop:
         self.item_entered = False
         self.ui.color_test_area.itemSelectionChanged.connect(self.check_for_drag)
         self.ui.color_test_area.itemEntered.connect(self.set_entered)
+        self.ui.color_test_area.itemClicked.connect(self.change_color)
 
         # set up fonts tab:
         self.ui.button_select_main.clicked.connect(lambda: self.font_select("main"))
@@ -85,6 +105,15 @@ class FigureOptions(QtGui.QDialog):
                 self.set_element_font(element_name, default_font)
                 
         self.ui.label_main.setFocus(True)
+
+    def change_color(self, item):
+        col = QtGui.QColorDialog.getColor(QtGui.QColor(str(item.text())))
+        if col:
+            item.set_color((col.red(), col.green(), col.blue()))
+        self.ui.color_test_area.clearSelection()
+        self.ui.radio_custom.setEnabled(True)
+        self.ui.radio_custom.setChecked(True)
+        self.change_palette()
 
     def set_entered(self):
         self.item_entered = True
@@ -131,13 +160,14 @@ class FigureOptions(QtGui.QDialog):
             self.ui.combo_custom.setEnabled(True)
             self.ui.button_edit_custom.setEnabled(True)
             self.ui.button_remove_custom.setEnabled(True)
-            self.current_palette = str(self.ui.combo_custom.currentText())
+            self.current_palette = "custom"
             if select_combo:
                 self.ui.combo_custom.setFocus(True)
         else:
             self.ui.radio_qualitative.setChecked(True)
             self.change_palette()
-        self.test_palette()
+        if self.current_palette != "custom":
+            self.test_palette()
 
     def set_palette_combo(self):
         for palette_type in ["qualitative", "sequential", "diverging", "custom"]:
@@ -160,12 +190,7 @@ class FigureOptions(QtGui.QDialog):
         palette = self.get_rgb_palette(self.current_palette, int(self.ui.spin_number.value()), bool(self.ui.check_reverse.isChecked()))
         self.ui.color_test_area.clear()
         for color in palette:
-            item = QtGui.QListWidgetItem("#{:02X}{:02X}{:02X}".format(*color))
-            item.setBackground(QtGui.QBrush(QtGui.QColor(*color)))
-            if sum(color) > (255 * 3) / 2:
-                item.setForeground(QtGui.QBrush(QtGui.QColor("black")))
-            else:
-                item.setForeground(QtGui.QBrush(QtGui.QColor("white")))
+            item = CoqColorListItem(color)
             self.ui.color_test_area.addItem(item)
     
     def set_element_font(self, element_name, font):
@@ -185,12 +210,13 @@ class FigureOptions(QtGui.QDialog):
         self.options["label_x_axis"] = str(self.ui.label_x_axis.text())
         self.options["label_y_axis"] = str(self.ui.label_y_axis.text())
         self.options["label_legend"] = str(self.ui.label_legend.text())
+        self.options["label_legend_columns"] = int(self.ui.spin_columns.value())
 
         self.options["color_palette"] = self.current_palette
         self.options["color_palette_values"] = self.get_current_palette()
         self.options["color_palette_reverse"] = bool(self.ui.check_reverse.isChecked())
-        if len(self.options["color_palette_values"]) < self.options["color_number"]:
-            self.options["color_palette_values"] = (self.options["color_palette_values"] * self.options["color_number"])[:self.options["color_number"]]
+        if len(self.options["color_palette_values"]) < self.options.get("color_number", 6):
+            self.options["color_palette_values"] = (self.options["color_palette_values"] * self.options.get("color_number", 6))[:self.options.get("color_number", 6)]
 
         self.options["font_main"] = self.ui.label_sample_main.font()
         self.options["font_x_axis"] = self.ui.label_sample_x.font()
