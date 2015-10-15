@@ -20,6 +20,7 @@ import pandas as pd
 
 import __init__
 from pyqt_compat import QtCore, QtGui
+import QtProgress
 import queryfilter
 import options
 import queries
