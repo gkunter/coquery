@@ -117,364 +117,420 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_fonts">
+     <widget class="QWidget" name="tab_colors">
       <attribute name="title">
        <string>Colors</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
+       <property name="spacing">
+        <number>16</number>
+       </property>
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
+       </property>
        <item>
-        <layout class="QGridLayout" name="gridLayout_6">
-         <property name="horizontalSpacing">
-          <number>8</number>
+        <widget class="QFrame" name="frame_2">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
          </property>
-         <item row="1" column="1">
-          <widget class="QComboBox" name="combo_sequential">
-           <item>
-            <property name="text">
-             <string>Greys</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Reds</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Greens</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Blues</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Oranges</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Purples</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>BuGn</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>BuPu</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>GnBu</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>OrRd</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>PuBu</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>PuRd</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>RdPu</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>YlGn</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>PuBuGn</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>YlGnBu</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>YlOrBr</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>YlOrRd</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QComboBox" name="combo_qualitative">
-           <item>
-            <property name="text">
-             <string>Set1</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Set2</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Set3</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Paired</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Accent</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Pastel1</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Pastel2</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Dark2</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QComboBox" name="combo_custom"/>
-         </item>
-         <item row="2" column="0">
-          <widget class="QRadioButton" name="radio_diverging">
-           <property name="text">
-            <string>Diverging</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QComboBox" name="combo_diverging">
-           <item>
-            <property name="text">
-             <string>RdBu</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>RdGy</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>PRGn</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>PiYG</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>BrBG</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>RdYlBu</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>RdYlGn</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Spectral</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QRadioButton" name="radio_qualitative">
-           <property name="text">
-            <string>Qualitative</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="4">
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="1" column="0">
-          <widget class="QRadioButton" name="radio_sequential">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Sequential</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QPushButton" name="button_edit_sequential">
-           <property name="text">
-            <string>Edit</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QPushButton" name="button_edit_qualitative">
-           <property name="text">
-            <string>Edit</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QRadioButton" name="radio_custom">
-           <property name="text">
-            <string>Custom</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QPushButton" name="button_edit_diverging">
-           <property name="text">
-            <string>Edit</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="2">
-          <widget class="QPushButton" name="button_edit_custom">
-           <property name="text">
-            <string>Edit</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="3">
-          <widget class="QPushButton" name="button_remove_custom">
-           <property name="text">
-            <string>Remove</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_6">
-         <item>
-          <widget class="QLabel" name="label_4">
-           <property name="text">
-            <string>Number of colors:</string>
-           </property>
-           <property name="buddy">
-            <cstring>spin_number</cstring>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="spin_number">
-           <property name="minimum">
-            <number>1</number>
-           </property>
-           <property name="value">
-            <number>6</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_3">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="check_reverse">
-         <property name="text">
-          <string>Reverse palette order</string>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
          </property>
+         <layout class="QVBoxLayout" name="verticalLayout_7">
+          <item>
+           <widget class="QLabel" name="label_15">
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Choose palette:&lt;br/&gt;(see &lt;a href=&quot;http://colorbrewer2.org&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#006e28;&quot;&gt;http://colorbrewer2.org&lt;/span&gt;&lt;/a&gt; for a demonstration)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+            <property name="openExternalLinks">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="gridLayout_6">
+            <item row="0" column="0">
+             <widget class="QRadioButton" name="radio_qualitative">
+              <property name="text">
+               <string>Qualitative</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="combo_qualitative">
+              <item>
+               <property name="text">
+                <string>Set1</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Set2</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Set3</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Paired</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Accent</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Pastel1</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Pastel2</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Dark2</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QRadioButton" name="radio_sequential">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Sequential</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="combo_sequential">
+              <item>
+               <property name="text">
+                <string>Greys</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Reds</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Greens</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Blues</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Oranges</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Purples</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>BuGn</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>BuPu</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>GnBu</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>OrRd</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>PuBu</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>PuRd</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>RdPu</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>YlGn</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>PuBuGn</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>YlGnBu</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>YlOrBr</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>YlOrRd</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QRadioButton" name="radio_diverging">
+              <property name="text">
+               <string>Diverging</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QComboBox" name="combo_diverging">
+              <item>
+               <property name="text">
+                <string>RdBu</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>RdGy</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>PRGn</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>PiYG</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>BrBG</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>RdYlBu</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>RdYlGn</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Spectral</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QRadioButton" name="radio_custom">
+              <property name="text">
+               <string>Custom</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QComboBox" name="combo_custom"/>
+            </item>
+            <item row="3" column="2">
+             <widget class="QPushButton" name="button_remove_custom">
+              <property name="text">
+               <string>Remove</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="3">
+             <spacer name="horizontalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_14"/>
+        <widget class="QFrame" name="frame">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_6">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_6">
+            <item>
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>Number of colors:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spin_number">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="value">
+               <number>6</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_3">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
        </item>
        <item>
-        <widget class="QListWidget" name="color_test_area">
-         <property name="dragEnabled">
-          <bool>true</bool>
+        <widget class="QFrame" name="frame">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
          </property>
-         <property name="dragDropMode">
-          <enum>QAbstractItemView::InternalMove</enum>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
          </property>
-         <property name="defaultDropAction">
-          <enum>Qt::MoveAction</enum>
-         </property>
-         <property name="selectionMode">
-          <enum>QAbstractItemView::SingleSelection</enum>
-         </property>
-         <property name="movement">
-          <enum>QListView::Snap</enum>
-         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <widget class="QLabel" name="label_14">
+            <property name="text">
+             <string>Click to modify color, drag to change order:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QListWidget" name="color_test_area">
+            <property name="dragEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="dragDropMode">
+             <enum>QAbstractItemView::InternalMove</enum>
+            </property>
+            <property name="defaultDropAction">
+             <enum>Qt::MoveAction</enum>
+            </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SingleSelection</enum>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectItems</enum>
+            </property>
+            <property name="movement">
+             <enum>QListView::Snap</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_8">
+            <item>
+             <widget class="QPushButton" name="button_reverse_order">
+              <property name="text">
+               <string>Reverse order</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_5">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
         </widget>
        </item>
       </layout>
       <zorder>layoutWidget</zorder>
-      <zorder>layoutWidget</zorder>
-      <zorder>color_test_area</zorder>
-      <zorder>check_reverse</zorder>
       <zorder>radio_qualitative</zorder>
       <zorder>combo_qualitative</zorder>
-      <zorder>layoutWidget_2</zorder>
+      <zorder>frame</zorder>
+      <zorder>frame</zorder>
+      <zorder>frame_2</zorder>
      </widget>
-     <widget class="QWidget" name="tab_colors">
+     <widget class="QWidget" name="tab_fonts">
       <attribute name="title">
        <string>Fonts</string>
       </attribute>
