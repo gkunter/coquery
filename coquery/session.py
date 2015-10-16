@@ -275,7 +275,8 @@ class StatisticsSession(Session):
 class SessionCommandLine(Session):
     def __init__(self):
         super(SessionCommandLine, self).__init__()
-        logger.info("{} queries".format(len(options.cfg.query_list)) if len(options.cfg.query_list) > 1 else "Single query")
+        if len(options.cfg.query_list) > 1:
+            logger.info("{} queries".format(len(options.cfg.query_list)))
         for query_string in options.cfg.query_list:
             if self.query_type:
                 new_query = self.query_type(query_string, self, tokens.COCAToken)
