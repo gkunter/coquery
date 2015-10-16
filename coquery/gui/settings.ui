@@ -90,6 +90,13 @@
             </widget>
            </item>
            <item>
+            <widget class="QCheckBox" name="check_server_side">
+             <property name="text">
+              <string>Retrieve results from server one by one  (somewhat slower, but uses less memory)</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QCheckBox" name="check_ignore_punctuation">
              <property name="text">
               <string>Ignore &amp;punctuation in contexts</string>

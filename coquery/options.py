@@ -64,6 +64,7 @@ class Options(object):
         self.args.save_query_string = True
         self.args.save_query_file = True
         self.args.reaggregate_data = True
+        self.args.server_side = True
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
         except AttributeError:
@@ -115,17 +116,17 @@ class Options(object):
         group.add_argument("-k", "--skip", help="skip SKIP lines in INPUTFILE (default: 0)", type=int, dest="skip_lines")
         group.add_argument("-H", "--header", help="use first row of INPUTFILE as headers", action="store_true", dest="file_has_headers")
         group.add_argument("-n", "--number", help="use column NUMBER in INPUTFILE for queries", type=int, dest="query_column_number")
-        group.add_argument("--is", "--input-separator", help="use CHARACTER as separator in input CSV file",  metavar="CHARACTER", dest="input_separator")
-        group.add_argument("--os", "--output-separator", help="use CHARACTER as separator in output CSV file", metavar="CHARACTER", dest="output_separator")
-        group.add_argument("--quote-character", help="use CHARACTER as quoting character", metavar="CHARACTER", dest="quote_char")
-        group.add_argument("--input-encoding", help="use INPUT-ENCODING as the encoding scheme for the input file (default: utf-8)", type=str, default="utf-8", dest="input_encoding")
-        group.add_argument("--output-encoding", help="use OUTPUT-ENCODING as the encoding scheme for the output file (default: utf-8)", type=str, default="utf-8", dest="output_encoding")
+        group.add_argument("--is", "--input_separator", help="use CHARACTER as separator in input CSV file",  metavar="CHARACTER", dest="input_separator")
+        group.add_argument("--os", "--output_separator", help="use CHARACTER as separator in output CSV file", metavar="CHARACTER", dest="output_separator")
+        group.add_argument("--quote_character", help="use CHARACTER as quoting character", metavar="CHARACTER", dest="quote_char")
+        group.add_argument("--input_encoding", help="use INPUT-ENCODING as the encoding scheme for the input file (default: utf-8)", type=str, default="utf-8", dest="input_encoding")
+        group.add_argument("--output_encoding", help="use OUTPUT-ENCODING as the encoding scheme for the output file (default: utf-8)", type=str, default="utf-8", dest="output_encoding")
 
         # Debug options:
         group = self.parser.add_argument_group("Debug options")
-        group.add_argument("-d", "--dry-run", help="dry run (do not query, just log the query strings)", action="store_true")
+        #group.add_argument("-d", "--dry-run", help="dry run (do not query, just log the query strings)", action="store_true")
         group.add_argument("-v", "--verbose", help="produce a verbose output", action="store_true", dest="verbose")
-        group.add_argument("-V", "--super-verbose", help="be super-verbose (i.e. log function calls)", action="store_true")
+        #group.add_argument("-V", "--super-verbose", help="be super-verbose (i.e. log function calls)", action="store_true")
         group.add_argument("-E", "--explain", help="explain mySQL queries in log file", action="store_true", dest="explain_queries")
         group.add_argument("--benchmark", help="benchmarking of Coquery", action="store_true")
         group.add_argument("--profile", help="deterministic profiling of Coquery", action="store_true")
@@ -136,12 +137,13 @@ class Options(object):
         # Query options:
         group = self.parser.add_argument_group("Query options")
         group.add_argument("-C", "--case", help="be case-sensitive (default: be COCA-compatible and ignore case)", action="store_true", dest="case_sensitive")
-        group.add_argument("-L", "--lemmatize-tokens", help="treat all tokens in query as lemma searches (default: be COCA-compatible and only do lemma searches if explicitly specified in query string)", action="store_true")
-        group.add_argument("-r", "--regexp", help="use regular expressions", action="store_true", dest="regexp")
+        group.add_argument("--one_by_one", help="retrieve results from server one by one (somewhat slower, but uses less memory)", action="store_true", dest="server_side")
+        #group.add_argument("-L", "--lemmatize-tokens", help="treat all tokens in query as lemma searches (default: be COCA-compatible and only do lemma searches if explicitly specified in query string)", action="store_true")
+        #group.add_argument("-r", "--regexp", help="use regular expressions", action="store_true", dest="regexp")
 
         # Output options:
         group = self.parser.add_argument_group("Output options")
-        group.add_argument("--suppress-header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
+        group.add_argument("--suppress_header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
         
         group.add_argument("--context_mode", help="specify the way the context is included in the output", choices=[CONTEXT_KWIC, CONTEXT_STRING, CONTEXT_COLUMNS], default=CONTEXT_KWIC, type=str)
         group.add_argument("-c", "--context_span", help="include context with N words to the left and the right of the keyword, or with N words to the left and M words to the right if the notation '-c N, M' is used", default=0, type=int, dest="context_span")
@@ -149,9 +151,9 @@ class Options(object):
 
         group.add_argument("--digits", help="set the number of digits after the period", dest="digits", default=3, type=int)
 
-        group.add_argument("--number-of-tokens", help="output up to NUMBER different tokens (default: all tokens)", default=0, type=int, dest="number_of_tokens", metavar="NUMBER")
+        group.add_argument("--number_of_tokens", help="output up to NUMBER different tokens (default: all tokens)", default=0, type=int, dest="number_of_tokens", metavar="NUMBER")
         #group.add_argument("-u", "--unique-id", help="include the token id for the first token matching the output", action="store_true", dest="show_id")
-        group.add_argument("-Q", "--show-query", help="include query string in the output", action="store_true", dest="show_query")
+        group.add_argument("-Q", "--show_query", help="include query string in the output", action="store_true", dest="show_query")
         group.add_argument("-P", "--show_parameters", help="include the parameter string in the output", action="store_true", dest="show_parameters")
         group.add_argument("-f", "--show_filter", help="include the filter strings in the output", action="store_true", dest="show_filter")
         group.add_argument("--freq-label", help="use this label in the heading line of the output (default: Freq)", default="Freq", type=str, dest="freq_label")
@@ -500,6 +502,11 @@ class Options(object):
                         except (configparser.NoOptionError, ValueError):
                             pass
                         try:
+                            self.args.server_side = config_file.get("main", "one_by_one")
+                        except configparser.NoOptionError:
+                            self.args.server_side = True
+                        
+                        try:
                             vars(self.args)["input_path"] = config_file.get("main", "csv_file")
                         except (configparser.NoOptionError, ValueError):
                             pass
@@ -568,7 +575,6 @@ class Options(object):
                             self.args.reaggregate_data = config_file.get("gui", "reaggregate_data")
                         except configparser.NoOptionError:
                             self.args.reaggregate_data = True
-
                         try:
                             vars(self.args)["width"] = int(config_file.get("gui", "width"))
                         except (configparser.NoOptionError, ValueError):
@@ -653,6 +659,7 @@ def save_configuration():
         config.set("main", "csv_has_header", cfg.file_has_headers)
         config.set("main", "csv_line_skip", cfg.skip_lines)
         config.set("main", "csv_quote_char", cfg.quote_char)
+    config.set("main", "one_by_one", cfg.server_side)
     
     if not "sql" in config.sections():
         config.add_section("sql")

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'settings.ui'
 #
-# Created: Thu Oct 15 23:43:21 2015
+# Created: Fri Oct 16 19:05:12 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -60,6 +60,9 @@ class Ui_SettingsDialog(object):
         self.check_reaggregate_data = QtGui.QCheckBox(self.groupBox)
         self.check_reaggregate_data.setObjectName(_fromUtf8("check_reaggregate_data"))
         self.verticalLayout.addWidget(self.check_reaggregate_data)
+        self.check_server_side = QtGui.QCheckBox(self.groupBox)
+        self.check_server_side.setObjectName(_fromUtf8("check_server_side"))
+        self.verticalLayout.addWidget(self.check_server_side)
         self.check_ignore_punctuation = QtGui.QCheckBox(self.groupBox)
         self.check_ignore_punctuation.setObjectName(_fromUtf8("check_ignore_punctuation"))
         self.verticalLayout.addWidget(self.check_ignore_punctuation)
@@ -209,6 +212,7 @@ class Ui_SettingsDialog(object):
         SettingsDialog.setWindowTitle(_translate("SettingsDialog", "Settings – Coquery", None))
         self.groupBox.setTitle(_translate("SettingsDialog", "Query options", None))
         self.check_reaggregate_data.setText(_translate("SettingsDialog", "&Reaggregate data when toggling column visibility", None))
+        self.check_server_side.setText(_translate("SettingsDialog", "Retrieve results from server one by one  (somewhat slower, but uses less memory)", None))
         self.check_ignore_punctuation.setText(_translate("SettingsDialog", "Ignore &punctuation in contexts", None))
         self.check_experimental.setText(_translate("SettingsDialog", "Use &experimental features (MAY BE UNSTABLE!)", None))
         self.groupBox1.setTitle(_translate("SettingsDialog", "Output options", None))

@@ -533,7 +533,7 @@ class SQLResource(BaseResource):
         Query.Session.output_order = self.get_select_list(Query)
 
         if query_string:
-            cursor = self.DB.execute_cursor(query_string)
+            cursor = self.DB.execute_cursor(query_string, server_side=options.cfg.server_side)
         else:
             cursor = {}
         for current_result in cursor:
