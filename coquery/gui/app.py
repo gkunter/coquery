@@ -370,6 +370,11 @@ class CoqueryApp(QtGui.QMainWindow):
                         else:
                             child.setDisabled(True)
     
+    def finish_reaggregation(self):
+        self.stop_progress_indicator()
+        self.table_model.set_data(self.Session.output_object)
+        self.table_model.set_header()
+    
     def reaggregate(self, query_type=None):
         """
         Reaggregate the current data table when changing the visibility of
@@ -377,18 +382,19 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         if not self.Session:
             return
+        
+        self.query_thread = QtProgress.ProgressThread(self.Session.aggregate_data, self)
+        self.query_thread.taskFinished.connect(self.finish_reaggregation)
+        self.query_thread.taskException.connect(self.exception_during_query)
+
         if query_type != self.Session.query_type:
             self.Session.query_type.remove_output_columns(self.Session)
             self.Session.query_type = query_type
             self.Session.query_type.add_output_columns(self.Session)
-            self.Session.aggregate_data()
-            self.table_model.set_data(self.Session.output_object)
-            self.table_model.set_header()
-            return
-        if options.cfg.reaggregate_data:
-            self.Session.aggregate_data()
-            self.table_model.set_data(self.Session.output_object)
-            self.table_model.set_header()
+        self.start_progress_indicator()
+        #self.Session.aggregate_data()
+        #self.finish_reaggregation()
+        self.query_thread.start()
 
     def change_corpus(self):
         """ Change the output options list depending on the features available
