@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>870</width>
-    <height>488</height>
+    <height>490</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -459,6 +459,12 @@
               <property name="icon">
                <iconset theme="media-playback-start">
                 <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
+              </property>
+              <property name="autoDefault">
+               <bool>false</bool>
+              </property>
+              <property name="default">
+               <bool>true</bool>
               </property>
              </widget>
             </item>

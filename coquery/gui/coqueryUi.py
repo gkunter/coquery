@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Fri Oct 16 14:14:15 2015
+# Created: Fri Oct 16 16:06:33 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(870, 488)
+        MainWindow.resize(870, 490)
         MainWindow.setDocumentMode(False)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
@@ -227,6 +227,8 @@ class Ui_MainWindow(object):
         self.button_run_query.setMinimumSize(QtCore.QSize(0, 0))
         icon = QtGui.QIcon.fromTheme(_fromUtf8("media-playback-start"))
         self.button_run_query.setIcon(icon)
+        self.button_run_query.setAutoDefault(False)
+        self.button_run_query.setDefault(True)
         self.button_run_query.setObjectName(_fromUtf8("button_run_query"))
         self.box_qer_buttons.addWidget(self.button_run_query, 2, 0, 1, 1)
         self.box_qer_buttons.setRowMinimumHeight(0, 1)
