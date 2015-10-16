@@ -392,8 +392,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.Session.query_type = query_type
             self.Session.query_type.add_output_columns(self.Session)
         self.start_progress_indicator()
-        #self.Session.aggregate_data()
-        #self.finish_reaggregation()
         self.query_thread.start()
 
     def change_corpus(self):
