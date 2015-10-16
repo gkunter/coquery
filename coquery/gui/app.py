@@ -387,7 +387,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.taskFinished.connect(self.finish_reaggregation)
         self.query_thread.taskException.connect(self.exception_during_query)
 
-        if query_type != self.Session.query_type:
+        if query_type and query_type != self.Session.query_type:
             self.Session.query_type.remove_output_columns(self.Session)
             self.Session.query_type = query_type
             self.Session.query_type.add_output_columns(self.Session)
