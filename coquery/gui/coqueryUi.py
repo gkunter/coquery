@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Fri Oct 16 13:20:55 2015
+# Created: Fri Oct 16 14:14:15 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -454,7 +454,10 @@ class Ui_MainWindow(object):
         self.data_preview.setHorizontalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
         self.data_preview.setSortingEnabled(True)
         self.data_preview.setObjectName(_fromUtf8("data_preview"))
-        self.box_aggregation_mode = QtGui.QFrame(self.splitter_2)
+        self.horizontalLayout_4.addWidget(self.splitter_2)
+        self.verticalLayout_4 = QtGui.QVBoxLayout()
+        self.verticalLayout_4.setObjectName(_fromUtf8("verticalLayout_4"))
+        self.box_aggregation_mode = QtGui.QFrame(self.layoutWidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -515,9 +518,11 @@ class Ui_MainWindow(object):
         self.radio_aggregate_collocations.setObjectName(_fromUtf8("radio_aggregate_collocations"))
         self.verticalLayout_14.addWidget(self.radio_aggregate_collocations)
         self.verticalLayout_6.addLayout(self.verticalLayout_14)
+        self.verticalLayout_4.addWidget(self.box_aggregation_mode)
         spacerItem5 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.verticalLayout_6.addItem(spacerItem5)
-        self.horizontalLayout_4.addWidget(self.splitter_2)
+        self.verticalLayout_4.addItem(spacerItem5)
+        self.verticalLayout_4.setStretch(1, 1)
+        self.horizontalLayout_4.addLayout(self.verticalLayout_4)
         self.verticalLayout_2.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
