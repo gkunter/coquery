@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'about.ui'
 #
-# Created: Sat Sep 12 17:25:32 2015
+# Created: Fri Oct 16 15:41:47 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -61,6 +61,7 @@ class Ui_AboutDialog(object):
         self.verticalLayout.addWidget(self.frame_pixmap)
         self.label_description = QtGui.QLabel(self.frame)
         self.label_description.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
+        self.label_description.setOpenExternalLinks(True)
         self.label_description.setObjectName(_fromUtf8("label_description"))
         self.verticalLayout.addWidget(self.label_description)
         self.verticalLayout_2.addWidget(self.frame)
@@ -77,6 +78,6 @@ class Ui_AboutDialog(object):
 
     def retranslateUi(self, AboutDialog):
         AboutDialog.setWindowTitle(_translate("AboutDialog", "About – Coquery", None))
-        self.label_description.setText(_translate("AboutDialog", "<html><head/><body><p>Coquery is a corpus query tool.</p><p>Copyright (c) {date} Gero Kunter</p><p>Inital development supported by<br/>Department of English, Heinrich-Heine Universität Düsseldorf</p><p>Website: <a href=\"http://www.coquery.org\"><span style=\" text-decoration: underline; color:#0057ae;\">http://www.coquery.org</span></a><br/>Follow on Twitter: <a href=\"https://twitter.com/CoqueryTool\"><span style=\" text-decoration: underline; color:#0057ae;\">@CoqueryTool</span></a></p></body></html>", None))
+        self.label_description.setText(_translate("AboutDialog", "<html><head/><body><p>Coquery is a corpus query tool.</p><p>Copyright (c) {date} Gero Kunter</p><p>Initial development supported by:<br/>Department of English, Heinrich-Heine Universität Düsseldorf</p><p>Website: <a href=\"http://www.coquery.org\"><span style=\" text-decoration: underline; color:#0057ae;\">http://www.coquery.org</span></a><br/>Follow on Twitter: <a href=\"https://twitter.com/CoqueryTool\"><span style=\" text-decoration: underline; color:#0057ae;\">@CoqueryTool</span></a></p></body></html>", None))
 
 
