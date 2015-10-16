@@ -1416,32 +1416,9 @@ class SQLCorpus(BaseCorpus):
         # get a list of all tables that are required to satisfy the 
         # feature request:
         
-        if number == 0:
-            requested_features = [x for x in options.cfg.selected_features]
-            
-            # if a GUI is used, include source features so the entries in the
-            # result table can be made clickable to show the context:
-            if options.cfg.gui or options.cfg.context_left or options.cfg.context_right:
-                # in order to make this not depend on a fixed database layout 
-                # (here: 'source' and 'file' tables), we should check for any
-                # table that corpus_table is linked to except for word_table
-                # (and all child tables).            
-                if "corpus_denorm_source_id" in dir(self.resource):
-                    requested_features.append("corpus_denorm_source_id")
-                    options.cfg.context_source_id = "corpus_denorm_source_id"
-                elif "corpus_denorm_file_id" in dir(self.resource):
-                    requested_features.append("corpus_denorm_file_id")
-                    options.cfg.context_source_id = "corpus_denorm_file_id"
-                else:
-                    options.cfg.context_source_id = None
-        else:
-            corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
-            requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
+        corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
+        requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
-        
-        lexicon_variables = [x for x, _ in self.resource.get_lexicon_features()]
-        requested_features = [x for x in options.cfg.selected_features if x in lexicon_variables]
-        
         requested_features.append("word_id")
         
         column_list = []
@@ -1496,7 +1473,7 @@ class SQLCorpus(BaseCorpus):
         if L:
             where_clauses.append("({})".format(" OR ".join(L)))
         
-        return """
+        S = """
         SELECT  {columns}
         FROM    {lexicon}
         WHERE   {constraints}
@@ -1504,6 +1481,7 @@ class SQLCorpus(BaseCorpus):
             columns=", ".join(column_list),
             lexicon=self.resource.__getattribute__("word_table"),
             constraints=" AND ".join(where_clauses))
+        return S
         
     def sql_string_query_self_joined(self, Query, token_list):
         """ 
@@ -1533,13 +1511,38 @@ class SQLCorpus(BaseCorpus):
                 token_query_list[i+1] = join_string
         final_select = []
 
+        requested_features = [x for x in options.cfg.selected_features]
+        if options.cfg.context_left or options.cfg.context_right:
+            # in order to make this not depend on a fixed database layout 
+            # (here: 'source' and 'file' tables), we should check for any
+            # table that corpus_table is linked to except for word_table
+            # (and all child tables).            
+            if "corpus_denorm_source_id" in dir(self.resource):
+                requested_features.append("corpus_denorm_source_id")
+                options.cfg.context_source_id = "corpus_denorm_source_id"
+            elif "corpus_denorm_file_id" in dir(self.resource):
+                requested_features.append("corpus_denorm_file_id")
+                options.cfg.context_source_id = "corpus_denorm_file_id"
+            else:
+                options.cfg.context_source_id = None
+                
+        for rc_feature in requested_features:
+            try:
+                final_select.append(
+                    "{} AS coq_{}_1".format(getattr(self.resource, "corpus_denorm_{}".format(rc_feature)), rc_feature))
+            except AttributeError:
+                # This means that the requested feature is not directly
+                # stored in the n-gram table. This means that a table 
+                # link is necessary.
+                pass
+
         # FIXME:
         # Not working: 
         # - align_quantified
         # - linked tables
 
         for rc_feature in self.resource.get_preferred_output_order():
-            if rc_feature in options.cfg.selected_features:
+            if rc_feature in requested_features:
                 if rc_feature in lexicon_features:
                     for i in range(Query.Session.get_max_token_count()):
                         if i < len(token_list):
@@ -1547,7 +1550,8 @@ class SQLCorpus(BaseCorpus):
                         else:
                             final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
                 elif rc_feature in corpus_features:
-                    final_select.append("coq_{}_1".format(rc_feature))
+                    pass
+                    #final_select.append("coq_{}_1".format(rc_feature))
 
 
         #for rc_feature in options.cfg.selected_features:
