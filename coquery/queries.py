@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
-""" FILENAME: queries.py -- part of Coquery corpus query tool
+# -*- coding: utf-8 -*-
+"""
+queries.py is part of Coquery.
 
-This module defines classes for query types. """
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from __future__ import unicode_literals
 from __future__ import print_function
@@ -266,7 +273,7 @@ class TokenQuery(object):
             df = pd.DataFrame(
                 self.Resource.yield_query_results(self, self._sub_query))
             df = self.insert_static_data(df)
-            self.add_output_columns()
+            self.add_output_columns(self.Session)
 
             if not options.cfg.case_sensitive and len(df.index) > 0:
                 for x in df.columns:
@@ -463,13 +470,24 @@ class TokenQuery(object):
                 df[new_name] = df[col_name].apply(fun)
         return df
 
-    def add_output_columns(self):
+    @staticmethod
+    def add_output_columns(session):
         """
         Add any column that is specific to this query type to the list of 
         output columns in Session.output_order.
         
         This is needed, for example, to add the frequency column in
         FrequencyQuery.
+        """
+        return
+
+    @staticmethod
+    def remove_output_columns(session):
+        """
+        Remove any column that was added by add_output_columns from the
+        current session's output_order list.
+        
+        This is needed when changing the aggregation mode.
         """
         return
  
@@ -516,8 +534,17 @@ class FrequencyQuery(TokenQuery):
     frequency filters.
     """
     
-    def add_output_columns(self):
-        self.Session.output_order.append("coq_frequency")
+    @staticmethod
+    def add_output_columns(session):
+        if "coq_frequency" not in session.output_order:
+            session.output_order.append("coq_frequency")
+
+    @staticmethod
+    def remove_output_columns(session):
+        try:
+            session.output_order.remove("coq_frequency")
+        except ValueError:
+            pass
         
     @staticmethod
     def do_the_grouping(df, group_columns, aggr_dict):
@@ -658,7 +685,6 @@ class StatisticsQuery(TokenQuery):
             return self.results_frame
         else:
             return df.append(self.results_frame)
-
 
 class CollocationQuery(TokenQuery):
     @staticmethod

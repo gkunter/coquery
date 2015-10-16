@@ -1,40 +1,50 @@
-from __future__ import division
+# -*- coding: utf-8 -*-
+"""
+logfile.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 from __future__ import unicode_literals
 
-from pyqt_compat import QtCore, QtGui
-import options
-import logfileUi
 import sys
 
+from pyqt_compat import QtCore, QtGui
+import logfileUi
+import classes
+
 class LogfileViewer(QtGui.QDialog):
-    def __init__(self, path, parent=None):
+    def __init__(self, parent=None):
         
         super(LogfileViewer, self).__init__(parent)
         
         self.ui = logfileUi.Ui_logfileDialog()
         self.ui.setupUi(self)
-        self.setWindowIcon(options.cfg.icon)
         
-        # Fill results view:
-        with open(path, "rt") as input_file:
-            content = input_file.read()
-        self.ui.viewing_area.setPlainText(content)
-        self.ui.log_file_path.setText(path)
+        self.log_table = classes.LogTableModel(self)
+        self.log_proxy = classes.LogProxyModel()
+        self.log_proxy.setSourceModel(self.log_table)
+        self.log_proxy.sortCaseSensitivity = False
+        self.ui.log_table.setModel(self.log_proxy)
+        self.ui.log_table.horizontalHeader().setStretchLastSection(True)        
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.accept()
             
     @staticmethod
-    def view(path, parent=None):
-        dialog = LogfileViewer(path, parent)
+    def view(parent=None):
+        dialog = LogfileViewer(parent)
         result = dialog.exec_()
         return None
     
             
 def main():
     app = QtGui.QApplication(sys.argv)
-    viewer = LogfileViewer()
+    viewer = LogfileViewer("")
     viewer.exec_()
     
 if __name__ == "__main__":

@@ -256,7 +256,10 @@ class LogTableModel(QtCore.QAbstractTableModel):
     """
     def __init__(self, parent, *args):
         super(LogTableModel, self).__init__(parent, *args)
-        self.content = options.cfg.gui_logger.log_data
+        try:
+            self.content = options.cfg.gui_logger.log_data
+        except AttributeError:
+            self.content = []
         self.header = ["Date", "Time", "Level", "Message"]
         
     def data(self, index, role):

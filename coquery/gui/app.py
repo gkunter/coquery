@@ -83,12 +83,6 @@ class GuiHandler(logging.StreamHandler):
         
     def emit(self, record):
         self.log_data.append(record)
-        self.app.log_table.dataChanged.emit(
-            self.app.log_table.index(len(self.log_data), 0),
-            self.app.log_table.index(len(self.log_data), 3))
-        if len(self.log_data) == 1:
-            self.app.ui.log_table.horizontalHeader().setStretchLastSection(True)
-        self.app.log_table.layoutChanged.emit()
 
 class CoqueryApp(QtGui.QMainWindow):
     """ Coquery as standalone application. """
@@ -115,6 +109,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.corpus_manager = None
         
         self.widget_list = []
+        self.Session = None
         
         # the dictionaries column_width and column_color store default
         # attributes of the columns by display name. This means that problems
@@ -195,11 +190,18 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.change_corpus()
         
-        self.log_table = classes.LogTableModel(self)
-        self.log_proxy = classes.LogProxyModel()
-        self.log_proxy.setSourceModel(self.log_table)
-        self.log_proxy.sortCaseSensitivity = False
-        self.ui.log_table.setModel(self.log_proxy)
+        # Align screen elements:
+        self.ui.label_2.setFixedHeight(self.ui.label_5.height())
+        self.ui.label.setFixedHeight(self.ui.label_5.height())
+        self.ui.label_5.setFixedHeight(self.ui.label_5.height())
+        
+        self.ui.data_preview.setEnabled(False)
+        
+        # set splitter stretches:
+        self.ui.splitter.setStretchFactor(0,0)
+        self.ui.splitter.setStretchFactor(1,1)
+        self.ui.splitter_2.setStretchFactor(0,1)
+        self.ui.splitter_2.setStretchFactor(1,0)
 
         self.table_model = classes.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
@@ -234,6 +236,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
+        self.ui.action_view_log.triggered.connect(self.show_log)
         
         self.ui.action_barcode_plot.triggered.connect(
             lambda: self.visualize_data("barcodeplot"))
@@ -282,10 +285,20 @@ class CoqueryApp(QtGui.QMainWindow):
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         
-        self.ui.radio_mode_collocations.toggled.connect(self.toggle_frequency_columns)
-        self.ui.radio_mode_frequency.toggled.connect(self.toggle_frequency_columns)
-        self.ui.radio_mode_tokens.toggled.connect(self.toggle_frequency_columns)
-        self.ui.radio_mode_context.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_aggregate_collocations.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_aggregate_frequencies.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_aggregate_none.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_aggregate_uniques.toggled.connect(self.toggle_frequency_columns)
+
+        self.ui.radio_aggregate_collocations.clicked.connect(
+            lambda x: self.reaggregate(query_type=queries.CollocationQuery))
+        self.ui.radio_aggregate_frequencies.clicked.connect(
+            lambda x: self.reaggregate(query_type=queries.FrequencyQuery))
+        self.ui.radio_aggregate_uniques.clicked.connect(
+            lambda x: self.reaggregate(query_type=queries.DistinctQuery))
+        self.ui.radio_aggregate_none.clicked.connect(
+            lambda x: self.reaggregate(query_type=queries.TokenQuery))
+
         
     def result_column_resize(self, index, old, new):
         header = self.table_model.header[index].lower()
@@ -352,16 +365,26 @@ class CoqueryApp(QtGui.QMainWindow):
             if root.objectName().startswith("coquery"):
                 for child in [root.child(i) for i in range(root.childCount())]:
                     if child.objectName() in ("coquery_relative_frequency", "coquery_per_million_words"):
-                        if self.ui.radio_mode_frequency.isChecked():
+                        if self.ui.radio_aggregate_frequencies.isChecked():
                             child.setDisabled(False)
                         else:
                             child.setDisabled(True)
     
-    def reaggregate(self):
+    def reaggregate(self, query_type=None):
         """
         Reaggregate the current data table when changing the visibility of
         the table columns.
         """
+        if not self.Session:
+            return
+        if query_type != self.Session.query_type:
+            self.Session.query_type.remove_output_columns(self.Session)
+            self.Session.query_type = query_type
+            self.Session.query_type.add_output_columns(self.Session)
+            self.Session.aggregate_data()
+            self.table_model.set_data(self.Session.output_object)
+            self.table_model.set_header()
+            return
         if options.cfg.reaggregate_data:
             self.Session.aggregate_data()
             self.table_model.set_data(self.Session.output_object)
@@ -498,6 +521,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.msg_box_no_corpus.show()
         
     def display_results(self):
+        self.ui.box_aggregation_mode.show()
+        self.ui.data_preview.setEnabled(True)
+        
         self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header()
 
@@ -1153,13 +1179,13 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.corpus = str(self.ui.combo_corpus.currentText()).lower()
         
             # determine query mode:
-            if self.ui.radio_mode_context.isChecked():
+            if self.ui.radio_aggregate_uniques.isChecked():
                 options.cfg.MODE = QUERY_MODE_DISTINCT
-            if self.ui.radio_mode_tokens.isChecked():
+            if self.ui.radio_aggregate_none.isChecked():
                 options.cfg.MODE = QUERY_MODE_TOKENS
-            if self.ui.radio_mode_frequency.isChecked():
+            if self.ui.radio_aggregate_frequencies.isChecked():
                 options.cfg.MODE = QUERY_MODE_FREQUENCIES
-            if self.ui.radio_mode_collocations.isChecked():
+            if self.ui.radio_aggregate_collocations.isChecked():
                 options.cfg.MODE = QUERY_MODE_COLLOCATIONS
             try:
                 if self.ui.radio_mode_statistics.isChecked():
@@ -1219,6 +1245,10 @@ class CoqueryApp(QtGui.QMainWindow):
 
             return True
 
+    def show_log(self):
+        import logfile
+        logfile.LogfileViewer.view()
+
     def show_about(self):
         import aboutUi
         dialog = QtGui.QDialog(self)
@@ -1248,13 +1278,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # set query mode:
         if options.cfg.MODE == QUERY_MODE_DISTINCT:
-            self.ui.radio_mode_context.setChecked(True)
+            self.ui.radio_aggregate_uniques.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-            self.ui.radio_mode_frequency.setChecked(True)
+            self.ui.radio_aggregate_frequencies.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_TOKENS:
-            self.ui.radio_mode_tokens.setChecked(True)
+            self.ui.radio_aggregate_none.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
-            self.ui.radio_mode_collocations.setChecked(True)
+            self.ui.radio_aggregate_collocations.setChecked(True)
 
         self.ui.edit_file_name.setText(options.cfg.input_path)
         # either fill query string or query file input:
