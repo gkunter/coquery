@@ -145,7 +145,7 @@ class Options(object):
         group = self.parser.add_argument_group("Output options")
         group.add_argument("--suppress_header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
         
-        group.add_argument("--context_mode", help="specify the way the context is included in the output", choices=[CONTEXT_KWIC, CONTEXT_STRING, CONTEXT_COLUMNS], default=CONTEXT_KWIC, type=str)
+        group.add_argument("--context_mode", help="specify the way the context is included in the output", choices=[CONTEXT_KWIC, CONTEXT_STRING, CONTEXT_COLUMNS], type=str)
         group.add_argument("-c", "--context_span", help="include context with N words to the left and the right of the keyword, or with N words to the left and M words to the right if the notation '-c N, M' is used", default=0, type=int, dest="context_span")
         group.add_argument("--sentence", help="include the sentence of the token as a context (not supported by all corpora, currently not implemented)", dest="context_sentence", action="store_true")
 
@@ -505,6 +505,10 @@ class Options(object):
                             self.args.server_side = config_file.get("main", "one_by_one")
                         except configparser.NoOptionError:
                             self.args.server_side = True
+                        try:
+                            self.args.context_mode = config_file.get("main", "context_mode")
+                        except configparser.NoOptionError:
+                            self.args.context_mode = CONTEXT_KWIC
                         
                         try:
                             vars(self.args)["input_path"] = config_file.get("main", "csv_file")
@@ -660,6 +664,7 @@ def save_configuration():
         config.set("main", "csv_line_skip", cfg.skip_lines)
         config.set("main", "csv_quote_char", cfg.quote_char)
     config.set("main", "one_by_one", cfg.server_side)
+    config.set("main", "context_mode", cfg.context_mode)
     
     if not "sql" in config.sections():
         config.add_section("sql")

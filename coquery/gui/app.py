@@ -96,6 +96,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.file_content = None
 
         size = QtGui.QApplication.desktop().screenGeometry()
+        # Retrieve font and metrics for the CoqItemDelegates
+        options.cfg.font = options.cfg.app.font()
+        options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
+
         if size.height() < 1024 or size.width() < 1024:
             self.ui = coqueryCompactUi.Ui_MainWindow()
         else:
@@ -1306,7 +1310,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         if options.cfg.context_mode == CONTEXT_STRING:
             self.ui.radio_context_mode_string.setChecked(True)
-        if options.cfg.context_mode == CONTEXT_COLUMNS:
+        elif options.cfg.context_mode == CONTEXT_COLUMNS:
             self.ui.radio_context_mode_column.setChecked(True)
         else:
             self.ui.radio_context_mode_kwic.setChecked(True)
