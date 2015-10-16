@@ -242,6 +242,34 @@ class TokenQuery(object):
         self.input_frame = pd.DataFrame()
         self.results_frame = pd.DataFrame()
         TokenQuery.filter_list = Session.filter_list
+        self._keys = []
+
+    def string_folder(self, results):
+        """
+        Yield the rows from the results with all string values folded.
+
+        This folder is used in yield_query_results, and helps to reduce the
+        amount of memory consumed by the query results data frames. It does 
+        so by keeping a map of string values so that each occurrence of a 
+        string in the query result is mapped to the identical string object,
+        and not to a new string object with the same content. 
+        
+        This string folder is based on:
+        http://www.mobify.com/blog/sqlalchemy-memory-magic/
+        """
+        string_map = {}
+        for row in results:
+            self._keys = row.keys()
+            l = []
+            for key, value in row.items():
+                if isinstance(value, str):
+                    s = string_map.get(value, None)
+                    if s is None:
+                        s = string_map[value] = value
+                    l.append(s)
+                else:
+                    l.append(value)
+            yield l
 
     def __len__(self):
         return len(self.tokens)
@@ -271,7 +299,9 @@ class TokenQuery(object):
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
             
             df = pd.DataFrame(
-                self.Resource.yield_query_results(self, self._sub_query))
+                self.string_folder(self.Resource.yield_query_results(self, self._sub_query)))
+            df.columns = list(self._keys)
+
             df = self.insert_static_data(df)
             self.add_output_columns(self.Session)
 
@@ -511,7 +541,6 @@ class DistinctQuery(TokenQuery):
     are removed.
     """
 
-    #@jit
     @classmethod
     def aggregate_data(cls, df, resource):
         vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
