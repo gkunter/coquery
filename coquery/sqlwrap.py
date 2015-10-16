@@ -127,22 +127,18 @@ class SqlDB (object):
             self.explain(S)
         logger.debug(S)
 
-        if options.cfg.dry_run:
-            cursor = []
+        if server_side:
+            cursor = self.Con.cursor(mysql_cursors.SSDictCursor)
         else:
-            if server_side:
-                cursor = self.Con.cursor(mysql_cursors.SSDictCursor)
-            
-            else:
-                cursor = self.Con.cursor(mysql_cursors.DictCursor)
-            cursor.execute(S)
+            cursor = self.Con.cursor(mysql_cursors.DictCursor)
+        cursor.execute(S)
         return cursor
     
     def executemany(self, S, data):
         cur = self.Con.cursor()
         cur.executemany(S, data)
     
-    def execute(self, S, ForceExecution = False):
+    def execute(self, S):
         """
 Call        execute(self, S, ForceExecution=False)
 Summary     Executes the SQL command string provided in S, or pretend to do 
@@ -158,16 +154,13 @@ Value       no return value
             self.explain(S)
         logger.debug(S)
 
-        if not options.cfg.dry_run or ForceExecution:
-            self.Cur.execute(S)
+        self.Cur.execute(S)
 
     def commit (self):
-        if not options.cfg.dry_run:
-            self.Con.commit ()
+        self.Con.commit ()
         
     def rollback (self):
-        if not options.cfg.dry_run:
-            self.Con.rollback ()
+        self.Con.rollback ()
 
     def fetch_all (self):
         return self.Cur.fetchall()
