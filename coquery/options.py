@@ -497,7 +497,6 @@ class Options(object):
                         try:
                             last_query = config_file.get("main", "query_string")
                             vars(self.args)["query_list"] = [x.strip('"') for x in last_query.split(",")]
-                            print(self.args.query_list)
                         except (configparser.NoOptionError, ValueError):
                             pass
                         try:
