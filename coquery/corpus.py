@@ -443,10 +443,6 @@ class BaseCorpus(object):
         filter restrictions into account."""
         raise CorpusUnsupportedFunctionError
 
-    def get_context(self, token_id):
-        """ returns the context of the token specified by token_id. """
-        raise CorpusUnsupportedFunctionError
-    
     def provides_feature(self, x):
         return x in self.provides + self.lexicon.provides
 
@@ -537,21 +533,6 @@ class SQLResource(BaseResource):
         else:
             cursor = {}
         for current_result in cursor:
-            if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
-                # add contexts for each query match:
-                if (options.cfg.context_left or options.cfg.context_right) and options.cfg.context_source_id:
-                    left, target, right = self.get_context(
-                        current_result["coquery_invisible_corpus_id"], 
-                        Query._current_number_of_tokens, True)
-                    if options.cfg.context_mode == CONTEXT_KWIC:
-                        if options.cfg.context_left:
-                            current_result["coq_context_left"] = collapse_words(left)
-                        if options.cfg.context_right:
-                            current_result["coq_context_right"] = collapse_words(right)
-                    elif options.cfg.context_mode == CONTEXT_STRING:
-                        current_result["coq_context"] = collapse_words(left + [x.upper() for x in target] + right)
-                    elif options.cfg.context_mode == CONTEXT_SENTENCE:
-                        current_result["coq_context"] = collapse_word(self.get_context_sentence())
             yield current_result
 
     def get_context(self, token_id, number_of_tokens, case_sensitive):

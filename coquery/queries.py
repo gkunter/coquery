@@ -36,7 +36,9 @@ except ImportError:
 import numpy as np        
 import pandas as pd
 
+from defines import *
 from errors import *
+import corpus
 import tokens
 import options
 
@@ -303,6 +305,7 @@ class TokenQuery(object):
             df.columns = list(self._keys)
 
             df = self.insert_static_data(df)
+            df = self.insert_context(df)
             self.add_output_columns(self.Session)
 
             if not options.cfg.case_sensitive and len(df.index) > 0:
@@ -387,6 +390,35 @@ class TokenQuery(object):
         if n > len(L) - 1:
             return n
         return L[n]
+    
+    def insert_context(self, df):
+        def insert_kwic(row):
+            left, target, right = self.Session.Resource.get_context(
+                row["coquery_invisible_corpus_id"], 
+                self._current_number_of_tokens, True)
+            row["coq_context_left"] = corpus.collapse_words(left)
+            row["coq_context_right"] = corpus.collapse_words(right)
+            return row
+
+        def insert_sentence(row):
+            left, target, right = self.Session.Resource.get_context(
+                row["coquery_invisible_corpus_id"], 
+                self._current_number_of_tokens, True)
+            row["coq_context"] = corpus.collapse_words(left + [x.upper() for x in target] + right)
+            return row
+
+        if not options.cfg.context_source_id:
+            return df
+        if not (options.cfg.context_left or options.cfg.context_right):
+            return df
+        if options.cfg.context_mode == CONTEXT_KWIC:
+            df = df.apply(insert_kwic, axis=1)
+        elif options.cfg.context_mode == CONTEXT_STRING:
+            df = df.apply(insert_sentence, axis=1)
+        #elif options.cfg.context_mode == CONTEXT_SENTENCE:
+            #current_result["coq_context"] = collapse_word(self.get_context_sentence())
+
+        return df
     
     def insert_static_data(self, df):
         """ 
@@ -716,6 +748,9 @@ class StatisticsQuery(TokenQuery):
             return df.append(self.results_frame)
 
 class CollocationQuery(TokenQuery):
+    def insert_context(self, df):
+        pass
+    
     @staticmethod
     def filter_data(df, filter_list):
         """ 
