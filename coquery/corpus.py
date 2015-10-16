@@ -757,11 +757,7 @@ class SQLLexicon(BaseLexicon):
     def sql_string_get_wordid_list_where(self, token):
         """ Returns a MySQL string that will return a list of all word_ids
         that match the given token. """
-        # TODO: fix cfg.lemmatize
         # FIXME: this needs to be revised. 
-        
-        if options.cfg.lemmatize_tokens:
-            dummy = self.get_other_wordforms(token)
         
         sub_clauses = []
         
@@ -825,7 +821,7 @@ class SQLLexicon(BaseLexicon):
         return " AND ".join(where_clauses)
             
     def is_part_of_speech(self, pos):
-        self.resource.DB.execute(self.sql_string_is_part_of_speech(pos), ForceExecution=True)
+        self.resource.DB.execute(self.sql_string_is_part_of_speech(pos))
         query_result = self.resource.DB.fetch_all ()
         return len(query_result) > 0
     
