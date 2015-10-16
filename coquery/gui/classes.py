@@ -684,18 +684,9 @@ def get_foreground(option, index):
         return index.data(QtCore.Qt.ForegroundRole)
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
-    margin = 2
-    
-    #def sizeHint(self, option, index):
-        
-        #return QtGui.QFontMetrics().
-        
-        #options = QtGui.QStyleOptionViewItemV4(option)
-        #self.initStyleOption(options,index)
-
-        #content = QtGui.QLabel(unicode(index.data(QtCore.Qt.DisplayRole)))
-        #content.setTextWidth(options.rect.width())
-        #return QtCore.QSize(content.idealWidth() + self.margin * 2, content.size().height())
+    def sizeHint(self, option, index):
+        rect = options.cfg.metrics.boundingRect(unicode(index.data(QtCore.Qt.DisplayRole)))
+        return rect.adjusted(0, 0, 15, 0).size()
     
     def paint(self, painter, option, index):
         """
@@ -705,18 +696,18 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         from the table's :func:`data` method, using the DecorationRole role.
         On mouse-over, the cell is rendered like a clickable link.
         """
-        
         content = unicode(index.data(QtCore.Qt.DisplayRole))
         if not content:
             return
         painter.save()
+
+        align = index.data(QtCore.Qt.TextAlignmentRole)
         
         # show content as a link on mouse-over:
         if option.state & QtGui.QStyle.State_MouseOver:
             font = painter.font()
             font.setUnderline(True)
             painter.setFont(font)
-            
         fg = get_foreground(option, index)
         bg = get_background(option, index)
         if bg:
@@ -725,8 +716,10 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             painter.fillRect(option.rect, bg)
         painter.setPen(QtGui.QPen(fg))
         try:
-            painter.translate(self.margin, 0)
-            painter.drawText(option.rect, index.data(QtCore.Qt.TextAlignmentRole), content)
+            if align & QtCore.Qt.AlignLeft:
+                painter.drawText(option.rect.adjusted(2, 0, 2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
+            else:
+                painter.drawText(option.rect.adjusted(-2, 0, -2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
         finally:
             painter.restore()
 
@@ -737,7 +730,6 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
             return QtGui.QColor("lightyellow")
         else:
             return super(CoqProbabilityDelegate, self).get_background(option, index)
-
 
 logger = logging.getLogger(__init__.NAME)
 
