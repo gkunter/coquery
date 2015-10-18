@@ -285,9 +285,18 @@ class BaseVisualizer(object):
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()
         vis_cols = [x for x in self._model.columns if not x.startswith("coquery_invisible")]
+        print(0, vis_cols)
         
-        self._column_order = [
-            vis_cols[header.logicalIndex(section)] for section in range(header.count())]
+        self._column_order = []
+        for section in range(header.count()):
+            print(section, header.logicalIndex(section), header.visualIndex(section))
+            self._column_order.append(vis_cols[header.logicalIndex(section)])
+        # The problem is that _view uses the aggregated data frame, and
+        # not the full frame.
+        
+        #self._column_order = [
+            #vis_cols[header.logicalIndex(section)] for section in range(header.count())]
+        print(1, self._column_order)
 
         # ... but make sure that the frequency is the last column:
         try:
@@ -300,18 +309,24 @@ class BaseVisualizer(object):
             if self.visualize_frequency:
                 self._column_order.append("coq_frequency")
         self._column_order += [x for x in options.cfg.main_window.Session.output_order if x.startswith("coquery_invisible") and x not in self._column_order]
+        print(2, self._column_order)
+
         try:
             self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
         except AttributeError:
             self._time_columns = []
+        print(3, self._column_order)
             
         # Remove hidden columns:
         self._column_order = [x for x in self._column_order if 
             options.cfg.column_visibility.get(x, True)]
-        
+        print(4, self._column_order)
+
         self._table = self._model.reindex(columns=self._column_order)
         self._table.columns = [
             options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
+
+        print(5, self._table.columns)
 
         # Remove hidden rows. 
         # Note that the row numbers in the data view start at 1, but in the
