@@ -630,6 +630,9 @@ class CoqueryApp(QtGui.QMainWindow):
     
     def exception_during_query(self):
         error_box.ErrorBox.show(self.exc_info, self.exception)
+        self.ui.statusbar.showMessage("Query failed.")
+        self.set_query_button()
+        self.stop_progress_indicator()
         
     def start_progress_indicator(self):
         """ Show the progress indicator, and make it move. """
@@ -1387,7 +1390,7 @@ class CoqueryApp(QtGui.QMainWindow):
             resource = get_available_resources()[corpus][0]
             table = resource.get_table_dict()[table_name]
             
-            new_table = CoqTreeLinkItem()
+            new_table = classes.CoqTreeLinkItem()
             new_table.setObjectName("{}.{}_table".format(corpus, table_name))
             
             position = self.ui.options_tree.indexOfTopLevelItem(item.parent()) +1
