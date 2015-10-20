@@ -17,7 +17,7 @@ import sys
 import linkselectUi
 
 from defines import *
-from app import CoqTreeItem
+from classes import CoqTreeItem
 
 class LinkSelect(QtGui.QDialog):
     def __init__(self, feature, corpus_omit = [], parent=None):
