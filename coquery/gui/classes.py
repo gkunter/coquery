@@ -215,24 +215,26 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         self.menu.addAction(action)
         
         if not str(item.objectName()).endswith("_table"):
-            view_unique = QtGui.QAction("View &unique values", self)
-            view_unique.triggered.connect(lambda: self.show_unique_values(item))
-            self.menu.addAction(view_unique)
-            self.menu.addSeparator()
-
             add_link = QtGui.QAction("&Link to external table", self)
             add_function = QtGui.QAction("&Add a function", self)
             remove_link = QtGui.QAction("&Remove link", self)
             remove_function = QtGui.QAction("&Remove function", self)
             
             parent = item.parent()
+
+            if not item._func and not (parent and parent._link_by):
+                view_unique = QtGui.QAction("View &unique values", self)
+                view_unique.triggered.connect(lambda: self.show_unique_values(item))
+                self.menu.addAction(view_unique)
+                self.menu.addSeparator()
             
-            if item._link_by or (parent and parent._link_by):
-                self.menu.addAction(remove_link)
-            elif item._func:
+            if item._func:
                 self.menu.addAction(remove_function)
             else:
-                self.menu.addAction(add_link)
+                if item._link_by or (parent and parent._link_by):
+                    self.menu.addAction(remove_link)
+                else:
+                    self.menu.addAction(add_link)
                 self.menu.addAction(add_function)
             
             self.menu.popup(self.mapToGlobal(point))
@@ -244,7 +246,6 @@ class CoqTreeWidget(QtGui.QTreeWidget):
                 self.addFunction.emit(item)
             elif action in (remove_link, remove_function):
                 self.removeItem.emit(item)
-            
 
     def show_unique_values(self, item):
         import uniqueviewer
