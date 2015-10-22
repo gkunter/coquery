@@ -263,7 +263,7 @@ class Table(object):
     def name(self, s):
         self._name = s
         
-    def commit(self, db_connector):
+    def commit(self, db_connector, strange_check=False):
         """
         Commit the table content to the data base.
         
@@ -291,9 +291,10 @@ class Table(object):
             for row in self._add_cache:
                 row_id, row_data = self._add_cache[row]
                 if row_data:
-                    if len(row_data) == 1:
-                        for x in row_data:
-                            row_data[x] = ["", row_data[x][0], "u"]
+                    if strange_check:
+                        if len(row_data) == 1:
+                            for x in row_data:
+                                row_data[x] = ["", row_data[x][0], "u"]
                     if self.primary.name in self._col_names:
                         data.append(list(row_data.values()))
                     else:
@@ -301,13 +302,6 @@ class Table(object):
                     new_keys.append(row)
 
             if data: 
-                #print(sql_string)
-                #for x in data:
-                    #print(x)
-                ##data = db_connector.escape_string(data)
-                #for x in data:
-                    #print(x)
-                #return
                 try:
                     db_connector.executemany(sql_string, data)
                 except TypeError as e:
@@ -573,7 +567,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             return
 
         for table in self._new_tables:
-            self._new_tables[table].commit(self.Con)
+            self._new_tables[table].commit(self.Con, strange_check=True)
 
         if self._corpus_buffer:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
