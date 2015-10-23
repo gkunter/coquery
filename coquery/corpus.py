@@ -1401,12 +1401,18 @@ class SQLCorpus(BaseCorpus):
         column_list = []
         for rc_feature in requested_features:
             column_list.append("{} AS coq_{}_{}".format(
-                self.resource.__getattribute__(rc_feature),
+                getattr(self.resource, rc_feature),
                 rc_feature, number + 1))
+
+        where_clauses = self.get_whereclauses(
+            token, 
+            self.resource.corpus_word_id, 
+            None)
+        print(where_clauses)
 
         where_clauses = []
         L = []
-        word_label = self.resource.__getattribute__("word_label")
+        word_label = getattr(self.resource, "word_label")
         for word in token.word_specifiers:
             current_token = tokens.COCAWord(word, self, replace=False, parse=False)
             current_token.negated = token.negated
@@ -1414,14 +1420,15 @@ class SQLCorpus(BaseCorpus):
                 S = unicode(current_token.S)
             else:
                 S = current_token.S
-            # take care of quotation marks:
-            S = S.replace('"', '""')
-            L.append('%s %s "%s"' % (word_label, self.resource.get_operator(current_token), S))
+            if S != "%":
+                # take care of quotation marks:
+                S = S.replace('"', '""')
+                L.append('%s %s "%s"' % (word_label, self.resource.get_operator(current_token), S))
         if L:
             where_clauses.append("({})".format(" OR ".join(L)))
 
         L = []
-        lemma_label = self.resource.__getattribute__("word_lemma")
+        lemma_label = getattr(self.resource, "word_lemma")
         for lemma in token.lemma_specifiers:
             current_token = tokens.COCAWord(lemma, self, replace=False, parse=False)
             current_token.negated = token.negated
@@ -1429,14 +1436,15 @@ class SQLCorpus(BaseCorpus):
                 S = unicode(current_token.S)
             else:
                 S = current_token.S
-            # take care of quotation marks:
-            S = S.replace('"', '""')
-            L.append('%s %s "%s"' % (lemma_label, self.resource.get_operator(current_token), S))
+            if S != "%":
+                # take care of quotation marks:
+                S = S.replace('"', '""')
+                L.append('%s %s "%s"' % (lemma_label, self.resource.get_operator(current_token), S))
         if L:
             where_clauses.append("({})".format(" OR ".join(L)))
             
         L = []
-        pos_label = self.resource.__getattribute__("word_pos")
+        pos_label = getattr(self.resource, "word_pos")
         for pos in token.class_specifiers:
             current_token = tokens.COCAWord(pos, self, replace=False, parse=False)
             current_token.negated = token.negated
@@ -1445,19 +1453,28 @@ class SQLCorpus(BaseCorpus):
             else:
                 S = current_token.S
             # take care of quotation marks:
-            S = S.replace('"', '""')
-            L.append('%s %s "%s"' % (pos_label, self.resource.get_operator(current_token), S))
+            if S != "%":
+                S = S.replace('"', '""')
+                L.append('%s %s "%s"' % (pos_label, self.resource.get_operator(current_token), S))
         if L:
             where_clauses.append("({})".format(" OR ".join(L)))
         
-        S = """
-        SELECT  {columns}
-        FROM    {lexicon}
-        WHERE   {constraints}
-        """.format(
-            columns=", ".join(column_list),
-            lexicon=self.resource.__getattribute__("word_table"),
-            constraints=" AND ".join(where_clauses))
+        if where_clauses:
+            S = """
+            SELECT  {columns}
+            FROM    {lexicon}
+            WHERE   {constraints}
+            """.format(
+                columns=", ".join(column_list),
+                lexicon=getattr(self.resource, "word_table"),
+                constraints=" AND ".join(where_clauses))
+        else:
+            S = """
+            SELECT  {columns}
+            FROM    {lexicon}
+            """.format(
+                columns=", ".join(column_list),
+                lexicon=getattr(self.resource, "word_table"))
         return S
         
     def sql_string_query_self_joined(self, Query, token_list):
