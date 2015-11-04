@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'uniqueViewer.ui'
 #
-# Created: Mon Oct  5 17:34:57 2015
+# Created: Wed Nov  4 10:30:49 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -68,7 +68,7 @@ class Ui_UniqueViewer(object):
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
         self.buttonBox = QtGui.QDialogButtonBox(UniqueViewer)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Save)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.horizontalLayout.addWidget(self.buttonBox)
         self.verticalLayout_2.addLayout(self.horizontalLayout)

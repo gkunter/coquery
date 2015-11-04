@@ -1,5 +1,19 @@
+# -*- coding: utf-8 -*-
+
+"""
+uniqueviewer.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import division
 from __future__ import unicode_literals
+
+import pandas as pd
 
 from pyqt_compat import QtCore, QtGui
 import uniqueViewerUi
@@ -20,8 +34,8 @@ class UniqueViewer(QtGui.QWidget):
 
         if self.resource:
             rc_table = "{}_table".format(rc_feature.partition("_")[0])
-            self.table = self.resource.__getattribute__(self.resource, rc_table)
-            self.column = self.resource.__getattribute__(self.resource, rc_feature)
+            self.table = getattr(self.resource, rc_table)
+            self.column = getattr(self.resource, rc_feature)
             self.ui.label.setText(str(self.ui.label.text()).format(self.resource.name))
             self.ui.treeWidget.headerItem().setText(0, "{}.{}".format(self.table, self.column))
             
@@ -57,6 +71,7 @@ class UniqueViewer(QtGui.QWidget):
         self.data = None
         self.ui.label_2.setText(self.old_label.format(
             self.ui.treeWidget.topLevelItemCount()))
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).setEnabled(True)
         
     def entry_clicked(self, item, column):
         text = str(item.text(column))
@@ -83,6 +98,39 @@ class UniqueViewer(QtGui.QWidget):
     def onException(self):
         error_box.ErrorBox.show(self.exc_info, self.exception)
 
+    def save_list(self):
+        name = QtGui.QFileDialog.getSaveFileName(directory="~")
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            try:
+                root = self.ui.treeWidget.invisibleRootItem()
+                tab = pd.DataFrame.from_records([(str(root.child(i).text(0)),) for i in range(root.childCount())])
+                print(tab.head())
+                tab.to_csv(name,
+                           sep=options.cfg.output_separator,
+                           index=False,
+                           header=["{}.{}".format(self.table, self.column)],
+                           encoding=options.cfg.output_encoding)
+                pass
+                #header = self.ui.data_preview.horizontalHeader()
+                #ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
+                #ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
+                #tab = self.table_model.content[ordered_headers]
+                ## exclude invisble rows:
+                #tab = tab.iloc[~tab.index.isin(pd.Series(options.cfg.row_visibility.keys()))]
+                #tab.to_csv(name,
+                           #sep=options.cfg.output_separator,
+                           #index=False,
+                           #header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
+                           #encoding=options.cfg.output_encoding)
+            except IOError as e:
+                QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+            else:
+                self.last_results_saved = True
+
     @staticmethod
     def show(rc_feature, resource):
         dialog = UniqueViewer(rc_feature, resource)
@@ -97,6 +145,10 @@ class UniqueViewer(QtGui.QWidget):
         dialog.thread.taskFinished.connect(dialog.finalize)
         dialog.thread.taskException.connect(dialog.onException)
         dialog.thread.start()
+        
+        dialog.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).setEnabled(False)
+        dialog.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(dialog.save_list)
+        
         #QtProgress.ProgressIndicator(dialog.get_unique, finalize=dialog.finalize)
 
 def main():
