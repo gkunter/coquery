@@ -565,13 +565,14 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def select_file(self):
         """ Call a file selector, and add file name to query file input. """
-        name = QtGui.QFileDialog.getOpenFileName(directory="~")
+        name = QtGui.QFileDialog.getOpenFileName(directory=options.cfg.query_file_path)
         
         # getOpenFileName() returns different types in PyQt and PySide, fix:
         if type(name) == tuple:
             name = name[0]
         
         if name:
+            options.cfg.query_file_path = os.path.dirname(name)
             self.ui.edit_file_name.setText(name)
             self.switch_to_file()
             
@@ -605,10 +606,11 @@ class CoqueryApp(QtGui.QMainWindow):
         result = stopwords.Stopwords.manage(self, options.cfg.icon)
     
     def save_results(self):
-        name = QtGui.QFileDialog.getSaveFileName(directory="~")
+        name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.results_file_path)
         if type(name) == tuple:
             name = name[0]
         if name:
+            options.cfg.results_file_path = os.path.dirname(name)
             try:
                 header = self.ui.data_preview.horizontalHeader()
                 ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
