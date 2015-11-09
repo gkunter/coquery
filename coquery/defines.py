@@ -119,7 +119,7 @@ msg_corpus_broken = """
 likely, there is a programming error in the installer, or the file could 
 not be read.</p>
 <p>Please inform the maintainer of this corpus installer of your problem. 
-When doing so, include the following information in your message:/p>
+When doing so, include the following information in your message:</p>
 {type}
 {code}"""
 msg_disk_error = """
