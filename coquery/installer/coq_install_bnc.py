@@ -478,6 +478,10 @@ class BNCBuilder(BaseCorpusBuilder):
 
     @staticmethod
     def get_name():
+        return "BNC"
+
+    @staticmethod
+    def get_db_name():
         return "bnc"
 
     @staticmethod

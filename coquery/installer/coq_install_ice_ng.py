@@ -796,6 +796,10 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
 
     @staticmethod
     def get_name():
+        return "ICE_NG"
+
+    @staticmethod
+    def get_db_name():
         return "ice_ng"
 
     @staticmethod

@@ -93,6 +93,10 @@ class CMUdictBuilder(BaseCorpusBuilder):
         return "CMUdict"
     
     @staticmethod
+    def get_db_name():
+        return "cmudict"
+    
+    @staticmethod
     def get_license():
         return "CMUdict is licensed under a modified FreeBSD license."
     
