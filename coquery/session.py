@@ -186,6 +186,13 @@ class Session(object):
         if header == "coquery_query_string" and options.cfg.query_label:
             return options.cfg.query_label
 
+        # treat frequency columns:
+        if header == "coq_frequency":
+            if options.cfg.query_label:
+                return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
+            else:
+                return "{}".format(COLUMN_NAMES[header])
+        
         # other features:
         if header in COLUMN_NAMES:
             return COLUMN_NAMES[header]
@@ -249,12 +256,6 @@ class Session(object):
                 pass
             return str(function_label).replace(column_name, "{}{}".format(column_name, number))
 
-        # treat frequency columns:
-        if header == "frequency":
-            if options.cfg.query_label:
-                return "Frequency({})".format(options.cfg.query_label)
-            else:
-                return "Frequency"
         # other features:
         if rc_feature in COLUMN_NAMES:
             try:
@@ -307,7 +308,7 @@ class SessionInputFile(Session):
                 else:
                     self.header = ["X{}".format(i+1) for i, _ in enumerate(input_file.columns)]
                     input_file.columns = self.header
-                options.cfg.query_label = self.header.pop(options.cfg.query_column_number - 1)
+            options.cfg.query_label = self.header.pop(options.cfg.query_column_number - 1)
             for current_line in input_file.iterrows():
                 current_line = list(current_line[1])
                 if options.cfg.query_column_number > len(current_line):
