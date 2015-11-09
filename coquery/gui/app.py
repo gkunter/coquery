@@ -687,24 +687,22 @@ class CoqueryApp(QtGui.QMainWindow):
         self.menu.addAction(action)
         self.menu.addSeparator()
 
-        action = QtGui.QAction("&Rename column", self)
-        action.triggered.connect(lambda: self.rename_column(column))
-        action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
-        self.menu.addAction(action)
-
         if not options.cfg.column_visibility.get(column, True):
             action = QtGui.QAction("&Show column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
             self.menu.addAction(action)
-            
         else:
             action = QtGui.QAction("&Hide column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
             self.menu.addAction(action)
             self.menu.addSeparator()
-            
+
+            action = QtGui.QAction("&Rename column...", self)
+            action.triggered.connect(lambda: self.rename_column(column))
+            self.menu.addAction(action)
+
             if column in options.cfg.column_color:
                 action = QtGui.QAction("&Reset color", self)
                 action.triggered.connect(lambda: self.reset_color(column))
