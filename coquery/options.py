@@ -81,7 +81,6 @@ class Options(object):
         
         self.args.context_left = 0
         self.args.context_right = 0
-        
         # these attributes are used only in the GUI:
         self.args.column_width = {}
         self.args.column_color = {}
@@ -89,7 +88,7 @@ class Options(object):
         self.args.column_visibility = {}
         self.args.row_visibility = {}
         self.args.row_color = {}
-        
+        self.args.context_view_details = False
         # Set defaults for CSV files:
         self.args.query_column_number = 1
         self.args.skip_lines = 0
@@ -639,7 +638,8 @@ class Options(object):
                                 try:
                                     vars(self.args)[name] = int(value)
                                 except ValueError:
-                                    pass
+                                    if name == "context_view_details":
+                                        self.args.context_view_details = value == "True"
                             
         vars(self.args) ["db_user"] = db_user
         vars(self.args) ["db_password"] = db_password
@@ -780,6 +780,10 @@ def save_configuration():
             pass
         try:
             config.set("gui", "context_view_words", cfg.context_view_words)
+        except AttributeError:
+            pass
+        try:
+            config.set("gui", "context_view_details", cfg.context_view_details)
         except AttributeError:
             pass
 

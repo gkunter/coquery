@@ -1,3 +1,15 @@
+# -*- coding: utf-8 -*-
+
+"""
+contextview.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -6,9 +18,23 @@ from pyqt_compat import QtCore, QtGui
 import sys
 import contextviewUi
 import options
+import sqlwrap
 
 class ContextView(QtGui.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, parent=None):
+        
+        def get_additional_labels(table, features, item_id):
+            S = "SELECT {features} FROM {table} WHERE {table}_id = {id}".format(
+                features=", ".join(features), table=table, id=item_id)
+            DB = sqlwrap.SqlDB(
+                options.cfg.db_host,
+                options.cfg.db_port,
+                options.cfg.db_user,
+                options.cfg.db_password,
+                self.resource.db_name)
+            DB.execute(S)
+            values = DB.Cur[0]
+            return dict(zip(features, values))
         
         super(ContextView, self).__init__(parent)
         
@@ -20,18 +46,20 @@ class ContextView(QtGui.QWidget):
         self.ui = contextviewUi.Ui_ContextView()
         self.ui.setupUi(self)
         
-        
-        #self.ui.button_close.setIcon(
-            #QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_SP_DialogCloseButton))
-
-
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
         self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
         self.ui.slider_context_width.setTracking(True)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.closeEvent)
-        self.add_source_label("Token ID", token_id)
-        self.add_source_label("Source ID", source_id)
-            
+
+        # Add clickable header
+        self.ui.button_ids.setText(str(self.ui.button_ids.text()).format(token_id, source_id))
+        self.ui.button_ids.clicked.connect(self.toggle_details)
+        self.set_details()
+        
+        D = self.corpus.get_source_data(source_id)
+        for label in sorted(D.keys()):
+            self.add_source_label(label, D[label])
+        
         self.update_context()
         
     def add_source_label(self, name, content):
@@ -65,6 +93,19 @@ class ContextView(QtGui.QWidget):
         if content:
             content = str(content).strip()
             self.ui.source_content.setText(content)
+
+    def set_details(self):
+        if options.cfg.context_view_details:
+            self.ui.widget_details.show()
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
+        else:
+            self.ui.widget_details.hide()
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
+        self.ui.button_ids.setIcon(icon)
+
+    def toggle_details(self):
+        options.cfg.context_view_details = not options.cfg.context_view_details
+        self.set_details()
         
     def spin_changed(self):
         self.ui.slider_context_width.valueChanged.disconnect(self.slider_changed)

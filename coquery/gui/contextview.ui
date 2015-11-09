@@ -30,20 +30,28 @@
        <number>10</number>
       </property>
       <item>
-       <layout class="QFormLayout" name="form_information">
-        <property name="fieldGrowthPolicy">
-         <enum>QFormLayout::ExpandingFieldsGrow</enum>
+       <widget class="QPushButton" name="button_ids">
+        <property name="styleSheet">
+         <string notr="true">text-align: left;</string>
         </property>
-        <property name="horizontalSpacing">
-         <number>10</number>
+        <property name="text">
+         <string>Token ID: {}, Source ID: {}</string>
         </property>
-       </layout>
+        <property name="flat">
+         <bool>false</bool>
+        </property>
+       </widget>
       </item>
       <item>
-       <widget class="Line" name="line_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
+       <widget class="QWidget" name="widget_details" native="true">
+        <layout class="QFormLayout" name="form_information">
+         <property name="fieldGrowthPolicy">
+          <enum>QFormLayout::ExpandingFieldsGrow</enum>
+         </property>
+         <property name="horizontalSpacing">
+          <number>10</number>
+         </property>
+        </layout>
        </widget>
       </item>
       <item>

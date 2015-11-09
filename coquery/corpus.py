@@ -952,15 +952,30 @@ class SQLCorpus(BaseCorpus):
 
     def get_source_id(self, token_id):
         if "corpus_source_id" in dir(self.resource):
-            origin_column = self.resource.__getattribute__("corpus_source_id")
+            origin_column = self.resource.corpus_source_id
         elif "corpus_file_id" in dir(self.resource):
-            origin_column = self.resource.__getattribute__("corpus_file_id")
+            origin_column = self.resource.corpus_file_id
         else:
             raise NotImplementedError("Cannot determine token source.")
         S = "SELECT {} FROM {} WHERE {} = {}".format(
             origin_column, self.resource.corpus_table, self.resource.corpus_id, token_id)
         self.resource.DB.execute(S)
         return self.resource.DB.Cur.fetchone()[0]
+
+    def get_source_data(self, source_id):
+        if "corpus_source_id" in dir(self.resource):
+            origin_table = self.resource.source_table
+            origin_id = self.resource.source_id
+        elif "corpus_file_id" in dir(self.resource):
+            origin_table = self.resource.file_table
+            origin_id = self.resource.file_id
+        else:
+            return
+        S = "SELECT * FROM {} WHERE {} = {}".format(
+            origin_table, origin_id, source_id)
+        D = self.resource.DB.execute_cursor(S).fetchone()
+        D.pop(origin_id)
+        return D
 
     def get_corpus_size(self):
         """ Return the number of tokens in the corpus, taking the current 
@@ -1408,7 +1423,6 @@ class SQLCorpus(BaseCorpus):
             token, 
             self.resource.corpus_word_id, 
             None)
-        print(where_clauses)
 
         where_clauses = []
         L = []
@@ -1937,9 +1951,10 @@ class SQLCorpus(BaseCorpus):
         closed_elements = []
         
         for context_token_id in sorted(entities):
-            print()
-            print("TOKEN ", context_token_id)
-            print()
+            if options.cfg.verbose:
+                print()
+                print("TOKEN ", context_token_id)
+                print()
             opening_elements = []
             closing_elements = []
             word = ""
@@ -1957,16 +1972,17 @@ class SQLCorpus(BaseCorpus):
                             closing_elements.append(x)
             word = entities[context_token_id][0][self.resource.word_label]
             
-            if opening_elements:
-                print("OPENING")
-                print("\t", opening_elements)
-                print()
-            if closing_elements:
-                print("CLOSING")
-                print("\t", closing_elements)
-                print()
-                
-            print("WORD", word)
+            if options.cfg.verbose:
+                if opening_elements:
+                    print("OPENING")
+                    print("\t", opening_elements)
+                    print()
+                if closing_elements:
+                    print("CLOSING")
+                    print("\t", closing_elements)
+                    print()
+                    
+                print("WORD", word)
             
             # process all opening elements:
             for element in opening_elements:
