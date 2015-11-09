@@ -313,11 +313,11 @@ class TokenQuery(object):
                     if x.startswith("coq_word") or x.startswith("coq_lemma"):
                         df[x] = df[x].apply(lambda x: x.lower() if x else x)
             df = self.apply_functions(df)
-
-            if self.results_frame.empty:
-                self.results_frame = df
-            else:
-                self.results_frame = self.results_frame.append(df)
+            if not df.empty:
+                if self.results_frame.empty:
+                    self.results_frame = df
+                else:
+                    self.results_frame = self.results_frame.append(df)
 
     def append_results(self, df):
         """
@@ -327,6 +327,10 @@ class TokenQuery(object):
         ----------
         df : pandas.DataFrame
             The data frame to which the last query results will be added.
+            
+        Returns
+        -------
+        df : pandas.DataFrame
         """
         if df.empty:
             return self.results_frame
@@ -509,6 +513,10 @@ class TokenQuery(object):
         df : DataFrame
             The data frame with new columns for each function.
         """
+        
+        # If the data frame is empty, no function can be applied anyway:
+        if df.empty:
+            return df
 
         lexicon_features = [x for x, _ in self.Resource.get_lexicon_features()]
 
@@ -738,6 +746,10 @@ class StatisticsQuery(TokenQuery):
         ----------
         df : pandas.DataFrame
             The data frame to which the last query results will be added.
+            
+        Returns
+        -------
+        df : pandas.DataFrame
         """
         self.results_frame = self.Session.Resource.get_statistics()
         self.Session.output_order = ["Table", "Column", "Entries", "Uniques", "Ratio"]
