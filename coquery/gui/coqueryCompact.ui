@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>830</width>
-    <height>467</height>
+    <width>778</width>
+    <height>417</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1050,7 +1050,7 @@ The number of occurrences of each token matching the query string is counted. Th
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>830</width>
+     <width>778</width>
      <height>21</height>
     </rect>
    </property>

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Fri Oct 16 16:06:33 2015
+# Created: Mon Nov  9 15:30:49 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -435,7 +435,7 @@ class Ui_MainWindow(object):
         self.layoutWidget = QtGui.QWidget(self.splitter)
         self.layoutWidget.setObjectName(_fromUtf8("layoutWidget"))
         self.horizontalLayout_4 = QtGui.QHBoxLayout(self.layoutWidget)
-        self.horizontalLayout_4.setMargin(0)
+        self.horizontalLayout_4.setContentsMargins(4, -1, 4, -1)
         self.horizontalLayout_4.setObjectName(_fromUtf8("horizontalLayout_4"))
         self.splitter_2 = QtGui.QSplitter(self.layoutWidget)
         self.splitter_2.setOrientation(QtCore.Qt.Horizontal)
