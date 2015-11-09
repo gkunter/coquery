@@ -85,6 +85,7 @@ class Options(object):
         # these attributes are used only in the GUI:
         self.args.column_width = {}
         self.args.column_color = {}
+        self.args.column_names = {}
         self.args.column_visibility = {}
         self.args.row_visibility = {}
         self.args.row_color = {}
@@ -628,7 +629,13 @@ class Options(object):
                                                 self.args.column_width[column] = int(value)
                                     except ValueError:
                                         pass
-                            if name.startswith("context_view_") or name.startswith("error_box_") or name.startswith("context_manager"):
+                            # restore window sizes:
+                            if name.startswith(
+                                ("context_view_", 
+                                 "error_box_", 
+                                 "context_manager_", 
+                                 "function_apply_", 
+                                 "rename_column_")):
                                 try:
                                     vars(self.args)[name] = int(value)
                                 except ValueError:
@@ -775,6 +782,25 @@ def save_configuration():
             config.set("gui", "context_view_words", cfg.context_view_words)
         except AttributeError:
             pass
+
+        try:
+            config.set("gui", "function_apply_width", cfg.function_apply_width)
+        except AttributeError:
+            pass
+        try:
+            config.set("gui", "function_apply_height", cfg.function_apply_height)
+        except AttributeError:
+            pass
+
+        try:
+            config.set("gui", "rename_column_width", cfg.rename_column_width)
+        except AttributeError:
+            pass
+        try:
+            config.set("gui", "rename_column_height", cfg.rename_column_height)
+        except AttributeError:
+            pass
+
 
         try:
             config.set("gui", "corpus_manager_view_width", cfg.corpus_manager_view_width)
