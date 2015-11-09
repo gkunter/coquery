@@ -74,17 +74,20 @@ class FunctionDialog(QtGui.QDialog):
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             value = dialog.ui.edit_function_value.text()
+            escaped = str(value).replace("\\", "\\\\")
+            escaped = escaped.replace("'", "\\'")
+
             if dialog.ui.radio_count.isChecked():
-                label = "COUNT('{}', {})".format(value, feature)
+                label = "COUNT('{}', {})".format(escaped, feature)
                 FUN = lambda x: x.count(value)
             elif dialog.ui.radio_length.isChecked():
                 label = "LENGTH({})".format(feature)
                 FUN = lambda x: len(x)
             elif dialog.ui.radio_match.isChecked():
-                label = "MATCH('{}', {})".format(value, feature)
+                label = "MATCH('{}', {})".format(escaped, feature)
                 FUN = lambda x: func_match(x, value)
             elif dialog.ui.radio_regexp.isChecked():
-                label = "REGEXP('{}', {})".format(value, feature)
+                label = "REGEXP('{}', {})".format(escaped, feature)
                 FUN = lambda x: func_regexp(x, value)
             return label, FUN
         else:
