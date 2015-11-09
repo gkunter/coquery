@@ -311,7 +311,10 @@ class TokenQuery(object):
             if not options.cfg.case_sensitive and len(df.index) > 0:
                 for x in df.columns:
                     if x.startswith("coq_word") or x.startswith("coq_lemma"):
-                        df[x] = df[x].apply(lambda x: x.lower() if x else x)
+                        try:
+                            df[x] = df[x].apply(lambda x: x.lower() if x else x)
+                        except AttributeError:
+                            pass
             df = self.apply_functions(df)
             if not df.empty:
                 if self.results_frame.empty:
