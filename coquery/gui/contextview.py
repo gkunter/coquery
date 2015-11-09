@@ -96,10 +96,10 @@ class ContextView(QtGui.QWidget):
 
     def set_details(self):
         if options.cfg.context_view_details:
-            self.ui.widget_details.show()
+            self.ui.frame_details.show()
             icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
         else:
-            self.ui.widget_details.hide()
+            self.ui.frame_details.hide()
             icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
         self.ui.button_ids.setIcon(icon)
 
