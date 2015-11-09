@@ -1044,7 +1044,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
     def remove_corpus(self, corpus_name):
         resource, _, _, module = get_available_resources()[corpus_name.lower()]
-        database = resource.get_db_name()
+        database = resource.db_name
         #database = resource.db_name
         try:
             size = FileSize(sqlwrap.SqlDB(options.cfg.db_host, options.cfg.db_port, options.cfg.db_user, options.cfg.db_password).get_database_size(database))
