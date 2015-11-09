@@ -172,7 +172,7 @@ class Session(object):
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
-    def translate_header(self, header):
+    def translate_header(self, header, ignore_alias=False):
         """ 
         Return a string that contains the display name for the header 
         string. 
@@ -181,7 +181,26 @@ class Session(object):
         determines the resource feature from the remaining string, translates 
         it to its display name, and returns the display name together with 
         the numerical suffix attached.
+        
+        Parameters
+        ----------
+        header : string
+            The resource string that is to be translated
+        ignore_alias : bool
+            True if user names should be ignored, and False if user names 
+            should be used.
+            
+        Returns
+        -------
+        s : string
+            The display name of the resource string
         """
+        
+        # If the column has been renamed by the user, that name has top
+        # priority, unless ignore_alias is used:
+        if not ignore_alias and header in options.cfg.column_names:
+            return options.cfg.column_names[header]
+        
         # Retain the column header if the query string was from an input file
         if header == "coquery_query_string" and options.cfg.query_label:
             return options.cfg.query_label

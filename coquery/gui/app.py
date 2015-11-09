@@ -687,6 +687,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.menu.addAction(action)
         self.menu.addSeparator()
 
+        action = QtGui.QAction("&Rename column", self)
+        action.triggered.connect(lambda: self.rename_column(column))
+        action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
+        self.menu.addAction(action)
+
         if not options.cfg.column_visibility.get(column, True):
             action = QtGui.QAction("&Show column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
@@ -810,6 +815,23 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.menu.popup(header.mapToGlobal(point))
         self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
+
+    def rename_column(self, column):
+        """
+        Open a dialog in which the column name can be changed.
+        
+        Parameters
+        ----------
+        column : column index
+        """
+        from renamecolumn import RenameColumnDialog
+        
+        column_name = self.Session.translate_header(column, ignore_alias=True)
+        current_name = options.cfg.column_names.get(column, column_name)
+        
+        name = RenameColumnDialog.get_name(column_name,
+                                           current_name)
+        options.cfg.column_names[column] = name
 
     def toggle_visibility(self, column):
         """ 
