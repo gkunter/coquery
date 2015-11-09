@@ -65,6 +65,10 @@ class Options(object):
         self.args.save_query_file = True
         self.args.reaggregate_data = True
         self.args.server_side = True
+        self.args.query_file_path = os.path.expanduser("~")
+        self.args.results_file_path = os.path.expanduser("~")
+        self.args.uniques_file_path = os.path.expanduser("~")
+        
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
         except AttributeError:
@@ -576,6 +580,23 @@ class Options(object):
                         except (configparser.NoOptionError, ValueError):
                             self.args.save_query_file = True
                         try:
+                            self.args.query_file_path = config_file.get("gui", "query_file_path")
+                        except (configparser.NoOptionError, ValueError):
+                            self.args.query_file_path = os.path.expanduser("~")
+                        try:
+                            self.args.query_file_path = config_file.get("gui", "query_file_path")
+                        except (configparser.NoOptionError, ValueError):
+                            self.args.query_file_path = os.path.expanduser("~")
+                        try:
+                            self.args.results_file_path = config_file.get("gui", "results_file_path")
+                        except (configparser.NoOptionError, ValueError):
+                            self.args.results_file_path = os.path.expanduser("~")
+                        try:
+                            self.args.uniques_file_path = config_file.get("gui", "uniques_file_path")
+                        except (configparser.NoOptionError, ValueError):
+                            self.args.uniques_file_path = os.path.expanduser("~")
+                            
+                        try:
                             self.args.reaggregate_data = config_file.get("gui", "reaggregate_data")
                         except configparser.NoOptionError:
                             self.args.reaggregate_data = True
@@ -718,6 +739,19 @@ def save_configuration():
             config.set("gui", "save_query_file", cfg.save_query_file)
         except AttributeError:
             config.set("gui", "save_query_file", True)
+
+        try:
+            config.set("gui", "query_file_path", cfg.query_file_path)
+        except AttributeError:
+            config.set("gui", "query_file_path", os.path.expanduser("~"))
+        try:
+            config.set("gui", "results_file_path", cfg.results_file_path)
+        except AttributeError:
+            config.set("gui", "results_file_path", os.path.expanduser("~"))
+        try:
+            config.set("gui", "uniques_file_path", cfg.uniques_file_path)
+        except AttributeError:
+            config.set("gui", "uniques_file_path", os.path.expanduser("~"))
 
         try:
             config.set("gui", "reaggregate_data", cfg.reaggregate_data)
