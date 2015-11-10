@@ -68,6 +68,8 @@ class Options(object):
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
+        self.args.corpus_source_path = os.path.expanduser("~")
+        self.args.text_source_path = os.path.expanduser("~")
         
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
@@ -595,6 +597,14 @@ class Options(object):
                             self.args.uniques_file_path = config_file.get("gui", "uniques_file_path")
                         except (configparser.NoOptionError, ValueError):
                             self.args.uniques_file_path = os.path.expanduser("~")
+                        try:
+                            self.args.corpus_source_path = config_file.get("gui", "corpus_source_path")
+                        except (configparser.NoOptionError, ValueError):
+                            self.args.corpus_source_path = os.path.expanduser("~")
+                        try:
+                            self.args.text_source_path = config_file.get("gui", "text_source_path")
+                        except (configparser.NoOptionError, ValueError):
+                            self.args.text_source_path = os.path.expanduser("~")
                             
                         try:
                             self.args.reaggregate_data = config_file.get("gui", "reaggregate_data")
@@ -759,6 +769,14 @@ def save_configuration():
             config.set("gui", "uniques_file_path", cfg.uniques_file_path)
         except AttributeError:
             config.set("gui", "uniques_file_path", os.path.expanduser("~"))
+        try:
+            config.set("gui", "corpus_source_path", cfg.corpus_source_path)
+        except AttributeError:
+            config.set("gui", "corpus_source_path", os.path.expanduser("~"))
+        try:
+            config.set("gui", "text_source_path", cfg.text_source_path)
+        except AttributeError:
+            config.set("gui", "text_source_path", os.path.expanduser("~"))
 
         try:
             config.set("gui", "reaggregate_data", cfg.reaggregate_data)

@@ -599,7 +599,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
         new_table = Table(table_name)
         for x in column_list:
             if isinstance(x, Link):
-                x.data_type = self._new_tables[x._link].primary.data_type
+                try:
+                    x.data_type = self._new_tables[x._link].primary.data_type
+                except KeyError:
+                    raise KeyError("Table description for '{}' contains a link to unknown table '{}'".format(table_name, x._link))
             new_table.add_column(x)
         self._new_tables[table_name] = new_table
 
@@ -1713,6 +1716,9 @@ if use_gui:
             self.progressSet.connect(self.set_progress)
             self.progressUpdate.connect(self.update_progress)
             
+            if options.cfg.corpus_source_path != os.path.expanduser("~"):
+                self.ui.input_path.setText(options.cfg.corpus_source_path)
+            
             self.accepted = False
             try:
                 self.builder_class = builder_class
@@ -1743,10 +1749,11 @@ if use_gui:
             self.ui.progress_bar.setValue(i)
 
         def select_path(self):
-            name = QtGui.QFileDialog.getExistingDirectory()
+            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.corpus_source_path)
             if type(name) == tuple:
                 name = name[0]
             if name:
+                options.cfg.corpus_source_path = name
                 self.ui.input_path.setText(name)
 
         def keyPressEvent(self, e):
@@ -1886,10 +1893,11 @@ if use_gui:
             self.exec_()
 
         def select_path(self):
-            name = QtGui.QFileDialog.getExistingDirectory()
+            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.test_source_path)
             if type(name) == tuple:
                 name = name[0]
             if name:
+                options.cfg.text_source_path = name
                 self.ui.input_path.setText(name)
 
         def keyPressEvent(self, e):
