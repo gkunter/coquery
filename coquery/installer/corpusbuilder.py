@@ -414,16 +414,19 @@ class Table(object):
             
     def get_create_string(self):
         str_list = []
+        columns_added = set([])
         for column in self.columns:
-            if column.primary:
-                str_list.insert(0, "`{}` {} AUTO_INCREMENT".format(
-                    column.name,
-                    column.data_type))
-                str_list.append("PRIMARY KEY (`{}`)".format(column.name))
-            else:
-                str_list.append("`{}` {}".format(
-                    column.name,
-                    column.data_type))
+            if column.name not in columns_added:
+                if column.primary:
+                    str_list.insert(0, "`{}` {} AUTO_INCREMENT".format(
+                        column.name,
+                        column.data_type))
+                    str_list.append("PRIMARY KEY (`{}`)".format(column.name))
+                else:
+                    str_list.append("`{}` {}".format(
+                        column.name,
+                        column.data_type))
+                columns_added.add(column.name)
         return ", ".join(str_list)
     
 class BaseCorpusBuilder(corpus.BaseResource):
