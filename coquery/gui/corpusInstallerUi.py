@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'corpusInstaller.ui'
 #
-# Created: Fri Sep  4 16:42:35 2015
+# Created: Wed Nov 11 18:52:03 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -134,6 +134,12 @@ class Ui_CorpusInstaller(object):
         self.label = QtGui.QLabel(self.progress_box)
         self.label.setObjectName(_fromUtf8("label"))
         self.verticalLayout_2.addWidget(self.label)
+        self.progress_general = QtGui.QProgressBar(self.progress_box)
+        self.progress_general.setMinimum(0)
+        self.progress_general.setMaximum(9)
+        self.progress_general.setProperty("value", 0)
+        self.progress_general.setObjectName(_fromUtf8("progress_general"))
+        self.verticalLayout_2.addWidget(self.progress_general)
         self.progress_bar = QtGui.QProgressBar(self.progress_box)
         self.progress_bar.setProperty("value", 0)
         self.progress_bar.setFormat(_fromUtf8(""))
@@ -142,12 +148,11 @@ class Ui_CorpusInstaller(object):
         self.verticalLayout_3.addWidget(self.progress_box)
         self.buttonBox = QtGui.QDialogButtonBox(CorpusInstaller)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Yes)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.verticalLayout_3.addWidget(self.buttonBox)
 
         self.retranslateUi(CorpusInstaller)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), CorpusInstaller.accept)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), CorpusInstaller.reject)
         QtCore.QMetaObject.connectSlotsByName(CorpusInstaller)
 
@@ -159,6 +164,7 @@ class Ui_CorpusInstaller(object):
         self.label_8.setText(_translate("CorpusInstaller", "Path to corpus data files:", None))
         self.button_input_path.setText(_translate("CorpusInstaller", "Browse", None))
         self.button_input_path.setShortcut(_translate("CorpusInstaller", "Alt+B", None))
-        self.label.setText(_translate("CorpusInstaller", "Installing the corpus. Please wait...", None))
+        self.label.setText(_translate("CorpusInstaller", "Installing...", None))
+        self.progress_general.setFormat(_translate("CorpusInstaller", "Stage %v of %m", None))
 
 
