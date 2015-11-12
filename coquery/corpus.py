@@ -257,10 +257,6 @@ class BaseResource(object):
             'rc_requested_features'  a list of strings containing those
                             resource features from argument 'rc_feature_list'
                             that are contained in this table
-            'alias'         the string that is used to give a name to the 
-                            table in the INNER JOIN string to avoid naming 
-                            clashes with existing tables in the database, 
-                            i.e. the resource table string prefixed by COQ_
         """
         D = {}
         D["parent"] = None
@@ -270,7 +266,7 @@ class BaseResource(object):
         requested_features = []
         children = []
         for rc_feature in cls.get_resource_features():
-            if rc_feature.endswith("{}_id".format(rc_tab)) and not rc_feature.startswith(rc_tab):
+            if rc_feature.endswith("_{}_id".format(rc_tab)) and not rc_feature.startswith(rc_tab):
                 D["parent"] = "{}_table".format(rc_feature.split("_")[0])
             if rc_feature.startswith("{}_".format(rc_tab)):
                 if not rc_feature.endswith("_table"):
@@ -289,7 +285,6 @@ class BaseResource(object):
         D["children"] = children
         D["rc_features"] = sorted(available_features)
         D["rc_requested_features"] = sorted(requested_features)
-        D["alias"] = "COQ_{}".format(rc_table.upper())
         return D
     
     @classmethod
@@ -1135,7 +1130,7 @@ class SQLCorpus(BaseCorpus):
                 rc_table = "{}_table".format(rc_feature.partition("_")[0])
                 rc_where_constraints[rc_table].add(
                     '{} {} "{}"'.format(
-                        self.resource.__getattribute__(rc_feature), op, value_list[0]))
+                        getattr(self.resource, rc_feature), op, value_list[0]))
 
         for linked in options.cfg.external_links:
             external, internal = options.cfg.external_links[linked]
@@ -1157,7 +1152,7 @@ class SQLCorpus(BaseCorpus):
             word_pos_column = None
         else:
             try:
-                word_pos_column = self.resource.__getattribute__(pos_feature)
+                word_pos_column = getattr(self.resource, pos_feature)
             except AttributeError:
                 word_pos_column = None
 
@@ -1183,6 +1178,7 @@ class SQLCorpus(BaseCorpus):
 
         # get a list of all tables that are required to satisfy the 
         # feature request:
+        
         required_tables = {}
         for rc_feature in requested_features:
             rc_table = "{}_table".format(rc_feature.split("_")[0])
@@ -1286,20 +1282,18 @@ class SQLCorpus(BaseCorpus):
                         rc_table.split("_")[0],
                         number+1)
                     
-                    join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS {alias} ON {parent_id} = {child_id}".format(
+                    join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS COQ_{rc_table} ON {parent_id} = {child_id}".format(
                         columns = columns, 
                         table = table,
-                        alias = sub_tree["alias"],
-                        parent = parent_tree["alias"],
+                        rc_table = rc_table.upper(),
                         where = where_string,
-                        number = number+1,
                         parent_id = parent_id,
                         child_id = child_id)
                 else:
-                    join_strings[rc_table] = "(SELECT {columns} FROM {table} {where}) AS {alias}".format(
+                    join_strings[rc_table] = "(SELECT {columns} FROM {table} {where}) AS COQ_{rc_table}".format(
                         columns = columns, 
                         table = table,
-                        alias = sub_tree["alias"],
+                        rc_table = rc_table.upper(),
                         where = where_string)
 
         # create a list containing the join strings for the different tables,
@@ -1506,8 +1500,6 @@ class SQLCorpus(BaseCorpus):
 
         corpus_features = [x for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
         lexicon_features = [x for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
-        
-        print(corpus_features)
         
         for i, tup in enumerate(token_list):
             number, token = tup
