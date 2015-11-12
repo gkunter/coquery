@@ -472,6 +472,8 @@ class BNCBuilder(BaseCorpusBuilder):
     def process_file(self, current_file):
         """ Process an XML file, and insert all relevant information into
         the corpus."""
+        if self.interrupted:
+            return
         e = self.xml_parse_file(current_file)
         self.xml_get_meta_info(e)
         self.xml_process_element(self.xml_get_body(e))
