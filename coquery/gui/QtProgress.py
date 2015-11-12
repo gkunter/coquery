@@ -58,7 +58,7 @@ class ProgressIndicator(QtGui.QDialog):
 
 class ProgressThread(QtCore.QThread):
     taskFinished = QtCore.Signal()
-    taskException = QtCore.Signal()
+    taskException = QtCore.Signal(Exception)
     taskAbort = QtCore.Signal()
     
     def __init__(self, FUN, window, *args):
@@ -86,7 +86,7 @@ class ProgressThread(QtCore.QThread):
         except Exception as e:
             self.parent.exc_info = sys.exc_info()
             self.parent.exception = e
-            self.taskException.emit()
+            self.taskException.emit(e)
         self.taskFinished.emit()
 
 if __name__ == "__main__":
