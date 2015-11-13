@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'contextview.ui'
 #
-# Created: Mon Nov  9 22:58:15 2015
+# Created: Thu Nov 12 10:24:18 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -28,14 +28,14 @@ class Ui_ContextView(object):
         ContextView.setObjectName(_fromUtf8("ContextView"))
         ContextView.resize(640, 480)
         self.verticalLayout_3 = QtGui.QVBoxLayout(ContextView)
-        self.verticalLayout_3.setSpacing(20)
+        self.verticalLayout_3.setSpacing(16)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.box_context = QtGui.QFrame(ContextView)
         self.box_context.setFrameShape(QtGui.QFrame.StyledPanel)
         self.box_context.setFrameShadow(frameShadow)
         self.box_context.setObjectName(_fromUtf8("box_context"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.box_context)
-        self.verticalLayout_2.setMargin(10)
+        self.verticalLayout_2.setContentsMargins(8, 6, 8, 6)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.verticalLayout = QtGui.QVBoxLayout()
         self.verticalLayout.setSpacing(0)
@@ -51,6 +51,7 @@ class Ui_ContextView(object):
         self.frame_details.setObjectName(_fromUtf8("frame_details"))
         self.form_information = QtGui.QFormLayout(self.frame_details)
         self.form_information.setFieldGrowthPolicy(QtGui.QFormLayout.ExpandingFieldsGrow)
+        self.form_information.setRowWrapPolicy(QtGui.QFormLayout.WrapLongRows)
         self.form_information.setContentsMargins(-1, 0, -1, -1)
         self.form_information.setHorizontalSpacing(10)
         self.form_information.setObjectName(_fromUtf8("form_information"))
@@ -70,7 +71,7 @@ class Ui_ContextView(object):
         self.box_context_width.setObjectName(_fromUtf8("box_context_width"))
         self.horizontalLayout_2 = QtGui.QHBoxLayout(self.box_context_width)
         self.horizontalLayout_2.setSpacing(10)
-        self.horizontalLayout_2.setMargin(10)
+        self.horizontalLayout_2.setContentsMargins(8, 6, 8, 6)
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
         self.label_4 = QtGui.QLabel(self.box_context_width)
         self.label_4.setObjectName(_fromUtf8("label_4"))
