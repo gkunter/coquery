@@ -36,16 +36,36 @@ class UniqueViewer(QtGui.QWidget):
             rc_table = "{}_table".format(rc_feature.partition("_")[0])
             self.table = getattr(self.resource, rc_table)
             self.column = getattr(self.resource, rc_feature)
-            self.ui.label.setText(str(self.ui.label.text()).format(self.resource.name))
-            self.ui.treeWidget.headerItem().setText(0, "{}.{}".format(self.table, self.column))
-            
+            self.ui.button_details.setText(
+                str(self.ui.button_details.text()).format(
+                    self.resource.name, 
+                    "{}.{}".format(self.table, self.column)))
         else:
             self.table = None
             self.column = None
             self.resource = None
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
         self.ui.treeWidget.itemClicked.connect(self.entry_clicked)
-            
+        self.ui.button_details.clicked.connect(self.toggle_details)
+        self.set_details()
+
+        self.ui.buttonBox.setDisabled(True)
+        self.ui.button_details.setDisabled(True)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(self.save_list)
+
+    def set_details(self):
+        if options.cfg.unique_view_details:
+            self.ui.frame_details.show()
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
+        else:
+            self.ui.frame_details.hide()
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
+        self.ui.button_details.setIcon(icon)
+
+    def toggle_details(self):
+        options.cfg.unique_view_details = not options.cfg.unique_view_details
+        self.set_details()
+        
     def get_unique(self):
         if not self.resource:
             return
@@ -68,10 +88,12 @@ class UniqueViewer(QtGui.QWidget):
         self.ui.progress_bar.setRange(1,0)
         self.ui.progress_bar.hide()
         self.ui.treeWidget.show()
+        self.ui.label_inform.hide()
+        self.ui.label.show()
+        self.ui.label.setText(str(self.ui.label.text()).format(len(self.data)))
+        self.ui.buttonBox.setEnabled(True)
+        self.ui.button_details.setEnabled(True)
         self.data = None
-        self.ui.label_2.setText(self.old_label.format(
-            self.ui.treeWidget.topLevelItemCount()))
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).setEnabled(True)
         
     def entry_clicked(self, item, column):
         text = str(item.text(column))
@@ -122,10 +144,10 @@ class UniqueViewer(QtGui.QWidget):
     @staticmethod
     def show(rc_feature, resource):
         dialog = UniqueViewer(rc_feature, resource)
-        dialog.old_label = str(dialog.ui.label_2.text())
-        dialog.ui.label_2.setText("Retrieving unique values...")
         dialog.ui.progress_bar.setRange(0,0)
         dialog.ui.treeWidget.hide()
+        dialog.ui.label.hide()
+
         dialog.setVisible(True)
         options.cfg.main_window.widget_list.append(dialog)
         
@@ -134,9 +156,6 @@ class UniqueViewer(QtGui.QWidget):
         dialog.thread.taskException.connect(dialog.onException)
         dialog.thread.start()
         
-        dialog.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).setEnabled(False)
-        dialog.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(dialog.save_list)
-
 def main():
     app = QtGui.QApplication(sys.argv)
     UniqueViewer.show(None, None)

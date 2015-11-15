@@ -91,6 +91,7 @@ class Options(object):
         self.args.row_visibility = {}
         self.args.row_color = {}
         self.args.context_view_details = False
+        self.args.unique_view_details = False
         # Set defaults for CSV files:
         self.args.query_column_number = 1
         self.args.skip_lines = 0
@@ -644,12 +645,15 @@ class Options(object):
                                  "error_box_", 
                                  "context_manager_", 
                                  "function_apply_", 
+                                 "unique_view_",
                                  "rename_column_")):
                                 try:
                                     vars(self.args)[name] = int(value)
                                 except ValueError:
                                     if name == "context_view_details":
                                         self.args.context_view_details = value == "True"
+                                    elif name == "unique_view_details":
+                                        self.args.unique_view_details = value == "True"
                             
         vars(self.args) ["db_user"] = db_user
         vars(self.args) ["db_password"] = db_password
@@ -802,6 +806,10 @@ def save_configuration():
             pass
         try:
             config.set("gui", "context_view_details", cfg.context_view_details)
+        except AttributeError:
+            pass
+        try:
+            config.set("gui", "unique_view_details", cfg.unique_view_details)
         except AttributeError:
             pass
 
