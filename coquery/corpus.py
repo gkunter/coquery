@@ -186,6 +186,44 @@ class BaseResource(object):
         return [x for x in dir(cls) if "_" in x and not x.startswith("_")]
 
     @classmethod
+    def split_resource_feature(cls, rc_feature):
+        """
+        Split a resource feature into a tuple containing the prefix, the 
+        table name, and the resource feature display name.
+        
+        Parameters:
+        -----------
+        rc_feature : str
+            The name of the resource feature
+            
+        Returns:
+        --------
+        tup : tuple
+            A tuple consisting of a boolean specificing whether it is a 
+            function, the database name (can be empty), the resource table
+            name, and the feature name
+        """
+        is_function = rc_feature.startswith("func.")
+        if is_function:
+            _, _, s = rc_feature.partition(".")
+        else:
+            s = rc_feature
+        if "." in s:
+            db_name, _, s= s.partition(".")
+        else:
+            try:
+                db_name = cls.db_name
+            except AttributeError:
+                db_name = "db_unknown"
+        table, _, feature = s.partition("_")
+        if not table or not feature:
+            raise ValueError("either no table or no feature: {}".format(rc_feature))
+        #rc_table = "{}_table".format(table)
+        
+        return (is_function, db_name, table, feature)
+
+
+    @classmethod
     def get_table_dict(cls):
         """ Return a dictionary with the table names specified in this
         resource as keys. The values of the dictionary are the table 
