@@ -165,27 +165,6 @@ class BaseResource(object):
     render_token_style = "background: lightyellow"
 
     @classmethod
-    def get_preferred_output_order(cls):
-        prefer = ["corpus_word", "word_label", "word_pos", "pos_label", "word_transcript", "transcript_label", "word_lemma", "lemma_label"]
-        
-        all_features = cls.get_resource_features()
-        order = []
-        for rc_feature in list(all_features):
-            if rc_feature in prefer:
-                for i, ordered_feature in enumerate(order):
-                    if prefer.index(ordered_feature) > prefer.index(rc_feature):
-                        order.insert(i, rc_feature)
-                        break
-                else:
-                    order.append(rc_feature)
-                all_features.remove(rc_feature)
-        return order + all_features
-    
-    @classmethod
-    def get_resource_features(cls):
-        return [x for x in dir(cls) if "_" in x and not x.startswith("_")]
-
-    @classmethod
     def split_resource_feature(cls, rc_feature):
         """
         Split a resource feature into a tuple containing the prefix, the 
@@ -222,22 +201,56 @@ class BaseResource(object):
         
         return (is_function, db_name, table, feature)
 
+    @classmethod
+    def get_preferred_output_order(cls):
+        prefer = ["corpus_word", "word_label", "word_pos", "pos_label", "word_transcript", "transcript_label", "word_lemma", "lemma_label"]
+        
+        all_features = cls.get_resource_features()
+        order = []
+        for rc_feature in list(all_features):
+            if rc_feature in prefer:
+                for i, ordered_feature in enumerate(order):
+                    if prefer.index(ordered_feature) > prefer.index(rc_feature):
+                        order.insert(i, rc_feature)
+                        break
+                else:
+                    order.append(rc_feature)
+                all_features.remove(rc_feature)
+        return order + all_features
+    
+    @classmethod
+    def get_resource_features(cls):
+        """
+        Return a list of all resource feature names.
+        
+        A resource feature is a class attribute that either contains the 
+        display name of a resource table or of a resource table variable.
+        Resource table features take the form TABLENAME_table, where 
+        TABLENAME is the resource name of the table. Resource features 
+        take the form TABLENAME_COLUMNNAME, where COLUMNNAME is the 
+        resource name of the column.
+        
+        Returns
+        -------
+        l : list 
+            List of strings containing the resource feature names
+        """
+        tables = [x.partition("_")[0] for x in dir(cls) if not x.startswith("_") and x.endswith("_table")]
+        tables.append("coquery")
+        return [x for x in dir(cls) if "_" in x and x.partition("_")[0] in tables]
 
     @classmethod
     def get_table_dict(cls):
         """ Return a dictionary with the table names specified in this
         resource as keys. The values of the dictionary are the table 
         columns. """
-        table_dict = {}
+        table_dict = defaultdict(set)
         for x in cls.get_resource_features():
-            if "_" in x and not x.startswith("_"):
-                table, _, _ = x.partition("_")
-                if table not in table_dict:
-                    table_dict[table] = []
-                table_dict[table].append(x)
-        for x in list(table_dict.keys()):
-            if x not in cls.special_table_list and not "{}_table".format(x) in table_dict[x]:
-                table_dict.pop(x)
+            table, _, _ = x.partition("_")
+            table_dict[table].add(x)
+        #for x in list(table_dict.keys()):
+            #if x not in cls.special_table_list and not "{}_table".format(x) in table_dict[x]:
+                #table_dict.pop(x)
         try:
             table_dict.pop("tag")
         except (AttributeError, KeyError):
@@ -265,19 +278,42 @@ class BaseResource(object):
     
     @classmethod
     def get_table_path(cls, start, end):
-        """ Return a list of table names that constitute a link chain from
+        """ 
+        Return a list of table names that constitute a link chain from
         table 'start' to 'end', including these two tables. Return None if 
-        no path was found, i.e. if table 'end' is not linked to 'start'. """
+        no path was found, i.e. if table 'end' is not linked to 'start'. 
+        
+        Parameters
+        ----------
+        start : string
+            A resource feature name, indicating the starting point of the 
+            search
+        end : string
+            A resource feature name, indicating the end point of the search
+        
+        Returns
+        -------
+        l : list or None
+            A list of the resource table names that lead from resource 
+            feature 'start' to resource feature'end'. The list contains 
+            start and end as the first and the last element if such a path
+            exists. If no path exists, the method returns None.
+        """
         table_dict = cls.get_table_dict()
         if "{}_id".format(end) in table_dict[start]:
             return [end]
-        for x in table_dict[start]:
-            if x.endswith("_id"):
-                parts = x.split("_")
-                if len(parts) == 3:
-                    descend = cls.get_table_path(parts[1], end)
-                    if descend:
-                        return [start] + descend
+        for rc_feature in table_dict[start]:
+            try:
+                from_table, to_table, id_spec = rc_feature.split("_")
+            except ValueError:
+                # this resource feature is not a linking feature
+                continue
+            else:
+                # this is a linking feature, so descend into the 
+                # table:
+                descend = cls.get_table_path(to_table, end)
+                if descend:
+                    return [start] + descend
         return None
 
     @classmethod
@@ -449,9 +485,8 @@ class BaseResource(object):
                 print("illegal filter?", filt)
                 column_name = ""
             if column_name:
-                table = str("{}_table".format(
-                        column_name.partition("_")[0]))
-                table_name = type(cls).__getattribute__(cls, table)
+                table = str("{}_table".format(column_name.partition("_")[0]))
+                table_name = getattribute(cls, table)
                 filter_list.append((variable, column_name, table_name, filt._op, filt._value_list, filt._value_range))
         return filter_list
 
@@ -1217,6 +1252,7 @@ class SQLCorpus(BaseCorpus):
         # get a list of all tables that are required to satisfy the 
         # feature request:
         
+        # FIXME: change to split_resource_feature
         required_tables = {}
         for rc_feature in requested_features:
             rc_table = "{}_table".format(rc_feature.split("_")[0])
@@ -1248,7 +1284,8 @@ class SQLCorpus(BaseCorpus):
         select_list = set([])
         for rc_table in required_tables:
             # FIXME: This section needs to be simplified!
-           # linked table?
+            # FIXME: change to split_resource_feature
+            # linked table?
             if "." in rc_table and not rc_table.startswith("func."):
                 external_corpus, rc_table = rc_table.split(".")
                 resource = get_available_resources()[external_corpus][0]
