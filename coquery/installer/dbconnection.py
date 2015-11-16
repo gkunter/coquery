@@ -31,8 +31,13 @@ insert_cache = defaultdict(list)
 
 class DBConnection(object):
     def __init__(self, db_user="mysql", db_host="localhost", db_port=3306, db_pass="mysql", local_infile=0, encoding="utf8"):
-        
-        self.Con = mysql.connect(host=db_host, user=db_user, passwd=db_pass, local_infile=local_infile, charset=encoding)
+        self.Con = mysql.connect(
+            host=db_host, 
+            user=db_user, 
+            passwd=db_pass,
+            port=db_port,
+            local_infile=local_infile, 
+            charset=encoding)
         self.dry_run = False
 
         self.set_variable("NAMES", encoding)
