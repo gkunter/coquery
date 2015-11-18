@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'mysqlConfiguration.ui'
 #
-# Created: Wed Nov 18 15:03:47 2015
+# Created: Wed Nov 18 19:05:55 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -295,7 +295,7 @@ class Ui_MySQLConfig(object):
         MySQLConfig.setTabOrder(self.button_status, self.scrollArea)
 
     def retranslateUi(self, MySQLConfig):
-        MySQLConfig.setWindowTitle(_translate("MySQLConfig", "MySQL configuration – Coquery", None))
+        MySQLConfig.setWindowTitle(_translate("MySQLConfig", "Database server configuration – Coquery", None))
         self.label_5.setText(_translate("MySQLConfig", "&Available configurations:", None))
         self.button_add.setText(_translate("MySQLConfig", "A&dd", None))
         self.button_replace.setText(_translate("MySQLConfig", "Replace", None))
