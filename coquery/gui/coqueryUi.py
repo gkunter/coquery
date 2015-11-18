@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Mon Nov  9 15:30:49 2015
+# Created: Wed Nov 18 15:18:53 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -646,11 +646,14 @@ class Ui_MainWindow(object):
         self.action_Stacked_bars.setObjectName(_fromUtf8("action_Stacked_bars"))
         self.action_view_log = QtGui.QAction(MainWindow)
         self.action_view_log.setObjectName(_fromUtf8("action_view_log"))
+        self.action_mysql_server_help = QtGui.QAction(MainWindow)
+        self.action_mysql_server_help.setObjectName(_fromUtf8("action_mysql_server_help"))
         self.menuFile.addAction(self.action_open_input_file)
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.action_quit)
         self.menuHilfe.addAction(self.action_help)
+        self.menuHilfe.addAction(self.action_mysql_server_help)
         self.menuHilfe.addSeparator()
         self.menuHilfe.addAction(self.action_about_coquery)
         self.menuCorpus.addAction(self.action_build_corpus)
@@ -773,5 +776,6 @@ class Ui_MainWindow(object):
         self.action_stacked_barchart_plot.setText(_translate("MainWindow", "&Percentage bars", None))
         self.action_Stacked_bars.setText(_translate("MainWindow", "&Stacked bars", None))
         self.action_view_log.setText(_translate("MainWindow", "View log...", None))
+        self.action_mysql_server_help.setText(_translate("MainWindow", "MySQL server help", None))
 
 

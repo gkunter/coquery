@@ -1077,6 +1077,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <string>&amp;Help</string>
     </property>
     <addaction name="action_help"/>
+    <addaction name="action_mysql_server_help"/>
     <addaction name="separator"/>
     <addaction name="action_about_coquery"/>
    </widget>
@@ -1386,6 +1387,11 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_view_log">
    <property name="text">
     <string>View log...</string>
+   </property>
+  </action>
+  <action name="action_mysql_server_help">
+   <property name="text">
+    <string>MySQL server help</string>
    </property>
   </action>
  </widget>
