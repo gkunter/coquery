@@ -194,6 +194,9 @@ class SQLOperationalError(GenericException):
 class SQLProgrammingError(GenericException):
     error_message = "SQL programming error"
 
+class SQLNoConfigurationError(NoTraceException):
+    error_message = "No MySQL configuration could be detected."
+
 class SQLNoConnectorError(GenericException):
     error_message = """The MySQL connector module 'pymysql' was not found for 
     your current Python configuration.
