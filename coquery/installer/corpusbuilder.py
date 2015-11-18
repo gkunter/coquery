@@ -106,6 +106,7 @@ else:
     nltk_available = True
 
 import corpus
+from errors import *
 
 insert_cache = collections.defaultdict(list)
 
@@ -476,7 +477,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("path", help="location of the text files", type=str)
         self.parser.add_argument("--db_user", help="name of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_user")
         self.parser.add_argument("--db_password", help="password of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_password")
-        self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="localhost", dest="db_host")
+        self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="127.0.0.1", dest="db_host")
         self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
         self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
         self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
@@ -1527,7 +1528,11 @@ class Resource(SQLResource):
         if not self.arguments.w:
             return
         
+        if not os.path.exists(corpus_path):
+            os.makedirs(corpus_path)
+            
         path = os.path.join(corpus_path, "{}.py".format(self.name))
+        
         # Handle existing versions of the corpus module
         if os.path.exists(path):
             # Read existing code as string:
@@ -1548,6 +1553,7 @@ class Resource(SQLResource):
                     self.logger.warning("Overwriting existing corpus module.")
                 else:
                     return
+        
         # write module code:
         with codecs.open(path, "w") as output_file:
             output_file.write(self.module_content)
@@ -1568,7 +1574,6 @@ class Resource(SQLResource):
             self.Con.drop_database(self.arguments.db_name)
         if self.arguments.c:
             self.Con.create_database(self.arguments.db_name)
-            
         self.Con.use_database(self.arguments.db_name)
 
         cursor = self.Con.Con.cursor()
@@ -1922,12 +1927,14 @@ if use_gui:
             
             namespace.name = self.builder_class.get_name()
             namespace.path = str(self.ui.input_path.text())
-            namespace.corpus_path = os.path.join(sys.path[0], "corpora/")
+
             namespace.db_name = self.builder_class.get_name().lower()
-            namespace.db_host = options.cfg.db_host
-            namespace.db_user = options.cfg.db_user
-            namespace.db_password = options.cfg.db_password
-            namespace.db_port = options.cfg.db_port
+            try:
+                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration
+            except ValueError:
+                raise SQLNoConfigurationError
+            namespace.current_server = options.cfg.current_server
+            namespace.corpus_path = os.path.join(sys.path[0], "../corpora/", namespace.current_server)
             
             return namespace
 
@@ -2002,12 +2009,16 @@ if use_gui:
             namespace.name = str(self.ui.corpus_name.text())
             namespace.path = str(self.ui.input_path.text())
             namespace.use_nltk = self.ui.use_pos_tagging.checkState()
-            namespace.corpus_path = os.path.join(sys.path[0], "../corpora/")
+
             namespace.db_name = str(self.ui.corpus_name.text())
-            namespace.db_host = options.cfg.db_host
-            namespace.db_user = options.cfg.db_user
-            namespace.db_password = options.cfg.db_password
-            namespace.db_port = options.cfg.db_port
+            try:
+                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration
+            except ValueError:
+                raise SQLNoConfigurationError
+
+            namespace.current_server = options.cfg.current_server
+            namespace.corpus_path = os.path.join(sys.path[0], "../corpora/", namespace.current_server)
+
             
             return namespace
 
