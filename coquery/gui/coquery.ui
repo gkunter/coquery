@@ -6,18 +6,18 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>870</width>
+    <width>868</width>
     <height>490</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Coquery</string>
   </property>
-  <property name="documentMode">
-   <bool>false</bool>
-  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_2">
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item>
      <widget class="QSplitter" name="splitter">
       <property name="frameShape">
@@ -388,31 +388,6 @@
             <property name="verticalSpacing">
              <number>4</number>
             </property>
-            <item row="2" column="1">
-             <widget class="QProgressBar" name="progress_bar">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="maximum">
-               <number>1</number>
-              </property>
-              <property name="textVisible">
-               <bool>false</bool>
-              </property>
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="invertedAppearance">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="0">
              <widget class="QPushButton" name="button_stopwords">
               <property name="sizePolicy">
@@ -1059,7 +1034,7 @@ The number of occurrences of each token matching the query string is counted. Th
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>870</width>
+     <width>868</width>
      <height>21</height>
     </rect>
    </property>
@@ -1230,7 +1205,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>&amp;MySQL settings...</string>
+    <string>&amp;Database servers...</string>
    </property>
   </action>
   <action name="action_settings">

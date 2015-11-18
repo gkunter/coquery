@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Wed Nov 18 15:18:53 2015
+# Created: Wed Nov 18 17:59:10 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,11 +26,11 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(870, 490)
-        MainWindow.setDocumentMode(False)
+        MainWindow.resize(868, 490)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.centralwidget)
+        self.verticalLayout_2.setContentsMargins(-1, -1, -1, 0)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.splitter = QtGui.QSplitter(self.centralwidget)
         self.splitter.setFrameShape(QtGui.QFrame.NoFrame)
@@ -195,19 +195,6 @@ class Ui_MainWindow(object):
         self.box_qer_buttons.setHorizontalSpacing(20)
         self.box_qer_buttons.setVerticalSpacing(4)
         self.box_qer_buttons.setObjectName(_fromUtf8("box_qer_buttons"))
-        self.progress_bar = QtGui.QProgressBar(self.options_area)
-        self.progress_bar.setEnabled(True)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.progress_bar.sizePolicy().hasHeightForWidth())
-        self.progress_bar.setSizePolicy(sizePolicy)
-        self.progress_bar.setMaximum(1)
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setOrientation(QtCore.Qt.Horizontal)
-        self.progress_bar.setInvertedAppearance(True)
-        self.progress_bar.setObjectName(_fromUtf8("progress_bar"))
-        self.box_qer_buttons.addWidget(self.progress_bar, 2, 1, 1, 1)
         self.button_stopwords = QtGui.QPushButton(self.options_area)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -528,7 +515,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 870, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 868, 21))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -750,7 +737,7 @@ class Ui_MainWindow(object):
         self.action_frequency.setText(_translate("MainWindow", "Frequency", None))
         self.action_all_tokens.setText(_translate("MainWindow", "All tokens", None))
         self.action_statistics.setText(_translate("MainWindow", "Corpus &statistics", None))
-        self.action_mySQL_settings.setText(_translate("MainWindow", "&MySQL settings...", None))
+        self.action_mySQL_settings.setText(_translate("MainWindow", "&Database servers...", None))
         self.action_settings.setText(_translate("MainWindow", "&Settings...", None))
         self.action_quit.setText(_translate("MainWindow", "&Quit", None))
         self.action_quit.setShortcut(_translate("MainWindow", "Ctrl+Q", None))
