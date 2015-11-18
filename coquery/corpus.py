@@ -540,7 +540,7 @@ class SQLResource(BaseResource):
             host, port, user, password = options.get_mysql_configuration()
         except ValueError:
             raise SQLNoConfigurationError
-        self.DB = sqlwrap.SqlDB(Host=host, Port=port, User=user, Password=password, Database=self.db_name)
+        self.DB = sqlwrap.SqlDB(Host=host, Port=port, User=user, Password=password, db_name=self.db_name)
         logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
         
     def get_statistics(self):

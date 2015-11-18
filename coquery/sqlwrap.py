@@ -30,17 +30,17 @@ except ImportError:
 
 class SqlDB (object):
     """ A wrapper for MySQL. """
-    def __init__(self, Host, Port, User, Password, Database=None, encoding="utf8", connect_timeout=60):
+    def __init__(self, Host, Port, User, Password, db_name=None, encoding="utf8", connect_timeout=60):
         self.Con = None
         self.Cur = None
         try:
-            if Database:
+            if db_name:
                 self.Con = pymysql.connect(
                     host=Host, 
                     port=Port, 
                     user=User, 
                     passwd=Password, 
-                    db=Database,
+                    db=db_name,
                     connect_timeout=connect_timeout,
                     charset=encoding)
             else:
