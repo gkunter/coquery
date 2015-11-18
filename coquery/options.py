@@ -47,7 +47,7 @@ class Options(object):
             "type": type(str(""))}
 
         self.prog_name = __init__.NAME
-        self.config_name = "%s.cfg" % __init__.NAME
+        self.config_name = "%s.cfg" % __init__.NAME.lower()
         self.version = __init__.__version__
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False)
         self.setup_parser()
@@ -65,6 +65,8 @@ class Options(object):
         self.args.save_query_file = True
         self.args.reaggregate_data = True
         self.args.server_side = True
+        self.args.server_configuration = dict()
+        self.args.current_server = None
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
@@ -460,33 +462,40 @@ class Options(object):
         logger.info("Command line parameters: " + self.args.parameter_string)
         
     def read_configuration(self):
-        # defaults:
-        db_user = "mysql"
-        db_password = "mysql"
-        db_port = 3306
-        db_host = "localhost"
         if os.path.exists(self.cfg.config_path):
             logger.info("Using configuration file %s" % self.cfg.config_path)
             config_file = configparser.ConfigParser()
             config_file.read(self.cfg.config_path)
             
             if "sql" in config_file.sections():
+                server_configuration = defaultdict(dict)
+
+                for name, value in config_file.items("sql"):
+                    if name.startswith("config_"):
+                        try:
+                            _, number, variable = name.split("_")
+                        except ValueError:
+                            continue
+                        else:
+                            if variable == "port":
+                                try:
+                                    server_configuration[number][variable] = int(value)
+                                except ValueError:
+                                    continue
+                            elif variable in ["name", "host", "user", "password"]:
+                                server_configuration[number][variable] = value
+                for i in server_configuration:
+                    d = server_configuration[i]
+                    try:
+                        if "name" in d and "host" in d and "port" in d and "user" in d and "password" in d:
+                            self.args.server_configuration[d["name"]] = d
+                    except KeyError:
+                        pass
+
                 try:
-                    db_user = config_file.get("sql", "db_user")
+                    self.args.current_server = config_file.get("sql", "active_configuration")
                 except (configparser.NoOptionError, ValueError):
-                    pass
-                try:
-                    db_password = config_file.get("sql", "db_password")
-                except (configparser.NoOptionError, ValueError):
-                    pass
-                try:
-                    db_port = int(config_file.get("sql", "db_port"))
-                except (configparser.NoOptionError, ValueError):
-                    pass
-                try:
-                    db_host = config_file.get("sql", "db_host")
-                except (configparser.NoOptionError, ValueError):
-                    pass
+                    self.args.current_server = None
                 
             # only use the other settings from the configuration file if a 
             # GUI is used:
@@ -655,11 +664,6 @@ class Options(object):
                                     elif name == "unique_view_details":
                                         self.args.unique_view_details = value == "True"
                             
-        vars(self.args) ["db_user"] = db_user
-        vars(self.args) ["db_password"] = db_password
-        vars(self.args) ["db_port"] = db_port
-        vars(self.args) ["db_host"] = db_host
-
 cfg = None
 
 class UnicodeConfigParser(configparser.RawConfigParser):
@@ -710,10 +714,15 @@ def save_configuration():
     
     if not "sql" in config.sections():
         config.add_section("sql")
-    config.set("sql", "db_user", cfg.db_user)
-    config.set("sql", "db_password", cfg.db_password)
-    config.set("sql", "db_port", cfg.db_port)
-    config.set("sql", "db_host", cfg.db_host)
+    config.set("sql", "active_configuration", cfg.current_server)
+
+    for i, server in enumerate(cfg.server_configuration):
+        d = cfg.server_configuration[server]
+        config.set("sql", "config_{}_name".format(i), d["name"])
+        config.set("sql", "config_{}_host".format(i), d["host"])
+        config.set("sql", "config_{}_port".format(i), d["port"])
+        config.set("sql", "config_{}_user".format(i), d["user"])
+        config.set("sql", "config_{}_password".format(i), d["password"])
     
     if cfg.selected_features:
         if not "output" in config.sections():
@@ -852,6 +861,28 @@ def save_configuration():
 
     with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)
+
+def get_mysql_configuration():
+    """
+    Returns a tuple containing the currently active MySQL configuration.
+    
+    The method uses the configuration name stored in the attribute 
+    'current_server' to retrieve the configuration values from the
+    dictionary 'server_configuration'.
+    
+    Returns
+    -------
+    tup : tuple or None
+        If there is a configuration for the currently selected server,
+        the method returns the tuple (db_host, db_port, db_name, 
+        db_password). If no configuration is available, the method
+        returns None.
+    """
+    if cfg.current_server in cfg.server_configuration:
+        d = cfg.server_configuration[cfg.current_server]
+        return (d["host"], d["port"], d["user"], d["password"])
+    else:
+        return None
 
 def process_options():
     global cfg

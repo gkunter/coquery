@@ -536,9 +536,12 @@ class SQLResource(BaseResource):
         self.connect_to_database()
 
     def connect_to_database(self):
-        self.DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password, Database=self.db_name)
-        logger.debug("Connected to database %s@%s:%s."  % (self.db_name, options.cfg.db_host, options.cfg.db_port))
-        logger.debug("User=%s, password=%s" % (options.cfg.db_user, options.cfg.db_password))
+        try:
+            host, port, user, password = options.get_mysql_configuration()
+        except ValueError:
+            raise SQLNoConfigurationError
+        self.DB = sqlwrap.SqlDB(Host=host, Port=port, User=user, Password=password, Database=self.db_name)
+        logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
         
     def get_statistics(self):
         lexicon_features = [x for x, _ in self.get_lexicon_features()]
