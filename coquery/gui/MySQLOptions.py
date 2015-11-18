@@ -122,6 +122,10 @@ class MySQLOptions(QtGui.QDialog):
         self.connected.connect(lambda: self.update_connection("connected"))
         self.state = None
         
+        # set the validator for the configuration name QLineEdit so that
+        # only an alphanumeric string (including '_') can be entered:
+        self.ui.configuration_name.setValidator(QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
+        
         # fill tree widget with existing server configurations:
         for x in sorted(self.config_dict):
             current_item = QtGui.QTreeWidgetItem()
