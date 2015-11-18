@@ -23,34 +23,36 @@ from errors import *
 import options
 
 try:
-    import pymysql as mysql
-    import pymysql.cursors as mysql_cursors
+    import pymysql
+    import pymysql.cursors
 except ImportError:
     raise DependencyError("pymysql")
 
 class SqlDB (object):
     """ A wrapper for MySQL. """
-    def __init__(self, Host, Port, User, Password, Database=None, encoding="utf8"):
+    def __init__(self, Host, Port, User, Password, Database=None, encoding="utf8", connect_timeout=60):
         self.Con = None
         self.Cur = None
         try:
             if Database:
-                self.Con = mysql.connect(
+                self.Con = pymysql.connect(
                     host=Host, 
                     port=Port, 
                     user=User, 
                     passwd=Password, 
                     db=Database,
+                    connect_timeout=connect_timeout,
                     charset=encoding)
             else:
-                self.Con = mysql.connect(
+                self.Con = pymysql.connect(
                     host=Host, 
                     port=Port, 
                     user=User, 
                     passwd=Password,
+                    connect_timeout=connect_timeout,
                     charset=encoding)
 
-        except (mysql.OperationalError, mysql.InternalError) as e:
+        except (pymysql.OperationalError, pymysql.InternalError) as e:
              raise SQLInitializationError(e)
         self.Cur = self.Con.cursor()
         self.set_variable("NAMES", encoding)
@@ -58,7 +60,7 @@ class SqlDB (object):
     def kill_connection(self):
         try:
             self.Con.kill(self.Con.thread_id())
-        except (mysql.OperationalError, mysql.InternalError):
+        except (pymysql.OperationalError, pymysql.InternalError):
             pass
 
     def set_variable(self, variable, value):
@@ -76,7 +78,7 @@ class SqlDB (object):
         try:
             self.Cur.close()
             self.Con.close()
-        except (mysql.ProgrammingError, mysql.Error):
+        except (pymysql.ProgrammingError, pymysql.Error):
             pass
         
     def explain(self, S):
@@ -96,7 +98,7 @@ class SqlDB (object):
             return
         try:
             self.Cur.execute("EXPLAIN %s" % S)
-        except mysql.ProgrammingError as e:
+        except pymysql.ProgrammingError as e:
             raise SQLProgrammingError(S + "\n"+ "%s" % e)
         else:
             explain_table = self.Cur
@@ -128,9 +130,9 @@ class SqlDB (object):
         logger.debug(S)
 
         if server_side:
-            cursor = self.Con.cursor(mysql_cursors.SSDictCursor)
+            cursor = self.Con.cursor(pymysql.cursors.SSDictCursor)
         else:
-            cursor = self.Con.cursor(mysql_cursors.DictCursor)
+            cursor = self.Con.cursor(pymysql.cursors.DictCursor)
         cursor.execute(S)
         return cursor
     
