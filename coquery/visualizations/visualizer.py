@@ -189,7 +189,7 @@ class BaseVisualizer(object):
                 context=self.get_plot_context(), 
                 font_scale=self.get_font_scale()):
 
-                self.g = sns.FacetGrid(self._table, 
+                self.g = sns.FacetGrid(self._table[self._column_order], 
                                     col=self._col_factor,
                                     col_wrap=self._col_wrap,
                                     row=self._row_factor,
@@ -219,7 +219,7 @@ class BaseVisualizer(object):
         if self._col_factor:
             self.g.map_dataframe(func) 
         else:
-            func(self._table, None)
+            func(self._table[self._column_order], None)
     
     def get_grid_layout(self, n):
         """ Return a tuple containing a nrows, ncols pair that can be used to
@@ -277,67 +277,26 @@ class BaseVisualizer(object):
         it is usable by the visualizer.
         """
         
-        # _table stores the data from the model in such a way that it is 
-        # accessible by the visualizer. """
-        
-        self._table = []
-
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()
-        vis_cols = [x for x in self._model.columns if not x.startswith("coquery_invisible")]
-        print(0, vis_cols)
-        
-        self._column_order = []
-        for section in range(header.count()):
-            print(section, header.logicalIndex(section), header.visualIndex(section))
-            self._column_order.append(vis_cols[header.logicalIndex(section)])
-        # The problem is that _view uses the aggregated data frame, and
-        # not the full frame.
-        
-        #self._column_order = [
-            #vis_cols[header.logicalIndex(section)] for section in range(header.count())]
-        print(1, self._column_order)
+        self._column_order = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
+        self._column_order = [x for x in self._column_order if options.cfg.column_visibility.get(x, True) and x != "coq_frequency"]
 
-        # ... but make sure that the frequency is the last column:
-        try:
-            self._column_order.remove("coq_frequency")
-        except ValueError:
-            pass
-        else:
-            # ... but only if the current visualizer displays frequency
-            # data. The frequency column is stripped otherwise.
-            if self.visualize_frequency:
-                self._column_order.append("coq_frequency")
-        self._column_order += [x for x in options.cfg.main_window.Session.output_order if x.startswith("coquery_invisible") and x not in self._column_order]
-        print(2, self._column_order)
+        self._column_order.append("coquery_invisible_corpus_id")
 
         try:
             self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
         except AttributeError:
             self._time_columns = []
-        print(3, self._column_order)
             
-        # Remove hidden columns:
-        self._column_order = [x for x in self._column_order if 
-            options.cfg.column_visibility.get(x, True)]
-        print(4, self._column_order)
+        self._table = options.cfg.main_window.Session.data_table
 
-        self._table = self._model.reindex(columns=self._column_order)
-        self._table.columns = [
-            options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
-
-        print(5, self._table.columns)
-
-        # Remove hidden rows. 
-        # Note that the row numbers in the data view start at 1, but in the
-        # internal visualization table at 0 (as is the default for data 
-        # frames).
-
-        self._table = self._table.iloc[~self._table.index.isin(pd.Series(options.cfg.row_visibility.keys())-1)]
+        # get list of visible rows:
+        self._row_order = ~self._table[self._column_order].index.isin(pd.Series(options.cfg.row_visibility.keys())-1)
 
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
-        self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object] if not x.startswith("coquery_invisible")]
+        self._factor_columns = [x for x in self._table[self._column_order].columns[self._table[self._column_order].dtypes == object]]
 
         if self.dimensionality:
             self._groupby = self._factor_columns[-self.dimensionality:]
@@ -478,7 +437,7 @@ class BaseVisualizer(object):
         -------
         row : a list of values from the data table
         """
-        return self._table.iloc[index]
+        return self._table[self._column_order].iloc[index]
 
     def setup_axis(self, axis, label=None):
         """ 
@@ -800,7 +759,7 @@ class VisualizerDialog(QtGui.QWidget):
         dialog = self
         self.smooth = kwargs.get("smooth", False)
         visualizer = visualizer_class(model, view, **kwargs)
-        if not visualizer._model.empty:
+        if not visualizer._table.empty:
             dialog.setVisible(True)
             dialog.add_visualizer(visualizer)
             dialog.add_matplot()

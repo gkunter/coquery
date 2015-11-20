@@ -1014,11 +1014,12 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     dialog = visualizer.VisualizerDialog()
                     dialog.Plot(
-                        self.Session.data_table,
+                        self.table_model,
                         self.ui.data_preview,
                         module.Visualizer,
                         parent=self,
                         **kwargs)
+
             except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
                 QtGui.QMessageBox.critical(
                     self, "Visualization error – Coquery",
