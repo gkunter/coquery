@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'mysql_guide.ui'
 #
-# Created: Mon Sep 21 20:23:50 2015
+# Created: Wed Nov 18 15:28:56 2015
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_mysql_guide(object):
     def setupUi(self, mysql_guide):
         mysql_guide.setObjectName(_fromUtf8("mysql_guide"))
-        mysql_guide.resize(800, 600)
+        mysql_guide.resize(640, 480)
         mysql_guide.setModal(True)
         mysql_guide.setWizardStyle(QtGui.QWizard.ModernStyle)
         mysql_guide.setOptions(QtGui.QWizard.NoBackButtonOnStartPage|QtGui.QWizard.NoCancelButton)

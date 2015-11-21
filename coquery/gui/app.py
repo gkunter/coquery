@@ -187,13 +187,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
         self.ui.edit_file_name.setCompleter(self.path_completer)
 
-        self.stop_progress_indicator()
-
         self.setup_hooks()
         self.setup_menu_actions()
         
         self.change_corpus()
-        
+
         # Align screen elements:
         self.ui.label_2.setFixedHeight(self.ui.label_5.height())
         self.ui.label.setFixedHeight(self.ui.label_5.height())
@@ -227,6 +225,39 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setSortingEnabled(False)
 
         self.ui.context_query_syntax.setPixmap(QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_TitleBarContextHelpButton))
+        
+        # This is only a template. Alledgedly, OS X does not favour 
+        # status bars, so we might use a toolbar instead.
+        #if __OS__ == "MAC OS X":
+            #self.ui.toolbar = self.addToolBar("Status")
+            #self.ui.statusbar = QtGui.QStatusBar()
+            #self.ui.toolbar.addWidget(self.ui.statusbar)
+            #self.ui.toolbar.setIconSize(QtCore.QSize(16, 16))
+            #self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+
+        self.ui.status_message = QtGui.QLabel("{} {}".format(__init__.NAME, __init__.__version__))
+
+        self.ui.combo_config = QtGui.QComboBox()
+        self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
+        self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
+
+        self.ui.status_progress = QtGui.QProgressBar()
+        self.ui.status_progress.hide()
+
+        widget = QtGui.QWidget()
+        layout = QtGui.QHBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.ui.status_message)
+        layout.addWidget(self.ui.status_progress)
+        layout.addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum))        
+        layout.addWidget(QtGui.QLabel("Database server: "))
+        layout.addWidget(self.ui.combo_config)
+
+        self.statusBar().layout().setContentsMargins(0, 0, 0, 0)
+        self.statusBar().setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
+        self.statusBar().addWidget(widget, 1)
+
+        self.change_mysql_configuration(options.cfg.current_server)
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
@@ -241,6 +272,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
         self.ui.action_view_log.triggered.connect(self.show_log)
+        self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
         
         self.ui.action_barcode_plot.triggered.connect(
             lambda: self.visualize_data("barcodeplot"))
@@ -630,25 +662,31 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 self.last_results_saved = True
     
+    def showMessage(self, S):
+        self.ui.status_message.setText(S)
+        
+    def showConnectionStatus(self, S):
+        self.ui.status_server.setText(S)
+    
     def exception_during_query(self):
         error_box.ErrorBox.show(self.exc_info, self.exception)
-        self.ui.statusbar.showMessage("Query failed.")
+        self.showMessage("Query failed.")
         self.set_query_button()
         self.stop_progress_indicator()
         
     def start_progress_indicator(self):
         """ Show the progress indicator, and make it move. """
-        self.ui.progress_bar.setRange(0, 0)
-        self.ui.progress_bar.show()
+        self.ui.status_progress.setRange(0, 0)
+        self.ui.status_progress.show()
         
     def stop_progress_indicator(self):
         """ Stop the progress indicator from moving, and hide it as well. """
-        self.ui.progress_bar.setRange(0, 1)
-        self.ui.progress_bar.hide()
+        self.ui.status_progress.setRange(0, 1)
+        self.ui.status_progress.hide()
         
     def finalize_query(self):
         self.query_thread = None
-        self.ui.statusbar.showMessage("Preparing results table...")
+        self.showMessage("Preparing results table...")
         self.display_results()
         self.set_query_button()
         self.stop_progress_indicator()
@@ -665,7 +703,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 duration_str = "{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3])
             else:
                 duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
-        self.ui.statusbar.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
+        self.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
             len(self.Session.output_object.index), duration_str))
         options.cfg.app.alert(self, 10)
         
@@ -933,7 +971,7 @@ class CoqueryApp(QtGui.QMainWindow):
             logger.warning("Last query is incomplete.")
             self.ui.button_run_query.setEnabled(False)
             self.ui.button_run_query.setText("Wait...")
-            self.ui.statusbar.showMessage("Terminating query...")
+            self.showMessage("Terminating query...")
             try:
                 self.Session.Corpus.resource.DB.kill_connection()
             except (AttributeError, sqlwrap.mysql.err):
@@ -941,7 +979,7 @@ class CoqueryApp(QtGui.QMainWindow):
             if self.query_thread:
                 self.query_thread.terminate()
                 self.query_thread.wait()
-            self.ui.statusbar.showMessage("Last query interrupted.")
+            self.showMessage("Last query interrupted.")
             self.ui.button_run_query.setEnabled(True)
             self.set_query_button()
             self.stop_progress_indicator()
@@ -953,7 +991,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.Session.Corpus.resource.DB.close()
         except AttributeError as e:
             pass
-        self.ui.statusbar.showMessage("Preparing query...")
+        self.showMessage("Preparing query...")
         try:
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = options.cfg.query_list[0].splitlines()
@@ -963,6 +1001,8 @@ class CoqueryApp(QtGui.QMainWindow):
                     QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     return
                 self.Session = SessionInputFile()
+        except SQLNoConfigurationError:
+            QtGui.QMessageBox.critical(self, "Database configuration error – Coquery", msg_sql_no_configuration, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except SQLInitializationError as e:
             QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error.format(code=e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except CollocationNoContextError as e:
@@ -973,7 +1013,7 @@ class CoqueryApp(QtGui.QMainWindow):
             error_box.ErrorBox.show(sys.exc_info(), e)
         else:
             self.set_stop_button()
-            self.ui.statusbar.showMessage("Running query...")
+            self.showMessage("Running query...")
             self.start_progress_indicator()
             self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
             self.query_thread.taskFinished.connect(self.finalize_query)
@@ -989,7 +1029,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.getGuiValues()
         self.Session = StatisticsSession()
-        self.ui.statusbar.showMessage("Gathering corpus statistics...")
+        self.showMessage("Gathering corpus statistics...")
         self.start_progress_indicator()
         self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
         self.query_thread.taskFinished.connect(self.finalize_query)
@@ -1157,19 +1197,26 @@ class CoqueryApp(QtGui.QMainWindow):
     def settings(self):
         import settings
         settings.Settings.manage(options.cfg, self)
-        
+
+    def change_current_server(self):
+        options.cfg.current_server = self.ui.combo_config.currentText()        
+
+    def change_mysql_configuration(self, name):
+        options.cfg.current_server = name
+        self.ui.combo_config.clear()
+        self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
+        index = self.ui.combo_config.findText(name)
+        self.ui.combo_config.setCurrentIndex(index)
+    
     def mysql_settings(self):
         import MySQLOptions
-        settings = MySQLOptions.MySQLOptions.set(
-            options.cfg.db_host, 
-            options.cfg.db_port,
-            options.cfg.db_user,
-            options.cfg.db_password)
-        if settings:
-            options.cfg.db_host = settings.db_host
-            options.cfg.db_port = settings.db_port
-            options.cfg.db_user = settings.db_user
-            options.cfg.db_password = settings.db_password
+        name = MySQLOptions.MySQLOptions.choose(options.cfg.current_server, options.cfg.server_configuration)
+        if name:
+            self.change_mysql_configuration(name)
+
+    def show_mysql_guide(self):
+        import mysql_guide
+        mysql_guide.MySqlGuide.display()
 
     def getGuiValues(self):
         """ Set the values in options.cfg.* depending on the current values

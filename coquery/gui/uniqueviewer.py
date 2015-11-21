@@ -73,11 +73,8 @@ class UniqueViewer(QtGui.QWidget):
         S = "SELECT DISTINCT {0} FROM {1} ORDER BY {0}".format(self.column, self.table)
 
         self.DB = sqlwrap.SqlDB(
-            options.cfg.db_host,
-            options.cfg.db_port,
-            options.cfg.db_user,
-            options.cfg.db_password,
-            self.resource.db_name)
+            *options.get_mysql_configuration(),
+            db_name=self.resource.db_name)
         self.DB.execute(S)
         self.data = [QtGui.QTreeWidgetItem(self.ui.treeWidget, [x[0]]) for x in self.DB.Cur]
         for x in self.data:

@@ -91,6 +91,14 @@ except NameError:
     long = int
     
 # Error messages used by the GUI:
+msg_mysql_no_configuration = """
+<p><b>No database server configuration is available.</b><p>
+<p>You haven't specified the configuration for your database server yet.
+Please call 'Database servers...' from the Preferences menu, and set up a 
+configuration for your MySQL database server.</p>
+<p>If you need assistance setting up your database server, call 'MySQL
+server help' from the Help menu.</p>
+"""
 msg_warning_statistics = """
 <p><b>You have unsaved data in the results table.</b><p>
 <p>The corpus statistics will discard the results table from your last 
@@ -156,7 +164,7 @@ privileges.</li>
 <li>You are trying to access a local database on a remote server, or vice
 versa.</li>
 </ul></p>
-<p>Open <b>MySQL settings</b> in the Settings menu to check whether the
+<p>Open <b>Database servers</b> in the Preferences menu to check whether the
 connection to the database server is working, and if the settings are 
 correct.</p>"""
 msg_corpus_remove = """
