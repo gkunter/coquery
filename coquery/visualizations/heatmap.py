@@ -5,7 +5,6 @@ import seaborn as sns
 import pandas as pd
 
 class Visualizer(vis.BaseVisualizer):
-    visualize_frequency = True
     dimensionality=2
     
     def setup_figure(self):

@@ -50,7 +50,6 @@ def lineplot(a, level=0, start=0, end=1, axis="x", color="black", ax=None, **kwa
     return ax
 
 class Visualizer(vis.BaseVisualizer):
-    visualize_frequency = False
     dimensionality = 1
     
     def __init__(self, *args):

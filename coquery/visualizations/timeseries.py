@@ -20,7 +20,6 @@ import logging
 import __init__
 
 class Visualizer(vis.BaseVisualizer):
-    visualize_frequency = True
     dimensionality = 2
     vmax = 0
     
