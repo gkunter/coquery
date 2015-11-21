@@ -2,6 +2,7 @@
 
 from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import visualizer as vis
 import seaborn as sns
@@ -137,7 +138,6 @@ class Visualizer(vis.BaseVisualizer):
             return ""
 
         def plot_facet(data, color):
-
             if len(self._groupby) == 2:
                 if self.percentage:
                     ct = pd.crosstab(
