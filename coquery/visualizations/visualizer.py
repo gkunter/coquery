@@ -136,8 +136,6 @@ class BaseVisualizer(object):
     by :func:`VisualizerDialog.Plot`. 
     """
     
-    visualize_frequency = True
-    
     def __init__(self, data_model, data_view):
         self._model = None
         self._view = None
@@ -189,7 +187,7 @@ class BaseVisualizer(object):
                 context=self.get_plot_context(), 
                 font_scale=self.get_font_scale()):
 
-                self.g = sns.FacetGrid(self._table[self._column_order], 
+                self.g = sns.FacetGrid(self._table, 
                                     col=self._col_factor,
                                     col_wrap=self._col_wrap,
                                     row=self._row_factor,
@@ -219,7 +217,7 @@ class BaseVisualizer(object):
         if self._col_factor:
             self.g.map_dataframe(func) 
         else:
-            func(self._table[self._column_order], None)
+            func(self._table, None)
     
     def get_grid_layout(self, n):
         """ Return a tuple containing a nrows, ncols pair that can be used to
@@ -279,41 +277,47 @@ class BaseVisualizer(object):
         
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()
-        self._column_order = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
-        self._column_order = [x for x in self._column_order if options.cfg.column_visibility.get(x, True) and x != "coq_frequency"]
+        column_order = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
+        column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and x != "coq_frequency"]
 
-        self._column_order.append("coquery_invisible_corpus_id")
+        column_order.append("coquery_invisible_corpus_id")
 
         try:
             self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
         except AttributeError:
             self._time_columns = []
             
-        self._table = options.cfg.main_window.Session.data_table
-
+        self._table = options.cfg.main_window.Session.data_table[column_order]
+        self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
         # get list of visible rows:
-        self._row_order = ~self._table[self._column_order].index.isin(pd.Series(options.cfg.row_visibility.keys())-1)
+        self._row_order = ~self._table.index.isin(pd.Series(options.cfg.row_visibility.keys())-1)
 
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
-        self._factor_columns = [x for x in self._table[self._column_order].columns[self._table[self._column_order].dtypes == object]]
+        self._factor_columns = [x for x in self._table.columns[self._table[column_order].dtypes == object]]
 
         if self.dimensionality:
             self._groupby = self._factor_columns[-self.dimensionality:]
         else:
             self._groupby = []
+
         self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby if not x in self._time_columns]
+
         
         if options.cfg.verbose:
-            print("grouping:   ", self._groupby)
-            print("levels:      ", self._levels)
-            print("factors:    ", self._factor_columns)
-            print("dimensions: ", self.dimensionality)
+            print("grouping:     ", self._groupby)
+            print("levels:       ", self._levels)
+            print("factors:      ", self._factor_columns)
+            #print("factor names: ", self._factor_names) 
+            print("dimensions:   ", self.dimensionality)
         
         if len(self._factor_columns) > self.dimensionality:
             self._col_factor = self._factor_columns[-self.dimensionality - 1]
         else:
             self._col_factor = None
+        if options.cfg.verbose:
+            print("col_factor:   ", self._col_factor)
+            print(self._table.head())
             
         if len(self._factor_columns) > self.dimensionality + 1:
             self._row_factor = self._factor_columns[-self.dimensionality - 2]
@@ -326,9 +330,10 @@ class BaseVisualizer(object):
             else:
                 self._col_wrap = None
         if options.cfg.verbose:
-            print("col_factor: ", self._col_factor)
-            print("col_wrap:   ", self._col_wrap)
-            print("row_factor: ", self._row_factor)
+            print("col_factor:   ", self._col_factor)
+            print("col_wrap:     ", self._col_wrap)
+            print("row_factor:   ", self._row_factor)
+            print("time_columns: ", self._time_columns)
         if not self._groupby:
             raise VisualizationNoDataError
 
@@ -437,7 +442,7 @@ class BaseVisualizer(object):
         -------
         row : a list of values from the data table
         """
-        return self._table[self._column_order].iloc[index]
+        return self._table.iloc[index]
 
     def setup_axis(self, axis, label=None):
         """ 
