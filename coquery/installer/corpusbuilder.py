@@ -1786,7 +1786,7 @@ if use_gui:
             
             self.ui.corpus_description.setText(
                 str(self.ui.corpus_description.text()).format(
-                    builder_class.get_title(), builder_class.get_name()))
+                    builder_class.get_title(), options.cfg.current_server))
 
         def display(self):
             return self.exec_()
