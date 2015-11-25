@@ -226,6 +226,7 @@ class CoqTreeWidget(QtGui.QTreeWidget):
                 view_unique = QtGui.QAction("View &unique values", self)
                 view_unique.triggered.connect(lambda: self.show_unique_values(item))
                 self.menu.addAction(view_unique)
+                view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
                 self.menu.addSeparator()
             
             if item._func:
@@ -715,7 +716,8 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
             painter.fillRect(option.rect, bg)
-        painter.setPen(QtGui.QPen(fg))
+        if fg:
+            painter.setPen(QtGui.QPen(fg))
         try:
             if align & QtCore.Qt.AlignLeft:
                 painter.drawText(option.rect.adjusted(2, 0, 2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
