@@ -35,7 +35,7 @@ import options
 try:
     from session import *
 except DependencyError as e:
-    print(str(e))
+    (str(e))
     sys.exit(1)
     
 import __init__
@@ -99,6 +99,7 @@ def main():
 
         options.cfg.app = QtGui.QApplication(sys.argv)
         Coq = CoqueryApp()
+        options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
         Coq.logo = QtGui.QPixmap("{}/logo/title.png".format(sys.path[0]))
         Coq.show()
