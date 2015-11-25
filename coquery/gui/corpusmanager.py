@@ -279,7 +279,7 @@ class CorpusManager(QtGui.QDialog):
                 if builder_class.get_license():
                     entry.setLicense("<p><b>License</b></p><p>{}</p>".format(builder_class.get_license()))
 
-                entry.setupInstallState(name.lower() in get_available_resources())
+                entry.setupInstallState(name.lower() in get_available_resources(options.cfg.current_server))
                 entry.setBuilderClass(builder_class)
 
                 self.ui.corpus_stack.addItem(entry, self.icon, name)
