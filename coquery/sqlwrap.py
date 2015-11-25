@@ -57,6 +57,43 @@ class SqlDB (object):
         self.Cur = self.Con.cursor()
         self.set_variable("NAMES", encoding)
 
+    @staticmethod
+    def test_connection(host, port, user, password, connect_timeout=60):
+        """
+        Tests if the specified MySQL connection is available.
+        
+        This method attempts to create a connection to the MySQL server using
+        the host, port, user name, and password as provided as arguments.
+        
+        Parameters
+        ----------
+        host : string
+            The host name or IP address of the host
+        port : int 
+            The MySQL port on the host server
+        user : string 
+            The name of the MySQL user 
+        password : string 
+            The password of the MySQL user
+            
+        Returns
+        -------
+        test : bool
+            Returns True if a connection could be created, or False otherwise.
+        """
+        try:
+            con = pymysql.connect(
+                host=host, 
+                port=port, 
+                user=user, 
+                passwd=password,
+                connect_timeout=connect_timeout)
+        except pymysql.Error as e:
+            return False
+        else:
+            con.close()
+        return True
+
     def kill_connection(self):
         try:
             self.Con.kill(self.Con.thread_id())
