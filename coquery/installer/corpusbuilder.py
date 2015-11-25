@@ -1527,12 +1527,10 @@ class Resource(SQLResource):
 
         if not self.arguments.w:
             return
-        
         if not os.path.exists(corpus_path):
             os.makedirs(corpus_path)
             
         path = os.path.join(corpus_path, "{}.py".format(self.name))
-        
         # Handle existing versions of the corpus module
         if os.path.exists(path):
             # Read existing code as string:
@@ -1930,11 +1928,11 @@ if use_gui:
 
             namespace.db_name = self.builder_class.get_name().lower()
             try:
-                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration
+                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
             except ValueError:
                 raise SQLNoConfigurationError
             namespace.current_server = options.cfg.current_server
-            namespace.corpus_path = os.path.join(sys.path[0], "../corpora/", namespace.current_server)
+            namespace.corpus_path = os.path.join(sys.path[0], "corpora/", namespace.current_server)
             
             return namespace
 
@@ -2012,7 +2010,7 @@ if use_gui:
 
             namespace.db_name = str(self.ui.corpus_name.text())
             try:
-                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration
+                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
             except ValueError:
                 raise SQLNoConfigurationError
 
