@@ -98,6 +98,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread = None
         self.last_results_saved = True
         self.last_connection_state = None
+        self.last_index = None
         self.corpus_manager = None
         
         self.widget_list = []
@@ -1094,7 +1095,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 webbrowser.open(url)
         
     def remove_corpus(self, corpus_name):
-        resource, _, _, module = get_available_resources()[corpus_name.lower()]
+        resource, _, _, module = get_available_resources(options.cfg.current_server)[corpus_name.lower()]
         database = resource.db_name
         db_con = options.cfg.server_configuration[options.cfg.current_server]
         try:
@@ -1259,13 +1260,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         index = self.ui.combo_config.findText(options.cfg.current_server)
             
-        if self.last_connection_state != state:
-            # add new entry with suitable icon, remove old icon and reset index:
-            self.ui.combo_config.insertItem(index + 1, icon, options.cfg.current_server)
-            self.ui.combo_config.removeItem(index)
-        self.last_connection_state = state
-
+        # add new entry with suitable icon, remove old icon and reset index:
+        self.ui.combo_config.insertItem(index + 1, icon, options.cfg.current_server)
+        self.ui.combo_config.setCurrentIndex(index + 1)
+        self.ui.combo_config.removeItem(index)
         self.ui.combo_config.setCurrentIndex(index)
+        self.last_connection_state = state
+        self.last_index = index
 
         if state:
             self.fill_combo_corpus()
@@ -1277,8 +1278,12 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def mysql_settings(self):
         import MySQLOptions
-        name = MySQLOptions.MySQLOptions.choose(options.cfg.current_server, options.cfg.server_configuration)
-        if name:
+        try:
+            config_dict, name = MySQLOptions.MySQLOptions.choose(options.cfg.current_server, options.cfg.server_configuration)
+        except TypeError:
+            return
+        else:
+            options.cfg.server_configuration = config_dict
             self.change_mysql_configuration(name)
 
     def show_mysql_guide(self):
