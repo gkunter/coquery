@@ -171,6 +171,11 @@ class MySQLOptions(QtGui.QDialog):
         
         name = self.ui.configuration_name.text()
 
+        if self.state == "noConnection":
+            self.ui.frame.setEnabled(False)
+        else:
+            self.ui.frame.setEnabled(True)            
+
         # exit if no configuration name has been entered:
         if not name:
             return
