@@ -91,9 +91,7 @@ class DBConnection(object):
             else:
                 return True
         except Exception as e:
-            print()
-            print()
-            print(command)
+            warnings.Warning("An error occurred when executing MySQL command '{}'.".format(command))
             raise e
 
     def has_table(self, table_name):
