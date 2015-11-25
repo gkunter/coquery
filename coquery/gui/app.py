@@ -94,6 +94,14 @@ class CoqueryApp(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self, parent)
         
         self.file_content = None
+        self.csv_options = None
+        self.query_thread = None
+        self.last_results_saved = True
+        self.last_connection_state = None
+        self.corpus_manager = None
+        
+        self.widget_list = []
+        self.Session = None
 
         size = QtGui.QApplication.desktop().screenGeometry()
         # Retrieve font and metrics for the CoqItemDelegates
@@ -107,13 +115,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.setupUi(self)
         
         self.setup_app()
-        self.csv_options = None
-        self.query_thread = None
-        self.last_results_saved = True
-        self.corpus_manager = None
-        
-        self.widget_list = []
-        self.Session = None
         
         # the dictionaries column_width and column_color store default
         # attributes of the columns by display name. This means that problems
@@ -124,7 +125,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         # A non-modal dialog is shown if no corpus resource is available.
         # The dialog contains some assistance on how to build a new corpus.
-        if not get_available_resources():
+        if not get_available_resources(options.cfg.current_server):
             self.show_no_corpus_message()
         
         options.cfg.main_window = self
@@ -144,7 +145,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
 
         # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(get_available_resources().keys())]
+        corpora = [x.upper() for x in sorted(get_available_resources(options.cfg.current_server).keys())]
 
         self.ui.combo_corpus.addItems(corpora)
         
@@ -238,8 +239,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.status_message = QtGui.QLabel("{} {}".format(__init__.NAME, __init__.__version__))
 
         self.ui.combo_config = QtGui.QComboBox()
-        self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
+        self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
 
         self.ui.status_progress = QtGui.QProgressBar()
         self.ui.status_progress.hide()
@@ -258,6 +259,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.statusBar().addWidget(widget, 1)
 
         self.change_mysql_configuration(options.cfg.current_server)
+        
+        self.connection_timer = QtCore.QTimer()
+        self.connection_timer.timeout.connect(self.test_mysql_connection)
+        self.connection_timer.start(10000)
+        
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
@@ -435,7 +441,7 @@ class CoqueryApp(QtGui.QMainWindow):
         in the current corpus. If no corpus is avaiable, disable the options
         area and some menu entries. If any corpus is available, these widgets
         are enabled again."""
-        if not get_available_resources():
+        if not get_available_resources(options.cfg.current_server):
             self.disable_corpus_widgets()
         else:
             self.enable_corpus_widgets()
@@ -446,7 +452,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if self.ui.combo_corpus.count():
             corpus_name = str(self.ui.combo_corpus.currentText()).lower()
-            self.resource, self.corpus, self.lexicon, self.path = get_available_resources()[corpus_name]
+            self.resource, self.corpus, self.lexicon, self.path = get_available_resources(options.cfg.current_server)[corpus_name]
             self.ui.filter_box.resource = self.resource
             
             corpus_variables = [x for _, x in self.resource.get_corpus_features()]
@@ -516,14 +522,18 @@ class CoqueryApp(QtGui.QMainWindow):
     def fill_combo_corpus(self):
         """ Add the available corpus names to the corpus selection combo 
         box. """
-        self.ui.combo_corpus.currentIndexChanged.disconnect()
+        try:
+            self.ui.combo_corpus.currentIndexChanged.disconnect()
+        except TypeError:
+            # ignore error if the combo box was not yet connected
+            pass
 
         # remember last corpus name:
         last_corpus = self.ui.combo_corpus.currentText()
 
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems([x.upper() for x in get_available_resources()])
+        self.ui.combo_corpus.addItems([x.upper() for x in get_available_resources(options.cfg.current_server)])
 
         # try to return to last corpus name:
         new_index = self.ui.combo_corpus.findText(last_corpus)
@@ -1086,9 +1096,11 @@ class CoqueryApp(QtGui.QMainWindow):
     def remove_corpus(self, corpus_name):
         resource, _, _, module = get_available_resources()[corpus_name.lower()]
         database = resource.db_name
-        #database = resource.db_name
+        db_con = options.cfg.server_configuration[options.cfg.current_server]
         try:
-            size = FileSize(sqlwrap.SqlDB(options.cfg.db_host, options.cfg.db_port, options.cfg.db_user, options.cfg.db_password).get_database_size(database))
+            size = FileSize(sqlwrap.SqlDB(
+                db_con["host"], db_con["port"], 
+                db_con["user"], db_con["password"]).get_database_size(database))
         except  TypeError:
             size = FileSize(-1)
         response = QtGui.QMessageBox.warning(
@@ -1099,7 +1111,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.Session.Corpus.resource.DB.close()
             except AttributeError as e:
                 pass
-            DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password)
+            DB = sqlwrap.SqlDB(
+                db_con["host"], db_con["port"], db_con["user"], db_con["password"])
             self.start_progress_indicator()
             try:
                 DB.execute("DROP DATABASE {}".format(database))
@@ -1114,6 +1127,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.stop_progress_indicator()
             self.fill_combo_corpus()
             logger.warning("Removed corpus {}.".format(corpus_name))
+            self.showMessage("Removed corpus {}.".format(corpus_name))
 
             self.change_corpus()
             try:
@@ -1199,7 +1213,11 @@ class CoqueryApp(QtGui.QMainWindow):
         settings.Settings.manage(options.cfg, self)
 
     def change_current_server(self):
-        options.cfg.current_server = self.ui.combo_config.currentText()        
+        name = self.ui.combo_config.currentText()
+        if name:
+            self.ui.combo_config.currentIndexChanged.disconnect(self.change_current_server)
+            self.change_mysql_configuration(name)
+            self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
 
     def change_mysql_configuration(self, name):
         options.cfg.current_server = name
@@ -1207,7 +1225,56 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
         index = self.ui.combo_config.findText(name)
         self.ui.combo_config.setCurrentIndex(index)
-    
+        db_con = options.cfg.server_configuration[name]
+        self.test_mysql_connection()
+        
+    def test_mysql_connection(self):
+        """
+        Tests whether a connection to the MySQL host is available, also update 
+        the GUI to reflect the status.
+        
+        This method tests the currently selected MySQL configuration. If a 
+        connection can be established using this configuration, the current 
+        combo box entry is marked by a tick icon. 
+        
+        If no connection can be established, the current combo box entry is 
+        marked by a warning icon.
+
+        Returns
+        -------
+        state : bool
+            True if a connection is available, or False otherwise.
+        """
+        
+        db_con = options.cfg.server_configuration[options.cfg.current_server]
+        state = bool(sqlwrap.SqlDB.test_connection(
+            db_con["host"], db_con["port"], 
+            db_con["user"], db_con["password"]))
+
+        # Choose a suitable icon:
+        if state:
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogYesButton)
+        else:
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogNoButton)
+
+        index = self.ui.combo_config.findText(options.cfg.current_server)
+            
+        if self.last_connection_state != state:
+            # add new entry with suitable icon, remove old icon and reset index:
+            self.ui.combo_config.insertItem(index + 1, icon, options.cfg.current_server)
+            self.ui.combo_config.removeItem(index)
+        self.last_connection_state = state
+
+        self.ui.combo_config.setCurrentIndex(index)
+
+        if state:
+            self.fill_combo_corpus()
+            self.ui.centralwidget.setEnabled(True)
+        else:
+            self.ui.centralwidget.setEnabled(False)
+        
+        return state
+
     def mysql_settings(self):
         import MySQLOptions
         name = MySQLOptions.MySQLOptions.choose(options.cfg.current_server, options.cfg.server_configuration)
