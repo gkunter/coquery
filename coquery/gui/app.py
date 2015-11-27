@@ -532,12 +532,14 @@ class CoqueryApp(QtGui.QMainWindow):
         # remember last corpus name:
         last_corpus = self.ui.combo_corpus.currentText()
 
+        l = [x.upper() for x in get_available_resources(options.cfg.current_server)]
+
         # add corpus names:
         self.ui.combo_corpus.clear()
         self.ui.combo_corpus.addItems([x.upper() for x in get_available_resources(options.cfg.current_server)])
 
         # try to return to last corpus name:
-        new_index = self.ui.combo_corpus.findText(last_corpus)
+        new_index = self.ui.combo_corpus.findText(last_corpus.upper())
         if new_index == -1:
             new_index = 0
             
@@ -1246,7 +1248,6 @@ class CoqueryApp(QtGui.QMainWindow):
         state : bool
             True if a connection is available, or False otherwise.
         """
-        
         db_con = options.cfg.server_configuration[options.cfg.current_server]
         state = bool(sqlwrap.SqlDB.test_connection(
             db_con["host"], db_con["port"], 
@@ -1261,12 +1262,14 @@ class CoqueryApp(QtGui.QMainWindow):
         index = self.ui.combo_config.findText(options.cfg.current_server)
             
         # add new entry with suitable icon, remove old icon and reset index:
+        self.ui.combo_config.currentIndexChanged.disconnect()
         self.ui.combo_config.insertItem(index + 1, icon, options.cfg.current_server)
         self.ui.combo_config.setCurrentIndex(index + 1)
         self.ui.combo_config.removeItem(index)
         self.ui.combo_config.setCurrentIndex(index)
         self.last_connection_state = state
         self.last_index = index
+        self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
 
         if state:
             self.fill_combo_corpus()
