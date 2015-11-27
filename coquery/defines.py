@@ -93,6 +93,18 @@ except NameError:
     long = int
     
 # Error messages used by the GUI:
+msg_corpus_path_not_valid = """
+<p><b>The corpus data path does not seem to be valid.</b></p>
+<p>{}</p>
+<p>If you choose to <b>ignore</b> that the corpus data path is invalid, 
+Coquery will start the corpus installation using this directiory. After the 
+installation, you mioght still be able to use the corpus, but it might be 
+incomplete.</p>
+<p>If you choose to <b>discard</b> the invalid corpus data path, you can 
+enter the correct data path in the previous dialog, or cancel the corpus 
+installation altogether.</p>
+<p>Do you wish to ignore or to discard the invalid corpus data path?</p>
+"""
 msg_mysql_no_configuration = """
 <p><b>No database server configuration is available.</b><p>
 <p>You haven't specified the configuration for your database server yet.
