@@ -20,6 +20,7 @@ import pymysql as mysql
 import pymysql.cursors as mysql_cursors
 
 import logging
+import warnings
 import copy
 from collections  import defaultdict
 
@@ -91,7 +92,7 @@ class DBConnection(object):
             else:
                 return True
         except Exception as e:
-            warnings.Warning("An error occurred when executing MySQL command '{}'.".format(command))
+            warnings.warn("An error occurred when executing MySQL command '{}'.".format(command))
             raise e
 
     def has_table(self, table_name):
