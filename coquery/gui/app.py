@@ -1085,7 +1085,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def open_corpus_help(self):
         if self.ui.combo_corpus.isEnabled():
             current_corpus = str(self.ui.combo_corpus.currentText())
-            resource, _, _, module = get_available_resources()[current_corpus.lower()]
+            resource, _, _, module = get_available_resources(options.cfg.current_server)[current_corpus.lower()]
             try:
                 url = resource.documentation_url
             except AttributeError:
@@ -1530,7 +1530,7 @@ class CoqueryApp(QtGui.QMainWindow):
             corpus, table_name, feature_name, case = link
             item.setExpanded(True)
             
-            resource = get_available_resources()[corpus][0]
+            resource = get_available_resources(options.cfg.current_server)[corpus][0]
             table = resource.get_table_dict()[table_name]
             
             new_table = classes.CoqTreeLinkItem()
