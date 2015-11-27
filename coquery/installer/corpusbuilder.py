@@ -308,6 +308,10 @@ class Table(object):
                 except TypeError as e:
                     print(sql_string, data)
                     print(e)
+                except Exception as e:
+                    print(sql_string, data)
+                    print(e)
+                    raise e
                 # Reset all new keys:
                 for row in new_keys:
                     self._add_cache[row] = (self._add_cache[row][0], None)
@@ -451,6 +455,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     start_time = None
     file_filter = None
     encoding = "utf-8"
+    expected_files = []
     
     def __init__(self, gui=False):
         self.module_code = module_code
@@ -801,12 +806,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
     def store_filename(self, file_name):
         self._file_name = file_name
-        self._value_file_name = file_name
-        self._value_file_path = os.path.splitext(os.path.basename(file_name))[0]
+        self._value_file_name = os.path.basename(file_name)
+        self._value_file_path = os.path.split(file_name)[0]
 
         self._file_id = self.table(self.file_table).get_or_insert(
-            {self.file_path: self._value_file_name,
-             self.file_name: self._value_file_path})
+            {self.file_name: self._value_file_name,
+             self.file_path: self._value_file_path})
 
     #def get_lemma(self, word):
         #""" Return a lemma for the word. By default, this is simply the
@@ -1635,6 +1640,10 @@ class Resource(SQLResource):
     @staticmethod
     def get_name():
         return "(unnamed)"
+    
+    @staticmethod
+    def get_db_name():
+        return "unnamed"
 
     def initialize_build(self):
         """ Start logging, start the timer."""
@@ -1880,7 +1889,7 @@ if use_gui:
         def install_exception(self):
             #self.parent().ui.showMessage(S)
             self.state = "failed"
-            error_box.ErrorBox.show(self.exc_info, self, no_trace=True)
+            error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
             #self.ui.progress_bar.setMaximum(1)
             #self.ui.progress_bar.setValue(0)
             #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
