@@ -654,7 +654,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         if not self.sort_columns:
             return
         self.layoutAboutToBeChanged.emit()
-        options.cfg.main_window.ui.progress_bar.setRange(0, 0)
+        options.cfg.main_window.start_progress_indicator()
         self_sort_thread = QtProgress.ProgressThread(
             self.do_sort, self)
         self_sort_thread.taskFinished.connect(self.sort_finished)
@@ -663,12 +663,12 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         
     def sort_finished(self):
         # Stop the progress indicator:
-        options.cfg.main_window.ui.progress_bar.setRange(0, 1)
+        options.cfg.main_window.stop_progress_indicator()
         self.layoutChanged.emit()
 
     def exception_during_sort(self):
-        options.cfg.main_window.ui.progress_bar.setRange(0, 1)
-        options.cfg.main_window.ui.statusbar.showMessage("Error during sorting.")
+        options.cfg.main_window.stop_progress_indicator()
+        options.cfg.main_window.showMessage("Error during sorting.")
         error_box.ErrorBox.show(self.exc_info, self.exception)
 
 def get_background(option, index):
