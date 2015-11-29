@@ -1223,14 +1223,16 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
 
     def change_mysql_configuration(self, name):
-        options.cfg.current_server = str(name)
         self.ui.combo_config.clear()
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
         if name:
+            options.cfg.current_server = str(name)
             index = self.ui.combo_config.findText(name)
             self.ui.combo_config.setCurrentIndex(index)
             db_con = options.cfg.server_configuration[name]
-        self.test_mysql_connection()
+            self.test_mysql_connection()
+        else:
+            options.cfg.current_server = None
         
     def test_mysql_connection(self):
         """
