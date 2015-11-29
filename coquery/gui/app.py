@@ -1251,10 +1251,13 @@ class CoqueryApp(QtGui.QMainWindow):
         state : bool
             True if a connection is available, or False otherwise.
         """
-        db_con = options.cfg.server_configuration[options.cfg.current_server]
-        state = bool(sqlwrap.SqlDB.test_connection(
-            db_con["host"], db_con["port"], 
-            db_con["user"], db_con["password"]))
+        if options.cfg.current_server == None:
+            state = False
+        else:
+            db_con = options.cfg.server_configuration[options.cfg.current_server]
+            state = bool(sqlwrap.SqlDB.test_connection(
+                db_con["host"], db_con["port"], 
+                db_con["user"], db_con["password"]))
 
         # Choose a suitable icon:
         if state:
