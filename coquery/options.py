@@ -42,16 +42,10 @@ class Options(object):
         except AttributeError:
             self.base_path = "."
 
-        self.corpus_argument_dict = {
-            "help": "specify the corpus to use", 
-            "choices": get_available_resources(DEFAULT_CONFIGURATION).keys(), 
-            "type": type(str(""))}
-
         self.prog_name = __init__.NAME
         self.config_name = "%s.cfg" % __init__.NAME.lower()
         self.version = __init__.__version__
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False)
-        self.setup_parser()
 
         self.args = argparse.Namespace()
 
@@ -73,7 +67,7 @@ class Options(object):
         self.args.uniques_file_path = os.path.expanduser("~")
         self.args.corpus_source_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.expanduser("~")
-        
+        self.args.corpora_path = os.path.join(sys.path[0], "corpora")
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
         except AttributeError:
@@ -101,7 +95,6 @@ class Options(object):
         self.args.input_separator = ','
         self.args.output_separator = ","
         self.args.quote_char = '"'
-        
 
     @property
     def cfg(self):
@@ -180,6 +173,12 @@ class Options(object):
         is used, both a corpus and a query mode have to be specified, and 
         only the database settings from the configuration file are used.
         """
+        self.corpus_argument_dict = {
+            "help": "specify the corpus to use", 
+            "choices": get_available_resources(DEFAULT_CONFIGURATION).keys(), 
+            "type": type(str(""))}
+
+        self.setup_parser()
         
         # Do a first argument parse to get the corpus to be used, and 
         # whether a GUI is requested. This parse doesn't raise an argument 
@@ -890,8 +889,95 @@ def get_mysql_configuration():
 def process_options():
     global cfg
     options = Options()
-    options.get_options()
     cfg = options.cfg
+    options.get_options()
+
+
+def get_available_resources(configuration):
+    """ 
+    Return a dictionary with the available corpus module resource classes
+    as values, and the corpus module names as keys.
+    
+    This method scans the content of the sub-directory 'corpora' for valid
+    corpus modules. This directory has additional subdirectories for each 
+    MySQL configuration. If a corpus module is found, the three resource 
+    classes Resource, Corpus, and Lexicon are retrieved from the module.
+    
+    Parameters
+    ----------
+    configuration : str
+        The name of the MySQL configuration, which corresponds to the 
+        directory name in which the resources are stored.
+    
+    Returns
+    -------
+    d : dict
+        A dictionary with resource names as keys, and tuples of resource
+        classes as values.
+    """
+    d  = {}
+    
+    # Create corpora path if it doesn't exist:
+    if not os.path.exists(cfg.corpora_path):
+        os.path.mkdir(cfg.corpora_path)
+    # Create __init__ if it doesn't exist:
+    if not os.path.exists(os.path.join(cfg.corpora_path, "__init__.py")):
+        open(os.path.join(cfg.corpora_path, "__init__.py"), "a").close()
+    
+    directory = os.path.split(cfg.corpora_path)[1]
+    
+    corpus_path = os.path.realpath(
+        os.path.abspath(
+            os.path.join(
+                cfg.corpora_path, configuration)))
+
+    if not os.path.exists(corpus_path):
+        warnings.warn("The directory {} does not exist.".format(corpus_path))
+        return d
+
+    for corpus in glob.glob(os.path.join(corpus_path, "*.py")):
+        path, basename = os.path.split(corpus)
+        corpus_name, ext = os.path.splitext(basename)
+        while True:
+            try:
+                module = importlib.import_module("{}.{}.{}".format(
+                    directory, configuration, corpus_name))
+            except SyntaxError as e:
+                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+                raise e
+            except ImportError as e:
+                if not os.path.exists(os.path.join(path, "__init__.py")):
+                    open(os.path.join(path, "__init__.py"), "a").close()
+                else:
+                    raise e
+            else:
+                break
+        try:
+            d[module.Resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
+        except (AttributeError, ImportError):
+            warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+    return d
+
+def get_resource(name, configuration):
+    """
+    Return a tuple containing the Resource, Corpus, and Lexicon of the 
+    corpus module specified by 'name'.
+    
+    Arguments
+    ---------
+    name : str
+        The name of the corpus module
+    configuration : str
+        The name of the MySQL configuration
+        
+    Returns
+    -------
+    res : tuple
+        A tuple consisting of the Resource class, Corpus class, and Lexicon 
+        class defined in the corpus module
+    """
+    Resource, Corpus, Lexicon, _ = get_available_resources(configuration)[name]
+    return Resource, Corpus, Lexicon
 
 try:
     logger = logging.getLogger(__init__.NAME)

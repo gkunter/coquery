@@ -204,9 +204,9 @@ Coquery could not find a corpus module. Without a corpus module, you cannot
 run any query."""
 msg_details = """
 <p>To build a new corpus module from a selection of text files, select 
-<b>Build corpus...</b> from the Corpus menu.</p>
+<b>Build new corpus...</b> from the Corpus menu.</p>
 <p>To install the corpus module for one of the corpora that are supported by
-Coquery, select <b>Install corpus...</b> from the Corpus menu.</p>"""
+Coquery, select <b>Manage corpora...</b> from the Corpus menu.</p>"""
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
@@ -269,69 +269,3 @@ def memory_dump():
             #if len(referents) < 2000:
                 #print(obj)
 
-def get_available_resources(configuration):
-    """ 
-    Return a dictionary with the available corpus module resource classes
-    as values, and the corpus module names as keys.
-    
-    This method scans the content of the sub-directory 'corpora' for valid
-    corpus modules. This directory has additional subdirectories for each 
-    MySQL configuration. If a corpus module is found, the three resource 
-    classes Resource, Corpus, and Lexicon are retrieved from the module.
-    
-    Parameters
-    ----------
-    configuration : str
-        The name of the MySQL configuration, which corresponds to the 
-        directory name in which the resources are stored.
-    
-    Returns
-    -------
-    d : dict
-        A dictionary with resource names as keys, and tuples of resource
-        classes as values.
-    """
-    d  = {}
-    
-    corpus_path = os.path.realpath(
-        os.path.abspath(
-            os.path.join(
-                sys.path[0], "corpora", configuration)))
-
-    if not os.path.exists(corpus_path):
-        warnings.warn("The directory {} does not exist.".format(corpus_path))
-        return d
-
-    for corpus in glob.glob(os.path.join(corpus_path, "*.py")):
-        corpus_name, ext = os.path.splitext(os.path.basename(corpus))
-        try:
-            module = importlib.import_module("corpora.{}.{}".format(configuration, corpus_name))
-        except SyntaxError as e:
-            warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-            raise e
-        try:
-            d[module.Resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
-        except (AttributeError, ImportError):
-            warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
-    return d
-
-def get_resource(name, configuration):
-    """
-    Return a tuple containing the Resource, Corpus, and Lexicon of the 
-    corpus module specified by 'name'.
-    
-    Arguments
-    ---------
-    name : str
-        The name of the corpus module
-    configuration : str
-        The name of the MySQL configuration
-        
-    Returns
-    -------
-    res : tuple
-        A tuple consisting of the Resource class, Corpus class, and Lexicon 
-        class defined in the corpus module
-    """
-    Resource, Corpus, Lexicon, _ = get_available_resources(configuration)[name]
-    return Resource, Corpus, Lexicon

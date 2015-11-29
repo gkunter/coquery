@@ -126,7 +126,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         # A non-modal dialog is shown if no corpus resource is available.
         # The dialog contains some assistance on how to build a new corpus.
-        if not get_available_resources(options.cfg.current_server):
+        if not options.get_available_resources(options.cfg.current_server):
             self.show_no_corpus_message()
         
         options.cfg.main_window = self
@@ -146,7 +146,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
 
         # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(get_available_resources(options.cfg.current_server).keys())]
+        corpora = [x.upper() for x in sorted(options.get_available_resources(options.cfg.current_server).keys())]
 
         self.ui.combo_corpus.addItems(corpora)
         
@@ -442,7 +442,7 @@ class CoqueryApp(QtGui.QMainWindow):
         in the current corpus. If no corpus is avaiable, disable the options
         area and some menu entries. If any corpus is available, these widgets
         are enabled again."""
-        if not get_available_resources(options.cfg.current_server):
+        if not options.get_available_resources(options.cfg.current_server):
             self.disable_corpus_widgets()
         else:
             self.enable_corpus_widgets()
@@ -453,7 +453,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if self.ui.combo_corpus.count():
             corpus_name = str(self.ui.combo_corpus.currentText()).lower()
-            self.resource, self.corpus, self.lexicon, self.path = get_available_resources(options.cfg.current_server)[corpus_name]
+            self.resource, self.corpus, self.lexicon, self.path = options.get_available_resources(options.cfg.current_server)[corpus_name]
             self.ui.filter_box.resource = self.resource
             
             corpus_variables = [x for _, x in self.resource.get_corpus_features()]
@@ -530,13 +530,13 @@ class CoqueryApp(QtGui.QMainWindow):
             pass
 
         # remember last corpus name:
-        last_corpus = self.ui.combo_corpus.currentText()
+        last_corpus = str(self.ui.combo_corpus.currentText())
 
-        l = [x.upper() for x in get_available_resources(options.cfg.current_server)]
+        l = [x.upper() for x in options.get_available_resources(options.cfg.current_server)]
 
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems([x.upper() for x in get_available_resources(options.cfg.current_server)])
+        self.ui.combo_corpus.addItems([x.upper() for x in options.get_available_resources(options.cfg.current_server)])
 
         # try to return to last corpus name:
         new_index = self.ui.combo_corpus.findText(last_corpus.upper())
@@ -1087,7 +1087,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def open_corpus_help(self):
         if self.ui.combo_corpus.isEnabled():
             current_corpus = str(self.ui.combo_corpus.currentText())
-            resource, _, _, module = get_available_resources(options.cfg.current_server)[current_corpus.lower()]
+            resource, _, _, module = options.get_available_resources(options.cfg.current_server)[current_corpus.lower()]
             try:
                 url = resource.documentation_url
             except AttributeError:
@@ -1097,7 +1097,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 webbrowser.open(url)
         
     def remove_corpus(self, corpus_name):
-        resource, _, _, module = get_available_resources(options.cfg.current_server)[corpus_name.lower()]
+        resource, _, _, module = options.get_available_resources(options.cfg.current_server)[corpus_name.lower()]
         database = resource.db_name
         db_con = options.cfg.server_configuration[options.cfg.current_server]
         try:
@@ -1216,14 +1216,14 @@ class CoqueryApp(QtGui.QMainWindow):
         settings.Settings.manage(options.cfg, self)
 
     def change_current_server(self):
-        name = self.ui.combo_config.currentText()
+        name = str(self.ui.combo_config.currentText())
         if name:
             self.ui.combo_config.currentIndexChanged.disconnect(self.change_current_server)
             self.change_mysql_configuration(name)
             self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
 
     def change_mysql_configuration(self, name):
-        options.cfg.current_server = name
+        options.cfg.current_server = str(name)
         self.ui.combo_config.clear()
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
         if name:
@@ -1534,7 +1534,7 @@ class CoqueryApp(QtGui.QMainWindow):
             corpus, table_name, feature_name, case = link
             item.setExpanded(True)
             
-            resource = get_available_resources(options.cfg.current_server)[corpus][0]
+            resource = options.get_available_resources(options.cfg.current_server)[corpus][0]
             table = resource.get_table_dict()[table_name]
             
             new_table = classes.CoqTreeLinkItem()
