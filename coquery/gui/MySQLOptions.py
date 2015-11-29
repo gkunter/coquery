@@ -170,7 +170,7 @@ class MySQLOptions(QtGui.QDialog):
         self.ui.button_remove.setEnabled(False)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
         
-        name = self.ui.configuration_name.text()
+        name = str(self.ui.configuration_name.text())
 
         if self.state == "noConnection":
             self.ui.frame.setEnabled(False)
@@ -209,8 +209,8 @@ class MySQLOptions(QtGui.QDialog):
                 self.ui.button_remove.setEnabled(True)
 
     def apply_configuration(self, item):
-        self.current_configuration = self.config_dict[item.text(0)]
-        self.current_configuration["name"] = item.text(0)
+        self.current_configuration = self.config_dict[str(item.text(0))]
+        self.current_configuration["name"] = str(item.text(0))
         self.set_configuration(self.current_configuration)
         self.update_configuration(True)
             
@@ -294,8 +294,8 @@ class MySQLOptions(QtGui.QDialog):
 
     def create_user(self):
         import createuser
-        name = self.ui.user.text()
-        password = self.ui.password.text()
+        name = str(self.ui.user.text())
+        password = str(self.ui.password.text())
         create_data = createuser.CreateUser.get(name, password, self)
 
         hostname = self.get_hostname()
@@ -398,7 +398,7 @@ class MySQLOptions(QtGui.QDialog):
         self.current_server = self.backup_server
 
     def accept(self):
-        self.current_server = self.ui.tree_configuration.currentItem().text(0)
+        self.current_server = str(self.ui.tree_configuration.currentItem().text(0))
         super(MySQLOptions, self).accept()
 
     def reject(self):

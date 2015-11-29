@@ -16,10 +16,10 @@ import __init__
 # Python 3.x: import configparser 
 # Python 2.x: import ConfigParser as configparser
 try:
-    import ConfigParser as configparser
+    from ConfigParser import *
 except ImportError:
     try:
-        import configparser
+        from configparser import * 
     except ImportError as e:
         raise e
 
@@ -29,6 +29,7 @@ import argparse
 import logging
 import codecs
 import tokens
+import warnings
 from collections import defaultdict
 
 from defines import *
@@ -41,16 +42,10 @@ class Options(object):
         except AttributeError:
             self.base_path = "."
 
-        self.corpus_argument_dict = {
-            "help": "specify the corpus to use", 
-            "choices": get_available_resources(DEFAULT_CONFIGURATION).keys(), 
-            "type": type(str(""))}
-
         self.prog_name = __init__.NAME
         self.config_name = "%s.cfg" % __init__.NAME.lower()
         self.version = __init__.__version__
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False)
-        self.setup_parser()
 
         self.args = argparse.Namespace()
 
@@ -72,6 +67,8 @@ class Options(object):
         self.args.uniques_file_path = os.path.expanduser("~")
         self.args.corpus_source_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.expanduser("~")
+        self.args.corpora_path = os.path.join(sys.path[0], "corpora")
+        self.args.custom_corpora_path = None
         
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
@@ -100,7 +97,6 @@ class Options(object):
         self.args.input_separator = ','
         self.args.output_separator = ","
         self.args.quote_char = '"'
-        
 
     @property
     def cfg(self):
@@ -179,6 +175,12 @@ class Options(object):
         is used, both a corpus and a query mode have to be specified, and 
         only the database settings from the configuration file are used.
         """
+        self.corpus_argument_dict = {
+            "help": "specify the corpus to use", 
+            "choices": get_available_resources(DEFAULT_CONFIGURATION).keys(), 
+            "type": type(str(""))}
+
+        self.setup_parser()
         
         # Do a first argument parse to get the corpus to be used, and 
         # whether a GUI is requested. This parse doesn't raise an argument 
@@ -464,7 +466,7 @@ class Options(object):
     def read_configuration(self):
         if os.path.exists(self.cfg.config_path):
             logger.info("Using configuration file %s" % self.cfg.config_path)
-            config_file = configparser.ConfigParser()
+            config_file = ConfigParser()
             config_file.read(self.cfg.config_path)
             
             if "sql" in config_file.sections():
@@ -494,7 +496,7 @@ class Options(object):
 
                 try:
                     self.args.current_server = config_file.get("sql", "active_configuration")
-                except (configparser.NoOptionError, ValueError):
+                except (NoOptionError, ValueError):
                     self.args.current_server = None
                 
             # only use the other settings from the configuration file if a 
@@ -504,31 +506,40 @@ class Options(object):
                     if section == "main":
                         try:
                             default_corpus = config_file.get("main", "default_corpus")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             default_corpus = self.corpora_dict.keys()[0]
                         vars(self.args) ["corpus"] = default_corpus
                         try:
                             mode = config_file.get("main", "query_mode")
                             vars(self.args)["MODE"] = mode
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             default_corpus = QUERY_MODE_DISTINCT
                         try:
                             last_query = config_file.get("main", "query_string")
                             vars(self.args)["query_list"] = [x.strip('"') for x in last_query.split(",")]
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
                         try:
                             self.args.server_side = config_file.get("main", "one_by_one")
-                        except configparser.NoOptionError:
+                        except NoOptionError:
                             self.args.server_side = True
                         try:
                             self.args.context_mode = config_file.get("main", "context_mode")
-                        except configparser.NoOptionError:
+                        except NoOptionError:
                             self.args.context_mode = CONTEXT_KWIC
                         
                         try:
+                            self.args.corpora_path = config_file.get("main", "corpora_path")
+                        except NoOptionError:
+                            pass
+                        try:
+                            self.args.custom_corpora_path = config_file.get("main", "custom_corpora_path")
+                        except NoOptionError:
+                            pass
+                        
+                        try:
                             vars(self.args)["input_path"] = config_file.get("main", "csv_file")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
                         else:
                             # Read CSV options, but only if a CSV file name
@@ -537,23 +548,23 @@ class Options(object):
                             # the saved values.
                             try:
                                 self.args.input_separator = config_file.get("main", "csv_separator")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
                             try:
                                 self.args.query_column_number = config_file.getint("main", "csv_column")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
                             try:
                                 self.args.file_has_headers = config_file.getboolean("main", "csv_has_header")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
                             try:
                                 self.args.skip_lines = config_file.getint("main", "csv_line_skip")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
                             try:
                                 self.args.quote_char = config_file.get("main", "csv_quote_char")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
 
                     elif section == "output":
@@ -567,66 +578,66 @@ class Options(object):
                     elif section == "context":
                         try:
                             vars(self.args)["context_left"] = int(config_file.get("context", "words_left"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
                         try:
                             vars(self.args)["context_right"] = int(config_file.get("context", "words_right"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
                         try:
                             vars(self.args)["context_mode"] = config_file.get("context", "mode")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
 
                     elif section == "gui":
                         try:
                             self.args.ask_on_quit = bool(config_file.get("gui", "ask_on_quit"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.ask_on_quit = True
                         try:
                             self.args.save_query_string = config_file.get("gui", "save_query_string")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.save_query_string = True
                         try:
                             self.args.save_query_file = config_file.get("gui", "save_query_file")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.save_query_file = True
                         try:
                             self.args.query_file_path = config_file.get("gui", "query_file_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.query_file_path = os.path.expanduser("~")
                         try:
                             self.args.query_file_path = config_file.get("gui", "query_file_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.query_file_path = os.path.expanduser("~")
                         try:
                             self.args.results_file_path = config_file.get("gui", "results_file_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.results_file_path = os.path.expanduser("~")
                         try:
                             self.args.uniques_file_path = config_file.get("gui", "uniques_file_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.uniques_file_path = os.path.expanduser("~")
                         try:
                             self.args.corpus_source_path = config_file.get("gui", "corpus_source_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.corpus_source_path = os.path.expanduser("~")
                         try:
                             self.args.text_source_path = config_file.get("gui", "text_source_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.text_source_path = os.path.expanduser("~")
                             
                         try:
                             self.args.reaggregate_data = config_file.get("gui", "reaggregate_data")
-                        except configparser.NoOptionError:
+                        except NoOptionError:
                             self.args.reaggregate_data = True
                         try:
                             vars(self.args)["width"] = int(config_file.get("gui", "width"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             vars(self.args)["width"] = None
                         try:
                             vars(self.args)["height"] = int(config_file.get("gui", "height"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             vars(self.args)["height"] = None
 
                         context_dict = {}
@@ -666,7 +677,7 @@ class Options(object):
                             
 cfg = None
 
-class UnicodeConfigParser(configparser.RawConfigParser):
+class UnicodeConfigParser(RawConfigParser):
     """
     Define a subclass of RawConfigParser that works with Unicode (hopefully).
     """
@@ -694,8 +705,10 @@ def save_configuration():
     config = UnicodeConfigParser()
     if os.path.exists(cfg.config_path):
         with codecs.open(cfg.config_path, "r", "utf-8") as input_file:
-            config.read(input_file)
-    
+            try:
+                config.read(input_file)
+            except (IOError, TypeError):
+                warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
     if not "main" in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
@@ -711,7 +724,11 @@ def save_configuration():
         config.set("main", "csv_quote_char", cfg.quote_char)
     config.set("main", "one_by_one", cfg.server_side)
     config.set("main", "context_mode", cfg.context_mode)
-    
+    config.set("main", "corpora_path", cfg.corpora_path)
+    if cfg.custom_corpora_path:
+        config.set("main", "custom_corpora_path", cfg.custom_corpora_path)
+        
+   
     if not "sql" in config.sections():
         config.add_section("sql")
     config.set("sql", "active_configuration", cfg.current_server)
@@ -887,8 +904,95 @@ def get_mysql_configuration():
 def process_options():
     global cfg
     options = Options()
-    options.get_options()
     cfg = options.cfg
+    options.get_options()
+
+
+def get_available_resources(configuration):
+    """ 
+    Return a dictionary with the available corpus module resource classes
+    as values, and the corpus module names as keys.
+    
+    This method scans the content of the sub-directory 'corpora' for valid
+    corpus modules. This directory has additional subdirectories for each 
+    MySQL configuration. If a corpus module is found, the three resource 
+    classes Resource, Corpus, and Lexicon are retrieved from the module.
+    
+    Parameters
+    ----------
+    configuration : str
+        The name of the MySQL configuration, which corresponds to the 
+        directory name in which the resources are stored.
+    
+    Returns
+    -------
+    d : dict
+        A dictionary with resource names as keys, and tuples of resource
+        classes as values.
+    """
+    d  = {}
+    
+    # Create corpora path if it doesn't exist:
+    if not os.path.exists(cfg.corpora_path):
+        os.path.mkdir(cfg.corpora_path)
+    # Create __init__ if it doesn't exist:
+    if not os.path.exists(os.path.join(cfg.corpora_path, "__init__.py")):
+        open(os.path.join(cfg.corpora_path, "__init__.py"), "a").close()
+    
+    directory = os.path.split(cfg.corpora_path)[1]
+    
+    corpus_path = os.path.realpath(
+        os.path.abspath(
+            os.path.join(
+                cfg.corpora_path, configuration)))
+
+    if not os.path.exists(corpus_path):
+        warnings.warn("The directory {} does not exist.".format(corpus_path))
+        return d
+
+    for corpus in glob.glob(os.path.join(corpus_path, "*.py")):
+        path, basename = os.path.split(corpus)
+        corpus_name, ext = os.path.splitext(basename)
+        while True:
+            try:
+                module = importlib.import_module("{}.{}.{}".format(
+                    directory, configuration, corpus_name))
+            except SyntaxError as e:
+                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+                raise e
+            except ImportError as e:
+                if not os.path.exists(os.path.join(path, "__init__.py")):
+                    open(os.path.join(path, "__init__.py"), "a").close()
+                else:
+                    raise e
+            else:
+                break
+        try:
+            d[module.Resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
+        except (AttributeError, ImportError):
+            warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+    return d
+
+def get_resource(name, configuration):
+    """
+    Return a tuple containing the Resource, Corpus, and Lexicon of the 
+    corpus module specified by 'name'.
+    
+    Arguments
+    ---------
+    name : str
+        The name of the corpus module
+    configuration : str
+        The name of the MySQL configuration
+        
+    Returns
+    -------
+    res : tuple
+        A tuple consisting of the Resource class, Corpus class, and Lexicon 
+        class defined in the corpus module
+    """
+    Resource, Corpus, Lexicon, _ = get_available_resources(configuration)[name]
+    return Resource, Corpus, Lexicon
 
 try:
     logger = logging.getLogger(__init__.NAME)
