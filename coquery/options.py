@@ -16,10 +16,10 @@ import __init__
 # Python 3.x: import configparser 
 # Python 2.x: import ConfigParser as configparser
 try:
-    import ConfigParser as configparser
+    from ConfigParser import *
 except ImportError:
     try:
-        import configparser
+        from configparser import * 
     except ImportError as e:
         raise e
 
@@ -68,6 +68,8 @@ class Options(object):
         self.args.corpus_source_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.expanduser("~")
         self.args.corpora_path = os.path.join(sys.path[0], "corpora")
+        self.args.custom_corpora_path = None
+        
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
         except AttributeError:
@@ -464,7 +466,7 @@ class Options(object):
     def read_configuration(self):
         if os.path.exists(self.cfg.config_path):
             logger.info("Using configuration file %s" % self.cfg.config_path)
-            config_file = configparser.ConfigParser()
+            config_file = ConfigParser()
             config_file.read(self.cfg.config_path)
             
             if "sql" in config_file.sections():
@@ -494,7 +496,7 @@ class Options(object):
 
                 try:
                     self.args.current_server = config_file.get("sql", "active_configuration")
-                except (configparser.NoOptionError, ValueError):
+                except (NoOptionError, ValueError):
                     self.args.current_server = None
                 
             # only use the other settings from the configuration file if a 
@@ -504,31 +506,40 @@ class Options(object):
                     if section == "main":
                         try:
                             default_corpus = config_file.get("main", "default_corpus")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             default_corpus = self.corpora_dict.keys()[0]
                         vars(self.args) ["corpus"] = default_corpus
                         try:
                             mode = config_file.get("main", "query_mode")
                             vars(self.args)["MODE"] = mode
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             default_corpus = QUERY_MODE_DISTINCT
                         try:
                             last_query = config_file.get("main", "query_string")
                             vars(self.args)["query_list"] = [x.strip('"') for x in last_query.split(",")]
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
                         try:
                             self.args.server_side = config_file.get("main", "one_by_one")
-                        except configparser.NoOptionError:
+                        except NoOptionError:
                             self.args.server_side = True
                         try:
                             self.args.context_mode = config_file.get("main", "context_mode")
-                        except configparser.NoOptionError:
+                        except NoOptionError:
                             self.args.context_mode = CONTEXT_KWIC
                         
                         try:
+                            self.args.corpora_path = config_file.get("main", "corpora_path")
+                        except NoOptionError:
+                            pass
+                        try:
+                            self.args.custom_corpora_path = config_file.get("main", "custom_corpora_path")
+                        except NoOptionError:
+                            pass
+                        
+                        try:
                             vars(self.args)["input_path"] = config_file.get("main", "csv_file")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
                         else:
                             # Read CSV options, but only if a CSV file name
@@ -537,23 +548,23 @@ class Options(object):
                             # the saved values.
                             try:
                                 self.args.input_separator = config_file.get("main", "csv_separator")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
                             try:
                                 self.args.query_column_number = config_file.getint("main", "csv_column")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
                             try:
                                 self.args.file_has_headers = config_file.getboolean("main", "csv_has_header")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
                             try:
                                 self.args.skip_lines = config_file.getint("main", "csv_line_skip")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
                             try:
                                 self.args.quote_char = config_file.get("main", "csv_quote_char")
-                            except (configparser.NoOptionError, ValueError):
+                            except (NoOptionError, ValueError):
                                 pass
 
                     elif section == "output":
@@ -567,66 +578,66 @@ class Options(object):
                     elif section == "context":
                         try:
                             vars(self.args)["context_left"] = int(config_file.get("context", "words_left"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
                         try:
                             vars(self.args)["context_right"] = int(config_file.get("context", "words_right"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
                         try:
                             vars(self.args)["context_mode"] = config_file.get("context", "mode")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             pass
 
                     elif section == "gui":
                         try:
                             self.args.ask_on_quit = bool(config_file.get("gui", "ask_on_quit"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.ask_on_quit = True
                         try:
                             self.args.save_query_string = config_file.get("gui", "save_query_string")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.save_query_string = True
                         try:
                             self.args.save_query_file = config_file.get("gui", "save_query_file")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.save_query_file = True
                         try:
                             self.args.query_file_path = config_file.get("gui", "query_file_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.query_file_path = os.path.expanduser("~")
                         try:
                             self.args.query_file_path = config_file.get("gui", "query_file_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.query_file_path = os.path.expanduser("~")
                         try:
                             self.args.results_file_path = config_file.get("gui", "results_file_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.results_file_path = os.path.expanduser("~")
                         try:
                             self.args.uniques_file_path = config_file.get("gui", "uniques_file_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.uniques_file_path = os.path.expanduser("~")
                         try:
                             self.args.corpus_source_path = config_file.get("gui", "corpus_source_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.corpus_source_path = os.path.expanduser("~")
                         try:
                             self.args.text_source_path = config_file.get("gui", "text_source_path")
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             self.args.text_source_path = os.path.expanduser("~")
                             
                         try:
                             self.args.reaggregate_data = config_file.get("gui", "reaggregate_data")
-                        except configparser.NoOptionError:
+                        except NoOptionError:
                             self.args.reaggregate_data = True
                         try:
                             vars(self.args)["width"] = int(config_file.get("gui", "width"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             vars(self.args)["width"] = None
                         try:
                             vars(self.args)["height"] = int(config_file.get("gui", "height"))
-                        except (configparser.NoOptionError, ValueError):
+                        except (NoOptionError, ValueError):
                             vars(self.args)["height"] = None
 
                         context_dict = {}
@@ -666,7 +677,7 @@ class Options(object):
                             
 cfg = None
 
-class UnicodeConfigParser(configparser.RawConfigParser):
+class UnicodeConfigParser(RawConfigParser):
     """
     Define a subclass of RawConfigParser that works with Unicode (hopefully).
     """
@@ -713,7 +724,11 @@ def save_configuration():
         config.set("main", "csv_quote_char", cfg.quote_char)
     config.set("main", "one_by_one", cfg.server_side)
     config.set("main", "context_mode", cfg.context_mode)
-    
+    config.set("main", "corpora_path", cfg.corpora_path)
+    if cfg.custom_corpora_path:
+        config.set("main", "custom_corpora_path", cfg.custom_corpora_path)
+        
+   
     if not "sql" in config.sections():
         config.add_section("sql")
     config.set("sql", "active_configuration", cfg.current_server)
