@@ -931,6 +931,8 @@ def get_available_resources(configuration):
         classes as values.
     """
     d  = {}
+    if configuration == None:
+        return d
     
     # Create corpora path if it doesn't exist:
     if not os.path.exists(cfg.corpora_path):
@@ -940,7 +942,7 @@ def get_available_resources(configuration):
         open(os.path.join(cfg.corpora_path, "__init__.py"), "a").close()
     
     directory = os.path.split(cfg.corpora_path)[1]
-    
+
     corpus_path = os.path.realpath(
         os.path.abspath(
             os.path.join(
