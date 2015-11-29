@@ -188,8 +188,7 @@ class BuckeyeBuilder(BaseCorpusBuilder):
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.word_label, "TEXT NOT NULL"),
-             Column(self.word_pos, "ENUM('CC','CD','DT','DT_VBZ','EX','EX_VBZ','FW','IN','JJ','JJR','JJS','LS','MD','MD_RB','NN','NNP','NNPS','NNS','null','PDT','PRP','PRP_MD','PRP_VBP','PRP_VBZ','PRP$','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBG_TO','VBN','VBP','VBP_RB','VBP_TO','VBZ','VBZ_RB','WDT','WP','WP_VBZ','WP$','WRB')
-NOT NULL"),
+             Column(self.word_pos, "ENUM('CC','CD','DT','DT_VBZ','EX','EX_VBZ','FW','IN','JJ','JJR','JJS','LS','MD','MD_RB','NN','NNP','NNPS','NNS','null','PDT','PRP','PRP_MD','PRP_VBP','PRP_VBZ','PRP$','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBG_TO','VBN','VBP','VBP_RB','VBP_TO','VBZ','VBZ_RB','WDT','WP','WP_VBZ','WP$','WRB') NOT NULL"),
              Column(self.word_transcript, "TINYTEXT NOT NULL"),
              Column(self.word_lemmatranscript, "VARCHAR(41) NOT NULL")])
                     

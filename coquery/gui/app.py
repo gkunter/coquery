@@ -1269,7 +1269,10 @@ class CoqueryApp(QtGui.QMainWindow):
         index = self.ui.combo_config.findText(options.cfg.current_server)
             
         # add new entry with suitable icon, remove old icon and reset index:
-        self.ui.combo_config.currentIndexChanged.disconnect()
+        try:
+            self.ui.combo_config.currentIndexChanged.disconnect()
+        except TypeError:
+            pass
         self.ui.combo_config.insertItem(index + 1, icon, options.cfg.current_server)
         self.ui.combo_config.setCurrentIndex(index + 1)
         self.ui.combo_config.removeItem(index)
