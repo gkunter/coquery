@@ -29,6 +29,7 @@ import argparse
 import logging
 import codecs
 import tokens
+import warnings
 from collections import defaultdict
 
 from defines import *
@@ -694,8 +695,10 @@ def save_configuration():
     config = UnicodeConfigParser()
     if os.path.exists(cfg.config_path):
         with codecs.open(cfg.config_path, "r", "utf-8") as input_file:
-            config.read(input_file)
-    
+            try:
+                config.read(input_file)
+            except (IOError, TypeError):
+                warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
     if not "main" in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
