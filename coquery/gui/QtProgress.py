@@ -1,12 +1,21 @@
+"""
+QtProgress.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from pyqt_compat import QtCore, QtGui
-import threading
 import time
 import sys, os
 from errors import *
 from error_box import ErrorBox 
 
 class ProgressIndicator(QtGui.QDialog):
-    def __init__(self, FUN, label="", parent=None, *args):
+    def __init__(self, FUN, finalize=None, label="", parent=None, *args):
         super(ProgressIndicator, self).__init__(parent)
  
         vbox = QtGui.QVBoxLayout()
@@ -21,7 +30,7 @@ class ProgressIndicator(QtGui.QDialog):
         self.setLayout(vbox) 
         self.setGeometry(300, 300, 300, 50)
         self.progress_bar.setRange(0, 1)
-        
+        self.finalize = finalize
         self.show()
         if FUN:
             self.thread = ProgressThread(FUN, self, *args)
@@ -39,6 +48,8 @@ class ProgressIndicator(QtGui.QDialog):
         self.progress_bar.setRange(0,1)
         self.progress_bar.setValue(1)
         self.close()
+        if self.finalize:
+            self.finalize()
         
     @staticmethod
     def RunThread(FUN, label="", parent=None):
@@ -47,7 +58,8 @@ class ProgressIndicator(QtGui.QDialog):
 
 class ProgressThread(QtCore.QThread):
     taskFinished = QtCore.Signal()
-    taskException = QtCore.Signal()
+    taskException = QtCore.Signal(Exception)
+    taskAbort = QtCore.Signal()
     
     def __init__(self, FUN, window, *args):
         super(ProgressThread, self).__init__()
@@ -60,6 +72,13 @@ class ProgressThread(QtCore.QThread):
         self.exiting = True
         self.wait()
     
+    def setInterrupt(self, fun):
+        self.INTERRUPT_FUN = fun
+    
+    def quit(self):
+        self.INTERRUPT_FUN()
+        super(ProgressThread, self).quit()
+    
     def run(self):
         self.exiting = False
         try:
@@ -67,7 +86,7 @@ class ProgressThread(QtCore.QThread):
         except Exception as e:
             self.parent.exc_info = sys.exc_info()
             self.parent.exception = e
-            self.taskException.emit()
+            self.taskException.emit(e)
         self.taskFinished.emit()
 
 if __name__ == "__main__":

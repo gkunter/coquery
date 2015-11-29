@@ -43,17 +43,31 @@ def lineplot(a, level=0, start=0, end=1, axis="x", color="black", ax=None, **kwa
     vertical = kwargs.pop("vertical", axis == "y")
     func = ax.axhline if vertical else ax.axvline
     kwargs.setdefault("linewidth", 1)
+    a.reset_index(drop=True, inplace=True)
+    level.reset_index(drop=True, inplace=True)
     for i in a.index:
         func(a[i], start[level[i]], end[level[i]], color=color[level[i]], **kwargs)
     return ax
 
-class BarcodeVisualizer(vis.Visualizer):
-    visualize_frequency = False
+class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
+    
+    def __init__(self, *args):
+        super(Visualizer, self).__init__(*args)
+        
+    def set_defaults(self):
+        self.options["color_palette"] = "Paired"
+        self.options["color_number"] = len(self._levels[0])
+        super(Visualizer, self).set_defaults()
+        self.options["label_x_axis"] = "Corpus position"
+        if not self._levels or len(self._levels[0]) < 2:
+            self.options["label_y_axis"] = ""
+        else:
+            self.options["label_y_axis"] = self._groupby[0]
 
     def setup_figure(self):
         with sns.axes_style("white"):
-            super(BarcodeVisualizer, self).setup_figure()
+            super(Visualizer, self).setup_figure()
     
     def draw(self):
         """ Plot a vertical line for each token in the current data table.
@@ -62,15 +76,17 @@ class BarcodeVisualizer(vis.Visualizer):
         token id so that tokens that occur in the same part of the corpus
         will also have lines that are placed close to each other. """
         def plot_facet(data, color):
+            offset = 0.025 * (1 / len(self._levels[0]))
             starts = dict(zip(
                 self._levels[0],
-                [x / len(self._levels[0]) for x in range(len(self._levels[0]))]))
+                [offset + x / len(self._levels[0]) for x in range(len(self._levels[0]))]))
             ends = dict(zip(
                 self._levels[0],
-                [0.95 * ((x+1) / len(self._levels[0])) for x in range(len(self._levels[0]))]))
+                [(x+1) / len(self._levels[0]) - offset for x in range(len(self._levels[0]))]))
+                #sns.color_palette("Paired", len(self._levels[0]))))
             colors = dict(zip(
                 self._levels[0],
-                sns.color_palette("Paired", len(self._levels[0]))))
+                self.options["color_palette_values"]))
             lineplot(data.coquery_invisible_corpus_id,
                      level=data[self._groupby[-1]],
                      start=starts, end=ends, color=colors, ax=plt.gca())
@@ -80,14 +96,14 @@ class BarcodeVisualizer(vis.Visualizer):
 
         self._ticks = [(x+0.5) / len(self._levels[0]) for x in range(len(self._levels[0]))]
 
-        self.g.map_dataframe(plot_facet)
+        self.map_data(plot_facet)
 
         if not self._levels or len(self._levels[0]) < 2:
             self.g.set(yticks=[])
-            self.g.set_axis_labels("Corpus position", "")
         else:
             self.g.set(yticks=self._ticks)
             self.g.set(yticklabels=self._levels[0])
-            self.g.set_axis_labels("Corpus position", self._groupby[0])
+        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
+        self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
         self.g.set_titles(fontweight="bold", size=options.cfg.app.font().pointSize() * self.get_font_scale())
         self.g.fig.tight_layout()

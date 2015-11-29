@@ -1,31 +1,44 @@
 # -*- coding: utf-8 -*-
 
+"""
+app.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
 from __future__ import print_function
 
-from session import *
-from defines import *
-from pyqt_compat import QtCore, QtGui
-import __init__
-import coqueryUi
-import csvOptions
-import QtProgress
-
-import results 
-import error_box
+import importlib
+import os
 import codecs
 import random
 import logging
+from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+
+import __init__
+from session import *
+from defines import *
+from pyqt_compat import QtCore, QtGui
+import QtProgress
+
+import coqueryUi, coqueryCompactUi
+
+import classes
+#import results 
+import error_box
 import sqlwrap
-import MySQLOptions
 import queries
 import contextview
-import os
 
 from queryfilter import *
-
-# so, pandas:
-import pandas as pd
 
 # load visualizations
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
@@ -59,234 +72,6 @@ class clickFilter(QtCore.QObject):
             return super(clickFilter, self).eventFilter(obj, event)
         return super(clickFilter, self).eventFilter(obj, event)
 
-class CoqTreeItem(QtGui.QTreeWidgetItem):
-    """ Define a tree element class that stores the output column options in
-    the options tree. """
-    
-    def __init__(self, *args):
-        super(CoqTreeItem, self).__init__(*args)
-        self._objectName = ""
-        
-    def setObjectName(self, name):
-        """ Store resource variable name as object name. """
-        self._objectName = name
-
-    def objectName(self):
-        """ Retrieve resource variable name from object name. """
-        return self._objectName
-
-    def check_children(self, column=0):
-        """ Compare the check state of the item to that of all children.
-        Returns True all children have the same check state, False if at 
-        # least one child has a different check state than another. """
-
-        child_states = set([])
-        for child in [self.child(i) for i in range(self.childCount())]:
-            child_states.add(child.checkState(column))
-        return len(child_states) == 1
-
-    def update_checkboxes(self, column, expand=False):
-        """ Propagate the check state of the item to its children. Also, 
-        adjust the check state of the parent accordingly. If the argument 
-        'expand' is True, the parents of items with checked children will be 
-        expanded. """
-        check_state = self.checkState(column)
-
-        if check_state == QtCore.Qt.PartiallyChecked:
-            # do not propagate a partially checked state
-            return
-        
-        if str(self._objectName).endswith("_root") and check_state:
-            self.setExpanded(True)
-        
-        # propagate check state to children:
-        for child in [self.child(i) for i in range(self.childCount())]:
-            child.setCheckState(column, check_state)
-        # adjust check state of parent:
-        if self.parent():
-            if not self.parent().check_children():
-                self.parent().setCheckState(column, QtCore.Qt.PartiallyChecked)
-            else:
-                self.parent().setCheckState(column, check_state)
-            if expand:
-                if self.parent().checkState(column) in (QtCore.Qt.PartiallyChecked, QtCore.Qt.Checked):
-                    self.parent().setExpanded(True)
-
-class CoqTreeWidget(QtGui.QTreeWidget):
-    """ Define a tree widget that stores the available output columns in a 
-    tree with check boxes for each variable. """
-    def __init__(self, *args):
-        super(CoqTreeWidget, self).__init__(*args)
-        self.itemChanged.connect(self.update)
-        self.setDragEnabled(True)
-            
-    def update(self, item, column):
-        """ Update the checkboxes of parent and child items whenever an
-        item has been changed. """
-        item.update_checkboxes(column)
-
-    def setCheckState(self, object_name, state, column=0):
-        """ Set the checkstate of the item that matches the object_name. If
-        the state is Checked, also expand the parent of the item. """
-        if type(state) != QtCore.Qt.CheckState:
-            if state:
-                state = QtCore.Qt.Checked
-            else:
-                state = QtCore.Qt.Unchecked
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
-            if root.objectName() == object_name:
-                root.setChecked(column, state)
-                self.update(root, column)
-            for child in [root.child(i) for i in range(root.childCount())]:
-                if child.objectName() == object_name:
-                    child.setCheckState(column, state)
-                    if state == QtCore.Qt.Checked:
-                        root.setExpanded(True)
-                    self.update(child, column)
-                    return
-                
-    def mimeData(self, *args):
-        """ Add the resource variable name to the MIME data (for drag and 
-        drop). """
-        value = super(CoqTreeWidget, self).mimeData(*args)
-        value.setText(", ".join([x.objectName() for x in args[0]]))
-        return value
-    
-    def get_checked(self, column = 0):
-        check_list = []
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
-            for child in [root.child(i) for i in range(root.childCount())]:
-                if child.checkState(column) == QtCore.Qt.Checked:
-                    check_list.append(str(child._objectName))
-        return check_list
-        
-
-class LogTableModel(QtCore.QAbstractTableModel):
-    def __init__(self, parent, *args):
-        super(LogTableModel, self).__init__(parent, *args)
-        self.content = options.cfg.gui_logger.log_data
-        self.header = ["Date", "Time", "Level", "Message"]
-        
-    def data(self, index, role):
-        if not index.isValid():
-            return None
-        row = index.row()
-        column = index.column()
-        
-        record = self.content[row]
-        if role == QtCore.Qt.DisplayRole:
-            if column == 0:
-                return record.asctime.split()[0]
-            elif column == 1:
-                return record.asctime.split()[1]
-            elif column == 2:
-                return record.levelname
-            elif column == 3:
-                return record.message            
-        elif role == QtCore.Qt.ForegroundRole:
-            if record.levelno in [logging.ERROR, logging.CRITICAL]:
-                return QtGui.QBrush(QtCore.Qt.white)
-            else:
-                return None
-        elif role == QtCore.Qt.BackgroundRole:
-            if record.levelno == logging.WARNING:
-                return QtGui.QBrush(QtCore.Qt.yellow)
-            elif record.levelno in [logging.ERROR, logging.CRITICAL]:
-                return QtGui.QBrush(QtCore.Qt.red)
-        else:
-            return None
-        
-    def rowCount(self, parent):
-        return len(self.content)
-
-    def columnCount(self, parent):
-        return len(self.header)
-
-class LogProxyModel(QtGui.QSortFilterProxyModel):
-    def headerData(self, index, orientation, role):
-        # column names:
-        if orientation == QtCore.Qt.Vertical:
-            return None
-        header = self.sourceModel().header
-        if not header or index > len(header):
-            return None
-        
-        if role == QtCore.Qt.DisplayRole:
-            return header[index]
-
-class CoqTextEdit(QtGui.QTextEdit):
-    def __init__(self, *args):
-        super(CoqTextEdit, self).__init__(*args)
-        self.setAcceptDrops(True)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-        self.setAcceptDrops(True)
-        
-    def dragEnterEvent(self, e):
-        e.acceptProposedAction()
-
-    def dragMoveEvent(self, e):
-        e.acceptProposedAction()
-
-    def dropEvent(self, e):
-        # get the relative position from the mime data
-        mime = e.mimeData().text()
-        
-        if "application/x-qabstractitemmodeldatalist" in e.mimeData().formats():
-            label = e.mimeData().text()
-            if label == "word_label":
-                self.insertPlainText("*")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-            elif label == "word_pos":
-                self.insertPlainText(".[*]")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-            elif label == "lemma_label":
-                self.insertPlainText("[*]")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-            elif label == "lemma_transcript":
-                self.insertPlainText("[/*/]")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-            elif label == "word_transcript":
-                self.insertPlainText("/*/")
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-        elif e.mimeData().hasText():
-            self.insertPlainText(e.mimeData().text())
-            e.setDropAction(QtCore.Qt.CopyAction)
-            e.accept()
-        #x, y = map(int, mime.split(','))
-
-        #if e.keyboardModifiers() & QtCore.Qt.ShiftModifier:
-            ## copy
-            ## so create a new button
-            #button = Button('Button', self)
-            ## move it to the position adjusted with the cursor position at drag
-            #button.move(e.pos()-QtCore.QPoint(x, y))
-            ## show it
-            #button.show()
-            ## store it
-            #self.buttons.append(button)
-            ## set the drop action as Copy
-            #e.setDropAction(QtCore.Qt.CopyAction)
-        #else:
-            ## move
-            ## so move the dragged button (i.e. event.source())
-            #e.source().move(e.pos()-QtCore.QPoint(x, y))
-            ## set the drop action as Move
-            #e.setDropAction(QtCore.Qt.MoveAction)
-        # tell the QDrag we accepted it
-        e.accept()
-
-    def setAcceptDrops(self, *args):
-        super(CoqTextEdit, self).setAcceptDrops(*args)
-        
 class GuiHandler(logging.StreamHandler):
     def __init__(self, *args):
         super(GuiHandler, self).__init__(*args)
@@ -298,106 +83,59 @@ class GuiHandler(logging.StreamHandler):
         
     def emit(self, record):
         self.log_data.append(record)
-        self.app.log_table.dataChanged.emit(
-            self.app.log_table.index(len(self.log_data), 0),
-            self.app.log_table.index(len(self.log_data), 3))
-        if len(self.log_data) == 1:
-            self.app.ui.log_table.horizontalHeader().setStretchLastSection(True)
-        self.app.log_table.layoutChanged.emit()
-
-class QueryFilterBox(CoqTagBox):
-    def destroyTag(self, tag):
-        """ Remove the tag from the tag cloud as well as the filter from 
-        the global filter list. """
-        options.cfg.filter_list = [x for x in options.cfg.filter_list if x.text != str(tag.text())]
-        super(QueryFilterBox, self).destroyTag(tag)
-    
-    def addTag(self, *args):
-        """ Add the tag to the tag cloud and the global filter list. """
-        filt = queries.QueryFilter()
-        try:
-            filt.resource = self.resource
-        except AttributeError:
-            return
-        try:
-            if args:
-                filt.text = args[0]
-            else:
-                filt.text = str(self.edit_tag.text())
-        except InvalidFilterError:
-            self.edit_tag.setStyleSheet('CoqTagEdit { border-radius: 5px; font: condensed;background-color: rgb(255, 255, 192); }')
-        else:
-            super(QueryFilterBox, self).addTag(filt.text)
-            options.cfg.filter_list.append(filt)
-
-#class CoqFileSystemModel(QtGui.QFileSystemModel):
-    #def lessThan(self, left, right):
-        #print(123)
-        #return self.data(left, QtCore.Qt.DisplayRole) < self.data(right, QtCore.Qt.DisplayRole)
-    
-    #def sort(self, *args):
-        #print("sort")
-        #super(CoqFileSystemModel, self).sort(*args)
-    
-    #def data(self, index, role):
-        #if role == QtCore.Qt.DisplayRole and index.column() == 0:
-            #file_name = self.filePath(index)
-            #if self.isDir(index):
-                #return super(CoqFileSystemModel, self).data(index, role) + QtCore.QDir.separator()
-            #else:
-                #return super(CoqFileSystemModel, self).data(index, role).upper()
-
-        #return super(CoqFileSystemModel, self).data(index, role)
 
 class CoqueryApp(QtGui.QMainWindow):
     """ Coquery as standalone application. """
-    
-    def setup_menu_actions(self):
-        """ Connect menu actions to their methods."""
-        self.ui.action_save_results.triggered.connect(self.save_results)
-        self.ui.action_quit.triggered.connect(self.close)
-        self.ui.action_build_corpus.triggered.connect(self.build_corpus)
-        self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
-        self.ui.action_mySQL_settings.triggered.connect(self.mysql_settings)
-        self.ui.action_statistics.triggered.connect(self.run_statistics)
-        self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
-        
-        self.ui.action_tree_map.triggered.connect(self.show_tree_map)
-        self.ui.action_barcode_plot.triggered.connect(self.show_barcode_plot)
-        self.ui.action_beeswarm_plot.triggered.connect(self.show_beeswarm_plot)
-        self.ui.action_heat_map.triggered.connect(self.show_heatmap_plot)
-        self.ui.action_barchart_plot.triggered.connect(self.show_barchart_plot)
-        
-        self.ui.action_percentage_area_plot.triggered.connect(
-            lambda: self.show_time_series_plot(area=True, percentage=True))
-        self.ui.action_stacked_area_plot.triggered.connect(
-            lambda: self.show_time_series_plot(area=True, percentage=False))
-        self.ui.action_line_plot.triggered.connect(
-            lambda: self.show_time_series_plot(area=False, percentage=False))
-    
-    def setup_hooks(self):
-        """ Hook up signals so that the GUI can adequately react to user 
-        input. """
-        # hook file browser button:
-        self.ui.button_browse_file.clicked.connect(self.select_file)
-        # hook file options button:
-        self.ui.button_file_options.clicked.connect(self.file_options)
 
-        # hook up events so that the radio buttons are set correctly
-        # between either query from file or query from string:
-        self.focus_to_file = focusFilter()
-        self.ui.edit_file_name.installEventFilter(self.focus_to_file)
-        #self.focus_to_file.clicked.connect(self.select_file)
-        self.ui.edit_file_name.textChanged.connect(self.switch_to_file)
-        self.ui.edit_file_name.textChanged.connect(self.verify_file_name)
-        self.focus_to_query = focusFilter()
-        self.focus_to_query.focus.connect(self.switch_to_query)
-        self.ui.edit_query_string.installEventFilter(self.focus_to_query)
+    def __init__(self, parent=None):
+        """ Initialize the main window. This sets up any widget that needs
+        spetial care, and also sets up some special attributes that relate
+        to the GUI, including default appearances of the columns."""
+        QtGui.QMainWindow.__init__(self, parent)
+        
+        self.file_content = None
+        self.csv_options = None
+        self.query_thread = None
+        self.last_results_saved = True
+        self.last_connection_state = None
+        self.last_index = None
+        self.corpus_manager = None
+        
+        self.widget_list = []
+        self.Session = None
 
-        self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
-        # hook run query button:
-        self.ui.button_run_query.clicked.connect(self.run_query)#self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
-        #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
+        size = QtGui.QApplication.desktop().screenGeometry()
+        # Retrieve font and metrics for the CoqItemDelegates
+        options.cfg.font = options.cfg.app.font()
+        options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
+
+        if size.height() < 1024 or size.width() < 1024:
+            self.ui = coqueryCompactUi.Ui_MainWindow()
+        else:
+            self.ui = coqueryUi.Ui_MainWindow()
+        self.ui.setupUi(self)
+        
+        self.setup_app()
+        
+        # the dictionaries column_width and column_color store default
+        # attributes of the columns by display name. This means that problems
+        # may arise if several columns have the same name!
+        # FIXME: Make sure that the columns are identified correctly.
+        self.column_width = {}
+        self.column_color = {}
+        
+        # A non-modal dialog is shown if no corpus resource is available.
+        # The dialog contains some assistance on how to build a new corpus.
+        if not get_available_resources(options.cfg.current_server):
+            self.show_no_corpus_message()
+        
+        options.cfg.main_window = self
+        # Resize the window if a previous size is available
+        try:
+            if options.cfg.height and options.cfg.width:
+                self.resize(options.cfg.width, options.cfg.height)
+        except AttributeError:
+            pass
         
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -408,20 +146,19 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
 
         # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(resource_list.get_available_resources().keys())]
+        corpora = [x.upper() for x in sorted(get_available_resources(options.cfg.current_server).keys())]
 
         self.ui.combo_corpus.addItems(corpora)
         
         # chamge the default query string edit to the sublassed edit class:
         self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
         self.ui.edit_query_string.close()        
-        edit_query_string = CoqTextEdit(self)
-        edit_query_string.setObjectName(coqueryUi._fromUtf8("edit_query_string"))
+        edit_query_string = classes.CoqTextEdit(self)
+        edit_query_string.setObjectName("edit_query_string")
         self.ui.gridLayout_2.addWidget(edit_query_string, 2, 1, 1, 1)
         self.ui.edit_query_string = edit_query_string
         
-        self.ui.filter_box = QueryFilterBox(self)
-        
+        self.ui.filter_box = classes.QueryFilterBox(self)
         
         self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
         self.ui.tag_cloud.close()
@@ -452,43 +189,180 @@ class CoqueryApp(QtGui.QMainWindow):
         self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
         self.ui.edit_file_name.setCompleter(self.path_completer)
 
-        self.stop_progress_indicator()
-
         self.setup_hooks()
         self.setup_menu_actions()
         
         self.change_corpus()
-        
-        self.log_table = LogTableModel(self)
-        self.log_proxy = LogProxyModel()
-        self.log_proxy.setSourceModel(self.log_table)
-        self.log_proxy.sortCaseSensitivity = False
-        self.ui.log_table.setModel(self.log_proxy)
 
-        self.table_model = results.CoqTableModel(self)
+        # Align screen elements:
+        self.ui.label_2.setFixedHeight(self.ui.label_5.height())
+        self.ui.label.setFixedHeight(self.ui.label_5.height())
+        self.ui.label_5.setFixedHeight(self.ui.label_5.height())
+        
+        self.ui.data_preview.setEnabled(False)
+        
+        # set splitter stretches:
+        self.ui.splitter.setStretchFactor(0,0)
+        self.ui.splitter.setStretchFactor(1,1)
+        self.ui.splitter_2.setStretchFactor(0,1)
+        self.ui.splitter_2.setStretchFactor(1,0)
+
+        self.table_model = classes.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
+        self.table_model.columnVisibilityChanged.connect(self.reaggregate)
         header = self.ui.data_preview.horizontalHeader()
         header.sectionResized.connect(self.result_column_resize)
         header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_header_menu)
 
-        self.ui.data_preview.setStyleSheet('::item:hover { color: blue; text-decoration: underline }')
+        header = self.ui.data_preview.verticalHeader()
+        header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.show_row_header_menu)
+
+        self.ui.data_preview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
+
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
+
+        self.ui.context_query_syntax.setPixmap(QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_TitleBarContextHelpButton))
+        
+        # This is only a template. Alledgedly, OS X does not favour 
+        # status bars, so we might use a toolbar instead.
+        #if __OS__ == "MAC OS X":
+            #self.ui.toolbar = self.addToolBar("Status")
+            #self.ui.statusbar = QtGui.QStatusBar()
+            #self.ui.toolbar.addWidget(self.ui.statusbar)
+            #self.ui.toolbar.setIconSize(QtCore.QSize(16, 16))
+            #self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+
+        self.ui.status_message = QtGui.QLabel("{} {}".format(__init__.NAME, __init__.__version__))
+
+        self.ui.combo_config = QtGui.QComboBox()
+        self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
+        self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
+
+        self.ui.status_progress = QtGui.QProgressBar()
+        self.ui.status_progress.hide()
+
+        widget = QtGui.QWidget()
+        layout = QtGui.QHBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.ui.status_message)
+        layout.addWidget(self.ui.status_progress)
+        layout.addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum))        
+        layout.addWidget(QtGui.QLabel("Database server: "))
+        layout.addWidget(self.ui.combo_config)
+
+        self.statusBar().layout().setContentsMargins(0, 0, 0, 0)
+        self.statusBar().setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
+        self.statusBar().addWidget(widget, 1)
+
+        self.change_mysql_configuration(options.cfg.current_server)
+        
+        self.connection_timer = QtCore.QTimer()
+        self.connection_timer.timeout.connect(self.test_mysql_connection)
+        self.connection_timer.start(10000)
+        
+
+    def setup_menu_actions(self):
+        """ Connect menu actions to their methods."""
+        self.ui.action_save_results.triggered.connect(self.save_results)
+        self.ui.action_quit.triggered.connect(self.close)
+        self.ui.action_build_corpus.triggered.connect(self.build_corpus)
+        self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
+        self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
+        self.ui.action_settings.triggered.connect(self.settings)
+        self.ui.action_mySQL_settings.triggered.connect(self.mysql_settings)
+        self.ui.action_statistics.triggered.connect(self.run_statistics)
+        self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
+        self.ui.action_about_coquery.triggered.connect(self.show_about)
+        self.ui.action_view_log.triggered.connect(self.show_log)
+        self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
+        
+        self.ui.action_barcode_plot.triggered.connect(
+            lambda: self.visualize_data("barcodeplot"))
+        self.ui.action_beeswarm_plot.triggered.connect(
+            lambda: self.visualize_data("beeswarmplot"))
+
+        self.ui.action_tree_map.triggered.connect(
+            lambda: self.visualize_data("treemap"))
+        self.ui.action_heat_map.triggered.connect(
+            lambda: self.visualize_data("heatmap"))
+        
+        self.ui.action_barchart_plot.triggered.connect(
+            lambda: self.visualize_data("barplot"))
+        self.ui.action_stacked_barchart_plot.triggered.connect(
+            lambda: self.visualize_data("barplot", percentage=True, stacked=True))
+        
+        self.ui.action_percentage_area_plot.triggered.connect(
+            lambda: self.visualize_data("timeseries", area=True, percentage=True))
+        self.ui.action_stacked_area_plot.triggered.connect(
+            lambda: self.visualize_data("timeseries", area=True, percentage=False))
+        self.ui.action_line_plot.triggered.connect(
+            lambda: self.visualize_data("timeseries", area=False, percentage=False))
     
+    def setup_hooks(self):
+        """ Hook up signals so that the GUI can adequately react to user 
+        input. """
+        # hook file browser button:
+        self.ui.button_browse_file.clicked.connect(self.select_file)
+        # hook file options button:
+        self.ui.button_file_options.clicked.connect(self.file_options)
+
+        # hook up events so that the radio buttons are set correctly
+        # between either query from file or query from string:
+        self.focus_to_file = focusFilter()
+        self.ui.edit_file_name.installEventFilter(self.focus_to_file)
+        #self.focus_to_file.clicked.connect(self.select_file)
+        self.ui.edit_file_name.textChanged.connect(self.switch_to_file)
+        self.ui.edit_file_name.textChanged.connect(self.verify_file_name)
+        self.focus_to_query = focusFilter()
+        self.focus_to_query.focus.connect(self.switch_to_query)
+        self.ui.edit_query_string.installEventFilter(self.focus_to_query)
+
+        self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
+        # hook run query button:
+        self.ui.button_run_query.clicked.connect(self.run_query)#self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
+        #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
+        self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
+        
+        self.ui.radio_aggregate_collocations.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_aggregate_frequencies.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_aggregate_none.toggled.connect(self.toggle_frequency_columns)
+        self.ui.radio_aggregate_uniques.toggled.connect(self.toggle_frequency_columns)
+
+        self.ui.radio_aggregate_collocations.clicked.connect(
+            lambda x: self.reaggregate(query_type=queries.CollocationQuery))
+        self.ui.radio_aggregate_frequencies.clicked.connect(
+            lambda x: self.reaggregate(query_type=queries.FrequencyQuery))
+        self.ui.radio_aggregate_uniques.clicked.connect(
+            lambda x: self.reaggregate(query_type=queries.DistinctQuery))
+        self.ui.radio_aggregate_none.clicked.connect(
+            lambda x: self.reaggregate(query_type=queries.TokenQuery))
+
+        
     def result_column_resize(self, index, old, new):
-        header = self.table_model.content.columns[index].lower()
+        header = self.table_model.header[index].lower()
         options.cfg.column_width[header] = new
 
     def result_cell_clicked(self, index):
+        """
+        Launch the context viewer.
+        """
+        
         model_index = index
         row = model_index.row()
         data = self.table_model.content.iloc[row]
-        token_id = data["coquery_invisible_corpus_id"]
-        origin_id = data["coquery_invisible_origin_id"]
-        token_width = data["coquery_invisible_number_of_tokens"]
-        contextview.ContextView.display(self.Session.Corpus, token_id, origin_id, token_width, self)
+        try:
+            token_id = data["coquery_invisible_corpus_id"]
+            origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
+            token_width = data["coquery_invisible_number_of_tokens"]
+        except KeyError:
+            QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
+
+        contextview.ContextView.display(self.Session.Corpus, int(token_id), int(origin_id), int(token_width), self)
 
     def verify_file_name(self):
         file_name = self.ui.edit_file_name.text()
@@ -514,22 +388,61 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Remove any existing tree widget for the output options, create a
         new, empty tree, add it to the layout, and return it. """
         # replace old tree widget by a new, still empty tree:
-        tree = CoqTreeWidget()
+        tree = classes.CoqTreeWidget()
         tree.setColumnCount(1)
         tree.setHeaderHidden(True)
         tree.setRootIsDecorated(True)
+        
+        tree.addLink.connect(self.add_link)
+        tree.addFunction.connect(self.add_function)
+        tree.removeItem.connect(self.remove_item)
+        
         self.ui.options_list.removeWidget(tree)
         self.ui.options_tree.close()
         self.ui.options_list.addWidget(tree)
         self.ui.options_tree = tree
         return tree
     
+    def toggle_frequency_columns(self):
+        for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
+            if root.objectName().startswith("coquery"):
+                for child in [root.child(i) for i in range(root.childCount())]:
+                    if child.objectName() in ("coquery_relative_frequency", "coquery_per_million_words"):
+                        if self.ui.radio_aggregate_frequencies.isChecked():
+                            child.setDisabled(False)
+                        else:
+                            child.setDisabled(True)
+    
+    def finish_reaggregation(self):
+        self.stop_progress_indicator()
+        self.table_model.set_data(self.Session.output_object)
+        self.table_model.set_header()
+    
+    def reaggregate(self, query_type=None):
+        """
+        Reaggregate the current data table when changing the visibility of
+        the table columns.
+        """
+        if not self.Session:
+            return
+        
+        self.query_thread = QtProgress.ProgressThread(self.Session.aggregate_data, self)
+        self.query_thread.taskFinished.connect(self.finish_reaggregation)
+        self.query_thread.taskException.connect(self.exception_during_query)
+
+        if query_type and query_type != self.Session.query_type:
+            self.Session.query_type.remove_output_columns(self.Session)
+            self.Session.query_type = query_type
+            self.Session.query_type.add_output_columns(self.Session)
+        self.start_progress_indicator()
+        self.query_thread.start()
+
     def change_corpus(self):
         """ Change the output options list depending on the features available
         in the current corpus. If no corpus is avaiable, disable the options
         area and some menu entries. If any corpus is available, these widgets
         are enabled again."""
-        if not resource_list.get_available_resources():
+        if not get_available_resources(options.cfg.current_server):
             self.disable_corpus_widgets()
         else:
             self.enable_corpus_widgets()
@@ -540,7 +453,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if self.ui.combo_corpus.count():
             corpus_name = str(self.ui.combo_corpus.currentText()).lower()
-            self.resource, self.corpus, self.lexicon, self.path = resource_list.get_available_resources()[corpus_name]
+            self.resource, self.corpus, self.lexicon, self.path = get_available_resources(options.cfg.current_server)[corpus_name]
             self.ui.filter_box.resource = self.resource
             
             corpus_variables = [x for _, x in self.resource.get_corpus_features()]
@@ -581,21 +494,26 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # populate the tree with a root for each table:
         for table in tables:
-            root = CoqTreeItem()
+            root = classes.CoqTreeItem()
+            root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
-            root.setText(0, table.capitalize())
-            root.setObjectName(coqueryUi._fromUtf8("{}_root".format(table)))
+            try:
+                label = type(self.resource).__getattribute__(self.resource, str("{}_table".format(table)))
+            except AttributeError:
+                label = table.capitalize()
+                
+            root.setText(0, label)
             root.setCheckState(0, QtCore.Qt.Unchecked)
             if table_dict[table]:
                 tree.addTopLevelItem(root)
             
             # add a leaf for each table variable:
             for var in table_dict[table]:
-                leaf = CoqTreeItem()
-                root.addChild(leaf)
-                label = type(self.resource).__getattribute__(self.resource, var).capitalize()
-                leaf.setText(0, label)
+                leaf = classes.CoqTreeItem()
                 leaf.setObjectName(coqueryUi._fromUtf8(var))
+                root.addChild(leaf)
+                label = type(self.resource).__getattribute__(self.resource, var)
+                leaf.setText(0, label)
                 if var in last_checked: 
                     leaf.setCheckState(0, QtCore.Qt.Checked)
                 else:
@@ -605,17 +523,23 @@ class CoqueryApp(QtGui.QMainWindow):
     def fill_combo_corpus(self):
         """ Add the available corpus names to the corpus selection combo 
         box. """
-        self.ui.combo_corpus.currentIndexChanged.disconnect()
+        try:
+            self.ui.combo_corpus.currentIndexChanged.disconnect()
+        except TypeError:
+            # ignore error if the combo box was not yet connected
+            pass
 
         # remember last corpus name:
         last_corpus = self.ui.combo_corpus.currentText()
 
+        l = [x.upper() for x in get_available_resources(options.cfg.current_server)]
+
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems([x.upper() for x in resource_list.get_available_resources()])
+        self.ui.combo_corpus.addItems([x.upper() for x in get_available_resources(options.cfg.current_server)])
 
         # try to return to last corpus name:
-        new_index = self.ui.combo_corpus.findText(last_corpus)
+        new_index = self.ui.combo_corpus.findText(last_corpus.upper())
         if new_index == -1:
             new_index = 0
             
@@ -639,10 +563,6 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Show a non-modal message box informing the user that no corpus
         module is available. This message box will be automatically closed 
         if a corpus resource is available."""
-        msg_no_corpus = "Coquery could not find a corpus module. Without a corpus module, you cannot run any query."
-        msg_details = """<p>To build a new corpus module from a selection of text files, select <b>Build corpus...</b> from the Corpus menu.</p>
-            <p>To install the corpus module for one of the corpora that are
-            supported by Coquery, select <b>Install corpus...</b> from the Corpus menu.</p>"""
         self.msg_box_no_corpus = QtGui.QMessageBox(self)
         self.msg_box_no_corpus.setWindowTitle("No corpus available – Coquery")
         self.msg_box_no_corpus.setText(msg_no_corpus)
@@ -653,55 +573,35 @@ class CoqueryApp(QtGui.QMainWindow):
         self.msg_box_no_corpus.setIcon(QtGui.QMessageBox.Warning)
         self.msg_box_no_corpus.show()
         
-    def __init__(self, parent=None):
-        """ Initialize the main window. This sets up any widget that needs
-        spetial care, and also sets up some special attributes that relate
-        to the GUI, including default appearances of the columns."""
-        QtGui.QMainWindow.__init__(self, parent)
-        
-        self.file_content = None
-
-        self.ui = coqueryUi.Ui_MainWindow()
-        self.ui.setupUi(self)
-        
-        self.setup_app()
-        self.csv_options = None
-        self.query_thread = None
-        self.last_results_saved = True
-        
-        self.widget_list = []
-        
-        # the dictionaries column_width and column_color store default
-        # attributes of the columns by display name. This means that problems
-        # may arise if several columns have the same name!
-        # FIXME: Make sure that the columns are identified correctly.
-        self.column_width = {}
-        self.column_color = {}
-        
-        # A non-modal dialog is shown if no corpus resource is available.
-        # The dialog contains some assistance on how to build a new corpus.
-        if not resource_list.get_available_resources():
-            self.show_no_corpus_message()
-        
-        options.cfg.main_window = self
-        # Resize the window if a previous size is available
-        try:
-            if options.cfg.height and options.cfg.width:
-                self.resize(options.cfg.width, options.cfg.height)
-        except AttributeError:
-            pass
-        
     def display_results(self):
+        self.ui.box_aggregation_mode.show()
+        self.ui.data_preview.setEnabled(True)
+        
         self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header()
-        
+
         self.ui.data_preview.setModel(self.table_model)
 
+        # drop row colors and row visibility:
+        options.cfg.row_visibility = {}
+        options.cfg.row_color = {}
+
         # set column widths:
-        for i, column in enumerate(self.table_model.content.columns):
+        for i, column in enumerate(self.table_model.header):
             if column.lower() in options.cfg.column_width:
                 self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower()])
         
+        #set delegates:
+        header = self.ui.data_preview.horizontalHeader()
+        for i in range(header.count()):
+            column = self.table_model.header[header.logicalIndex(i)]
+
+            if column in ("coq_conditional_probability"):
+                deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
+            else:
+                deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
+            self.ui.data_preview.setItemDelegateForColumn(i, deleg)
+
         if self.table_model.rowCount():
             self.last_results_saved = False
             
@@ -710,64 +610,96 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def select_file(self):
         """ Call a file selector, and add file name to query file input. """
-        name = QtGui.QFileDialog.getOpenFileName(directory="~")
+        name = QtGui.QFileDialog.getOpenFileName(directory=options.cfg.query_file_path)
         
         # getOpenFileName() returns different types in PyQt and PySide, fix:
         if type(name) == tuple:
             name = name[0]
         
         if name:
+            options.cfg.query_file_path = os.path.dirname(name)
             self.ui.edit_file_name.setText(name)
             self.switch_to_file()
             
     def file_options(self):
         """ Get CSV file options for current query input file. """
+        import csvOptions
         results = csvOptions.CSVOptions.getOptions(
-            self.ui.edit_file_name.text(), 
-            self.csv_options, 
+            str(self.ui.edit_file_name.text()), 
+            (options.cfg.input_separator,
+             options.cfg.query_column_number,
+             options.cfg.file_has_headers,
+             options.cfg.skip_lines,
+             options.cfg.quote_char),
             self, icon=options.cfg.icon)
         
         if results:
-            self.csv_options = results
+            (options.cfg.input_separator,
+             options.cfg.query_column_number,
+             options.cfg.file_has_headers,
+             options.cfg.skip_lines,
+             options.cfg.quote_char) = results
+            
+            if options.cfg.input_separator == "{tab}":
+                options.cfg.input_separator = "\t"
+            elif options.cfg.input_separator == "{space}":
+                options.cfg.input_separator = " "
             self.switch_to_file()
+
+    def manage_stopwords(self):
+        import stopwords 
+        result = stopwords.Stopwords.manage(self, options.cfg.icon)
     
     def save_results(self):
-        name = QtGui.QFileDialog.getSaveFileName(directory="~")
+        name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.results_file_path)
         if type(name) == tuple:
             name = name[0]
         if name:
+            options.cfg.results_file_path = os.path.dirname(name)
             try:
-                columns = [x for x in self.table_model.content.columns if not x.startswith("coquery_invisible")]
-                columns = [x for x in columns if options.cfg.column_visibility.get(x, True)]
-                tab = self.table_model.content[columns]
-                with codecs.open(name, "w", encoding=options.cfg.output_encoding) as output_file:
-                    writer = UnicodeWriter(output_file, delimiter=options.cfg.output_separator)
-                    writer.writerow([options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in tab.columns])
-                    for i in tab.index:
-                        writer.writerow(tab.iloc[i])
+                header = self.ui.data_preview.horizontalHeader()
+                ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
+                ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
+                tab = self.table_model.content[ordered_headers]
+                # exclude invisble rows:
+                tab = tab.iloc[~tab.index.isin(pd.Series(options.cfg.row_visibility.keys()))]
+                tab.to_csv(name,
+                           sep=options.cfg.output_separator,
+                           index=False,
+                           header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
+                           encoding=options.cfg.output_encoding)
             except IOError as e:
-                QtGui.QMessageBox.critical(self, "Disk error", "An error occurred while accessing the disk storage. <b>The results have not been saved.</b>")
+                QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
             except (UnicodeEncodeError, UnicodeDecodeError):
-                QtGui.QMessageBox.critical(self, "Encoding error", "<p>Unfortunatenly, there was an error while encoding the characters in the results view. <b>The save file is probably incomplete.</b></p><p>At least one column contains special characters which could not be translated to a format that can be written to a file. You may try to work around this issue by reducing the number of output columns so that the offending character is not in the output anymore.</p><p>We apologize for this inconvenience. Please do not hesitate to contact the authors about it so that the problem may be fixed in a future version.</p>")
+                QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
             else:
                 self.last_results_saved = True
     
+    def showMessage(self, S):
+        self.ui.status_message.setText(S)
+        
+    def showConnectionStatus(self, S):
+        self.ui.status_server.setText(S)
+    
     def exception_during_query(self):
         error_box.ErrorBox.show(self.exc_info, self.exception)
+        self.showMessage("Query failed.")
+        self.set_query_button()
+        self.stop_progress_indicator()
         
     def start_progress_indicator(self):
         """ Show the progress indicator, and make it move. """
-        self.ui.progress_bar.setRange(0, 0)
-        self.ui.progress_bar.show()
+        self.ui.status_progress.setRange(0, 0)
+        self.ui.status_progress.show()
         
     def stop_progress_indicator(self):
         """ Stop the progress indicator from moving, and hide it as well. """
-        self.ui.progress_bar.setRange(0, 1)
-        self.ui.progress_bar.hide()
+        self.ui.status_progress.setRange(0, 1)
+        self.ui.status_progress.hide()
         
     def finalize_query(self):
         self.query_thread = None
-        self.ui.statusbar.showMessage("Preparing results table...")
+        self.showMessage("Preparing results table...")
         self.display_results()
         self.set_query_button()
         self.stop_progress_indicator()
@@ -784,18 +716,21 @@ class CoqueryApp(QtGui.QMainWindow):
                 duration_str = "{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3])
             else:
                 duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
-        
-        self.ui.statusbar.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
-            len(self.Session.output_object), duration_str))
+        self.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
+            len(self.Session.output_object.index), duration_str))
+        options.cfg.app.alert(self, 10)
         
     def show_header_menu(self, point ):
         header = self.ui.data_preview.horizontalHeader()
         header.customContextMenuRequested.disconnect(self.show_header_menu)
-        column = header.logicalIndexAt(point.x())
         # show self.menu about the column
         self.menu = QtGui.QMenu("Column options", self)
 
-        display_name = options.cfg.main_window.Session.Corpus.resource.translate_header(self.table_model.content.columns[column])
+        index = header.logicalIndexAt(point.x())
+        column = self.table_model.header[index]
+
+        display_name = options.cfg.main_window.Session.translate_header(column)
+        
         action = QtGui.QWidgetAction(self)
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
         label.setAlignment(QtCore.Qt.AlignCenter)
@@ -803,21 +738,23 @@ class CoqueryApp(QtGui.QMainWindow):
         self.menu.addAction(action)
         self.menu.addSeparator()
 
-        if not options.cfg.column_visibility.get(
-            self.table_model.content.columns[column].lower(), True):
+        if not options.cfg.column_visibility.get(column, True):
             action = QtGui.QAction("&Show column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
             self.menu.addAction(action)
-            
         else:
             action = QtGui.QAction("&Hide column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
             self.menu.addAction(action)
             self.menu.addSeparator()
-            
-            if self.table_model.content.columns[column].lower() in options.cfg.column_color:
+
+            action = QtGui.QAction("&Rename column...", self)
+            action.triggered.connect(lambda: self.rename_column(column))
+            self.menu.addAction(action)
+
+            if column in options.cfg.column_color:
                 action = QtGui.QAction("&Reset color", self)
                 action.triggered.connect(lambda: self.reset_color(column))
                 self.menu.addAction(action)
@@ -829,78 +766,199 @@ class CoqueryApp(QtGui.QMainWindow):
 
             group = QtGui.QActionGroup(self, exclusive=True)
             action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_NONE))
-            if self.table_model.sort_state[column] == results.SORT_NONE:
+            action.triggered.connect(lambda: self.change_sorting_order(column, SORT_NONE))
+            if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_NONE:
                 action.setChecked(True)
             self.menu.addAction(action)
             
             action = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_INC))
-            if self.table_model.sort_state[column] == results.SORT_INC:
+            action.triggered.connect(lambda: self.change_sorting_order(column, SORT_INC))
+            if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_INC:
                 action.setChecked(True)
             self.menu.addAction(action)
             action = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
-            action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_DEC))
-            if self.table_model.sort_state[column] == results.SORT_DEC:
+            action.triggered.connect(lambda: self.change_sorting_order(column, SORT_DEC))
+            if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_DEC:
                 action.setChecked(True)
             self.menu.addAction(action)
                                     
-            
-            probe_index = self.table_model.createIndex(0, column)
-            probe_cell = probe_index.data()
-            if type(probe_cell) in [unicode, str, QtCore.QString]:
+            if self.table_model.content[[column]].dtypes[0] == "object":
                 action = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
-                action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_INC))
-                if self.table_model.sort_state[column] == results.SORT_REV_INC:
+                action.triggered.connect(lambda: self.change_sorting_order(column, SORT_REV_INC))
+                if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_REV_INC:
                     action.setChecked(True)
 
                 self.menu.addAction(action)
                 action = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
-                action.triggered.connect(lambda: self.change_sorting_order(column, results.SORT_REV_DEC))
-                if self.table_model.sort_state[column] == results.SORT_REV_DEC:
+                action.triggered.connect(lambda: self.change_sorting_order(column, SORT_REV_DEC))
+                if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_REV_DEC:
                     action.setChecked(True)
                 self.menu.addAction(action)
         
         self.menu.popup(header.mapToGlobal(point))
         header.customContextMenuRequested.connect(self.show_header_menu)
 
-    def toggle_visibility(self, index):
-        """ Show again a hidden column, or hide a visible column."""
-        column = self.table_model.content.columns[index]
+    def show_row_header_menu(self, point):
+        self.ui.data_preview.customContextMenuRequested.disconnect(self.show_row_header_menu)
+        header = self.ui.data_preview.verticalHeader()
+        # show self.menu about the column
+        self.menu = QtGui.QMenu("Row options", self)
+
+        index = header.logicalIndexAt(point.y())
+        row = self.table_model.content.index[index]
+        
+        selection = []
+        for x in self.ui.data_preview.selectionModel().selectedRows():
+            selection.append(self.table_model.content.index[x.row()])
+
+        length = len(selection)
+        if length > 1:
+            display_name = "{} rows selected".format(len(selection))
+        elif length == 1:
+            display_name = "Row menu"
+        else:
+            display_name = "(no row selected)"
+        action = QtGui.QWidgetAction(self)
+        label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        action.setDefaultWidget(label)
+        self.menu.addAction(action)
+        
+        if length:
+            self.menu.addSeparator()
+            # Check if any row is hidden
+            if any([not options.cfg.row_visibility.get(x, True) for x in selection]):
+                if length > 1:
+                    if all([not options.cfg.row_visibility.get(x, True) for x in selection]):
+                        action = QtGui.QAction("&Show rows", self)
+                    else:
+                        action = QtGui.QAction("&Show hidden rows", self)
+                else:
+                    action = QtGui.QAction("&Show row", self)
+                action.triggered.connect(lambda: self.set_row_visibility(selection, True))
+                action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
+                self.menu.addAction(action)
+            # Check if any row is visible
+            if any([options.cfg.row_visibility.get(x, True) for x in selection]):
+                if length:
+                    if all([options.cfg.row_visibility.get(x, True) for x in selection]):
+                        action = QtGui.QAction("&Hide rows", self)
+                    else:
+                        action = QtGui.QAction("&Hide visible rows", self)
+                else:
+                    action = QtGui.QAction("&Hide row", self)
+                action.triggered.connect(lambda: self.set_row_visibility(selection, False))
+                action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
+                self.menu.addAction(action)
+            self.menu.addSeparator()
+            
+            # Check if any row has a custom color:
+            if any([x in options.cfg.row_color for x in selection]):
+                action = QtGui.QAction("&Reset color", self)
+                action.triggered.connect(lambda: self.reset_row_color(selection))
+                self.menu.addAction(action)
+
+            action = QtGui.QAction("&Change color...", self)
+            action.triggered.connect(lambda: self.change_row_color(selection))
+            self.menu.addAction(action)
+        
+        self.menu.popup(header.mapToGlobal(point))
+        self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
+
+    def rename_column(self, column):
+        """
+        Open a dialog in which the column name can be changed.
+        
+        Parameters
+        ----------
+        column : column index
+        """
+        from renamecolumn import RenameColumnDialog
+        
+        column_name = self.Session.translate_header(column, ignore_alias=True)
+        current_name = options.cfg.column_names.get(column, column_name)
+        
+        name = RenameColumnDialog.get_name(column_name,
+                                           current_name)
+        options.cfg.column_names[column] = name
+
+    def toggle_visibility(self, column):
+        """ 
+        Show again a hidden column, or hide a visible column.
+        
+        Parameters
+        ----------
+        column : column index
+        """
         options.cfg.column_visibility[column] = not options.cfg.column_visibility.get(column, True)
         self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
         # Resort the data if this is a sorting column:
-        if index in self.table_model.sort_columns:
+        if column in self.table_model.sort_columns:
             self.table_model.sort(0, QtCore.Qt.AscendingOrder)
         self.table_model.layoutChanged.emit()
+        self.table_model.columnVisibilityChanged.emit()
 
+    def set_row_visibility(self, selection, state):
+        """ 
+        Set the visibility of the selected rows.
+        
+        Parameters
+        ----------
+        selection : list
+            A list of row indices
+        
+        state : bool
+            True if the rows should be visible, or False to hide the rows
+        """
+        if state:
+            for x in selection:
+                try:
+                    options.cfg.row_visibility.pop(np.int64(x))
+                except KeyError:
+                    pass
+        else:
+            for x in selection:
+                options.cfg.row_visibility[np.int64(x)] = False 
+        self.ui.data_preview.verticalHeader().geometriesChanged.emit()
+        self.table_model.layoutChanged.emit()
 
     def reset_color(self, column):
-        header = self.table_model.content.columns[column].lower()
         try:
-            options.cfg.column_color.pop(header)
+            options.cfg.column_color.pop(column)
             self.table_model.layoutChanged.emit()
         except KeyError:
             pass
 
     def change_color(self, column):
         col = QtGui.QColorDialog.getColor()
-        header = self.table_model.content.columns[column].lower()
         if col.isValid():
-            options.cfg.column_color[header] = col.name()
-            #self.table_model.layoutChanged.emit()
+            options.cfg.column_color[column] = col.name()
         
-    def change_sorting_order(self, index, mode):
-        self.menu.close()
-        if not mode:
+    def reset_row_color(self, selection):
+        for x in selection:
             try:
-                self.table_model.sort_columns.remove(index)
-            except IndexError:
+                options.cfg.row_color.pop(np.int64(x))
+            except KeyError:
                 pass
-        elif index not in self.table_model.sort_columns:
-            self.table_model.sort_columns.append(index)
-        self.table_model.sort_state[index] = mode
+        #self.table_model.layoutChanged.emit()
+
+    def change_row_color(self, selection):
+        col = QtGui.QColorDialog.getColor()
+        if col.isValid():
+            for x in selection:
+                options.cfg.row_color[np.int64(x)] = col.name()
+        
+    def change_sorting_order(self, column, mode):
+        self.menu.close()
+        if mode == SORT_NONE:
+            self.table_model.sort_columns.pop(column)
+        else:
+            self.table_model.sort_columns[column] = mode
         self.table_model.sort(0, QtCore.Qt.AscendingOrder)
+        # make sure that the table is updated if there are no sort columns
+        # left anymore:
+        if not self.table_model.sort_columns:
+            self.table_model.layoutChanged.emit()
         
     def set_query_button(self):
         """ Set the action button to start queries. """
@@ -921,21 +979,20 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-stop")))
     
     def stop_query(self):
-        msg_query_running = "<p>The last query has not finished yet. If you interrupt it, the results that have been retrieved so far will be discarded.</p><p>Do you really want to interrupt this query?</p>"
         response = QtGui.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
         if response == QtGui.QMessageBox.Yes:
             logger.warning("Last query is incomplete.")
             self.ui.button_run_query.setEnabled(False)
             self.ui.button_run_query.setText("Wait...")
-            self.ui.statusbar.showMessage("Terminating query...")
+            self.showMessage("Terminating query...")
             try:
                 self.Session.Corpus.resource.DB.kill_connection()
-            except AttributeError:
+            except (AttributeError, sqlwrap.mysql.err):
                 pass
             if self.query_thread:
                 self.query_thread.terminate()
                 self.query_thread.wait()
-            self.ui.statusbar.showMessage("Last query interrupted.")
+            self.showMessage("Last query interrupted.")
             self.ui.button_run_query.setEnabled(True)
             self.set_query_button()
             self.stop_progress_indicator()
@@ -947,38 +1004,29 @@ class CoqueryApp(QtGui.QMainWindow):
             self.Session.Corpus.resource.DB.close()
         except AttributeError as e:
             pass
-        self.ui.statusbar.showMessage("Preparing query...")
+        self.showMessage("Preparing query...")
         try:
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = options.cfg.query_list[0].splitlines()
                 self.Session = SessionCommandLine()
             else:
                 if not self.verify_file_name():
-                    msg_filename_error = """<p><b>File name not valid.</b></p>
-                    <p>You have chosen to read the query strings from a file, but
-                    the query file name that you have entered is not valid. Please enter a
-                    valid query file name, or select a file by pressing the Open
-                    button.</p>"""
                     QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     return
                 self.Session = SessionInputFile()
+        except SQLNoConfigurationError:
+            QtGui.QMessageBox.critical(self, "Database configuration error – Coquery", msg_sql_no_configuration, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except SQLInitializationError as e:
-            msg_initialization_error = """<p>An error occurred while
-            initializing the database:</p><p>{}</p>
-            <p>Possible reasons include:
-            <ul><li>The database server is not running.</li>
-            <li>The host name or the server port are incorrect.</li>
-            <li>The user name or password are incorrect, or the user has insufficient privileges.</li>
-            <li>You are trying to access a local database on a remote server, or vice versa.</li>
-            </ul></p>
-            <p>Open <b>MySQL settings</b> in the Settings menu to check whether
-            the connection to the database server is working, and if the settings are correct.</p>""".format(e)
-            QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error.format(code=e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        except CollocationNoContextError as e:
+            QtGui.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+        except RuntimeError as e:
+            error_box.ErrorBox.show(sys.exc_info(), no_trace=True)
         except Exception as e:
-            error_box.ErrorBox.show(sys.exc_info())
+            error_box.ErrorBox.show(sys.exc_info(), e)
         else:
             self.set_stop_button()
-            self.ui.statusbar.showMessage("Running query...")
+            self.showMessage("Running query...")
             self.start_progress_indicator()
             self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
             self.query_thread.taskFinished.connect(self.finalize_query)
@@ -986,89 +1034,52 @@ class CoqueryApp(QtGui.QMainWindow):
             self.query_thread.start()
 
     def run_statistics(self):
+        if not self.last_results_saved:
+            response = QtGui.QMessageBox.warning(
+            self, "Discard unsaved data", msg_warning_statistics, QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+            if response == QtGui.QMessageBox.No:
+                return
+        
         self.getGuiValues()
         self.Session = StatisticsSession()
-        self.ui.statusbar.showMessage("Gathering corpus statistics...")
+        self.showMessage("Gathering corpus statistics...")
         self.start_progress_indicator()
         self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
         self.query_thread.taskFinished.connect(self.finalize_query)
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
+
+    def visualize_data(self, module, **kwargs):
+        import visualizer
+        try:
+            module = importlib.import_module(module)
+        except Exception as e:
+            msg = "<code style='color: darkred'>{type}: {code}</code>".format(
+                type=type(e).__name__, code=sys.exc_info()[1])
+            logger.error(msg)
+            QtGui.QMessageBox.critical(
+                self, "Visualization error – Coquery",
+                VisualizationModuleError(module, msg).error_message)
+        else:
+            try:
+                if "Session" not in dir(self):
+                    raise VisualizationNoDataError
+                else:
+                    dialog = visualizer.VisualizerDialog()
+                    dialog.Plot(
+                        self.table_model,
+                        self.ui.data_preview,
+                        module.Visualizer,
+                        parent=self,
+                        **kwargs)
+
+            except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
+                QtGui.QMessageBox.critical(
+                    self, "Visualization error – Coquery",
+                    str(e))
+            except Exception as e:
+                error_box.ErrorBox.show(sys.exc_info())
         
-    def show_tree_map(self):
-        import visualizer
-        import treemap
-        if not self.table_model.content.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.table_model, 
-                self.ui.data_preview, 
-                treemap.TreemapVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
-    def show_heatmap_plot(self):
-        import visualizer
-        import heatmap
-        if not self.table_model.content.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.table_model, 
-                self.ui.data_preview, 
-                heatmap.HeatmapVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-        
-    def show_beeswarm_plot(self):
-        import visualizer
-        import beeswarmplot
-        if not self.table_model.content.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.table_model, 
-                self.ui.data_preview, 
-                beeswarmplot.BeeswarmVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
-    def show_barchart_plot(self):
-        import visualizer
-        import barplot
-        if not self.table_model.content.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.table_model, 
-                self.ui.data_preview, 
-                barplot.BarchartVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
-    def show_barcode_plot(self):
-        import visualizer
-        import barcodeplot
-        if not self.table_model.content.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.table_model, 
-                self.ui.data_preview, 
-                barcodeplot.BarcodeVisualizer, self)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
-    def show_time_series_plot(self, area, percentage):
-        import visualizer
-        import time_series
-        if not self.table_model.content.empty:
-            viz = visualizer.VisualizerDialog()
-            viz.Plot(
-                self.table_model, 
-                self.ui.data_preview, 
-                time_series.TimeSeriesVisualizer, 
-                self, area=area, percentage=percentage, 
-                smooth=True)
-        else:
-            QtGui.QMessageBox.critical(None, "Visualization error – Coquery", msg_visualization_no_data, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-
     def save_configuration(self):
         self.getGuiValues()
         options.save_configuration()
@@ -1076,69 +1087,121 @@ class CoqueryApp(QtGui.QMainWindow):
     def open_corpus_help(self):
         if self.ui.combo_corpus.isEnabled():
             current_corpus = str(self.ui.combo_corpus.currentText())
-            resource, _, _, module = resource_list.get_available_resources()[current_corpus.lower()]
+            resource, _, _, module = get_available_resources(options.cfg.current_server)[current_corpus.lower()]
             try:
                 url = resource.documentation_url
             except AttributeError:
-                QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation.format(corpus=current_corpus), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             else:
                 import webbrowser
                 webbrowser.open(url)
         
-    def remove_corpus(self):
-        if self.ui.combo_corpus.isEnabled():
-            current_corpus = str(self.ui.combo_corpus.currentText())
-            resource, _, _, module = resource_list.get_available_resources()[current_corpus.lower()]
-            database = resource.db_name
+    def remove_corpus(self, corpus_name):
+        resource, _, _, module = get_available_resources(options.cfg.current_server)[corpus_name.lower()]
+        database = resource.db_name
+        db_con = options.cfg.server_configuration[options.cfg.current_server]
+        try:
+            size = FileSize(sqlwrap.SqlDB(
+                db_con["host"], db_con["port"], 
+                db_con["user"], db_con["password"]).get_database_size(database))
+        except  TypeError:
+            size = FileSize(-1)
+        response = QtGui.QMessageBox.warning(
+            self, "Remove corpus", msg_corpus_remove.format(corpus=corpus_name, size=size), QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+        
+        if response == QtGui.QMessageBox.Yes:
             try:
-                size = FileSize(sqlwrap.SqlDB(options.cfg.db_host, options.cfg.db_port, options.cfg.db_user, options.cfg.db_password).get_database_size(database))
-            except  TypeError:
-                size = FileSize(-1)
-            msg_corpus_remove = "<p><b>You have requested to remove the corpus '{0}'.</b></p><p>This step cannot be reverted. If you proceed, the corpus will not be available for further queries before you install it again.</p><p>Removing '{0}' will free approximately {1:.1S} of disk space.</p><p><p>Do you really want to remove the corpus?</p>".format(current_corpus, size)
-            
-            response = QtGui.QMessageBox.warning(
-                self, "Remove corpus", msg_corpus_remove, QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
-            
-            if response == QtGui.QMessageBox.Yes:
-                try:
-                    self.Session.Corpus.resource.DB.close()
-                except AttributeError as e:
-                    pass
-                DB = sqlwrap.SqlDB(Host=options.cfg.db_host, Port=options.cfg.db_port, User=options.cfg.db_user, Password=options.cfg.db_password)
-                self.start_progress_indicator()
-                try:
-                    DB.execute("DROP DATABASE {}".format(database))
-                except (sqlwrap.mysql.InternalError, sqlwrap.mysql.OperationalError) as e:
-                    QtGui.QMessageBox.critical(self, "Database error – Coquery", "<p>There was an error while deleting the corpus databases:</p><p>{}</p>".format(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                finally:
-                    DB.close()
-                try:
-                    os.remove(module)
-                except IOError:
-                    QtGui.QMessageBox.critical(self, "Storage error – Coquery", "<p>There was an error while deleting the corpus module.</p>", QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                self.stop_progress_indicator()
-                self.fill_combo_corpus()
-                logger.warning("Removed corpus {}.".format(current_corpus))
-        self.change_corpus()
+                self.Session.Corpus.resource.DB.close()
+            except AttributeError as e:
+                pass
+            DB = sqlwrap.SqlDB(
+                db_con["host"], db_con["port"], db_con["user"], db_con["password"])
+            self.start_progress_indicator()
+            try:
+                DB.execute("DROP DATABASE {}".format(database))
+            except (sqlwrap.mysql.InternalError, sqlwrap.mysql.OperationalError) as e:
+                QtGui.QMessageBox.critical(self, "Database error – Coquery", msg_remove_corpus_error.format(code=e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            finally:
+                DB.close()
+            try:
+                os.remove(module)
+            except IOError:
+                QtGui.QMessageBox.critical(self, "Storage error – Coquery", msg_remove_corpus_disk_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            self.stop_progress_indicator()
+            self.fill_combo_corpus()
+            logger.warning("Removed corpus {}.".format(corpus_name))
+            self.showMessage("Removed corpus {}.".format(corpus_name))
+
+            self.change_corpus()
+            try:
+                self.corpus_manager.close()
+            except AttributeError:
+                pass
+            self.corpus_manager = None
 
     def build_corpus(self):
         import coq_install_generic
         import corpusbuilder
-        corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, self)
+        corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, parent=self)
         self.fill_combo_corpus()
         self.change_corpus()
+        try:
+            self.corpus_manager.close()
+        except AttributeError:
+            pass
+        self.corpus_manager = None
+            
+    def install_corpus(self, builder_class):
+        import corpusbuilder
+        builder = corpusbuilder.InstallerGui(builder_class, self)
+        try:
+            result = builder.display()
+        except Exception as e:
+            error_box.ErrorBox.show(sys.exc_info())
+        if result:
+            self.fill_combo_corpus()
+            self.change_corpus()
+            try:
+                self.corpus_manager.close()
+            except AttributeError:
+                pass
+            self.corpus_manager = None
+            
+    def manage_corpus(self):
+        import corpusmanager
+        
+        path = os.path.join(sys.path[0], "installer")
+        
+        if self.corpus_manager:
+            self.corpus_manager.raise_()
+            self.corpus_manager.activateWindow()
+        else:
+            self.corpus_manager = corpusmanager.CorpusManager(parent=self)        
+            self.corpus_manager.show()
+            self.corpus_manager.read(path)
+            self.corpus_manager.installCorpus.connect(self.install_corpus)
+            self.corpus_manager.removeCorpus.connect(self.remove_corpus)
+            result = self.corpus_manager.exec_()
+            try:
+                self.corpus_manager.close()
+            except AttributeError:
+                pass
+            self.corpus_manager = None
             
     def shutdown(self):
         """ Shut down the application by removing all open widgets and saving
         the configuration. """
         for x in self.widget_list:
-            x.close()
+            try:
+                x.close()
+            except:
+                pass
+            del x
         self.save_configuration()
             
     def closeEvent(self, event):
-        if not self.last_results_saved:
-            msg_query_running = "<p>The last query results have not been saved. If you quit now, they will be lost.</p><p>Do you really want to quit?</p>"
-            response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+        if not self.last_results_saved and options.cfg.ask_on_quit:
+            response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_unsaved_data, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
                 self.shutdown()
                 event.accept()
@@ -1148,32 +1211,138 @@ class CoqueryApp(QtGui.QMainWindow):
             self.shutdown()
             event.accept()
         
+    def settings(self):
+        import settings
+        settings.Settings.manage(options.cfg, self)
+
+    def change_current_server(self):
+        name = self.ui.combo_config.currentText()
+        if name:
+            self.ui.combo_config.currentIndexChanged.disconnect(self.change_current_server)
+            self.change_mysql_configuration(name)
+            self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
+
+    def change_mysql_configuration(self, name):
+        options.cfg.current_server = name
+        self.ui.combo_config.clear()
+        self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
+        index = self.ui.combo_config.findText(name)
+        self.ui.combo_config.setCurrentIndex(index)
+        db_con = options.cfg.server_configuration[name]
+        self.test_mysql_connection()
+        
+    def test_mysql_connection(self):
+        """
+        Tests whether a connection to the MySQL host is available, also update 
+        the GUI to reflect the status.
+        
+        This method tests the currently selected MySQL configuration. If a 
+        connection can be established using this configuration, the current 
+        combo box entry is marked by a tick icon. 
+        
+        If no connection can be established, the current combo box entry is 
+        marked by a warning icon.
+
+        Returns
+        -------
+        state : bool
+            True if a connection is available, or False otherwise.
+        """
+        db_con = options.cfg.server_configuration[options.cfg.current_server]
+        state = bool(sqlwrap.SqlDB.test_connection(
+            db_con["host"], db_con["port"], 
+            db_con["user"], db_con["password"]))
+
+        # Choose a suitable icon:
+        if state:
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogYesButton)
+        else:
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogNoButton)
+
+        index = self.ui.combo_config.findText(options.cfg.current_server)
+            
+        # add new entry with suitable icon, remove old icon and reset index:
+        self.ui.combo_config.currentIndexChanged.disconnect()
+        self.ui.combo_config.insertItem(index + 1, icon, options.cfg.current_server)
+        self.ui.combo_config.setCurrentIndex(index + 1)
+        self.ui.combo_config.removeItem(index)
+        self.ui.combo_config.setCurrentIndex(index)
+        self.last_connection_state = state
+        self.last_index = index
+        self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
+
+        if state:
+            self.fill_combo_corpus()
+            self.ui.centralwidget.setEnabled(True)
+        else:
+            self.ui.centralwidget.setEnabled(False)
+        
+        return state
+
     def mysql_settings(self):
-        settings = MySQLOptions.MySQLOptions.set(
-            options.cfg.db_host, 
-            options.cfg.db_port,
-            options.cfg.db_user,
-            options.cfg.db_password)
-        if settings:
-            options.cfg.db_host = settings.db_host
-            options.cfg.db_port = settings.db_port
-            options.cfg.db_user = settings.db_user
-            options.cfg.db_password = settings.db_password
+        import MySQLOptions
+        try:
+            config_dict, name = MySQLOptions.MySQLOptions.choose(options.cfg.current_server, options.cfg.server_configuration)
+        except TypeError:
+            return
+        else:
+            options.cfg.server_configuration = config_dict
+            self.change_mysql_configuration(name)
+
+    def show_mysql_guide(self):
+        import mysql_guide
+        mysql_guide.MySqlGuide.display()
 
     def getGuiValues(self):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
+        
+        def traverse_output_columns(node):
+            output_features = []
+            for child in [node.child(i) for i in range(node.childCount())]:
+                output_features += traverse_output_columns(child)
+            if node.checkState(0) == QtCore.Qt.Checked and not node.objectName().rpartition("_")[-1] == "table" and not node.isDisabled():
+                output_features.append(node.objectName())
+            return output_features
+        
+        def get_external_links(node):
+            output_features = {}
+            for child in [node.child(i) for i in range(node.childCount())]:
+                output_features.update(get_external_links(child))
+            if node.checkState(0) == QtCore.Qt.Checked:
+                if node.parent() and node.parent()._link_by:
+                    link_name = node.objectName().rpartition("func.")[-1]
+                    output_features.update({
+                        link_name: (
+                            "{}.{}".format(node.parent().objectName(),
+                            node.parent()._link_by[1]),
+                            node.parent()._link_by[0])})
+
+                    #output_features[link_name].append(
+                        #("{}.{}".format(node.parent().objectName(),
+                        #node.parent()._link_by[1]),
+                        #node.parent()._link_by[0]))
+            return output_features
+
+        def get_functions(node):
+            functions = []
+            for child in [node.child(i) for i in range(node.childCount())]:
+                functions += get_functions(child)
+            if node.checkState(0) == QtCore.Qt.Checked and node._func:
+                functions.append((node.objectName(), node._func, node.text(0)))
+            return functions 
+
         if options.cfg:
-            options.cfg.corpus = unicode(self.ui.combo_corpus.currentText()).lower()
+            options.cfg.corpus = str(self.ui.combo_corpus.currentText()).lower()
         
             # determine query mode:
-            if self.ui.radio_mode_context.isChecked():
+            if self.ui.radio_aggregate_uniques.isChecked():
                 options.cfg.MODE = QUERY_MODE_DISTINCT
-            if self.ui.radio_mode_tokens.isChecked():
+            if self.ui.radio_aggregate_none.isChecked():
                 options.cfg.MODE = QUERY_MODE_TOKENS
-            if self.ui.radio_mode_frequency.isChecked():
+            if self.ui.radio_aggregate_frequencies.isChecked():
                 options.cfg.MODE = QUERY_MODE_FREQUENCIES
-            if self.ui.radio_mode_collocations.isChecked():
+            if self.ui.radio_aggregate_collocations.isChecked():
                 options.cfg.MODE = QUERY_MODE_COLLOCATIONS
             try:
                 if self.ui.radio_mode_statistics.isChecked():
@@ -1189,27 +1358,13 @@ class CoqueryApp(QtGui.QMainWindow):
             if self.ui.radio_context_mode_columns.isChecked():
                 options.cfg.context_mode  = CONTEXT_COLUMNS
 
-                
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
                 if type(self.ui.edit_query_string) == QtGui.QLineEdit:
-                    options.cfg.query_list = [unicode(self.ui.edit_query_string.text())]
+                    options.cfg.query_list = [str(self.ui.edit_query_string.text())]
                 else:
-                    options.cfg.query_list = [unicode(self.ui.edit_query_string.toPlainText())]
-            elif self.ui.radio_query_file.isChecked():
-                options.cfg.input_path = unicode(self.ui.edit_file_name.text())
-
-            # retrieve the CSV options for the current input file:
-            if self.csv_options:
-                sep, col, head, skip = self.csv_options
-                if sep == "{tab}":
-                    sep = "\t"
-                if sep == "{space}":
-                    sep = " "
-                options.cfg.input_separator = sep
-                options.cfg.query_column_number = col
-                options.cfg.file_has_headers = head
-                options.cfg.skip_lines = skip
+                    options.cfg.query_list = [str(self.ui.edit_query_string.toPlainText())]
+            options.cfg.input_path = str(self.ui.edit_file_name.text())
 
             # get context options:
             try:
@@ -1226,49 +1381,48 @@ class CoqueryApp(QtGui.QMainWindow):
                    options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-            options.cfg.selected_features = []
+            
+            options.cfg.external_links = {}
+            #options.cfg.external_links = defaultdict(list)
+            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
+                options.cfg.external_links.update(get_external_links(root))
+            #print("External links:")
+            #for x in options.cfg.external_links:
+                #print(x, options.cfg.external_links[x])
             
             # Go throw options tree widget to get all checked output columns:
+            options.cfg.selected_features = []
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                for child in [root.child(i) for i in range(root.childCount())]:
-                    if child.checkState(0) == QtCore.Qt.Checked:
-                        options.cfg.selected_features.append(str(child.objectName()))
-                        
-                    table, _, variable = str(child.objectName()).partition("_")
-                    
-                    if table == "coquery":
-                        if variable == "query_string":
-                            options.cfg.show_query = bool(child.checkState(0))
-                        if variable == "input_file":
-                            options.cfg.show_input_file = bool(child.checkState(0))
-                    if table == "word":
-                        if variable == "label":
-                            options.cfg.show_orth = bool(child.checkState(0))
-                        if variable == "pos":
-                            options.cfg.show_pos = bool(child.checkState(0))
-                        if variable == "transcript":
-                            options.cfg.show_phon = bool(child.checkState(0))
-                    if table == "lemma":
-                        if variable == "label":
-                            options.cfg.show_lemma = bool(child.checkState(0))
-                        if variable == "pos":
-                            options.cfg.show_lemma_pos = bool(child.checkState(0))
-                        if variable == "transcript":
-                            options.cfg.show_lemma_phon = bool(child.checkState(0))
-                    try:
-                        if table == "source":
-                            options.cfg.source_columns.append(str(child.objectName()))
-                    except AttributeError:
-                        pass
-                    if table == "file":
-                        if variable == "label":
-                            options.cfg.show_filename = bool(child.checkState(0))
-                    if table == "speaker":
-                        options.cfg.show_speaker = options.cfg.show_speaker | child.checkState(0)
-                    if table == "corpus":
-                        if variable == "time":
-                            options.cfg.show_time = bool(child.checkState(0))
+                options.cfg.selected_features += traverse_output_columns(root)
+
+            options.cfg.selected_functions = []
+            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
+                func = get_functions(root)
+                options.cfg.selected_functions += func
+
             return True
+
+    def show_log(self):
+        import logfile
+        logfile.LogfileViewer.view()
+
+    def show_about(self):
+        import aboutUi
+        dialog = QtGui.QDialog(self)
+        dialog.ui = aboutUi.Ui_AboutDialog()
+        dialog.ui.setupUi(dialog)
+
+        image = QtGui.QImage(self.logo)
+        painter = QtGui.QPainter(image)
+        painter.setPen(QtCore.Qt.black)
+        painter.drawText(image.rect(), QtCore.Qt.AlignBottom, "Version {}".format(__init__.__version__))
+        painter.end()
+        dialog.ui.label_pixmap.setPixmap(QtGui.QPixmap.fromImage(image))
+        dialog.ui.label_pixmap.setAlignment(QtCore.Qt.AlignCenter)
+
+        dialog.ui.label_description.setText(
+            unicode(dialog.ui.label_description.text()).format(version=__init__.__version__, date=__init__.DATE))
+        dialog.exec_()
 
     def setGUIDefaults(self):
         """ Set up the gui values based on the values in options.cfg.* """
@@ -1281,21 +1435,21 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # set query mode:
         if options.cfg.MODE == QUERY_MODE_DISTINCT:
-            self.ui.radio_mode_context.setChecked(True)
+            self.ui.radio_aggregate_uniques.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-            self.ui.radio_mode_frequency.setChecked(True)
+            self.ui.radio_aggregate_frequencies.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_TOKENS:
-            self.ui.radio_mode_tokens.setChecked(True)
+            self.ui.radio_aggregate_none.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
-            self.ui.radio_mode_collocations.setChecked(True)
+            self.ui.radio_aggregate_collocations.setChecked(True)
 
+        self.ui.edit_file_name.setText(options.cfg.input_path)
         # either fill query string or query file input:
         if options.cfg.query_list:
+            self.ui.edit_query_string.setText("\n".join(options.cfg.query_list))
             self.ui.radio_query_string.setChecked(True)
-            self.ui.edit_query_string.setText(options.cfg.query_list[0])
-        elif options.cfg.input_path:
+        if options.cfg.input_path_provided:
             self.ui.radio_query_file.setChecked(True)
-            self.ui.edit_file_name.setText(options.cfg.input_path)
             
         for rc_feature in options.cfg.selected_features:
             self.ui.options_tree.setCheckState(rc_feature, True)
@@ -1305,13 +1459,11 @@ class CoqueryApp(QtGui.QMainWindow):
         
         if options.cfg.context_mode == CONTEXT_STRING:
             self.ui.radio_context_mode_string.setChecked(True)
-        if options.cfg.context_mode == CONTEXT_COLUMNS:
+        elif options.cfg.context_mode == CONTEXT_COLUMNS:
             self.ui.radio_context_mode_column.setChecked(True)
         else:
             self.ui.radio_context_mode_kwic.setChecked(True)
             
-        self.csv_options = (options.cfg.input_separator, options.cfg.query_column_number, options.cfg.file_has_headers, options.cfg.skip_lines)
-        
         for filt in list(options.cfg.filter_list):
             self.ui.filter_box.addTag(filt)
             options.cfg.filter_list.remove(filt)
@@ -1324,7 +1476,139 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.data_preview.setModel(self.table_model)
         except AttributeError:
             pass
-        return True
+        
+        self.toggle_frequency_columns()
 
+    def select_table(self):
+        """
+        Open a table select widget.
+        
+        The table select widget contains a QTreeWidget with all corpora 
+        except the currently active one as parents, and the respective tables
+        as children.
+        
+        The return tuple contains the corpus and the table name. 
+        
+        Returns
+        -------
+        (corpus, table) : tuple
+            The name of the corpus and the name of the table from that corpus
+            as feature strings. 
+        """
+        
+        
+        corpus, table, feature = linkselect.LinkSelect.display(self)
+        
+        corpus = "bnc"
+        table = "word"
+        feature_name = "word_label"
+        
+        return (corpus, table, feature_name)
+
+    def add_link(self, item):
+        """
+        Link the selected output column to a column from an external table.
+        
+        The method opens a dialog from which a column in an external table 
+        can be selected. Then, a link is added from the argument to that 
+        column so that rows from the external table that have the same value
+        in the linked table as in the output column from the present corpus
+        can be included in the output.
+        
+        Parameters
+        ----------
+        item : CoqTreeItem
+            An entry in the output column list
+        """
+        import linkselect
+        column = 0
+        link = linkselect.LinkSelect.display(
+            feature=item.text(0),
+            corpus_omit=str(self.ui.combo_corpus.currentText()).lower(),
+            parent=self)
+        
+        if not link:
+            return
+        else:
+            corpus, table_name, feature_name, case = link
+            item.setExpanded(True)
+            
+            resource = get_available_resources(options.cfg.current_server)[corpus][0]
+            table = resource.get_table_dict()[table_name]
+            
+            new_table = classes.CoqTreeLinkItem()
+            new_table.setObjectName("{}.{}_table".format(corpus, table_name))
+            
+            position = self.ui.options_tree.indexOfTopLevelItem(item.parent()) +1
+            self.ui.options_tree.insertTopLevelItem(position, new_table)
+            new_table.setLink("{}.{}".format(item.parent().objectName(), item.objectName()), feature_name)
+            new_table.setText(column, "{} ► {}.{}".format(str(item.text(0)), corpus.upper(), table_name))
+            new_table.setCheckState(column, False)
+            
+            for rc_feature in table:
+                if rc_feature.rpartition("_")[-1] not in ("id", "table") and rc_feature != feature_name:
+                    new_item = classes.CoqTreeItem()
+                    new_item.setText(0, resource.__getattribute__(resource, rc_feature))
+                    new_item.setObjectName("{}.{}".format(corpus, rc_feature))
+                    new_item.setCheckState(column, False)
+                    new_table.addChild(new_item)
+            
+    def add_function(self, item):
+        """
+        Add an output column that applies a function to the selected item.
+        
+        This method opens a dialog that allows to choose a function that 
+        may be applied to the selected item. This function is added as an
+        additional output column to the list of output columns.
+        
+        Parameters
+        ----------
+        item : CoqTreeItem
+            An entry in the output column list
+        """
+
+        import functionapply
+        column = 0
+        parent = item.parent()
+        
+        response  = functionapply.FunctionDialog.display(
+            table=parent.text(0),
+            feature=item.text(0), parent=self)
+        
+        if not response:
+            return
+        else:
+            label, func = response
+            
+            child_func = classes.CoqTreeFuncItem()
+            child_func.setObjectName("func.{}".format(item.objectName()))
+            child_func.setFunction(func)
+            child_func.setText(column, label)
+            child_func.setCheckState(column, QtCore.Qt.Checked)
+
+            item.parent().addChild(child_func)
+            item.parent().setExpanded(True)
+
+    def remove_item(self, item):
+        """
+        Remove either a link or a function from the list of output columns.        
+        
+        Parameters
+        ----------
+        item : CoqTreeItem
+            An entry in the output column list
+        """
+        def remove_children(node):
+            for child in [node.child(i) for i in range(node.childCount())]:
+                remove_children(child)
+                node.removeChild(child)
+            node.close()
+
+        # remove linked table, but only if the item is not a function:
+        if item.parent and item.parent()._link_by and not item._func:
+            item = item.parent()
+            self.ui.options_tree.takeTopLevelItem(self.ui.options_tree.indexOfTopLevelItem(item))
+        else:
+            item.parent().removeChild(item)
     
 logger = logging.getLogger(__init__.NAME)

@@ -21,6 +21,7 @@ if pyqt:
     QtCore.Signal = QtCore.pyqtSignal
     QtCore.Slot = QtCore.pyqtSlot
     QtCore.Property = QtCore.pyqtProperty
+    QtCore.QString = str
 else:
     
     print("Using PySide.")

@@ -2,21 +2,22 @@
 
 Coquery is a corpus query tool.
 
-### About ###
+## About ##
 Coquery is a tool that can search a number of linguistic corpora using a unified interface. Its initial purpose was to handle the off-line texts from the [Corpus of Contemporary American English](http://corpus.byu.edu/coca/) on your own computer, but has quickly developed into a more generic corpus query tool.
 
 The latest release is version 0.9. 
 
-### Features ###
-* Uses MySQL database for fast searches on big corpora, much faster than processing textfiles
-* Corpora that are already stored in a database can easily be incorporated by writing a new corpus module
-* Many query strings can be stored in one input file that is processed in one go -- ideal for obtaining frequency lists
-* Frequency counts can be grouped by word, lemma, part-of-speech, text genre, ...
-* Supports the easy COCA query syntax, but is modular enough to support CQL or other query syntaxes
-* Provides a flexible framework that should allow retrieval of multi-level corpus information
-* Link data from different corpora -- for example, use the transcriptions from CMUdict to query the BNC
+## Features ##
+* Different query modes: Frequency, Collocations, Token, Types
+* One query syntax for all supported corpora
+* Flexible selection of query output columns
+* Multiple queries can be read from an input file (useful for creating frequency lists)
+* Data columns from different corpora can be linked
+* Build-in graphical visualizations
+* Simple corpus creation from local text files (including lemmatization and tagging)
+* New corpora can be added quite easily
 
-### Supported corpora ###
+## Supported corpora ##
 * [Bostom University Radio Speech Corpus](https://catalog.ldc.upenn.edu/LDC96S36)
 * [British National Corpus](http://www.natcorp.ox.ac.uk/)
 * [Corpus of Contemporary American English](http://corpus.byu.edu/coca/)
@@ -27,45 +28,76 @@ The latest release is version 0.9.
 
 Coquery does not provide any corpus data. You can only use these corpora if you have acquired the data files from the corpus maintainers. Coquery supplies tools that read these data files into MySQL databases that then can be queried. You can also build and query your own part-of-speech-tagged corpus using Coquery: simply put your text files into a folder and run the necessary tool.
 
-### Installation ###
+## Getting started ##
+Before you start Coquery for the first time, make sure that all system 
+requirements are met. See the file INSTALLATION.md for details.
 
-See the (Installation guide)[INSTALLATION.md].
+### Starting Coquery ###
 
-### Examples ###
+Coquery can either be run either using a graphical user interface (GUI) or as 
+a command line tool. The GUI offers many features that are not available 
+when using the the command line, e.g. table linking, data functions, extended
+context views, or graphical visualizations. Yet, the command line tool 
+requires less memory and can execute queries somewhat faster. 
 
-Coquery is a command line tool (a graphical interface may be added at a later stage). Here are a view examples of how Coquery can be used:
-
-**Get a word frequency list, based on orthographic form**
+For new users, it is recommended that you try the GUI first. You can start it
+by executing the following command from the folder where you unpacked the 
+source code:
+    
 ```
-#!bash
-coquery -q "*" -O FREQ
-```
-**Get a bigram frequency list, based on orthographic form**
-```
-#!bash
-coquery -q "* *" -O FREQ
-```
-**Get a frequency list of the part-of-speech labels, and store results in file output.csv**
-```
-#!bash
-coquery -q "*" -p FREQ -o output.csv
-```
-**Get a list of all co-occurrences of the word 'residualized' followed by a noun**
-```
-#!bash
-coquery -q "residualized [n*]" -O
-```
-**Get all five-word contexts preceding and following an ART-NOUN sequence**
-```
-#!bash
-coquery -q "the|a|an [n*]" -c 5
-```
-**Run all queries given in the 3rd column (-n 3) of file input.csv. Output the orthographic form (-O), the part-of-speech tag (-p), a five-word context (-c 5) and the text information (-t) of all matches to file output.csv**
-```
-#!bash
-coquery -i input.csv -o output.csv -n 3 -O -p -t
+python coquery.py --gui
 ```
 
-### Maintainer ###
+### Setting up the MySQL server ###
+The first step that you'll have to do is to ensure that the connectio to the
+MySQL database server can be established. Once you have started the GUI, call
+"MySQL settings" from the Settings menu. 
 
-[Gero Kunter](http://www.anglistik.hhu.de/sections/anglistik-iii-english-language-and-linguistics/facultystaff/detailseite-kunter.html)
+### Installing a corpus ###
+Now that the MySQL server can be used, you can either install your first 
+corpus, or you can choose a directory with text files in order to 
+compile a custom corpus from these files.
+
+To install a corpus, call "Manage corpora" from the Corpus menu. In the 
+dialog, all currently supported corpora are listed. Choose the corpus that
+you want to install. If you haven't done so yet, you can download the corpus
+data files following the link given for each corpus. Then, press the Install 
+button. In the next dialog, select the directory that contains the corpus 
+data files, and click on "Install". A status bar at the bottom of the dialog 
+will show the progress of the installation. 
+
+Please note that depending on the size and structure of the corpus, the
+installation may take a long time, and require a considerable amount of 
+memory and hard disk space. For example, installing the British National 
+Corpus requires about 3Gb memory and about 6Gb hard disk space. Depending on
+your hardware speed, this process may take four hours or more. Other, smaller
+corpora can be installed almost instantly. The ICE Nigeria for example is 
+typically installed in less than two minutes.
+
+If you wish to use your own collection of texts as a corpus, call "Build new
+corpus" from the Corpus menu. Enter the name of the new corpus, and select the
+directory that contains your text files. If you have the Natural Language 
+Toolkit (NLTK) installed, you can use the toolkit to lemmatize and tag the 
+words in your text files. After pressing Ok, your texts will be processed, and
+be made available for queries.
+
+### Querying a corpus ###
+Coquery uses a syntax that is very similar to the syntax from the BYU corpus resources, with a few extensions and modifications. For example, it is not possible to query the asterisk '*' in COCA, because it is always interpreted as a placeholder for any number of characters. In a Coquery string, the asterisk ``*`` has also this interpretation, but in addition, the term ``\*`` (i.e. an asterisk preceded by a backslash) queries the asterisk.
+
+## Acknowledgements ##
+Initial development was supported by: 
+
+Anglistik III, English Language and Linguistics
+Heinrich-Heine-Universität Düsseldorf
+
+## License ##
+Copyright (c) Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is free software: you can redistribute it and/or modify
+it under the terms of the [GNU General Public License](http://www.gnu.org/licenses/), 
+either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.

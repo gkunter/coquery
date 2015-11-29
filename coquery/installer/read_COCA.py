@@ -11,9 +11,6 @@ import progressbar
 import getopt
 
 
-from lxml import etree
-
-
 EXPERIMENTAL = True
 
 DataPath = "/usr/local/share/COCA/db/data/"

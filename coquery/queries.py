@@ -1,12 +1,20 @@
 # -*- coding: utf-8 -*-
-""" FILENAME: queries.py -- part of Coquery corpus query tool
+# -*- coding: utf-8 -*-
+"""
+queries.py is part of Coquery.
 
-This module defines classes for query types. """
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 import math
+import re
 
 try:
     range = xrange
@@ -17,11 +25,22 @@ import __init__
 import collections
 import datetime
 
+try:
+    from numba import jit
+except ImportError:
+    def jit(f):
+        def inner(f, *args):
+            return f(*args)
+        return lambda *args: inner(f, *args)
+
+import numpy as np        
+import pandas as pd
+
+from defines import *
 from errors import *
+import corpus
 import tokens
 import options
-
-import pandas as pd
 
 class QueryFilter(object):
     """ Define a class that stores a query filter. 
@@ -171,8 +190,7 @@ class QueryFilter(object):
         if var.lower() not in variable_names:
             return False
         if variable_names.count(var.lower()) > 1:
-            print("ambiguous!")
-            print(variable_names, var.lower())
+            logger.warning("Query filter may be ambiguous: {}".format(s))
             return True
         if op.lower() not in [x.lower() for x in self.operators]:
             return False
@@ -210,50 +228,203 @@ class QueryFilter(object):
         except ValueError:
             return False
 
-class CorpusQuery(object):
+class TokenQuery(object):
     """ 
     This class manages the query string, and is responsible for the output 
     of the query results. 
     """
-    
-    collapse_identical = True
-
     def __init__(self, S, Session, token_class):
         self.token_class = token_class
-        self.query_list = []
-        self.max_number_of_tokens = 0
-        repeated_queries = set(tokens.preprocess_query(S))
-        if len(repeated_queries) > 1:
-            for current_string in repeated_queries:
-                current_query = self.__class__(current_string, Session, token_class, source_filter)
-                self.query_list.append(current_query)
-                self.max_number_of_tokens = max(self.max_number_of_tokens, current_query.number_of_tokens)
-        else:
-            self.tokens = [token_class(x, Session.Corpus.lexicon) for x in tokens.parse_query_string(S, token_class)]
-            self.number_of_tokens = len(self.tokens)
-            self.max_number_of_tokens = len(self.tokens)
-            
+        self.query_list = tokens.preprocess_query(S)
         self.query_string = S
-        self._current = 0
         self.Session = Session
+        self.Resource = Session.Resource
         self.Corpus = Session.Corpus
         self.Results = []
-        self.InputLine = []
-        self.input_header = []
         self.input_frame = pd.DataFrame()
+        self.results_frame = pd.DataFrame()
+        TokenQuery.filter_list = Session.filter_list
+        self._keys = []
 
-    def __str__(self):
-        return " ".join(["{}".format(x) for x in self.tokens])
-    
+    def string_folder(self, results):
+        """
+        Yield the rows from the results with all string values folded.
+
+        This folder is used in yield_query_results, and helps to reduce the
+        amount of memory consumed by the query results data frames. It does 
+        so by keeping a map of string values so that each occurrence of a 
+        string in the query result is mapped to the identical string object,
+        and not to a new string object with the same content. 
+        
+        This string folder is based on:
+        http://www.mobify.com/blog/sqlalchemy-memory-magic/
+        """
+        string_map = {}
+        for row in results:
+            self._keys = row.keys()
+            l = []
+            for key, value in row.items():
+                if isinstance(value, str):
+                    s = string_map.get(value, None)
+                    if s is None:
+                        s = string_map[value] = value
+                    l.append(s)
+                else:
+                    l.append(value)
+            yield l
+
     def __len__(self):
         return len(self.tokens)
 
-    def aggregate_data(self, df):
+    @staticmethod
+    def aggregate_data(df, resource):
         """ Aggregate the data frame. """
         return df
     
-    def filter_data(self, df):
+    @staticmethod
+    def filter_data(df, filter_list):
         """ Apply filters to the data frame. """
+        return df
+    
+    def run(self):
+        """
+        Run the query, and store the results in an internal data frame.
+        
+        This method runs all required subqueries for the query string, e.g.
+        the quantified queries if quantified tokens are used. The results are 
+        stored in self.results_frame.
+        """
+        self.results_frame = pd.DataFrame()
+        
+        for self._sub_query in self.query_list:
+            self._current_number_of_tokens = len(self._sub_query)
+            self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
+            
+            df = pd.DataFrame(
+                self.string_folder(self.Resource.yield_query_results(self, self._sub_query)))
+            df.columns = list(self._keys)
+
+            df = self.insert_static_data(df)
+            df = self.insert_context(df)
+            self.add_output_columns(self.Session)
+
+            if not options.cfg.case_sensitive and len(df.index) > 0:
+                for x in df.columns:
+                    if x.startswith("coq_word") or x.startswith("coq_lemma"):
+                        try:
+                            df[x] = df[x].apply(lambda x: x.lower() if x else x)
+                        except AttributeError:
+                            pass
+            df = self.apply_functions(df)
+            if not df.empty:
+                if self.results_frame.empty:
+                    self.results_frame = df
+                else:
+                    self.results_frame = self.results_frame.append(df)
+
+    def append_results(self, df):
+        """
+        Append the last results to the data frame.
+        
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The data frame to which the last query results will be added.
+            
+        Returns
+        -------
+        df : pandas.DataFrame
+        """
+        if df.empty:
+            return self.results_frame
+        else:
+            return df.append(self.results_frame)
+
+    def get_max_tokens(self):
+        """
+        Return the maximum number of tokens that this query produces.
+        
+        The maximum number of tokens is determined by the number of token
+        strings, modified by the quantifiers. For each query, query_list 
+        contains the quantified sub-queries. The maximum number of tokens is
+        the maximum of number_of_tokens for these sub-queris.
+        
+        Returns
+        -------
+        maximum : int
+            The maximum number of tokens that may be produced by this query.
+        """
+        maximum = 0
+        for token_list in self.query_list:
+            maximum = max(maximum, len(token_list))
+        return maximum
+    
+    def get_token_numbering(self, n):
+        """
+        Create a suitable number label for the nth lexical column.
+
+        If the specified column was not created by a quantified query token,
+        or if the maximum quantificatin of that query token was 1, the label
+        will correspond to the query token number. Otherwise, it will take
+        the form "x.y", where x is the query token number, and y is the 
+        repetition number of that query token.
+        
+        If the quantified columns are not aligned (i.e. if 
+        options.cfg.align_quantified is not set), this function simply 
+        returns a string representation of n.
+        
+        Parameters
+        ----------
+        n : int 
+            An lexical output column number
+        
+        Returns
+        -------
+        s : string
+            A string representing a suitable number label
+        """
+        if not options.cfg.align_quantified:
+            return "{}".format(n + 1)
+        L = []
+        current_pos = 0
+        for i, x in enumerate(self.query_string.split(" ")):
+            _, _, length = tokens.get_quantifiers(x)
+            if length == 1:
+                L.append("{}".format(i+1))
+            else:
+                for y in range(length):
+                    L.append("{}.{}".format(i + 1, y + 1))
+        if n > len(L) - 1:
+            return n
+        return L[n]
+    
+    def insert_context(self, df):
+        def insert_kwic(row):
+            left, target, right = self.Session.Resource.get_context(
+                row["coquery_invisible_corpus_id"], 
+                self._current_number_of_tokens, True)
+            row["coq_context_left"] = corpus.collapse_words(left)
+            row["coq_context_right"] = corpus.collapse_words(right)
+            return row
+
+        def insert_sentence(row):
+            left, target, right = self.Session.Resource.get_context(
+                row["coquery_invisible_corpus_id"], 
+                self._current_number_of_tokens, True)
+            row["coq_context"] = corpus.collapse_words(left + [x.upper() for x in target] + right)
+            return row
+
+        if not options.cfg.context_source_id:
+            return df
+        if not (options.cfg.context_left or options.cfg.context_right):
+            return df
+        if options.cfg.context_mode == CONTEXT_KWIC:
+            df = df.apply(insert_kwic, axis=1)
+        elif options.cfg.context_mode == CONTEXT_STRING:
+            df = df.apply(insert_sentence, axis=1)
+        #elif options.cfg.context_mode == CONTEXT_SENTENCE:
+            #current_result["coq_context"] = collapse_word(self.get_context_sentence())
+
         return df
     
     def insert_static_data(self, df):
@@ -274,14 +445,15 @@ class CorpusQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-        
+        if "coquery_invisible_corpus_id" not in list(df.columns.values):
+            df["coquery_invisible_corpus_id"] = np.NaN
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
-                df[column] = self.number_of_tokens
+                df[column] = self._current_number_of_tokens
             if column == "coquery_query_string":
-                df[column] = self.Session.literal_query_string
-            elif column == "coquery_expanded_query_string":
                 df[column] = self.query_string
+            elif column == "coquery_expanded_query_string":
+                df[column] = self._current_subquery_string
             elif column == "coquery_query_file":
                 if options.cfg.input_path:
                     df[column] = options.cfg.input_path
@@ -292,8 +464,19 @@ class CorpusQuery(object):
             elif column == "coquery_current_time":
                 df[column] = datetime.datetime.now().strftime("%H:%M:%S")
             elif column.startswith("coquery_query_token"):
+                token_list = self.query_string.split() 
                 n = int(column.rpartition("_")[-1])
-                df[column] = self.tokens[n - 1].S
+                # construct a list with the maximum number of quantified
+                # token repetitions. This is used to look up the query token 
+                # string.
+                L = []
+                for x in token_list:
+                    token, _, length = tokens.get_quantifiers(x)
+                    L += [token] * length
+                try:
+                    df[column] = L[n-1]
+                except IndexError:
+                    df[column] = ""
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
@@ -305,81 +488,108 @@ class CorpusQuery(object):
                     df[df_col] = self.input_frame[input_col][0]
         return df
 
-    def no_result_data_frame(self):
+    def apply_functions(self, df):
         """
-        Return a data frame that represents a query without results.
+        Applies the selected functions to the data frame.
         
-        This method creates a new data frame that contains '<NA>' for all
-        output columns that would be filled by data from the data base if the
-        query matched any token from the corpus. Columns that contain static
-        data, i.e. values that are not provided by the data base, but by 
-        Coquery itself (e.g. the query string, the name of the input file),
-        the data frame contains the appropriate values.
+        This method applies the functions that were selected as output 
+        columns to the associated column from the data frame. The result of 
+        each function is added as a new column to the data frame. The name 
+        of this column takes the form
+        
+        coq_func_{resource}_{n},
+        
+        where 'resource' is the resource feature on which the function was 
+        applied, and 'n' is the count of that function. For example, the 
+        results from the first function that was applied on the resource 
+        feature 'word_label' is stored in the column 'coq_func_word_label_1',
+        the second function on that feature in 'coq_func_word_label_2', and
+        so on. 
+        
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame on which the selected function will be applied.
         
         Returns
         -------
         df : DataFrame
-            A data frame with strings '<NA>' in data columns, and appropriate
-            values for the static columns.
+            The data frame with new columns for each function.
         """
-        df = pd.DataFrame([["<NA>"] * len(self.Session.output_order)], columns=self.Session.output_order)
-        df = self.insert_static_data(df)
+        
+        # If the data frame is empty, no function can be applied anyway:
+        if df.empty:
+            return df
+
+        lexicon_features = [x for x, _ in self.Resource.get_lexicon_features()]
+
+        func_counter = collections.Counter()
+        for rc_feature, fun, _ in options.cfg.selected_functions:
+            resource = self.Resource.get_feature_from_function(rc_feature)
+
+            func_counter[resource] += 1
+            fc = func_counter[resource]
+                        
+            # handle functions added to lexicon features:
+            if self.Resource.is_lexical(rc_feature):
+                for n in range(self.get_max_tokens()):
+                    new_name = "coq_func_{}_{}_{}".format(resource, fc, n + 1)
+                    col_name = "coq_{}_{}".format(resource, n + 1)
+                    df[new_name] = df[col_name].apply(fun)
+            # handle other functions:
+            else:
+                new_name = "coq_func_{}_{}_1".format(resource, fc)
+                col_name = "coq_{}_1".format(resource)
+                df[new_name] = df[col_name].apply(fun)
         return df
 
-    def write_results(self, output_object):
-        """ Transform the query results to a pandas DataFrame that is either
-        directly written to a CSV file, or stored for later processing in
-        the GUI. """
-        # turn query results into a pandas DataFrame:
-        df = pd.DataFrame(self.Results)
-        df = self.insert_static_data(df)
-
-        vis_cols = [x for x in self.Session.output_order if not x.startswith("coquery_invisible")]
-        # check if the results table contains rows and columns
-        if len(df.index) and len(vis_cols):
-            # word and lemma columns are lower-cased, unless requested otherwise:
-            if not options.cfg.case_sensitive and len(df.index) > 0:
-                for x in df.columns:
-                    if x.startswith("coq_word") or x.startswith("coq_lemma"):
-                        df[x] = df[x].apply(lambda x: x.lower() if x else x)
-
-            # for DISTINCT query mode, duplicates are dropped from the dataframe:
-            if self.collapse_identical:
-                df.drop_duplicates(subset=vis_cols, inplace=True)
-                df.reset_index(drop=True, inplace=True)
-        else:
-            # create an empty data frame
-            df = pd.DataFrame(columns=vis_cols)
-
-        df = self.aggregate_data(df)
-        df = self.filter_data(df)
-        if options.cfg.gui:
-            # append the data frame to the existing data frame
-            self.Session.output_object = self.Session.output_object.append(df)
-            self.Session.output_object.fillna("", inplace=True)
-        else:
-            # write data frame to output_file as a CSV file, using the 
-            # current output_separator. Encoding is always "utf-8".
-            df[vis_cols].to_csv(output_object, 
-                header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
-                sep=options.cfg.output_separator,
-                encoding="utf-8",
-                index=False)
-            # remember that the header columns have already been included in
-            # the output so that multiple queries in a single session do not
-            # produce multiple headers:
-            self.Session.header_shown = True
+    @staticmethod
+    def add_output_columns(session):
+        """
+        Add any column that is specific to this query type to the list of 
+        output columns in Session.output_order.
+        
+        This is needed, for example, to add the frequency column in
+        FrequencyQuery.
+        """
         return
 
-class TokenQuery(CorpusQuery):
+    @staticmethod
+    def remove_output_columns(session):
+        """
+        Remove any column that was added by add_output_columns from the
+        current session's output_order list.
+        
+        This is needed when changing the aggregation mode.
+        """
+        return
+ 
+    @classmethod
+    def aggregate_it(cls, df, resource):
+        agg = cls.aggregate_data(df, resource)
+        agg = cls.filter_data(agg, cls.filter_list)
+        agg_cols = list(agg.columns.values)
+        for col in list(agg_cols):
+            if col.startswith("coquery_invisible"):
+                agg_cols.remove(col)
+                agg_cols.append(col)
+        agg = agg[agg_cols]
+        return agg
+
+class DistinctQuery(TokenQuery):
     """ 
-    TokenQuery is a subclass of CorpusQuery. 
+    DistinctQuery is a subclass of TokenQuery. 
     
-    In this subclass, the attribute collapse_identical is set to False so 
-    that :func:`write_results` does not remove the duplicate rows from the
-    data frame containing the query results.
+    This subclass reimplements :func:`aggregate_data` so that duplicate rows 
+    are removed.
     """
-    collapse_identical = False
+
+    @classmethod
+    def aggregate_data(cls, df, resource):
+        vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
+        df = df.drop_duplicates(subset=vis_cols)
+        df = df.reset_index(drop=True)
+        return df
 
 class FrequencyQuery(TokenQuery):
     """ 
@@ -396,7 +606,32 @@ class FrequencyQuery(TokenQuery):
     frequency filters.
     """
     
-    def aggregate_data(self, df):
+    @staticmethod
+    def add_output_columns(session):
+        if "coq_frequency" not in session.output_order:
+            session.output_order.append("coq_frequency")
+
+    @staticmethod
+    def remove_output_columns(session):
+        try:
+            session.output_order.remove("coq_frequency")
+        except ValueError:
+            pass
+        
+    @staticmethod
+    def do_the_grouping(df, group_columns, aggr_dict):
+        gp = df.fillna("").groupby(group_columns, sort=False)
+        return gp.agg(aggr_dict).reset_index()
+    
+    def run(self):
+        super(FrequencyQuery, self).run()
+        if self.results_frame.empty:
+            df = pd.DataFrame(index=[0])
+            df = self.insert_static_data(df)
+            self.results_frame = df
+
+    @classmethod
+    def aggregate_data(cls, df, resource):
         """
         Aggregate the data frame by obtaining the row frequencies for each
         group specified by the visible data columns.
@@ -413,6 +648,12 @@ class FrequencyQuery(TokenQuery):
             row frequencies of the aggregated groups.
         """
         # get a list of grouping and sampling columns:
+        
+        # Drop frequency column if it is already in the data frame (this is
+        # needed for re-aggregation):
+        if "coq_frequency" in list(df.columns.values):
+            df.drop("coq_frequency", axis=1, inplace=True)
+
         columns = []
         for x in df.columns.values:
             try:
@@ -420,28 +661,26 @@ class FrequencyQuery(TokenQuery):
             except ValueError:
                 columns.append(x)
             else:
-                if n <= self.number_of_tokens:
-                    columns.append(x)
+                columns.append(x)
 
-        group_columns = [x for x in columns if not x.startswith("coquery_invisible")]
+        # Group by those columns which are neither intrinsically invisible 
+        # nor currently hidden:
+        group_columns = [x for x in columns if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
         sample_columns = [x for x in columns if x not in group_columns]
         
         # Add a frequency column:
         df["coq_frequency"] = 0
-        self.Session.output_order.append("coq_frequency")
         
         if len(df.index) == 0:
-            df = self.no_result_data_frame()
-            df["coq_frequency"] = 0
-            return df
+            result = pd.DataFrame({"coq_frequency": [0]})
         elif len(group_columns) == 0:
             # if no grouping variables are selected, simply return the first
             # row of the data frame together with the total length of the 
             # data frame as the frequency:
             freq = len(df.index)
             df = df.iloc[[0]]
-            df["coq_frequency"] = freq
-            return df
+            result = df 
+            result["coq_frequency"] = freq
         else:
             # create a dictionary that contains the aggregate functions for
             # the different columns. For the sampling columns, this function
@@ -453,11 +692,29 @@ class FrequencyQuery(TokenQuery):
                 {col: lambda x: x.head(1) for col in sample_columns})
             # group the data frame by the group columns, apply the aggregate
             # functions to each group, and return the aggregated data frame:
+            result = cls.do_the_grouping(df, group_columns, aggr_dict)
 
-            gp = df.groupby(group_columns)
-            return gp.agg(aggr_dict).reset_index()
+        if "coquery_relative_frequency" in options.cfg.selected_features:
+            total_frequency = result.coq_frequency.sum()
+            result["coquery_relative_frequency"] = result["coq_frequency"].apply(
+                lambda x: x / total_frequency)
 
-    def filter_data(self, df):
+        if "coquery_per_million_words" in options.cfg.selected_features:
+            corpus_size = resource.get_corpus_size()
+            result["coquery_per_million_words"] = result["coq_frequency"].apply(
+                lambda x: x / (corpus_size / 1000000))
+
+        # entries with no corpus_id are the result of empty frequency 
+        # queries. Their frequency is set to zero:
+        try:
+            result.coq_frequency[result.coquery_invisible_corpus_id == ""] = 0
+        except TypeError:
+            pass
+        
+        return result
+
+    @staticmethod
+    def filter_data(df, filter_list):
         """ 
         Apply the frequency filters to the frequency column. 
         
@@ -472,7 +729,7 @@ class FrequencyQuery(TokenQuery):
             A new data frame that contains the filtered rows from the 
             argument data frame.
         """
-        for filt in options.cfg.filter_list:
+        for filt in filter_list:
             if filt.var == options.cfg.freq_label:
                 try:
                     df = df[df["coq_frequency"].apply(filt.check_number)]
@@ -480,44 +737,65 @@ class FrequencyQuery(TokenQuery):
                     pass
         return df
 
-class StatisticsQuery(CorpusQuery):
+class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session, None)
-        self.Results = self.Session.Corpus.get_statistics()
         
-        # convert all values to strings (the Unicode writer needs that):
-        self.Results = {key: str(self.Results[key]) for key in self.Results}
-
-    def write_results(self, output_file):
-        df = sorted(self.Results)
-
-        #for x in sorted(self.Results):
-            #if options.cfg.gui:
-                #self.Session.output_storage.append([x, self.Results[x]])
-            #else:
-                #output_file.writerow([x, self.Results[x]])
-
-        if options.cfg.gui:
-            # append the data frame to the existing data frame
-            self.Session.output_object = pd.concat([self.Session.output_object, df])
+    def append_results(self, df):
+        """
+        Append the last results to the data frame.
+        
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The data frame to which the last query results will be added.
+            
+        Returns
+        -------
+        df : pandas.DataFrame
+        """
+        self.results_frame = self.Session.Resource.get_statistics()
+        self.Session.output_order = ["Table", "Column", "Entries", "Uniques", "Ratio"]
+        self.results_frame.columns = self.Session.output_order
+        if df.empty:
+            return self.results_frame
         else:
-            # write data frame to output_file as a CSV file, using the 
-            # current output_separator. Encoding is always "utf-8".
-            df[vis_cols].to_csv(output_object, 
-                header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
-                sep=options.cfg.output_separator,
-                encoding="utf-8",
-                index=False)
-            # remember that the header columns have already been included in
-            # the output so that multiple queries in a single session do not
-            # produce multiple headers:
-            self.Session.header_shown = True
-        return
+            return df.append(self.results_frame)
 
 class CollocationQuery(TokenQuery):
+    def insert_context(self, df):
+        pass
+    
+    @staticmethod
+    def filter_data(df, filter_list):
+        """ 
+        Apply the frequency filters to the collocate frequency column. 
+        
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame to be filtered.
+
+        Returns
+        -------
+        df : DataFrame
+            A new data frame that contains the filtered rows from the 
+            argument data frame.
+        """
+        for filt in filter_list:
+            if filt.var == options.cfg.freq_label:
+                try:
+                    df = df[df["coq_collocate_frequency"].apply(filt.check_number)]
+                except AttributeError:
+                    pass
+        return df
+
     def __init__(self, S, Session, token_class):
         self.left_span = options.cfg.context_left
         self.right_span = options.cfg.context_right
+        
+        if not self.left_span and not self.right_span:
+            raise CollocationNoContextError
 
         self._query_string = S
         # build query string so that the neighbourhood is also queried:
@@ -540,7 +818,11 @@ class CollocationQuery(TokenQuery):
             MI = log ( (f_coll * size) / (f_1 * f_2 * span) ) / log (2)
         
         """
-        return math.log((f_coll * size) / (f_1 * f_2 * span)) / math.log(2)
+        try:
+            MI = math.log((f_coll * size) / (f_1 * f_2 * span)) / math.log(2)
+        except (ZeroDivisionError, TypeError):
+            return None
+        return MI
 
     def conditional_propability(self, freq_left, freq_total):
         """ Calculate the conditional probability Pcond to encounter the query 
@@ -564,209 +846,104 @@ class CollocationQuery(TokenQuery):
         right_span = options.cfg.context_right
 
         features = []
-        lexicon_features = self.Corpus.resource.get_lexicon_features()
+        lexicon_features = self.Resource.get_lexicon_features()
         for rc_feature in options.cfg.selected_features:
             if rc_feature in [x for x, _ in lexicon_features]:
                 features.append("coq_{}".format(rc_feature))
             
-        corpus_size = self.Corpus.get_corpus_size()
+        self.corpus_size = self.Corpus.get_corpus_size()
         query_freq = 0
         context_info = {}
 
         df = pd.DataFrame(self.Results)
 
-        print(df.head())
+        fix_col = ["coquery_invisible_corpus_id"]
 
         # FIXME: Be more generic than always using coq_word_label!
-        fix_col = ["coquery_invisible_corpus_id", 
-                   "coquery_invisible_origin_id"]
         left_cols = ["coq_word_label_{}".format(x + 1) for x in range(options.cfg.context_left)]
-        right_cols = ["coq_word_label_{}".format(x + self.number_of_tokens - options.cfg.context_right + 1) for x in range(options.cfg.context_right)]
+        right_cols = ["coq_word_label_{}".format(x + self.get_max_tokens() - options.cfg.context_right + 1) for x in range(options.cfg.context_right)]
         left_context_span = df[fix_col + left_cols]
         right_context_span = df[fix_col + right_cols]
+        if not options.cfg.case_sensitive:
+            for column in left_cols:
+                left_context_span[column] = left_context_span[column].apply(lambda x: x.lower())
+            for column in right_cols:
+                right_context_span[column] = right_context_span[column].apply(lambda x: x.lower())
 
         left = left_context_span[left_cols].stack().value_counts()
         right = right_context_span[right_cols].stack().value_counts()
 
-        print(left_context_span.to_dict())
-        print(right_context_span.to_dict())
-
-        print(left_context_span)
-        print("LEFT")
-        print(left)
+        # Build a lookup table for contexts. This table is used to provide
+        # the corpus_id to the collocations table so that # the entries can 
+        # be clicked to see an example of that collocation.
+        # The lookup table is basically a long data frame containing all
+        # collocate words 
+        lookup_header = ["coq_word_label", "coquery_invisible_corpus_id"]
+        lookup = pd.DataFrame(columns=lookup_header)
+        for i in range(1, left_span + 1):
+            tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id"]]
+            col = tmp_table.columns.values
+            col[0] = "coq_word_label"
+            tmp_table.columns = col
+            lookup = lookup.append(tmp_table)
+        for i in range(self.get_max_tokens() + 1 - right_span, self.get_max_tokens() + 1):
+            tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id"]]
+            col = tmp_table.columns.values
+            col[0] = "coq_word_label"
+            tmp_table.columns = col
+            lookup = lookup.append(tmp_table)
+        lookup["coquery_invisible_number_of_tokens"] = self.get_max_tokens()
 
         all_words = set(left.index + right.index)
         
-        left = left.reindex(all_words).fillna(0)
-        right = right.reindex(all_words).fillna(0)
+        left = left.reindex(all_words).fillna(0).astype(int)
+        right = right.reindex(all_words).fillna(0).astype(int)
         
         collocates = pd.concat([left, right], axis=1)
         collocates = collocates.reset_index()
         collocates.columns = ["coq_word_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
-        #print(collocates)
         collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
-        collocates["coq_frequency"] = collocates["coq_word_label"].apply(
-            lambda x: self.Corpus.get_frequency(self.token_class(x, self.Corpus.lexicon)))
+        collocates["coq_frequency"] = collocates["coq_word_label"].apply(self.Corpus.get_frequency)
         collocates["coquery_query_string"] = self._query_string
+        collocates["coq_conditional_probability"] = collocates.apply(
+            lambda x: self.conditional_propability(
+                x["coq_collocate_frequency_left"],
+                x["coq_frequency"]) if x["coq_frequency"] else None, 
+            axis=1)
         
-        print(collocates.head())
+        collocates["coq_mutual_information"] = collocates.apply(
+            lambda x: self.mutual_information(
+                    f_1=len(df.index),
+                    f_2=x["coq_frequency"], 
+                    f_coll=x["coq_collocate_frequency"],
+                    size=self.corpus_size, 
+                    span=self.left_span + self.right_span),
+            axis=1)
 
+        collocates = collocates.merge(lookup, on="coq_word_label", how="left")
+        
+        collocates = collocates.dropna()
+        
         self.Session.output_order = collocates.columns.values
-        print(self.Session.output_order)
+
+        collocates = self.filter_data(collocates, self.Session.filter_list)
+        aggregate = collocates.drop_duplicates(subset="coq_word_label")
 
         if options.cfg.gui:
             # append the data frame to the existing data frame
-            self.Session.output_object = pd.concat([self.Session.output_object, collocates])
+            self.Session.data_table = collocates
+            self.Session.output_object = pd.concat([self.Session.output_object, aggregate])
         else:
             # write data frame to output_file as a CSV file, using the 
             # current output_separator. Encoding is always "utf-8".
             collocates[vis_cols].to_csv(output_object, 
-                header=None if self.Session.header_shown else [self.Corpus.resource.translate_header(x) for x in vis_cols], 
+                header=None if self.Session.header_shown else [self.Session.translate_header(x) for x in vis_cols], 
                 sep=options.cfg.output_separator,
-                encoding="utf-8",
+                encoding=options.cfg.output_encoding,
                 index=False)
             # remember that the header columns have already been included in
             # the output so that multiple queries in a single session do not
             # produce multiple headers:
             self.Session.header_shown = True
-        return
-
-        
-        for current_result in self.Results:
-            query_freq += 1
-            # increase the count for all items in the left neighbourhood:
-            for i in range(left_span):
-                tup = []
-                for feature in features:
-                    lookup = "{}_{}".format(feature, i+1)
-                    # normally, collocations will be case-insensitive, but
-                    # the option to heed case is provided:
-                    if options.cfg.case_sensitive:
-                        tup.append(current_result[lookup])
-                    else:
-                        tup.append(current_result[lookup].lower())
-                count_left[tuple(tup)] += 1
-                count_total[tuple(tup)] += 1
-
-                context_info[tuple(tup)] = (
-                    current_result["coquery_invisible_corpus_id"],
-                    current_result["coquery_invisible_origin_id"],
-                    current_result["coquery_invisible_number_of_tokens"])
-
-
-            # increase the count for all items in the right neighbourhood:
-            for i in range(right_span):
-                tup = []
-                for feature in features:
-                    lookup = "{}_{}".format(feature, self.number_of_tokens - left_span +i+1)
-                    # normally, collocations will be case-insensitive, but
-                    # the option to heed case is provided:
-                    if options.cfg.case_sensitive:
-                        tup.append(current_result[lookup])
-                    else:
-                        tup.append(current_result[lookup].lower())
-                count_right[tuple(tup)] += 1
-                count_total[tuple(tup)] += 1
-                context_info[tuple(tup)] = (
-                    current_result["coquery_invisible_corpus_id"],
-                    current_result["coquery_invisible_origin_id"],
-                    current_result["coquery_invisible_number_of_tokens"])
-
-        self.Session.output_order = self.Session.header
-        
-        S = ""
-        for collocate_tuple in count_total:
-            try:
-                word = collocate_tuple[features.index("coq_word_label")]
-            except ValueError:
-                try:
-                    word = collocate_tuple[features.index("coq_corpus_word")]
-                except ValueError:
-                    word = ""
-            try:
-                lemma = collocate_tuple[features.index("coq_word_lemma")]
-            except ValueError:
-                try:
-                    lemma = collocate_tuple[features.index("coq_lemma_label")]
-                except ValueError:
-                    lemma = ""
-            try:
-                pos = collocate_tuple[features.index("coq_word_pos")]
-            except ValueError:
-                try:
-                    pos = collocate_tuple[features.index("coq_pos_label")]
-                except ValueError:
-                    pos  = ""
-            if word:
-                S = word
-            elif lemma:
-                S = "[{}]".format(lemma)
-            if S and pos:
-                S = "{}.[{}]".format(S, pos)
-            elif pos:
-                S = "[{}]".format(pos)
-            coll_freq = self.Corpus.get_frequency(self.token_class(S, self.Corpus.lexicon))
-            # build a new token from the tuple:
-        
-            current_result = {}
-            
-            current_result["coquery_query_string"] = self.Session.literal_query_string
-            for i, feature in enumerate(features):
-                feature = feature.partition("_")[2]
-                current_result["coq_collocate_{}".format(feature)] = collocate_tuple[i]
-            current_result["coq_frequency"] = count_total[collocate_tuple]
-            current_result["coq_collocate_frequency"] = coll_freq
-            current_result["coq_collocate_frequency_right"] = count_right[collocate_tuple]
-            current_result["coq_collocate_frequency_left"] = count_left[collocate_tuple]
-            try:
-                current_result["coq_mutual_information"] = round(self.mutual_information(
-                    query_freq,
-                    coll_freq, 
-                    count_total[collocate_tuple], 
-                    corpus_size, 
-                    self.left_span + self.right_span), 3)
-            except ZeroDivisionError:
-                current_result["coq_mutual_information"] = "<NA>"
-            try:
-                current_result["coq_conditional_probability"] = round(
-                    self.conditional_propability(count_left[collocate_tuple], coll_freq), 3)
-            except ZeroDivisionError:
-                current_result["coq_conditional_probability"] = "<NA>"
-            corpus_id, origin_id, number = context_info[collocate_tuple]
-            
-            current_result["coquery_invisible_corpus_id"] = corpus_id
-            current_result["coquery_invisible_origin_id"] = origin_id 
-            current_result["coquery_invisible_number_of_tokens"] = number
-
-            if options.cfg.gui:
-                self.Session.output_storage.append(current_result)
-            else:
-                output_list = [current_result[x] for x in self.Session.output_order]
-                output_file.writerow(output_list)
-
-    def get_collocates(self):
-        """ Run a normal query base on the token string, but pad the query by
-        empty queries '*' for each word in the left and right context. This
-        query respects the output column selection, so it can be restricted to
-        only some parts of the corpus. Also, it can be restricted to lemmas
-        and POS tags.
-        
-        Then, for each neighbourhood column, make a word count: for each word
-        in the neighbourhood span, form tuples (based on all selected lexicon
-        features), and count how often the tuple occurs. Then, calculate the 
-        MI for each tuple. Finally, construct the output rows.
-        
-        Each output row consists of these columns:
-        
-        - Query string
-        - Collocate tuple (one column for each feature)
-        - Collocate frequency
-        - Collocate frequency (left)
-        - Collocate frequency (right)
-        - MI
-        
-        This output may also be supplemented by other lexical measures, for 
-        example, the conditional probability. """
-        
         
 logger = logging.getLogger(__init__.NAME)

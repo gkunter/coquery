@@ -4,13 +4,12 @@ import visualizer as vis
 import seaborn as sns
 import pandas as pd
 
-class HeatmapVisualizer(vis.Visualizer):
-    visualize_frequency = True
+class Visualizer(vis.BaseVisualizer):
     dimensionality=2
     
     def setup_figure(self):
         with sns.axes_style("white"):
-            super(HeatmapVisualizer, self).setup_figure()
+            super(Visualizer, self).setup_figure()
 
     def draw(self):
         """ Draw a heat map. """
@@ -24,10 +23,11 @@ class HeatmapVisualizer(vis.Visualizer):
         if len(self._groupby) < 2:
             # create a dummy cross tab with one dimension containing empty
             # values:
+            data_column = self._table[self._groupby[0]].reset_index(drop=True)
             tab = pd.crosstab(
-                pd.Series([""] * len(self._table[self._groupby[0]]), name=""), 
-                self._table[self._groupby[0]])
-            FUN = lambda data, color: sns.heatmap(
+                pd.Series([""] * len(data_column), name=""), 
+                data_column)
+            plot_facet = lambda data, color: sns.heatmap(
                 tab,
                 robust=True,
                 annot=True,
@@ -35,7 +35,7 @@ class HeatmapVisualizer(vis.Visualizer):
                 fmt="g",
                 linewidths=1)
         else:
-            FUN = lambda data, color: sns.heatmap(
+            plot_facet = lambda data, color: sns.heatmap(
                 get_crosstab(
                     data, 
                     self._groupby[0], 
@@ -50,12 +50,18 @@ class HeatmapVisualizer(vis.Visualizer):
                 linewidths=1)
 
             vmax = pd.crosstab(
-                [self._table[x] for x in [self._row_factor, self._groupby[0]] if x <> None],
-                [self._table[x] for x in [self._col_factor, self._groupby[1]] if x <> None]).values.max()
+                [self._table[x] for x in [self._row_factor, self._groupby[0]] if x != None],
+                [self._table[x] for x in [self._col_factor, self._groupby[1]] if x != None]).values.max()
 
-        self.g.map_dataframe(FUN)
+        self.map_data(plot_facet)
 
         self.setup_axis("Y")
         self.setup_axis("X")
-        
-        self.g.fig.tight_layout()
+
+        self.adjust_fonts(16)
+
+        try:
+            self.g.fig.tight_layout()
+        except ValueError:
+            # A ValueError sometimes occurs with long labels. We ignore it:
+            pass

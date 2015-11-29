@@ -15,11 +15,12 @@ import math
 from defines import *
 
 from matplotlib.patches import Rectangle
-from visualizer import Visualizer, color_categories
+import visualizer as vis
 
-class TreemapVisualizer(Visualizer):
+class Visualizer(vis.BaseVisualizer):
+    dimensionality = 1
     def update_data(self):
-        super(TreemapVisualizer, self).update_data()
+        super(Visualizer, self).update_data()
 
         self._tree = self.get_content_tree(self._table)
         self.max_weight = self.tree_weight(self._tree)
@@ -57,7 +58,7 @@ class TreemapVisualizer(Visualizer):
                 p[axis] = q[axis]
 
     def setup_figure(self, *args):
-        super(TreemapVisualizer, self).setup_figure(*args)
+        super(Visualizer, self).setup_figure(*args)
         self.subplot.set_ylim(0, math.sqrt(self.max_weight) - 1)
         self.subplot.set_xlim(0, math.sqrt(self.max_weight) - 1)
 

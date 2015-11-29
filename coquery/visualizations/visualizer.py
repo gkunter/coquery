@@ -1,5 +1,20 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 """ 
+visualizer.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
+"""
 This module provides the base classes required for data visualization:
 
 * :class:`Visualizer`
@@ -27,10 +42,6 @@ the current results table in the form of one or more barcharts, and  :mod:`visua
 indicate the position within the corpus for each token in the result table.
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import sys
 import os
 import collections
@@ -47,17 +58,16 @@ from pyqt_compat import QtGui, QtCore, pyside
 
 import options
 sys.path.append(os.path.join(sys.path[0], "../gui/"))
+from QtProgress import ProgressIndicator
 import visualizerUi
 from defines import *
 from errors import *
-import error_box
 
-
+import matplotlib as mpl
 # Tell matplotlib if PySide is being used:
 if pyside:
-    import matplotlib
-    matplotlib.use("Qt4Agg")
-    matplotlib.rcParams["backend.qt4"] = "PySide"
+    mpl.use("Qt4Agg")
+    mpl.rcParams["backend.qt4"] = "PySide"
 
 # import required matplotlib classes
 from matplotlib.figure import Figure
@@ -66,7 +76,7 @@ from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as Navigatio
 from matplotlib.backend_bases import key_press_handler
 import matplotlib.pyplot as plt
 
-import multiprocessing
+
 
 #def table_to_tree(table, label="count"):
     #""" Return a tree that contains a tree representation of the table. It
@@ -95,11 +105,24 @@ import multiprocessing
             #i += tree_weight(tree[node])
     #return i
 
-# pandas snippet:
-# check if a column contains only a single value:
-# len(pd.unique(self._table[column].values.ravel())) == 1
+class CoqNavigationToolbar(NavigationToolbar):
+    
+    def __init__(self, canvas, parent, coordinates=True):
+        super(CoqNavigationToolbar, self).__init__(canvas, parent, coordinates)
+        if options.cfg.experimental:
+            self.check_freeze = QtGui.QCheckBox()
+            self.check_freeze.setText("Freeze visualization")
+            self.check_freeze.setObjectName("check_freeze")
+            self.addWidget(self.check_freeze)
 
-class Visualizer(object):
+    def edit_parameters(self, *args):
+        import figureoptions
+        new_values = figureoptions.FigureOptions.manage(self.parent.visualizer.options)
+        if new_values:
+            self.parent.visualizer.options.update(new_values)
+            self.parent.update_plot()
+
+class BaseVisualizer(object):
     """ 
     Define a class that contains the code to visualize data in several
     ways. 
@@ -113,50 +136,89 @@ class Visualizer(object):
     by :func:`VisualizerDialog.Plot`. 
     """
     
-    visualize_frequency = True
-    
-    def _validate_layout(func):
-        def func_wrapper(self):
-            if self._col_wrap and self._col_wrap > 16:
-                raise InvalidGraphLayout
-            if self._col_factor and len(pd.unique(self._table[self._col_factor].values.ravel())) > 16:
-                raise InvalidGraphLayout
-            if self._row_factor and len(pd.unique(self._table[self._row_factor].values.ravel())) > 16:
-                raise InvalidGraphLayout
-            return func(self)
-        return func_wrapper
-    
     def __init__(self, data_model, data_view):
         self._model = None
         self._view = None
+        self.options = {}
         self.set_data_source(data_model, data_view)
+        self.set_defaults()
         self.setup_figure()
     
-    #def get_xlim(self):
-        #return (0, options.cfg.main_window.Session.Corpus.get_corpus_size())
+    def set_defaults(self):
+        if not self.options.get("color_number", ""):
+            self.options["color_number"] = len(self._levels[-1])
+        if not self.options.get("label_legend_columns", 0):
+            self.options["label_legend_columns"] = 1
+        if not self.options.get("color_palette", ""):
+            if len(self._levels) == 0:
+                self.options["color_palette"] = "Paired"
+                self.options["color_number"] = 1
+            elif len(self._levels[-1]) in (2, 4, 6):
+                self.options["color_palette"] = "Paired"
+            elif len(self._groupby) == 2:
+                self.options["color_palette"] = "Paired"
+            else:
+                self.options["color_palette"] = "RdPu"
+            
+        if not self.options.get("color_palette_values", ""):
+            self.options["color_palette_values"] = sns.color_palette(
+                self.options["color_palette"],
+                self.options["color_number"])
+                                                                                                                            
+    def _validate_layout(func):
+        def func_wrapper(self):
+            if self._col_wrap:
+                if self._col_wrap > 16:
+                    raise VisualizationInvalidLayout
+                else:
+                    return func(self)
+            if self._col_factor and len(pd.unique(self._table[self._col_factor].values.ravel())) > 16:
+                raise VisualizationInvalidLayout
+            if self._row_factor and len(pd.unique(self._table[self._row_factor].values.ravel())) > 16:
+                raise VisualizationInvalidLayout
+            return func(self)
+        return func_wrapper
     
-    #def get_ylim(self):
-        #return (0, 1)
-
     @_validate_layout
     def setup_figure(self):
         """ Prepare the matplotlib figure for plotting. """ 
-        with sns.plotting_context(
-            context=self.get_plot_context(), 
-            font_scale=self.get_font_scale()):
+        with mpl.rc_context({"legend.fontsize": 16}):
+            with sns.plotting_context(
+                context=self.get_plot_context(), 
+                font_scale=self.get_font_scale()):
 
-            print("col_factor: ", self._col_factor)
-            print("col_wrap:   ", self._col_wrap)
-            print("row_factor: ", self._row_factor)
-            self.g = sns.FacetGrid(self._table, 
-                                #xlim=self.get_xlim(),
-                                #ylim=self.get_ylim(),
-                                col=self._col_factor,
-                                col_wrap=self._col_wrap,
-                                row=self._row_factor,
-                                sharex=True,
-                                sharey=True)
+                self.g = sns.FacetGrid(self._table, 
+                                    col=self._col_factor,
+                                    col_wrap=self._col_wrap,
+                                    row=self._row_factor,
+                                    sharex=True,
+                                    sharey=True)
 
+    def map_data(self, func):
+        """
+        Map the dataframe using :func:`func`.
+        
+        This method wraps the function :func:`func` so that a facet is 
+        plotted for the grouping variables. In order for this to work, 
+        :func:`func` has to take two values: `data`, which is a sub-
+        dataframe after grouping, and `color`, which is currently not
+        used, but which must be handled by `func` anyway.
+        
+        Technically, it calls :func:`FacetGrid.map_dataframe` from
+        `seaborn` with `func` as a parameter if more than one plot 
+        is required. Otherwise, it calls `func` directly, as `FacetGrid`
+        can have problems if only one plot is drawn.
+        
+        Parameters
+        ----------
+        func : function
+            The plotting function.
+        """
+        if self._col_factor:
+            self.g.map_dataframe(func) 
+        else:
+            func(self._table, None)
+    
     def get_grid_layout(self, n):
         """ Return a tuple containing a nrows, ncols pair that can be used to
         utilize the screen space more or less nicely for the number of grids
@@ -178,14 +240,12 @@ class Visualizer(object):
         
     def draw(self):
         """ Do the visualization."""
-        print("not implemented")
         pass
 
     def set_data_source(self, model, view):
         """ Set the data for the the visualizer. Currently, the method takes
         two parameters, 'model' and 'view', which are expected to be instances
         of QAbstractDataModel and QTableView classes, respectively. """
-        
         self._model = model
         self._view = view
         self.update_data()
@@ -194,7 +254,6 @@ class Visualizer(object):
         """ 
         Return a palette that is suitable for the data. 
         """
-        
         # choose the "Paired" palette if the number of grouping factor
         # levels is even and below 13, or the "Set3" palette otherwise:
         if len(self._levels) == 0:
@@ -202,7 +261,7 @@ class Visualizer(object):
                 return sns.color_palette("Paired")[0]
             else:
                 palette_name = "Paired"        
-        elif len(self._levels[-1]) in (2, 4, 6, 8, 12):
+        elif len(self._levels[-1]) in (2, 4, 6):
             palette_name = "Paired"
         else:
             # use 'Set3', a quantitative palette, if there are two grouping
@@ -216,60 +275,49 @@ class Visualizer(object):
         it is usable by the visualizer.
         """
         
-        # _table stores the data from the model in such a way that it is 
-        # accessible by the visualizer. """
-        
-        self._table = []
-
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()
-        self._column_order = [self._model.content.columns[header.logicalIndex(section)] for section in range(header.count())]
-        # ... but make sure that the frequency is the last column:
-        try:
-            self._column_order.remove("coq_frequency")
-        except ValueError:
-            pass
-        else:
-            # ... but only if the current visualizer displays frequency
-            # data. The frequency column is stripped otherwise.
-            if self.visualize_frequency:
-                self._column_order.append("coq_frequency")
-        
-        self._column_order += [x for x in options.cfg.main_window.Session.output_order if x.startswith("coquery_invisible") and x not in self._column_order]
+        column_order = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
+        column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and x != "coq_frequency"]
+
+        column_order.append("coquery_invisible_corpus_id")
+
         try:
             self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
         except AttributeError:
             self._time_columns = []
             
-        # Remove hidden columns:
-        self._column_order = [x for x in self._column_order if 
-            options.cfg.column_visibility.get(x, True)]
-        
-        self._table = self._model.content.reindex(columns=self._column_order)
-        
-        self._table = self._table.sort(columns=self._column_order, axis="rows")
-        self._table.columns = [
-            options.cfg.main_window.Session.Corpus.resource.translate_header(x) for x in self._table.columns]
+        self._table = options.cfg.main_window.Session.data_table[column_order]
+        self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
+        # get list of visible rows:
+        self._row_order = ~self._table.index.isin(pd.Series(options.cfg.row_visibility.keys())-1)
 
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
-        self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object] if not x.startswith("coquery_invisible")]
+        self._factor_columns = [x for x in self._table.columns[self._table[column_order].dtypes == object]]
 
         if self.dimensionality:
             self._groupby = self._factor_columns[-self.dimensionality:]
         else:
             self._groupby = []
-        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby]
+
+        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby if not x in self._time_columns]
+
         
-        print("grouping:   ", self._groupby)
-        print("levels:      ", self._levels)
-        print("factors:    ", self._factor_columns)
-        print("dimensions: ", self.dimensionality)
+        if options.cfg.verbose:
+            print("grouping:     ", self._groupby)
+            print("levels:       ", self._levels)
+            print("factors:      ", self._factor_columns)
+            #print("factor names: ", self._factor_names) 
+            print("dimensions:   ", self.dimensionality)
         
         if len(self._factor_columns) > self.dimensionality:
             self._col_factor = self._factor_columns[-self.dimensionality - 1]
         else:
             self._col_factor = None
+        if options.cfg.verbose:
+            print("col_factor:   ", self._col_factor)
+            print(self._table.head())
             
         if len(self._factor_columns) > self.dimensionality + 1:
             self._row_factor = self._factor_columns[-self.dimensionality - 2]
@@ -281,6 +329,34 @@ class Visualizer(object):
                     len(pd.unique(self._table[self._col_factor].ravel())))
             else:
                 self._col_wrap = None
+        if options.cfg.verbose:
+            print("col_factor:   ", self._col_factor)
+            print("col_wrap:     ", self._col_wrap)
+            print("row_factor:   ", self._row_factor)
+            print("time_columns: ", self._time_columns)
+        if not self._groupby:
+            raise VisualizationNoDataError
+
+    def adjust_fonts(self, size):
+        """
+        Adjust the fonts of the figure.
+        
+        This method adjusts all fonts in the figure. The axis labels are 
+        set to exactly the given size, and the axis tick labels are adjusted
+        to size * 0.8.
+        
+        Parameters
+        ----------
+        size : numeric
+            The base font size.
+        """
+        return
+        figure = self.g.fig
+        ax = plt.gca()
+        ax.xaxis.label.set_fontsize(size)
+        ax.yaxis.label.set_fontsize(size)
+        figure.get_xticklabels().set_fontsize(size * 0.8)
+        figure.get_yticklabels().set_fontsize(size * 0.8)
 
     def get_content_tree(self, table, label="count"):
         """ 
@@ -503,7 +579,7 @@ class Visualizer(object):
         if font_scale <= 1.5:
             return "talk"
         return "poster"
-
+    
 class VisualizerDialog(QtGui.QWidget):
     """ Defines a QDialog that is used to visualize the data in the main 
     data preview area. It connects the dataChanged signal of the abstract 
@@ -526,94 +602,106 @@ class VisualizerDialog(QtGui.QWidget):
 
         # Connect the required signals so the plot is updated on changes to
         # the results table:
-        self.connect_signals()
         self.ui.button_close.clicked.connect(self.close)
-        self.ui.check_freeze.stateChanged.connect(self.toggle_freeze)
         self.frozen = False
-
-    def add_smooth_spinner(self):
-        self.ui.spinner = QtGui.QSpinBox()
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.ui.spinner.sizePolicy().hasHeightForWidth())
-        self.ui.spinner.setSizePolicy(sizePolicy)
-        self.ui.spinner.setFrame(True)
-        self.ui.spinner.setButtonSymbols(QtGui.QAbstractSpinBox.UpDownArrows)
-        self.ui.spinner.setMaximum(10)
-        self.ui.spinner.setMinimum(1)
-        self.ui.spinner.setSuffix(" year(s)")
-        self.ui.horizontalLayout_3.insertWidget(2, self.ui.spinner)
-        self.ui.horizontalLayout_3.insertWidget(2, QtGui.QLabel("Bins: "))
+        self.spinner = QtGui.QSpinBox()
+        self.spinner.setFrame(True)
+        self.spinner.setButtonSymbols(QtGui.QAbstractSpinBox.UpDownArrows)
+        self.spinner.setMaximum(10)
+        self.spinner.setMinimum(1)
+        self.spinner.setSuffix(" year(s)")
+        self.spinner_label = QtGui.QLabel("Buckets: ")
+        self.spinner.valueChanged.connect(self.update_plot)
         
-        self.ui.spinner.valueChanged.connect(self.update_plot)
+        self.toolbar = None
+        self.canvas = None
 
     def add_visualizer(self, visualizer):
         """ Add a Visualizer instance to the visualization dialog. Also, 
         add a matplotlib canvas and a matplotlib navigation toolbar to the 
         dialog. """
         self.visualizer = visualizer
+        self.connect_signals()
         options.cfg.main_window.widget_list.append(self)
 
     def update_plot(self):
-        """ Update the plot. During the update, the canvas and the navigation
-        toolbar are replaced by new instances, as is the figure used by the 
-        visualizer. Finally, the draw() method of the visualizer is called to
-        plot the visualization again. """
+        """ 
+        Update the plot. 
+        
+        During the update, the canvas and the navigation toolbar are 
+        replaced by new instances, as is the figure used by the visualizer.
+        Finally, the draw() method of the visualizer is called to plot the
+        visualization again. 
+        """
         if self.smooth:
-            self.ui.spinner.valueChanged.disconnect(self.update_plot)
-            self.ui.spinner.setEnabled(False)
-        self.visualizer.setup_figure()
-        self.remove_matplot()
-        self.add_matplot()
-        if self.smooth:
-            self.visualizer.update_data(bandwidth=self.ui.spinner.value())
+            self.spinner.setEnabled(False)
+            self.visualizer.update_data(bandwidth=self.spinner.value())
         else:
             self.visualizer.update_data()
+
+        self.visualizer.setup_figure()
+        
+        self.remove_matplot()
+        self.add_matplot()
             
         self.visualizer.draw()
         if self.smooth:
-            self.ui.spinner.valueChanged.connect(self.update_plot)
-            self.ui.spinner.setEnabled(True)
+            self.spinner.setEnabled(True)
 
     def add_matplot(self):
         """ Add a matplotlib canvas and a navigation bar to the dialog. """
-        self.canvas = FigureCanvas(self.visualizer.g.fig)
-        self.ui.verticalLayout.addWidget(self.canvas)
-        self.canvas.setParent(self.ui.box_visualize)
-        self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.canvas.setFocus()
-        self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
-        self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)
-        self.ui.navigation_layout.addWidget(self.toolbar)
+        if not self.canvas:
+            self.canvas = FigureCanvas(self.visualizer.g.fig)
+            self.ui.verticalLayout.addWidget(self.canvas)
+            self.canvas.setParent(self.ui.box_visualize)
+            self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
+            self.canvas.setFocus()
+            self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
+
+        if not self.toolbar:
+            self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
+            if options.cfg.experimental:
+                self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
+            if self.smooth:
+                self.toolbar.addWidget(self.spinner)
+                self.toolbar.addWidget(self.spinner_label)
+            self.ui.navigation_layout.addWidget(self.toolbar)
+        else:
+            self.toolbar.canvas = self.canvas
 
     def remove_matplot(self):
-        """ Remove the matplotlib canvas and the navigation bar from the 
-        dialog. """
+        """ 
+        Remove the matplotlib canvas and the navigation bar from the 
+        dialog. 
+        """
+        if self.canvas:
+            self.canvas.close()
         self.ui.verticalLayout.removeWidget(self.canvas)
-        self.canvas.close()
-        self.ui.navigation_layout.removeWidget(self.toolbar)
-        self.toolbar.close()
+        self.canvas = None
+        
+    def closeEvent(self, event):
+        self.close()
         
     def close(self, *args):
         """ Close the visualizer widget, disconnect the signals, and remove 
         the visualizer from the list of visualizers when closing."""
-        super(VisualizerDialog, self).close(*args)
+        try:
+            self.disconnect_signals()
+        except TypeError:
+            # TypeErrors can be raised if there is no connected object. This
+            # can be ignored:
+            pass
+        self.remove_matplot()
+        super(VisualizerDialog, self).close()
         try:
             options.cfg.main_window.widget_list.remove(self)
         except ValueError:
             pass
         try:
-            self.disconnect_signals()
-        except RuntimeError:
+            del self.visualizer
+        except AttributeError:
             pass
         
-    def closeEvent(self, *args):
-        """ Catch close event so that the visualizer is disconnected and 
-        removed from the list of visualizers. """
-        self.close()
-        super(VisualizerDialog, self).closeEvent(*args)
-
     def keyPressEvent(self, event):
         """ Catch key events so that they can be passed on to the matplotlib
         toolbar. """
@@ -627,19 +715,22 @@ class VisualizerDialog(QtGui.QWidget):
         sectionMoved signal of the header of the table view to the 
         update_plot() method so that the method is called whenever either the
         content of the results table changes, or the columns are moved."""
-
+        if not options.cfg.experimental:
+            return
         options.cfg.main_window.table_model.dataChanged.connect(self.update_plot)
         options.cfg.main_window.table_model.layoutChanged.connect(self.update_plot)
-        options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.connect(self.update_plot)
+        self.visualizer._view.horizontalHeader().sectionMoved.connect(self.update_plot)
 
     def disconnect_signals(self):
         """ Disconnect the dataChanged signal of the abstract data table and 
         the sectionMoved signal of the header of the table view so that the 
         update_plot() method is not called anymore when the content of the 
         results table changes or the columns are moved."""
+        if not options.cfg.experimental:
+            return
         options.cfg.main_window.table_model.dataChanged.disconnect(self.update_plot)
         options.cfg.main_window.table_model.layoutChanged.disconnect(self.update_plot)
-        options.cfg.main_window.ui.data_preview.horizontalHeader().sectionMoved.disconnect(self.update_plot)
+        self.visualizer._view.horizontalHeader().sectionMoved.disconnect(self.update_plot)
         
     def toggle_freeze(self):
         """ Toggle the 'frozen' state of the visualization. This method is 
@@ -652,6 +743,8 @@ class VisualizerDialog(QtGui.QWidget):
         
         If the box is unchecked (the default), the visualization is not 
         frozen, and the plot is updated on changes to the results table. """
+        if not options.cfg.experimental:
+            return
         self.frozen = not self.frozen
         if self.frozen:
             self.disconnect_signals()
@@ -661,7 +754,7 @@ class VisualizerDialog(QtGui.QWidget):
     def plot_it(self):
         print("starting")
         self.visualizer.setup_figure()
-        self.visualizer.draw()
+        self.visualizer.start_draw_thread()
         print("done")
 
     def Plot(self, model, view, visualizer_class, parent=None, **kwargs):
@@ -670,19 +763,13 @@ class VisualizerDialog(QtGui.QWidget):
         view given in 'view'. """
         dialog = self
         self.smooth = kwargs.get("smooth", False)
-        if self.smooth:
-            self.add_smooth_spinner()
-        try:
-            visualizer = visualizer_class(model, view, **kwargs)
-            if visualizer._model:
-                dialog.setVisible(True)
-                dialog.add_visualizer(visualizer)
-                dialog.add_matplot()
-                #self.sub_process = multiprocessing.Process(target=self.plot_it, args=())
-                #self.sub_process.start()
-                self.visualizer.draw()
-        except InvalidGraphLayout as e:
-            QtGui.QMessageBox.critical(self, "Visualization error", e.error_message)
+        visualizer = visualizer_class(model, view, **kwargs)
+        if not visualizer._table.empty:
+            dialog.setVisible(True)
+            dialog.add_visualizer(visualizer)
+            dialog.add_matplot()
+            self.visualizer.draw()
+            
 if __name__ == "__main__":
     unittest.main()
             

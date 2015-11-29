@@ -2,12 +2,12 @@
 
 # Form implementation generated from reading ui file 'corpusBuilder.ui'
 #
-# Created: Sat Jul 25 14:08:28 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created: Sun Sep 27 19:39:27 2015
+#      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui
+from pyqt_compat import QtCore, QtGui, frameShadow
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_CorpusBuilder(object):
     def setupUi(self, CorpusBuilder):
         CorpusBuilder.setObjectName(_fromUtf8("CorpusBuilder"))
-        CorpusBuilder.resize(797, 591)
+        CorpusBuilder.resize(823, 591)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -47,7 +47,7 @@ class Ui_CorpusBuilder(object):
         sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
         self.frame.setSizePolicy(sizePolicy)
         self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.frame.setFrameShadow(QtGui.QFrame.Raised)
+        self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout = QtGui.QVBoxLayout(self.frame)
         self.verticalLayout.setMargin(10)
@@ -70,6 +70,7 @@ class Ui_CorpusBuilder(object):
         self.horizontalLayout.addItem(spacerItem)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.gridLayout_2 = QtGui.QGridLayout()
+        self.gridLayout_2.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
         self.gridLayout_2.setVerticalSpacing(10)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
         self.radio_build_corpus = QtGui.QRadioButton(self.frame)
@@ -133,12 +134,12 @@ class Ui_CorpusBuilder(object):
         self.gridLayout_2.addWidget(self.box_build_options, 1, 1, 1, 1)
         self.verticalLayout.addLayout(self.gridLayout_2)
         self.verticalLayout_2.addWidget(self.frame)
+        spacerItem1 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.verticalLayout_2.addItem(spacerItem1)
         self.progress_bar = QtGui.QProgressBar(CorpusBuilder)
         self.progress_bar.setProperty("value", 0)
         self.progress_bar.setObjectName(_fromUtf8("progress_bar"))
         self.verticalLayout_2.addWidget(self.progress_bar)
-        spacerItem1 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem1)
         self.buttonBox = QtGui.QDialogButtonBox(CorpusBuilder)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
@@ -161,4 +162,5 @@ class Ui_CorpusBuilder(object):
         self.button_input_path.setShortcut(_translate("CorpusBuilder", "Alt+B", None))
         self.use_pos_tagging.setText(_translate("CorpusBuilder", "Use NLTK for part-of-speech tagging and lemmatization", None))
         self.progress_bar.setFormat(_translate("CorpusBuilder", "Idle.", None))
+
 

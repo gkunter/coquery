@@ -54,13 +54,6 @@
        <number>10</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="check_freeze">
-        <property name="text">
-         <string>&amp;Freeze visualization</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QFrame" name="frame_2">
         <property name="sizePolicy">
          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">

@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
-""" FILENAME: sqlwrap.py -- part of Coquery corpus query tool
+"""
+sqlwrap.py is part of Coquery.
 
-This module defines a wrapper to access a MySQL database. """
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from __future__ import unicode_literals
 import __init__
@@ -17,48 +23,81 @@ from errors import *
 import options
 
 try:
-    try:
-        import MySQLdb as mysql
-        import MySQLdb.cursors as mysql_cursors
-        logger.debug("Using MySQLdb")
-    except ImportError:
-        import pymysql as mysql
-        import pymysql.cursors as mysql_cursors
-        logger.debug("Using pymysql")
+    import pymysql
+    import pymysql.cursors
 except ImportError:
-    raise DependencyError(["MySQLdb", "pymysql"])
+    raise DependencyError("pymysql")
 
 class SqlDB (object):
     """ A wrapper for MySQL. """
-    def __init__(self, Host, Port, User, Password, Database=None, encoding="utf8"):
+    def __init__(self, Host, Port, User, Password, db_name=None, encoding="utf8", connect_timeout=60):
         self.Con = None
         self.Cur = None
         try:
-            if Database:
-                self.Con = mysql.connect(
+            if db_name:
+                self.Con = pymysql.connect(
                     host=Host, 
                     port=Port, 
                     user=User, 
                     passwd=Password, 
-                    db=Database,
+                    db=db_name,
+                    connect_timeout=connect_timeout,
                     charset=encoding)
             else:
-                self.Con = mysql.connect(
+                self.Con = pymysql.connect(
                     host=Host, 
                     port=Port, 
                     user=User, 
                     passwd=Password,
+                    connect_timeout=connect_timeout,
                     charset=encoding)
 
-        except mysql.InternalError as e:
+        except (pymysql.OperationalError, pymysql.InternalError) as e:
              raise SQLInitializationError(e)
         self.Cur = self.Con.cursor()
         self.set_variable("NAMES", encoding)
 
+    @staticmethod
+    def test_connection(host, port, user, password, connect_timeout=60):
+        """
+        Tests if the specified MySQL connection is available.
+        
+        This method attempts to create a connection to the MySQL server using
+        the host, port, user name, and password as provided as arguments.
+        
+        Parameters
+        ----------
+        host : string
+            The host name or IP address of the host
+        port : int 
+            The MySQL port on the host server
+        user : string 
+            The name of the MySQL user 
+        password : string 
+            The password of the MySQL user
+            
+        Returns
+        -------
+        test : bool
+            Returns True if a connection could be created, or False otherwise.
+        """
+        try:
+            con = pymysql.connect(
+                host=host, 
+                port=port, 
+                user=user, 
+                passwd=password,
+                connect_timeout=connect_timeout)
+        except pymysql.Error as e:
+            return False
+        else:
+            con.close()
+        return True
+
     def kill_connection(self):
         try:
             self.Con.kill(self.Con.thread_id())
-        except mysql.OperationalError:
+        except (pymysql.OperationalError, pymysql.InternalError):
             pass
 
     def set_variable(self, variable, value):
@@ -76,22 +115,27 @@ class SqlDB (object):
         try:
             self.Cur.close()
             self.Con.close()
-        except mysql.ProgrammingError:
+        except (pymysql.ProgrammingError, pymysql.Error):
             pass
         
     def explain(self, S):
         """
-Call        explain(self, S)
-Summary     Execute an SQL EXPLAIN command for the command S. The resulting
-            table will be printed to the log file as INFO.             
-Value       no return value
+        Explain a MySQL query.
+        
+        The output of the EXPLAIN command is formatted as a table, and then
+        logged to the logger as an INFO.
+        
+        Parameters
+        ----------
+        S : string
+            The MySQL string to be explained.
         """
         command = S.partition(" ")[0].upper()
         if command in ["SHOW", "DESCRIBE", "SET", "RESET"]:
             return
         try:
             self.Cur.execute("EXPLAIN %s" % S)
-        except mysql.ProgrammingError as e:
+        except pymysql.ProgrammingError as e:
             raise SQLProgrammingError(S + "\n"+ "%s" % e)
         else:
             explain_table = self.Cur
@@ -122,22 +166,18 @@ Value       no return value
             self.explain(S)
         logger.debug(S)
 
-        if options.cfg.dry_run:
-            cursor = []
+        if server_side:
+            cursor = self.Con.cursor(pymysql.cursors.SSDictCursor)
         else:
-            if server_side:
-                cursor = self.Con.cursor(mysql_cursors.SSDictCursor)
-            
-            else:
-                cursor = self.Con.cursor(mysql_cursors.DictCursor)
-            cursor.execute(S)
+            cursor = self.Con.cursor(pymysql.cursors.DictCursor)
+        cursor.execute(S)
         return cursor
     
     def executemany(self, S, data):
         cur = self.Con.cursor()
         cur.executemany(S, data)
     
-    def execute(self, S, ForceExecution = False):
+    def execute(self, S):
         """
 Call        execute(self, S, ForceExecution=False)
 Summary     Executes the SQL command string provided in S, or pretend to do 
@@ -153,16 +193,13 @@ Value       no return value
             self.explain(S)
         logger.debug(S)
 
-        if not options.cfg.dry_run or ForceExecution:
-            self.Cur.execute(S)
+        self.Cur.execute(S)
 
     def commit (self):
-        if not options.cfg.dry_run:
-            self.Con.commit ()
+        self.Con.commit ()
         
     def rollback (self):
-        if not options.cfg.dry_run:
-            self.Con.rollback ()
+        self.Con.rollback ()
 
     def fetch_all (self):
         return self.Cur.fetchall()

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>797</width>
+    <width>823</width>
     <height>591</height>
    </rect>
   </property>
@@ -93,6 +93,9 @@
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout_2">
+        <property name="sizeConstraint">
+         <enum>QLayout::SetMinimumSize</enum>
+        </property>
         <property name="verticalSpacing">
          <number>10</number>
         </property>

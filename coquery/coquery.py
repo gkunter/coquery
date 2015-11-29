@@ -2,47 +2,42 @@
 # -*- coding: utf-8 -*-
 
 """
-FILENAME: coquery.py -- main module of Coquery corpus query tool
-
 This is the main module of Coquery.
 
-LICENSE:
 Copyright (c) 2015 Gero Kunter
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>
 """
 
 from __future__ import unicode_literals
 
 import sys
 import os.path
+import time
 
 import logging
 import logging.handlers
 
-import options
-from session import *
 from errors import *
+import options
 
-import cProfile
-
-import time
+try:
+    from session import *
+except DependencyError as e:
+    (str(e))
+    sys.exit(1)
+    
 import __init__
 
 def set_logger():
@@ -66,13 +61,13 @@ def main():
         # Check if a valid corpus was specified, but only if no GUI is
         # requested (the GUI will handle corpus selection later):
         if not (options.cfg.gui):
-            if not resource_list.get_available_resources():
+            if not get_available_resources(options.cfg.current_server):
                 raise NoCorpusError
 
             if not options.cfg.corpus:
                 raise NoCorpusSpecifiedError
 
-            if options.cfg.corpus not in resource_list.get_available_resources():
+            if options.cfg.corpus not in get_available_resources(options.cfg.current_server):
                 raise CorpusUnavailableError(options.cfg.corpus)
             
     except Exception as e:
@@ -94,7 +89,7 @@ def main():
     # Run the Application GUI?
     if options.cfg.gui:
         sys.path.append(os.path.join(sys.path[0], "gui"))
-        from pyqt_compat import QtGui
+        from pyqt_compat import QtGui, QtCore
         from app import CoqueryApp
         from app import GuiHandler
 
@@ -104,13 +99,20 @@ def main():
 
         options.cfg.app = QtGui.QApplication(sys.argv)
         Coq = CoqueryApp()
+        options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
+        Coq.logo = QtGui.QPixmap("{}/logo/title.png".format(sys.path[0]))
         Coq.show()
         Coq.setGUIDefaults()
+
         options.cfg.icon = QtGui.QIcon()
         options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_tiny.png".format(sys.path[0])))
         Coq.setWindowIcon(options.cfg.icon)
-        options.cfg.app.exec_()
+        if options.cfg.profile:
+            import cProfile
+            cProfile.runctx("options.cfg.app.exec_()", globals(), locals())
+        else:
+            options.cfg.app.exec_()
         logger.info("--- Finished program (after %.3f seconds) ---" % (time.time() - start_time))
 
     # Otherwise, run program as a command-line tool:
@@ -131,6 +133,7 @@ def main():
             # Check if profiling is requested. If so, wrap the profiler 
             # around the query execution:
             if options.cfg.profile:
+                import cProfile
                 cProfile.runctx("Session.run_queries()", globals(), locals())
             # Otherwise, run queries normally:
             else:

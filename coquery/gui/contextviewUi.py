@@ -2,12 +2,12 @@
 
 # Form implementation generated from reading ui file 'contextview.ui'
 #
-# Created: Mon Aug 17 21:32:34 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created: Thu Nov 12 10:24:18 2015
+#      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui
+from pyqt_compat import QtCore, QtGui, frameShadow
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -28,25 +28,35 @@ class Ui_ContextView(object):
         ContextView.setObjectName(_fromUtf8("ContextView"))
         ContextView.resize(640, 480)
         self.verticalLayout_3 = QtGui.QVBoxLayout(ContextView)
-        self.verticalLayout_3.setSpacing(20)
+        self.verticalLayout_3.setSpacing(16)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.box_context = QtGui.QFrame(ContextView)
         self.box_context.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.box_context.setFrameShadow(QtGui.QFrame.Raised)
+        self.box_context.setFrameShadow(frameShadow)
         self.box_context.setObjectName(_fromUtf8("box_context"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.box_context)
-        self.verticalLayout_2.setMargin(10)
+        self.verticalLayout_2.setContentsMargins(8, 6, 8, 6)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
-        self.form_information = QtGui.QFormLayout()
+        self.verticalLayout = QtGui.QVBoxLayout()
+        self.verticalLayout.setSpacing(0)
+        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        self.button_ids = QtGui.QPushButton(self.box_context)
+        self.button_ids.setStyleSheet(_fromUtf8("text-align: left; padding: 4px; padding-left: 1px;"))
+        self.button_ids.setFlat(False)
+        self.button_ids.setObjectName(_fromUtf8("button_ids"))
+        self.verticalLayout.addWidget(self.button_ids)
+        self.frame_details = QtGui.QFrame(self.box_context)
+        self.frame_details.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_details.setFrameShadow(QtGui.QFrame.Sunken)
+        self.frame_details.setObjectName(_fromUtf8("frame_details"))
+        self.form_information = QtGui.QFormLayout(self.frame_details)
         self.form_information.setFieldGrowthPolicy(QtGui.QFormLayout.ExpandingFieldsGrow)
+        self.form_information.setRowWrapPolicy(QtGui.QFormLayout.WrapLongRows)
+        self.form_information.setContentsMargins(-1, 0, -1, -1)
         self.form_information.setHorizontalSpacing(10)
         self.form_information.setObjectName(_fromUtf8("form_information"))
-        self.verticalLayout_2.addLayout(self.form_information)
-        self.line_2 = QtGui.QFrame(self.box_context)
-        self.line_2.setFrameShape(QtGui.QFrame.HLine)
-        self.line_2.setFrameShadow(QtGui.QFrame.Sunken)
-        self.line_2.setObjectName(_fromUtf8("line_2"))
-        self.verticalLayout_2.addWidget(self.line_2)
+        self.verticalLayout.addWidget(self.frame_details)
+        self.verticalLayout_2.addLayout(self.verticalLayout)
         self.context_area = QtGui.QTextBrowser(self.box_context)
         self.context_area.setAutoFillBackground(False)
         self.context_area.setFrameShape(QtGui.QFrame.StyledPanel)
@@ -57,11 +67,11 @@ class Ui_ContextView(object):
         self.verticalLayout_3.addWidget(self.box_context)
         self.box_context_width = QtGui.QFrame(ContextView)
         self.box_context_width.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.box_context_width.setFrameShadow(QtGui.QFrame.Raised)
+        self.box_context_width.setFrameShadow(frameShadow)
         self.box_context_width.setObjectName(_fromUtf8("box_context_width"))
         self.horizontalLayout_2 = QtGui.QHBoxLayout(self.box_context_width)
         self.horizontalLayout_2.setSpacing(10)
-        self.horizontalLayout_2.setMargin(10)
+        self.horizontalLayout_2.setContentsMargins(8, 6, 8, 6)
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
         self.label_4 = QtGui.QLabel(self.box_context_width)
         self.label_4.setObjectName(_fromUtf8("label_4"))
@@ -108,7 +118,9 @@ class Ui_ContextView(object):
 
     def retranslateUi(self, ContextView):
         ContextView.setWindowTitle(_translate("ContextView", "Context view – Coquery", None))
+        self.button_ids.setText(_translate("ContextView", "Token ID: {}, Source ID: {}", None))
         self.label_4.setText(_translate("ContextView", "Context size:", None))
         self.spin_context_width.setSpecialValueText(_translate("ContextView", "none", None))
         self.spin_context_width.setSuffix(_translate("ContextView", " words", None))
+
 

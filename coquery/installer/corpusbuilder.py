@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+from __future__ import print_function
+
+"""
+corpusbuilder.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 """ 
 The module :mod:`corpusbuilder.py` provides the framework for corpus module
 installers.
@@ -41,14 +54,19 @@ collection of text files in a directiory into a query-able corpus, and
 version of the British National corpus.
 """
 
-from __future__ import unicode_literals
-from __future__ import print_function
+try:
+    str = unicode
+except:
+    pass
+
 import codecs
 
 import logging
 import collections
-import os, os.path
+import os.path
 import string
+import imp
+import importlib
 
 import dbconnection
 import argparse
@@ -58,14 +76,17 @@ import sys
 import textwrap
 import fnmatch
 import inspect
-import xml.etree.ElementTree as ET
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
+        
 import difflib
 
 try:
+    sys.path.append(os.path.join(sys.path[0], "../gui"))
+    sys.path.append(os.path.join(sys.path[0], ".."))
     from pyqt_compat import QtCore, QtGui
-    import options
-    import corpusBuilderUi
-    import error_box
     use_gui = True
 except ImportError:
     print("Import error; GUI will not be available.")
@@ -84,12 +105,8 @@ except ImportError:
 else:
     nltk_available = True
 
-try:
-    import progressbar
-    show_progress = True
-except ImportError:
-    show_progress = False
-
+import corpus
+from errors import *
 
 insert_cache = collections.defaultdict(list)
 
@@ -108,7 +125,7 @@ class NLTKTaggerError(Exception):
             error_box.ErrorBox.show(sys.exc_info(), self)
 
 class MethodNotImplementedError(Exception):
-    msg = "Function not impemented."
+    msg = "Function not implemented."
 
 # module_code contains the Python skeleton code that will be used to write
 # the Python corpus module."""
@@ -124,6 +141,7 @@ from corpus import *
 
 class Resource(SQLResource):
     name = '{name}'
+    display_name = '{display_name}'
     db_name = '{db_name}'
 {variables}
 {resource_code}
@@ -143,8 +161,6 @@ class Corpus(SQLCorpus):
 # combinations of corpus features and the associated number of words.
 # For example, COCA should have a table with Genre, Year and Frequency,
 # with 5 x 23 rows (5 Genres, 23 Years). 
-
-in_memory = False
 
 class Column(object):
     """ Define an object that stores the description of a column in one 
@@ -173,9 +189,34 @@ class Column(object):
     
     @property
     def data_type(self):
+        """
+        Return the data type of the column.
+        
+        Returns
+        -------
+        data_type : string
+            The data type of the column in the same form as used by the 
+            MySQL CREATE TABLE command.
+        
+        """
         return self._data_type
     
+    @property
     def base_type(self):
+        """
+        Return the base type of the column.
+        
+        This function does not return the field length, but only the base 
+        data type, i.e. VARCHAR, MEDIUMINT, etc.
+        
+        Use data_type for the full column specification.
+
+        Returns
+        -------
+        base_type : string
+            A MySQL base data type.
+
+        """
         return self._data_type.split()[0].partition("(")[0]
     
     @data_type.setter
@@ -210,76 +251,190 @@ class Table(object):
         self.columns = list()
         self.primary = None
         self._current_id = 0
-        self._add_cache = collections.OrderedDict()
+        self._row_order = []
+        self._add_cache = dict()
         self._commited = {}
         self._col_names = None
+
+    @property
+    def name(self):
+        return self._name
         
-    def commit(self, db_connector):
+    @name.setter
+    def name(self, s):
+        self._name = s
+        
+    def commit(self, db_connector, strange_check=False):
+        """
+        Commit the table content to the data base.
+        
+        This table commits the unsaved content of the table to the data base.
+        After commiting, the values of all table entries are set to None, and
+        only those data that have a value different from None will be 
+        commited the next time this method is called.
+        
+        As this method is usually called after a file has been processed, 
+        this ensures that all new table rows are commited, while at the same
+        time preserving some memory space.
+        """
+        
         if self._add_cache:
+            if self.primary.name not in self._col_names:
+                fields = [self.primary.name] + self._col_names
+            else:
+                fields = self._col_names
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self._name, ", ".join([self.primary.name] + self._col_names), ", ".join(["%s"] * (len(self._col_names) + 1)))
+                self._name, ", ".join(fields), ", ".join(["%s"] * len(fields)))
             data = []
+            new_keys = []
+            # build a list of all new entries, i.e. those for which the value
+            # is not Null
             for row in self._add_cache:
                 row_id, row_data = self._add_cache[row]
                 if row_data:
-                    data.append([row_id] + row_data.values())
-            #data = [[row_id] + row.values() for row_id, row in self._add_cache if row]
+                    if strange_check:
+                        if len(row_data) == 1:
+                            for x in row_data:
+                                row_data[x] = ["", row_data[x][0], "u"]
+                    if self.primary.name in self._col_names:
+                        data.append(list(row_data.values()))
+                    else:
+                        data.append([row_id] + list(row_data.values()))
+                    new_keys.append(row)
+
             if data: 
-                db_connector.executemany(sql_string, data)
-                for row in self._add_cache:
-                    row_id, row_data = self._add_cache[row]
-                    self._add_cache[row] = (row_id, None)        
+                try:
+                    db_connector.executemany(sql_string, data)
+                except TypeError as e:
+                    print(sql_string, data)
+                    print(e)
+                except Exception as e:
+                    print(sql_string, data)
+                    print(e)
+                    raise e
+                # Reset all new keys:
+                for row in new_keys:
+                    self._add_cache[row] = (self._add_cache[row][0], None)
     
-    def add_data(self, row):
+    def _add_next_with_primary(self, row):
         """ Add a valid primary key to the data in the 'row' dictionary, 
         and store the data in add cache of the table. """ 
-        if not self._col_names:
-            self._col_names = row.keys()
         self._current_id += 1
-        
-        self._add_cache[tuple([row[x] for x in sorted(row)])] = (self._current_id, row)
+        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        return self._current_id
+
+    def _add_next_no_primary(self, row):
+        """ Sotre the row in the add cache of the table. The primary key is 
+        expected to be already in the row, so it is not added."""
+        self._current_id = row[self.primary.name]
+        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        return self._current_id
+    
+    def add(self, row):
+        """ Add a valid primary key to the data in the 'row' dictionary, 
+        and store the data in add cache of the table. """ 
+
+        if not self._col_names:
+            self._col_names = list(row.keys())
+        if self.primary.name in self._col_names:
+            # if the primary key is in the row, use it:
+            self._current_id = row[self.primary.name]
+            self.add = self._add_next_no_primary
+        else:
+            # otherwise, the primary key is created:
+            self._current_id += 1
+            self.add = self._add_next_with_primary
+
+        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
         return self._current_id
         
-    def get_or_insert(self, row):
-        """ Either return the id of the cached row, or insert the row as a
-        new entry and return the new id."""
+    def get_or_insert(self, values, case=False):
+        """ 
+        Returns the id of the first entry matching the values from the table.
         
-        try:
-            return self._add_cache[tuple([row[x] for x in sorted(row)])][0]
-        except KeyError:
-            return self.add_data(row)
+        If there is no entry matching the values in the table, a new entry is
+        added to the table based on the values. 
+        description.
         
-    def get_data_id(self, row):
+        Parameters
+        ----------
+        values : dict
+            A dictionary with column names as keys, and the entry content
+            as values.
+            
+        Returns
+        -------
+        id : int 
+            The id of the entry, as it is stored in the MySQL table.
+        """
         try:
-            return self._add_cache[tuple([row[x] for x in sorted(row)])][0]
+            row_id = self._add_cache[tuple([values[x] for x in self._row_order])][0]
         except KeyError:
+            return self.add(values)
+        else:
+            return row_id
+
+    def find(self, values, db_connector):
+        """ 
+        Return the first row that matches the values, or None
+        otherwise.
+        """
+        x = db_connector.find(self.name, values, [self.primary.name])
+        if x:
+            return x[0]
+        else:
             return None
+        
+        #self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        #try:
+            #return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
+        #except IndexError:
+            #return None
         
     def add_column(self, column):
         self.columns.append(column)
         if column.primary:
             self.primary = column
+        else:
+            self._row_order.append(column.name)
+
+    def get_column(self, name):
+        """
+        Return the specified column.
+        
+        Parameters
+        ----------
+        name : string
+            The name of the column
+            
+        Returns
+        -------
+        col : object or NoneType
+            The Column object matching the name, or None.
+        """
+        for x in self.columns:
+            if x.name == name:
+                return x
+        return None
             
     def get_create_string(self):
         str_list = []
+        columns_added = set([])
         for column in self.columns:
-            if column.primary:
-                if in_memory:
-                    str_list.insert(0, "`{}` {}".format(
-                        column.name,
-                        column.data_type))
-                else:
+            if column.name not in columns_added:
+                if column.primary:
                     str_list.insert(0, "`{}` {} AUTO_INCREMENT".format(
                         column.name,
                         column.data_type))
                     str_list.append("PRIMARY KEY (`{}`)".format(column.name))
-            else:
-                str_list.append("`{}` {}".format(
-                    column.name,
-                    column.data_type))
+                else:
+                    str_list.append("`{}` {}".format(
+                        column.name,
+                        column.data_type))
+                columns_added.add(column.name)
         return ", ".join(str_list)
     
-class BaseCorpusBuilder(object):
+class BaseCorpusBuilder(corpus.BaseResource):
     """ 
     This class is the base class used to build and install a corpus for 
     Coquery. For corpora currently not supported by Coquery, new builders 
@@ -290,7 +445,7 @@ class BaseCorpusBuilder(object):
     name = None
     table_description = None
     lexicon_features = None
-    corpus_features = None
+    #corpus_features = None
     arguments = None
     name = None
     additional_arguments = None
@@ -299,46 +454,49 @@ class BaseCorpusBuilder(object):
     additional_stages = []
     start_time = None
     file_filter = None
+    encoding = "utf-8"
+    expected_files = []
     
     def __init__(self, gui=False):
         self.module_code = module_code
         self.table_description = {}
         self.lexicon_features = []
-        self.corpus_features = []
+        #self.corpus_features = []
         self._time_features = []
-        self._tables = {}
+        #self._tables = {}
         self._id_count = {}
         self._primary_keys = {}
-        
+        self._interrupted = False
+        self._blocklist = set()
         self._new_tables = {}
         
         self._corpus_buffer = []
         self._corpus_id = 0
         self._widget = gui
         
-        if not gui:        
-            # set up argument parser:
-            self.parser = argparse.ArgumentParser()
-            self.parser.add_argument("name", help="name of the corpus", type=str)
-            self.parser.add_argument("path", help="location of the text files", type=str)
-            self.parser.add_argument("--db_user", help="name of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_user")
-            self.parser.add_argument("--db_password", help="password of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_password")
-            self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="localhost", dest="db_host")
-            self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
-            self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
-            self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
-            self.parser.add_argument("-w", help="Actually do something; default behaviour is simulation.", action="store_false", dest="dry_run")
-            self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
-            self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
-            if nltk_available:
-                self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
-            self.parser.add_argument("-l", help="load source files", action="store_true")
-            self.parser.add_argument("-c", help="Create database tables", action="store_true")
-            self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
-            self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
-            self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: utf8)", type=str, default="utf8")
-            self.parser.add_argument("--in_memory", help="try to improve writing speed by retaining tables in working memory. May require a lot of memory for big corpora.", action="store_true")
-            self.additional_arguments()
+        self._source_count = collections.Counter()
+        
+        # set up argument parser:
+        self.parser = argparse.ArgumentParser()
+        self.parser.add_argument("name", help="name of the corpus", type=str)
+        self.parser.add_argument("path", help="location of the text files", type=str)
+        self.parser.add_argument("--db_user", help="name of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_user")
+        self.parser.add_argument("--db_password", help="password of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_password")
+        self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="127.0.0.1", dest="db_host")
+        self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
+        self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
+        self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
+        self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
+        self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
+        if nltk_available:
+            self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
+        self.parser.add_argument("-l", help="load source files", action="store_true")
+        self.parser.add_argument("-c", help="create database tables", action="store_true")
+        self.parser.add_argument("-w", help="write corpus module", action="store_true")
+        self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
+        self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
+        self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
+        self.additional_arguments()
 
     def add_tag_table(self):
         """ 
@@ -347,10 +505,10 @@ class BaseCorpusBuilder(object):
         Corpora should usually have a tag table that is used to store
         text information. This method is called during :func:`build` and
         adds a tag table if none is present yet.
-        """
         
-        if "tag_table" in dir(self):
-            return
+        Currently, the tag table cannot be queried, so no indices will be
+        created for the data columns.
+        """
         
         self.tag_table = "tags"
         self.tag_id = "TagId"
@@ -359,18 +517,6 @@ class BaseCorpusBuilder(object):
         self.tag_corpus_id = self.corpus_id
         self.tag_attribute = "Attribute"
         
-        self.add_table_description(self.tag_table, self.tag_id,
-            {"CREATE": [
-                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_id),
-                "`{}` ENUM('open', 'close', 'empty')".format(self.tag_type),
-                "`{}` TINYTEXT NOT NULL".format(self.tag_label),
-                "`{}` MEDIUMINT(6) UNSIGNED NOT NULL".format(self.tag_corpus_id),
-                "`{}` TINYTEXT NOT NULL".format(self.tag_attribute)],
-            "INDEX": [
-                ([self.tag_corpus_id], 0, "HASH"),
-                ([self.tag_label], 0, "BTREE"),
-                ([self.tag_type], 0, "BTREE")]})
-            
         self.create_table_description(self.tag_table,
             [Primary(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
@@ -378,8 +524,29 @@ class BaseCorpusBuilder(object):
              Link(self.tag_corpus_id, self.corpus_table),
              Column(self.tag_attribute, "TINYTEXT NOT NULL", index=False)])
 
+        self.add_index_to_blocklist(("tags", self.tag_label))
+        self.add_index_to_blocklist(("tags", self.tag_type))
+        self.add_index_to_blocklist(("tags", self.tag_type))
+        self.add_index_to_blocklist(("tags", self.tag_attribute))
+
+    def interrupt(self):
+        """
+        Interrupt the builder.
+        
+        Calling this method will interrupt the current building or 
+        installation process. All data written so far to the database will 
+        be discarded, and no corpus module will be written.
+        
+        In particular, this method is called in the GUI if the Cancel button
+        is pressed.
+        """
+        self._interrupted = True
+        
+    @property
+    def interrupted(self):
+        return self._interrupted
+
     def check_arguments(self):
-        global in_memory
         """ Check the command line arguments. Add defaults if necessary."""
         if not self._widget:
             self.arguments, unknown = self.parser.parse_known_args()
@@ -388,10 +555,8 @@ class BaseCorpusBuilder(object):
             if not self.arguments.db_name:
                 self.arguments.db_name = self.arguments.name
             if not self.arguments.corpus_path:
-                self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../coquery/corpora"))
+                self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../corpora"))
             self.name = self.arguments.name
-            
-            in_memory = self.arguments.in_memory
             
     def additional_arguments(self):
         """ Use this function if your corpus installer requires additional
@@ -399,13 +564,24 @@ class BaseCorpusBuilder(object):
         pass
     
     def commit_data(self):
-        if in_memory:
-            for table in self._new_tables:
-                self._new_tables[table].commit(self.Con)
-        elif self._corpus_buffer:
+        """
+        Commit any corpus data that is still stored only in the internal 
+        tables to the database.
+        
+        :func:`commit_data` is usually called for each file after the content
+        has been processed. 
+        
+        """
+        if self.interrupted:
+            return
+
+        for table in self._new_tables:
+            self._new_tables[table].commit(self.Con, strange_check=True)
+
+        if self._corpus_buffer:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
                 self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["%s"] * (len(self._corpus_keys))))
-            data = [row.values() for row in self._corpus_buffer]
+            data = [list(row.values()) for row in self._corpus_buffer]
             if data: 
                 try:
                     self.Con.executemany(sql_string, data)
@@ -428,97 +604,35 @@ class BaseCorpusBuilder(object):
             The name of the MySQL table
         column_list : list
             A list of :class:`Column` instances
-        """        
+        """
         new_table = Table(table_name)
         for x in column_list:
             if isinstance(x, Link):
-                x.data_type = self._new_tables[x._link].primary.data_type
+                try:
+                    x.data_type = self._new_tables[x._link].primary.data_type
+                except KeyError:
+                    raise KeyError("Table description for '{}' contains a link to unknown table '{}'".format(table_name, x._link))
             new_table.add_column(x)
         self._new_tables[table_name] = new_table
-                
-    def add_table_description(self, table_name, primary_key, table_description):
-        """ Add a primary key to the table description and the internal
-        tables."""
-        for i, x in enumerate(table_description["CREATE"]):
-            if "`{}`".format(primary_key) in x:
-                table_description["CREATE"][i] = "{} AUTO_INCREMENT".format(
-                    table_description["CREATE"][i])
-        table_description["CREATE"].append("PRIMARY KEY (`{}`)".format(primary_key))
-        self.table_description[table_name] = table_description
-        
-        self._tables[table_name] = {}
-        self._primary_keys[table_name] = primary_key
-        self._id_count[table_name] = 0
-        
-    def table_add(self, table_name, values):
-        """ 
-        Add an entry containing the values to the table. 
-        
-        This method adds a row with the values to the specified table. A new
-        unique id is also provided, and the class counter is updated. 
+
+    def table(self, table_name):
         """
-        return self.Con.insert(table_name, values)
-    
-    def table_find(self, table_name, values):
-        """ 
-        Return the first row that matches the values, or None
-        otherwise.
-        """
+        Return a Table object matching the specified name.
         
-        if in_memory:
-            keys_values = set(values.keys())
-            table = self._new_tables[table_name]
-            keys_table = sorted(table._col_names)
-            lookup_list = {}
+        Parameters
+        ----------
+        table_name : string
+            The name of the table
             
-            for key in values:
-                try:
-                    lookup_list[key] = keys_table.index(key)
-                except IndexError:
-                    pass
-
-            if lookup_list:
-                for key in table._add_cache:
-                    for lookup in lookup_list:
-                        if values[lookup] != key[lookup_list[lookup]]:
-                            break
-                        else:
-                            row_id, _ = table._add_cache[key]
-                            return 
-            return None
-        else:
-            try:
-                return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
-            except IndexError:
-                return None
-    
-    def table_get(self, table_name, values, case=False):
-        """ 
-        Returns the id of the first entry matching the values from the table.
-        
-        If there is no entry matching the values in the table, a new entry is
-        added to the table based on the values. The values have to be given 
-        in the same order as the column specifications in the table
-        description.
+        Returns
+        -------
+        table : object
+            A Table object, or None if there is no table of the given name
         """
-
-        # use new internal tables:
-        
-        if in_memory:
-            row_id = self._new_tables[table_name].get_data_id(values)
-            if row_id:
-                return row_id
-            else:
-                return self._new_tables[table_name].add_data(values)
-
-        key = tuple(values.values())
-        if key in self._tables[table_name]:
-            return self._tables[table_name][key]
-        else:
-            last = self.Con.insert(table_name, values)
-            self._tables[table_name][key] = last
-            return last
-        
+        try:
+            return self._new_tables[table_name]
+        except KeyError:
+            return None
 
     def setup_logger(self):
         """ 
@@ -552,45 +666,110 @@ class BaseCorpusBuilder(object):
         
         self.Con.start_transaction()
         self.add_tag_table()
+
+        # initialize progress bars:
         if self._widget:
-            self._widget.ui.progress_bar.setFormat("Creating tables... (%v of %m)")
-            self._widget.ui.progress_bar.setMaximum(len(self.table_description))
-            self._widget.ui.progress_bar.setValue(0)
-        elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Creating tables ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(self.table_description))
-            progress.start()
-        for i, current_table in enumerate(self.table_description):
+            self._widget.progressSet.emit(len(self._new_tables), "Creating tables... (%v of %m)")
+            self._widget.progressUpdate.emit(0)
+
+        for i, current_table in enumerate(self._new_tables):
             if not self.Con.has_table(current_table):
-                if self._new_tables:
-                    self.Con.create_table(current_table, self._new_tables[current_table].get_create_string())
-                else:
-                    self.Con.create_table(current_table, ", ".join(self.table_description[current_table]["CREATE"]), override=True)
+                self.Con.create_table(current_table, self._new_tables[current_table].get_create_string())
             if self._widget:
-                self._widget.ui.progress_bar.setValue(i)
-            elif show_progress:
-                progress.update(i + 1)
+                self._widget.progressUpdate.emit(i + 1)
+            if self.interrupted:
+                return
         self.Con.commit()
 
-        if show_progress and not self._widget:
-            progress.finish()
-
-    def get_file_list(self, path):
+    @staticmethod
+    def get_file_list(path, file_filter):
         """ 
-        Returns a list of file names from the given path that match
-        the file filter from self.file_filter.
+        Return a list of valid file names from the given path.
+        
+        This method recursively searches in the directory ``path`` and its
+        subdirectories for files that match the file filter specified in 
+        the class attribute ``file_filter``.
+        
+        Parameters
+        ----------
+        path : string
+            The path in which to look for files
+            
+        Returns
+        -------
+        l : list
+            A list of strings, each representing a file name        
         """
         L = []
         for source_path, folders, files in os.walk(path):
             for current_file in files:
                 full_name = os.path.join(source_path, current_file)
-                if not self.file_filter or fnmatch.fnmatch(current_file, self.file_filter):
+                if not file_filter or fnmatch.fnmatch(current_file, file_filter):
                     L.append(full_name)
         return L
+    
+    def validate_path(self, path):
+        """
+        Validate that directory ``path`` contains corpus data files.
+        
+        Parameters
+        ----------
+        path : string
+            The path to be validated
+        
+        Returns
+        -------
+        valid : bool
+            True if the directory ``path`` contains valid corpus data files,
+            or False otherwise.
+        """
+        
+        # check if path exists:
+        if not os.path.isdir(path):
+            return False
 
+        # check if path contains any file:
+        for source_path, folders, files in os.walk(path):
+            for current_file in files:
+                full_name = os.path.join(source_path, current_file)
+                if os.path.isfile(full_name):
+                    return True
+                if not self.file_filter or fnmatch.fnmatch(current_file, self.file_filter):
+                    return True
+        return False
+
+    @staticmethod
+    def validate_files(l):
+        """
+        Validates the file list.
+        
+        A corpus module has to overload this method to implement a protection 
+        against illegal installation paths. It could, for example, count the 
+        number of files in the file list, and compare it to an expected number
+        of files. It could also open each file and verify the file content.
+        
+        If the file list is invalid, the method raises a RuntimeError 
+        exception, with details on why the file list is invalid as the 
+        argument string to the exception.
+        
+        The default implementation will always invalidate the list.
+        
+        Parameters
+        ----------
+        l : list
+            A list of file names as created by get_file_list()
+            
+        """
+        
+        raise RuntimeError("The file list could not be validated.")
+        
     def get_corpus_code(self):
-        """ return a text string containing the Python source code from
-        the class attribute self._corpus_code. This function is needed
-        to add corpus-specifc to the Python corpus module."""
+        """ 
+        Return a text string containing the Python source code for the 
+        Corpus class of this module.
+        
+        The code is obtained from the the class attribute self._corpus_code.
+        """
         try:
             lines = [x for x in inspect.getsourcelines(self._corpus_code)[0] if not x.strip().startswith("class")]
         except AttributeError:
@@ -627,71 +806,71 @@ class BaseCorpusBuilder(object):
 
     def store_filename(self, file_name):
         self._file_name = file_name
-        self._file_id = self.table_get(self.file_table, 
-            {self.file_path: file_name,
-             self.file_name: 
-                 os.path.splitext(os.path.basename(file_name))[0]
-                 })
+        self._value_file_name = os.path.basename(file_name)
+        self._value_file_path = os.path.split(file_name)[0]
 
-    def get_lemma(self, word):
-        """ Return a lemma for the word. By default, this is simply the
-        word in lower case, but this method can be overloaded with methods
-        that use e.g. lemma dictionaries. 
-        The method is used by the default file processing methods. If your
-        corpus implements a specific file processing method, get_lemma() may
-        be obsolete. """
-        return word.lower()
-    
-    def get_lemma_id(self, word):
-        """ Return a lemma identifier for the word. If there is a separate 
-        lemma table, the identifier is an index to that table. Otherwise, 
-        the identifier is the lemma label."""
-        
-        if "lemma_table" in self.table_description:
-            return self.table_get(self.lemma_table, 
-                {self.lemma_label: self.get_lemma(word)})
-        else:
-            return self.get_lemma(word)
-    
-    def get_pos(self, word):
-        """ Return the part-of-speech for the word. By default, an empty
-        string is returned, but this method may be overloaded with methods
-        that use for example a pos-tagged dictionary.
-        The method is used by the default file processing methods. If your
-        corpus implements a specific file processing method, get_lemma() may
-        be obsolete. """
-        return ""
-    
-    def get_pos_id(self, word):
-        """ Return a part-of-speech identifier for the word. If there is a 
-        separate part-of-speech table, the identifier is an index to that 
-        table. Otherwise, the identifier is the part-of-speech label."""
-        
-        if "pos_table" in self.table_description:
-            return self.table_get(self.pos_table, 
-                {self.pos_label: self.get_pos(word)})
-        else:
-            return self.get_pos(word)        
+        self._file_id = self.table(self.file_table).get_or_insert(
+            {self.file_name: self._value_file_name,
+             self.file_path: self._value_file_path})
 
-    def get_transcript(self, word):
-        """ Return the phonemic transcript for the word. By default, an 
-        empty string is returned, but this method may be overloaded with 
-        methods that use for example a pronunciation dictionary.
-        The method is used by the default file processing methods. If your
-        corpus implements a specific file processing method, get_lemma() may
-        be obsolete. """
-        return ""
+    #def get_lemma(self, word):
+        #""" Return a lemma for the word. By default, this is simply the
+        #word in lower case, but this method can be overloaded with methods
+        #that use e.g. lemma dictionaries. 
+        #The method is used by the default file processing methods. If your
+        #corpus implements a specific file processing method, get_lemma() may
+        #be obsolete. """
+        #return word.lower()
     
-    def get_transcript_id(self, word):
-        """ Return a transcription identifier for the word. If there is a 
-        separate transcription table, the identifier is an index to that 
-        table. Otherwise, the identifier is the transcript label."""
+    #def get_lemma_id(self, word):
+        #""" Return a lemma identifier for the word. If there is a separate 
+        #lemma table, the identifier is an index to that table. Otherwise, 
+        #the identifier is the lemma label."""
+        #try:
+            #return self.table_get(self.lemma_table, 
+                #{self.lemma_label: self.get_lemma(word)})
+        #else:
+            #return self.get_lemma(word)
+    
+    #def get_pos(self, word):
+        #""" Return the part-of-speech for the word. By default, an empty
+        #string is returned, but this method may be overloaded with methods
+        #that use for example a pos-tagged dictionary.
+        #The method is used by the default file processing methods. If your
+        #corpus implements a specific file processing method, get_lemma() may
+        #be obsolete. """
+        #return ""
+    
+    #def get_pos_id(self, word):
+        #""" Return a part-of-speech identifier for the word. If there is a 
+        #separate part-of-speech table, the identifier is an index to that 
+        #table. Otherwise, the identifier is the part-of-speech label."""
         
-        if "transcript_table" in self.table_description:
-            return self.table_get(self.transcript_table, 
-                {self.transcript_label: self.get_transcript(word)})
-        else:
-            return self.get_transcript(word)        
+        #if "pos_table" in self.table_description:
+            #return self.table_get(self.pos_table, 
+                #{self.pos_label: self.get_pos(word)})
+        #else:
+            #return self.get_pos(word)        
+
+    #def get_transcript(self, word):
+        #""" Return the phonemic transcript for the word. By default, an 
+        #empty string is returned, but this method may be overloaded with 
+        #methods that use for example a pronunciation dictionary.
+        #The method is used by the default file processing methods. If your
+        #corpus implements a specific file processing method, get_lemma() may
+        #be obsolete. """
+        #return ""
+    
+    #def get_transcript_id(self, word):
+        #""" Return a transcription identifier for the word. If there is a 
+        #separate transcription table, the identifier is an index to that 
+        #table. Otherwise, the identifier is the transcript label."""
+        
+        #if "transcript_table" in self.table_description:
+            #return self.table_get(self.transcript_table, 
+                #{self.transcript_label: self.get_transcript(word)})
+        #else:
+            #return self.get_transcript(word)        
 
     def process_xlabel_file(self, file_name):
         """ 
@@ -748,10 +927,11 @@ class BaseCorpusBuilder(object):
                     word_dict[self.word_transcript_id] = self.get_transcript_id(word)
 
                 # get a word id for the current word:
-                word_id = self.table_get(self.word_table, word_dict)
+                word_id = self.table(self.word_table).get_or_insert(word_dict)
                 
                 # add the word as a new token to the corpus:
-                self.table_add(self.corpus_table, 
+                
+                self.add_token_to_corpus(
                     {self.corpus_word_id: word_id, 
                         self.corpus_file_id: self._file_id,
                         self.corpus_time: time})
@@ -785,25 +965,32 @@ class BaseCorpusBuilder(object):
         tokens = []
         pos_map = []
 
+        # if possible, use NLTK for lemmatization, tokenization, and tagging:
         if self.arguments.use_nltk:
+            # the WordNet lemmatizer will be used to obtain the lemma for a
+            # given word:
             self.lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
-            self.pos_translate = lambda x:{'NN':nltk.corpus.wordnet.NOUN, 
-                 'JJ':nltk.corpus.wordnet.ADJ,
-                 'VB':nltk.corpus.wordnet.VERB,
-                 'RB':nltk.corpus.wordnet.ADV} [x.upper()[:2]]
+            
+            # The NLTK POS tagger produces some labels that are different from
+            # the labels used in WordNet. In order to use the WordNet 
+            # lemmatizer for all words, we need a function that translates 
+            # these labels:
+            self.pos_translate = lambda x: {'NN': nltk.corpus.wordnet.NOUN, 
+                'JJ': nltk.corpus.wordnet.ADJ,
+                'VB': nltk.corpus.wordnet.VERB,
+                'RB': nltk.corpus.wordnet.ADV} [x.upper()[:2]]
 
+            # Create a list of sentences from the content of the current file
+            # and process this list one by one:
             sentence_list = nltk.sent_tokenize(raw_text)
             for sentence in sentence_list:
+                # use NLTK tokenizer and POS tagger on this sentence:
                 tokens = nltk.word_tokenize(sentence)
                 pos_map = nltk.pos_tag(tokens)
-                if not sentence:
-                    print("empty")
+                    
                 for current_token, current_pos in pos_map:
-                    if current_token in string.punctuation:
-                        current_pos = "PUNCT"
-
+                    # store each token:
                     self.add_token(current_token.strip(), current_pos)
-            return
         else:
         # The default lemmatizer is pretty dumb and simply turns the 
         # word-form to lower case so that at least 'Dogs' and 'dogs' are 
@@ -814,9 +1001,9 @@ class BaseCorpusBuilder(object):
         # which will result in much better results.
             self.lemmatize = lambda x: x.lower()
             self.pos_translate = lambda x: x
-            # create a list of all tokens, either using NLTK or using a 
-            # dumb tokenizer that simply splits by spaces.        
             
+            # use a dumb tokenizer that simply splits the file content by 
+            # spaces:            
             tokens = raw_text.split(" ")
             tokens = [x.strip() for x in tokens if x.strip()]
             if not pos_map:
@@ -835,16 +1022,21 @@ class BaseCorpusBuilder(object):
                     # add the token to the corpus:
                     self.add_token(current_token, current_pos)
     
+    def add_next_token_to_corpus(self, values):
+        self._corpus_id += 1
+        values[self.corpus_id] = self._corpus_id
+        self._corpus_buffer.append(values)
+        
     def add_token_to_corpus(self, values):
-        if len(values) != len(self.table_description[self.corpus_table]["CREATE"]) - 2:
-            print(self.table_description[self.corpus_table]["CREATE"])
-            print(len(values), values)
+        if len(values) < len(self._new_tables[self.corpus_table].columns) - 2:
+            print(values)
+            print(len(self._new_tables[self.corpus_table].columns))
             raise IndexError
-
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
         self._corpus_keys = values.keys()
         self._corpus_buffer.append(values)
+        self.add_token_to_corpus = self.add_next_token_to_corpus
     
     def add_token(self, token_string, token_pos):
         # get lemma string:
@@ -863,7 +1055,7 @@ class BaseCorpusBuilder(object):
                     self.word_label: token_string}
         if token_pos and "word_pos" in dir(self):
             word_dict[self.word_pos] = token_pos 
-        word_id = self.table_get(self.word_table, word_dict, case=True)
+        word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
 
         # store new token in corpus table:
         self.add_token_to_corpus(
@@ -890,7 +1082,8 @@ class BaseCorpusBuilder(object):
             else:
                 start_line = 0
                 end_line = 999999
-            S = S.splitlines()
+            #S = S.splitlines()
+            S = []
             self.logger.error(e)
             for i, x in enumerate(S):                
                 if i > start_line:
@@ -963,7 +1156,7 @@ class BaseCorpusBuilder(object):
             A dictionary containing the attributes of the opening tag.
             
         """
-        self.table_add(self.tag_table,
+        self.table(self.tag_table).add(
             {self.tag_label: "{}".format(tag),
                 self.tag_corpus_id: self._corpus_id + 1,
                 self.tag_type: "open",
@@ -989,7 +1182,7 @@ class BaseCorpusBuilder(object):
             A dictionary containing the attributes of the closing tag.
         """
         
-        self.table_add(self.tag_table,
+        self.table(self.tag_table).add(
             {self.tag_label: "{}".format(tag),
                 self.tag_corpus_id: self._corpus_id,
                 self.tag_type: "close",
@@ -1024,12 +1217,12 @@ class BaseCorpusBuilder(object):
         reimplementation of :func:`process_file` so that the method is 
         called the placeholder tag is encountered in the source files.
         """
-        self.table_add(self.tag_table,
+        self.table(self.tag_table).add(
             {self.tag_label: "{}".format(tag),
-                self.tag_corpus_id: self._corpus_id + 1,
-                self.tag_type: "empty",
-                self.tag_attribute: ", ".join(
-                    ["{}={}".format(x, attributes[x]) for x in attributes])})
+             self.tag_corpus_id: self._corpus_id + 1,
+             self.tag_type: "empty",
+             self.tag_attribute: ", ".join(
+                ["{}={}".format(x, attributes[x]) for x in attributes])})
 
     ### END XML
 
@@ -1060,7 +1253,7 @@ class BaseCorpusBuilder(object):
     def build_load_files(self):
         """ Goes through the list of suitable files, and calls process_file()
         on each file name. File names are added to the file table.""" 
-        files = self.get_file_list(self.arguments.path)
+        files = self.get_file_list(self.arguments.path, self.file_filter)
         if not files:
             self.logger.warning("No files found at %s" % self.arguments.path)
             return
@@ -1068,31 +1261,60 @@ class BaseCorpusBuilder(object):
             self.logger.warning("This script can use the NLTK library for automatic part-of-speech tagging. However, this library is not installed on this computer. Follow the steps from http://www.nltk.org/install.html to install this library.")
         
         if self._widget:
-            self._widget.ui.progress_bar.setFormat("Reading text files... (%v of %m)")
-            self._widget.ui.progress_bar.setMaximum(len(files))
-            self._widget.ui.progress_bar.setValue(0)
-        elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Reading data files ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=len(files))
-            progress.start()
+            self._widget.progressSet.emit(len(files), "Reading text files... (%v of %m)")
+            self._widget.progressUpdate.emit(0)
             
-        for x in self.table_description:
-            self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
+        #for x in self.table_description:
+            #self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         
         for i, file_name in enumerate(files):
+            if self.interrupted:
+                return
+
             if not self.Con.find(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
                 self.process_file(file_name)
                 
             if self._widget:
-                self._widget.ui.progress_bar.setValue(i)
-            elif show_progress:
-                progress.update(i + 1)
+                self._widget.progressUpdate.emit(i + 1)
 
             self.commit_data()
 
-        if show_progress and not self._widget:
-            progress.finish()
+    def build_create_frequency_table(self):
+        """ 
+        Create a frequency table for all combinations of corpus features.
+        
+        This method creates a database table named 'coq_frequency_count' with 
+        all corpus features as columns, and a row for each comination of 
+        corpus features that occur in the corpus. The last column 'Count' 
+        gives the number of tokens in the corpus that occur in the corpus.
+        
+        The frequency table can be used to look up quickly the size of a 
+        subcorpus as well as the overall corpus. This is important for 
+        reporting frequency counts as per-million-word frequencies.
+        """
+
+        pass
+        #print(self.module_content)
+        #print(self.name)
+
+        #module = importlib.import_module("..{}".format(self.name), "installer.{}".format(self.name))
+
+        #exec self.resource_content
+        ##print(self.resource_content)
+
+        #module_path = os.path.join(self.arguments.corpus_path, "{}.py".format(self.name))
+        #module_path = "/home/kunibert/Dev/coquery/coquery/corpora/ice_ng.py"
+        #print(module_path)
+        #print(sys.modules.keys())
+        #module = imp.load_source(self.name, module_path)
+        #print(module, dir(module))
+        ##resource = module.Resource
+        ##print(resource)
+        
+        
+        
     
     def create_joined_table(self):
         pass
@@ -1101,57 +1323,66 @@ class BaseCorpusBuilder(object):
         """ Optimizes the table columns so that they use a minimal amount
         of disk space."""
         totals = 0
-        for current_table in self.table_description:
-            totals += len(self.table_description[current_table]["CREATE"])
+        #for current_table in self.table_description:
+            #totals += len(self.table_description[current_table]["CREATE"])
+
+        for table in self._new_tables:
+            totals += len(self._new_tables[table].columns)
+
         totals -= 1
         
         if self._widget:
-            self._widget.ui.progress_bar.setFormat("Optimizing table columns... (%v of %m)")
-            self._widget.ui.progress_bar.setMaximum(totals)
-            self._widget.ui.progress_bar.setValue(0)
-        elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Optimizing table columns ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=totals)
-            progress.start()
+            self._widget.progressSet.emit(totals, "Optimizing table columns... (%v of %m)")
+            self._widget.progressUpdate.emit(0)
             
         column_count = 0
         self.Con.start_transaction()
-        for current_table in self.table_description:
-            field_specs = self.table_description[current_table]["CREATE"]
-            for current_spec in field_specs:
-                match = re.match ("`(\w+)`", current_spec)
-                if match:
-                    current_field = match.group(1)
-                    self.logger.info("Determine current and optimal type for column {}.{}".format(
-                        current_table, current_field))
+        for table_name in self._new_tables:
+            table = self._new_tables[table_name]
+            if self.interrupted:
+                return
+
+            for column in table.columns:
+                try:
+                    ot = self.Con.get_optimal_field_type(table.name, column.name)
+                except TypeError:
+                    continue
+                dt = column.data_type
+                if dt.lower() != ot.lower():
                     try:
-                        optimal_type = self.Con.get_optimal_field_type(current_table, current_field)
-                    except TypeError:
-                        continue
-                    current_type = self.Con.get_field_type(current_table, current_field)
-                    if current_type.lower() != optimal_type.lower():
-                        optimal_type = optimal_type.decode("utf-8")
-                        self.logger.info("Optimising column {}.{} from {} to {}".format(
-                            current_table, current_field, current_type, optimal_type))
-                        try:
-                            self.Con.modify_field_type(current_table, current_field, optimal_type)
-                        except (
-                            dbconnection.mysql.InterfaceError, 
-                            dbconnection.mysql.DataError,
-                            dbconnection.mysql.DatabaseError, 
-                            dbconnection.mysql.OperationalError, 
-                            dbconnection.mysql.IntegrityError, 
-                            dbconnection.mysql.InternalError, 
-                            dbconnection.mysql.ProgrammingError) as e:
-                            if self.logger:
-                                self.logger.warning(e)
+                        ot = ot.decode("utf-8")
+                    except AttributeError:
+                        pass
+                    self.logger.info("Optimising column {}.{} from {} to {}".format(
+                        table.name, column.name, dt, ot))
+                    try:
+                        self.Con.modify_field_type(table.name, column.name, ot)
+                    except (
+                        dbconnection.mysql.InterfaceError, 
+                        dbconnection.mysql.DataError,
+                        dbconnection.mysql.DatabaseError, 
+                        dbconnection.mysql.OperationalError, 
+                        dbconnection.mysql.IntegrityError, 
+                        dbconnection.mysql.InternalError, 
+                        dbconnection.mysql.ProgrammingError) as e:
+                        if self.logger:
+                            self.logger.warning(e)
+                    else:
+                        column.data_type = ot
                 column_count += 1
+
                 if self._widget:
-                    self._widget.ui.progress_bar.setValue(column_count)
-                elif show_progress:
-                    progress.update(column_count - 1)
+                    self._widget.progressUpdate.emit(column_count + 1)
+
+        if self.interrupted:
+            return
         self.Con.commit()
-        if show_progress and not self._widget:
-            progress.finish()
+        
+    def add_index_to_blocklist(self, index):
+        self._blocklist.add(index)
+        
+    def remove_index_from_blocklist(self, index):
+        self._blocklist.remove(index)
         
     def build_create_indices(self):
         """ 
@@ -1170,44 +1401,59 @@ class BaseCorpusBuilder(object):
         However, the performance increase won by indexing usually clearly 
         outweighs these disadvantages.
         """
-        total_indices = 0
-        for current_table in self.table_description:
-            if "INDEX" in self.table_description[current_table]:
-                total_indices += len(self.table_description[current_table]["INDEX"])
-        
+        index_list = []
+        for table_name in self._new_tables:
+            table = self._new_tables[table_name]
+            for column in table.columns:
+                if not isinstance(column, Primary) and (table.name, column.name) not in self._blocklist:
+                    index_list.append((table.name, column.name))
+
         if self._widget:
-            self._widget.ui.progress_bar.setFormat("Creating indices... (%v of %m)")
-            self._widget.ui.progress_bar.setMaximum(total_indices)
-            self._widget.ui.progress_bar.setValue(0)
-        elif show_progress:
-            progress = progressbar.ProgressBar(widgets=["Indexing ", progressbar.SimpleProgress(), " ", progressbar.Percentage(), " ", progressbar.Bar(), " ", progressbar.ETA()], maxval=total_indices)
-            progress.start()
+            self._widget.progressSet.emit(len(index_list), "Creating indices... (%v of %m)")
+            self._widget.progressUpdate.emit(0)
+
         index_count = 0
         self.Con.start_transaction()
-        for i, current_table in enumerate(self.table_description):
-            # only create indices for the corpus table in the final pass:
-            description = self.table_description[current_table]
-            if "INDEX" in description:
-                for variables, length, index_type in description["INDEX"]:
-                    current_index = "_".join(variables)
-                    if not self.Con.has_index(current_table, current_index):
-                        self.logger.info("Creating index {} on table '{}'".format(
-                            current_index, current_table))
-                        try:
-                            self.Con.create_index(current_table, current_index, variables, index_type, length)
-                        except dbconnection.mysql.OperationalError as e:
-                            if self.logger:
-                                self.logger.Warning(e)
-                    index_count += 1
-                    if self._widget:
-                        self._widget.ui.progress_bar.setValue(i)
-                    elif show_progress:
-                        progress.update(index_count)
+        i = 0
+        for table, column in index_list:
+            if self.interrupted:
+                return
+
+            if not self.Con.has_index(table, column):
+                self.logger.info("Creating index {} on table '{}'".format(
+                    column, table))
+                try:
+                    this_column = self._new_tables[table].get_column(column)
+                    
+                    # indices for TEXT/BLOB columns require a key length:
+                    if this_column.base_type.endswith("TEXT") or this_column.base_type.endswith("BLOB"):
+                        length = self.Con.get_index_length(table, column)
+                    else:
+                        length = None
+
+                    self.Con.create_index(table, column, [column], index_length=length)
+                except (
+                        dbconnection.mysql.InterfaceError, 
+                        dbconnection.mysql.DataError,
+                        dbconnection.mysql.DatabaseError, 
+                        dbconnection.mysql.OperationalError, 
+                        dbconnection.mysql.IntegrityError, 
+                        dbconnection.mysql.InternalError, 
+                        dbconnection.mysql.ProgrammingError) as e:
+                    if self.logger:
+                        self.logger.warning(e)
+                
+                i += 1
+                if self._widget:
+                    self._widget.progressUpdate.emit(i + 1)
+
+        if self.interrupted:
+            return
+
         self.Con.commit()
-        if show_progress and not self._widget:
-            progress.finish()
-    
-    def get_class_variables(self):
+
+    @staticmethod
+    def get_class_variables():
         return dir(BaseCorpusBuilder)
 
     def verify_corpus(self):
@@ -1222,9 +1468,9 @@ class BaseCorpusBuilder(object):
         
         Returns
         -------
-            bool : boolean
-                True if the database and all tables in the table
-                descriptions exist, or False otherwise.
+        bool : boolean
+            True if the database and all tables in the table
+            descriptions exist, or False otherwise.
         """
         no_fail = True
         if not self.Con.has_database(self.arguments.db_name):
@@ -1263,11 +1509,9 @@ class BaseCorpusBuilder(object):
     def build_write_module(self, corpus_path):
         """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
-        if self.arguments.dry_run:
-            return
         
-        base_variables = self.get_class_variables()
-        
+        base_variables = type(self).get_class_variables()
+
         # all class variables that are defined in this class and which...
         # - are note stored in the base class
         # - do not start with an underscore '_'
@@ -1281,24 +1525,42 @@ class BaseCorpusBuilder(object):
                           and not inspect.ismethod(self.__getattribute__(x))]
         variable_strings = []
         for variable_name in sorted(variable_names):
-            variable_strings.append("    {} = '{}'".format(
-                variable_name, self.__dict__[variable_name]))
+            try:
+                variable_strings.append("    {} = '{}'".format(
+                    variable_name, type(self).__dict__[variable_name]))
+            except KeyError:
+                variable_strings.append("    {} = '{}'".format(
+                    variable_name, self.__dict__[variable_name]))
         variable_code = "\n".join(variable_strings)
         
         lexicon_provides = "[{}]".format(", ".join(self.lexicon_features))
-        corpus_provides = "[{}]".format(", ".join(self.corpus_features))
-        
-        output_code = self.module_code.format(
+        #corpus_provides = "[{}]".format(", ".join(self.corpus_features))
+        corpus_provides = "[]"
+
+        self.resource_content = """
+class Resource(SQLResource):
+    name = '{name}'
+    db_name = '{db_name}'
+{variables}
+{resource_code}
+""".format(name=self.name, db_name=self.arguments.db_name, variables=variable_code, resource_code=self.get_resource_code())
+
+        self.module_content = self.module_code.format(
                 name=self.name,
+                display_name=self.get_name(),
                 db_name=self.arguments.db_name,
-                url=self.documentation_url,
                 variables=variable_code,
                 lexicon_provides=lexicon_provides,
                 corpus_provides=corpus_provides,
                 corpus_code=self.get_corpus_code(),
                 lexicon_code=self.get_lexicon_code(),
                 resource_code=self.get_resource_code())
-        
+
+        if not self.arguments.w:
+            return
+        if not os.path.exists(corpus_path):
+            os.makedirs(corpus_path)
+            
         path = os.path.join(corpus_path, "{}.py".format(self.name))
         # Handle existing versions of the corpus module
         if os.path.exists(path):
@@ -1306,7 +1568,7 @@ class BaseCorpusBuilder(object):
             with codecs.open(path, "r") as input_file:
                 existing_code = input_file.read()
             # Keep if existing code is the same as the new code:
-            if existing_code == output_code:
+            if existing_code == self.module_content:
                 self.logger.info("Identical corpus module %s already exists." % path)
                 return
             # Ask if the existing code should be overwritten:
@@ -1316,13 +1578,14 @@ class BaseCorpusBuilder(object):
                     self.logger.warning(msq_module_exists)
                 except NameError:
                     pass
-                if self.ask_overwrite(msq_module_exists, existing_code, output_code):
+                if self.ask_overwrite(msq_module_exists, existing_code, self.module_content):
                     self.logger.warning("Overwriting existing corpus module.")
                 else:
                     return
+        
         # write module code:
         with codecs.open(path, "w") as output_file:
-            output_file.write(output_code)
+            output_file.write(self.module_content)
             self.logger.info("Library %s written." % path)
             
     def setup_db(self):
@@ -1336,11 +1599,11 @@ class BaseCorpusBuilder(object):
             db_pass=self.arguments.db_password,
             db_port=self.arguments.db_port,
             local_infile=1)
-        if not self.Con.has_database(self.arguments.db_name):
+        if self.Con.has_database(self.arguments.db_name) and self.arguments.l:
+            self.Con.drop_database(self.arguments.db_name)
+        if self.arguments.c:
             self.Con.create_database(self.arguments.db_name)
         self.Con.use_database(self.arguments.db_name)
-        # if this is a dry run, database access will only be emulated:
-        self.Con.dry_run = self.arguments.dry_run
 
         cursor = self.Con.Con.cursor()
         self.Con.execute(cursor, "SET autocommit=0")
@@ -1354,28 +1617,55 @@ class BaseCorpusBuilder(object):
         indexed. More than one function can be added."""
         self.additional_stages.append(stage)
 
-    def get_description(self):
-        return ""
+    @staticmethod
+    def get_license():
+        return "(license not specified)"
 
-    def get_speaker_data(self, *args):
+    @staticmethod
+    def get_title():
+        return "(no title)"
+
+    @staticmethod
+    def get_description():
         return []
+
+    @staticmethod
+    def get_references():
+        return []
+
+    @staticmethod
+    def get_url():
+        return "(no URL)"
+    
+    @staticmethod
+    def get_name():
+        return "(unnamed)"
+    
+    @staticmethod
+    def get_db_name():
+        return "unnamed"
 
     def initialize_build(self):
         """ Start logging, start the timer."""
         self.start_time = time.time()
-        if self.arguments.dry_run:
-            self.logger.info("--- Starting (dry run) ---")
-        else:
-            self.logger.info("--- Starting ---")
+        self.logger.info("--- Starting ---")
         self.logger.info("Building corpus %s" % self.name)
         self.logger.info("Command line arguments: %s" % " ".join(sys.argv[1:]))
         if not self._widget:
-            print("\n%s\n" % textwrap.TextWrapper(width=79).fill(self.get_description()))
+            print("\n%s\n" % textwrap.TextWrapper(width=79).fill(" ".join(self.get_description())))
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """
-        self.Con.close()
-        self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
+        if self.interrupted:
+            try:
+                self.Con.drop_database(self.arguments.db_name)
+            except:
+                pass
+            self.Con.close()
+            self.logger.info("--- Interrupted (after %.3f seconds) ---" % (time.time() - self.start_time))
+        else:
+            self.Con.close()
+            self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
 
     def build(self):
         """ 
@@ -1398,37 +1688,325 @@ class BaseCorpusBuilder(object):
             :class:`BaseCorpusBuilder`. Corpus installers that want to use
             this feature have to override :func:`build_self_joined`.
         """
+
+        def progress_next(count):
+            if self._widget:
+                count += 1
+                self._widget.generalUpdate.emit(count)
+                self._widget.progressSet.emit(0, "")
+            return count
+        
+        def progress_done():
+            if self._widget:
+                self._widget.progressUpdate.emit(0)
+        
         self.check_arguments()
         if not self._widget:
             self.setup_logger()
         self.setup_db()
 
+        if self._widget:
+            steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.self_join) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
+            self._widget.ui.progress_general.setMaximum(steps)
+
+        current = 0
+        current = progress_next(current)
         self.initialize_build()
+        progress_done()
         
-        if self.arguments.c:
+        if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
+            raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
+        
+        if self.arguments.c and not self.interrupted:
+            current = progress_next(current)
             self.build_create_tables()
+            progress_done()
 
-        if self.arguments.l:
+        if self.arguments.l and not self.interrupted:
+            current = progress_next(current)
             self.build_load_files()
+            progress_done()
 
-        if self.arguments.self_join:
+        if self.arguments.self_join and not self.interrupted:
+            current = progress_next(current)
             self.build_self_joined()
-            
-        for stage in self.additional_stages:
-            stage()
-            
-        if self.arguments.o:
+            current = progress_done()
+
+        if not self.interrupted:
+            current = progress_next(current)
+            for stage in self.additional_stages and not self.interrupted:
+                stage()
+            progress_done()
+
+        if self.arguments.o and not self.interrupted:
+            current = progress_next(current)
             self.build_optimize()
+            progress_done()
 
-        if self.arguments.i:
+        if self.arguments.i and not self.interrupted:
+            current = progress_next(current)
             self.build_create_indices()
+            progress_done()
 
-        if self.verify_corpus():
+        if self.verify_corpus() and not self.interrupted:
+            current = progress_next(current)
             self.build_write_module(self.arguments.corpus_path)
+            current = progress_next(current)
             
+        if not self.interrupted:
+            current = progress_next(current)
+            self.build_create_frequency_table()
+            progress_done
+
         self.build_finalize()
-                
+        
 if use_gui:
+    import options
+    import corpusBuilderUi
+    import corpusInstallerUi
+    import error_box
+    import QtProgress
+    from defines import * 
+    
+    class InstallerGui(QtGui.QDialog):
+        installStarted = QtCore.Signal()
+        
+        progressSet = QtCore.Signal(int, str)
+        labelSet = QtCore.Signal(str)
+        progressUpdate = QtCore.Signal(int)
+        
+        generalUpdate = QtCore.Signal(int)
+        
+        def __init__(self, builder_class, parent=None):
+            super(InstallerGui, self).__init__(parent)
+
+            import __init__
+            self.logger = logging.getLogger(__init__.NAME)        
+            
+            self.state = None
+            
+            self.ui = corpusInstallerUi.Ui_CorpusInstaller()
+            self.ui.setupUi(self)
+            self.ui.progress_box.hide()
+            self.ui.button_input_path.clicked.connect(self.select_path)
+            self.ui.radio_install_corpus.toggled.connect(self.changed_radio)
+            self.ui.radio_only_module.toggled.connect(self.changed_radio)
+            self.ui.input_path.textChanged.connect(self.check_input)
+
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setText("&Install")
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).clicked.connect(self.start_install)
+            
+            self.installStarted.connect(self.show_progress)
+            self.progressSet.connect(self.set_progress)
+            self.labelSet.connect(self.set_label)
+            self.progressUpdate.connect(self.update_progress)
+            
+            self.generalUpdate.connect(self.general_update)
+            
+            if options.cfg.corpus_source_path != os.path.expanduser("~"):
+                self.ui.input_path.setText(options.cfg.corpus_source_path)
+            
+            self.accepted = False
+            try:
+                self.builder_class = builder_class
+            except Exception as e:
+                msg = msg_corpus_broken.format(
+                    name=basename,
+                    type=sys.exc_info()[0],
+                    code=sys.exc_info()[1])
+                logger.error(msg)
+                QtGui.QMessageBox.critical(
+                    None, "Corpus error – Coquery", 
+                    msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                return
+            
+            self.ui.corpus_description.setText(
+                str(self.ui.corpus_description.text()).format(
+                    builder_class.get_title(), options.cfg.current_server))
+
+        def display(self):
+            return self.exec_()
+
+        def general_update(self, i):
+            self.ui.progress_general.setValue(i)
+
+        def set_label(self, s):
+            self.ui.progress_bar.setFormat(s)
+
+        def set_progress(self, vmax, s):
+            self.ui.progress_bar.setFormat(s)
+            self.ui.progress_bar.setMaximum(vmax)
+            self.ui.progress_bar.setValue(0)
+            
+        def update_progress(self, i):
+            self.ui.progress_bar.setValue(i)
+
+        def select_path(self):
+            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.corpus_source_path)
+            if type(name) == tuple:
+                name = name[0]
+            if name:
+                options.cfg.corpus_source_path = name
+                self.ui.input_path.setText(name)
+
+        def keyPressEvent(self, e):
+            if e.key() == QtCore.Qt.Key_Escape:
+                self.reject()
+                
+        def changed_radio(self):
+            if self.ui.radio_install_corpus.isChecked():
+                self.ui.box_build_options.setEnabled(True)
+                self.check_input()
+            else:
+                self.ui.box_build_options.setEnabled(False)
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+
+        def show_progress(self):
+            self.ui.progress_box.show()
+            self.ui.progress_box.update()
+                
+        def do_install(self):
+            self.builder.build()
+
+        def finish_install(self):
+            if self.state == "failed":
+                S = "Installation of {} failed.".format(self.builder.name)
+                self.ui.progress_box.hide()
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+                self.ui.frame.setEnabled(True)
+            else:
+                S = "Finished installing {}.".format(self.builder.name)
+                self.ui.label.setText("Installation complete.")
+                self.ui.progress_bar.setMaximum(1)
+                self.ui.progress_bar.setValue(1)
+                self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
+                self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
+                self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
+            self.parent().showMessage(S)
+            
+        def install_exception(self):
+            #self.parent().ui.showMessage(S)
+            self.state = "failed"
+            error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
+            #self.ui.progress_bar.setMaximum(1)
+            #self.ui.progress_bar.setValue(0)
+            #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
+            #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
+            #self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
+            #self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
+
+        def reject(self):
+            try:
+                if self.install_thread:
+                    response = QtGui.QMessageBox.warning(self,
+                        "Aborting installation", 
+                        msg_install_abort,
+                        QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+                    if response:
+                        self.install_thread.quit()
+                        super(InstallerGui, self).reject()
+            except AttributeError:
+                super(InstallerGui, self).reject()
+                
+        def check_input(self):
+            if self.ui.radio_only_module.isChecked():
+                self.ui.input_path.setStyleSheet('')
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+            else:
+                path = str(self.ui.input_path.text())
+                if os.path.isdir(path):
+                    self.ui.input_path.setStyleSheet('')
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+                else:
+                    self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            
+        def start_install(self):
+            """
+            Launches the installation.
+            
+            This method starts a new thread that runs the do_install() method.
+            
+            If this is a full install, i.e. the data base containing the
+            corpus is to be created, a call to validate_files() is made first
+            to check whether the input path is valid. The thread is only 
+            started if the path is valid, or if the user decides to ignore
+            the invalid path.
+            """
+            if self.ui.radio_install_corpus.isChecked():
+                try:
+                    self.builder_class.validate_files(
+                        self.builder_class.get_file_list(
+                            str(self.ui.input_path.text()),
+                            self.builder_class.file_filter))
+                except RuntimeError as e:
+                    reply = QtGui.QMessageBox.question(
+                        None, "Corpus path not valid – Coquery",
+                        msg_corpus_path_not_valid.format(e),
+                        QtGui.QMessageBox.Ignore|QtGui.QMessageBox.Discard)
+                    if reply == QtGui.QMessageBox.Discard:
+                        return
+
+            self.installStarted.emit()
+            self.accepted = True
+            self.builder = self.builder_class(gui = self)
+            self.builder.logger = self.logger
+            self.builder.arguments = self.get_arguments_from_gui()
+            self.builder.name = self.builder.arguments.name
+
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            self.ui.frame.setEnabled(False)
+
+            #try:
+                #self.do_install()
+            #except RuntimeError as e:
+                #error_box.ErrorBox.show(sys.exc_info(), e, no_trace=True)
+            #except Exception as e:
+                #error_box.ErrorBox.show(sys.exc_info(), e)
+            #else:
+                #self.finish_install()
+
+            self.install_thread = QtProgress.ProgressThread(self.do_install, self)
+            self.install_thread.setInterrupt(self.builder.interrupt)
+            self.install_thread.taskFinished.connect(self.finish_install)
+            self.install_thread.taskException.connect(self.install_exception)
+            self.install_thread.start()
+        
+        def get_arguments_from_gui(self):
+            namespace = argparse.Namespace()
+            namespace.verbose = False
+            
+            if self.ui.radio_only_module.isChecked():
+                namespace.o = False
+                namespace.i = False
+                namespace.l = False
+                namespace.c = False
+                namespace.w = True
+                namespace.self_join = False
+            else:
+                namespace.w = True
+                namespace.o = True
+                namespace.i = True
+                namespace.l = True
+                namespace.c = True
+                namespace.self_join = False
+
+            namespace.encoding = self.builder_class.encoding
+            
+            namespace.name = self.builder_class.get_name()
+            namespace.path = str(self.ui.input_path.text())
+
+            namespace.db_name = self.builder_class.get_name().lower()
+            try:
+                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
+            except ValueError:
+                raise SQLNoConfigurationError
+            namespace.current_server = options.cfg.current_server
+            namespace.corpus_path = os.path.join(sys.path[0], "corpora/", namespace.current_server)
+            
+            return namespace
 
     class BuilderGui(QtGui.QDialog):
         def __init__(self, builder_class, parent=None):
@@ -1455,10 +2033,11 @@ if use_gui:
             self.exec_()
 
         def select_path(self):
-            name = QtGui.QFileDialog.getExistingDirectory()
+            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.test_source_path)
             if type(name) == tuple:
                 name = name[0]
             if name:
+                options.cfg.text_source_path = name
                 self.ui.input_path.setText(name)
 
         def keyPressEvent(self, e):
@@ -1482,12 +2061,11 @@ if use_gui:
             except Exception as e:
                 error_box.ErrorBox.show(sys.exc_info(), self)
             else:
-                self.parent().ui.statusbar.showMessage("Finished building new corpus.")
+                self.parent().showMessage("Finished building new corpus.")
             super(BuilderGui, self).accept()
 
         def get_arguments_from_gui(self):
             namespace = argparse.Namespace()
-            namespace.dry_run = False
             namespace.verbose = False
             namespace.o = True
             namespace.i = True
@@ -1496,16 +2074,21 @@ if use_gui:
             namespace.c = True
             namespace.self_join = False
 
-            namespace.encoding = "utf-8"
+            namespace.encoding = self.builder_class.encoding
             
             namespace.name = str(self.ui.corpus_name.text())
             namespace.path = str(self.ui.input_path.text())
             namespace.use_nltk = self.ui.use_pos_tagging.checkState()
-            namespace.corpus_path = os.path.join(sys.path[0], "corpora/")
+
             namespace.db_name = str(self.ui.corpus_name.text())
-            namespace.db_host = options.cfg.db_host
-            namespace.db_user = options.cfg.db_user
-            namespace.db_password = options.cfg.db_password
-            namespace.db_port = options.cfg.db_port
+            try:
+                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
+            except ValueError:
+                raise SQLNoConfigurationError
+
+            namespace.current_server = options.cfg.current_server
+            namespace.corpus_path = os.path.join(sys.path[0], "../corpora/", namespace.current_server)
+
             
             return namespace
+
