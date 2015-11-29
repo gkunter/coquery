@@ -731,7 +731,8 @@ def save_configuration():
    
     if not "sql" in config.sections():
         config.add_section("sql")
-    config.set("sql", "active_configuration", cfg.current_server)
+    if cfg.current_server:
+        config.set("sql", "active_configuration", cfg.current_server)
 
     for i, server in enumerate(cfg.server_configuration):
         d = cfg.server_configuration[server]

@@ -1216,8 +1216,9 @@ class CoqueryApp(QtGui.QMainWindow):
         settings.Settings.manage(options.cfg, self)
 
     def change_current_server(self):
-        name = str(self.ui.combo_config.currentText())
+        name = self.ui.combo_config.currentText()
         if name:
+            name = str(name)
             self.ui.combo_config.currentIndexChanged.disconnect(self.change_current_server)
             self.change_mysql_configuration(name)
             self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
