@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'corpusInstaller.ui'
 #
-# Created: Wed Nov 11 18:52:03 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -45,8 +44,8 @@ class Ui_CorpusInstaller(object):
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout = QtGui.QVBoxLayout(self.frame)
-        self.verticalLayout.setSpacing(20)
         self.verticalLayout.setMargin(10)
+        self.verticalLayout.setSpacing(20)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.corpus_description = QtGui.QLabel(self.frame)
         self.corpus_description.setWordWrap(True)
@@ -158,7 +157,7 @@ class Ui_CorpusInstaller(object):
 
     def retranslateUi(self, CorpusInstaller):
         CorpusInstaller.setWindowTitle(_translate("CorpusInstaller", "Corpus Installer – Coquery", None))
-        self.corpus_description.setText(_translate("CorpusInstaller", "<html><head/><body><p>About to install: <span style=\" font-weight:600;\">{}</span> ({}).</p></body></html>", None))
+        self.corpus_description.setText(_translate("CorpusInstaller", "<html><head/><body><p>You have requested to install the corpus \'<span style=\" font-weight:600;\">{}\'</span> on the MySQL server \'{}\'.</p></body></html>", None))
         self.label_5.setText(_translate("CorpusInstaller", "Install corpus data and corpus module (if you have a local database server)", None))
         self.label_6.setText(_translate("CorpusInstaller", "Only install corpus module (if you have a network database server)", None))
         self.label_8.setText(_translate("CorpusInstaller", "Path to corpus data files:", None))

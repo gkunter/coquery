@@ -47,7 +47,7 @@
       <item>
        <widget class="QLabel" name="corpus_description">
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;About to install: &lt;span style=&quot; font-weight:600;&quot;&gt;{}&lt;/span&gt; ({}).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You have requested to install the corpus '&lt;span style=&quot; font-weight:600;&quot;&gt;{}'&lt;/span&gt; on the MySQL server '{}'.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>

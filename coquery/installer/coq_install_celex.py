@@ -328,23 +328,24 @@ class CELEXBuilder(BaseCorpusBuilder):
              Column(self.word_cobspelldev, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.word_wordsyldia, "VARCHAR(43) NOT NULL")])
 
-    def build_load_files(self):
+    @staticmethod
+    def validate_files(l):
         expected_files = sorted(["eow.cd", "eol.cd", "epw.cd", "epl.cd", "emw.cd", "eml.cd", "esl.cd"])
-        files = [x for x in sorted(self.get_file_list(self.arguments.path)) if os.path.basename(x).lower() in expected_files]
+        files = [x for x in l if os.path.basename(x).lower() in expected_files]
         if len(files) != len(expected_files):
             existing_files = [os.path.basename(x) for x in files]
             missing_files = [x for x in expected_files if x not in existing_files]
             raise RuntimeError("""
-                <p><b>Not all CELEX database files could be found in the selected directory.</b></p>
-                <p>You selected to install the CELEX lexical database from the directory <code>{path}</code>. In order to successfully install the CELEX lexical database, this directory has to contain the following files:</p>
+                <p>In order to successfully install the CELEX lexical database, the corpus data path has to contain the following files:</p>
                 <p>{expected_files}</p>
-                <p>However, the following files are missing from this directory:</p>
-                <p><span color="darkred">{files_missing}</p>
-                <p>Please start the CELEX installation again and choose a directory that contains all CELEX database files. Alternatively, copy the missing database files to the selected directory and start the CELEX installation again.</p>""".format(
-                    path=self.arguments.path,
+                <p>However, the following files are missing from this path:</p>
+                <p><span color="darkred">{files_missing}</p>""".format(
                     expected_files="<br/>".join(expected_files),
                     files_missing="<br/>".join(missing_files)))
 
+    def build_load_files(self):
+        expected_files = sorted(["eow.cd", "eol.cd", "epw.cd", "epl.cd", "emw.cd", "eml.cd", "esl.cd"])
+        files = [x for x in sorted(self.get_file_list(self.arguments.path, self.file_filter)) if os.path.basename(x).lower() in expected_files]
         if self._widget:
             self._widget.progressSet.emit(len(files), "")
             self._widget.progressUpdate.emit(0)
@@ -353,19 +354,19 @@ class CELEXBuilder(BaseCorpusBuilder):
             component = file_name.lower()[-6:-3]
 
             if component == "epw":
-                s = "Phonology data (word forms)"
+                s = "Phonology word forms"
             elif component == "epl":
-                s = "Phonology data (lemmas)"
+                s = "Phonology lemmas"
             elif component == "emw":
-                s = "Morphology data (word forms)"
+                s = "Morphology word forms"
             elif component == "eml":
-                s = "Morphology data (lemmas)"
+                s = "Morphology lemmas"
             elif component == "eow":
-                s = "Orthography data (word forms)"
+                s = "Orthography word forms"
             elif component == "eol":
-                s = "Orthography data (lemmas)"
+                s = "Orthography lemmas"
             elif component == "esl":
-                s = "Syntax data (word forms)"
+                s = "Syntax word forms"
             else:
                 component = None
 

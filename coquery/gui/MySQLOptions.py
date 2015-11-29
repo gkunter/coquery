@@ -26,7 +26,6 @@ import sqlwrap
 from errors import *
 import QtProgress
 
-
 def check_valid_host(s):
     """
     Check if a string is a valid host name or a valid IP address.
@@ -103,7 +102,9 @@ class MySQLOptions(QtGui.QDialog):
         self.default_password = password
     
         self.current_server = name
-        self.config_dict = config_dict
+        self.backup_dict = dict(config_dict)
+        self.backup_server = name
+        self.config_dict = dict(config_dict)
         
         self.ui = mysqlConfigurationUi.Ui_MySQLConfig()
         self.ui.setupUi(self)
@@ -171,6 +172,11 @@ class MySQLOptions(QtGui.QDialog):
         
         name = str(self.ui.configuration_name.text())
 
+        if self.state == "noConnection":
+            self.ui.frame.setEnabled(False)
+        else:
+            self.ui.frame.setEnabled(True)            
+
         # exit if no configuration name has been entered:
         if not name:
             return
@@ -210,6 +216,7 @@ class MySQLOptions(QtGui.QDialog):
             
     def set_configuration(self, d):
         self.ui.configuration_name.setText(d["name"])
+        self.old_name = d["name"]
 
         if d["host"] == "127.0.0.1":
             self.ui.radio_local.setChecked(True)
@@ -255,8 +262,10 @@ class MySQLOptions(QtGui.QDialog):
         self.current_item.setSelected(True)
         self.check_buttons()
     
-    def remove_configuration(self):
-        name = str(self.ui.configuration_name.text())
+    def remove_configuration(self, name=None):
+        if not name:
+            name = str(self.ui.configuration_name.text())
+        print ("REMOVE ", name)
         current_item = self.ui.tree_configuration.findItems(name, QtCore.Qt.MatchExactly, 0)[0]
         self.ui.tree_configuration.takeTopLevelItem(
             self.ui.tree_configuration.indexOfTopLevelItem(current_item))
@@ -384,14 +393,22 @@ class MySQLOptions(QtGui.QDialog):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
 
+    def reset_values(self):
+        self.config_dict = dict(self.backup_dict)
+        self.current_server = self.backup_server
+
     def accept(self):
         self.current_server = str(self.ui.tree_configuration.currentItem().text(0))
         super(MySQLOptions, self).accept()
 
+    def reject(self):
+        self.reset_values()
+        super(MySQLOptions, self).reject()
+
     def exec_(self):
         super(MySQLOptions, self).exec_()
         if self.ui.tree_configuration.currentItem():
-            return str(self.ui.tree_configuration.currentItem().text(0))
+            return (self.config_dict, str(self.ui.tree_configuration.currentItem().text(0)))
         else:
             return None
         

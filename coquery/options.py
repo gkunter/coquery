@@ -44,7 +44,7 @@ class Options(object):
 
         self.corpus_argument_dict = {
             "help": "specify the corpus to use", 
-            "choices": get_available_resources().keys(), 
+            "choices": get_available_resources(DEFAULT_CONFIGURATION).keys(), 
             "type": type(str(""))}
 
         self.prog_name = __init__.NAME
@@ -67,7 +67,7 @@ class Options(object):
         self.args.reaggregate_data = True
         self.args.server_side = True
         self.args.server_configuration = dict()
-        self.args.current_server = None
+        self.args.current_server = DEFAULT_CONFIGURATION
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
@@ -209,7 +209,7 @@ class Options(object):
                 # values the features provided by each of the tables defined in
                 # the resource. The features are included as tuples, with first,
                 # the display name and second, the resource feature name.
-                resource, _, _ = get_resource(self.args.corpus)
+                resource, _, _ = get_resource(self.args.corpus, self.args.current_server)
                 corpus_features = resource.get_corpus_features()
                 lexicon_features = resource.get_lexicon_features()
                 for rc_feature, column in corpus_features + lexicon_features:

@@ -57,12 +57,15 @@ class CMUdictBuilder(BaseCorpusBuilder):
              Column(self.word_label, "VARCHAR(50) NOT NULL"),
              Column(self.word_transcript, "VARCHAR(100) NOT NULL")])
 
+    @staticmethod
+    def validate_files(l):
+        if len(l) > 1:
+            raise RuntimeError("<p>More than one file has a name that starts with <code>cmudict</code>' in the selected directory:</p><p>{}</p>.".format("<br/>".join(files)))
+        if len(l) == 0:
+            raise RuntimeError("<p>No dictionary file could be found in the selected directory. The file name of the dictionary file has to start with the sequence <code>cmudict</code>.</p> ")
+
     def build_load_files(self):
-        files = self.get_file_list(self.arguments.path)
-        if len(files) > 1:
-            raise RuntimeError("<p><b>There is more than one file in the selected directory.</b></p><p>{}</p><p>Please remove the unneeded files, and try again to install.".format("<br/>".join(files)))
-        if len(files) == 0:
-            raise RuntimeError("<p><b>No dictionary file could be found in the selected directory.</p><p>{}</p><p>The file name of dictionary files has to start with the sequence <code>cmudict</code>. If you have saved the CMUdict file under a different name, rename it so that its file name matches this sequence.</p><p>If you have not downloaded a dictionary file yet, please go to the CMUdict website and follow the download instructions there.</p> ".format("<br/>".join(files)))
+        files = CMUdictBuilder.get_file_list(self.arguments.path, self.file_filter)
         with codecs.open(files[0], "r", encoding = self.arguments.encoding) as input_file:
             content = input_file.readlines()
         if self._widget:

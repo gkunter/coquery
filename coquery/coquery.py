@@ -35,7 +35,7 @@ import options
 try:
     from session import *
 except DependencyError as e:
-    print(str(e))
+    (str(e))
     sys.exit(1)
     
 import __init__
@@ -61,13 +61,13 @@ def main():
         # Check if a valid corpus was specified, but only if no GUI is
         # requested (the GUI will handle corpus selection later):
         if not (options.cfg.gui):
-            if not get_available_resources():
+            if not get_available_resources(options.cfg.current_server):
                 raise NoCorpusError
 
             if not options.cfg.corpus:
                 raise NoCorpusSpecifiedError
 
-            if options.cfg.corpus not in get_available_resources():
+            if options.cfg.corpus not in get_available_resources(options.cfg.current_server):
                 raise CorpusUnavailableError(options.cfg.corpus)
             
     except Exception as e:
@@ -99,6 +99,7 @@ def main():
 
         options.cfg.app = QtGui.QApplication(sys.argv)
         Coq = CoqueryApp()
+        options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
         Coq.logo = QtGui.QPixmap("{}/logo/title.png".format(sys.path[0]))
         Coq.show()

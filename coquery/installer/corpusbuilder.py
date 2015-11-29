@@ -308,6 +308,10 @@ class Table(object):
                 except TypeError as e:
                     print(sql_string, data)
                     print(e)
+                except Exception as e:
+                    print(sql_string, data)
+                    print(e)
+                    raise e
                 # Reset all new keys:
                 for row in new_keys:
                     self._add_cache[row] = (self._add_cache[row][0], None)
@@ -451,6 +455,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     start_time = None
     file_filter = None
     encoding = "utf-8"
+    expected_files = []
     
     def __init__(self, gui=False):
         self.module_code = module_code
@@ -676,7 +681,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 return
         self.Con.commit()
 
-    def get_file_list(self, path):
+    @staticmethod
+    def get_file_list(path, file_filter):
         """ 
         Return a list of valid file names from the given path.
         
@@ -698,7 +704,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         for source_path, folders, files in os.walk(path):
             for current_file in files:
                 full_name = os.path.join(source_path, current_file)
-                if not self.file_filter or fnmatch.fnmatch(current_file, self.file_filter):
+                if not file_filter or fnmatch.fnmatch(current_file, file_filter):
                     L.append(full_name)
         return L
     
@@ -732,6 +738,31 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     return True
         return False
 
+    @staticmethod
+    def validate_files(l):
+        """
+        Validates the file list.
+        
+        A corpus module has to overload this method to implement a protection 
+        against illegal installation paths. It could, for example, count the 
+        number of files in the file list, and compare it to an expected number
+        of files. It could also open each file and verify the file content.
+        
+        If the file list is invalid, the method raises a RuntimeError 
+        exception, with details on why the file list is invalid as the 
+        argument string to the exception.
+        
+        The default implementation will always invalidate the list.
+        
+        Parameters
+        ----------
+        l : list
+            A list of file names as created by get_file_list()
+            
+        """
+        
+        raise RuntimeError("The file list could not be validated.")
+        
     def get_corpus_code(self):
         """ 
         Return a text string containing the Python source code for the 
@@ -775,12 +806,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
     def store_filename(self, file_name):
         self._file_name = file_name
-        self._value_file_name = file_name
-        self._value_file_path = os.path.splitext(os.path.basename(file_name))[0]
+        self._value_file_name = os.path.basename(file_name)
+        self._value_file_path = os.path.split(file_name)[0]
 
         self._file_id = self.table(self.file_table).get_or_insert(
-            {self.file_path: self._value_file_name,
-             self.file_name: self._value_file_path})
+            {self.file_name: self._value_file_name,
+             self.file_path: self._value_file_path})
 
     #def get_lemma(self, word):
         #""" Return a lemma for the word. By default, this is simply the
@@ -1222,7 +1253,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def build_load_files(self):
         """ Goes through the list of suitable files, and calls process_file()
         on each file name. File names are added to the file table.""" 
-        files = self.get_file_list(self.arguments.path)
+        files = self.get_file_list(self.arguments.path, self.file_filter)
         if not files:
             self.logger.warning("No files found at %s" % self.arguments.path)
             return
@@ -1527,12 +1558,10 @@ class Resource(SQLResource):
 
         if not self.arguments.w:
             return
-        
         if not os.path.exists(corpus_path):
             os.makedirs(corpus_path)
             
         path = os.path.join(corpus_path, "{}.py".format(self.name))
-        
         # Handle existing versions of the corpus module
         if os.path.exists(path):
             # Read existing code as string:
@@ -1611,6 +1640,10 @@ class Resource(SQLResource):
     @staticmethod
     def get_name():
         return "(unnamed)"
+    
+    @staticmethod
+    def get_db_name():
+        return "unnamed"
 
     def initialize_build(self):
         """ Start logging, start the timer."""
@@ -1750,6 +1783,8 @@ if use_gui:
             import __init__
             self.logger = logging.getLogger(__init__.NAME)        
             
+            self.state = None
+            
             self.ui = corpusInstallerUi.Ui_CorpusInstaller()
             self.ui.setupUi(self)
             self.ui.progress_box.hide()
@@ -1788,7 +1823,7 @@ if use_gui:
             
             self.ui.corpus_description.setText(
                 str(self.ui.corpus_description.text()).format(
-                    builder_class.get_title(), builder_class.get_name()))
+                    builder_class.get_title(), options.cfg.current_server))
 
         def display(self):
             return self.exec_()
@@ -1832,26 +1867,35 @@ if use_gui:
             self.ui.progress_box.update()
                 
         def do_install(self):
-            S = "Installing {}...".format(self.builder.name)
-            #self.parent().ui.statusbar.showMessage(S)
-            self.ui.frame.setEnabled(False)
             self.builder.build()
-            
+
         def finish_install(self):
-            S = "Finished installing {}.".format(self.builder.name)
-            self.parent().ui.statusbar.showMessage(S)
-            self.ui.label.setText("Installation complete.")
-            self.ui.progress_bar.setMaximum(1)
-            self.ui.progress_bar.setValue(1)
-            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
-            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
-            self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
+            if self.state == "failed":
+                S = "Installation of {} failed.".format(self.builder.name)
+                self.ui.progress_box.hide()
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+                self.ui.frame.setEnabled(True)
+            else:
+                S = "Finished installing {}.".format(self.builder.name)
+                self.ui.label.setText("Installation complete.")
+                self.ui.progress_bar.setMaximum(1)
+                self.ui.progress_bar.setValue(1)
+                self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
+                self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
+                self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
+            self.parent().showMessage(S)
             
         def install_exception(self):
-            S = "Installation of {} failed.".format(self.builder.name)
-            self.parent().ui.statusbar.showMessage(S)
-            error_box.ErrorBox.show(self.exc_info, self, no_trace=True)
+            #self.parent().ui.showMessage(S)
+            self.state = "failed"
+            error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
+            #self.ui.progress_bar.setMaximum(1)
+            #self.ui.progress_bar.setValue(0)
+            #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
+            #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
+            #self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
+            #self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
 
         def reject(self):
             try:
@@ -1880,6 +1924,31 @@ if use_gui:
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
             
         def start_install(self):
+            """
+            Launches the installation.
+            
+            This method starts a new thread that runs the do_install() method.
+            
+            If this is a full install, i.e. the data base containing the
+            corpus is to be created, a call to validate_files() is made first
+            to check whether the input path is valid. The thread is only 
+            started if the path is valid, or if the user decides to ignore
+            the invalid path.
+            """
+            if self.ui.radio_install_corpus.isChecked():
+                try:
+                    self.builder_class.validate_files(
+                        self.builder_class.get_file_list(
+                            str(self.ui.input_path.text()),
+                            self.builder_class.file_filter))
+                except RuntimeError as e:
+                    reply = QtGui.QMessageBox.question(
+                        None, "Corpus path not valid – Coquery",
+                        msg_corpus_path_not_valid.format(e),
+                        QtGui.QMessageBox.Ignore|QtGui.QMessageBox.Discard)
+                    if reply == QtGui.QMessageBox.Discard:
+                        return
+
             self.installStarted.emit()
             self.accepted = True
             self.builder = self.builder_class(gui = self)
@@ -1888,6 +1957,7 @@ if use_gui:
             self.builder.name = self.builder.arguments.name
 
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            self.ui.frame.setEnabled(False)
 
             #try:
                 #self.do_install()
@@ -1930,11 +2000,11 @@ if use_gui:
 
             namespace.db_name = self.builder_class.get_name().lower()
             try:
-                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration
+                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
             except ValueError:
                 raise SQLNoConfigurationError
             namespace.current_server = options.cfg.current_server
-            namespace.corpus_path = os.path.join(sys.path[0], "../corpora/", namespace.current_server)
+            namespace.corpus_path = os.path.join(sys.path[0], "corpora/", namespace.current_server)
             
             return namespace
 
@@ -1991,7 +2061,7 @@ if use_gui:
             except Exception as e:
                 error_box.ErrorBox.show(sys.exc_info(), self)
             else:
-                self.parent().ui.statusbar.showMessage("Finished building new corpus.")
+                self.parent().showMessage("Finished building new corpus.")
             super(BuilderGui, self).accept()
 
         def get_arguments_from_gui(self):
@@ -2012,7 +2082,7 @@ if use_gui:
 
             namespace.db_name = str(self.ui.corpus_name.text())
             try:
-                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration
+                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
             except ValueError:
                 raise SQLNoConfigurationError
 
