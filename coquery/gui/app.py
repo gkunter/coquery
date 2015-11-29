@@ -358,7 +358,7 @@ class CoqueryApp(QtGui.QMainWindow):
         contextview.ContextView.display(self.Session.Corpus, int(token_id), int(origin_id), int(token_width), self)
 
     def verify_file_name(self):
-        file_name = self.ui.edit_file_name.text()
+        file_name = str(self.ui.edit_file_name.text())
         if not os.path.isfile(file_name):
             self.ui.edit_file_name.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
             self.ui.button_file_options.setEnabled(False)
@@ -1205,8 +1205,9 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.current_server = name
         self.ui.combo_config.clear()
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
-        index = self.ui.combo_config.findText(name)
-        self.ui.combo_config.setCurrentIndex(index)
+        if name:
+            index = self.ui.combo_config.findText(name)
+            self.ui.combo_config.setCurrentIndex(index)
     
     def mysql_settings(self):
         import MySQLOptions
@@ -1254,7 +1255,7 @@ class CoqueryApp(QtGui.QMainWindow):
             for child in [node.child(i) for i in range(node.childCount())]:
                 functions += get_functions(child)
             if node.checkState(0) == QtCore.Qt.Checked and node._func:
-                functions.append((node.objectName(), node._func, node.text(0)))
+                functions.append((node.objectName(), node._func, str(node.text(0))))
             return functions 
 
         if options.cfg:
@@ -1346,7 +1347,7 @@ class CoqueryApp(QtGui.QMainWindow):
         dialog.ui.label_pixmap.setAlignment(QtCore.Qt.AlignCenter)
 
         dialog.ui.label_description.setText(
-            unicode(dialog.ui.label_description.text()).format(version=__init__.__version__, date=__init__.DATE))
+            str(dialog.ui.label_description.text()).format(version=__init__.__version__, date=__init__.DATE))
         dialog.exec_()
 
     def setGUIDefaults(self):
@@ -1448,7 +1449,7 @@ class CoqueryApp(QtGui.QMainWindow):
         import linkselect
         column = 0
         link = linkselect.LinkSelect.display(
-            feature=item.text(0),
+            feature=str(item.text(0)),
             corpus_omit=str(self.ui.combo_corpus.currentText()).lower(),
             parent=self)
         
@@ -1497,8 +1498,8 @@ class CoqueryApp(QtGui.QMainWindow):
         parent = item.parent()
         
         response  = functionapply.FunctionDialog.display(
-            table=parent.text(0),
-            feature=item.text(0), parent=self)
+            table=str(parent.text(0)),
+            feature=str(item.text(0)), parent=self)
         
         if not response:
             return
