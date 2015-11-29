@@ -61,7 +61,7 @@ class Options(object):
         self.args.reaggregate_data = True
         self.args.server_side = True
         self.args.server_configuration = dict()
-        self.args.current_server = DEFAULT_CONFIGURATION
+        self.args.current_server = None
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")

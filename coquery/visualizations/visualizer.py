@@ -288,13 +288,15 @@ class BaseVisualizer(object):
             self._time_columns = []
             
         self._table = options.cfg.main_window.Session.data_table[column_order]
+        
         self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
         # get list of visible rows:
         self._row_order = ~self._table.index.isin(pd.Series(options.cfg.row_visibility.keys())-1)
 
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
-        self._factor_columns = [x for x in self._table.columns[self._table[column_order].dtypes == object]]
+
+        self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object]]
 
         if self.dimensionality:
             self._groupby = self._factor_columns[-self.dimensionality:]
