@@ -92,7 +92,15 @@ except NameError:
     unicode = str
     long = int
     
-# Error messages used by the GUI:
+msg_missing_seaborn_module = """
+<p><b>One of the required Python module could not be loaded.</b></p>
+<p>The Python module called 'seaborn' does not appear to be installed on this 
+computer. Without this module, the visualization functions are not available.</p>
+<p>Please visit the Seaborn website for installation instructions:
+<a href="http://stanford.edu/~mwaskom/software/seaborn/index.html">http://stanford.edu/~mwaskom/software/seaborn/index.html</a>.
+</p>
+"""
+
 msg_corpus_path_not_valid = """
 <p><b>The corpus data path does not seem to be valid.</b></p>
 <p>{}</p>
