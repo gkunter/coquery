@@ -52,7 +52,11 @@ import __init__
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
+
+try:
+    import seaborn as sns
+except ImportError:
+    raise RuntimeError
 
 from pyqt_compat import QtGui, QtCore, pyside
 
