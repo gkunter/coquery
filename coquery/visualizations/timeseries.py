@@ -96,8 +96,8 @@ class Visualizer(vis.BaseVisualizer):
         # FIXME:
         # pandas >= 0.17.0 has changed the Timestamp API. Check that this
         # is still working!
-        version = [int(x) for x in pd.version.version.split(".")]
-        if version[0] >= 0 and version[1] > 15:
+        version = [int(x) for x in pd.__version__.split(".")]
+        if version[0] >= 0 and version[1] > 16:
             logger.warning("Behaviour of Timeseries has changed in pandas 0.17.0. This may cause problems in Coquery.")
         try:
              return pd.Timestamp("{}".format(
