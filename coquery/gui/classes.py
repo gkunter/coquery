@@ -478,6 +478,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 self.createIndex(0, 0), 
                 self.createIndex(self.rowCount(), self.columnCount()))
 
+    def is_visible(self, index):
+        return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
+                options.cfg.row_visibility.get(self.content.index[index.row()], True))
+    
     def data(self, index, role):
         """ Return a representation of the data cell indexed by 'index', 
         using the specified Qt role. """
@@ -489,43 +493,51 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # ToolTipRole: also returns the cell content, but in a form suitable
         # for QHTML:
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
-            column = self.header[index.column()]
-            value = self.content.iloc[index.row()][column] 
-            
-            if isinstance(value, (float, np.float64)):
-                format_string = "{:.%if}" % options.cfg.digits
+            if self.is_visible(index):
+                value = self.content.iloc[index.row()][self.header[index.column()]] 
+                
+                if role == QtCore.Qt.ToolTipRole:
+                    if isinstance(value, (float, np.float64)):
+                        return "<div>{}</div>".format(QtCore.Qt.escape(("{:.%if}" % options.cfg.digits).format(str(value))))
+                    else:
+                        return "<div>{}</div>".format(QtCore.Qt.escape(str(value)))
+                else:
+                    if isinstance(value, (float, np.float64)):
+                        return ("{:.%if}" % options.cfg.digits).format(value)
+                    else:
+                        return str(value)
             else:
-                format_string = "{}"
-            
-            if role == QtCore.Qt.ToolTipRole:
-                return "<div>{}</div>".format(QtCore.Qt.escape(format_string.format(value)))
-            else:
-                return format_string.format(value)
-            
+                return "[hidden]"
         # ForegroundRole: return the colour of the column, or the default if
         # no color is specified:
         elif role == QtCore.Qt.ForegroundRole:
-            header = self.header[index.column()]
-            row = self.content.index[index.row()]
-            # Check if cell is in a visible row and visible column:
-            if options.cfg.column_visibility.get(header, True) and options.cfg.row_visibility.get(row, True):
+            if self.is_visible(index):
                 # return row color if specified:
                 try:
-                    col = options.cfg.row_color[row]
+                    col = options.cfg.row_color[self.content.index[index.row()]]
                     return QtGui.QColor(col)
                 except KeyError:
                     pass
                 # return column color if specified:
                 try:
-                    col = options.cfg.column_color[header]
+                    col = options.cfg.column_color[self.header[index.column()]]
                     return QtGui.QColor(col)
                 except KeyError:
                     # return default color
                     return None
             else:
                 # return light grey for hidden cells:
-                return QtGui.QColor("lightgrey")
+                return options.cfg.app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Text)
                 
+        elif role == QtCore.Qt.BackgroundRole:
+            if self.is_visible(index):
+                color_group = QtGui.QPalette.Normal
+            else:
+                color_group = QtGui.QPalette.Disabled
+            if self.content.index[index.row()] & 1:
+                return options.cfg.app.palette().color(color_group, QtGui.QPalette.Base)
+            else:
+                return options.cfg.app.palette().color(color_group, QtGui.QPalette.AlternateBase)
         # TextAlignmentRole: return the alignment of the column:
         elif role == QtCore.Qt.TextAlignmentRole:
             column = self.header[index.column()]
@@ -554,9 +566,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         column = self.header[index]
 
         if role == QtCore.Qt.DisplayRole:
-            if not options.cfg.column_visibility.get(column, True):
-                return "[hidden]"
-            
             # do not return a header string for invisible columns:
             if column.startswith("coquery_invisible"):
                 return None
@@ -655,8 +664,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             return
         self.layoutAboutToBeChanged.emit()
         options.cfg.main_window.start_progress_indicator()
-        self_sort_thread = QtProgress.ProgressThread(
-            self.do_sort, self)
+        self_sort_thread = QtProgress.ProgressThread(self.do_sort, self)
         self_sort_thread.taskFinished.connect(self.sort_finished)
         self_sort_thread.taskException.connect(self.exception_during_sort)
         self_sort_thread.start()
