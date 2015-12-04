@@ -260,6 +260,7 @@ class TokenQuery(object):
         http://www.mobify.com/blog/sqlalchemy-memory-magic/
         """
         string_map = {}
+        self._keys = []
         for row in results:
             self._keys = row.keys()
             l = []
@@ -623,13 +624,6 @@ class FrequencyQuery(TokenQuery):
         gp = df.fillna("").groupby(group_columns, sort=False)
         return gp.agg(aggr_dict).reset_index()
     
-    def run(self):
-        super(FrequencyQuery, self).run()
-        if self.results_frame.empty:
-            df = pd.DataFrame(index=[0])
-            df = self.insert_static_data(df)
-            self.results_frame = df
-
     @classmethod
     def aggregate_data(cls, df, resource):
         """
@@ -708,7 +702,7 @@ class FrequencyQuery(TokenQuery):
         # queries. Their frequency is set to zero:
         try:
             result.coq_frequency[result.coquery_invisible_corpus_id == ""] = 0
-        except TypeError:
+        except (TypeError, AttributeError):
             pass
         
         return result
