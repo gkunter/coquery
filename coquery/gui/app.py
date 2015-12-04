@@ -1050,7 +1050,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.start()
 
     def visualize_data(self, module, **kwargs):
-        import visualizer
+        try:
+            import visualizer
+        except RuntimeError:
+            QtGui.QMessageBox.critical(
+                self, "Missing Python module – Coquery",
+                msg_missing_seaborn_module)
         try:
             module = importlib.import_module(module)
         except Exception as e:
