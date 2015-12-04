@@ -811,6 +811,9 @@ class CoqueryApp(QtGui.QMainWindow):
         for x in self.ui.data_preview.selectionModel().selectedRows():
             selection.append(self.table_model.content.index[x.row()])
 
+        if not selection:
+            selection.append(self.table_model.content.index[row - 1])
+
         length = len(selection)
         if length > 1:
             display_name = "{} rows selected".format(len(selection))
@@ -840,7 +843,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.menu.addAction(action)
             # Check if any row is visible
             if any([options.cfg.row_visibility.get(x, True) for x in selection]):
-                if length:
+                if length > 1:
                     if all([options.cfg.row_visibility.get(x, True) for x in selection]):
                         action = QtGui.QAction("&Hide rows", self)
                     else:
