@@ -700,6 +700,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def finalize_query(self):
         self.query_thread = None
         self.showMessage("Preparing results table...")
+        self.Session = self.new_session
         self.display_results()
         self.set_query_button()
         self.stop_progress_indicator()
@@ -1008,12 +1009,12 @@ class CoqueryApp(QtGui.QMainWindow):
         try:
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = options.cfg.query_list[0].splitlines()
-                self.Session = SessionCommandLine()
+                self.new_session = SessionCommandLine()
             else:
                 if not self.verify_file_name():
                     QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     return
-                self.Session = SessionInputFile()
+                self.new_session = SessionInputFile()
         except SQLNoConfigurationError:
             QtGui.QMessageBox.critical(self, "Database configuration error – Coquery", msg_sql_no_configuration, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except SQLInitializationError as e:
@@ -1028,7 +1029,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.set_stop_button()
             self.showMessage("Running query...")
             self.start_progress_indicator()
-            self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
+            self.query_thread = QtProgress.ProgressThread(self.new_session.run_queries, self)
             self.query_thread.taskFinished.connect(self.finalize_query)
             self.query_thread.taskException.connect(self.exception_during_query)
             self.query_thread.start()
