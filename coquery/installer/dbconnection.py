@@ -39,7 +39,6 @@ class DBConnection(object):
             port=db_port,
             local_infile=local_infile, 
             charset=encoding)
-        self.dry_run = False
 
         self.set_variable("NAMES", encoding)
         self.set_variable("CHARACTER SET", encoding)
@@ -60,10 +59,11 @@ class DBConnection(object):
                 if x[0] == database_name.split()[0]:
                     return database_name
         except mysql.ProgrammingError as ex:
+            warning.warn(ex)
             if cur:
-                print(cur.messages)
+                warning.warn(cur.messages)
             else:
-                print(self.Con.messages)
+                warning.warn(self.Con.messages)
         return False
 
     def create_database(self, database_name):
@@ -79,6 +79,10 @@ class DBConnection(object):
         cur = self.Con.cursor()
         self.execute(cur, "DROP DATABASE {}".format(database_name.split()[0]))
 
+    def load_infile(self, file_name, table_name, arguments):
+        cur = self.Con.cursor()
+        self.execute(cur, "LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
+
     def executemany(self, s, d):
         cur = self.Con.cursor()
         cur.executemany(s, d)
@@ -87,10 +91,7 @@ class DBConnection(object):
         if verbose:
             logger.info(command)
         try:
-            if not self.dry_run or override:
-                return cursor.execute(command)
-            else:
-                return True
+            return cursor.execute(command)
         except Exception as e:
             warnings.warn("An error occurred when executing MySQL command '{}'.".format(command))
             raise e
@@ -285,12 +286,10 @@ class DBConnection(object):
             self.execute(cur, "SET {}={}".format(variable, value), override=True)
 
     def commit(self):
-        if not self.dry_run:
-            self.Con.commit()
+        self.Con.commit()
 
     def rollback(self):
-        if not self.dry_run:
-            self.Con.commit()
+        self.Con.commit()
 
     def close(self):
         self.Con.commit()

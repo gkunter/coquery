@@ -13,11 +13,13 @@ from __future__ import unicode_literals
 import __init__
 
 import logging
+import warnings
 
 try:
     logger = logging.getLogger(__init__.NAME)
 except AttributeError:
     pass
+import warnings
 
 from errors import *
 import options
@@ -192,8 +194,11 @@ Value       no return value
         if options.cfg.explain_queries:
             self.explain(S)
         logger.debug(S)
-
-        self.Cur.execute(S)
+        try:
+            self.Cur.execute(S)
+        except pymysql.Error as e:
+            warnings.warn(e)
+            raise e
 
     def commit (self):
         self.Con.commit ()

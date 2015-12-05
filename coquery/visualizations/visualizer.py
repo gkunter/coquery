@@ -52,7 +52,11 @@ import __init__
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
+
+try:
+    import seaborn as sns
+except ImportError:
+    raise RuntimeError
 
 from pyqt_compat import QtGui, QtCore, pyside
 
@@ -290,9 +294,13 @@ class BaseVisualizer(object):
         self._table = options.cfg.main_window.Session.data_table[column_order]
         
         self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
+        
         # get list of visible rows:
-        self._row_order = ~self._table.index.isin(pd.Series(options.cfg.row_visibility.keys())-1)
-
+        #visible_rows = list(options.cfg.row_visibility.keys())
+        #self._row_order = ~self._table.index.isin(pd.Series(visible_rows) - 1)
+        #self._table = self._table[self._row_order]
+        
+        
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
 
@@ -303,7 +311,7 @@ class BaseVisualizer(object):
         else:
             self._groupby = []
 
-        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby if not x in self._time_columns]
+        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby]
 
         
         if options.cfg.verbose:

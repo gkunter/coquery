@@ -418,14 +418,26 @@ class Table(object):
         return None
             
     def get_create_string(self):
+        """
+        Generates the MySQL command required to create the table.
+        
+        Returns
+        -------
+        S : str
+            A string that can be sent to the MySQL server in order to create
+            the table according to the specifications.
+        """
         str_list = []
         columns_added = set([])
         for column in self.columns:
             if column.name not in columns_added:
                 if column.primary:
-                    str_list.insert(0, "`{}` {} AUTO_INCREMENT".format(
-                        column.name,
-                        column.data_type))
+                    # do not add AUTO_INCREMENT to ENUMs:
+                    if column.data_type.upper().startswith("ENUM"):
+                        pattern = "`{}` {}"
+                    else:
+                        pattern = "`{}` {} AUTO_INCREMENT"
+                    str_list.insert(0, pattern.format(column.name, column.data_type))
                     str_list.append("PRIMARY KEY (`{}`)".format(column.name))
                 else:
                     str_list.append("`{}` {}".format(
@@ -1889,7 +1901,11 @@ if use_gui:
         def install_exception(self):
             #self.parent().ui.showMessage(S)
             self.state = "failed"
-            error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
+            if type(self.exception) == RuntimeError:
+                QtGui.QMessageBox.critical(self, "Installation error – Coquery",
+                                           str(self.exception))
+            else:
+                error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
             #self.ui.progress_bar.setMaximum(1)
             #self.ui.progress_bar.setValue(0)
             #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
