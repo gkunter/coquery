@@ -38,7 +38,6 @@ class BuckeyeBuilder(BaseCorpusBuilder):
     word_table = "Words"
     word_id = "WordId"
     word_label = "Text"
-    word_lemma_id = "LemmaId"
     word_pos = "POS"
     word_transcript = "Transcript"
     word_lemmatranscript = "Lemma_Transcript"
