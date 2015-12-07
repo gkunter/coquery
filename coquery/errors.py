@@ -166,6 +166,9 @@ class LexiconUnsupportedFunctionError(GenericException):
 class WordNotInLexiconError(NoTraceException):
     error_message = "Word is not in the lexicon"
 
+class NoLemmaInformationError(NoTraceException):
+    error_message = "The current resource does not provide lemma information."
+
 class LexiconUnknownPartOfSpeechTag(GenericException):
     error_message = "Part-of-speech tag not in current lexicon"
     def __init__(self, par):

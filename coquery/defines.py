@@ -100,7 +100,14 @@ computer. Without this module, the visualization functions are not available.</p
 <a href="http://stanford.edu/~mwaskom/software/seaborn/index.html">http://stanford.edu/~mwaskom/software/seaborn/index.html</a>.
 </p>
 """
-
+msg_no_lemma_information = """
+<p><b>The current resource does not provide lemma information.</b></p>
+<p>Your last query makes use of the lemma search syntax by enclosing query 
+tokens in square brackets <code>[...]</code>, but the current resource does 
+not provide lemmatized word entries.</p>
+<p>Please change your query, for example by removing the square brackets 
+around the query token.</p>
+"""
 msg_corpus_path_not_valid = """
 <p><b>The corpus data path does not seem to be valid.</b></p>
 <p>{}</p>
