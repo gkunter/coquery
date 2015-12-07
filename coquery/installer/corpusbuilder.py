@@ -143,6 +143,7 @@ class Resource(SQLResource):
     name = '{name}'
     display_name = '{display_name}'
     db_name = '{db_name}'
+    url = '{url}'
 {variables}
 {resource_code}
     
@@ -1546,21 +1547,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
         variable_code = "\n".join(variable_strings)
         
         lexicon_provides = "[{}]".format(", ".join(self.lexicon_features))
-        #corpus_provides = "[{}]".format(", ".join(self.corpus_features))
         corpus_provides = "[]"
-
-        self.resource_content = """
-class Resource(SQLResource):
-    name = '{name}'
-    db_name = '{db_name}'
-{variables}
-{resource_code}
-""".format(name=self.name, db_name=self.arguments.db_name, variables=variable_code, resource_code=self.get_resource_code())
 
         self.module_content = self.module_code.format(
                 name=self.name,
                 display_name=self.get_name(),
                 db_name=self.arguments.db_name,
+                url=self.get_url(),
                 variables=variable_code,
                 lexicon_provides=lexicon_provides,
                 corpus_provides=corpus_provides,
@@ -1855,7 +1848,7 @@ if use_gui:
             self.ui.progress_bar.setValue(i)
 
         def select_path(self):
-            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.corpus_source_path)
+            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.corpus_source_path, options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
             if type(name) == tuple:
                 name = name[0]
             if name:

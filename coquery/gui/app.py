@@ -146,7 +146,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
 
         # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(options.get_available_resources(options.cfg.current_server).keys())]
+        corpora = [x for x in sorted(options.get_available_resources(options.cfg.current_server).keys())]
 
         self.ui.combo_corpus.addItems(corpora)
         
@@ -1095,9 +1095,9 @@ class CoqueryApp(QtGui.QMainWindow):
     def open_corpus_help(self):
         if self.ui.combo_corpus.isEnabled():
             current_corpus = str(self.ui.combo_corpus.currentText())
-            resource, _, _, module = options.get_available_resources(options.cfg.current_server)[current_corpus.lower()]
+            resource, _, _, module = options.get_available_resources(options.cfg.current_server)[current_corpus]
             try:
-                url = resource.documentation_url
+                url = resource.url
             except AttributeError:
                 QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation.format(corpus=current_corpus), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             else:
