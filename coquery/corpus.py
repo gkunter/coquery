@@ -104,9 +104,6 @@ class BaseLexicon(object):
                 count += 1
         return count
 
-    def get_statistics(self):
-        raise CorpusUnsupportedFunctionError
-
 #class ResFeature(str):
     #""" Define a feature class that acts like a string, but has some class
     #properties that makes using features somewhat easier."""
@@ -511,12 +508,9 @@ class BaseCorpus(object):
         filter restrictions into account."""
         raise CorpusUnsupportedFunctionError
 
-    def provides_feature(self, x):
-        return x in self.provides + self.lexicon.provides
+    #def provides_feature(self, x):
+        #return x in self.provides + self.lexicon.provides
 
-    def get_statistics(self):
-        raise CorpusUnsupportedFunctionError
-    
 class SQLResource(BaseResource):
     def get_operator(self, Token):
         """ returns a string containing the appropriate operator for an 
@@ -748,46 +742,19 @@ class SQLResource(BaseResource):
 class SQLLexicon(BaseLexicon):
     entry_cache = {}
     
-    def sql_string_is_part_of_speech(self, pos):
-        current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
-        lexicon_features = [x for x, _ in self.resource.get_lexicon_features()]
-        if "pos_table" in lexicon_features:
-            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                self.resource.pos_id, 
-                self.resource.pos_table, 
-                self.resource.pos_label,
-                self.resource.get_operator(current_token),
-                pos)
-        elif "word_pos" in lexicon_features:
-            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                self.resource.word_pos,
-                self.resource.word_table,
-                self.resource.word_pos,
-                self.resource.get_operator(current_token),
-                pos)
-        elif "corpus_pos" in lexicon_features:
-            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                self.resource.corpus_pos,
-                self.resource.corpus_table,
-                self.resource.corpus_pos,
-                self.resource.get_operator(current_token),
-                pos)
-        else:
-            raise LexiconFeatureUnavailableError
-
-    def sql_string_get_other_wordforms(self, match):
-        if "lemma_table" not in dir(self.resource):
-            word_lemma_column = self.resource.word_lemma
-        else:
-            word_lemma_column = self.resource.word_lemma_id
+    #def sql_string_get_other_wordforms(self, match):
+        #if "lemma_table" not in dir(self.resource):
+            #word_lemma_column = self.resource.word_lemma
+        #else:
+            #word_lemma_column = self.resource.word_lemma_id
             
-        return 'SELECT {word_id} FROM {word_table} WHERE {word_lemma_id} IN (SELECT {word_lemma_id} FROM {word_table} WHERE {word_label} {operator} "{match}")'.format(
-            word_id=self.resource.word_id,
-            word_table=self.resource.word_table,
-            word_label=self.resource.word_label,
-            word_lemma_id=word_lemma_column,
-            operator=self.resource.get_operator(match),
-            match=match)
+        #return 'SELECT {word_id} FROM {word_table} WHERE {word_lemma_id} IN (SELECT {word_lemma_id} FROM {word_table} WHERE {word_label} {operator} "{match}")'.format(
+            #word_id=self.resource.word_id,
+            #word_table=self.resource.word_table,
+            #word_label=self.resource.word_label,
+            #word_lemma_id=word_lemma_column,
+            #operator=self.resource.get_operator(match),
+            #match=match)
     
     def sql_string_get_posid_list_where(self, token):
         comparing_operator = self.resource.get_operator(token)
@@ -817,21 +784,28 @@ class SQLLexicon(BaseLexicon):
         
         if token.lemma_specifiers:
             if not ("lemma_label" in lexicon_features or "word_lemma" in lexicon_features or "corpus_lemma" in lexicon_features):
-                raise LexiconUnsupportedFunctionError
+                raise NoLemmaInformationError
             
             specifier_list = token.lemma_specifiers
             if "lemma_table" in dir(self.resource):
                 target = "COQ_LEMMA_TABLE.{}".format(
                     self.resource.lemma_label)
+            elif "word_table" in dir(self.resource):
+                target = "{}.{}".format(
+                    self.resource.word_table, self.resource.word_lemma)
             else:
                 target = "{}.{}".format(
-                    self.resource.word_table,
-                    self.resource.word_lemma)
+                    self.resource.corpus_table, self.resource.corpus_lemma)
+                
         else:
             specifier_list = token.word_specifiers
-            target = "{}.{}".format(
-                self.resource.word_table,
-                self.resource.word_label)
+            if "word_table" in dir(self.resource):
+                target = "{}.{}".format(
+                    self.resource.word_table, self.resource.word_label)
+            else:
+                target = "{}.{}".format(
+                    self.resource.corpus_table, self.resource.corpus_word)
+                
 
         for CurrentWord in specifier_list:
             if CurrentWord != "%":
@@ -872,24 +846,55 @@ class SQLLexicon(BaseLexicon):
             where_clauses.append(self.sql_string_get_posid_list_where(token))
         return " AND ".join(where_clauses)
             
-    def is_part_of_speech(self, pos):
-        self.resource.DB.execute(self.sql_string_is_part_of_speech(pos))
-        query_result = self.resource.DB.fetch_all ()
-        return len(query_result) > 0
-    
-    def get_other_wordforms(self, Word):
-        """ Return a list of word_id containing all other entries in the
-        lexicon which have the same lemma as the word given as an argument.
-        """ 
+    def sql_string_is_part_of_speech(self, pos):
+        current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
+        lexicon_features = [x for x, _ in self.resource.get_lexicon_features()]
+        if "pos_table" in lexicon_features:
+            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+                self.resource.pos_id, 
+                self.resource.pos_table, 
+                self.resource.pos_label,
+                self.resource.get_operator(current_token),
+                pos)
+        elif "word_pos" in lexicon_features:
+            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+                self.resource.word_pos,
+                self.resource.word_table,
+                self.resource.word_pos,
+                self.resource.get_operator(current_token),
+                pos)
+        elif "corpus_pos" in lexicon_features:
+            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+                self.resource.corpus_pos,
+                self.resource.corpus_table,
+                self.resource.corpus_pos,
+                self.resource.get_operator(current_token),
+                pos)
+        else:
+            raise LexiconFeatureUnavailableError
 
-        if LEX_LEMMA not in self.provides:
-            raise LexiconUnsupportedFunctionError
+    def is_part_of_speech(self, pos):
+        try:
+            self.resource.DB.execute(self.sql_string_is_part_of_speech(pos))
+            query_result = self.resource.DB.fetch_all()
+        except LexiconFeatureUnavailableError:
+            return False
+        else:
+            return len(query_result) > 0
+    
+    #def get_other_wordforms(self, Word):
+        #""" Return a list of word_id containing all other entries in the
+        #lexicon which have the same lemma as the word given as an argument.
+        #""" 
+
+        #if LEX_LEMMA not in self.provides:
+            #raise LexiconUnsupportedFunctionError
         
-        current_word = tokens.COCAWord(Word, self, replace=False)
-        # create an inner join of lexicon, containing all rows that match
-        # the string stored in current_word:
-        self.resource.DB.execute(self.sql_string_get_other_wordforms(current_word))
-        return [result[0] for result in self.resource.DB.Cur]
+        #current_word = tokens.COCAWord(Word, self, replace=False)
+        ## create an inner join of lexicon, containing all rows that match
+        ## the string stored in current_word:
+        #self.resource.DB.execute(self.sql_string_get_other_wordforms(current_word))
+        #return [result[0] for result in self.resource.DB.Cur]
 
     def get_orth(self, word_id):
         """ 
@@ -968,7 +973,14 @@ class SQLLexicon(BaseLexicon):
         """ returns a string that may be used to query all word_ids that
         match the token specification."""
         self.where_list = [self.sql_string_get_wordid_list_where(token)]
-        self.table_list = [self.resource.word_table]
+        if "word_table" in dir(self.resource):
+            word_table = self.resource.word_table
+            word_id = self.resource.word_id
+        else:
+            word_table = self.resource.corpus_table
+            word_id = self.resource.corpus_word_id
+            
+        self.table_list = [word_table]
         if token.lemma_specifiers:
             if "lemma_table" in dir(self.resource):
                 self.table_list.append("LEFT JOIN {} AS COQ_LEMMA_TABLE ON {}.{} = COQ_LEMMA_TABLE.{}".format(
@@ -980,20 +992,20 @@ class SQLLexicon(BaseLexicon):
             if "pos_table" in dir(self.resource):
                 self.table_list.append("LEFT JOIN {} AS COQ_POS_TABLE ON {}.{} = COQ_POS_TABLE.{}".format(
                     self.resource.pos_table,
-                    self.resource.word_table,
+                    word_table,
                     self.resource.word_pos_id,
                     self.resource.pos_id))
         if token.transcript_specifiers:
             if "transcript_table" in dir(self.resource):
                 self.table_list.append("LEFT JOIN {} AS COQ_TRANSCRIPT_TABLE ON {}.{} = COQ_TRANSCRIPT_TABLE.{}".format(
                     self.resource.transcript_table,
-                    self.resource.word_table,
+                    word_table,
                     self.resource.word_transcript_id,
                     self.resource.transcript_id))
         where_string = " AND ".join(self.where_list)
         S = "SELECT {}.{} FROM {} WHERE {}".format(
-                self.resource.word_table,
-                self.resource.word_id,
+                word_table,
+                word_id,
                 " ".join(self.table_list),
                 where_string)
         return S
@@ -1009,12 +1021,6 @@ class SQLLexicon(BaseLexicon):
         else:
             return [x[0] for x in query_results]
         
-    def get_statistics(self):
-        stats = {}
-        stats["lexicon_provides"] = " ".join(self.provides)
-        stats["lexicon_features"] = " ".join([x for x, _ in self.resource.get_lexicon_features()])
-        return stats
-
 class SQLCorpus(BaseCorpus):
     def __init__(self):
         super(SQLCorpus, self).__init__()
