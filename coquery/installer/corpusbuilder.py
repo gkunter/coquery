@@ -1705,66 +1705,71 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if self._widget:
                 self._widget.progressUpdate.emit(0)
         
-        self.check_arguments()
-        if not self._widget:
-            self.setup_logger()
-        self.setup_db()
+        try:
+            self.check_arguments()
+            if not self._widget:
+                self.setup_logger()
+            self.setup_db()
 
-        if self._widget:
-            steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.self_join) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
-            self._widget.ui.progress_general.setMaximum(steps)
+            if self._widget:
+                steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.self_join) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
+                self._widget.ui.progress_bar.setMaximum(steps)
 
-        current = 0
-        current = progress_next(current)
-        self.initialize_build()
-        progress_done()
-        
-        if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
-            raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
-        
-        if self.arguments.c and not self.interrupted:
+            current = 0
             current = progress_next(current)
-            self.build_create_tables()
+            self.initialize_build()
             progress_done()
-
-        if self.arguments.l and not self.interrupted:
-            current = progress_next(current)
-            self.build_load_files()
-            progress_done()
-
-        if self.arguments.self_join and not self.interrupted:
-            current = progress_next(current)
-            self.build_self_joined()
-            current = progress_done()
-
-        if not self.interrupted:
-            current = progress_next(current)
-            for stage in self.additional_stages and not self.interrupted:
-                stage()
-            progress_done()
-
-        if self.arguments.o and not self.interrupted:
-            current = progress_next(current)
-            self.build_optimize()
-            progress_done()
-
-        if self.arguments.i and not self.interrupted:
-            current = progress_next(current)
-            self.build_create_indices()
-            progress_done()
-
-        if self.verify_corpus() and not self.interrupted:
-            current = progress_next(current)
-            self.build_write_module(self.arguments.corpus_path)
-            current = progress_next(current)
             
-        if not self.interrupted:
-            current = progress_next(current)
-            self.build_create_frequency_table()
-            progress_done
+            if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
+                raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
+            
+            if self.arguments.c and not self.interrupted:
+                current = progress_next(current)
+                self.build_create_tables()
+                progress_done()
 
-        self.build_finalize()
-        
+            if self.arguments.l and not self.interrupted:
+                current = progress_next(current)
+                self.build_load_files()
+                progress_done()
+
+            if self.arguments.self_join and not self.interrupted:
+                current = progress_next(current)
+                self.build_self_joined()
+                current = progress_done()
+
+            if not self.interrupted:
+                current = progress_next(current)
+                for stage in self.additional_stages and not self.interrupted:
+                    stage()
+                progress_done()
+
+            if self.arguments.o and not self.interrupted:
+                current = progress_next(current)
+                self.build_optimize()
+                progress_done()
+
+            if self.arguments.i and not self.interrupted:
+                current = progress_next(current)
+                self.build_create_indices()
+                progress_done()
+
+            if self.verify_corpus() and not self.interrupted:
+                current = progress_next(current)
+                self.build_write_module(self.arguments.corpus_path)
+                current = progress_next(current)
+                
+            if not self.interrupted:
+                current = progress_next(current)
+                self.build_create_frequency_table()
+                progress_done
+
+            self.build_finalize()
+        except Exception as e:
+            print(e)
+            self.Con.close()
+            raise e
+            
 if use_gui:
     import options
     import corpusBuilderUi
@@ -2018,6 +2023,12 @@ if use_gui:
             return namespace
 
     class BuilderGui(QtGui.QDialog):
+        progressSet = QtCore.Signal(int, str)
+        labelSet = QtCore.Signal(str)
+        progressUpdate = QtCore.Signal(int)
+        
+        generalUpdate = QtCore.Signal(int)
+        
         def __init__(self, builder_class, parent=None):
             super(BuilderGui, self).__init__(parent)
 
@@ -2029,6 +2040,9 @@ if use_gui:
             self.ui.button_input_path.clicked.connect(self.select_path)
             self.ui.radio_build_corpus.toggled.connect(self.changed_radio)
             self.ui.radio_only_module.toggled.connect(self.changed_radio)
+
+            if options.cfg.text_source_path != os.path.expanduser("~"):
+                self.ui.input_path.setText(options.cfg.text_source_path)
             
             self.accepted = False
             self.builder_class = builder_class
@@ -2042,7 +2056,7 @@ if use_gui:
             self.exec_()
 
         def select_path(self):
-            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.test_source_path)
+            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.text_source_path)
             if type(name) == tuple:
                 name = name[0]
             if name:
@@ -2076,12 +2090,23 @@ if use_gui:
         def get_arguments_from_gui(self):
             namespace = argparse.Namespace()
             namespace.verbose = False
-            namespace.o = True
-            namespace.i = True
+            
+            if self.ui.radio_only_module.isChecked():
+                namespace.o = False
+                namespace.i = False
+                namespace.l = False
+                namespace.c = False
+                namespace.w = True
+                namespace.self_join = False
+            else:
+                namespace.w = True
+                namespace.o = True
+                namespace.i = True
+                namespace.l = True
+                namespace.c = True
+                namespace.self_join = False
+
             namespace.no_nltk = True
-            namespace.l = True
-            namespace.c = True
-            namespace.self_join = False
 
             namespace.encoding = self.builder_class.encoding
             
@@ -2096,7 +2121,7 @@ if use_gui:
                 raise SQLNoConfigurationError
 
             namespace.current_server = options.cfg.current_server
-            namespace.corpus_path = os.path.join(sys.path[0], "../corpora/", namespace.current_server)
+            namespace.corpus_path = os.path.join(sys.path[0], "corpora/", namespace.current_server)
 
             
             return namespace
