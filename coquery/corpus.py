@@ -816,7 +816,7 @@ class SQLLexicon(BaseLexicon):
         lexicon_features = [x for x, _ in self.resource.get_lexicon_features()]
         
         if token.lemma_specifiers:
-            if not ("lemma_label" in lexicon_features or "word_lemma" in lexicon_features or "corpus_lemma" in lexicon_feature):
+            if not ("lemma_label" in lexicon_features or "word_lemma" in lexicon_features or "corpus_lemma" in lexicon_features):
                 raise LexiconUnsupportedFunctionError
             
             specifier_list = token.lemma_specifiers
