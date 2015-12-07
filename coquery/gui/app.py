@@ -682,7 +682,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.status_server.setText(S)
     
     def exception_during_query(self):
-        error_box.ErrorBox.show(self.exc_info, self.exception)
+        if type(self.exception) == NoLemmaInformationError:
+            QtGui.QMessageBox.critical(self, "Disk error", msg_no_lemma_information)
+        else:
+            error_box.ErrorBox.show(self.exc_info, self.exception)
         self.showMessage("Query failed.")
         self.set_query_button()
         self.stop_progress_indicator()
