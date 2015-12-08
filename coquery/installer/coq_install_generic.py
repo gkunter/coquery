@@ -1,5 +1,24 @@
 # -*- coding: utf-8 -*-
+
+"""
+coq_install_generic.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
+
+import warnings
+try:
+    import chardet
+except ImportError:
+    warnings.warn("The Python library 'chardet' is not available. The encoding of the input text files cannot be determined automatically.")
+    warnings.warn("Using default Unicode encoding 'utf-8'.")
+
 from corpusbuilder import *
 
 class GenericCorpusBuilder(BaseCorpusBuilder):
@@ -106,7 +125,6 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
         # 
         # Path
         # A text value containing the path that points to this data file.
-        
 
         self.create_table_description(self.file_table,
             [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
@@ -118,8 +136,17 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table)])
 
-    def get_description(self):
+    @staticmethod
+    def validate_files(l):
+        if len(l) == 0:
+            raise RuntimeError("<p>No file could be found in the selected directory..</p> ")
+        
+
+    @staticmethod
+    def get_description():
         return "This script creates the corpus '{}' by reading data from the files in {} to populate the MySQL database '{}' so that the database can be queried by Coquery.".format(self.name, self.arguments.path, self.arguments.db_name)
+
+BuilderClass = GenericCorpusBuilder
 
 def main():
     GenericCorpusBuilder().build()
