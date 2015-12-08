@@ -452,7 +452,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 pass
 
         if self.ui.combo_corpus.count():
-            corpus_name = str(self.ui.combo_corpus.currentText()).lower()
+            corpus_name = str(self.ui.combo_corpus.currentText())
             self.resource, self.corpus, self.lexicon, self.path = options.get_available_resources(options.cfg.current_server)[corpus_name]
             self.ui.filter_box.resource = self.resource
             
@@ -532,14 +532,14 @@ class CoqueryApp(QtGui.QMainWindow):
         # remember last corpus name:
         last_corpus = str(self.ui.combo_corpus.currentText())
 
-        l = [x.upper() for x in options.get_available_resources(options.cfg.current_server)]
+        l = [x for x in options.get_available_resources(options.cfg.current_server)]
 
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems([x.upper() for x in options.get_available_resources(options.cfg.current_server)])
+        self.ui.combo_corpus.addItems([x for x in options.get_available_resources(options.cfg.current_server)])
 
         # try to return to last corpus name:
-        new_index = self.ui.combo_corpus.findText(last_corpus.upper())
+        new_index = self.ui.combo_corpus.findText(last_corpus)
         if new_index == -1:
             new_index = 0
             
@@ -1108,7 +1108,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 webbrowser.open(url)
         
     def remove_corpus(self, corpus_name):
-        resource, _, _, module = options.get_available_resources(options.cfg.current_server)[corpus_name.lower()]
+        resource, _, _, module = options.get_available_resources(options.cfg.current_server)[corpus_name]
         database = resource.db_name
         db_con = options.cfg.server_configuration[options.cfg.current_server]
         try:
@@ -1360,7 +1360,7 @@ class CoqueryApp(QtGui.QMainWindow):
             return functions 
 
         if options.cfg:
-            options.cfg.corpus = str(self.ui.combo_corpus.currentText()).lower()
+            options.cfg.corpus = str(self.ui.combo_corpus.currentText())
         
             # determine query mode:
             if self.ui.radio_aggregate_uniques.isChecked():
@@ -1456,7 +1456,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # set corpus combo box to current corpus:
         if options.cfg.corpus:
-            index = self.ui.combo_corpus.findText(options.cfg.corpus.upper())
+            index = self.ui.combo_corpus.findText(options.cfg.corpus)
             if index > -1:
                 self.ui.combo_corpus.setCurrentIndex(index)
 
@@ -1551,7 +1551,7 @@ class CoqueryApp(QtGui.QMainWindow):
         column = 0
         link = linkselect.LinkSelect.display(
             feature=str(item.text(0)),
-            corpus_omit=str(self.ui.combo_corpus.currentText()).lower(),
+            corpus_omit=str(self.ui.combo_corpus.currentText()), 
             parent=self)
         
         if not link:
@@ -1569,7 +1569,7 @@ class CoqueryApp(QtGui.QMainWindow):
             position = self.ui.options_tree.indexOfTopLevelItem(item.parent()) +1
             self.ui.options_tree.insertTopLevelItem(position, new_table)
             new_table.setLink("{}.{}".format(item.parent().objectName(), item.objectName()), feature_name)
-            new_table.setText(column, "{} ► {}.{}".format(str(item.text(0)), corpus.upper(), table_name))
+            new_table.setText(column, "{} ► {}.{}".format(str(item.text(0)), corpus, table_name))
             new_table.setCheckState(column, False)
             
             for rc_feature in table:

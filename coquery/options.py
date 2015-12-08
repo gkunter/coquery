@@ -220,7 +220,7 @@ class Options(object):
                             D[table] = set([])
                         D[table].add((column, rc_feature))
             
-                if self.args.corpus.upper() == "COCA":
+                if self.args.corpus == "COCA":
                     group = self.parser.add_argument_group("COCA compatibility", "These options apply only to the COCA corpus module, and are unsupported by any other corpus.")
                     # COCA compatibility options
                     group.add_argument("--exact-pos-tags", help="part-of-speech tags must match exactly the label used in the query string (default: be COCA-compatible and match any part-of-speech tag that starts with the given label)", action="store_true", dest="exact_pos_tags")
@@ -971,7 +971,7 @@ def get_available_resources(configuration):
             else:
                 break
         try:
-            d[module.Resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
+            d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, corpus)
         except (AttributeError, ImportError):
             warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
