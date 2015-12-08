@@ -1153,14 +1153,20 @@ class CoqueryApp(QtGui.QMainWindow):
     def build_corpus(self):
         import coq_install_generic
         import corpusbuilder
-        corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, parent=self)
-        self.fill_combo_corpus()
-        self.change_corpus()
+
+        builder = corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, self)
         try:
-            self.corpus_manager.close()
-        except AttributeError:
-            pass
-        self.corpus_manager = None
+            result = builder.display()
+        except Exception as e:
+            error_box.ErrorBox.show(sys.exc_info())
+        if result:
+            self.fill_combo_corpus()
+            self.change_corpus()
+            try:
+                self.corpus_manager.close()
+            except AttributeError:
+                pass
+            self.corpus_manager = None
             
     def install_corpus(self, builder_class):
         import corpusbuilder

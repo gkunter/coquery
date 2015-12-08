@@ -1772,13 +1772,15 @@ class BaseCorpusBuilder(corpus.BaseResource):
             
 if use_gui:
     import options
-    import corpusBuilderUi
     import corpusInstallerUi
     import error_box
     import QtProgress
     from defines import * 
     
     class InstallerGui(QtGui.QDialog):
+        button_label = "&Install"
+        window_title = "Corpus installer – Coquery"
+        
         installStarted = QtCore.Signal()
         
         progressSet = QtCore.Signal(int, str)
@@ -1799,12 +1801,12 @@ if use_gui:
             self.ui.setupUi(self)
             self.ui.progress_box.hide()
             self.ui.button_input_path.clicked.connect(self.select_path)
-            self.ui.radio_install_corpus.toggled.connect(self.changed_radio)
+            self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=True))
+            self.ui.radio_complete.toggled.connect(self.changed_radio)
             self.ui.radio_only_module.toggled.connect(self.changed_radio)
             self.ui.input_path.textChanged.connect(self.check_input)
 
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setText("&Install")
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setText(self.button_label)
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).clicked.connect(self.start_install)
             
             self.installStarted.connect(self.show_progress)
@@ -1834,6 +1836,21 @@ if use_gui:
             self.ui.corpus_description.setText(
                 str(self.ui.corpus_description.text()).format(
                     builder_class.get_title(), options.cfg.current_server))
+
+        def validate_dialog(self, check_path=True):
+            self.ui.input_path.setStyleSheet("")
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+            if self.ui.radio_only_module.isChecked():
+                return
+            if check_path:
+                path = str(self.ui.input_path.text())
+                if not path:
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                    return
+                if not os.path.isdir(path):
+                    self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                    return            
 
         def display(self):
             return self.exec_()
@@ -1865,7 +1882,7 @@ if use_gui:
                 self.reject()
                 
         def changed_radio(self):
-            if self.ui.radio_install_corpus.isChecked():
+            if self.ui.radio_complete.isChecked():
                 self.ui.box_build_options.setEnabled(True)
                 self.check_input()
             else:
@@ -1897,19 +1914,12 @@ if use_gui:
             self.parent().showMessage(S)
             
         def install_exception(self):
-            #self.parent().ui.showMessage(S)
             self.state = "failed"
             if type(self.exception) == RuntimeError:
                 QtGui.QMessageBox.critical(self, "Installation error – Coquery",
                                            str(self.exception))
             else:
                 error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
-            #self.ui.progress_bar.setMaximum(1)
-            #self.ui.progress_bar.setValue(0)
-            #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
-            #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
-            #self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
-            #self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
 
         def reject(self):
             try:
@@ -1949,7 +1959,7 @@ if use_gui:
             started if the path is valid, or if the user decides to ignore
             the invalid path.
             """
-            if self.ui.radio_install_corpus.isChecked():
+            if self.ui.radio_complete.isChecked():
                 try:
                     self.builder_class.validate_files(
                         self.builder_class.get_file_list(
@@ -2022,39 +2032,82 @@ if use_gui:
             
             return namespace
 
-    class BuilderGui(QtGui.QDialog):
-        progressSet = QtCore.Signal(int, str)
-        labelSet = QtCore.Signal(str)
-        progressUpdate = QtCore.Signal(int)
-        
-        generalUpdate = QtCore.Signal(int)
+    class BuilderGui(InstallerGui):
+        button_label = "&Build"
+        window_title = "Corpus builder – Coquery"
         
         def __init__(self, builder_class, parent=None):
-            super(BuilderGui, self).__init__(parent)
+            super(BuilderGui, self).__init__(builder_class, parent)
+            self.ui.input_path.textChanged.disconnect()
 
             import __init__
             self.logger = logging.getLogger(__init__.NAME)        
-            
-            self.ui = corpusBuilderUi.Ui_CorpusBuilder()
-            self.ui.setupUi(self)
-            self.ui.button_input_path.clicked.connect(self.select_path)
-            self.ui.radio_build_corpus.toggled.connect(self.changed_radio)
-            self.ui.radio_only_module.toggled.connect(self.changed_radio)
 
-            if options.cfg.text_source_path != os.path.expanduser("~"):
-                self.ui.input_path.setText(options.cfg.text_source_path)
+            self.ui.corpus_description.setText("<html><head/><body><p><span style='font-weight:600;'>Corpus builder</span></p><p>You have requested to create a new corpus from a selection of text files on the MySQL server '{}'. The corpus will afterwards be available for queries.</p></body></html>".format(options.cfg.current_server))
+            self.ui.label_5.setText("Build corpus from local text files and install corpus module (if you have a local database server)")
+            self.ui.label_8.setText("Path to text files:")
+            self.setWindowTitle(self.window_title)
             
-            self.accepted = False
-            self.builder_class = builder_class
-            if not nltk_available:
+            self.ui.name_layout = QtGui.QHBoxLayout()
+            self.ui.name_label = QtGui.QLabel("&Name of new corpus:")
+            self.ui.issue_label = QtGui.QLabel("")
+            self.ui.corpus_name = QtGui.QLineEdit()
+            self.ui.corpus_name.setMaxLength(32)
+            self.ui.corpus_name.setValidator(QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
+            self.ui.name_label.setBuddy(self.ui.corpus_name)
+            spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+
+            self.ui.name_layout.addWidget(self.ui.name_label)
+            self.ui.name_layout.addWidget(self.ui.corpus_name)
+            self.ui.name_layout.addWidget(self.ui.issue_label)
+            self.ui.name_layout.addItem(spacerItem)
+            self.ui.verticalLayout.insertLayout(1, self.ui.name_layout)
+
+            if nltk_available:
+                self.ui.use_pos_tagging = QtGui.QCheckBox("Use NLTK for part-of-speech tagging and lemmatization")
+                self.ui.use_pos_tagging.setChecked(True)
+            else:
+                self.ui.use_pos_tagging = QtGui.QCheckBox("Use NLTK for part-of-speech tagging and lemmatization (NOT AVAILABLE, install the Python NLTK module)")
                 self.ui.use_pos_tagging.setChecked(False)
                 self.ui.use_pos_tagging.setEnabled(False)
-                self.ui.label_3.setEnabled(False)
+            
+            self.ui.gridLayout.addWidget(self.ui.use_pos_tagging, 2, 0)
+            if options.cfg.text_source_path != os.path.expanduser("~"):
+                self.ui.input_path.setText(options.cfg.text_source_path)
             else:
-                self.ui.use_pos_tagging.setChecked(True)
-
-            self.exec_()
-
+                self.ui.input_path.setText("")
+                
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=False))
+            self.ui.corpus_name.textChanged.connect(lambda: self.validate_dialog(check_path=False))
+            self.ui.corpus_name.setFocus()
+        
+        def validate_dialog(self, check_path=True):
+            if hasattr(self.ui, "corpus_name"):
+                self.ui.corpus_name.setStyleSheet("")
+            super(BuilderGui, self).validate_dialog()
+            if hasattr(self.ui, "corpus_name"):
+                self.ui.issue_label.setText("")
+                if not str(self.ui.corpus_name.text()):
+                    self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                    self.ui.issue_label.setText("The corpus name cannot be empty.")
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                elif str(self.ui.corpus_name.text()) in options.get_available_resources(options.cfg.current_server):
+                    self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                    self.ui.issue_label.setText("There is already another corpus with this name..")
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                else:
+                    try:
+                        db_host, db_port, db_user, db_password = options.get_mysql_configuration()
+                    except ValueError:
+                        raise SQLNoConfigurationError
+                    Con = dbconnection.DBConnection(
+                        db_user=db_user, db_host=db_host, db_port=db_port, db_pass=db_password)
+                    if Con.has_database("coq_{}".format(str(self.ui.corpus_name.text()).lower())):
+                        self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                        self.ui.issue_label.setText("There is already another database that uses this name.")
+                        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+        
         def select_path(self):
             name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.text_source_path)
             if type(name) == tuple:
@@ -2063,66 +2116,19 @@ if use_gui:
                 options.cfg.text_source_path = name
                 self.ui.input_path.setText(name)
 
-        def keyPressEvent(self, e):
-            if e.key() == QtCore.Qt.Key_Escape:
-                self.reject()
-                
-        def changed_radio(self):
-            if self.ui.radio_build_corpus.isChecked():
-                self.ui.box_build_options.setEnabled(True)
+        def install_exception(self):
+            self.state = "failed"
+            if type(self.exception) == RuntimeError:
+                QtGui.QMessageBox.critical(self, "Corpus building error – Coquery",
+                                           str(self.exception))
             else:
-                self.ui.box_build_options.setEnabled(False)
-                
-        def accept(self):
-            self.accepted = True
-            self.builder = self.builder_class(gui = self)
-            self.builder.logger = self.logger
-            self.builder.arguments = self.get_arguments_from_gui()
-            self.builder.name = self.builder.arguments.name
-            try:
-                self.builder.build()
-            except Exception as e:
-                error_box.ErrorBox.show(sys.exc_info(), self)
-            else:
-                self.parent().showMessage("Finished building new corpus.")
-            super(BuilderGui, self).accept()
+                error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
 
         def get_arguments_from_gui(self):
-            namespace = argparse.Namespace()
-            namespace.verbose = False
-            
-            if self.ui.radio_only_module.isChecked():
-                namespace.o = False
-                namespace.i = False
-                namespace.l = False
-                namespace.c = False
-                namespace.w = True
-                namespace.self_join = False
-            else:
-                namespace.w = True
-                namespace.o = True
-                namespace.i = True
-                namespace.l = True
-                namespace.c = True
-                namespace.self_join = False
+            namespace = super(BuilderGui, self).get_arguments_from_gui()
 
-            namespace.no_nltk = True
-
-            namespace.encoding = self.builder_class.encoding
-            
             namespace.name = str(self.ui.corpus_name.text())
-            namespace.path = str(self.ui.input_path.text())
             namespace.use_nltk = self.ui.use_pos_tagging.checkState()
-
-            namespace.db_name = str(self.ui.corpus_name.text())
-            try:
-                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
-            except ValueError:
-                raise SQLNoConfigurationError
-
-            namespace.current_server = options.cfg.current_server
-            namespace.corpus_path = os.path.join(sys.path[0], "corpora/", namespace.current_server)
-
+            namespace.db_name = "coq_".format(str(self.ui.corpus_name.text()).lower())
             
             return namespace
-
