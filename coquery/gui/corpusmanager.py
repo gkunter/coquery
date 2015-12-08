@@ -238,6 +238,10 @@ class CorpusManager(QtGui.QDialog):
         row = 0
         for root, dirnames, filenames in os.walk(path):
             installer_list = sorted(fnmatch.filter(filenames, 'coq_install_*.py'), reverse=True)
+            try:
+                installer_list.remove("coq_install_generic.py")
+            except ValueError:
+                pass
             for fullpath in installer_list:
                 module_path = os.path.join(root, fullpath)
                 basename, ext = os.path.splitext(os.path.basename(fullpath))
