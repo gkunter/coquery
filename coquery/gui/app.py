@@ -498,7 +498,7 @@ class CoqueryApp(QtGui.QMainWindow):
             root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
             try:
-                label = type(self.resource).__getattribute__(self.resource, str("{}_table".format(table)))
+                label = getattr(self.resource, str("{}_table".format(table)))
             except AttributeError:
                 label = table.capitalize()
                 
@@ -507,12 +507,12 @@ class CoqueryApp(QtGui.QMainWindow):
             if table_dict[table]:
                 tree.addTopLevelItem(root)
             
-            # add a leaf for each table variable:
-            for var in table_dict[table]:
+            # add a leaf for each table variable, in alphabetical order:
+            for _, var in sorted([(getattr(self.resource, x), x) for x in table_dict[table]]):
                 leaf = classes.CoqTreeItem()
                 leaf.setObjectName(coqueryUi._fromUtf8(var))
                 root.addChild(leaf)
-                label = type(self.resource).__getattribute__(self.resource, var)
+                label = getattr(self.resource, var)
                 leaf.setText(0, label)
                 if var in last_checked: 
                     leaf.setCheckState(0, QtCore.Qt.Checked)
@@ -1575,7 +1575,7 @@ class CoqueryApp(QtGui.QMainWindow):
             for rc_feature in table:
                 if rc_feature.rpartition("_")[-1] not in ("id", "table") and rc_feature != feature_name:
                     new_item = classes.CoqTreeItem()
-                    new_item.setText(0, resource.__getattribute__(resource, rc_feature))
+                    new_item.setText(0, getattr(resource, rc_feature))
                     new_item.setObjectName("{}.{}".format(corpus, rc_feature))
                     new_item.setCheckState(column, False)
                     new_table.addChild(new_item)
