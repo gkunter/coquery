@@ -283,7 +283,7 @@ class CorpusManager(QtGui.QDialog):
                 if builder_class.get_license():
                     entry.setLicense("<p><b>License</b></p><p>{}</p>".format(builder_class.get_license()))
 
-                entry.setupInstallState(name.lower() in options.get_available_resources(options.cfg.current_server))
+                entry.setupInstallState(name in options.get_available_resources(options.cfg.current_server))
                 entry.setBuilderClass(builder_class)
 
                 self.ui.corpus_stack.addItem(entry, self.icon, name)
@@ -291,23 +291,10 @@ class CorpusManager(QtGui.QDialog):
         self.ui.scroll_area_corpus.setWidgetResizable(True)
         self.ui.corpus_stack.setCurrentIndex(self.ui.corpus_stack.count() - 1)
 
-
     def closeEvent(self, *args):
         options.cfg.corpus_manager_view_height = self.height()
         options.cfg.corpus_manager_view_width = self.width()
                     
-    @staticmethod
-    def display(path, install_func, remove_func, parent=None):
-        dialog = CorpusManager(parent=parent)        
-        dialog.show()
-        dialog.read(path)
-        
-        dialog.installCorpus.connect(install_func)
-        dialog.removeCorpus.connect(remove_func)
-        
-        
-        dialog.exec_()
-
     def add_source_label(self, name, content):
         pass
 

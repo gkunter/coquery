@@ -69,6 +69,7 @@ class Options(object):
         self.args.text_source_path = os.path.expanduser("~")
         self.args.corpora_path = os.path.join(sys.path[0], "corpora")
         self.args.custom_corpora_path = None
+        self.args.custom_installer_path = None
         
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
@@ -536,6 +537,10 @@ class Options(object):
                             self.args.custom_corpora_path = config_file.get("main", "custom_corpora_path")
                         except NoOptionError:
                             pass
+                        try:
+                            self.args.custom_installer_path = config_file.get("main", "custom_installer_path")
+                        except NoOptionError:
+                            pass
                         
                         try:
                             vars(self.args)["input_path"] = config_file.get("main", "csv_file")
@@ -727,6 +732,8 @@ def save_configuration():
     config.set("main", "corpora_path", cfg.corpora_path)
     if cfg.custom_corpora_path:
         config.set("main", "custom_corpora_path", cfg.custom_corpora_path)
+    if cfg.custom_installer_path:
+        config.set("main", "custom_installer_path", cfg.custom_installer_path)
         
    
     if not "sql" in config.sections():

@@ -1170,6 +1170,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
     def install_corpus(self, builder_class):
         import corpusbuilder
+
         builder = corpusbuilder.InstallerGui(builder_class, self)
         try:
             result = builder.display()
@@ -1196,6 +1197,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.corpus_manager = corpusmanager.CorpusManager(parent=self)        
             self.corpus_manager.show()
             self.corpus_manager.read(path)
+            if options.cfg.custom_installer_path:
+                self.corpus_manager.read(options.cfg.custom_installer_path)
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
             result = self.corpus_manager.exec_()
