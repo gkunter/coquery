@@ -13,6 +13,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 import codecs
 import csv
+import itertools
+import tempfile
 
 from corpusbuilder import *
 import dbconnection
@@ -170,8 +172,8 @@ class COCABuilder(BaseCorpusBuilder):
     @staticmethod
     def get_description():
         return [
-            "The Corpus of Contemporary American English (COCA) is the largest freely-available corpus of English, and the only large and balanced corpus of American English. The corpus was created by Mark Davies of Brigham Young University, and it is used by tens of thousands of users every month (linguists, teachers, translators, and other researchers). COCA is also related to other large corpora that we have created.",
-            "The corpus contains more than 450 million words of text and is equally divided among spoken, fiction, popular magazines, newspapers, and academic texts. It includes 20 million words each year from 1990-2012 and the corpus is also updated regularly (the most recent texts are from Summer 2012). Because of its design, it is perhaps the only corpus of English that is suitable for looking at current, ongoing changes in the language (see the 2011 article in Literary and Linguistic Computing)."]
+            "The Corpus of Contemporary American English (COCA) is the largest freely-available corpus of English, and the only large and balanced corpus of American English. The corpus was created by Mark Davies of Brigham Young University, and it is used by tens of thousands of users every month (linguists, teachers, translators, and other researchers).",
+            "The corpus contains more than 450 million words of text and is equally divided among spoken, fiction, popular magazines, newspapers, and academic texts. It includes 20 million words each year from 1990-2012 and the corpus is also updated regularly (the most recent texts are from Summer 2012). Because of its design, it is perhaps the only corpus of English that is suitable for looking at current, ongoing changes in the language."]
 
     @staticmethod
     def get_references():
@@ -198,79 +200,80 @@ class COCABuilder(BaseCorpusBuilder):
             raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
 
     def build_load_files(self):
-        files = self.get_file_list(self.arguments.path, self.file_filter)
-        for file_name in (["coca-sources.txt", "lexicon.txt", "Sub-genre codes.txt"]):
-            print("Load file {}".format(file_name))
-            for x in files:
-                if os.path.basename(x) == file_name:
-                    file_path = x
-                    break
-            else:
-                raise RuntimeError("File '{}' not found.".format(file_name))
-            try:
-                self.Con.load_infile(file_path, self.word_table, "LINES TERMINATED BY '\\r\\n' IGNORE 2 LINES")
-            except dbconnection.mysql.OperationalError as e:
-                raise RuntimeError("""
-                    <p><b>The file '{}' could not be loaded into the database.</b></p>
-                    <p>While attempting to load the file into the database, the 
-                    following error occurred:</p>
-                    <p><code>{}</code></p>
-                    <p>One possible cause of this error is that your MySQL 
-                    database server is not configured to allow LOCAL INFILE 
-                    loading of data files. Please ask the administrator of 
-                    your MySQL server to ensure that the option 
-                    <code>local-infile=1</code> is set in the <code>[mysql]</code>
-                    section of the server configuration file.</p>
-                    """.format(file_name, e))
+        chunk_size 250000
+        def get_chunk(iterable):
+            """
+            Yield a chunk from the big file given as 'iterable'.
             
-        print("Process corpus files")
-        super(COCABuilder, self).build_load_files()
+            There are different ways of splitting a large text file into 
+            smaller chunks. This function is based on a rather elegant solutin
+            posted on Stack Overflow: http://stackoverflow.com/a/24862655
+            """
+            iterable = iter(iterable)
+            while True:
+                yield itertools.chain(
+                    [next(iterable)], 
+                    itertools.islice(iterable, chunk_size))
+        
+        # for INFILE loading, autocommit doesn't seem to be harmful, so turn
+        # it on again:
+        self.Con.set_variable("autocommit", 1)
+        
+        files = sorted(self.get_file_list(self.arguments.path, self.file_filter))
 
-    def process_file(self, filename):
-        print(filename)
-        #file_body = False
-        ## read file using the specified encoding (default is 'utf-8), and 
-        ## retry using 'ISO-8859-1'/'latin-1' in case of an error:
-        #try:
-            #with codecs.open(filename, "r", encoding=self.arguments.encoding) as input_file:
-                #input_data = input_file.read()
-        #except UnicodeDecodeError:
-            #with codecs.open(filename, "r", encoding="ISO-8859-1") as input_file:
-                #input_data = input_file.read()
-                
-        #input_data = [x.strip() for x in input_data.splitlines() if x.strip()]
-        #for row in input_data:
-            #while "  " in row:
-                #row = row.replace("  ", " ")
-            ## only process the lines after the hash mark:
-            #if row == "#":
-                #file_body = True
-            #elif file_body:
-                #try:
-                    #self._value_corpus_time, _, remain = row.partition(" ")
-                    #_, _, value = remain.partition(" ")
-                #except ValueError:
-                    #continue
+        if self._widget:
+            self._widget.progressSet.emit(len(files), "")
 
-                #try:
-                    #(self._value_word_label, 
-                    #self._value_word_lemmatranscript, 
-                    #self._value_word_transcript, 
-                    #self._value_word_pos) = value.split("; ")
-                #except ValueError:
-                    #continue
+        for count, file_name in enumerate(files):
+            
+            # these arguments are required by some files:
+            arguments = "LINES TERMINATED BY '\\r\\n' IGNORE 2 LINES"
+            # get the table name depending on the file:
+            if file_name == "coca-sources.txt":
+                table = self.source_table
+            elif file_name == "Sub-genre codes.txt":
+                table = self.subgenre_table
+            elif file_name == "lexicon.txt":
+                table = self.word_table
+            else:
+                table = self.corpus_table
+                arguments = ""
 
-                #if float(self._value_corpus_time) >= 0:
-                    #self._word_id = self.table(self.word_table).get_or_insert(
-                        #{self.word_label: self._value_word_label, 
-                            #self.word_pos: self._value_word_pos,
-                            #self.word_transcript: self._value_word_transcript,
-                            #self.word_lemmatranscript: self._value_word_lemmatranscript})
-                    
-                    #self.add_token_to_corpus(
-                        #{self.corpus_word_id: self._word_id, 
-                        #self.corpus_file_id: self._file_id,
-                        #self.corpus_time: self._value_corpus_time})
+            # There seems to be an issue when loading longer files into an
+            # MySQL database. Sometimes, the connection is lost
+            with codecs.open(file_name, "r", encoding="latin-1") as big_file:
+                if self._widget:
+                    self._widget.labelSet.emit("Reading '{}' (file %v out of %m)".format(os.path.basename(file_name)))
+                for i, lines in enumerate(chunks(big_file)):
+                    if self.interrupted:
+                        return
+                    temp_file = tempfile.NamedTemporaryFile("w", delete=False)
+                    temp_file.writelines(lines)
+                    temp_file.close()
+
+                    # load the temporary file containing a chunk from the big 
+                    # file into the matching table name:
+                    try:
+                        self.Con.load_infile(temp_file.name, table, arguments)
+                    except dbconnection.mysql.OperationalError as e:
+                        raise RuntimeError("""
+                            <p><b>The file '{}' could not be loaded into the database.</b></p>
+                            <p>While attempting to load the file into the database, the 
+                            following error occurred:</p>
+                            <p><code>{}</code></p>
+                            <p>One possible cause of this error is that your MySQL 
+                            database server is not configured to allow LOCAL INFILE 
+                            loading of data files. Please ask the administrator of 
+                            your MySQL server to ensure that the option 
+                            <code>local-infile=1</code> is set in the <code>[mysql]</code>
+                            section of the server configuration file.</p>
+                            """.format(file_name, e))
+                    finally:
+                        os.remove(temp_file.name)
+
+            if self._widget:
+                self._widget.progressUpdate.emit(count + 1)
+
 BuilderClass = COCABuilder
 
 if __name__ == "__main__":
