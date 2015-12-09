@@ -27,31 +27,28 @@ import sys
 import os
 import argparse
 import logging
-import codecs
-import tokens
+import platform
 import warnings
+import codecs
 from collections import defaultdict
 
+import tokens
 from defines import *
 from errors import *
 
 class Options(object):
     def __init__(self):
-        try:
-            self.base_path = os.path.dirname(__init__.__file__)
-        except AttributeError:
-            self.base_path = "."
+        self.args = argparse.Namespace()
+        
+        self.args.coquery_home = get_home_dir(create=True)
 
         self.prog_name = __init__.NAME
         self.config_name = "%s.cfg" % __init__.NAME.lower()
         self.version = __init__.__version__
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False)
 
-        self.args = argparse.Namespace()
-
-        self.args.config_path = os.path.join(self.base_path, self.config_name)
+        self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
         self.args.filter_list = []
-        self.args.program_location = self.base_path
         self.args.version = self.version
         self.args.query_label = ""
         self.args.input_path = ""
@@ -68,8 +65,8 @@ class Options(object):
         self.args.corpus_source_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.expanduser("~")
         self.args.corpora_path = os.path.join(sys.path[0], "corpora")
-        self.args.custom_corpora_path = None
-        self.args.custom_installer_path = None
+        self.args.custom_corpora_path = os.path.join(self.args.coquery_home, "corpora")
+        self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
         
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
@@ -938,49 +935,48 @@ def get_available_resources(configuration):
         A dictionary with resource names as keys, and tuples of resource
         classes as values.
     """
+    
+    def ensure_init_file(path):
+        """
+        Creates an empty file __init__.py in the given path if necessary.
+        """
+        return
+        if not os.path.exists(path):
+            os.makedirs(path)
+        if not os.path.exists(os.path.join(path, "__init__.py")):
+            open(os.path.join(path, "__init__.py"), "a").close()
+        
     d  = {}
     if configuration == None:
         return d
     
-    # Create corpora path if it doesn't exist:
-    if not os.path.exists(cfg.corpora_path):
-        os.path.mkdir(cfg.corpora_path)
-    # Create __init__ if it doesn't exist:
-    if not os.path.exists(os.path.join(cfg.corpora_path, "__init__.py")):
-        open(os.path.join(cfg.corpora_path, "__init__.py"), "a").close()
-    
-    directory = os.path.split(cfg.corpora_path)[1]
+    for current_path in [cfg.corpora_path, cfg.custom_corpora_path]:
+        corpus_path = os.path.join(current_path, configuration)
 
-    corpus_path = os.path.realpath(
-        os.path.abspath(
-            os.path.join(
-                cfg.corpora_path, configuration)))
+        # add corpus_path to sys.path so that modules can be imported from
+        # that location:
+        old_sys_path = list(sys.path)
+        sys.path.append(os.path.join(corpus_path))
 
-    if not os.path.exists(corpus_path):
-        warnings.warn("The directory {} does not exist.".format(corpus_path))
-        return d
+        # create the directory if it doesn't exist yet: 
+        if not os.path.exists(corpus_path):
+            os.makedirs(corpus_path)
 
-    for corpus in glob.glob(os.path.join(corpus_path, "*.py")):
-        path, basename = os.path.split(corpus)
-        corpus_name, ext = os.path.splitext(basename)
-        while True:
+        # cycle through the modules in the corpus path:
+        for module_name in glob.glob(os.path.join(corpus_path, "*.py")):
+            corpus_name, ext = os.path.splitext(os.path.basename(module_name))
             try:
-                module = importlib.import_module("{}.{}.{}".format(
-                    directory, configuration, corpus_name))
+                module = importlib.import_module(corpus_name)
             except SyntaxError as e:
                 warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
                 raise e
-            except ImportError as e:
-                if not os.path.exists(os.path.join(path, "__init__.py")):
-                    open(os.path.join(path, "__init__.py"), "a").close()
-                else:
-                    raise e
-            else:
-                break
-        try:
-            d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, corpus)
-        except (AttributeError, ImportError):
-            warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+            except Exception as e:
+                raise e
+            try:
+                d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, corpus)
+            except (AttributeError, ImportError):
+                warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+        sys.path = old_sys_path
     return d
 
 def get_resource(name, configuration):
@@ -1003,6 +999,56 @@ def get_resource(name, configuration):
     """
     Resource, Corpus, Lexicon, _ = get_available_resources(configuration)[name]
     return Resource, Corpus, Lexicon
+
+def get_home_dir(create=True):
+    """
+    Return the path to the Coquery home directory. Also, create all required
+    directories.
+    
+    The coquery_home path points to the directory where Coquery stores (and 
+    looks for) the following files:
+    
+    $COQ_HOME/coquery.cfg               configuration file
+    $COQ_HOME/coquery.log               log files
+    $COQ_HOME/installer/                additional corpus installers
+    $COQ_HOME/corpora/$MYSQL_CONFIG/    corpus modules installed by the user
+    
+    The location of $COQ_HOME depends on the operating system:
+    
+    Linux           either $XDG_CONFIG_HOME or ~/.config/Coquery
+    Windows         %APPDATA%/Coquery
+    Mac OS X        ~/Library/Application Support/Coquery
+    """
+
+    if platform.system() == "Linux":
+        try:
+            basepath = os.environ["XDG_CONFIG_HOME"]
+        except KeyError:
+            basepath = os.path.expanduser("~/.config")
+    elif platform.system() == "Windows":
+        try:
+            basepath = os.environ["APPDATA"]
+        except KeyError:
+            basepath = os.path.expanduser("~")
+    elif platform.system() == "Darwin":
+        basepath = os.path.expanduser("~/Library/Application Support")
+        
+    coquery_home = os.path.join(basepath, "Coquery")
+
+    if create:
+        # create Coquery home if it doesn't exist yet:
+        if not os.path.exists(coquery_home):
+            os.makedirs(coquery_home)
+            
+        # create installer directory if it doesn't exist yet:
+        if not os.path.exists(os.path.join(coquery_home, "installer")):
+            os.makedirs(os.path.join(coquery_home, "installer"))
+            
+        # create corpora directory if it doesn't exist yet:
+        if not os.path.exists(os.path.join(coquery_home, "corpora")):
+            os.makedirs(os.path.join(coquery_home, "corpora"))
+        
+    return coquery_home
 
 try:
     logger = logging.getLogger(__init__.NAME)
