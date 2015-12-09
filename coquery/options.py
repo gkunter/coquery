@@ -31,6 +31,7 @@ import platform
 import warnings
 import codecs
 import ast
+import hashlib
 from collections import defaultdict
 
 import tokens
@@ -913,7 +914,7 @@ def process_options():
     cfg = options.cfg
     options.get_options()
 
-def validate_module(path, expected_classes, whitelisted_modules):
+def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
     """
     Read the Python code from path, and validate that it contains only 
     the required class definitions and whitelisted module imports.
@@ -928,7 +929,8 @@ def validate_module(path, expected_classes, whitelisted_modules):
     path contains unexpected code.
     """
     
-    allowed_parents = (ast.If, ast.FunctionDef, ast.Try, ast.While)
+    allowed_parents = (ast.If, ast.FunctionDef, ast.Try, ast.While, ast.For,
+                       ast.With)
 
     def validate_node(node, parent):
         if isinstance(node, ast.ClassDef):
@@ -936,35 +938,59 @@ def validate_module(path, expected_classes, whitelisted_modules):
                 expected_classes.remove(node.name)
         
         elif isinstance(node, ast.ImportFrom):
-            if not node.module in whitelisted_modules:
-                raise IllegalImportInModuleError(corpus_name, configuration, node.module)
+            if whitelisted_modules != "all" and node.module not in whitelisted_modules:
+                raise IllegalImportInModuleError(corpus_name, cfg.current_server, node.module)
+
         elif isinstance(node, ast.Import):
             for element in node.names:
-                if not element in whitelisted_modules:
-                    raise IllegalImportInModuleError(corpus_name, configuration, element, node.lineno)
-        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.Return, ast.Try, ast.Pass)):
+                if whitelisted_modules != "all" and element not in whitelisted_modules:
+                    raise IllegalImportInModuleError(corpus_name, cfg.current_server, element, node.lineno)
+        
+        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.AugAssign, ast.Return, ast.Try, ast.Pass, ast.Raise)):
             pass
-        # The following types are only allowed if the node is nested in 
-        # a legal node type:
-        elif isinstance(node, (ast.If, ast.Expr, ast.While)):
+        
+        elif isinstance(node, ast.Expr):
+            if isinstance(node.value, ast.Str):
+                pass
+            else:
+                if not isinstance(parent, allowed_parents):
+                    print(node, type(node), dir(node), node.value)
+                    raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
+        
+        elif isinstance(node, ast.If):
+            if parent == None:
+                if not allow_if:
+                    raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
+            elif not isinstance(parent, allowed_parents):
+                raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
+        
+        elif isinstance(node, (ast.While, ast.For, ast.With, ast.Continue, ast.Break)):
+            # these types are only allowed if the node is nested in 
+            # a legal node type:
             if not isinstance(parent, allowed_parents):
-                raise IllegalCodeInModuleError(corpus_name, configuration, node.lineno)
+                print(node, type(node), dir(node))
+                raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
         else:
-            raise IllegalCodeInModuleError(corpus_name, configuration, node.lineno)
+            print(node, type(node), dir(node))
+            raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
+
+        # recursively validate the content of the node:
         if hasattr(node, "body"):
             for child in node.body:
                 validate_node(child, node)
     
     corpus_name = os.path.splitext(os.path.basename(path))[0]
-    with open(path, "r") as module_file:
-        tree = ast.parse(module_file.read())
+    with open(path, "r", encoding="utf-8") as module_file:
+        content = module_file.read()
+        tree = ast.parse(content)
         
         for node in tree.body:
             validate_node(node, None)
     if expected_classes:
-        raise ModuleIncompleteError(corpus_name, configuration, expected_classes)
-
-
+        raise ModuleIncompleteError(corpus_name, cfg.current_server, expected_classes)
+    
+    if hash:
+        return hashlib.md5(content.encode("utf-8"))
 
 def get_available_resources(configuration):
     """ 
@@ -1024,9 +1050,9 @@ def get_available_resources(configuration):
                 validate_module(
                     module_name, 
                     expected_classes = ["Resource", "Corpus", "Lexicon"],
-                    whitelisted_modules = ["corpus", "__future__"])
-
-                
+                    whitelisted_modules = ["corpus", "__future__"],
+                    allow_if = False,
+                    hash = False)
                 
             except SyntaxError as e:
                 warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
