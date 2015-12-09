@@ -913,6 +913,58 @@ def process_options():
     cfg = options.cfg
     options.get_options()
 
+def validate_module(path, expected_classes, whitelisted_modules):
+    """
+    Read the Python code from path, and validate that it contains only 
+    the required class definitions and whitelisted module imports.
+    
+    The corpus modules are plain Python code, which opens an attack 
+    vector for people who want to compromise the system: if an attacker
+    managed to plant a Python file in the corpus module directory, this 
+    file wouldbe processed automatically, and without validation, the 
+    content would also be executed. 
+    
+    This method raises an exception if the Python file in the specified 
+    path contains unexpected code.
+    """
+    
+    allowed_parents = (ast.If, ast.FunctionDef, ast.Try, ast.While)
+
+    def validate_node(node, parent):
+        if isinstance(node, ast.ClassDef):
+            if node.name in expected_classes:
+                expected_classes.remove(node.name)
+        
+        elif isinstance(node, ast.ImportFrom):
+            if not node.module in whitelisted_modules:
+                raise IllegalImportInModuleError(corpus_name, configuration, node.module)
+        elif isinstance(node, ast.Import):
+            for element in node.names:
+                if not element in whitelisted_modules:
+                    raise IllegalImportInModuleError(corpus_name, configuration, element, node.lineno)
+        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.Return, ast.Try, ast.Pass)):
+            pass
+        # The following types are only allowed if the node is nested in 
+        # a legal node type:
+        elif isinstance(node, (ast.If, ast.Expr, ast.While)):
+            if not isinstance(parent, allowed_parents):
+                raise IllegalCodeInModuleError(corpus_name, configuration, node.lineno)
+        else:
+            raise IllegalCodeInModuleError(corpus_name, configuration, node.lineno)
+        if hasattr(node, "body"):
+            for child in node.body:
+                validate_node(child, node)
+    
+    corpus_name = os.path.splitext(os.path.basename(path))[0]
+    with open(path, "r") as module_file:
+        tree = ast.parse(module_file.read())
+        
+        for node in tree.body:
+            validate_node(node, None)
+    if expected_classes:
+        raise ModuleIncompleteError(corpus_name, configuration, expected_classes)
+
+
 
 def get_available_resources(configuration):
     """ 
@@ -947,42 +999,6 @@ def get_available_resources(configuration):
         if not os.path.exists(os.path.join(path, "__init__.py")):
             open(os.path.join(path, "__init__.py"), "a").close()
         
-    def validate_module(path):
-        """
-        Read the Python code from path, and validate that it contains only 
-        the required class definitions and whitelisted module imports.
-        
-        The corpus modules are plain Python code, which opens an attack 
-        vector for people who want to compromise the system: if an attacker
-        managed to plant a Python file in the corpus module directory, this 
-        file wouldbe processed automatically, and without validation, the 
-        content would also be executed. 
-        
-        This method raises an exception if the Python file in the specified 
-        path contains unexpected code. It only allows the three class 
-        definitions Resource, Corpus, and Lexicon, and the two module imports 
-        corpus and __future__.
-        """
-        whitelisted_classes = ["Resource", "Corpus", "Lexicon"]
-        whitelisted_modules = ["corpus", "__future__"]
-        corpus_name = os.path.splitext(os.path.basename(path))[0]
-        with open(path, "r") as module_file:
-            tree = ast.parse(module_file.read())
-            
-            for node in tree.body:
-                if isinstance(node, ast.ClassDef):
-                    if node.name not in whitelisted_classes:
-                        raise IllegalClassInModuleError(corpus_name, configuration, node.name)
-                    else:
-                        whitelisted_classes.remove(node.name)
-                elif isinstance(node, (ast.ImportFrom, ast.Import)):
-                    if not node.module in whitelisted_modules:
-                        raise IllegalImportInModuleError(corpus_name, configuration, node.module)
-                else:
-                    raise IllegalCodeInModuleError(corpus_name, configuration)
-        if whitelisted_classes:
-            raise ModuleIncompleteError(corpus_name, configuration, whitelisted_classes)
-
     d  = {}
     if configuration == None:
         return d
@@ -1005,7 +1021,13 @@ def get_available_resources(configuration):
         for module_name in glob.glob(os.path.join(corpus_path, "*.py")):
             corpus_name, ext = os.path.splitext(os.path.basename(module_name))
             try:
-                validate_module(module_name)
+                validate_module(
+                    module_name, 
+                    expected_classes = ["Resource", "Corpus", "Lexicon"],
+                    whitelisted_modules = ["corpus", "__future__"])
+
+                
+                
             except SyntaxError as e:
                 warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
                 continue

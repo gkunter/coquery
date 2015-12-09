@@ -96,22 +96,22 @@ class ContextUnvailableError(NoTraceException):
     """
 
 class IllegalCodeInModuleError(NoTraceException):
-    error_message = "The corpus module '{}' for configuration '{}' contains illegal code."
-    def __init__(self, module, configuration):
+    error_message = "The corpus module '{}' for configuration '{}' contains illegal code  (line {})."
+    def __init__(self, module, configuration, lineno):
         self.par = ""
-        self.error_message = self.error_message.format(module, configuration)
+        self.error_message = self.error_message.format(module, configuration, lineno)
 
 class IllegalFunctionInModuleError(NoTraceException):
-    error_message = "The corpus module '{}' for configuration '{}' contains illegal class definition: {}"
-    def __init__(self, module, configuration, class_name):
+    error_message = "The corpus module '{}' for configuration '{}' contains illegal class definition: {} (line {})"
+    def __init__(self, module, configuration, class_name, lineno):
         self.par = ""
-        self.error_message = self.error_message.format(module, configuration, class_name)
+        self.error_message = self.error_message.format(module, configuration, class_name, lineno)
 
 class IllegalImportInModuleError(NoTraceException):
-    error_message = "The corpus module '{}' for configuration '{}' attempts to import a blocked module: {}"
-    def __init__(self, module, configuration, module_name):
+    error_message = "The corpus module '{}' for configuration '{}' attempts to import a blocked module: {}  (line {})"
+    def __init__(self, module, configuration, module_name, lineno):
         self.par = ""
-        self.error_message = self.error_message.format(module, configuration, module_name)
+        self.error_message = self.error_message.format(module, configuration, module_name, lineno)
 
 class ModuleIncompleteError(NoTraceException):
     error_message = "The corpus module '{}' for configuration '{}' does not contain all required definitions. Missing: {}"
