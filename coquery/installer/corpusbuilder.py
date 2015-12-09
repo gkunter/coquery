@@ -983,13 +983,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self.arguments.use_nltk:
             # the WordNet lemmatizer will be used to obtain the lemma for a
             # given word:
-            self.lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
+            self._lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
             
             # The NLTK POS tagger produces some labels that are different from
             # the labels used in WordNet. In order to use the WordNet 
             # lemmatizer for all words, we need a function that translates 
             # these labels:
-            self.pos_translate = lambda x: {'NN': nltk.corpus.wordnet.NOUN, 
+            self._pos_translate = lambda x: {'NN': nltk.corpus.wordnet.NOUN, 
                 'JJ': nltk.corpus.wordnet.ADJ,
                 'VB': nltk.corpus.wordnet.VERB,
                 'RB': nltk.corpus.wordnet.ADV} [x.upper()[:2]]
@@ -1013,8 +1013,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         #
         # If NLTK is used, the lemmatizer will use the data from WordNet,
         # which will result in much better results.
-            self.lemmatize = lambda x: x.lower()
-            self.pos_translate = lambda x: x
+            self._lemmatize = lambda x: x.lower()
+            self._pos_translate = lambda x: x
             
             # use a dumb tokenizer that simply splits the file content by 
             # spaces:            
@@ -1058,7 +1058,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         else:
             try:
                 # use the current lemmatizer to assign the token to a lemma: 
-                lemma = self.lemmatize(token_string, self.pos_translate(token_pos)).lower()
+                lemma = self._lemmatize(token_string, self._pos_translate(token_pos)).lower()
             except Exception as e:
                 lemma = token_string.lower()
 
