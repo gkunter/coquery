@@ -200,7 +200,7 @@ class COCABuilder(BaseCorpusBuilder):
             raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
 
     def build_load_files(self):
-        chunk_size 250000
+        chunk_size = 250000
         def get_chunk(iterable):
             """
             Yield a chunk from the big file given as 'iterable'.
@@ -268,6 +268,8 @@ class COCABuilder(BaseCorpusBuilder):
                             <code>local-infile=1</code> is set in the <code>[mysql]</code>
                             section of the server configuration file.</p>
                             """.format(file_name, e))
+                    else:
+                        self.Con.commit()
                     finally:
                         os.remove(temp_file.name)
 
