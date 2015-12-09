@@ -95,6 +95,31 @@ class ContextUnvailableError(NoTraceException):
     context of the token.</p>
     """
 
+class IllegalCodeInModuleError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' contains illegal code."
+    def __init__(self, module, configuration):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration)
+
+class IllegalFunctionInModuleError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' contains illegal class definition: {}"
+    def __init__(self, module, configuration, class_name):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, class_name)
+
+class IllegalImportInModuleError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' attempts to import a blocked module: {}"
+    def __init__(self, module, configuration, module_name):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, module_name)
+
+class ModuleIncompleteError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' does not contain all required definitions. Missing: {}"
+    def __init__(self, module, configuration, element_list):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, ", ".join(element_list))
+    
+
 class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
 

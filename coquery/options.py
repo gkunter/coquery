@@ -30,6 +30,7 @@ import logging
 import platform
 import warnings
 import codecs
+import ast
 from collections import defaultdict
 
 import tokens
@@ -946,10 +947,48 @@ def get_available_resources(configuration):
         if not os.path.exists(os.path.join(path, "__init__.py")):
             open(os.path.join(path, "__init__.py"), "a").close()
         
+    def validate_module(path):
+        """
+        Read the Python code from path, and validate that it contains only 
+        the required class definitions and whitelisted module imports.
+        
+        The corpus modules are plain Python code, which opens an attack 
+        vector for people who want to compromise the system: if an attacker
+        managed to plant a Python file in the corpus module directory, this 
+        file wouldbe processed automatically, and without validation, the 
+        content would also be executed. 
+        
+        This method raises an exception if the Python file in the specified 
+        path contains unexpected code. It only allows the three class 
+        definitions Resource, Corpus, and Lexicon, and the two module imports 
+        corpus and __future__.
+        """
+        whitelisted_classes = ["Resource", "Corpus", "Lexicon"]
+        whitelisted_modules = ["corpus", "__future__"]
+        corpus_name = os.path.splitext(os.path.basename(path))[0]
+        with open(path, "r") as module_file:
+            tree = ast.parse(module_file.read())
+            
+            for node in tree.body:
+                if isinstance(node, ast.ClassDef):
+                    if node.name not in whitelisted_classes:
+                        raise IllegalClassInModuleError(corpus_name, configuration, node.name)
+                    else:
+                        whitelisted_classes.remove(node.name)
+                elif isinstance(node, (ast.ImportFrom, ast.Import)):
+                    if not node.module in whitelisted_modules:
+                        raise IllegalImportInModuleError(corpus_name, configuration, node.module)
+                else:
+                    raise IllegalCodeInModuleError(corpus_name, configuration)
+        if whitelisted_classes:
+            raise ModuleIncompleteError(corpus_name, configuration, whitelisted_classes)
+
     d  = {}
     if configuration == None:
         return d
     
+    # corpus modules can reside either in the system-wide path stored in 
+    # cfg.corpora_path, or in the user path cfg.custom_corpora_path:
     for current_path in [cfg.corpora_path, cfg.custom_corpora_path]:
         corpus_path = os.path.join(current_path, configuration)
 
@@ -966,6 +1005,11 @@ def get_available_resources(configuration):
         for module_name in glob.glob(os.path.join(corpus_path, "*.py")):
             corpus_name, ext = os.path.splitext(os.path.basename(module_name))
             try:
+                validate_module(module_name)
+            except SyntaxError as e:
+                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+                continue
+            try:
                 module = importlib.import_module(corpus_name)
             except SyntaxError as e:
                 warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
@@ -973,7 +1017,7 @@ def get_available_resources(configuration):
             except Exception as e:
                 raise e
             try:
-                d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, corpus)
+                d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
             except (AttributeError, ImportError):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
         sys.path = old_sys_path
