@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 from corpusbuilder import *
 import re
 
-class BNCBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     file_filter = "*.xml"
 
     def __init__(self, gui=False, *args):
@@ -524,8 +524,6 @@ class BNCBuilder(BaseCorpusBuilder):
     @staticmethod
     def get_url():
         return "http://www.natcorp.ox.ac.uk/"
-
-BuilderClass = BNCBuilder
 
 if __name__ == "__main__":
     BuilderClass().build()

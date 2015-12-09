@@ -32,7 +32,7 @@ class corpus_code():
     def get_time_info_header(self):
         return ["Time"]
 
-class BuckeyeBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     file_filter = "s*.words.tagged"
 
     word_table = "Words"
@@ -322,7 +322,6 @@ class BuckeyeBuilder(BaseCorpusBuilder):
                         {self.corpus_word_id: self._word_id, 
                         self.corpus_file_id: self._file_id,
                         self.corpus_time: self._value_corpus_time})
-BuilderClass = BuckeyeBuilder
 
 if __name__ == "__main__":
-    BuckeyeBuilder().build()
+    BuilderClass().build()

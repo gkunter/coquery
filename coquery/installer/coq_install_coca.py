@@ -19,7 +19,7 @@ import tempfile
 from corpusbuilder import *
 import dbconnection
 
-class COCABuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.txt"
 
     word_table = "Words"
@@ -276,7 +276,5 @@ class COCABuilder(BaseCorpusBuilder):
             if self._widget:
                 self._widget.progressUpdate.emit(count + 1)
 
-BuilderClass = COCABuilder
-
 if __name__ == "__main__":
-    COCABuilder().build()
+    BuilderClass().build()

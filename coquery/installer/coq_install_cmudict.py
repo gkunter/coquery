@@ -16,7 +16,7 @@ from __future__ import print_function
 from corpusbuilder import *
 import codecs
 
-class CMUdictBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     encoding = "latin-1"
     file_filter = "cmudict*"
     
@@ -117,8 +117,6 @@ class CMUdictBuilder(BaseCorpusBuilder):
     @staticmethod
     def get_description():
         return ["The Carnegie Mellon Pronouncing Dictionary (CMUdict) is a dictionary containing approximately 135.000 English word-forms and their phonemic transcriptions, using a variant of the ARPAbet transcription system."]
-
-BuilderClass = CMUdictBuilder
 
 if __name__ == "__main__":
     BuilderClass().build()

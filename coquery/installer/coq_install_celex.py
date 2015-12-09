@@ -59,7 +59,7 @@ def dia_to_unicode(s):
     unicode_string = unicodedata.normalize("NFC", "".join(char_list))
     return unicode_string
 
-class CELEXBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     file_filter = "e??.cd"
     
     def __init__(self, gui=False, *args):
@@ -668,8 +668,6 @@ class CELEXBuilder(BaseCorpusBuilder):
                 <li>morphology (derivational and compositional structure, inflectional paradigms)</li>
                 <li>syntax (word class, word class-specific subcategorizations, argument structures)</li>
                 <li>word frequency (summed word and lemma counts, based on representative text corpora)</li></ul>"""]
-
-BuilderClass = CELEXBuilder
 
 if __name__ == "__main__":
     BuilderClass().build()

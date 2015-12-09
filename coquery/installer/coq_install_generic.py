@@ -21,7 +21,7 @@ except ImportError:
 
 from corpusbuilder import *
 
-class GenericCorpusBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     corpus_table = "Corpus"
     corpus_id = "TokenId"
     corpus_word_id = "WordId"
@@ -146,10 +146,8 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
     def get_description():
         return "This script creates the corpus '{}' by reading data from the files in {} to populate the MySQL database '{}' so that the database can be queried by Coquery.".format(self.name, self.arguments.path, self.arguments.db_name)
 
-BuilderClass = GenericCorpusBuilder
-
 def main():
-    GenericCorpusBuilder().build()
+    BuilderClass().build()
     
 if __name__ == "__main__":
     main()
