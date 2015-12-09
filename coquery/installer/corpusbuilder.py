@@ -89,14 +89,14 @@ try:
     from pyqt_compat import QtCore, QtGui
     use_gui = True
 except ImportError:
-    print("Import error; GUI will not be available.")
+    warnings.warn("Import error; GUI will not be available.")
     use_gui = False
     pass
 
 try:
     import nltk
 except ImportError:
-    print("NLTK module not available.")
+    warnings.warn("NLTK module not available.")
     try:
         QtGui.QMessageBox.warning("No NLTK module – Coquery", "The NLTK module could not be loaded. Automatic part-of-speech tagging will not be available.", QtGui.QMessageBox.Ok)
     except NameError:        
@@ -307,11 +307,11 @@ class Table(object):
                 try:
                     db_connector.executemany(sql_string, data)
                 except TypeError as e:
-                    print(sql_string, data)
-                    print(e)
+                    warnings.warn(sql_string)
+                    warnings.warn(str(e))
                 except Exception as e:
-                    print(sql_string, data)
-                    print(e)
+                    warnings.warn(sql_string)
+                    warnings.warn(str(e))
                     raise e
                 # Reset all new keys:
                 for row in new_keys:
@@ -599,7 +599,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 try:
                     self.Con.executemany(sql_string, data)
                 except TypeError as e:
-                    print(sql_string, data[0])
+                    warnings.warn(sql_string)
+                    warnings.warn(data[0])
                     raise(e)
             self._corpus_buffer = []        
             
@@ -1042,8 +1043,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         
     def add_token_to_corpus(self, values):
         if len(values) < len(self._new_tables[self.corpus_table].columns) - 2:
-            print(values)
-            print(len(self._new_tables[self.corpus_table].columns))
             raise IndexError
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
@@ -1100,9 +1099,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.logger.error(e)
             for i, x in enumerate(S):                
                 if i > start_line:
-                    print("{:<3}: {}".format(i, x.decode("utf8")))
+                    warnings.warn("{:<3}: {}".format(i, x.decode("utf8")))
                 if i == line - 1:
-                    print("      " + " " * (column - 1) + "^")
+                    warnings.warn("      " + " " * (column - 1) + "^")
                 if i > end_line:
                     break
             raise e
@@ -1766,8 +1765,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             self.build_finalize()
         except Exception as e:
-            print(e)
-            self.Con.close()
+            warnings.warn(str(e))
             raise e
             
 if use_gui:
