@@ -1024,7 +1024,7 @@ def set_current_server(name):
         cfg.current_resources = get_available_resources(name)
     else:
         cfg.current_resources = None
-    
+
 def get_available_resources(configuration):
     """ 
     Return a dictionary with the available corpus module resource classes
@@ -1067,7 +1067,6 @@ def get_available_resources(configuration):
     for current_path in [cfg.corpora_path, cfg.custom_corpora_path]:
         corpus_path = os.path.join(current_path, configuration)
         if os.path.exists(corpus_path):
-
             # add corpus_path to sys.path so that modules can be imported from
             # that location:
             old_sys_path = list(sys.path)
@@ -1103,7 +1102,7 @@ def get_available_resources(configuration):
                     raise e
                 try:
                     d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
-                except (AttributeError, ImportError):
+                except (AttributeError, ImportError) as e:
                     warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
             sys.path = old_sys_path
     return d
