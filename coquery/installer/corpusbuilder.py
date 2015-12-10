@@ -1519,7 +1519,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             warning_msg = "<p>{}</p><p>Do you really want to overwrite the existing version?</p>".format(warning_msg)
             return QtGui.QMessageBox.question(self._widget, "Library exists.", warning_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
                 
-    def build_write_module(self, corpus_path):
+    def build_write_module(self):
         """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
         
@@ -1563,6 +1563,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         if not self.arguments.w:
             return
+        
+        if os.access(self.arguments.corpus_path, os.W_OK|os.X_OK):
+            corpus_path = self.arguments.corpus_path
+        else:
+            corpus_path = self.arguments.custom_corpus_path
+        
         if not os.path.exists(corpus_path):
             os.makedirs(corpus_path)
             
@@ -1756,7 +1762,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             if self.verify_corpus() and not self.interrupted:
                 current = progress_next(current)
-                self.build_write_module(self.arguments.corpus_path)
+                self.build_write_module()
                 current = progress_next(current)
                 
             if not self.interrupted:
