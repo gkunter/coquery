@@ -22,14 +22,6 @@ import dbconnection
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.txt"
 
-    word_table = "Words"
-    word_id = "WordId"
-    word_label = "Text"
-    word_lemma_id = "LemmaId"
-    word_pos = "POS"
-    word_transcript = "Transcript"
-    word_lemmatranscript = "Lemma_Transcript"
-    
     file_table = "Files"
     file_id = "FileId"
     file_name = "Filename"
@@ -38,9 +30,7 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_table = "Corpus"
     corpus_id = "TokenId"
     corpus_word_id = "WordId"
-    corpus_pos_id = "PosId"
     corpus_source_id = "SourceId"
-    corpus_time = "Time"
 
     word_table = "Lexicon"
     word_id = "WordId"
@@ -48,11 +38,6 @@ class BuilderClass(BaseCorpusBuilder):
     word_lemma = "Lemma"
     word_pos = "POS"
 
-    pos_table = "POS"
-    pos_id = "PosId"
-    pos_label = "POS"
-    pos_labelclean = "POS_clean"
-    
     source_table = "Sources"
     source_id = "SourceId"
     source_label = "Source"
@@ -64,8 +49,11 @@ class BuilderClass(BaseCorpusBuilder):
     subgenre_table = "Subgenres"
     subgenre_id = "SubgenreId"
     subgenre_label = "Subgenre"
-
-    expected_files = [
+    
+    special_files = ["coca-sources.txt", 
+                      "lexicon.txt", 
+                      "Sub-genre codes.txt"]
+    expected_files = special_files + [
         "coca-sources.txt", "lexicon.txt", "Sub-genre codes.txt",
         "db_acad_1990.txt", "db_acad_1991.txt", "db_acad_1992.txt", 
         "db_acad_1993.txt", "db_acad_1994.txt", "db_acad_1995.txt", 
@@ -109,7 +97,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     def __init__(self, gui=False, *args):
        # all corpus builders have to call the inherited __init__ function:
-        super(COCABuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
 
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "MEDIUMINT(8) UNSIGNED NOT NULL"),
@@ -117,11 +105,6 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.word_lemma, "TINYTEXT NOT NULL"),
              Column(self.word_pos, "VARCHAR(24) NOT NULL")])
 
-        self.create_table_description(self.pos_table,
-            [Primary(self.pos_id, "SMALLINT(4) UNSIGNED NOT NULL"),
-             Column(self.pos_label, "VARCHAR(24)"),
-             Column(self.pos_labelclean, "VARCHAR(24)")])
-        
         self.create_table_description(self.file_table,
             [Primary(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "ENUM('w_acad_1990.txt', 'w_acad_1991.txt', 'w_acad_1992.txt', 'w_acad_1993.txt', 'w_acad_1994.txt', 'w_acad_1995.txt', 'w_acad_1996.txt', 'w_acad_1997.txt', 'w_acad_1998.txt', 'w_acad_1999.txt', 'w_acad_2000.txt', 'w_acad_2001.txt', 'w_acad_2002.txt', 'w_acad_2003.txt', 'w_acad_2004.txt', 'w_acad_2005.txt', 'w_acad_2006.txt', 'w_acad_2007.txt', 'w_acad_2008.txt', 'w_acad_2009.txt', 'w_acad_2010.txt', 'w_acad_2011.txt', 'w_acad_2012.txt', 'w_fic_1990.txt', 'w_fic_1991.txt', 'w_fic_1992.txt', 'w_fic_1993.txt', 'w_fic_1994.txt', 'w_fic_1995.txt', 'w_fic_1996.txt', 'w_fic_1997.txt', 'w_fic_1998.txt', 'w_fic_1999.txt', 'w_fic_2000.txt', 'w_fic_2001.txt', 'w_fic_2002.txt', 'w_fic_2003.txt', 'w_fic_2004.txt', 'w_fic_2005.txt', 'w_fic_2006.txt', 'w_fic_2007.txt', 'w_fic_2008.txt', 'w_fic_2009.txt', 'w_fic_2010.txt', 'w_fic_2011.txt', 'w_fic_2012.txt', 'w_mag_1990.txt', 'w_mag_1991.txt', 'w_mag_1992.txt', 'w_mag_1993.txt', 'w_mag_1994.txt', 'w_mag_1995.txt', 'w_mag_1996.txt', 'w_mag_1997.txt', 'w_mag_1998.txt', 'w_mag_1999.txt', 'w_mag_2000.txt', 'w_mag_2001.txt', 'w_mag_2002.txt', 'w_mag_2003.txt', 'w_mag_2004.txt', 'w_mag_2005.txt', 'w_mag_2006.txt', 'w_mag_2007.txt', 'w_mag_2008.txt', 'w_mag_2009.txt', 'w_mag_2010.txt', 'w_mag_2011.txt', 'w_mag_2012.txt', 'w_news_1990.txt', 'w_news_1991.txt', 'w_news_1992.txt', 'w_news_1993.txt', 'w_news_1994.txt', 'w_news_1995.txt', 'w_news_1996.txt', 'w_news_1997.txt', 'w_news_1998.txt', 'w_news_1999.txt', 'w_news_2000.txt', 'w_news_2001.txt', 'w_news_2002.txt', 'w_news_2003.txt', 'w_news_2004.txt', 'w_news_2005.txt', 'w_news_2006.txt', 'w_news_2007.txt', 'w_news_2008.txt', 'w_news_2009.txt', 'w_news_2010.txt', 'w_news_2011.txt', 'w_news_2012.txt', 'w_spok_1990.txt', 'w_spok_1991.txt', 'w_spok_1992.txt', 'w_spok_1993.txt', 'w_spok_1994.txt', 'w_spok_1995.txt', 'w_spok_1996.txt', 'w_spok_1997.txt', 'w_spok_1998.txt', 'w_spok_1999.txt', 'w_spok_2000.txt', 'w_spok_2001.txt', 'w_spok_2002.txt', 'w_spok_2003.txt', 'w_spok_2004.txt', 'w_spok_2005.txt', 'w_spok_2006.txt', 'w_spok_2007.txt', 'w_spok_2008.txt', 'w_spok_2009.txt', 'w_spok_2010.txt', 'w_spok_2011.txt', 'w_spok_2012.txt') NOT NULL"),
@@ -142,7 +125,6 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(self.corpus_table,
             [Primary(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
-             Link(self.corpus_pos_id, self.pos_table),
              Link(self.corpus_source_id, self.source_table)])
 
         self.add_time_feature(self.source_year)
@@ -153,8 +135,10 @@ class BuilderClass(BaseCorpusBuilder):
         for source_path, folders, files in os.walk(path):
             for current_file in files:
                 full_name = os.path.join(source_path, current_file)
-                if not file_filter or fnmatch.fnmatch(current_file, file_filter) or current_file in (["coca-sources.txt", "lexicon.txt", "Sub-genre codes.txt"]):
+                if (fnmatch.fnmatch(current_file, file_filter) or 
+                    current_file in BuilderClass.special_files):
                     L.append(full_name)
+
         return L
         
     @staticmethod
@@ -187,17 +171,6 @@ class BuilderClass(BaseCorpusBuilder):
     def get_license():
         return "Commercial license"
 
-    @staticmethod
-    def validate_files(l):
-        found_list = [x for x in [os.path.basename(y) for y in l] if x.lower() in [y.lower() for y in BuilderClass.expected_files]]
-        if len(found_list) < len(BuilderClass.expected_files):
-            missing_list = [x for x in BuilderClass.expected_files if x.lower() not in [y.lower() for y in found_list]]
-            sample = "<br/>".join(missing_list[:5])
-            if len(missing_list) > 6:
-                sample = "{}</code>, and {} other files".format(sample, len(missing_list) - 3)
-            elif len(missing_list) == 6:
-                sample = "<br/>".join(missing_list[:6])
-            raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
 
     def build_load_files(self):
         chunk_size = 250000
@@ -213,7 +186,7 @@ class BuilderClass(BaseCorpusBuilder):
             while True:
                 yield itertools.chain(
                     [next(iterable)], 
-                    itertools.islice(iterable, chunk_size))
+                    itertools.islice(iterable, chunk_size - 1))
         
         # for INFILE loading, autocommit doesn't seem to be harmful, so turn
         # it on again:
@@ -226,30 +199,54 @@ class BuilderClass(BaseCorpusBuilder):
 
         for count, file_name in enumerate(files):
             
-            # these arguments are required by some files:
-            arguments = "LINES TERMINATED BY '\\r\\n' IGNORE 2 LINES"
-            # get the table name depending on the file:
-            if file_name == "coca-sources.txt":
-                table = self.source_table
-            elif file_name == "Sub-genre codes.txt":
-                table = self.subgenre_table
-            elif file_name == "lexicon.txt":
-                table = self.word_table
-            else:
-                table = self.corpus_table
-                arguments = ""
-
+            if self._widget:
+                self._widget.labelSet.emit("Reading '{}' (file %v out of %m)".format(os.path.basename(file_name)))
+            
+                
             # There seems to be an issue when loading longer files into an
             # MySQL database. Sometimes, the connection is lost
             with codecs.open(file_name, "r", encoding="latin-1") as big_file:
-                if self._widget:
-                    self._widget.labelSet.emit("Reading '{}' (file %v out of %m)".format(os.path.basename(file_name)))
-                for i, lines in enumerate(chunks(big_file)):
+                base_name = os.path.basename(file_name)
+                if base_name in self.special_files:
+                    # get the target table name from a dictionary that links 
+                    # the file name to the right resource table # name:
+                    table = dict(zip(self.special_files,
+                                        [self.source_table,
+                                        self.word_table,
+                                        self.subgenre_table]))[base_name]
+                
+                # Unfortunately, the connection to the MySQL server may break 
+                # with larger files. It is as yet unclear whether this can be 
+                # fixed on the server side by a suitable configuration. For 
+                # the time being, we will break the text files into smaller 
+                # chunks of currently 250000 lines. These chunks are written 
+                # into temporary files, which are in turn read by the MySQL 
+                # server using the LOAD DATA LOCAL INLINE command.
+                # Sadly, this is not very fast.
+                
+                # Iterate the chunks:
+                for i, lines in enumerate(get_chunk(big_file)):
                     if self.interrupted:
                         return
+                    # create and fill temporary file:
                     temp_file = tempfile.NamedTemporaryFile("w", delete=False)
-                    temp_file.writelines(lines)
+                    temp_file.write("\n".join([x.strip() for x in lines]))
                     temp_file.close()
+
+                    # set the right arguments for the special files:
+                    if base_name in self.special_files:
+                        # ignore the first two lines from the first chunk
+                        # since they contain the column headings:
+                        if i == 0:
+                            arguments = "LINES TERMINATED BY '\\n' IGNORE 2 LINES"
+                        else:
+                            arguments = "LINES TERMINATED BY '\\n'"
+                    else:
+                        table = self.corpus_table
+                        arguments = "LINES TERMINATED BY '\\n' ({}, {}, {}) ".format(
+                            self.corpus_source_id,
+                            self.corpus_id,
+                            self.corpus_word_id)
 
                     # load the temporary file containing a chunk from the big 
                     # file into the matching table name:
@@ -268,8 +265,6 @@ class BuilderClass(BaseCorpusBuilder):
                             <code>local-infile=1</code> is set in the <code>[mysql]</code>
                             section of the server configuration file.</p>
                             """.format(file_name, e))
-                    else:
-                        self.Con.commit()
                     finally:
                         os.remove(temp_file.name)
 
