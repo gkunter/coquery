@@ -27,14 +27,15 @@ can be queried by Coquery.
 
 Thus, in order to use a new corpus with Coquery, a subclass of 
 :class:`BaseCorpusBuilder` needs to be defined that is tailored to the
-structure of that corpus. Usually, such a subclass will at least 
-reimplement :func:`BaseCorpusBuilder.__init__`,. The reimplementation 
+structure of that corpus. The name of this subclass has to be 
+:class:`BuilderClass`. Usually, such a subclass will at least 
+reimplement :func:`BaseCorpusBuilder.__init__`.. The reimplementation 
 contains the specifications for the data tables such as the name and data 
 type of the columns. It also specifies links between different data tables.
 Please note that the reimplemented :func:`__init__`` should start with a 
 call to the inherited initialization method, like so::
 
-    super(YourCorpusBuilderClass, self).__init__(gui)
+    super(BuilderClass, self).__init__(gui)
 
 In addition to that, most subclasses will also reimplement either
 :func:`BaseCorpusBuilder.process_file` or one of the related methods (e.g. 
@@ -48,10 +49,10 @@ Examples
 --------    
 For examples of reimplementations of ``BaseCorpusBuilder``, see the 
 corpus installers distributed in the Coquery default installation. For 
-instance, :mod:`coq_generic.py` is a generic installer that process any 
-collection of text files in a directiory into a query-able corpus, and
-:mod:`coq_bnc.py` contains an installer that reads and processes the XML 
-version of the British National corpus.
+instance, :mod:`coq_install_generic.py` is a generic installer that process 
+any collection of text files in a directiory into a query-able corpus, and
+:mod:`coq_install_bnc.py` contains an installer that reads and processes the 
+XML version of the British National Corpus.
 """
 
 try:
