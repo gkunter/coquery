@@ -461,15 +461,19 @@ class CoqueryApp(QtGui.QMainWindow):
             corpus_variables = [x for _, x in self.resource.get_corpus_features()]
             corpus_variables.append("Freq")
             corpus_variables.append("Freq.pmw")
-            self.change_corpus_features()
             try:
                 self.filter_variable_model.setStringList(corpus_variables)
             except AttributeError:
                 pass
+        self.change_corpus_features()
 
     def change_corpus_features(self, prefix="", suffix=""):
         """ Construct a new output option tree depending on the features
         provided by the corpus given in 'corpus_label."""
+        
+        if not options.cfg.current_resources:
+            tree = self.create_output_options_tree()
+            return
         
         table_dict = self.resource.get_table_dict()
         # Ignore denormalized tables:
