@@ -1126,23 +1126,28 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.Session.Corpus.resource.DB.close()
             except AttributeError as e:
                 pass
+            success = True
             DB = sqlwrap.SqlDB(
                 db_con["host"], db_con["port"], db_con["user"], db_con["password"])
             self.start_progress_indicator()
             try:
                 DB.execute("DROP DATABASE {}".format(database))
-            except (sqlwrap.mysql.InternalError, sqlwrap.mysql.OperationalError) as e:
+            except (sqlwrap.pymysql.Error) as e:
                 QtGui.QMessageBox.critical(self, "Database error – Coquery", msg_remove_corpus_error.format(code=e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                success = False
             finally:
                 DB.close()
-            try:
-                os.remove(module)
-            except IOError:
-                QtGui.QMessageBox.critical(self, "Storage error – Coquery", msg_remove_corpus_disk_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            if success:
+                try:
+                    os.remove(module)
+                except IOError:
+                    QtGui.QMessageBox.critical(self, "Storage error – Coquery", msg_remove_corpus_disk_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                    success = False
             self.stop_progress_indicator()
             self.fill_combo_corpus()
-            logger.warning("Removed corpus {}.".format(corpus_name))
-            self.showMessage("Removed corpus {}.".format(corpus_name))
+            if success:
+                logger.warning("Removed corpus {}.".format(corpus_name))
+                self.showMessage("Removed corpus {}.".format(corpus_name))
 
             self.change_corpus()
             try:
