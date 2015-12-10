@@ -31,6 +31,13 @@ import platform
 import warnings
 import codecs
 import ast
+
+# make ast work in all Python versions:
+if not hasattr(ast, "TryExcept"):
+    ast.TryExcept = ast.Try
+if not hasattr(ast, "TryFinally"):
+    ast.TryFinally = ast.Try
+
 import hashlib
 from collections import defaultdict
 
@@ -929,7 +936,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
     path contains unexpected code.
     """
     
-    allowed_parents = (ast.If, ast.FunctionDef, ast.Try, ast.While, ast.For,
+    allowed_parents = (ast.If, ast.FunctionDef, ast.TryExcept, ast.TryFinally, ast.While, ast.For,
                        ast.With)
 
     def validate_node(node, parent):
@@ -946,7 +953,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                 if whitelisted_modules != "all" and element not in whitelisted_modules:
                     raise IllegalImportInModuleError(corpus_name, cfg.current_server, element, node.lineno)
         
-        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.AugAssign, ast.Return, ast.Try, ast.Pass, ast.Raise)):
+        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.AugAssign, ast.Return, ast.TryExcept, ast.TryFinally, ast.Pass, ast.Raise)):
             pass
         
         elif isinstance(node, ast.Expr):
@@ -980,7 +987,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                 validate_node(child, node)
     
     corpus_name = os.path.splitext(os.path.basename(path))[0]
-    with open(path, "r", encoding="utf-8") as module_file:
+    with codecs.open(path, "r", encoding="utf-8") as module_file:
         content = module_file.read()
         tree = ast.parse(content)
         
