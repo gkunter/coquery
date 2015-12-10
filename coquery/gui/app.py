@@ -1111,6 +1111,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def remove_corpus(self, corpus_name):
         resource, _, _, module = options.get_available_resources(options.cfg.current_server)[corpus_name]
         database = resource.db_name
+
         db_con = options.cfg.server_configuration[options.cfg.current_server]
         try:
             size = FileSize(sqlwrap.SqlDB(
@@ -1133,7 +1134,11 @@ class CoqueryApp(QtGui.QMainWindow):
             try:
                 DB.execute("DROP DATABASE {}".format(database))
             except (sqlwrap.pymysql.Error) as e:
-                QtGui.QMessageBox.critical(self, "Database error – Coquery", msg_remove_corpus_error.format(code=e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                QtGui.QMessageBox.critical(
+                    self, 
+                    "Database error – Coquery", 
+                    msg_remove_corpus_error.format(corpus=resource.name, code=e), 
+                    QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                 success = False
             finally:
                 DB.close()
