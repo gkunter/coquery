@@ -68,6 +68,7 @@ class Options(object):
         self.args.server_side = True
         self.args.server_configuration = dict()
         self.args.current_server = None
+        self.args.current_resources = None
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
@@ -503,8 +504,10 @@ class Options(object):
 
                 try:
                     self.args.current_server = config_file.get("sql", "active_configuration")
+                    self.args.current_resources = get_available_resources(self.args.current_server)
                 except (NoOptionError, ValueError):
                     self.args.current_server = None
+                    self.args.current_resources = None
                 
             # only use the other settings from the configuration file if a 
             # GUI is used:
@@ -999,6 +1002,29 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
     if hash:
         return hashlib.md5(content.encode("utf-8"))
 
+def set_current_server(name):
+    """
+    Changes the current server name. Also, update the currently available 
+    resources.
+    
+    This method changes the content of the configuration variable 
+    'current_server' to the content of the argument 'name'. It also calls the 
+    method get_available_resources() for this configuration, and stores the 
+    result in the configuration variable 'current_resources'.    
+    
+    Parameters
+    ----------
+    name : str 
+        The name of the MySQL configuration
+    """
+    global cfg
+    
+    cfg.current_server = name
+    if name:
+        cfg.current_resources = get_available_resources(name)
+    else:
+        cfg.current_resources = None
+    
 def get_available_resources(configuration):
     """ 
     Return a dictionary with the available corpus module resource classes

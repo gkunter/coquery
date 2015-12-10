@@ -2100,7 +2100,7 @@ if use_gui:
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("The corpus name cannot be empty.")
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
-                elif str(self.ui.corpus_name.text()) in options.get_available_resources(options.cfg.current_server):
+                elif str(self.ui.corpus_name.text()) in options.cfg.current_resources:
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("There is already another corpus with this name..")
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)

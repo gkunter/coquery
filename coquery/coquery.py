@@ -64,13 +64,13 @@ def main():
         # Check if a valid corpus was specified, but only if no GUI is
         # requested (the GUI will handle corpus selection later):
         if not (options.cfg.gui):
-            if not options.get_available_resources(options.cfg.current_server):
+            if not options.cfg.current_resources:
                 raise NoCorpusError
 
             if not options.cfg.corpus:
                 raise NoCorpusSpecifiedError
 
-            if options.cfg.corpus not in options.get_available_resources(options.cfg.current_server):
+            if options.cfg.corpus not in options.cfg.current_resources:
                 raise CorpusUnavailableError(options.cfg.corpus)
             
     except Exception as e:

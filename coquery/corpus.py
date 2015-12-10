@@ -1297,7 +1297,7 @@ class SQLCorpus(BaseCorpus):
             # linked table?
             if "." in rc_table and not rc_table.startswith("func."):
                 external_corpus, rc_table = rc_table.split(".")
-                resource = options.get_available_resources(options.cfg.current_server)[external_corpus][0]
+                resource = options.cfg.current_resources[external_corpus][0]
                 table = resource.__getattribute__(resource, rc_table)
                 
                 column_list = []
