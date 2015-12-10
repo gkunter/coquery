@@ -471,6 +471,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     file_filter = None
     encoding = "utf-8"
     expected_files = []
+    special_files = []
     __version__ = "1.0"
     
     def __init__(self, gui=False):
