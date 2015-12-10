@@ -1060,9 +1060,15 @@ def get_available_resources(configuration):
                     whitelisted_modules = ["corpus", "__future__"],
                     allow_if = False,
                     hash = False)
-                
+            except (ModuleIncompleteError, 
+                    IllegalImportInModuleError, IllegalFunctionInModuleError,
+                    IllegalCodeInModuleError) as e:
+                warnings.warn(str(e))
             except SyntaxError as e:
                 warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+                continue
+            except IndentationError as e:
+                warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
                 continue
             try:
                 module = importlib.import_module(corpus_name)
