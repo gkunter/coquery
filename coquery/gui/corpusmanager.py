@@ -355,6 +355,7 @@ class CorpusManager(QtGui.QDialog):
     def closeEvent(self, *args):
         options.cfg.corpus_manager_view_height = self.height()
         options.cfg.corpus_manager_view_width = self.width()
+        options.set_current_server(options.cfg.current_server)
                     
     def add_source_label(self, name, content):
         pass
