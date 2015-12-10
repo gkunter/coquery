@@ -61,6 +61,9 @@ def dia_to_unicode(s):
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "e??.cd"
+
+    expected_files = sorted(["eow.cd", "eol.cd", "epw.cd", "epl.cd", "emw.cd", "eml.cd", "esl.cd"])
+
     
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
@@ -328,24 +331,8 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.word_cobspelldev, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.word_wordsyldia, "VARCHAR(43) NOT NULL")])
 
-    @staticmethod
-    def validate_files(l):
-        expected_files = sorted(["eow.cd", "eol.cd", "epw.cd", "epl.cd", "emw.cd", "eml.cd", "esl.cd"])
-        files = [x for x in l if os.path.basename(x).lower() in expected_files]
-        if len(files) != len(expected_files):
-            existing_files = [os.path.basename(x) for x in files]
-            missing_files = [x for x in expected_files if x not in existing_files]
-            raise RuntimeError("""
-                <p>In order to successfully install the CELEX lexical database, the corpus data path has to contain the following files:</p>
-                <p>{expected_files}</p>
-                <p>However, the following files are missing from this path:</p>
-                <p><span color="darkred">{files_missing}</p>""".format(
-                    expected_files="<br/>".join(expected_files),
-                    files_missing="<br/>".join(missing_files)))
-
     def build_load_files(self):
-        expected_files = sorted(["eow.cd", "eol.cd", "epw.cd", "epl.cd", "emw.cd", "eml.cd", "esl.cd"])
-        files = [x for x in sorted(self.get_file_list(self.arguments.path, self.file_filter)) if os.path.basename(x).lower() in expected_files]
+        files = [x for x in sorted(self.get_file_list(self.arguments.path, self.file_filter)) if os.path.basename(x).lower() in BuilderClass.expected_files]
         if self._widget:
             self._widget.progressSet.emit(len(files), "")
             self._widget.progressUpdate.emit(0)
