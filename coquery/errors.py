@@ -95,6 +95,31 @@ class ContextUnvailableError(NoTraceException):
     context of the token.</p>
     """
 
+class IllegalCodeInModuleError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' contains illegal code  (line {})."
+    def __init__(self, module, configuration, lineno):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, lineno)
+
+class IllegalFunctionInModuleError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' contains illegal class definition: {} (line {})"
+    def __init__(self, module, configuration, class_name, lineno):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, class_name, lineno)
+
+class IllegalImportInModuleError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' attempts to import a blocked module: {}  (line {})"
+    def __init__(self, module, configuration, module_name, lineno):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, module_name, lineno)
+
+class ModuleIncompleteError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' does not contain all required definitions. Missing: {}"
+    def __init__(self, module, configuration, element_list):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, ", ".join(element_list))
+    
+
 class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
 
@@ -165,6 +190,9 @@ class LexiconUnsupportedFunctionError(GenericException):
 
 class WordNotInLexiconError(NoTraceException):
     error_message = "Word is not in the lexicon"
+
+class NoLemmaInformationError(NoTraceException):
+    error_message = "The current resource does not provide lemma information."
 
 class LexiconUnknownPartOfSpeechTag(GenericException):
     error_message = "Part-of-speech tag not in current lexicon"

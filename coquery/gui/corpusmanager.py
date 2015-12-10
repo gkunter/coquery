@@ -28,6 +28,7 @@ import __init__
 sys.path.append(os.path.join(sys.path[0], "../installer"))
 
 import options
+from errors import *
 from defines import *
 
 class CoqAccordionEntry(QtGui.QWidget):
@@ -41,6 +42,8 @@ class CoqAccordionEntry(QtGui.QWidget):
         self._references = ""
         self._license = ""
         self._builder_class = None
+        self._checksum = ""
+        self._validation = ""
         self.stack=stack
         
         self.verticalLayout_2 = QtGui.QVBoxLayout(self)
@@ -62,7 +65,9 @@ class CoqAccordionEntry(QtGui.QWidget):
         self.button_layout = QtGui.QHBoxLayout()
         self.button_layout.setSpacing(0)
         self.button_manage = QtGui.QPushButton(self.corpus_description_frame)
+        self.validation_label = QtGui.QLabel("")
         self.button_layout.addWidget(self.button_manage)
+        self.button_layout.addWidget(self.validation_label)
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.button_layout.addItem(spacerItem)
         self.verticalLayout_3.addLayout(self.button_layout)
@@ -79,9 +84,40 @@ class CoqAccordionEntry(QtGui.QWidget):
                 self.stack.removeCorpus.emit(self._name))
         else:
             self.button_manage.setText("Install")
+            self.validation_label.setText(
+                "<b>MD5 checksum:</b> {} ({})".format(
+                    self._checksum, self._validation))
+
             if self.stack:
-                self.button_manage.clicked.connect(lambda x: 
-                self.stack.installCorpus.emit(self._builder_class))
+                self.button_manage.clicked.connect(self.safe_install)
+                #self.button_manage.clicked.connect(lambda x: 
+                #self.stack.installCorpus.emit(self._builder_class))
+    
+    def safe_install(self):
+        if self._validation == "validated":
+            msg = msg_validated_install
+            box = QtGui.QMessageBox.question
+            default = QtGui.QMessageBox.Yes
+        elif self._validation == "unvalidated":
+            msg = msg_unvalidated_install
+            default = QtGui.QMessageBox.No
+            box = QtGui.QMessageBox.warning
+        elif self._validation == "failed":
+            msg = msg_failed_install
+            default = QtGui.QMessageBox.No
+            box = QtGui.QMessageBox.warning
+        elif self._validation == "rejected":
+            msg = msg_rejected_install
+            default = QtGui.QMessageBox.No
+            box = QtGui.QMessageBox.critical
+            
+        msg = msg.format(corpus=self._name)
+
+        response = box(None, 
+            "Unvalidated corpus installer – Coquery", 
+            msg, QtGui.QMessageBox.Yes| QtGui.QMessageBox.No, default)
+        if response == QtGui.QMessageBox.Yes:
+            self.stack.installCorpus.emit(self._builder_class)
     
     def setReferences(self, ref):
         self._references = ref
@@ -90,6 +126,16 @@ class CoqAccordionEntry(QtGui.QWidget):
     def setTitle(self, title):
         self._title = title
         self.change_description()
+        
+    def setChecksum(self, checksum):
+        self._checksum = checksum
+        if self.validate_checksum(checksum):
+            self._validation = "validated"
+        else:
+            self._validation = "unvalidated"
+        
+    def validate_checksum(self, checksum):
+        return False
         
     def setLicense(self, license):
         self._license = license
@@ -238,9 +284,26 @@ class CorpusManager(QtGui.QDialog):
         row = 0
         for root, dirnames, filenames in os.walk(path):
             installer_list = sorted(fnmatch.filter(filenames, 'coq_install_*.py'), reverse=True)
+            try:
+                installer_list.remove("coq_install_generic.py")
+            except ValueError:
+                pass
             for fullpath in installer_list:
                 module_path = os.path.join(root, fullpath)
                 basename, ext = os.path.splitext(os.path.basename(fullpath))
+                try:
+                    hashsum = options.validate_module(module_path, 
+                            expected_classes=["BuilderClass"], 
+                            whitelisted_modules="all",
+                            allow_if = True).hexdigest()
+                except (IllegalCodeInModuleError,
+                        IllegalFunctionInModuleError,
+                        IllegalImportInModuleError,
+                        ModuleIncompleteError) as e:
+                    QtGui.QMessageBox.critical(
+                        None, "Corpus validation error – Coquery", 
+                        msg_invalid_installer.format(name=basename, code=str(e)), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                    continue
                 try:
                     module = imp.load_source(basename, module_path)
                 except (ImportError, SyntaxError) as e:
@@ -261,6 +324,8 @@ class CorpusManager(QtGui.QDialog):
 
                 name = builder_class.get_name()
                 entry.setName(name)
+                
+                entry.setChecksum(hashsum)
 
                 title = builder_class.get_title()
                 entry.setTitle(title)
@@ -279,7 +344,7 @@ class CorpusManager(QtGui.QDialog):
                 if builder_class.get_license():
                     entry.setLicense("<p><b>License</b></p><p>{}</p>".format(builder_class.get_license()))
 
-                entry.setupInstallState(name.lower() in options.get_available_resources(options.cfg.current_server))
+                entry.setupInstallState(name in options.get_available_resources(options.cfg.current_server))
                 entry.setBuilderClass(builder_class)
 
                 self.ui.corpus_stack.addItem(entry, self.icon, name)
@@ -287,23 +352,10 @@ class CorpusManager(QtGui.QDialog):
         self.ui.scroll_area_corpus.setWidgetResizable(True)
         self.ui.corpus_stack.setCurrentIndex(self.ui.corpus_stack.count() - 1)
 
-
     def closeEvent(self, *args):
         options.cfg.corpus_manager_view_height = self.height()
         options.cfg.corpus_manager_view_width = self.width()
                     
-    @staticmethod
-    def display(path, install_func, remove_func, parent=None):
-        dialog = CorpusManager(parent=parent)        
-        dialog.show()
-        dialog.read(path)
-        
-        dialog.installCorpus.connect(install_func)
-        dialog.removeCorpus.connect(remove_func)
-        
-        
-        dialog.exec_()
-
     def add_source_label(self, name, content):
         pass
 

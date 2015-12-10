@@ -40,23 +40,26 @@ except DependencyError as e:
     
 import __init__
 
-def set_logger():
+def set_logger(log_file_path):
     logger = logging.getLogger(__init__.NAME)
     logger.setLevel(logging.INFO)
-    file_handler = logging.handlers.RotatingFileHandler(os.path.join(os.path.expanduser("~"), "coquery.log"), maxBytes=1024*1024, backupCount=10)
+    file_handler = logging.handlers.RotatingFileHandler(log_file_path, maxBytes=1024*1024, backupCount=10)
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
     logger.addHandler(file_handler)
     logging.captureWarnings(True)
     return logger
 
 def main():
-    logger = set_logger()
+    coquery_home = options.get_home_dir()
+
+    logger = set_logger(os.path.join(coquery_home, "coquery.log"))
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (__init__.NAME, __init__.__version__))
     logger.info("{}".format(sys.version))
     try:
         options.process_options()
-        options.cfg.log_file_path = os.path.join(os.path.expanduser("~"), "coquery.log")
+        options.cfg.coquery_home = coquery_home
+        options.cfg.log_file_path = os.path.join(coquery_home, "coquery.log")
 
         # Check if a valid corpus was specified, but only if no GUI is
         # requested (the GUI will handle corpus selection later):

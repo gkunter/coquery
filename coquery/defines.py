@@ -100,7 +100,14 @@ computer. Without this module, the visualization functions are not available.</p
 <a href="http://stanford.edu/~mwaskom/software/seaborn/index.html">http://stanford.edu/~mwaskom/software/seaborn/index.html</a>.
 </p>
 """
-
+msg_no_lemma_information = """
+<p><b>The current resource does not provide lemma information.</b></p>
+<p>Your last query makes use of the lemma search syntax by enclosing query 
+tokens in square brackets <code>[...]</code>, but the current resource does 
+not provide lemmatized word entries.</p>
+<p>Please change your query, for example by removing the square brackets 
+around the query token.</p>
+"""
 msg_corpus_path_not_valid = """
 <p><b>The corpus data path does not seem to be valid.</b></p>
 <p>{}</p>
@@ -143,6 +150,86 @@ msg_install_abort = """
 <p>The installation has not been completed yet. If you abort now, the data 
 installed so far will be discarded, and the corpus will still not be 
 available for queries.</p>"""
+msg_invalid_installer = """
+<p><b>The corpus installer '{name}' contains invalid code.</b></p>
+<p>{code}</p>
+<p>Please note that running an invalid corpus installer can potentially be 
+a security risk. For this reason, the corpus installer was disabled.</p>
+"""
+
+msg_validated_install = """
+<p><b>You have requested the installation of the corpus '{corpus}'.</b></p>
+<p>The Coquery website stores validation codes for all corpus installers that 
+have passed a security screening. During this screening, the installer code is 
+manually scanned for instructions that may be harmful to your computer, 
+software, or privacy.</p>
+<p>The installer '{corpus}' has been validated. This means that the Coquery 
+maintainers do not consider it to be a security risk, but please note that 
+the Coquery maintainers cannot be held liable for damages arising out of the
+use of this installer. See Section 16 of the 
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+</a> for details.</p>
+<p>Click <b>Yes</b> to proceed with the installation, or <b>No</b> to abort it.
+</p>
+"""
+
+msg_failed_validation_install = """
+<p><b>The validation of the corpus installer '{corpus}' failed.</b></p>
+<p>The Coquery website stores validation codes for all corpus installers that 
+have passed a security screening. During this screening, the installer code is 
+manually scanned for instructions that may be harmful to your computer, 
+software, or privacy.</p>
+<p>The validation of the installer '{corpus}' failed. This means that your 
+copy of the installer does not match any copy of the installer that has been 
+validated by the Coquery maintainers. Please note that 
+the Coquery maintainers cannot be held liable for damages arising out of the
+use of this installer. See Section 16 of the 
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+</a> for details.</p>
+<p><b>You are advised to proceed with the installation only if you are certain 
+that the installer is from a trustworthy source.</b></p>
+<p>Click <b>Yes</b> to proceed with the installation, or <b>No</b> to abort it.
+</p>
+"""
+msg_unvalidated_install = """
+<p><b>The corpus installer '{corpus}' could not be validated.</b></p>
+<p>The Coquery website stores validation codes for all corpus installers that 
+have passed a security screening. During this screening, the installer code is 
+manually scanned for instructions that may be harmful to your computer, 
+software, or privacy.</p>
+<p>For the installer '{corpus}', no validation code is available. This means 
+either that the installer has not yet been submitted to the screening process, 
+or that no validation code could be fetched from the Coquery website. Please 
+note that the Coquery maintainers cannot be held liable for damages arising 
+out of the use of this installer. See Section 16 of the 
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+</a> for details.</p>
+<p><b>You are advised to proceed with the installation only if you are certain 
+that the installer is from a trustworthy source.</b></p>
+<p>Click <b>Yes</b> to proceed with the installation, or <b>No</b> to abort it.
+</p>
+"""
+
+msg_rejected_install = """
+<p><b>The corpus installer '{corpus}' may be a security risk.</b></p>
+<p>The Coquery website stores validation codes for all corpus installers that 
+have passed a security screening. During this screening, the installer code is 
+manually scanned for instructions that may be harmful to your computer, 
+software, or privacy.</p>
+<p>The corpus installer '{corpus}' has been <b>rejected</b> during this 
+screening process. This means that the Coquery maintainers considered the 
+installer to be potentially harmful. Please note that 
+the Coquery maintainers cannot be held liable for damages arising out of the
+use of this installer. See Section 16 of the 
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+</a> for details.</p>
+<p><b>You are strongly advised not to continue with the installation of this 
+corpus.</b></p>
+<p>If you with to ignore this warning, click <b>Yes</b> to continue with the 
+istallation. Click <b>No</b> if you wish to abort the installation of this
+corpus.</p>
+"""
+
 msg_corpus_broken = """
 <p><b>An error occurred while reading the installer '{name}'</b></p>
 <p>The corpus installer stored in the file {name} could not be read. Most 

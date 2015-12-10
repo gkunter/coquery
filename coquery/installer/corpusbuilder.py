@@ -89,14 +89,14 @@ try:
     from pyqt_compat import QtCore, QtGui
     use_gui = True
 except ImportError:
-    print("Import error; GUI will not be available.")
+    warnings.warn("Import error; GUI will not be available.")
     use_gui = False
     pass
 
 try:
     import nltk
 except ImportError:
-    print("NLTK module not available.")
+    warnings.warn("NLTK module not available.")
     try:
         QtGui.QMessageBox.warning("No NLTK module – Coquery", "The NLTK module could not be loaded. Automatic part-of-speech tagging will not be available.", QtGui.QMessageBox.Ok)
     except NameError:        
@@ -143,6 +143,7 @@ class Resource(SQLResource):
     name = '{name}'
     display_name = '{display_name}'
     db_name = '{db_name}'
+    url = '{url}'
 {variables}
 {resource_code}
     
@@ -306,11 +307,11 @@ class Table(object):
                 try:
                     db_connector.executemany(sql_string, data)
                 except TypeError as e:
-                    print(sql_string, data)
-                    print(e)
+                    warnings.warn(sql_string)
+                    warnings.warn(str(e))
                 except Exception as e:
-                    print(sql_string, data)
-                    print(e)
+                    warnings.warn(sql_string)
+                    warnings.warn(str(e))
                     raise e
                 # Reset all new keys:
                 for row in new_keys:
@@ -468,6 +469,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     file_filter = None
     encoding = "utf-8"
     expected_files = []
+    __version__ = "1.0"
     
     def __init__(self, gui=False):
         self.module_code = module_code
@@ -598,7 +600,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 try:
                     self.Con.executemany(sql_string, data)
                 except TypeError as e:
-                    print(sql_string, data[0])
+                    warnings.warn(sql_string)
+                    warnings.warn(data[0])
                     raise(e)
             self._corpus_buffer = []        
             
@@ -981,13 +984,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self.arguments.use_nltk:
             # the WordNet lemmatizer will be used to obtain the lemma for a
             # given word:
-            self.lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
+            self._lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
             
             # The NLTK POS tagger produces some labels that are different from
             # the labels used in WordNet. In order to use the WordNet 
             # lemmatizer for all words, we need a function that translates 
             # these labels:
-            self.pos_translate = lambda x: {'NN': nltk.corpus.wordnet.NOUN, 
+            self._pos_translate = lambda x: {'NN': nltk.corpus.wordnet.NOUN, 
                 'JJ': nltk.corpus.wordnet.ADJ,
                 'VB': nltk.corpus.wordnet.VERB,
                 'RB': nltk.corpus.wordnet.ADV} [x.upper()[:2]]
@@ -1011,8 +1014,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         #
         # If NLTK is used, the lemmatizer will use the data from WordNet,
         # which will result in much better results.
-            self.lemmatize = lambda x: x.lower()
-            self.pos_translate = lambda x: x
+            self._lemmatize = lambda x: x.lower()
+            self._pos_translate = lambda x: x
             
             # use a dumb tokenizer that simply splits the file content by 
             # spaces:            
@@ -1041,8 +1044,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         
     def add_token_to_corpus(self, values):
         if len(values) < len(self._new_tables[self.corpus_table].columns) - 2:
-            print(values)
-            print(len(self._new_tables[self.corpus_table].columns))
             raise IndexError
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
@@ -1058,7 +1059,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         else:
             try:
                 # use the current lemmatizer to assign the token to a lemma: 
-                lemma = self.lemmatize(token_string, self.pos_translate(token_pos)).lower()
+                lemma = self._lemmatize(token_string, self._pos_translate(token_pos)).lower()
             except Exception as e:
                 lemma = token_string.lower()
 
@@ -1099,9 +1100,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.logger.error(e)
             for i, x in enumerate(S):                
                 if i > start_line:
-                    print("{:<3}: {}".format(i, x.decode("utf8")))
+                    warnings.warn("{:<3}: {}".format(i, x.decode("utf8")))
                 if i == line - 1:
-                    print("      " + " " * (column - 1) + "^")
+                    warnings.warn("      " + " " * (column - 1) + "^")
                 if i > end_line:
                     break
             raise e
@@ -1546,21 +1547,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
         variable_code = "\n".join(variable_strings)
         
         lexicon_provides = "[{}]".format(", ".join(self.lexicon_features))
-        #corpus_provides = "[{}]".format(", ".join(self.corpus_features))
         corpus_provides = "[]"
-
-        self.resource_content = """
-class Resource(SQLResource):
-    name = '{name}'
-    db_name = '{db_name}'
-{variables}
-{resource_code}
-""".format(name=self.name, db_name=self.arguments.db_name, variables=variable_code, resource_code=self.get_resource_code())
 
         self.module_content = self.module_code.format(
                 name=self.name,
                 display_name=self.get_name(),
                 db_name=self.arguments.db_name,
+                url=self.get_url(),
                 variables=variable_code,
                 lexicon_provides=lexicon_provides,
                 corpus_provides=corpus_provides,
@@ -1712,75 +1705,81 @@ class Resource(SQLResource):
             if self._widget:
                 self._widget.progressUpdate.emit(0)
         
-        self.check_arguments()
-        if not self._widget:
-            self.setup_logger()
-        self.setup_db()
+        try:
+            self.check_arguments()
+            if not self._widget:
+                self.setup_logger()
+            self.setup_db()
 
-        if self._widget:
-            steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.self_join) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
-            self._widget.ui.progress_general.setMaximum(steps)
+            if self._widget:
+                steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.self_join) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
+                self._widget.ui.progress_bar.setMaximum(steps)
 
-        current = 0
-        current = progress_next(current)
-        self.initialize_build()
-        progress_done()
-        
-        if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
-            raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
-        
-        if self.arguments.c and not self.interrupted:
+            current = 0
             current = progress_next(current)
-            self.build_create_tables()
+            self.initialize_build()
             progress_done()
-
-        if self.arguments.l and not self.interrupted:
-            current = progress_next(current)
-            self.build_load_files()
-            progress_done()
-
-        if self.arguments.self_join and not self.interrupted:
-            current = progress_next(current)
-            self.build_self_joined()
-            current = progress_done()
-
-        if not self.interrupted:
-            current = progress_next(current)
-            for stage in self.additional_stages and not self.interrupted:
-                stage()
-            progress_done()
-
-        if self.arguments.o and not self.interrupted:
-            current = progress_next(current)
-            self.build_optimize()
-            progress_done()
-
-        if self.arguments.i and not self.interrupted:
-            current = progress_next(current)
-            self.build_create_indices()
-            progress_done()
-
-        if self.verify_corpus() and not self.interrupted:
-            current = progress_next(current)
-            self.build_write_module(self.arguments.corpus_path)
-            current = progress_next(current)
             
-        if not self.interrupted:
-            current = progress_next(current)
-            self.build_create_frequency_table()
-            progress_done
+            if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
+                raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
+            
+            if self.arguments.c and not self.interrupted:
+                current = progress_next(current)
+                self.build_create_tables()
+                progress_done()
 
-        self.build_finalize()
-        
+            if self.arguments.l and not self.interrupted:
+                current = progress_next(current)
+                self.build_load_files()
+                progress_done()
+
+            if self.arguments.self_join and not self.interrupted:
+                current = progress_next(current)
+                self.build_self_joined()
+                current = progress_done()
+
+            if not self.interrupted:
+                current = progress_next(current)
+                for stage in self.additional_stages and not self.interrupted:
+                    stage()
+                progress_done()
+
+            if self.arguments.o and not self.interrupted:
+                current = progress_next(current)
+                self.build_optimize()
+                progress_done()
+
+            if self.arguments.i and not self.interrupted:
+                current = progress_next(current)
+                self.build_create_indices()
+                progress_done()
+
+            if self.verify_corpus() and not self.interrupted:
+                current = progress_next(current)
+                self.build_write_module(self.arguments.corpus_path)
+                current = progress_next(current)
+                
+            if not self.interrupted:
+                current = progress_next(current)
+                self.build_create_frequency_table()
+                progress_done
+
+            self.build_finalize()
+        except Exception as e:
+            warnings.warn(str(e))
+            raise e
+            
 if use_gui:
     import options
-    import corpusBuilderUi
     import corpusInstallerUi
     import error_box
     import QtProgress
     from defines import * 
     
     class InstallerGui(QtGui.QDialog):
+        button_label = "&Install"
+        window_title = "Corpus installer – Coquery"
+        
         installStarted = QtCore.Signal()
         
         progressSet = QtCore.Signal(int, str)
@@ -1801,12 +1800,12 @@ if use_gui:
             self.ui.setupUi(self)
             self.ui.progress_box.hide()
             self.ui.button_input_path.clicked.connect(self.select_path)
-            self.ui.radio_install_corpus.toggled.connect(self.changed_radio)
+            self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=True))
+            self.ui.radio_complete.toggled.connect(self.changed_radio)
             self.ui.radio_only_module.toggled.connect(self.changed_radio)
             self.ui.input_path.textChanged.connect(self.check_input)
 
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setText("&Install")
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setText(self.button_label)
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).clicked.connect(self.start_install)
             
             self.installStarted.connect(self.show_progress)
@@ -1837,6 +1836,21 @@ if use_gui:
                 str(self.ui.corpus_description.text()).format(
                     builder_class.get_title(), options.cfg.current_server))
 
+        def validate_dialog(self, check_path=True):
+            self.ui.input_path.setStyleSheet("")
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+            if self.ui.radio_only_module.isChecked():
+                return
+            if check_path:
+                path = str(self.ui.input_path.text())
+                if not path:
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                    return
+                if not os.path.isdir(path):
+                    self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                    return            
+
         def display(self):
             return self.exec_()
 
@@ -1855,7 +1869,7 @@ if use_gui:
             self.ui.progress_bar.setValue(i)
 
         def select_path(self):
-            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.corpus_source_path)
+            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.corpus_source_path, options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
             if type(name) == tuple:
                 name = name[0]
             if name:
@@ -1867,7 +1881,7 @@ if use_gui:
                 self.reject()
                 
         def changed_radio(self):
-            if self.ui.radio_install_corpus.isChecked():
+            if self.ui.radio_complete.isChecked():
                 self.ui.box_build_options.setEnabled(True)
                 self.check_input()
             else:
@@ -1899,19 +1913,12 @@ if use_gui:
             self.parent().showMessage(S)
             
         def install_exception(self):
-            #self.parent().ui.showMessage(S)
             self.state = "failed"
             if type(self.exception) == RuntimeError:
                 QtGui.QMessageBox.critical(self, "Installation error – Coquery",
                                            str(self.exception))
             else:
                 error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
-            #self.ui.progress_bar.setMaximum(1)
-            #self.ui.progress_bar.setValue(0)
-            #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
-            #self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
-            #self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
-            #self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
 
         def reject(self):
             try:
@@ -1951,7 +1958,7 @@ if use_gui:
             started if the path is valid, or if the user decides to ignore
             the invalid path.
             """
-            if self.ui.radio_install_corpus.isChecked():
+            if self.ui.radio_complete.isChecked():
                 try:
                     self.builder_class.validate_files(
                         self.builder_class.get_file_list(
@@ -2024,87 +2031,103 @@ if use_gui:
             
             return namespace
 
-    class BuilderGui(QtGui.QDialog):
+    class BuilderGui(InstallerGui):
+        button_label = "&Build"
+        window_title = "Corpus builder – Coquery"
+        
         def __init__(self, builder_class, parent=None):
-            super(BuilderGui, self).__init__(parent)
+            super(BuilderGui, self).__init__(builder_class, parent)
+            self.ui.input_path.textChanged.disconnect()
 
             import __init__
             self.logger = logging.getLogger(__init__.NAME)        
+
+            self.ui.corpus_description.setText("<html><head/><body><p><span style='font-weight:600;'>Corpus builder</span></p><p>You have requested to create a new corpus from a selection of text files on the MySQL server '{}'. The corpus will afterwards be available for queries.</p></body></html>".format(options.cfg.current_server))
+            self.ui.label_5.setText("Build corpus from local text files and install corpus module (if you have a local database server)")
+            self.ui.label_8.setText("Path to text files:")
+            self.setWindowTitle(self.window_title)
             
-            self.ui = corpusBuilderUi.Ui_CorpusBuilder()
-            self.ui.setupUi(self)
-            self.ui.button_input_path.clicked.connect(self.select_path)
-            self.ui.radio_build_corpus.toggled.connect(self.changed_radio)
-            self.ui.radio_only_module.toggled.connect(self.changed_radio)
-            
-            self.accepted = False
-            self.builder_class = builder_class
-            if not nltk_available:
+            self.ui.name_layout = QtGui.QHBoxLayout()
+            self.ui.name_label = QtGui.QLabel("&Name of new corpus:")
+            self.ui.issue_label = QtGui.QLabel("")
+            self.ui.corpus_name = QtGui.QLineEdit()
+            self.ui.corpus_name.setMaxLength(32)
+            self.ui.corpus_name.setValidator(QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
+            self.ui.name_label.setBuddy(self.ui.corpus_name)
+            spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+
+            self.ui.name_layout.addWidget(self.ui.name_label)
+            self.ui.name_layout.addWidget(self.ui.corpus_name)
+            self.ui.name_layout.addWidget(self.ui.issue_label)
+            self.ui.name_layout.addItem(spacerItem)
+            self.ui.verticalLayout.insertLayout(1, self.ui.name_layout)
+
+            if nltk_available:
+                self.ui.use_pos_tagging = QtGui.QCheckBox("Use NLTK for part-of-speech tagging and lemmatization")
+                self.ui.use_pos_tagging.setChecked(True)
+            else:
+                self.ui.use_pos_tagging = QtGui.QCheckBox("Use NLTK for part-of-speech tagging and lemmatization (NOT AVAILABLE, install the Python NLTK module)")
                 self.ui.use_pos_tagging.setChecked(False)
                 self.ui.use_pos_tagging.setEnabled(False)
-                self.ui.label_3.setEnabled(False)
+            
+            self.ui.gridLayout.addWidget(self.ui.use_pos_tagging, 2, 0)
+            if options.cfg.text_source_path != os.path.expanduser("~"):
+                self.ui.input_path.setText(options.cfg.text_source_path)
             else:
-                self.ui.use_pos_tagging.setChecked(True)
-
-            self.exec_()
-
+                self.ui.input_path.setText("")
+                
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=False))
+            self.ui.corpus_name.textChanged.connect(lambda: self.validate_dialog(check_path=False))
+            self.ui.corpus_name.setFocus()
+        
+        def validate_dialog(self, check_path=True):
+            if hasattr(self.ui, "corpus_name"):
+                self.ui.corpus_name.setStyleSheet("")
+            super(BuilderGui, self).validate_dialog()
+            if hasattr(self.ui, "corpus_name"):
+                self.ui.issue_label.setText("")
+                if not str(self.ui.corpus_name.text()):
+                    self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                    self.ui.issue_label.setText("The corpus name cannot be empty.")
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                elif str(self.ui.corpus_name.text()) in options.get_available_resources(options.cfg.current_server):
+                    self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                    self.ui.issue_label.setText("There is already another corpus with this name..")
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                else:
+                    try:
+                        db_host, db_port, db_user, db_password = options.get_mysql_configuration()
+                    except ValueError:
+                        raise SQLNoConfigurationError
+                    Con = dbconnection.DBConnection(
+                        db_user=db_user, db_host=db_host, db_port=db_port, db_pass=db_password)
+                    if Con.has_database("coq_{}".format(str(self.ui.corpus_name.text()).lower())):
+                        self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                        self.ui.issue_label.setText("There is already another database that uses this name.")
+                        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+        
         def select_path(self):
-            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.test_source_path)
+            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.text_source_path)
             if type(name) == tuple:
                 name = name[0]
             if name:
                 options.cfg.text_source_path = name
                 self.ui.input_path.setText(name)
 
-        def keyPressEvent(self, e):
-            if e.key() == QtCore.Qt.Key_Escape:
-                self.reject()
-                
-        def changed_radio(self):
-            if self.ui.radio_build_corpus.isChecked():
-                self.ui.box_build_options.setEnabled(True)
+        def install_exception(self):
+            self.state = "failed"
+            if type(self.exception) == RuntimeError:
+                QtGui.QMessageBox.critical(self, "Corpus building error – Coquery",
+                                           str(self.exception))
             else:
-                self.ui.box_build_options.setEnabled(False)
-                
-        def accept(self):
-            self.accepted = True
-            self.builder = self.builder_class(gui = self)
-            self.builder.logger = self.logger
-            self.builder.arguments = self.get_arguments_from_gui()
-            self.builder.name = self.builder.arguments.name
-            try:
-                self.builder.build()
-            except Exception as e:
-                error_box.ErrorBox.show(sys.exc_info(), self)
-            else:
-                self.parent().showMessage("Finished building new corpus.")
-            super(BuilderGui, self).accept()
+                error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
 
         def get_arguments_from_gui(self):
-            namespace = argparse.Namespace()
-            namespace.verbose = False
-            namespace.o = True
-            namespace.i = True
-            namespace.no_nltk = True
-            namespace.l = True
-            namespace.c = True
-            namespace.self_join = False
+            namespace = super(BuilderGui, self).get_arguments_from_gui()
 
-            namespace.encoding = self.builder_class.encoding
-            
             namespace.name = str(self.ui.corpus_name.text())
-            namespace.path = str(self.ui.input_path.text())
             namespace.use_nltk = self.ui.use_pos_tagging.checkState()
-
-            namespace.db_name = str(self.ui.corpus_name.text())
-            try:
-                namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
-            except ValueError:
-                raise SQLNoConfigurationError
-
-            namespace.current_server = options.cfg.current_server
-            namespace.corpus_path = os.path.join(sys.path[0], "../corpora/", namespace.current_server)
-
+            namespace.db_name = "coq_".format(str(self.ui.corpus_name.text()).lower())
             
             return namespace
-

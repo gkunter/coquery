@@ -27,31 +27,30 @@ import sys
 import os
 import argparse
 import logging
-import codecs
-import tokens
+import platform
 import warnings
+import codecs
+import ast
+import hashlib
 from collections import defaultdict
 
+import tokens
 from defines import *
 from errors import *
 
 class Options(object):
     def __init__(self):
-        try:
-            self.base_path = os.path.dirname(__init__.__file__)
-        except AttributeError:
-            self.base_path = "."
+        self.args = argparse.Namespace()
+        
+        self.args.coquery_home = get_home_dir(create=True)
 
         self.prog_name = __init__.NAME
         self.config_name = "%s.cfg" % __init__.NAME.lower()
         self.version = __init__.__version__
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False)
 
-        self.args = argparse.Namespace()
-
-        self.args.config_path = os.path.join(self.base_path, self.config_name)
+        self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
         self.args.filter_list = []
-        self.args.program_location = self.base_path
         self.args.version = self.version
         self.args.query_label = ""
         self.args.input_path = ""
@@ -68,7 +67,8 @@ class Options(object):
         self.args.corpus_source_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.expanduser("~")
         self.args.corpora_path = os.path.join(sys.path[0], "corpora")
-        self.args.custom_corpora_path = None
+        self.args.custom_corpora_path = os.path.join(self.args.coquery_home, "corpora")
+        self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
         
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
@@ -220,7 +220,7 @@ class Options(object):
                             D[table] = set([])
                         D[table].add((column, rc_feature))
             
-                if self.args.corpus.upper() == "COCA":
+                if self.args.corpus == "COCA":
                     group = self.parser.add_argument_group("COCA compatibility", "These options apply only to the COCA corpus module, and are unsupported by any other corpus.")
                     # COCA compatibility options
                     group.add_argument("--exact-pos-tags", help="part-of-speech tags must match exactly the label used in the query string (default: be COCA-compatible and match any part-of-speech tag that starts with the given label)", action="store_true", dest="exact_pos_tags")
@@ -536,6 +536,10 @@ class Options(object):
                             self.args.custom_corpora_path = config_file.get("main", "custom_corpora_path")
                         except NoOptionError:
                             pass
+                        try:
+                            self.args.custom_installer_path = config_file.get("main", "custom_installer_path")
+                        except NoOptionError:
+                            pass
                         
                         try:
                             vars(self.args)["input_path"] = config_file.get("main", "csv_file")
@@ -727,6 +731,8 @@ def save_configuration():
     config.set("main", "corpora_path", cfg.corpora_path)
     if cfg.custom_corpora_path:
         config.set("main", "custom_corpora_path", cfg.custom_corpora_path)
+    if cfg.custom_installer_path:
+        config.set("main", "custom_installer_path", cfg.custom_installer_path)
         
    
     if not "sql" in config.sections():
@@ -908,6 +914,83 @@ def process_options():
     cfg = options.cfg
     options.get_options()
 
+def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
+    """
+    Read the Python code from path, and validate that it contains only 
+    the required class definitions and whitelisted module imports.
+    
+    The corpus modules are plain Python code, which opens an attack 
+    vector for people who want to compromise the system: if an attacker
+    managed to plant a Python file in the corpus module directory, this 
+    file wouldbe processed automatically, and without validation, the 
+    content would also be executed. 
+    
+    This method raises an exception if the Python file in the specified 
+    path contains unexpected code.
+    """
+    
+    allowed_parents = (ast.If, ast.FunctionDef, ast.Try, ast.While, ast.For,
+                       ast.With)
+
+    def validate_node(node, parent):
+        if isinstance(node, ast.ClassDef):
+            if node.name in expected_classes:
+                expected_classes.remove(node.name)
+        
+        elif isinstance(node, ast.ImportFrom):
+            if whitelisted_modules != "all" and node.module not in whitelisted_modules:
+                raise IllegalImportInModuleError(corpus_name, cfg.current_server, node.module)
+
+        elif isinstance(node, ast.Import):
+            for element in node.names:
+                if whitelisted_modules != "all" and element not in whitelisted_modules:
+                    raise IllegalImportInModuleError(corpus_name, cfg.current_server, element, node.lineno)
+        
+        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.AugAssign, ast.Return, ast.Try, ast.Pass, ast.Raise)):
+            pass
+        
+        elif isinstance(node, ast.Expr):
+            if isinstance(node.value, ast.Str):
+                pass
+            else:
+                if not isinstance(parent, allowed_parents):
+                    print(node, type(node), dir(node), node.value)
+                    raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
+        
+        elif isinstance(node, ast.If):
+            if parent == None:
+                if not allow_if:
+                    raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
+            elif not isinstance(parent, allowed_parents):
+                raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
+        
+        elif isinstance(node, (ast.While, ast.For, ast.With, ast.Continue, ast.Break)):
+            # these types are only allowed if the node is nested in 
+            # a legal node type:
+            if not isinstance(parent, allowed_parents):
+                print(node, type(node), dir(node))
+                raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
+        else:
+            print(node, type(node), dir(node))
+            raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
+
+        # recursively validate the content of the node:
+        if hasattr(node, "body"):
+            for child in node.body:
+                validate_node(child, node)
+    
+    corpus_name = os.path.splitext(os.path.basename(path))[0]
+    with open(path, "r", encoding="utf-8") as module_file:
+        content = module_file.read()
+        tree = ast.parse(content)
+        
+        for node in tree.body:
+            validate_node(node, None)
+    if expected_classes:
+        raise ModuleIncompleteError(corpus_name, cfg.current_server, expected_classes)
+    
+    if hash:
+        return hashlib.md5(content.encode("utf-8"))
 
 def get_available_resources(configuration):
     """ 
@@ -931,49 +1014,61 @@ def get_available_resources(configuration):
         A dictionary with resource names as keys, and tuples of resource
         classes as values.
     """
+    
+    def ensure_init_file(path):
+        """
+        Creates an empty file __init__.py in the given path if necessary.
+        """
+        return
+        if not os.path.exists(path):
+            os.makedirs(path)
+        if not os.path.exists(os.path.join(path, "__init__.py")):
+            open(os.path.join(path, "__init__.py"), "a").close()
+        
     d  = {}
     if configuration == None:
         return d
     
-    # Create corpora path if it doesn't exist:
-    if not os.path.exists(cfg.corpora_path):
-        os.path.mkdir(cfg.corpora_path)
-    # Create __init__ if it doesn't exist:
-    if not os.path.exists(os.path.join(cfg.corpora_path, "__init__.py")):
-        open(os.path.join(cfg.corpora_path, "__init__.py"), "a").close()
-    
-    directory = os.path.split(cfg.corpora_path)[1]
+    # corpus modules can reside either in the system-wide path stored in 
+    # cfg.corpora_path, or in the user path cfg.custom_corpora_path:
+    for current_path in [cfg.corpora_path, cfg.custom_corpora_path]:
+        corpus_path = os.path.join(current_path, configuration)
 
-    corpus_path = os.path.realpath(
-        os.path.abspath(
-            os.path.join(
-                cfg.corpora_path, configuration)))
+        # add corpus_path to sys.path so that modules can be imported from
+        # that location:
+        old_sys_path = list(sys.path)
+        sys.path.append(os.path.join(corpus_path))
 
-    if not os.path.exists(corpus_path):
-        warnings.warn("The directory {} does not exist.".format(corpus_path))
-        return d
+        # create the directory if it doesn't exist yet: 
+        if not os.path.exists(corpus_path):
+            os.makedirs(corpus_path)
 
-    for corpus in glob.glob(os.path.join(corpus_path, "*.py")):
-        path, basename = os.path.split(corpus)
-        corpus_name, ext = os.path.splitext(basename)
-        while True:
+        # cycle through the modules in the corpus path:
+        for module_name in glob.glob(os.path.join(corpus_path, "*.py")):
+            corpus_name, ext = os.path.splitext(os.path.basename(module_name))
             try:
-                module = importlib.import_module("{}.{}.{}".format(
-                    directory, configuration, corpus_name))
+                validate_module(
+                    module_name, 
+                    expected_classes = ["Resource", "Corpus", "Lexicon"],
+                    whitelisted_modules = ["corpus", "__future__"],
+                    allow_if = False,
+                    hash = False)
+                
+            except SyntaxError as e:
+                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+                continue
+            try:
+                module = importlib.import_module(corpus_name)
             except SyntaxError as e:
                 warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
                 raise e
-            except ImportError as e:
-                if not os.path.exists(os.path.join(path, "__init__.py")):
-                    open(os.path.join(path, "__init__.py"), "a").close()
-                else:
-                    raise e
-            else:
-                break
-        try:
-            d[module.Resource.name.lower()] = (module.Resource, module.Corpus, module.Lexicon, corpus)
-        except (AttributeError, ImportError):
-            warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+            except Exception as e:
+                raise e
+            try:
+                d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
+            except (AttributeError, ImportError):
+                warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+        sys.path = old_sys_path
     return d
 
 def get_resource(name, configuration):
@@ -996,6 +1091,56 @@ def get_resource(name, configuration):
     """
     Resource, Corpus, Lexicon, _ = get_available_resources(configuration)[name]
     return Resource, Corpus, Lexicon
+
+def get_home_dir(create=True):
+    """
+    Return the path to the Coquery home directory. Also, create all required
+    directories.
+    
+    The coquery_home path points to the directory where Coquery stores (and 
+    looks for) the following files:
+    
+    $COQ_HOME/coquery.cfg               configuration file
+    $COQ_HOME/coquery.log               log files
+    $COQ_HOME/installer/                additional corpus installers
+    $COQ_HOME/corpora/$MYSQL_CONFIG/    corpus modules installed by the user
+    
+    The location of $COQ_HOME depends on the operating system:
+    
+    Linux           either $XDG_CONFIG_HOME or ~/.config/Coquery
+    Windows         %APPDATA%/Coquery
+    Mac OS X        ~/Library/Application Support/Coquery
+    """
+
+    if platform.system() == "Linux":
+        try:
+            basepath = os.environ["XDG_CONFIG_HOME"]
+        except KeyError:
+            basepath = os.path.expanduser("~/.config")
+    elif platform.system() == "Windows":
+        try:
+            basepath = os.environ["APPDATA"]
+        except KeyError:
+            basepath = os.path.expanduser("~")
+    elif platform.system() == "Darwin":
+        basepath = os.path.expanduser("~/Library/Application Support")
+        
+    coquery_home = os.path.join(basepath, "Coquery")
+
+    if create:
+        # create Coquery home if it doesn't exist yet:
+        if not os.path.exists(coquery_home):
+            os.makedirs(coquery_home)
+            
+        # create installer directory if it doesn't exist yet:
+        if not os.path.exists(os.path.join(coquery_home, "installer")):
+            os.makedirs(os.path.join(coquery_home, "installer"))
+            
+        # create corpora directory if it doesn't exist yet:
+        if not os.path.exists(os.path.join(coquery_home, "corpora")):
+            os.makedirs(os.path.join(coquery_home, "corpora"))
+        
+    return coquery_home
 
 try:
     logger = logging.getLogger(__init__.NAME)

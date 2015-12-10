@@ -146,7 +146,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
 
         # add available resources to corpus dropdown box:
-        corpora = [x.upper() for x in sorted(options.get_available_resources(options.cfg.current_server).keys())]
+        corpora = [x for x in sorted(options.get_available_resources(options.cfg.current_server).keys())]
 
         self.ui.combo_corpus.addItems(corpora)
         
@@ -452,7 +452,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 pass
 
         if self.ui.combo_corpus.count():
-            corpus_name = str(self.ui.combo_corpus.currentText()).lower()
+            corpus_name = str(self.ui.combo_corpus.currentText())
             self.resource, self.corpus, self.lexicon, self.path = options.get_available_resources(options.cfg.current_server)[corpus_name]
             self.ui.filter_box.resource = self.resource
             
@@ -498,7 +498,7 @@ class CoqueryApp(QtGui.QMainWindow):
             root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
             try:
-                label = type(self.resource).__getattribute__(self.resource, str("{}_table".format(table)))
+                label = getattr(self.resource, str("{}_table".format(table)))
             except AttributeError:
                 label = table.capitalize()
                 
@@ -507,12 +507,12 @@ class CoqueryApp(QtGui.QMainWindow):
             if table_dict[table]:
                 tree.addTopLevelItem(root)
             
-            # add a leaf for each table variable:
-            for var in table_dict[table]:
+            # add a leaf for each table variable, in alphabetical order:
+            for _, var in sorted([(getattr(self.resource, x), x) for x in table_dict[table]]):
                 leaf = classes.CoqTreeItem()
                 leaf.setObjectName(coqueryUi._fromUtf8(var))
                 root.addChild(leaf)
-                label = type(self.resource).__getattribute__(self.resource, var)
+                label = getattr(self.resource, var)
                 leaf.setText(0, label)
                 if var in last_checked: 
                     leaf.setCheckState(0, QtCore.Qt.Checked)
@@ -532,14 +532,14 @@ class CoqueryApp(QtGui.QMainWindow):
         # remember last corpus name:
         last_corpus = str(self.ui.combo_corpus.currentText())
 
-        l = [x.upper() for x in options.get_available_resources(options.cfg.current_server)]
+        l = [x for x in options.get_available_resources(options.cfg.current_server)]
 
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems([x.upper() for x in options.get_available_resources(options.cfg.current_server)])
+        self.ui.combo_corpus.addItems([x for x in options.get_available_resources(options.cfg.current_server)])
 
         # try to return to last corpus name:
-        new_index = self.ui.combo_corpus.findText(last_corpus.upper())
+        new_index = self.ui.combo_corpus.findText(last_corpus)
         if new_index == -1:
             new_index = 0
             
@@ -682,7 +682,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.status_server.setText(S)
     
     def exception_during_query(self):
-        error_box.ErrorBox.show(self.exc_info, self.exception)
+        if type(self.exception) == NoLemmaInformationError:
+            QtGui.QMessageBox.critical(self, "Disk error", msg_no_lemma_information)
+        else:
+            error_box.ErrorBox.show(self.exc_info, self.exception)
         self.showMessage("Query failed.")
         self.set_query_button()
         self.stop_progress_indicator()
@@ -1096,9 +1099,9 @@ class CoqueryApp(QtGui.QMainWindow):
     def open_corpus_help(self):
         if self.ui.combo_corpus.isEnabled():
             current_corpus = str(self.ui.combo_corpus.currentText())
-            resource, _, _, module = options.get_available_resources(options.cfg.current_server)[current_corpus.lower()]
+            resource, _, _, module = options.get_available_resources(options.cfg.current_server)[current_corpus]
             try:
-                url = resource.documentation_url
+                url = resource.url
             except AttributeError:
                 QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation.format(corpus=current_corpus), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             else:
@@ -1106,7 +1109,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 webbrowser.open(url)
         
     def remove_corpus(self, corpus_name):
-        resource, _, _, module = options.get_available_resources(options.cfg.current_server)[corpus_name.lower()]
+        resource, _, _, module = options.get_available_resources(options.cfg.current_server)[corpus_name]
         database = resource.db_name
         db_con = options.cfg.server_configuration[options.cfg.current_server]
         try:
@@ -1151,17 +1154,24 @@ class CoqueryApp(QtGui.QMainWindow):
     def build_corpus(self):
         import coq_install_generic
         import corpusbuilder
-        corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, parent=self)
-        self.fill_combo_corpus()
-        self.change_corpus()
+
+        builder = corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, self)
         try:
-            self.corpus_manager.close()
-        except AttributeError:
-            pass
-        self.corpus_manager = None
+            result = builder.display()
+        except Exception as e:
+            error_box.ErrorBox.show(sys.exc_info())
+        if result:
+            self.fill_combo_corpus()
+            self.change_corpus()
+            try:
+                self.corpus_manager.close()
+            except AttributeError:
+                pass
+            self.corpus_manager = None
             
     def install_corpus(self, builder_class):
         import corpusbuilder
+
         builder = corpusbuilder.InstallerGui(builder_class, self)
         try:
             result = builder.display()
@@ -1188,6 +1198,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.corpus_manager = corpusmanager.CorpusManager(parent=self)        
             self.corpus_manager.show()
             self.corpus_manager.read(path)
+            if options.cfg.custom_installer_path:
+                self.corpus_manager.read(options.cfg.custom_installer_path)
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
             result = self.corpus_manager.exec_()
@@ -1352,7 +1364,7 @@ class CoqueryApp(QtGui.QMainWindow):
             return functions 
 
         if options.cfg:
-            options.cfg.corpus = str(self.ui.combo_corpus.currentText()).lower()
+            options.cfg.corpus = str(self.ui.combo_corpus.currentText())
         
             # determine query mode:
             if self.ui.radio_aggregate_uniques.isChecked():
@@ -1448,7 +1460,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # set corpus combo box to current corpus:
         if options.cfg.corpus:
-            index = self.ui.combo_corpus.findText(options.cfg.corpus.upper())
+            index = self.ui.combo_corpus.findText(options.cfg.corpus)
             if index > -1:
                 self.ui.combo_corpus.setCurrentIndex(index)
 
@@ -1543,7 +1555,7 @@ class CoqueryApp(QtGui.QMainWindow):
         column = 0
         link = linkselect.LinkSelect.display(
             feature=str(item.text(0)),
-            corpus_omit=str(self.ui.combo_corpus.currentText()).lower(),
+            corpus_omit=str(self.ui.combo_corpus.currentText()), 
             parent=self)
         
         if not link:
@@ -1561,13 +1573,13 @@ class CoqueryApp(QtGui.QMainWindow):
             position = self.ui.options_tree.indexOfTopLevelItem(item.parent()) +1
             self.ui.options_tree.insertTopLevelItem(position, new_table)
             new_table.setLink("{}.{}".format(item.parent().objectName(), item.objectName()), feature_name)
-            new_table.setText(column, "{} ► {}.{}".format(str(item.text(0)), corpus.upper(), table_name))
+            new_table.setText(column, "{} ► {}.{}".format(str(item.text(0)), corpus, table_name))
             new_table.setCheckState(column, False)
             
             for rc_feature in table:
                 if rc_feature.rpartition("_")[-1] not in ("id", "table") and rc_feature != feature_name:
                     new_item = classes.CoqTreeItem()
-                    new_item.setText(0, resource.__getattribute__(resource, rc_feature))
+                    new_item.setText(0, getattr(resource, rc_feature))
                     new_item.setObjectName("{}.{}".format(corpus, rc_feature))
                     new_item.setCheckState(column, False)
                     new_table.addChild(new_item)

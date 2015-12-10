@@ -1,10 +1,22 @@
+# -*- coding: utf-8 -*-
+
+"""
+coq_install_cmudict.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
 from __future__ import print_function
 
 from corpusbuilder import *
 import codecs
 
-class CMUdictBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     encoding = "latin-1"
     file_filter = "cmudict*"
     
@@ -44,18 +56,16 @@ class CMUdictBuilder(BaseCorpusBuilder):
         # ARPAbet.
 
         
-        self.corpus_table = "dict"
+        self.corpus_table = "Dictionary"
         self.corpus_id = "WordId"
         self.corpus_word_id = "WordId"
-        self.word_table = "dict"
-        self.word_id = "WordId"
-        self.word_label = "Text"
-        self.word_transcript = "Transcript"
+        self.corpus_word = "Word"
+        self.corpus_transcript = "Transcript"
         
-        self.create_table_description(self.word_table,
+        self.create_table_description(self.corpus_table,
             [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.word_label, "VARCHAR(50) NOT NULL"),
-             Column(self.word_transcript, "VARCHAR(100) NOT NULL")])
+             Column(self.corpus_word, "VARCHAR(50) NOT NULL"),
+             Column(self.corpus_transcript, "VARCHAR(100) NOT NULL")])
 
     @staticmethod
     def validate_files(l):
@@ -76,9 +86,10 @@ class CMUdictBuilder(BaseCorpusBuilder):
             current_line = current_line.strip()
             if current_line and not current_line.startswith (";;;"):
                 word, transcript = current_line.split ("  ")
-                self.table(self.word_table).add(
-                    {self.word_label: word, 
-                    self.word_transcript: transcript})
+                self.add_token_to_corpus(
+                    {self.corpus_word_id: i+1, 
+                    self.corpus_word: word,
+                    self.corpus_transcript: transcript})
             if self._widget and not i % 100:
                 self._widget.progressUpdate.emit(i // 100)
         self.commit_data()
@@ -106,8 +117,6 @@ class CMUdictBuilder(BaseCorpusBuilder):
     @staticmethod
     def get_description():
         return ["The Carnegie Mellon Pronouncing Dictionary (CMUdict) is a dictionary containing approximately 135.000 English word-forms and their phonemic transcriptions, using a variant of the ARPAbet transcription system."]
-
-BuilderClass = CMUdictBuilder
 
 if __name__ == "__main__":
     BuilderClass().build()

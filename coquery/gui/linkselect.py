@@ -24,7 +24,7 @@ class LinkSelect(QtGui.QDialog):
     def __init__(self, feature, corpus_omit = [], parent=None):
         
         super(LinkSelect, self).__init__(parent)
-        self.omit_tables = ["coquery", "corpus"]
+        self.omit_tables = ["coquery"]
         self.corpus_omit = corpus_omit
         self.ui = linkselectUi.Ui_LinkSelect()
         self.ui.setupUi(self)

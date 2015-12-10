@@ -1,17 +1,50 @@
 # -*- coding: utf-8 -*-
+
+"""
+coq_install_generic.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
+
+import warnings
+try:
+    import chardet
+except ImportError:
+    warnings.warn("The Python library 'chardet' is not available. The encoding of the input text files cannot be determined automatically.")
+    warnings.warn("Using default Unicode encoding 'utf-8'.")
+
 from corpusbuilder import *
 
-class GenericCorpusBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
+    corpus_table = "Corpus"
+    corpus_id = "TokenId"
+    corpus_word_id = "WordId"
+    corpus_file_id = "FileId"
+    word_table = "Lexicon"
+    word_id = "WordId"
+    word_lemma = "Lemma"
+    word_label = "Word"
+    word_pos = "POS"
+    file_table = "Files"
+    file_id = "FileId"
+    file_name = "Filename"
+    file_path = "Path"
+
     def __init__(self, gui=False):
         # all corpus builders have to call the inherited __init__ function:
         super(GenericCorpusBuilder, self).__init__(gui)
         
         # specify which features are provided by this corpus and lexicon:
-        self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
-        self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS"]
+        #self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
+        #self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS"]
         
-        self.documentation_url = "(no URL availabe)"
+        #self.documentation_url = "(no URL availabe)"
 
         # add table descriptions for the tables used in this database.
         #
@@ -51,19 +84,6 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
         # An int value containing the unique identifier of the data file 
         # that contains this token.
         
-        self.corpus_table = "corpus"
-        self.corpus_id = "TokenId"
-        self.corpus_word_id = "WordId"
-        self.corpus_file_id = "FileId"
-        
-        self.add_table_description(self.corpus_table, self.corpus_id,
-            {"CREATE": [
-                "`{}` BIGINT(20) UNSIGNED NOT NULL".format(self.corpus_id),
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_word_id),
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_file_id)],
-            "INDEX": [
-                ([self.corpus_word_id], 0, "HASH"),
-                ([self.corpus_file_id], 0, "HASH")]})
         
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
@@ -85,24 +105,6 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
         # A text value containing the part-of-speech label of this 
         # word-form.
         
-        self.word_table = "word"
-        self.word_id = "WordId"
-        self.word_lemma = "Lemma"
-        self.word_label = "Text"
-        self.word_pos = "Pos"
-        
-        create_columns = ["`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_id),
-                "`{}` VARCHAR(40) NOT NULL".format(self.word_lemma),
-                "`{}` VARCHAR(12) NOT NULL".format(self.word_pos),
-                "`{}` VARCHAR(40) NOT NULL".format(self.word_label)]
-        index_columns = [([self.word_lemma], 0, "HASH"),
-                ([self.word_pos], 0, "BTREE"),
-                ([self.word_label], 0, "BTREE")]
-
-        self.add_table_description(self.word_table, self.word_id,
-            {"CREATE": create_columns,
-            "INDEX": index_columns})
-            
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
             Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
@@ -123,17 +125,6 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
         # 
         # Path
         # A text value containing the path that points to this data file.
-        
-        self.file_table = "file"
-        self.file_id = "FileId"
-        self.file_name = "File"
-        self.file_path = "Path"
-        
-        self.add_table_description(self.file_table, self.file_id,
-            {"CREATE": [
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
-                "`{}` TINYTEXT NOT NULL".format(self.file_name),
-                "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
 
         self.create_table_description(self.file_table,
             [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
@@ -145,11 +136,18 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table)])
 
-    def get_description(self):
+    @staticmethod
+    def validate_files(l):
+        if len(l) == 0:
+            raise RuntimeError("<p>No file could be found in the selected directory..</p> ")
+        
+
+    @staticmethod
+    def get_description():
         return "This script creates the corpus '{}' by reading data from the files in {} to populate the MySQL database '{}' so that the database can be queried by Coquery.".format(self.name, self.arguments.path, self.arguments.db_name)
 
 def main():
-    GenericCorpusBuilder().build()
+    BuilderClass().build()
     
 if __name__ == "__main__":
     main()

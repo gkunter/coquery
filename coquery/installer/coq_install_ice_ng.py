@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 coq_install_ice_ng.py is part of Coquery.
 
@@ -210,7 +209,7 @@ class corpus_code():
 
         #widget.ui.context_area.setText(collapse_words(context))
 
-class ICENigeriaBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     encoding = "latin-1"
     file_filter = "*.xml.pos"
 
@@ -1013,8 +1012,6 @@ expected_files]]
             elif len(missing_list) == 6:
                 sample = "<br/>".join(missing_list[:6])
             raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
-
-BuilderClass = ICENigeriaBuilder
 
 if __name__ == "__main__":
     BuilderClass().build()
