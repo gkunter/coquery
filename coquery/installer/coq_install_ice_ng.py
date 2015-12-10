@@ -256,7 +256,7 @@ class BuilderClass(BaseCorpusBuilder):
             True if the graphical installer is used, and False if the 
             installer runs on the console.
         """
-        super(ICENigeriaBuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
 
         # specify which features are provided by this corpus and lexicon:
         #self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]

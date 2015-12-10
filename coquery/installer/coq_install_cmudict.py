@@ -22,7 +22,7 @@ class BuilderClass(BaseCorpusBuilder):
     
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
-        super(CMUdictBuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
         
         # Add table descriptions for the table used in this database.
         #

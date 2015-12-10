@@ -64,7 +64,7 @@ class BuilderClass(BaseCorpusBuilder):
     
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
-        super(CELEXBuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
 
         self.corpus_table = "eow"
         self.corpus_id = "IdNum"

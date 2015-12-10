@@ -142,7 +142,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     def __init__(self, gui=False, *args):
        # all corpus builders have to call the inherited __init__ function:
-        super(BuckeyeBuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
 
         # add table descriptions for the tables used in this database.
         #
