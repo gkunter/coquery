@@ -106,6 +106,7 @@ else:
     nltk_available = True
 
 import corpus
+import options
 from errors import *
 
 insert_cache = collections.defaultdict(list)
@@ -569,7 +570,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if not self.arguments.db_name:
                 self.arguments.db_name = self.arguments.name
             if not self.arguments.corpus_path:
-                self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../corpora"))
+                self.arguments.corpus_path = options.cfg.corpora_path
             self.name = self.arguments.name
             
     def additional_arguments(self):
@@ -758,16 +759,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         Validates the file list.
         
-        A corpus module has to overload this method to implement a protection 
-        against illegal installation paths. It could, for example, count the 
-        number of files in the file list, and compare it to an expected number
-        of files. It could also open each file and verify the file content.
-        
-        If the file list is invalid, the method raises a RuntimeError 
-        exception, with details on why the file list is invalid as the 
-        argument string to the exception.
-        
-        The default implementation will always invalidate the list.
+        The default implementation will compare the content of the argument 
+        to the class attribute expected_files. If there is an entry in 
+        expected_files that is not also in the argument list, the file list 
+        is considered to be invalid.
         
         Parameters
         ----------
@@ -775,8 +770,16 @@ class BaseCorpusBuilder(corpus.BaseResource):
             A list of file names as created by get_file_list()
             
         """
-        
-        raise RuntimeError("The file list could not be validated.")
+
+        found_list = [x for x in [os.path.basename(y) for y in l] if x.lower() in [y.lower() for y in BaseCorpusBuilder.expected_files]]
+        if len(found_list) < len(BaseCorpusBuilder.expected_files):
+            missing_list = [x for x in BaseCorpusBuilder.expected_files if x.lower() not in [y.lower() for y in found_list]]
+            sample = "<br/>".join(missing_list[:5])
+            if len(missing_list) > 6:
+                sample = "{}</code>, and {} other files".format(sample, len(missing_list) - 3)
+            elif len(missing_list) == 6:
+                sample = "<br/>".join(missing_list[:6])
+            raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
         
     def get_corpus_code(self):
         """ 
@@ -1523,6 +1526,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
         
+        if not self.arguments.w:
+            return
+        
         base_variables = type(self).get_class_variables()
 
         # all class variables that are defined in this class and which...
@@ -1561,17 +1567,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 lexicon_code=self.get_lexicon_code(),
                 resource_code=self.get_resource_code())
 
-        if not self.arguments.w:
-            return
-        
-        if os.access(self.arguments.corpus_path, os.W_OK|os.X_OK):
-            corpus_path = self.arguments.corpus_path
+        if os.access(options.cfg.corpora_path, os.W_OK|os.X_OK):
+            corpus_path = os.path.join(options.cfg.corpora_path, options.cfg.current_server)
         else:
-            corpus_path = self.arguments.custom_corpus_path
+            corpus_path = os.path.join(options.cfg.custom_corpora_path, options.cfg.current_server)
         
         if not os.path.exists(corpus_path):
             os.makedirs(corpus_path)
-            
         path = os.path.join(corpus_path, "{}.py".format(self.name))
         # Handle existing versions of the corpus module
         if os.path.exists(path):
