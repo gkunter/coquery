@@ -142,7 +142,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     def __init__(self, gui=False, *args):
        # all corpus builders have to call the inherited __init__ function:
-        super(BuckeyeBuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
 
         # add table descriptions for the tables used in this database.
         #
@@ -263,18 +263,6 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_license():
         return "Buckeye Corpus Content License"
-
-    @staticmethod
-    def validate_files(l):
-        found_list = [x for x in [os.path.basename(y) for y in l] if x.lower() in [y.lower() for y in BuilderClass.expected_files]]
-        if len(found_list) < len(BuilderClass.expected_files):
-            missing_list = [x for x in BuilderClass.expected_files if x.lower() not in [y.lower() for y in found_list]]
-            sample = "<br/>".join(missing_list[:5])
-            if len(missing_list) > 6:
-                sample = "{}</code>, and {} other files".format(sample, len(missing_list) - 3)
-            elif len(missing_list) == 6:
-                sample = "<br/>".join(missing_list[:6])
-            raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
 
     # Redefine the process_file method so that the .words files provided
     # by the Buckeye corpus are handled correctly:

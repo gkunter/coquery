@@ -27,14 +27,15 @@ can be queried by Coquery.
 
 Thus, in order to use a new corpus with Coquery, a subclass of 
 :class:`BaseCorpusBuilder` needs to be defined that is tailored to the
-structure of that corpus. Usually, such a subclass will at least 
-reimplement :func:`BaseCorpusBuilder.__init__`,. The reimplementation 
+structure of that corpus. The name of this subclass has to be 
+:class:`BuilderClass`. Usually, such a subclass will at least 
+reimplement :func:`BaseCorpusBuilder.__init__`.. The reimplementation 
 contains the specifications for the data tables such as the name and data 
 type of the columns. It also specifies links between different data tables.
 Please note that the reimplemented :func:`__init__`` should start with a 
 call to the inherited initialization method, like so::
 
-    super(YourCorpusBuilderClass, self).__init__(gui)
+    super(BuilderClass, self).__init__(gui)
 
 In addition to that, most subclasses will also reimplement either
 :func:`BaseCorpusBuilder.process_file` or one of the related methods (e.g. 
@@ -48,10 +49,10 @@ Examples
 --------    
 For examples of reimplementations of ``BaseCorpusBuilder``, see the 
 corpus installers distributed in the Coquery default installation. For 
-instance, :mod:`coq_generic.py` is a generic installer that process any 
-collection of text files in a directiory into a query-able corpus, and
-:mod:`coq_bnc.py` contains an installer that reads and processes the XML 
-version of the British National corpus.
+instance, :mod:`coq_install_generic.py` is a generic installer that process 
+any collection of text files in a directiory into a query-able corpus, and
+:mod:`coq_install_bnc.py` contains an installer that reads and processes the 
+XML version of the British National Corpus.
 """
 
 try:
@@ -106,6 +107,7 @@ else:
     nltk_available = True
 
 import corpus
+import options
 from errors import *
 
 insert_cache = collections.defaultdict(list)
@@ -469,6 +471,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     file_filter = None
     encoding = "utf-8"
     expected_files = []
+    special_files = []
     __version__ = "1.0"
     
     def __init__(self, gui=False):
@@ -569,7 +572,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if not self.arguments.db_name:
                 self.arguments.db_name = self.arguments.name
             if not self.arguments.corpus_path:
-                self.arguments.corpus_path = os.path.normpath(os.path.join(sys.path[0], "../corpora"))
+                self.arguments.corpus_path = options.cfg.corpora_path
             self.name = self.arguments.name
             
     def additional_arguments(self):
@@ -758,16 +761,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         Validates the file list.
         
-        A corpus module has to overload this method to implement a protection 
-        against illegal installation paths. It could, for example, count the 
-        number of files in the file list, and compare it to an expected number
-        of files. It could also open each file and verify the file content.
-        
-        If the file list is invalid, the method raises a RuntimeError 
-        exception, with details on why the file list is invalid as the 
-        argument string to the exception.
-        
-        The default implementation will always invalidate the list.
+        The default implementation will compare the content of the argument 
+        to the class attribute expected_files. If there is an entry in 
+        expected_files that is not also in the argument list, the file list 
+        is considered to be invalid.
         
         Parameters
         ----------
@@ -775,8 +772,16 @@ class BaseCorpusBuilder(corpus.BaseResource):
             A list of file names as created by get_file_list()
             
         """
-        
-        raise RuntimeError("The file list could not be validated.")
+
+        found_list = [x for x in [os.path.basename(y) for y in l] if x.lower() in [y.lower() for y in BaseCorpusBuilder.expected_files]]
+        if len(found_list) < len(BaseCorpusBuilder.expected_files):
+            missing_list = [x for x in BaseCorpusBuilder.expected_files if x.lower() not in [y.lower() for y in found_list]]
+            sample = "<br/>".join(missing_list[:5])
+            if len(missing_list) > 6:
+                sample = "{}</code>, and {} other files".format(sample, len(missing_list) - 3)
+            elif len(missing_list) == 6:
+                sample = "<br/>".join(missing_list[:6])
+            raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
         
     def get_corpus_code(self):
         """ 
@@ -1270,9 +1275,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if not files:
             self.logger.warning("No files found at %s" % self.arguments.path)
             return
-        if not self._widget and not nltk_available:
-            self.logger.warning("This script can use the NLTK library for automatic part-of-speech tagging. However, this library is not installed on this computer. Follow the steps from http://www.nltk.org/install.html to install this library.")
-        
+
         if self._widget:
             self._widget.progressSet.emit(len(files), "Reading text files... (%v of %m)")
             self._widget.progressUpdate.emit(0)
@@ -1519,9 +1522,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
             warning_msg = "<p>{}</p><p>Do you really want to overwrite the existing version?</p>".format(warning_msg)
             return QtGui.QMessageBox.question(self._widget, "Library exists.", warning_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
                 
-    def build_write_module(self, corpus_path):
+    def build_write_module(self):
         """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
+        
+        if not self.arguments.w:
+            return
         
         base_variables = type(self).get_class_variables()
 
@@ -1561,11 +1567,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 lexicon_code=self.get_lexicon_code(),
                 resource_code=self.get_resource_code())
 
-        if not self.arguments.w:
-            return
+        if os.access(options.cfg.corpora_path, os.W_OK|os.X_OK):
+            corpus_path = os.path.join(options.cfg.corpora_path, options.cfg.current_server)
+        else:
+            corpus_path = os.path.join(options.cfg.custom_corpora_path, options.cfg.current_server)
+        
         if not os.path.exists(corpus_path):
             os.makedirs(corpus_path)
-            
         path = os.path.join(corpus_path, "{}.py".format(self.name))
         # Handle existing versions of the corpus module
         if os.path.exists(path):
@@ -1756,7 +1764,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             if self.verify_corpus() and not self.interrupted:
                 current = progress_next(current)
-                self.build_write_module(self.arguments.corpus_path)
+                self.build_write_module()
                 current = progress_next(current)
                 
             if not self.interrupted:
@@ -2091,7 +2099,7 @@ if use_gui:
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("The corpus name cannot be empty.")
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
-                elif str(self.ui.corpus_name.text()) in options.get_available_resources(options.cfg.current_server):
+                elif str(self.ui.corpus_name.text()) in options.cfg.current_resources:
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("There is already another corpus with this name..")
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)

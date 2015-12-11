@@ -33,7 +33,7 @@ class BuilderClass(BaseCorpusBuilder):
             True if the graphical installer is used, and False if the 
             installer runs on the console.
         """
-        super(BNCBuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
         self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
 
         self.documentation_url = BNCBuilder.get_url()

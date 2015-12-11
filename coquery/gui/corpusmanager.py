@@ -344,7 +344,7 @@ class CorpusManager(QtGui.QDialog):
                 if builder_class.get_license():
                     entry.setLicense("<p><b>License</b></p><p>{}</p>".format(builder_class.get_license()))
 
-                entry.setupInstallState(name in options.get_available_resources(options.cfg.current_server))
+                entry.setupInstallState(name in options.cfg.current_resources)
                 entry.setBuilderClass(builder_class)
 
                 self.ui.corpus_stack.addItem(entry, self.icon, name)
@@ -355,6 +355,7 @@ class CorpusManager(QtGui.QDialog):
     def closeEvent(self, *args):
         options.cfg.corpus_manager_view_height = self.height()
         options.cfg.corpus_manager_view_width = self.width()
+        options.set_current_server(options.cfg.current_server)
                     
     def add_source_label(self, name, content):
         pass

@@ -22,7 +22,7 @@ class BuilderClass(BaseCorpusBuilder):
     
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
-        super(CMUdictBuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
         
         # Add table descriptions for the table used in this database.
         #
@@ -75,7 +75,7 @@ class BuilderClass(BaseCorpusBuilder):
             raise RuntimeError("<p>No dictionary file could be found in the selected directory. The file name of the dictionary file has to start with the sequence <code>cmudict</code>.</p> ")
 
     def build_load_files(self):
-        files = CMUdictBuilder.get_file_list(self.arguments.path, self.file_filter)
+        files = BuilderClass.get_file_list(self.arguments.path, self.file_filter)
         with codecs.open(files[0], "r", encoding = self.arguments.encoding) as input_file:
             content = input_file.readlines()
         if self._widget:

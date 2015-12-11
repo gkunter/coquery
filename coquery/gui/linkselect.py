@@ -43,13 +43,12 @@ class LinkSelect(QtGui.QDialog):
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
         
     def insert_data(self):
-        resources = options.get_available_resources(options.cfg.current_server)
-        for corpus in [x for x in resources if x not in self.corpus_omit]:
-            resource = resources[corpus][0]
+        for corpus in [x for x in options.cfg.current_resources if x not in self.corpus_omit]:
+            resource = options.cfg.current_resources[corpus][0]
             table_dict = resource.get_table_dict()
             
-            corpusItem =  CoqTreeItem()
-            corpusItem.setText(0, corpus.upper())
+            corpusItem = CoqTreeItem()
+            corpusItem.setText(0, corpus)
             corpusItem.setObjectName(corpus)
             for table in [x for x in table_dict if x not in self.omit_tables]:
                 table_string = getattr(resource, "{}_table".format(table))

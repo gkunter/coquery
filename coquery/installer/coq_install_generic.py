@@ -38,7 +38,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     def __init__(self, gui=False):
         # all corpus builders have to call the inherited __init__ function:
-        super(GenericCorpusBuilder, self).__init__(gui)
+        super(BuilderClass, self).__init__(gui)
         
         # specify which features are provided by this corpus and lexicon:
         #self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]

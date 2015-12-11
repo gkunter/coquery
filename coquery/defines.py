@@ -283,8 +283,13 @@ available for further queries before you install it again.</p>
 <p>Removing '{corpus}' will free approximately {size:.1S} of disk space.</p>
 <p>Do you really want to remove the corpus?</p>"""
 msg_remove_corpus_error = """
-"<p><b>An error occurred while deleting the corpus database:</b></p>
-<p>{code}</p>"""
+<p><b>A database error occurred while deleting the corpus '{corpus}'.</b></p>
+<p>The corpus was <b>not</b> removed.</p>
+<p>The MySQL server returned the following error message:</p>
+<p><code>{code}</code></p>
+<p>Please verify that the MySQL privileges for the current user allow you to
+delete databases.</p>
+"""
 msg_remove_corpus_disk_error = """
 <p><b>A disk error occurred while deleting the corpus database.</b></p>
 <p>Please try removing the corpus another time. If the problem persists, 

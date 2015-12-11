@@ -197,7 +197,7 @@ Value       no return value
         try:
             self.Cur.execute(S)
         except pymysql.Error as e:
-            warnings.warn(e)
+            warnings.warn(str(e))
             raise e
 
     def commit (self):
