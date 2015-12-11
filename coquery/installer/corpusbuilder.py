@@ -1275,9 +1275,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if not files:
             self.logger.warning("No files found at %s" % self.arguments.path)
             return
-        if not self._widget and not nltk_available:
-            self.logger.warning("This script can use the NLTK library for automatic part-of-speech tagging. However, this library is not installed on this computer. Follow the steps from http://www.nltk.org/install.html to install this library.")
-        
+
         if self._widget:
             self._widget.progressSet.emit(len(files), "Reading text files... (%v of %m)")
             self._widget.progressUpdate.emit(0)
