@@ -47,8 +47,8 @@ class LinkSelect(QtGui.QDialog):
             resource = options.cfg.current_resources[corpus][0]
             table_dict = resource.get_table_dict()
             
-            corpusItem =  CoqTreeItem()
-            corpusItem.setText(0, corpus.upper())
+            corpusItem = CoqTreeItem()
+            corpusItem.setText(0, corpus)
             corpusItem.setObjectName(corpus)
             for table in [x for x in table_dict if x not in self.omit_tables]:
                 table_string = getattr(resource, "{}_table".format(table))
