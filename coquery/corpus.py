@@ -600,6 +600,23 @@ class SQLResource(BaseResource):
         for current_result in cursor:
             yield current_result
 
+    def get_query_string(self, Query, token_list, self_joined=False):
+        """
+        Run the corpus query specified in the token_list on the corpus
+        and yield the results.
+        """
+        try:
+            if self_joined:
+                query_string = self.corpus.sql_string_query_self_joined(Query, token_list)
+            else:
+                query_string = self.corpus.sql_string_query(Query, token_list)
+        except WordNotInLexiconError:
+            query_string = ""
+            
+        Query.Session.output_order = self.get_select_list(Query)
+
+        return query_string
+
     def get_context(self, token_id, number_of_tokens, case_sensitive):
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
