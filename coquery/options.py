@@ -526,7 +526,7 @@ class Options(object):
                             default_corpus = QUERY_MODE_DISTINCT
                         try:
                             last_query = config_file.get("main", "query_string")
-                            vars(self.args)["query_list"] = [x.strip('"') for x in last_query.split(",")]
+                            self.args.query_list = decode_query_string(last_query)
                         except (NoOptionError, ValueError):
                             pass
                         try:
@@ -728,7 +728,7 @@ def save_configuration():
     config.set("main", "default_corpus", cfg.corpus)
     config.set("main", "query_mode", cfg.MODE)
     if cfg.query_list and cfg.save_query_string:
-        config.set("main", "query_string", ",".join(['"{}"'.format(x) for x in cfg.query_list]))
+        config.set("main", "query_string", encode_query_string("\n".join(cfg.query_list)))
     if cfg.input_path and cfg.save_query_file:
         config.set("main", "csv_file", cfg.input_path)
         config.set("main", "csv_separator", cfg.input_separator)
@@ -1178,6 +1178,56 @@ def get_home_dir(create=True):
         
     return coquery_home
 
+def decode_query_string(s):
+    """
+    Decode a query string that has been read from the configuration file.
+    
+    This method is the inverse of encode_query_string(). It takes a 
+    comma-separated, quoted and escaped string and transforms it into 
+    a newline-separated string without unneeded quotes and escapes.
+    """
+    in_quote = False
+    escape = False
+    l = []
+    char_list = []
+    last_ch = None
+    for ch in s:
+        if escape:
+            char_list.append(ch)
+            escape = False
+        else:
+            if ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_quote = not in_quote
+            elif ch == ",":
+                if in_quote:
+                    char_list.append(ch)
+                else:
+                    l.append("".join(char_list))
+                    char_list = []
+            else:
+                char_list.append(ch)
+    l.append("".join(char_list))
+    return "\n".join(l)
+
+def encode_query_string(s):
+    """
+    Encode a query string that has can be written to a configuration file.
+    
+    This method is the inverse of decode_query_string(). It takes a newline-
+    separated strinbg as read from the query string field, and transformes it
+    into a comma-separated, quoted and escaped string that can be passed on 
+    to the configuration file.
+    """
+    l = s.split("\n")
+    str_list = []
+    for s in l:
+        s = s.replace("\\", "\\\\")
+        s = s.replace('"', '\\"')
+        str_list.append(s)
+    return ",".join(['"{}"'.format(x) for x in str_list])
+        
 try:
     logger = logging.getLogger(__init__.NAME)
 except AttributeError:
