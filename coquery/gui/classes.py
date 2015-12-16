@@ -505,7 +505,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                     if isinstance(value, (float, np.float64)):
                         return ("{:.%if}" % options.cfg.digits).format(value)
                     else:
-                        return str(value)
+                        try:
+                            return str(value)
+                        except UnicodeEncodeError:
+                            return unicode(value)
             else:
                 return "[hidden]"
         # ForegroundRole: return the colour of the column, or the default if
