@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 from collections import *
+from sqlalchemy import create_engine
 import pandas as pd
 
 from errors import *
@@ -537,6 +538,17 @@ class SQLResource(BaseResource):
         self.DB = sqlwrap.SqlDB(Host=host, Port=port, User=user, Password=password, db_name=self.db_name)
         logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
         
+    def SQLAlchemyConnect(self):
+        host, port, user, password = options.get_mysql_configuration()
+        engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4"
+        engine = create_engine(engine_string.format(
+            host=host,
+            port=port,
+            user=user, 
+            password=password,
+            db_name=self.db_name))
+        return engine.connect()
+
     def get_statistics(self):
         lexicon_features = [x for x, _ in self.get_lexicon_features()]
         corpus_features = [x for x, _ in self.get_corpus_features()]

@@ -300,10 +300,19 @@ class TokenQuery(object):
         for self._sub_query in self.query_list:
             self._current_number_of_tokens = len(self._sub_query)
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
-            
-            df = pd.DataFrame(
-                self.string_folder(self.Resource.yield_query_results(self, self._sub_query)))
-            df.columns = list(self._keys)
+
+            with self.Resource.SQLAlchemyConnect() as connection:
+                if not options.cfg.experimental:
+                    df = pd.DataFrame(
+                        self.string_folder(self.Resource.yield_query_results(self, self._sub_query)))
+                    df.columns = list(self._keys)
+                else:
+                    # This SQLAlchemy optimization including the string folder 
+                    # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
+                    results = (connection.execution_options(stream_results=True).execute(self.Resource.get_query_string(self, self._sub_query)))
+                    df = pd.DataFrame(self.string_folder(results))
+                    df.columns = results.keys()
+
 
             df = self.insert_static_data(df)
             df = self.insert_context(df)
