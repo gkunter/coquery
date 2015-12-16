@@ -949,7 +949,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
         
         elif isinstance(node, ast.ImportFrom):
             if whitelisted_modules != "all" and node.module not in whitelisted_modules:
-                raise IllegalImportInModuleError(corpus_name, cfg.current_server, node.module)
+                raise IllegalImportInModuleError(corpus_name, cfg.current_server, node.module, node.lineno)
 
         elif isinstance(node, ast.Import):
             for element in node.names:
@@ -964,12 +964,12 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                 pass
             else:
                 if not isinstance(parent, allowed_parents):
-                    print(node, type(node), dir(node), node.value)
                     raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
         
         elif isinstance(node, ast.If):
             if parent == None:
                 if not allow_if:
+
                     raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
             elif not isinstance(parent, allowed_parents):
                 raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
@@ -978,10 +978,8 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
             # these types are only allowed if the node is nested in 
             # a legal node type:
             if not isinstance(parent, allowed_parents):
-                print(node, type(node), dir(node))
                 raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
         else:
-            print(node, type(node), dir(node))
             raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
 
         # recursively validate the content of the node:
@@ -990,7 +988,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                 validate_node(child, node)
     
     corpus_name = os.path.splitext(os.path.basename(path))[0]
-    with codecs.open(path, "r", encoding="utf-8") as module_file:
+    with codecs.open(path, "r") as module_file:
         content = module_file.read()
         tree = ast.parse(content)
         
@@ -998,7 +996,6 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
             validate_node(node, None)
     if expected_classes:
         raise ModuleIncompleteError(corpus_name, cfg.current_server, expected_classes)
-    
     if hash:
         return hashlib.md5(content.encode("utf-8"))
 
