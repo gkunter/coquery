@@ -223,7 +223,7 @@ class CoqTreeWidget(QtGui.QTreeWidget):
             
             parent = item.parent()
 
-            if not item._func and not (parent and parent._link_by):
+            if not item._func:
                 view_unique = QtGui.QAction("View &unique values", self)
                 view_unique.triggered.connect(lambda: self.show_unique_values(item))
                 self.menu.addAction(view_unique)
@@ -251,7 +251,14 @@ class CoqTreeWidget(QtGui.QTreeWidget):
 
     def show_unique_values(self, item):
         import uniqueviewer
-        uniqueviewer.UniqueViewer.show(item.objectName(), options.cfg.main_window.resource)
+        resource = options.cfg.main_window.resource
+        rc_feature = item.objectName()
+        _, db_name, table, feature = resource.split_resource_feature(rc_feature)
+        if not db_name:
+            db_name = resource.db_name
+        uniqueviewer.UniqueViewer.show(
+            "{}_{}".format(table, feature),
+            db_name)
 
 class LogTableModel(QtCore.QAbstractTableModel):
     """

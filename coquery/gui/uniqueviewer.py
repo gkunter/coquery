@@ -24,18 +24,21 @@ import error_box
 import QtProgress
 
 class UniqueViewer(QtGui.QWidget):
-    def __init__(self, rc_feature=None, resource=None, parent=None):
+    def __init__(self, rc_feature=None, db_name=None, parent=None):
         super(UniqueViewer, self).__init__(parent)
         
         self.ui = uniqueViewerUi.Ui_UniqueViewer()
         self.ui.setupUi(self)
-        self.rc_feature = rc_feature
-        self.resource = resource
 
-        if self.resource:
+        self.rc_feature = rc_feature
+        self.db_name = db_name
+        self.resource = options.get_resource_of_database(db_name)
+        
+        if self.db_name:
             rc_table = "{}_table".format(rc_feature.partition("_")[0])
             self.table = getattr(self.resource, rc_table)
             self.column = getattr(self.resource, rc_feature)
+
             self.ui.button_details.setText(
                 str(self.ui.button_details.text()).format(
                     self.resource.name, 
@@ -43,7 +46,7 @@ class UniqueViewer(QtGui.QWidget):
         else:
             self.table = None
             self.column = None
-            self.resource = None
+
         self.ui.treeWidget.itemClicked.connect(self.entry_clicked)
         self.ui.button_details.clicked.connect(self.toggle_details)
         self.set_details()
@@ -67,14 +70,14 @@ class UniqueViewer(QtGui.QWidget):
         self.set_details()
         
     def get_unique(self):
-        if not self.resource:
+        if not self.db_name:
             return
         import sqlwrap
         S = "SELECT DISTINCT {0} FROM {1} ORDER BY {0}".format(self.column, self.table)
 
         self.DB = sqlwrap.SqlDB(
             *options.get_mysql_configuration(),
-            db_name=self.resource.db_name)
+            db_name=self.db_name)
         self.DB.execute(S)
         self.data = [QtGui.QTreeWidgetItem(self.ui.treeWidget, [x[0]]) for x in self.DB.Cur]
         for x in self.data:
