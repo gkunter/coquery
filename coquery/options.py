@@ -1040,6 +1040,16 @@ def set_current_server(name):
     else:
         cfg.current_resources = None
 
+def get_resource_of_database(db_name):
+    """
+    Get the resource that uses the database.
+    """
+    for name in cfg.current_resources:
+        resource, _, _, _ = cfg.current_resources[name]
+        if resource.db_name == db_name:
+            return resource
+    return None
+
 def get_available_resources(configuration):
     """ 
     Return a dictionary with the available corpus module resource classes
@@ -1060,7 +1070,8 @@ def get_available_resources(configuration):
     -------
     d : dict
         A dictionary with resource names as keys, and tuples of resource
-        classes as values.
+        classes as values:
+        (module.Resource, module.Corpus, module.Lexicon, module_name)
     """
     
     def ensure_init_file(path):
