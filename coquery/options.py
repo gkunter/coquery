@@ -58,6 +58,7 @@ class Options(object):
 
         self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
         self.args.filter_list = []
+        self.args.stopword_list = []
         self.args.version = self.version
         self.args.query_label = ""
         self.args.input_path = ""
@@ -74,6 +75,7 @@ class Options(object):
         self.args.uniques_file_path = os.path.expanduser("~")
         self.args.corpus_source_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.expanduser("~")
+        self.args.stopwords_file_path = os.path.expanduser("~")
         self.args.corpora_path = os.path.join(sys.path[0], "corpora")
         self.args.custom_corpora_path = os.path.join(self.args.coquery_home, "corpora")
         self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
@@ -605,6 +607,11 @@ class Options(object):
 
                     elif section == "gui":
                         try:
+                            stopwords = config_file.get("gui", "stopword_list")
+                            self.args.stopword_list = decode_query_string(stopwords).split("\n")
+                        except (NoOptionError, ValueError):
+                            self.args.stopword_list = []                            
+                        try:
                             self.args.ask_on_quit = bool(config_file.get("gui", "ask_on_quit"))
                         except (NoOptionError, ValueError):
                             self.args.ask_on_quit = True
@@ -628,6 +635,10 @@ class Options(object):
                             self.args.results_file_path = config_file.get("gui", "results_file_path")
                         except (NoOptionError, ValueError):
                             self.args.results_file_path = os.path.expanduser("~")
+                        try:
+                            self.args.stopwords_file_path = config_file.get("gui", "stopwords_file_path")
+                        except (NoOptionError, ValueError):
+                            self.args.stopwords_file_path = os.path.expanduser("~")
                         try:
                             self.args.uniques_file_path = config_file.get("gui", "uniques_file_path")
                         except (NoOptionError, ValueError):
@@ -744,7 +755,6 @@ def save_configuration():
     if cfg.custom_installer_path:
         config.set("main", "custom_installer_path", cfg.custom_installer_path)
         
-   
     if not "sql" in config.sections():
         config.add_section("sql")
     if cfg.current_server:
@@ -784,6 +794,10 @@ def save_configuration():
         config.set("gui", "height", window_size.height())
         config.set("gui", "width", window_size.width())
 
+        if cfg.stopword_list:
+            config.set("gui", "stopword_list", 
+                       encode_query_string("\n".join(cfg.stopword_list)))
+
         for x in cfg.column_width:
             if not x.startswith("coquery_invisible") and cfg.column_width[x]:
                 config.set("gui", 
@@ -812,6 +826,10 @@ def save_configuration():
             config.set("gui", "results_file_path", cfg.results_file_path)
         except AttributeError:
             config.set("gui", "results_file_path", os.path.expanduser("~"))
+        try:
+            config.set("gui", "stopwords_file_path", cfg.stopwords_file_path)
+        except AttributeError:
+            config.set("gui", "stopwords_file_path", os.path.expanduser("~"))
         try:
             config.set("gui", "uniques_file_path", cfg.uniques_file_path)
         except AttributeError:

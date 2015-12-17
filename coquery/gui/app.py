@@ -159,6 +159,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.edit_query_string = edit_query_string
         
         self.ui.filter_box = classes.QueryFilterBox(self)
+        filter_examples = ["Year > 1999", "Gender is m", "Genre in MAG, NEWS", 
+                       "Year in 2005-2010", "Year = 2012", "File is b0*"]
+        self.ui.filter_box.edit_tag.setPlaceholderText("e.g. {}".format(random.sample(filter_examples, 1)[0]))
+
+        self.stopwords_label = str(self.ui.button_stopwords.text())
+        self.set_stopword_button()
         
         self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
         self.ui.tag_cloud.close()
@@ -651,9 +657,18 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.input_separator = " "
             self.switch_to_file()
 
+
+    def set_stopword_button(self):
+        if options.cfg.stopword_list:
+            s = "(active stopwords: {})".format(len(options.cfg.stopword_list))
+        else:
+            s = ""
+        self.ui.stopword_label.setText(s)
+
     def manage_stopwords(self):
         import stopwords 
         result = stopwords.Stopwords.manage(self, options.cfg.icon)
+        self.set_stopword_button()
     
     def save_results(self):
         name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.results_file_path)
@@ -1170,7 +1185,7 @@ class CoqueryApp(QtGui.QMainWindow):
         import coq_install_generic
         import corpusbuilder
 
-        builder = corpusbuilder.BuilderGui(coq_install_generic.GenericCorpusBuilder, self)
+        builder = corpusbuilder.BuilderGui(coq_install_generic.BuilderClass, self)
         try:
             result = builder.display()
         except Exception as e:

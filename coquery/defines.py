@@ -91,7 +91,13 @@ except NameError:
     # Python 3 does not have unicode and long, so define them here:
     unicode = str
     long = int
-    
+
+
+msg_clear_stopwords = """
+<p><b>You have requested to reset the list of stop words.</b></p>
+<p>Click <b>Yes</b> if you really want to delete all stop words in the list,
+or <b>No</b> if you want to leave the stop word list unchanged.</p>
+"""
 msg_missing_seaborn_module = """
 <p><b>One of the required Python module could not be loaded.</b></p>
 <p>The Python module called 'seaborn' does not appear to be installed on this 

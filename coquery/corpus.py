@@ -835,23 +835,22 @@ class SQLLexicon(BaseLexicon):
                 target = "{}.{}".format(
                     self.resource.corpus_table, self.resource.corpus_word)
                 
-
-        for CurrentWord in specifier_list:
-            if CurrentWord != "%":
-                current_token = tokens.COCAWord(CurrentWord, self, replace=False, parse=False)
-                current_token.negated = token.negated
-                if not isinstance(current_token.S, unicode):
-                    S = unicode(current_token.S)
+        for word in specifier_list:
+            if word != "%":
+                token = tokens.COCAWord(word, self, replace=False, parse=False)
+                token.negated = token.negated
+                if not isinstance(token.S, unicode):
+                    S = unicode(token.S)
                 else:
-                    S = current_token.S
+                    S = token.S
                 # take care of quotation marks:
                 S = S.replace('"', '""')
-                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), S))
+                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(token), S))
                 
-        for current_transcript in token.transcript_specifiers:
-            if current_transcript:
-                current_token = tokens.COCAWord(current_transcript, self, replace=False, parse=False)
-                current_token.negated = token.negated
+        for transcript in token.transcript_specifiers:
+            if transcript:
+                token = tokens.COCAWord(transcript, self, replace=False, parse=False)
+                token.negated = token.negated
                 if "transcript_table" not in dir(self.resource):
                     target = "{}.{}".format(
                         self.resource.word_table, 
@@ -864,9 +863,9 @@ class SQLLexicon(BaseLexicon):
                         self.resource.transcript_table,
                         self.resource.transcript_label)
                 # take care of quotation marks:
-                S = str(current_token)
+                S = str(token)
                 S = S.replace('"', '""')
-                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(current_token), S))
+                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(token), S))
         
         where_clauses = []
         if sub_clauses:
@@ -998,6 +997,19 @@ class SQLLexicon(BaseLexicon):
         self.resource.DB.execute(S)
         return set([x[0] for x in self.resource.DB.fetch_all()])
 
+    def get_stopword_ids(self):
+        """
+        Return a list of all word ids that match the entries in the stopword 
+        list.
+        """
+        if not hasattr(self, "_cached_stopword_list") or self._cached_stopword_list != options.cfg.stopword_list:
+            id_list = set([])
+            for stopword in options.cfg.stopword_list:
+                id_list.update(set(self.get_matching_wordids(tokens.COCAToken(stopword, self), stopwords=False)))
+            self._cached_stopword_list = list(options.cfg.stopword_list)
+            self._cached_stopword_ids = id_list
+        return self._cached_stopword_ids
+
     def sql_string_get_matching_wordids(self, token):
         """ returns a string that may be used to query all word_ids that
         match the token specification."""
@@ -1039,16 +1051,25 @@ class SQLLexicon(BaseLexicon):
                 where_string)
         return S
 
-    def get_matching_wordids(self, token):
+    def get_matching_wordids(self, token, stopwords=True):
+        """
+        Return a list of word ids that match the tokens. This takes the 
+        entries from the stopword list into account.
+        """
         if token.S == "%" or token.S == "":
             return []
+        if stopwords:
+            stopword_ids = self.get_stopword_ids()
         S = self.sql_string_get_matching_wordids(token)
         self.resource.DB.execute(S)
         query_results = self.resource.DB.fetch_all()
         if not query_results:
             raise WordNotInLexiconError
         else:
-            return [x[0] for x in query_results]
+            if stopwords:
+                return [x[0] for x in query_results if x[0] not in stopword_ids]
+            else:
+                return [x[0] for x in query_results]
         
 class SQLCorpus(BaseCorpus):
     def __init__(self):
@@ -1151,6 +1172,14 @@ class SQLCorpus(BaseCorpus):
                 where_clauses.append("{} IN ({})".format(
                     WordTarget, 
                     ", ".join (map (str, L))))
+            else:
+                # is the empty word id list due to the stopword list?
+                if token.S not in ("%", ""):
+                    raise WordNotInLexiconError
+                else:
+                    where_clauses.append("{} NOT IN ({})".format(
+                        WordTarget,
+                        ", ".join([str(x) for x in self.lexicon.get_stopword_ids()])))
         else:
             # if only a class specification is given, this specification is
             # used as the where clause:
