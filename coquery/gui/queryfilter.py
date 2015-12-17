@@ -100,10 +100,10 @@ class CoqTextTag(QtGui.QFrame):
         drag.setPixmap(pixmap)
         drag.setHotSpot(e.pos())
 
-        self.parent().dragTag(drag, self)
+        self.parent().parent().parent().parent().dragTag(drag, self)
 
     def removeRequested(self):
-        self.parent().destroyTag(self)
+        self.parent().parent().parent().parent().destroyTag(self)
 
     def validate(self):
         """ Validate the content, and return True if the content is valid,
@@ -112,28 +112,31 @@ class CoqTextTag(QtGui.QFrame):
     
 class CoqTagEdit(QtGui.QLineEdit):
     """ Define a QLineEdit class that is used to enter query filters. """
-
-    filter_examples = ["Year > 1999", "Gender is m", "Genre in MAG, NEWS", 
-                       "Year in 2005-2010", "Year = 2012", "File is b0*"]
+    
+    filter_examples = []
 
     def __init__(self, *args):
         super(CoqTagEdit, self).__init__(*args)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.setSizePolicy(sizePolicy)
         #self.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; }'))
         self.setObjectName(_fromUtf8("edit_source_filter"))
-        self.setPlaceholderText("e.g. {}".format(random.sample(self.filter_examples, 1)[0]))
+        if self.filter_examples:
+            self.setPlaceholderText("e.g. {}".format(random.sample(self.filter_examples, 1)[0]))
 
 class CoqTagBox(QtGui.QWidget):
     """ Defines a QWidget class that contains and manages filter tags. """
     
-    def __init__(self, *args):
-        super(CoqTagBox, self).__init__(*args)
+    def __init__(self, parent=None, label="Filter"):
+        super(CoqTagBox, self).__init__(parent)
+        if not label.endswith(":"):
+            label = label + ":"
+        self._label = label
         self.setupUi()
-        self.edit_tag.returnPressed.connect(self.addTag)
+        self.edit_tag.returnPressed.connect(lambda: self.addTag(self.edit_tag.text()))
         self.edit_tag.textEdited.connect(self.editTagText)
         # self._tagList stores the 
         self._tagList = []
@@ -150,29 +153,51 @@ class CoqTagBox(QtGui.QWidget):
     def tagList(self):
         return self._tagList
         
-    def setupUi(self):
-        self.verticalLayout = QtGui.QVBoxLayout(self)
-        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
-        self.cloud_area = FlowLayout(spacing=2)
-        self.cloud_area.setObjectName(_fromUtf8("cloud_area"))
-        self.verticalLayout.addLayout(self.cloud_area)
-        self.horizontalLayout = QtGui.QHBoxLayout()
-        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.label = QtGui.QLabel(self)
-        self.label.setObjectName(_fromUtf8("label"))
-        self.label.setText(_fromUtf8("Filter:"))
-        self.horizontalLayout.addWidget(self.label)
-        self.edit_tag = CoqTagEdit(self)
+    def setupUi(self):        
+        # make this widget take up all available space:
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+
+        self.scroll_area = QtGui.QScrollArea()                                                                      
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)                                       
+        sizePolicy.setHorizontalStretch(0)                                                                                           
+        sizePolicy.setVerticalStretch(0)                                                                                             
+        sizePolicy.setHeightForWidth(self.scroll_area.sizePolicy().hasHeightForWidth())                                              
+        self.scroll_area.setSizePolicy(sizePolicy)                                                                                   
+        self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)                                                     
+        self.scroll_area.setWidgetResizable(True)                                                                                    
+
+        self.scroll_content = QtGui.QWidget()                                                                                        
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)                                         
+        sizePolicy.setHorizontalStretch(0)                                                                                           
+        sizePolicy.setVerticalStretch(0)                                                                                             
+        sizePolicy.setHeightForWidth(self.scroll_content.sizePolicy().hasHeightForWidth())                                           
+        self.scroll_content.setSizePolicy(sizePolicy)                                                                                
+
+        self.cloud_area = FlowLayout(spacing=5)                                                                 
+        self.scroll_content.setLayout(self.cloud_area)
+        self.scroll_area.setWidget(self.scroll_content)                                                                              
+        
+        self.edit_label = QtGui.QLabel(self._label)                                                                            
+        self.edit_tag = CoqTagEdit()
+
+        self.edit_layout = QtGui.QHBoxLayout(spacing=5)                                                                                       
+        self.edit_layout.addWidget(self.edit_label)
+        self.edit_layout.addWidget(self.edit_tag)
+
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.edit_tag.sizePolicy().hasHeightForWidth())
         self.edit_tag.setSizePolicy(sizePolicy)
-        self.edit_tag.setObjectName(_fromUtf8("edit_tag"))
-        self.horizontalLayout.addWidget(self.edit_tag)
-        self.horizontalLayout.setStretch(1, 0)
-        self.verticalLayout.addLayout(self.horizontalLayout)
-        #self.verticalLayout.setStretch(0, 1)
+
+        self.layout = QtGui.QVBoxLayout(self)                                                                                        
+        self.layout.addWidget(self.scroll_area)                                                                                  
+        self.layout.addLayout(self.edit_layout)
+        self.layout.setStretch(1,0)
 
         self.setAcceptDrops(True)
 
@@ -207,6 +232,7 @@ class CoqTagBox(QtGui.QWidget):
         if not s:
             s = str(self.edit_tag.text())
         tag = self._tagType(self)
+
         tag.setContent(s)
         #if self.edit_tag.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; background-color: rgb(255, 255, 192); }'))
             #return
@@ -222,6 +248,26 @@ class CoqTagBox(QtGui.QWidget):
         
     def insertTag(self, index, tag):
         self.cloud_area.insertWidget(index, tag)
+
+    def hasTag(self, s):
+        """
+        Check if there is a tag with the given string.
+        
+        Parameters
+        ----------
+        s : str
+            The string to search for.
+        
+        Returns
+        -------
+        b : bool
+            True if there is a tag that contains the string as a label, or 
+            False otherwise.        
+        """
+        for tag_label in [str(self.cloud_area.itemAt(x).widget().text()) for x in range(self.cloud_area.count())]:
+            if s == tag_label:
+                return True
+        return False
 
     def findTag(self, tag):
         """ Returns the index number of the tag in the cloud area, or -1 if
