@@ -1612,7 +1612,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             db_pass=self.arguments.db_password,
             db_port=self.arguments.db_port,
             local_infile=1)
-        if self.Con.has_database(self.arguments.db_name) and self.arguments.l:
+        if self.Con.has_database(self.arguments.db_name) and self.arguments.c:
             self.Con.drop_database(self.arguments.db_name)
         if self.arguments.c:
             self.Con.create_database(self.arguments.db_name)
@@ -1671,7 +1671,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """ Wrap up everything after the corpus installation is complete. """
         if self.interrupted:
             try:
-                self.Con.drop_database(self.arguments.db_name)
+                if self.arguments.c or self.arguments.l:
+                    self.Con.drop_database(self.arguments.db_name)
             except:
                 pass
             self.Con.close()
@@ -1891,10 +1892,11 @@ if use_gui:
         def changed_radio(self):
             if self.ui.radio_complete.isChecked():
                 self.ui.box_build_options.setEnabled(True)
-                self.check_input()
+                #self.check_input()
             else:
                 self.ui.box_build_options.setEnabled(False)
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+                #self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+            self.validate_dialog()
 
         def show_progress(self):
             self.ui.progress_box.show()
@@ -1912,8 +1914,8 @@ if use_gui:
             else:
                 S = "Finished installing {}.".format(self.builder.name)
                 self.ui.label.setText("Installation complete.")
-                self.ui.progress_bar.setMaximum(1)
-                self.ui.progress_bar.setValue(1)
+                self.ui.progress_bar.hide()
+                self.ui.progress_general.hide()
                 self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
                 self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
                 self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
@@ -2016,12 +2018,14 @@ if use_gui:
                 namespace.c = False
                 namespace.w = True
                 namespace.self_join = False
+                namespace.only_module = True
             else:
                 namespace.w = True
                 namespace.o = True
                 namespace.i = True
                 namespace.l = True
                 namespace.c = True
+                namespace.only_module = False
                 namespace.self_join = False
 
             namespace.encoding = self.builder_class.encoding
@@ -2095,22 +2099,34 @@ if use_gui:
             super(BuilderGui, self).validate_dialog()
             if hasattr(self.ui, "corpus_name"):
                 self.ui.issue_label.setText("")
+                try:
+                    db_host, db_port, db_user, db_password = options.get_mysql_configuration()
+                except ValueError:
+                    raise SQLNoConfigurationError
+                Con = dbconnection.DBConnection(
+                    db_user=db_user, db_host=db_host, db_port=db_port, db_pass=db_password)
+                db_exists = Con.has_database("coq_{}".format(str(self.ui.corpus_name.text()).lower()))
+                # regardless of whether only the module or the whole corpus
+                # is requested, the corpus needs a name:
                 if not str(self.ui.corpus_name.text()):
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("The corpus name cannot be empty.")
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                # make sure that there is no corpus with that name already:
                 elif str(self.ui.corpus_name.text()) in options.cfg.current_resources:
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("There is already another corpus with this name..")
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
                 else:
-                    try:
-                        db_host, db_port, db_user, db_password = options.get_mysql_configuration()
-                    except ValueError:
-                        raise SQLNoConfigurationError
-                    Con = dbconnection.DBConnection(
-                        db_user=db_user, db_host=db_host, db_port=db_port, db_pass=db_password)
-                    if Con.has_database("coq_{}".format(str(self.ui.corpus_name.text()).lower())):
+                    # make sure that the database exists if only the module
+                    # install is requested:
+                    if self.ui.radio_only_module.isChecked() and not db_exists:
+                        self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                        self.ui.issue_label.setText("There is no database that uses this name.")
+                        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                    # make sure that no database exists if the complete
+                    # install is requested:
+                    elif self.ui.radio_complete.isChecked() and db_exists:
                         self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                         self.ui.issue_label.setText("There is already another database that uses this name.")
                         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
@@ -2136,6 +2152,5 @@ if use_gui:
 
             namespace.name = str(self.ui.corpus_name.text())
             namespace.use_nltk = self.ui.use_pos_tagging.checkState()
-            namespace.db_name = "coq_".format(str(self.ui.corpus_name.text()).lower())
-            
+            namespace.db_name = "coq_{}".format(namespace.name).lower()
             return namespace
