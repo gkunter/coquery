@@ -1176,10 +1176,7 @@ class SQLCorpus(BaseCorpus):
                 # is the empty word id list due to the stopword list?
                 if token.S not in ("%", ""):
                     raise WordNotInLexiconError
-                else:
-                    where_clauses.append("{} NOT IN ({})".format(
-                        WordTarget,
-                        ", ".join([str(x) for x in self.lexicon.get_stopword_ids()])))
+
         else:
             # if only a class specification is given, this specification is
             # used as the where clause:
@@ -1189,6 +1186,7 @@ class SQLCorpus(BaseCorpus):
                     where_clauses.append("{} IN ({})".format(
                         PosTarget, 
                         ", ".join (["'%s'" % x for x in L])))
+
         return where_clauses
     
     def sql_string_run_query_filter_list(self, self_joined):
@@ -1305,16 +1303,33 @@ class SQLCorpus(BaseCorpus):
         for x in where_clauses:
             if x: 
                 sub_list.add(x)
-        if sub_list:
-            if current_token.negated:
-                s = "NOT ({})".format(" AND ".join(sub_list))
-            else:
-                s = " AND ".join(sub_list)
+        if sub_list or current_token.S in ["%", ""]:
+            if sub_list:
+                if current_token.negated:
+                    s = "NOT ({})".format(" AND ".join(sub_list))
+                else:
+                    s = " AND ".join(sub_list)
+
+            if current_token.S in ["%", ""] or not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
+                stopwords = self.lexicon.get_stopword_ids()
+                if stopwords:
+                    try:
+                        s = "({}) AND ({} NOT IN ({}))".format(
+                            s,
+                            self.resource.corpus_word_id,
+                            ", ".join([str(x) for x in stopwords]))
+                    except UnboundLocalError:
+                        s = "{} NOT IN ({})".format(
+                            self.resource.corpus_word_id,
+                            ", ".join([str(x) for x in stopwords]))
+
             if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
                 requested_features.append(pos_feature)
                 rc_where_constraints["word_table"].add(s)
             else:
                 rc_where_constraints["corpus_table"].add(s)
+
+
 
         # get a list of all tables that are required to satisfy the 
         # feature request:
