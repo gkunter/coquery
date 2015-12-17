@@ -18,6 +18,10 @@ class FlowLayout(QtGui.QLayout):
         while item:
             item = self.takeAt(0)
  
+    def clear(self):
+        for tag in [x.widget() for x in self.itemList]:
+            tag.removeRequested()
+ 
     def addItem(self, item):
         self.itemList.append(item)
         self.update()
