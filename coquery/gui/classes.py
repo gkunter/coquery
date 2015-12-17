@@ -24,6 +24,7 @@ import QtProgress
 import queryfilter
 import options
 import queries
+from errors import *
 from defines import *
 
 class CoqTreeItem(QtGui.QTreeWidgetItem):
@@ -422,8 +423,6 @@ class QueryFilterBox(queryfilter.CoqTagBox):
         else:
             super(QueryFilterBox, self).addTag(filt.text)
             options.cfg.filter_list.append(filt)
-
-
 
 class CoqTableModel(QtCore.QAbstractTableModel):
     """ Define a QAbstractTableModel class that stores the query results in a 
