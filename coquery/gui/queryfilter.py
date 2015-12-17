@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 
+"""
+queryfilter.py is part of Coquery.
+
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
 
 from pyqt_compat import QtCore, QtGui
@@ -136,7 +146,7 @@ class CoqTagBox(QtGui.QWidget):
             label = label + ":"
         self._label = label
         self.setupUi()
-        self.edit_tag.returnPressed.connect(lambda: self.addTag(self.edit_tag.text()))
+        self.edit_tag.returnPressed.connect(lambda: self.addTag(str(self.edit_tag.text())))
         self.edit_tag.textEdited.connect(self.editTagText)
         # self._tagList stores the 
         self._tagList = []

@@ -146,7 +146,7 @@ class Stopwords(QtGui.QDialog):
                 with codecs.open(name, "r", encoding=options.cfg.output_encoding) as input_file:
                     for word in sorted(set(" ".join(input_file.readlines()).split())):
                         if word and not self.ui.stopword_list.hasTag(word):
-                            self.ui.stopword_list.addTag(word)
+                            self.ui.stopword_list.addTag(str(word))
             except IOError as e:
                 QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
             except (UnicodeEncodeError, UnicodeDecodeError):
@@ -157,7 +157,7 @@ class Stopwords(QtGui.QDialog):
     def close(self):
         super(Stopwords, self).close()
         options.cfg.stopword_list = [
-            self.ui.stopword_list.cloud_area.itemAt(x).widget().text() for x in range(self.ui.stopword_list.cloud_area.count())]
+            str(self.ui.stopword_list.cloud_area.itemAt(x).widget().text()) for x in range(self.ui.stopword_list.cloud_area.count())]
         super(Stopwords, self).accept()
     
     def accept(self):
@@ -172,7 +172,7 @@ class Stopwords(QtGui.QDialog):
         
     def set_list(self, l):
         for x in l:
-            self.ui.stopword_list.addTag(x)
+            self.ui.stopword_list.addTag(str(x))
         
     @staticmethod
     def manage(parent=None, icon=None):
