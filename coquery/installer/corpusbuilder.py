@@ -2033,7 +2033,7 @@ if use_gui:
             namespace.name = self.builder_class.get_name()
             namespace.path = str(self.ui.input_path.text())
 
-            namespace.db_name = self.builder_class.get_name().lower()
+            namespace.db_name = self.builder_class.get_db_name()
             try:
                 namespace.db_host, namespace.db_port, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
             except ValueError:
