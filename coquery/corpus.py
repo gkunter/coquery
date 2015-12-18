@@ -1303,6 +1303,7 @@ class SQLCorpus(BaseCorpus):
         for x in where_clauses:
             if x: 
                 sub_list.add(x)
+        s = ""
         if sub_list or current_token.S in ["%", ""]:
             if sub_list:
                 if current_token.negated:
@@ -1323,11 +1324,12 @@ class SQLCorpus(BaseCorpus):
                             self.resource.corpus_word_id,
                             ", ".join([str(x) for x in stopwords]))
 
-            if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
-                requested_features.append(pos_feature)
-                rc_where_constraints["word_table"].add(s)
-            else:
-                rc_where_constraints["corpus_table"].add(s)
+            if s:
+                if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
+                    requested_features.append(pos_feature)
+                    rc_where_constraints["word_table"].add(s)
+                else:
+                    rc_where_constraints["corpus_table"].add(s)
 
 
 
