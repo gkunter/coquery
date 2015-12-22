@@ -1,16 +1,22 @@
-""" Beeswarm visualization """
+# -*- coding: utf-8 -*-
+""" 
+beeswarmplot.py is part of Coquery.
 
-from __future__ import division
+Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License.
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import print_function
 
-import unittest
 import options
 from defines import *
+from pyqt_compat import QtGui
 
 import visualizer as vis
 import seaborn as sns
-import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from beeswarm import *
@@ -22,32 +28,35 @@ class Visualizer(vis.BaseVisualizer):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
  
+    def set_defaults(self):
+        self.options["color_palette"] = "Paired"
+        self.options["color_number"] = len(self._levels[0])
+        super(Visualizer, self).set_defaults()
+        self.options["label_y_axis"] = "Corpus position"
+        if not self._levels or len(self._levels[0]) < 2:
+            self.options["label_x_axis"] = ""
+        else:
+            self.options["label_x_axis"] = self._groupby[0]
+
+ 
     def draw(self):
         def plot_facet(data, color):
-            #col = self.get_colors_for_factor(self.col_factor, rgb_string=True)
-            
             values = [data[data[self._groupby[-1]] == x]["coquery_invisible_corpus_id"].values for x in self._levels[-1]]
-            
+
+            col = ["#{:02X}{:02X}{:02X}".format(
+                    int(255*r), int(255*g), int(255*b)) for r, g, b in self.options["color_palette_values"]][:len(values)]
             beeswarm(
                 values=values,
+                method="center",
+                s=5,
                 positions=range(len(self._levels[-1])),
+                col=col, 
                 ax=plt.gca())
         
         self.g.map_dataframe(plot_facet)
-        self.g.set_axis_labels(self._groupby[-1], "Corpus position")
+        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         self.g.set_titles(fontweight="bold", size=options.cfg.app.font().pointSize() * self.get_font_scale())
         self.g.set(xticklabels=self._levels[-1])
-        #self.setup_axis("X", self.col_factor)
-        #self.subplot.set_xlabel(self.col_factor)
-        #self.subplot.set_ylabel("Corpus position")
-        #self.figure.tight_layout()
+        self.g.fig.tight_layout()
 
-        
         #sns.despine(self.g.fig, left=False, right=False, top=False, bottom=False)
-        #self.g.map(beeswarm,
-            #values=[self._table["coquery_invisible_corpus_id"]],
-                   ##positions=self._table["coquery_invisible_corpus_id"],
-                   #col=["blue"], method="square")
-        #self.g.set(yticks=[])
-        #self.g.set_axis_labels("Corpus position", "")
-        #self.g.set_titles(fontweight="bold", size=options.cfg.app.font().pointSize() * self.get_font_scale())
