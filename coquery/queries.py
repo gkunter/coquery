@@ -424,7 +424,7 @@ class TokenQuery(object):
             row["coq_context"] = corpus.collapse_words(left + [x.upper() for x in target] + right)
             return row
 
-        if not options.cfg.context_source_id:
+        if not options.cfg.token_origin_id:
             return df
         if not (options.cfg.context_left or options.cfg.context_right):
             return df
