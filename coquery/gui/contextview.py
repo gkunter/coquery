@@ -13,9 +13,11 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
+import sys
+import os
+
 from pyqt_compat import QtCore, QtGui
 
-import sys
 import contextviewUi
 import options
 import sqlwrap
@@ -56,14 +58,17 @@ class ContextView(QtGui.QWidget):
         self.ui.button_ids.clicked.connect(self.toggle_details)
         self.set_details()
         
-        D = self.corpus.get_source_data(source_id)
-        for label in sorted(D.keys()):
-            self.add_source_label(label, D[label])
+        L = self.corpus.get_origin_data(token_id)
+        for table, fields in sorted(L):
+            self.add_source_label(table)
+            for label in sorted(fields.keys()):
+                self.add_source_label(label, fields[label])
         
         self.update_context()
         
-    def add_source_label(self, name, content):
-        """ Add the label 'name' with value 'content' to the context viewer.
+    def add_source_label(self, name, content=None):
+        """ 
+        Add the label 'name' with value 'content' to the context viewer.
         """
         layout_row = self.ui.form_information.count()
         self.ui.source_name = QtGui.QLabel(self.ui.box_context)
@@ -86,12 +91,19 @@ class ContextView(QtGui.QWidget):
         self.ui.form_information.setWidget(layout_row, QtGui.QFormLayout.FieldRole, self.ui.source_content)
         
         if name:
-            name = str(name).strip()
-            if not name.endswith(":"):
-                name += ":"
+            if not content:
+                name = "<b>{}</b>".format(name)
+            else:
+                name = str(name).strip()
+                if not name.endswith(":"):
+                    name += ":"
             self.ui.source_name.setText(name)
         if content:
             content = str(content).strip()
+            if os.path.exists(content) or "://" in content:
+                content = "<a href={0}>{0}</a>".format(content)
+                self.ui.source_content.setOpenExternalLinks(True)
+                self.ui.source_content.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
             self.ui.source_content.setText(content)
 
     def set_details(self):
