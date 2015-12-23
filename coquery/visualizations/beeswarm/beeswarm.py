@@ -135,12 +135,15 @@ def beeswarm(values, positions=None, method="swarm",
 
     # Determine dot size
     figw, figh = ax.get_figure().get_size_inches()
+    dpi = ax.get_figure().get_dpi()
+
     w = (ax.get_position().xmax-ax.get_position().xmin)*figw
     h = (ax.get_position().ymax-ax.get_position().ymin)*figh
     xran = ax.get_xlim()[1]-ax.get_xlim()[0]
     yran = ax.get_ylim()[1]-ax.get_ylim()[0]
-    xsize=math.sqrt(s)*1.0/72*xran*1.0/(w*0.8)
-    ysize=math.sqrt(s)*1.0/72*yran*1.0/(h*0.8)
+
+    xsize=math.sqrt(s) * float(xran) / (w * float(dpi))
+    ysize=math.sqrt(s) * float(yran) / (h * float(dpi))
 
     # Get new arrangements
     if method == "swarm":
@@ -148,7 +151,7 @@ def beeswarm(values, positions=None, method="swarm",
     else:
         bs = _beeswarm(positions, values, ylim=ax.get_ylim(), xsize=xsize, ysize=ysize, method=method, colors=colors)
     # plot
-    ax.scatter(bs["xnew"], bs["ynew"], c=list(bs["color"]), **kwargs)
+    ax.scatter(bs["xnew"], bs["ynew"], c=list(bs["color"]), s=math.sqrt(s)/xsize, **kwargs)
     ax.set_xticks(positions)
     if labels is not None:
         ax.set_xticklabels(labels, rotation=labelrotation)
@@ -166,39 +169,43 @@ def unsplit(x,f):
     y = pandas.DataFrame({"y":[None]*len(f)})
     f = pandas.Series(f)
     for item in set(f):
-        y.ix[f==item,"y"] = x[item]
+        y.ix[f==item, "y"] = x[item]
     return y["y"]
 
 def grid(x, ylim, xsize=0, ysize=0, method="hex", colors="black"):
     """
     Implement the non-swarm arrangement methods
     """
-    size_d = ysize
-    if method == "hex": size_d = size_d*math.sqrt(3)/2
-    size_g = xsize
-    breaks = numpy.arange(ylim[0], ylim[1]+size_d, size_d)
-    mids = (pandas.Series(breaks[:-1]) + pandas.Series(breaks[1:]))*1.0/2
+    if method == "hex": 
+        ysize = ysize * math.sqrt(3) / 2
+    breaks = numpy.arange(ylim[0], ylim[1] + ysize, ysize)
+    mids = (pandas.Series(breaks[:-1]) + pandas.Series(breaks[1:]))*0.5
     d_index = pandas.Series(pandas.cut(pandas.Series(x), bins=breaks, labels=False))
-    d_pos = d_index.apply(lambda x: mids[x])
+    d_pos = pandas.Series([mids[x] for x in d_index])
+    
     v_s = {}
     for item in set(d_index):
-        odd_row = (item%2)==1
         vals = range(list(d_index).count(item))
+        # The mean of a range is equal to the number of elements in the
+        # range minus 1, divided by two
+        mean = (len(vals)-1) / 2.0
         if method == "center":
-            v_s[item] = list(map(lambda a: a - numpy.mean(vals), vals))
+            m = mean
         elif method == "square":
-            v_s[item] = list(map(lambda a: a - math.floor(numpy.mean(vals)), vals))
+            m = math.floor(mean)
         elif method == "hex":
-            if odd_row:
-                v_s[item] = list(map(lambda a: a - math.floor(numpy.mean(vals)) - 0.25, vals))
+            if item % 2:
+                m = math.floor(mean) - 0.25
             else:
-                v_s[item] = list(map(lambda a: a - math.ceil(numpy.mean(vals)) + 0.25, vals))
+                m = math.ceil(mean) + 0.25
         else:
             sys.stderr.write("ERROR: this block should never execute.\n")
             return
+        v_s[item] = [a - m for a in vals]
     x_index = unsplit(v_s, d_index)
-    if type(colors) == str: colors = [colors]*len(x_index)
-    return x_index.apply(lambda x: x*size_g), d_pos, colors
+    if type(colors) == str: 
+        colors = [colors]*len(x_index)
+    return list(x_index * xsize), d_pos, colors
 
 def swarm(x, xsize=0, ysize=0, colors="black"):
     """
@@ -206,7 +213,11 @@ def swarm(x, xsize=0, ysize=0, colors="black"):
     """
     gsize = xsize
     dsize = ysize
-    out = pandas.DataFrame({"x": [item*1.0/dsize for item in x], "y": [0]*len(x), "color": colors, "order": range(len(x))})
+    out = pandas.DataFrame(
+        {"x": [item*1.0/dsize for item in x], 
+         "y": [0]*len(x), 
+         "color": colors, 
+         "order": range(len(x))})
     out.sort_index(by='x', inplace=True)
     if out.shape[0] > 1:
         for i in range(1, out.shape[0]):

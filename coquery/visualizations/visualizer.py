@@ -278,6 +278,10 @@ class BaseVisualizer(object):
         Update the internal representation of the model content so that
         it is usable by the visualizer.
         """
+
+        if not options.cfg.main_window.Session:
+            raise VisualizationNoDataError
+
         
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()

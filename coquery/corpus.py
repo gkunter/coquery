@@ -1367,12 +1367,12 @@ class SQLCorpus(BaseCorpus):
             if current_token.S in ["%", ""] or not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
                 stopwords = self.lexicon.get_stopword_ids()
                 if stopwords:
-                    try:
+                    if sub_list:
                         s = "({}) AND ({} NOT IN ({}))".format(
                             s,
                             self.resource.corpus_word_id,
                             ", ".join([str(x) for x in stopwords]))
-                    except UnboundLocalError:
+                    else:
                         s = "{} NOT IN ({})".format(
                             self.resource.corpus_word_id,
                             ", ".join([str(x) for x in stopwords]))
