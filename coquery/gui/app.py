@@ -1238,6 +1238,7 @@ class CoqueryApp(QtGui.QMainWindow):
             except AttributeError:
                 pass
             self.corpus_manager = None
+            self.fill_combo_corpus()
             
     def shutdown(self):
         """ Shut down the application by removing all open widgets and saving
