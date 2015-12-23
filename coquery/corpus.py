@@ -1134,7 +1134,7 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_id,
             token_id)
         d = self.resource.DB.execute_cursor(S).fetchone()
-        print(d)
+
         for column in d:
             if column == self.resource.corpus_id:
                 continue
