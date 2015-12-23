@@ -605,8 +605,8 @@ class BuilderClass(BaseCorpusBuilder):
             except ValueError:
                 pass
             else:
-                self._value_word_label = ICENigeriaBuilder._replace_encoding_errors(self._value_word_label)
-                self._value_word_lemma = ICENigeriaBuilder._replace_encoding_errors(self._value_word_lemma)
+                self._value_word_label = self._replace_encoding_errors(self._value_word_label)
+                self._value_word_lemma = self._replace_encoding_errors(self._value_word_lemma)
                 new_sentence = False
                 
                 if self._value_word_pos == "CD":
