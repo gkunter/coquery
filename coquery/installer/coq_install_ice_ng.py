@@ -954,6 +954,9 @@ class BuilderClass(BaseCorpusBuilder):
             ("Ã±", "ñ"),
 
             ("Ê€", "ʤ"),
+            
+            ("Î¼", "μ"),
+            ("â", "∆"),
             ]
         corrupt_replace_list = [
             ("", "’"),
