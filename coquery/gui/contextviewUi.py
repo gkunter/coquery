@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'contextview.ui'
 #
-# Created: Thu Nov 12 10:24:18 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -70,8 +69,8 @@ class Ui_ContextView(object):
         self.box_context_width.setFrameShadow(frameShadow)
         self.box_context_width.setObjectName(_fromUtf8("box_context_width"))
         self.horizontalLayout_2 = QtGui.QHBoxLayout(self.box_context_width)
-        self.horizontalLayout_2.setSpacing(10)
         self.horizontalLayout_2.setContentsMargins(8, 6, 8, 6)
+        self.horizontalLayout_2.setSpacing(10)
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
         self.label_4 = QtGui.QLabel(self.box_context_width)
         self.label_4.setObjectName(_fromUtf8("label_4"))
@@ -112,6 +111,7 @@ class Ui_ContextView(object):
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.verticalLayout_3.addWidget(self.buttonBox)
+        self.label_4.setBuddy(self.spin_context_width)
 
         self.retranslateUi(ContextView)
         QtCore.QMetaObject.connectSlotsByName(ContextView)
@@ -119,7 +119,7 @@ class Ui_ContextView(object):
     def retranslateUi(self, ContextView):
         ContextView.setWindowTitle(_translate("ContextView", "Context view – Coquery", None))
         self.button_ids.setText(_translate("ContextView", "Token ID: {}, Source ID: {}", None))
-        self.label_4.setText(_translate("ContextView", "Context size:", None))
+        self.label_4.setText(_translate("ContextView", "&Context size:", None))
         self.spin_context_width.setSpecialValueText(_translate("ContextView", "none", None))
         self.spin_context_width.setSuffix(_translate("ContextView", " words", None))
 

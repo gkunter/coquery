@@ -128,7 +128,10 @@
       <item>
        <widget class="QLabel" name="label_4">
         <property name="text">
-         <string>Context size:</string>
+         <string>&amp;Context size:</string>
+        </property>
+        <property name="buddy">
+         <cstring>spin_context_width</cstring>
         </property>
        </widget>
       </item>
