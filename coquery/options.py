@@ -494,12 +494,14 @@ class Options(object):
                                     server_configuration[number][variable] = int(value)
                                 except ValueError:
                                     continue
-                            elif variable in ["name", "host", "user", "password"]:
+                            elif variable in ["name", "host", "type", "user", "password"]:
                                 server_configuration[number][variable] = value
                 for i in server_configuration:
                     d = server_configuration[i]
+                    if "type" not in d:
+                        d["type"] = "mysql"
                     try:
-                        if "name" in d and "host" in d and "port" in d and "user" in d and "password" in d:
+                        if all(var in d for var in ["name", "host", "port", "user", "password", "type"]):
                             self.args.server_configuration[d["name"]] = d
                     except KeyError:
                         pass
@@ -765,6 +767,7 @@ def save_configuration():
         config.set("sql", "config_{}_name".format(i), d["name"])
         config.set("sql", "config_{}_host".format(i), d["host"])
         config.set("sql", "config_{}_port".format(i), d["port"])
+        config.set("sql", "config_{}_type".format(i), d["type"])
         config.set("sql", "config_{}_user".format(i), d["user"])
         config.set("sql", "config_{}_password".format(i), d["password"])
     
@@ -932,7 +935,7 @@ def get_mysql_configuration():
     """
     if cfg.current_server in cfg.server_configuration:
         d = cfg.server_configuration[cfg.current_server]
-        return (d["host"], d["port"], d["user"], d["password"])
+        return (d["host"], d["port"], d["type"], d["user"], d["password"])
     else:
         return None
 

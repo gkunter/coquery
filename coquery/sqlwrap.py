@@ -32,9 +32,11 @@ except ImportError:
 
 class SqlDB (object):
     """ A wrapper for MySQL. """
-    def __init__(self, Host, Port, User, Password, db_name=None, encoding="utf8", connect_timeout=60):
+    def __init__(self, Host, Port, Type, User, Password, db_name=None, encoding="utf8", connect_timeout=60):
         self.Con = None
         self.Cur = None
+        if Type != "mysql":
+            raise RuntimeError("Database type '{}' not supported.".format(Type))
         try:
             if db_name:
                 self.Con = pymysql.connect(

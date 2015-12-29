@@ -92,7 +92,7 @@ class MySQLOptions(QtGui.QDialog):
     accessDenied = QtCore.Signal(Exception)
     connected = QtCore.Signal()
     
-    def __init__(self, name, config_dict, host="127.0.0.1", port=3306, user="mysql", password="mysql", parent=None):
+    def __init__(self, name, config_dict, host="127.0.0.1", port=3306, user="mysql", password="mysql", db_type="mysql", parent=None):
         
         super(MySQLOptions, self).__init__(parent)
         
@@ -100,6 +100,7 @@ class MySQLOptions(QtGui.QDialog):
         self.default_port = port
         self.default_user = user
         self.default_password = password
+        self.default_type = db_type
     
         self.current_server = name
         self.backup_dict = dict(config_dict)
@@ -241,6 +242,7 @@ class MySQLOptions(QtGui.QDialog):
                 "host": self.default_host,
                 "port": self.default_port,
                 "user": self.default_user,
+                "type": self.default_type,
                 "password": self.default_password}
     
     def get_values(self):
@@ -250,6 +252,7 @@ class MySQLOptions(QtGui.QDialog):
         d["port"] = int(self.ui.port.text())
         d["user"] = str(self.ui.user.text())
         d["password"] = str(self.ui.password.text())
+        d["type"] = "mysql"
         return d
     
     def add_configuration(self):

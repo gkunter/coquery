@@ -545,14 +545,18 @@ class SQLResource(BaseResource):
 
     def connect_to_database(self):
         try:
-            host, port, user, password = options.get_mysql_configuration()
+            host, port, db_type, user, password = options.get_mysql_configuration()
         except ValueError:
             raise SQLNoConfigurationError
-        self.DB = sqlwrap.SqlDB(Host=host, Port=port, User=user, Password=password, db_name=self.db_name)
+        if db_type != "mysql":
+            raise RuntimeError("Database type '{}' not supported.".format(Type))
+        self.DB = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
         logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
         
     def SQLAlchemyConnect(self):
-        host, port, user, password = options.get_mysql_configuration()
+        host, port, db_type, user, password = options.get_mysql_configuration()
+        if db_type != "mysql":
+            raise RuntimeError("Database type '{}' not supported.".format(Type))
         engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4"
         engine = create_engine(engine_string.format(
             host=host,

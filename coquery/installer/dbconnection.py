@@ -31,7 +31,9 @@ logger = None
 insert_cache = defaultdict(list)
 
 class DBConnection(object):
-    def __init__(self, db_user="mysql", db_host="localhost", db_port=3306, db_pass="mysql", local_infile=0, encoding="utf8"):
+    def __init__(self, db_user="mysql", db_host="localhost", db_type="mysql", db_port=3306, db_pass="mysql", local_infile=0, encoding="utf8"):
+        if db_type != "mysql":
+            raise RuntimeError("Database type '{}' not supported.".format(Type))
         self.Con = mysql.connect(
             host=db_host, 
             user=db_user, 
