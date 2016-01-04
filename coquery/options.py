@@ -499,9 +499,13 @@ class Options(object):
                 for i in server_configuration:
                     d = server_configuration[i]
                     if "type" not in d:
-                        d["type"] = "mysql"
+                        d["type"] = SQL_MYSQL
+                    if d["type"] == SQL_MYSQL:
+                        required_vars = ["name", "host", "port", "user", "password"]
+                    elif d["type"] == SQL_SQLITE:
+                        required_vars = ["name"]
                     try:
-                        if all(var in d for var in ["name", "host", "port", "user", "password", "type"]):
+                        if all(var in d for var in required_vars):
                             self.args.server_configuration[d["name"]] = d
                     except KeyError:
                         pass
@@ -764,12 +768,14 @@ def save_configuration():
 
     for i, server in enumerate(cfg.server_configuration):
         d = cfg.server_configuration[server]
-        config.set("sql", "config_{}_name".format(i), d["name"])
-        config.set("sql", "config_{}_host".format(i), d["host"])
-        config.set("sql", "config_{}_port".format(i), d["port"])
-        config.set("sql", "config_{}_type".format(i), d["type"])
-        config.set("sql", "config_{}_user".format(i), d["user"])
-        config.set("sql", "config_{}_password".format(i), d["password"])
+        if d["type"] == SQL_MYSQL:
+            required_vars = ["name", "host", "port", "user", "password", "type"]
+        elif d["type"] == SQL_SQLITE:
+            required_vars = ["name", "type"]
+        else:
+            required_vars = []
+        for x in required_vars:
+            config.set("sql", "config_{}_{}".format(i, x), d[x])
     
     if cfg.selected_features:
         if not "output" in config.sections():
@@ -935,7 +941,10 @@ def get_mysql_configuration():
     """
     if cfg.current_server in cfg.server_configuration:
         d = cfg.server_configuration[cfg.current_server]
-        return (d["host"], d["port"], d["type"], d["user"], d["password"])
+        if d["type"] == SQL_MYSQL:
+            return (d["host"], d["port"], d["type"], d["user"], d["password"])
+        elif d["type"] == SQL_SQLITE:
+            return (None, None, SQL_SQLITE, None, None)
     else:
         return None
 
@@ -1018,7 +1027,8 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
     if expected_classes:
         raise ModuleIncompleteError(corpus_name, cfg.current_server, expected_classes)
     if hash:
-        return hashlib.md5(content.encode("utf-8"))
+        #return hashlib.md5(content.encode("utf-8"))
+        return hashlib.md5("MD5 hash not available")
 
 def set_current_server(name):
     """
@@ -1204,6 +1214,10 @@ def get_home_dir(create=True):
         # create corpora directory if it doesn't exist yet:
         if not os.path.exists(os.path.join(coquery_home, "corpora")):
             os.makedirs(os.path.join(coquery_home, "corpora"))
+
+        # create SQLite databases directory if it doesn't exist yet:
+        if not os.path.exists(os.path.join(coquery_home, "databases")):
+            os.makedirs(os.path.join(coquery_home, "databases"))
         
     return coquery_home
 
