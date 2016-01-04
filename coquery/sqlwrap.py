@@ -22,7 +22,10 @@ except AttributeError:
 import warnings
 
 from errors import *
+from defines import *
 import options
+
+import sqlite3
 
 try:
     import pymysql
@@ -35,31 +38,45 @@ class SqlDB (object):
     def __init__(self, Host, Port, Type, User, Password, db_name=None, encoding="utf8", connect_timeout=60):
         self.Con = None
         self.Cur = None
-        if Type != "mysql":
+        if Type not in SQL_ENGINES:
             raise RuntimeError("Database type '{}' not supported.".format(Type))
-        try:
-            if db_name:
-                self.Con = pymysql.connect(
-                    host=Host, 
-                    port=Port, 
-                    user=User, 
-                    passwd=Password, 
-                    db=db_name,
-                    connect_timeout=connect_timeout,
-                    charset=encoding)
-            else:
-                self.Con = pymysql.connect(
-                    host=Host, 
-                    port=Port, 
-                    user=User, 
-                    passwd=Password,
-                    connect_timeout=connect_timeout,
-                    charset=encoding)
+        elif Type == SQL_MYSQL:
+            try:
+                if db_name:
+                    self.Con = pymysql.connect(
+                        host=Host, 
+                        port=Port, 
+                        user=User, 
+                        passwd=Password, 
+                        db=db_name,
+                        connect_timeout=connect_timeout,
+                        charset=encoding)
+                else:
+                    self.Con = pymysql.connect(
+                        host=Host, 
+                        port=Port, 
+                        user=User, 
+                        passwd=Password,
+                        connect_timeout=connect_timeout,
+                        charset=encoding)
 
-        except (pymysql.OperationalError, pymysql.InternalError) as e:
-             raise SQLInitializationError(e)
-        self.Cur = self.Con.cursor()
-        self.set_variable("NAMES", encoding)
+            except (pymysql.OperationalError, pymysql.InternalError) as e:
+                raise SQLInitializationError(e)
+            self.Cur = self.Con.cursor()
+            self.set_variable("NAMES", encoding)
+        elif Type == SQL_SQLITE:
+            if db_name:
+                self.Con = sqlite3.connect(
+                    os.path.join(options.get_home_dir(), "databases", "{}.db".format(db_name)))
+                self.Cur = self.Con.cursor()
+            else:
+                raise SQLInitializationError("SQLite requires a database name")
+        else:
+            raise RuntimeError("Database type '{}' not supported.".format(Type))
+
+    @staticmethod
+    def sqlite_path(db_name):
+        return os.path.join(options.get_home_dir(), "databases", "{}.db".format(db_name))
 
     @staticmethod
     def test_connection(host, port, user, password, connect_timeout=60):
