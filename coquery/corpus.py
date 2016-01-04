@@ -615,32 +615,27 @@ class SQLResource(BaseResource):
         df[4] = df[2] / df[3]
         return df
 
-    def yield_query_results(self, Query, token_list, self_joined=False):
-        """
-        Run the corpus query specified in the token_list on the corpus
-        and yield the results.
-        """
-        try:
-            if self_joined:
-                query_string = self.corpus.sql_string_query_self_joined(Query, token_list)
-            else:
-                query_string = self.corpus.sql_string_query(Query, token_list)
-        except WordNotInLexiconError:
-            query_string = ""
-            
-        Query.Session.output_order = self.get_select_list(Query)
-
-        if query_string:
-            cursor = self.DB.execute_cursor(query_string, server_side=options.cfg.server_side)
-        else:
-            cursor = {}
-        for current_result in cursor:
-            yield current_result
-
     def get_query_string(self, Query, token_list, self_joined=False):
         """
-        Run the corpus query specified in the token_list on the corpus
-        and yield the results.
+        Get a query string that can be used to retrieve the query matches.
+
+        If any of the tokens does not match any word in the current lexicon,
+        an empty query string is returned.
+        
+        Parameters
+        ----------
+        query : TokenQuery
+            An TokenQuery instance that specifies the current query.
+        token_list : list 
+            A list of Tokens
+        self_joined : bool
+            True if the query is to be run on a table with static self-joins, 
+            or False if the query is to be run on several dynamic self-joins.
+            
+        Returns
+        -------
+        query_string : str 
+            A string that can be executed by an SQL engine.
         """
         try:
             if self_joined:
