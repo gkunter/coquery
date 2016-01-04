@@ -206,6 +206,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.label_5.setFixedHeight(self.ui.label_5.height())
         
         self.ui.data_preview.setEnabled(False)
+        self.ui.menu_Results.setEnabled(False)
+        self.ui.menuAnalyse.setEnabled(False)
         
         # set splitter stretches:
         self.ui.splitter.setStretchFactor(0,0)
@@ -216,6 +218,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.table_model = classes.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
         self.table_model.columnVisibilityChanged.connect(self.reaggregate)
+
         header = self.ui.data_preview.horizontalHeader()
         header.sectionResized.connect(self.result_column_resize)
         header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -226,11 +229,13 @@ class CoqueryApp(QtGui.QMainWindow):
         header.customContextMenuRequested.connect(self.show_row_header_menu)
 
         self.ui.data_preview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
 
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
+
+        self.ui.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows|QtGui.QAbstractItemView.SelectColumns)
+
 
         self.ui.context_query_syntax.setPixmap(QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_TitleBarContextHelpButton))
         
@@ -308,7 +313,77 @@ class CoqueryApp(QtGui.QMainWindow):
             lambda: self.visualize_data("timeseries", area=True, percentage=False))
         self.ui.action_line_plot.triggered.connect(
             lambda: self.visualize_data("timeseries", area=False, percentage=False))
-    
+        
+        self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
+
+    def show_results_menu(self):
+        
+        self.ui.menu_Results.clear()
+
+        select = self.ui.data_preview.selectionModel()
+        if not select:
+            # If there is no selection model, the results view is probably
+            # empty. In this case, add a disabled menu entry and exit:
+
+            self.ui.menuDisabled = QtGui.QAction(self.ui.menu_Results)
+            self.ui.menuDisabled.setText("Run a query first.")
+            self.ui.menuDisabled.setDisabled(True)
+            self.ui.menu_Results.addAction(self.ui.menuDisabled)
+            return
+
+        # Add clipboard menu entry:
+        self.ui.action_copy_to_clipboard = QtGui.QAction(self.ui.menu_Results)
+        self.ui.action_copy_to_clipboard.setText(_translate("MainWindow", "&Copy to clipboard", None))
+        self.ui.action_copy_to_clipboard.setShortcut(_translate("MainWindow", "Ctrl+C", None))
+        icon = QtGui.QIcon.fromTheme(_fromUtf8("edit-copy"))
+        self.ui.action_copy_to_clipboard.setIcon(icon)
+        self.ui.action_copy_to_clipboard.triggered.connect(self.copy_to_clipboard)
+        self.ui.menu_Results.addAction(self.ui.action_copy_to_clipboard)
+        self.ui.action_copy_to_clipboard.setDisabled(True)
+
+        # Add save menu entry:
+        self.ui.action_save_results = QtGui.QAction(self.ui.menu_Results)
+        self.ui.action_save_results.setText(_translate("MainWindow", "&Save...", None))
+        self.ui.action_save_results.setShortcut(_translate("MainWindow", "Ctrl+S", None))
+        icon = QtGui.QIcon.fromTheme(_fromUtf8("document-save"))
+        self.ui.action_save_results.setIcon(icon)
+        self.ui.action_save_results.triggered.connect(self.save_results)
+        self.ui.menu_Results.addAction(self.ui.action_save_results)
+
+        self.ui.menu_Results.addSeparator()        
+
+        # Check if columns are selected
+        if select.selectedColumns():
+            # Add column submenu
+            selection = []
+            for x in self.ui.data_preview.selectionModel().selectedColumns():
+                selection.append(self.table_model.header[x.column()])
+            
+            self.ui.menuColumns = self.get_column_context_menu(selection=selection)
+            self.ui.menu_Results.addMenu(self.ui.menuColumns)
+        else:
+            # Otherwise, add disabled menu entry
+            self.ui.menuColumns = QtGui.QAction(self.ui.menu_Results)
+            self.ui.menuColumns.setText("No columns selected.")
+            self.ui.menuColumns.setDisabled(True)
+            self.ui.menu_Results.addAction(self.ui.menuColumns)
+            
+        # Check if rows are selected
+        if select.selectedRows():
+            # Add rows submenu
+            selection = []
+            for x in self.ui.data_preview.selectionModel().selectedRows():
+                selection.append(self.table_model.content.index[x.row()])
+            
+            self.ui.menuRows = self.get_row_context_menu(selection=selection)
+            self.ui.menu_Results.addMenu(self.ui.menuRows)
+        else:
+            # Otherwise, add disabled menu entry
+            self.ui.menuRows = QtGui.QAction(self.ui.menu_Results)
+            self.ui.menuRows.setText("No rows selected.")
+            self.ui.menuRows.setDisabled(True)
+            self.ui.menu_Results.addAction(self.ui.menuRows)
+        
     def setup_hooks(self):
         """ Hook up signals so that the GUI can adequately react to user 
         input. """
@@ -587,6 +662,8 @@ class CoqueryApp(QtGui.QMainWindow):
     def display_results(self):
         self.ui.box_aggregation_mode.show()
         self.ui.data_preview.setEnabled(True)
+        self.ui.menu_Results.setEnabled(True)
+        self.ui.menuAnalyse.setEnabled(True)
         
         self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header()
@@ -670,29 +747,38 @@ class CoqueryApp(QtGui.QMainWindow):
         result = stopwords.Stopwords.manage(self, options.cfg.icon)
         self.set_stopword_button()
     
-    def save_results(self):
-        name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.results_file_path)
-        if type(name) == tuple:
-            name = name[0]
-        if name:
+    def copy_to_clipboard(self):
+        self.save_results(to_clipboard=True)
+    
+    def save_results(self, to_clipboard=False):
+        if not to_clipboard:
+            name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.results_file_path)
+            if type(name) == tuple:
+                name = name[0]
+            if not name:
+                return
             options.cfg.results_file_path = os.path.dirname(name)
-            try:
-                header = self.ui.data_preview.horizontalHeader()
-                ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
-                ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
-                tab = self.table_model.content[ordered_headers]
-                # exclude invisble rows:
-                tab = tab.iloc[~tab.index.isin(pd.Series(options.cfg.row_visibility.keys()))]
-                tab.to_csv(name,
-                           sep=options.cfg.output_separator,
-                           index=False,
-                           header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
-                           encoding=options.cfg.output_encoding)
-            except IOError as e:
-                QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
-            except (UnicodeEncodeError, UnicodeDecodeError):
-                QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+        try:
+            header = self.ui.data_preview.horizontalHeader()
+            ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
+            ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
+            tab = self.table_model.content[ordered_headers]
+            # exclude invisble rows:
+            tab = tab.iloc[~tab.index.isin(pd.Series(options.cfg.row_visibility.keys()))]
+            if to_clipboard:
+                tab.to_clipboard(excel=False)
             else:
+                tab.to_csv(name,
+                        sep=options.cfg.output_separator,
+                        index=False,
+                        header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
+                        encoding=options.cfg.output_encoding)
+        except IOError as e:
+            QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+        else:
+            if not to_clipboard:
                 self.last_results_saved = True
     
     def showMessage(self, S):
@@ -744,14 +830,18 @@ class CoqueryApp(QtGui.QMainWindow):
             len(self.Session.output_object.index), duration_str))
         options.cfg.app.alert(self, 10)
         
-    def show_header_menu(self, point ):
-        header = self.ui.data_preview.horizontalHeader()
-        header.customContextMenuRequested.disconnect(self.show_header_menu)
-        # show self.menu about the column
-        self.menu = QtGui.QMenu("Column options", self)
+    def get_column_context_menu(self, selection=[], point=None):
+        # show menu about the column
+        menu = QtGui.QMenu("Column options", self)
 
-        index = header.logicalIndexAt(point.x())
-        column = self.table_model.header[index]
+        if not selection:
+            if point:
+                header = self.ui.data_preview.horizontalHeader()
+                index = header.logicalIndexAt(point.x())
+                column = self.table_model.header[index]
+                selection = [column]
+
+        column = selection[0]
 
         display_name = options.cfg.main_window.Session.translate_header(column)
         
@@ -759,52 +849,52 @@ class CoqueryApp(QtGui.QMainWindow):
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
         label.setAlignment(QtCore.Qt.AlignCenter)
         action.setDefaultWidget(label)
-        self.menu.addAction(action)
-        self.menu.addSeparator()
+        menu.addAction(action)
+        menu.addSeparator()
 
         if not options.cfg.column_visibility.get(column, True):
             action = QtGui.QAction("&Show column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
-            self.menu.addAction(action)
+            menu.addAction(action)
         else:
             action = QtGui.QAction("&Hide column", self)
             action.triggered.connect(lambda: self.toggle_visibility(column))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
-            self.menu.addAction(action)
-            self.menu.addSeparator()
+            menu.addAction(action)
+            menu.addSeparator()
 
             action = QtGui.QAction("&Rename column...", self)
             action.triggered.connect(lambda: self.rename_column(column))
-            self.menu.addAction(action)
+            menu.addAction(action)
 
             if column in options.cfg.column_color:
                 action = QtGui.QAction("&Reset color", self)
                 action.triggered.connect(lambda: self.reset_color(column))
-                self.menu.addAction(action)
+                menu.addAction(action)
     
             action = QtGui.QAction("&Change color...", self)
             action.triggered.connect(lambda: self.change_color(column))
-            self.menu.addAction(action)
-            self.menu.addSeparator()
+            menu.addAction(action)
+            menu.addSeparator()
 
             group = QtGui.QActionGroup(self, exclusive=True)
             action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
             action.triggered.connect(lambda: self.change_sorting_order(column, SORT_NONE))
             if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_NONE:
                 action.setChecked(True)
-            self.menu.addAction(action)
+            menu.addAction(action)
             
             action = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
             action.triggered.connect(lambda: self.change_sorting_order(column, SORT_INC))
             if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_INC:
                 action.setChecked(True)
-            self.menu.addAction(action)
+            menu.addAction(action)
             action = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
             action.triggered.connect(lambda: self.change_sorting_order(column, SORT_DEC))
             if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_DEC:
                 action.setChecked(True)
-            self.menu.addAction(action)
+            menu.addAction(action)
                                     
             if self.table_model.content[[column]].dtypes[0] == "object":
                 action = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
@@ -812,31 +902,23 @@ class CoqueryApp(QtGui.QMainWindow):
                 if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_REV_INC:
                     action.setChecked(True)
 
-                self.menu.addAction(action)
+                menu.addAction(action)
                 action = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
                 action.triggered.connect(lambda: self.change_sorting_order(column, SORT_REV_DEC))
                 if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_REV_DEC:
                     action.setChecked(True)
-                self.menu.addAction(action)
-        
-        self.menu.popup(header.mapToGlobal(point))
-        header.customContextMenuRequested.connect(self.show_header_menu)
+                menu.addAction(action)
+        return menu
 
-    def show_row_header_menu(self, point):
-        self.ui.data_preview.customContextMenuRequested.disconnect(self.show_row_header_menu)
-        header = self.ui.data_preview.verticalHeader()
-        # show self.menu about the column
-        self.menu = QtGui.QMenu("Row options", self)
-
-        index = header.logicalIndexAt(point.y())
-        row = self.table_model.content.index[index]
-        
-        selection = []
-        for x in self.ui.data_preview.selectionModel().selectedRows():
-            selection.append(self.table_model.content.index[x.row()])
+    def get_row_context_menu(self, selection=[], point=None):
+        menu = QtGui.QMenu("Row options", self)
 
         if not selection:
-            selection.append(self.table_model.content.index[row - 1])
+            if point:
+                header = self.ui.data_preview.verticalHeader()
+                index = header.logicalIndexAt(point.y())
+                row = self.table_model.content.index[index]
+                selection = [self.table_model.content.index[row - 1]]
 
         length = len(selection)
         if length > 1:
@@ -849,10 +931,10 @@ class CoqueryApp(QtGui.QMainWindow):
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
         label.setAlignment(QtCore.Qt.AlignCenter)
         action.setDefaultWidget(label)
-        self.menu.addAction(action)
+        menu.addAction(action)
         
         if length:
-            self.menu.addSeparator()
+            menu.addSeparator()
             # Check if any row is hidden
             if any([not options.cfg.row_visibility.get(x, True) for x in selection]):
                 if length > 1:
@@ -864,7 +946,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     action = QtGui.QAction("&Show row", self)
                 action.triggered.connect(lambda: self.set_row_visibility(selection, True))
                 action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
-                self.menu.addAction(action)
+                menu.addAction(action)
             # Check if any row is visible
             if any([options.cfg.row_visibility.get(x, True) for x in selection]):
                 if length > 1:
@@ -876,21 +958,45 @@ class CoqueryApp(QtGui.QMainWindow):
                     action = QtGui.QAction("&Hide row", self)
                 action.triggered.connect(lambda: self.set_row_visibility(selection, False))
                 action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
-                self.menu.addAction(action)
-            self.menu.addSeparator()
+                menu.addAction(action)
+            menu.addSeparator()
             
             # Check if any row has a custom color:
             if any([x in options.cfg.row_color for x in selection]):
                 action = QtGui.QAction("&Reset color", self)
                 action.triggered.connect(lambda: self.reset_row_color(selection))
-                self.menu.addAction(action)
+                menu.addAction(action)
 
             action = QtGui.QAction("&Change color...", self)
             action.triggered.connect(lambda: self.change_row_color(selection))
-            self.menu.addAction(action)
+            menu.addAction(action)
+        return menu
+
+    def show_header_menu(self, point=None):
+        """
+        Show a context menu for the current column selection. If no column is
+        selected, show a context menu for the column that has been clicked on.
+        """
+        selection = []
+        for x in self.ui.data_preview.selectionModel().selectedColumns():
+            selection.append(self.table_model.header[x.column()])
         
+        header = self.ui.data_preview.horizontalHeader()
+        self.menu = self.get_column_context_menu(selection=selection, point=point)
         self.menu.popup(header.mapToGlobal(point))
-        self.ui.data_preview.customContextMenuRequested.connect(self.show_row_header_menu)
+
+    def show_row_header_menu(self, point=None):
+        """
+        Show a context menu for the current row selection. If no row is
+        selected, show a context menu for the row that has been clicked on.
+        """
+        selection = []
+        for x in self.ui.data_preview.selectionModel().selectedRows():
+            selection.append(self.table_model.content.index[x.row()])
+        
+        header = self.ui.data_preview.verticalHeader()
+        self.menu = self.get_row_context_menu(selection=selection, point=point)
+        self.menu.popup(header.mapToGlobal(point))
 
     def rename_column(self, column):
         """
@@ -976,7 +1082,6 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.row_color[np.int64(x)] = col.name()
         
     def change_sorting_order(self, column, mode):
-        self.menu.close()
         if mode == SORT_NONE:
             self.table_model.sort_columns.pop(column)
         else:
@@ -1670,5 +1775,16 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.options_tree.takeTopLevelItem(self.ui.options_tree.indexOfTopLevelItem(item))
         else:
             item.parent().removeChild(item)
+
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
     
 logger = logging.getLogger(__init__.NAME)
+
+
