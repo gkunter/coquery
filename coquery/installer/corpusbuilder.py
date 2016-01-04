@@ -312,6 +312,8 @@ class Table(object):
                     warnings.warn(sql_string)
                     warnings.warn(str(e))
                 except Exception as e:
+                    print(e)
+                    print(sql_string)
                     warnings.warn(sql_string)
                     warnings.warn(str(e))
                     raise e
@@ -420,34 +422,66 @@ class Table(object):
                 return x
         return None
             
-    def get_create_string(self):
+    def get_create_string(self, db_type):
         """
-        Generates the MySQL command required to create the table.
+        Generates the SQL command required to create the table.
+        
+        Parameters
+        ----------
+        db_type : str
+            A string representing the SQL engine, either "mysql" or "sqlite"
         
         Returns
         -------
         S : str
-            A string that can be sent to the MySQL server in order to create
+            A string that can be sent to the SQL engine in order to create
             the table according to the specifications.
         """
+        command_list = []
         str_list = []
         columns_added = set([])
         for column in self.columns:
             if column.name not in columns_added:
-                if column.primary:
-                    # do not add AUTO_INCREMENT to ENUMs:
-                    if column.data_type.upper().startswith("ENUM"):
-                        pattern = "`{}` {}"
+                if db_type == SQL_MYSQL:
+                    if column.primary:
+                        # do not add AUTO_INCREMENT to ENUMs:
+                        if column.data_type.upper().startswith("ENUM"):
+                            pattern = "{} {}"
+                        else:
+                            pattern = "{} {} AUTO_INCREMENT"
+                        str_list.insert(0, pattern.format(column.name, column.data_type))
+                        str_list.append("PRIMARY KEY ({})".format(column.name))
                     else:
-                        pattern = "`{}` {} AUTO_INCREMENT"
-                    str_list.insert(0, pattern.format(column.name, column.data_type))
-                    str_list.append("PRIMARY KEY (`{}`)".format(column.name))
-                else:
-                    str_list.append("`{}` {}".format(
-                        column.name,
-                        column.data_type))
-                columns_added.add(column.name)
-        return ", ".join(str_list)
+                        str_list.append("{} {}".format(
+                            column.name,
+                            column.data_type))
+                    columns_added.add(column.name)
+                elif db_type == SQL_SQLITE:
+                    match = re.match("^\s*enum\((.+)\)(.*)$", column.data_type, re.IGNORECASE)
+                    if match:
+                        max_len = 0
+                        for x in match.group(1).split(","):
+                            max_len = max(max_len, len(x.strip(" '\"")))
+                        data_type = "VARCHAR({max_len}) {spec}".format(
+                            max_len=max_len, spec=match.group(2))
+                    else:
+                        data_type = column.data_type
+                    
+                    if column.primary:
+                        str_list.insert(0, "{} {} PRIMARY KEY".format(
+                            column.name, data_type))
+                    else:
+                        str_list.append("{} {}".format(
+                            column.name, data_type))
+                    columns_added.add(column.name)
+
+        S = ", ".join(str_list)
+        command_list.insert(0, S)
+        table_str = "; ".join(command_list)
+        if db_type == SQL_SQLITE:
+            return re.sub(r"\s*UNSIGNED", "", table_str)
+        else:
+            return table_str
     
 class BaseCorpusBuilder(corpus.BaseResource):
     """ 
@@ -601,8 +635,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
             data = [list(row.values()) for row in self._corpus_buffer]
             if data: 
                 try:
-                    self.Con.executemany(sql_string, data)
+                    self.Con.executemany(sql_string, tuple(data))
+                    self.Con.commit()
                 except TypeError as e:
+                    print(e)
                     warnings.warn(sql_string)
                     warnings.warn(data[0])
                     raise(e)
@@ -692,7 +728,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         for i, current_table in enumerate(self._new_tables):
             if not self.Con.has_table(current_table):
-                self.Con.create_table(current_table, self._new_tables[current_table].get_create_string())
+                self.Con.create_table(
+                    current_table, 
+                    self._new_tables[current_table].get_create_string(self.arguments.db_type))
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
             if self.interrupted:
@@ -1282,20 +1320,20 @@ class BaseCorpusBuilder(corpus.BaseResource):
             
         #for x in self.table_description:
             #self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
-        
-        for i, file_name in enumerate(files):
-            if self.interrupted:
-                return
-
-            if not self.Con.find(self.file_table, {self.file_path: file_name}):
-                self.logger.info("Loading file %s" % (file_name))
-                self.store_filename(file_name)
-                self.process_file(file_name)
-                
-            if self._widget:
-                self._widget.progressUpdate.emit(i + 1)
-
-            self.commit_data()
+        try:
+            for i, file_name in enumerate(files):
+                if self.interrupted:
+                    return
+                if not self.Con.find(self.file_table, {self.file_path: file_name}):
+                    self.logger.info("Loading file %s" % (file_name))
+                    self.store_filename(file_name)
+                    self.process_file(file_name)
+                if self._widget:
+                    self._widget.progressUpdate.emit(i + 1)
+                self.commit_data()
+        except Exception as e:
+            print(e)
+            raise e
 
     def build_create_frequency_table(self):
         """ 
@@ -1363,7 +1401,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     ot = self.Con.get_optimal_field_type(table.name, column.name)
                 except TypeError:
                     continue
-                dt = column.data_type
+                dt = self.Con.get_field_type(table.name, column.name)
                 if dt.lower() != ot.lower():
                     try:
                         ot = ot.decode("utf-8")
@@ -1373,6 +1411,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         table.name, column.name, dt, ot))
                     try:
                         self.Con.modify_field_type(table.name, column.name, ot)
+                    except Exception as e:
+                        print(e)
+                        raise e
                     except (
                         dbconnection.mysql.InterfaceError, 
                         dbconnection.mysql.DataError,
@@ -1609,6 +1650,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.Con = dbconnection.DBConnection(
             db_host=self.arguments.db_host,
             db_user=self.arguments.db_user,
+            db_type=self.arguments.db_type,
             db_pass=self.arguments.db_password,
             db_port=self.arguments.db_port,
             local_infile=1)
@@ -1618,10 +1660,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.Con.create_database(self.arguments.db_name)
         self.Con.use_database(self.arguments.db_name)
 
-        cursor = self.Con.Con.cursor()
-        self.Con.execute(cursor, "SET autocommit=0")
-        self.Con.execute(cursor, "SET unique_checks=0")
-        self.Con.execute(cursor, "SET foreign_key_checks=0")
+        if self.arguments.db_type == SQL_MYSQL:
+            cursor = self.Con.Con().cursor()
+            self.Con.execute(cursor, "SET autocommit=0")
+            self.Con.execute(cursor, "SET unique_checks=0")
+            self.Con.execute(cursor, "SET foreign_key_checks=0")
 
     def add_building_stage(self, stage):
         """ The parameter stage is a function that will be executed
@@ -1719,7 +1762,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if not self._widget:
                 self.setup_logger()
             self.setup_db()
-
             if self._widget:
                 steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.self_join) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
                 self._widget.ui.progress_bar.setMaximum(steps)
@@ -1728,7 +1770,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             current = progress_next(current)
             self.initialize_build()
             progress_done()
-            
+
             if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
                 raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
             
@@ -1767,15 +1809,16 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 current = progress_next(current)
                 self.build_write_module()
                 current = progress_next(current)
-                
+
             if not self.interrupted:
                 current = progress_next(current)
                 self.build_create_frequency_table()
-                progress_done
+                progress_done()
 
             self.build_finalize()
         except Exception as e:
             warnings.warn(str(e))
+            print(e)
             raise e
             
 if use_gui:

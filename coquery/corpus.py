@@ -543,27 +543,35 @@ class SQLResource(BaseResource):
         else:
             options.cfg.token_origin_id = None
 
-    def connect_to_database(self):
+    def get_db(self):
         try:
             host, port, db_type, user, password = options.get_mysql_configuration()
         except ValueError:
             raise SQLNoConfigurationError
-        if db_type != "mysql":
-            raise RuntimeError("Database type '{}' not supported.".format(Type))
-        self.DB = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
+        if db_type not in SQL_ENGINES:
+            raise RuntimeError("Database type '{}' not supported.".format(db_type))
+        db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
         logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
+        return db
+    
+    def connect_to_database(self):
+        self.DB = self.get_db()
         
     def SQLAlchemyConnect(self):
         host, port, db_type, user, password = options.get_mysql_configuration()
-        if db_type != "mysql":
-            raise RuntimeError("Database type '{}' not supported.".format(Type))
-        engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4"
-        engine = create_engine(engine_string.format(
-            host=host,
-            port=port,
-            user=user, 
-            password=password,
-            db_name=self.db_name))
+        if db_type == SQL_MYSQL:
+            engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
+                host=host,
+                port=port,
+                user=user, 
+                password=password,
+                db_name=self.db_name)
+        elif db_type == SQL_SQLITE:
+            engine_string = "sqlite+pysqlite:///{}".format(
+                self.DB.sqlite_path(self.db_name))
+        else:
+            raise RuntimeError("Database type '{}' not supported.".format(db_type))
+        engine = create_engine(engine_string)
         return engine.connect()
 
     def get_statistics(self):
@@ -1081,8 +1089,10 @@ class SQLLexicon(BaseLexicon):
         if stopwords:
             stopword_ids = self.get_stopword_ids()
         S = self.sql_string_get_matching_wordids(token)
-        self.resource.DB.execute(S)
-        query_results = self.resource.DB.fetch_all()
+        
+        db = self.resource.get_db()
+        db.execute(S)
+        query_results = db.fetch_all()
         if not query_results:
             raise WordNotInLexiconError
         else:

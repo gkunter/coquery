@@ -84,6 +84,11 @@ COLUMN_NAMES = {
 
 DEFAULT_CONFIGURATION = "Default"
 
+SQL_MYSQL = "mysql"
+SQL_SQLITE = "sqlite"
+
+SQL_ENGINES = [SQL_MYSQL, SQL_SQLITE]
+
 # for Python 3 compatibility:
 try:
     unicode()

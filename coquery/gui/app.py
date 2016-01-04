@@ -1306,9 +1306,14 @@ class CoqueryApp(QtGui.QMainWindow):
             state = False
         else:
             db_con = options.cfg.server_configuration[options.cfg.current_server]
-            state = bool(sqlwrap.SqlDB.test_connection(
-                db_con["host"], db_con["port"], 
-                db_con["user"], db_con["password"]))
+            if db_con["type"] == SQL_MYSQL:
+                state = bool(sqlwrap.SqlDB.test_connection(
+                    db_con["host"], db_con["port"], 
+                    db_con["user"], db_con["password"]))
+            elif db_con["type"] == SQL_SQLITE:
+                state = True
+            else:
+                state = False
 
         # Choose a suitable icon:
         if state:
