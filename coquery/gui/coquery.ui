@@ -1043,7 +1043,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <string>&amp;File</string>
     </property>
     <addaction name="action_open_input_file"/>
-    <addaction name="action_save_results"/>
+    <addaction name="action_view_log"/>
     <addaction name="separator"/>
     <addaction name="action_quit"/>
    </widget>
@@ -1073,7 +1073,6 @@ The number of occurrences of each token matching the query string is counted. Th
     <addaction name="action_mySQL_settings"/>
     <addaction name="action_settings"/>
     <addaction name="separator"/>
-    <addaction name="action_view_log"/>
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
@@ -1115,8 +1114,14 @@ The number of occurrences of each token matching the query string is counted. Th
     <addaction name="menuTime_data"/>
     <addaction name="menuFrequency_maps"/>
    </widget>
+   <widget class="QMenu" name="menu_Results">
+    <property name="title">
+     <string>&amp;Results</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
+   <addaction name="menu_Results"/>
    <addaction name="menuAnalyse"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHilfe"/>
@@ -1267,6 +1272,9 @@ The number of occurrences of each token matching the query string is counted. Th
    <property name="toolTip">
     <string>Install a corpus into a MySQL database</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
+   </property>
   </action>
   <action name="action_tree_map">
    <property name="enabled">
@@ -1361,12 +1369,37 @@ The number of occurrences of each token matching the query string is counted. Th
   </action>
   <action name="action_view_log">
    <property name="text">
-    <string>View log...</string>
+    <string>View log file...</string>
    </property>
   </action>
   <action name="action_mysql_server_help">
    <property name="text">
     <string>MySQL server help</string>
+   </property>
+  </action>
+  <action name="action_Column_context_menu">
+   <property name="text">
+    <string>[Column context menu]</string>
+   </property>
+  </action>
+  <action name="action_Row_context_menu">
+   <property name="text">
+    <string>[Row context menu]</string>
+   </property>
+  </action>
+  <action name="actionCopy_to_clipboard">
+   <property name="text">
+    <string>Copy to clipboard</string>
+   </property>
+  </action>
+  <action name="actionSave_results">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="action_Selection_menu">
+   <property name="text">
+    <string>[Selection menu]</string>
    </property>
   </action>
  </widget>
