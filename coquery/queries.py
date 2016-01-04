@@ -309,9 +309,13 @@ class TokenQuery(object):
                 else:
                     # This SQLAlchemy optimization including the string folder 
                     # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
-                    results = (connection.execution_options(stream_results=True).execute(self.Resource.get_query_string(self, self._sub_query)))
+                    query_string = self.Resource.get_query_string(self, self._sub_query)
+                    if options.cfg.verbose:
+                        logger.info(query_string)
+                    results = connection.execution_options(stream_results=True).execute(query_string)
                     df = pd.DataFrame(self.string_folder(results))
                     df.columns = results.keys()
+                    results = None
 
             df = self.insert_static_data(df)
             df = self.insert_context(df)
