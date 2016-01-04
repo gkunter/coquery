@@ -24,6 +24,7 @@ import mysqlConfigurationUi
 
 import sqlwrap
 from errors import *
+from defines import *
 import QtProgress
 
 def check_valid_host(s):
@@ -90,6 +91,7 @@ def check_valid_host(s):
 class MySQLOptions(QtGui.QDialog):
     noConnection = QtCore.Signal(Exception)
     accessDenied = QtCore.Signal(Exception)
+    configurationError = QtCore.Signal(Exception)
     connected = QtCore.Signal()
     
     def __init__(self, name, config_dict, host="127.0.0.1", port=3306, user="mysql", password="mysql", db_type="mysql", parent=None):
@@ -121,6 +123,7 @@ class MySQLOptions(QtGui.QDialog):
         # set up connection signals:
         self.noConnection.connect(lambda x: self.update_connection("noConnection", x))
         self.accessDenied.connect(lambda x: self.update_connection("accessDenied", x))
+        self.configurationError.connect(lambda x: self.update_connection("configurationError", x))
         self.connected.connect(lambda: self.update_connection("connected"))
         self.state = None
         
@@ -146,6 +149,9 @@ class MySQLOptions(QtGui.QDialog):
         self.ui.port.valueChanged.connect(lambda: self.update_configuration(True))
         self.ui.radio_local.clicked.connect(lambda: self.update_configuration(True))
         self.ui.radio_remote.clicked.connect(lambda: self.update_configuration(True))
+        self.ui.radio_mysql.toggled.connect(self.toggle_engine)
+        self.ui.radio_sqlite.toggled.connect(self.toggle_engine)
+        self.toggle_engine()
 
     def update_connection(self, state, exc=None):
         if state == "noConnection":
@@ -154,6 +160,9 @@ class MySQLOptions(QtGui.QDialog):
         elif state == "accessDenied":
             self.ui.label_connection.setText("A MySQL server was found, but access was denied. Check the user name and password, or create a new MySQL user.")
             self.ui.button_status.setStyleSheet('QPushButton {background-color: yellow; color: yellow;}')
+        elif state == "configurationError":
+            self.ui.label_connection.setText("The current configuration does not appear to be valid. Please check the settings of the dialog.")
+            self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
         elif state == "connected": 
             self.ui.button_status.setStyleSheet('QPushButton {background-color: green; color: green;}')
             self.ui.label_connection.setText("Coquery is successfully connected to the MySQL server.")
@@ -173,10 +182,10 @@ class MySQLOptions(QtGui.QDialog):
         
         name = str(self.ui.configuration_name.text())
 
-        if self.state == "noConnection":
-            self.ui.frame.setEnabled(False)
+        if self.state == "noConnection" or self.state == "configurationError":
+            self.ui.group_credentials.setEnabled(False)
         else:
-            self.ui.frame.setEnabled(True)            
+            self.ui.group_credentials.setEnabled(True)            
 
         # exit if no configuration name has been entered:
         if not name:
@@ -191,12 +200,17 @@ class MySQLOptions(QtGui.QDialog):
                 # only enable Replace button if current values are different
                 # from the stored values:
                 d = self.get_values()
-                if (d["host"] != self.config_dict[name]["host"] or
-                    d["port"] != self.config_dict[name]["port"] or
-                    d["user"] != self.config_dict[name]["user"] or
-                    d["password"] != self.config_dict[name]["password"]):
-                    self.ui.button_replace.setEnabled(True)
-                else:
+                
+                if d["type"] == SQL_MYSQL:
+                    if (d["host"] != self.config_dict[name]["host"] or
+                        d["port"] != self.config_dict[name]["port"] or
+                        d["user"] != self.config_dict[name]["user"] or
+                        d["password"] != self.config_dict[name]["password"]):
+                        self.ui.button_replace.setEnabled(True)
+                    else:
+                        # Enable the Ok button:
+                        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                elif d["type"] == SQL_SQLITE:
                     # Enable the Ok button:
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
                     
@@ -219,16 +233,23 @@ class MySQLOptions(QtGui.QDialog):
         self.ui.configuration_name.setText(d["name"])
         self.old_name = d["name"]
 
-        if d["host"] == "127.0.0.1":
-            self.ui.radio_local.setChecked(True)
-        else:
-            self.ui.radio_remote.setChecked(True)
-            self.ui.hostname.setText(d["host"])
-        
-        self.ui.user.setText(d["user"])
-        self.ui.password.setText(d["password"])
-        self.ui.port.setValue(int(d["port"]))
-        
+        if d["type"] == SQL_MYSQL:
+            self.ui.radio_mysql.setChecked(True)
+            self.ui.frame_mysql.show()
+
+            if d["host"] == "127.0.0.1":
+                self.ui.radio_local.setChecked(True)
+            else:
+                self.ui.radio_remote.setChecked(True)
+                self.ui.hostname.setText(d["host"])
+            
+            self.ui.user.setText(d["user"])
+            self.ui.password.setText(d["password"])
+            self.ui.port.setValue(int(d["port"]))
+        elif d["type"] == SQL_SQLITE:
+            self.ui.radio_sqlite.setChecked(True)
+            self.ui.frame_mysql.hide()
+       
     def get_configuration(self):
         if self.current_server in self.config_dict:
             # Select the current configuration in the tree:
@@ -252,7 +273,10 @@ class MySQLOptions(QtGui.QDialog):
         d["port"] = int(self.ui.port.text())
         d["user"] = str(self.ui.user.text())
         d["password"] = str(self.ui.password.text())
-        d["type"] = "mysql"
+        if self.ui.radio_mysql.isChecked():
+            d["type"] = SQL_MYSQL
+        elif self.ui.radio_sqlite.isChecked():
+            d["type"] = SQL_SQLITE
         return d
     
     def add_configuration(self):
@@ -338,11 +362,39 @@ class MySQLOptions(QtGui.QDialog):
             self.current_connection = self.check_connection()
         self.check_buttons()
             
+    def toggle_engine(self):
+        """
+        Change the current database engine type.
+        """
+        self.ui.frame_mysql.hide()
+        if self.ui.radio_mysql.isChecked():
+            self.ui.frame_mysql.show()
+            self.db_engine = SQL_MYSQL
+        elif self.ui.radio_sqlite.isChecked():
+            self.db_engine = SQL_SQLITE
+        self.check_connection()
+            
     def check_connection(self):
-        """ Check if a connection to a MySQL server can be established using
-        the settings from the GUI. Return True if a connection can be
-        established, or True if not. Also, set up the connection indicator
-        accordingly."""
+        """ 
+        Check if a connection can be established using the current 
+        configuration.
+        
+        For an SQLite configuration, it is always assumed that a connection 
+        can be establised. For MySQL configurations, the settings from the 
+        GUI are used to probe the database host.
+        
+        This method also sets the connection indicator according to the 
+        connection state.
+        
+        Returns
+        -------
+        b : bool
+            True if a connection could be established, or False otherwise.
+        """
+
+        if self.ui.radio_sqlite.isChecked():
+            self.connected.emit()
+            return True
 
         hostname = self.get_hostname()
         if hostname == "127.0.0.1":
@@ -374,22 +426,25 @@ class MySQLOptions(QtGui.QDialog):
             pass
         
     def probe_host(self, hostname):
-        try:
-            DB = sqlwrap.SqlDB(
-                Host=hostname,
-                Port=self.ui.port.value(),
-                User=str(self.ui.user.text()),
-                connect_timeout=60,
-                Password=str(self.ui.password.text()))
-            DB.Cur.execute("SELECT VERSION()")
-            x = DB.Cur.fetchone()
-            DB.close()
-        except SQLInitializationError as e:
-            if "access denied" in str(e).lower():
-                self.accessDenied.emit(e)
+        if self.db_engine == SQL_MYSQL:
+            try:
+                DB = sqlwrap.SqlDB(
+                    Host=hostname,
+                    Port=self.ui.port.value(),
+                    User=str(self.ui.user.text()),
+                    connect_timeout=60,
+                    Password=str(self.ui.password.text()))
+                DB.Cur.execute("SELECT VERSION()")
+                x = DB.Cur.fetchone()
+                DB.close()
+            except SQLInitializationError as e:
+                if "access denied" in str(e).lower():
+                    self.accessDenied.emit(e)
+                else:
+                    self.noConnection.emit(e)
             else:
-                self.noConnection.emit(e)
-        else:
+                self.connected.emit()
+        elif db_type == SQL_SQLITE:
             self.connected.emit()
     
     def keyPressEvent(self, e):
