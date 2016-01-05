@@ -285,7 +285,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
         self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
         self.ui.action_settings.triggered.connect(self.settings)
-        self.ui.action_mySQL_settings.triggered.connect(self.mysql_settings)
+        self.ui.action_connection_settings.triggered.connect(self.connection_settings)
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
@@ -1459,9 +1459,9 @@ class CoqueryApp(QtGui.QMainWindow):
         return state
 
     def mysql_settings(self):
-        import MySQLOptions
+        import connectionconfiguration
         try:
-            config_dict, name = MySQLOptions.MySQLOptions.choose(options.cfg.current_server, options.cfg.server_configuration)
+            config_dict, name = connectionconfiguration.ConnectionConfiguration.choose(options.cfg.current_server, options.cfg.server_configuration)
         except TypeError:
             return
         else:
