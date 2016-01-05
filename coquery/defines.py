@@ -311,8 +311,8 @@ msg_unsaved_data = """
 <p>If you quit now, they will be lost.</p>
 <p>Do you really want to quit?</p>"""
 msg_no_corpus = """
-Coquery could not find a corpus module. Without a corpus module, you cannot 
-run any query."""
+<p>Coquery could not find a corpus module. Without a corpus module, you cannot 
+run any query.</p>"""
 msg_details = """
 <p>To build a new corpus module from a selection of text files, select 
 <b>Build new corpus...</b> from the Corpus menu.</p>
