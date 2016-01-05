@@ -315,6 +315,16 @@ class CoqueryApp(QtGui.QMainWindow):
             lambda: self.visualize_data("timeseries", area=False, percentage=False))
         
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
+        self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
+
+    def show_corpus_menu(self):
+        if self.ui.combo_corpus.count():
+            self.ui.action_corpus_documentation.setEnabled(True)
+            self.ui.action_statistics.setEnabled(True)
+        else:
+            self.ui.action_corpus_documentation.setEnabled(False)
+            self.ui.action_statistics.setEnabled(False)
+            
 
     def show_results_menu(self):
         
@@ -1246,6 +1256,7 @@ class CoqueryApp(QtGui.QMainWindow):
         resource, _, _, module = options.cfg.current_resources[corpus_name]
         database = resource.db_name
 
+        # Try to estimate the file size:
         db_con = options.cfg.server_configuration[options.cfg.current_server]
         try:
             size = FileSize(sqlwrap.SqlDB(
@@ -1283,6 +1294,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     QtGui.QMessageBox.critical(self, "Storage error – Coquery", msg_remove_corpus_disk_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     success = False
             self.stop_progress_indicator()
+            options.set_current_server(options.cfg.current_server)
             self.fill_combo_corpus()
             if success:
                 logger.warning("Removed corpus {}.".format(corpus_name))
@@ -1305,6 +1317,7 @@ class CoqueryApp(QtGui.QMainWindow):
         except Exception as e:
             error_box.ErrorBox.show(sys.exc_info())
         if result:
+            options.set_current_server(options.cfg.current_server)
             self.fill_combo_corpus()
             self.change_corpus()
             try:
@@ -1450,15 +1463,15 @@ class CoqueryApp(QtGui.QMainWindow):
         self.last_index = index
         self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
 
+        self.ui.options_area.setDisabled(True)
         if state:
             self.fill_combo_corpus()
-            self.ui.options_area.setDisabled(False)
-        else:
-            self.ui.options_area.setDisabled(True)
+            if self.ui.combo_corpus.count():
+                self.ui.options_area.setDisabled(False)
         
         return state
 
-    def mysql_settings(self):
+    def connection_settings(self):
         import connectionconfiguration
         try:
             config_dict, name = connectionconfiguration.ConnectionConfiguration.choose(options.cfg.current_server, options.cfg.server_configuration)

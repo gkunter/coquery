@@ -20,9 +20,10 @@ import string
 import sys
 
 from pyqt_compat import QtCore, QtGui
-import mysqlConfigurationUi
+import connectionConfigurationUi
 
 import sqlwrap
+import options
 from errors import *
 from defines import *
 import QtProgress
@@ -88,28 +89,36 @@ def check_valid_host(s):
         return True
     return False
 
-class MySQLOptions(QtGui.QDialog):
+class CoqFileFilter(QtGui.QSortFilterProxyModel):
+    def filterAcceptsRow(self, sourceRow, sourceParent):
+        index0 = self.sourceModel().index(sourceRow, 0, sourceParent)
+        return False
+        return self.sourceModel().isDir(index0)
+
+class ConnectionConfiguration(QtGui.QDialog):
     noConnection = QtCore.Signal(Exception)
     accessDenied = QtCore.Signal(Exception)
     configurationError = QtCore.Signal(Exception)
     connected = QtCore.Signal()
     
-    def __init__(self, name, config_dict, host="127.0.0.1", port=3306, user="mysql", password="mysql", db_type="mysql", parent=None):
+    def __init__(self, name, config_dict, host="127.0.0.1", port=3306, user="mysql", password="mysql", db_type=SQL_SQLITE, parent=None):
         
-        super(MySQLOptions, self).__init__(parent)
+        super(ConnectionConfiguration, self).__init__(parent)
         
         self.default_host = host
         self.default_port = port
         self.default_user = user
         self.default_password = password
         self.default_type = db_type
+        self.default_path = "{}/databases".format(options.get_home_dir())
+
     
         self.current_server = name
         self.backup_dict = dict(config_dict)
         self.backup_server = name
         self.config_dict = dict(config_dict)
         
-        self.ui = mysqlConfigurationUi.Ui_MySQLConfig()
+        self.ui = connectionConfigurationUi.Ui_ConnectionConfig()
         self.ui.setupUi(self)
         
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
@@ -149,6 +158,10 @@ class MySQLOptions(QtGui.QDialog):
         self.ui.port.valueChanged.connect(lambda: self.update_configuration(True))
         self.ui.radio_local.clicked.connect(lambda: self.update_configuration(True))
         self.ui.radio_remote.clicked.connect(lambda: self.update_configuration(True))
+
+        self.ui.input_db_path.textChanged.connect(lambda: self.update_configuration(True))
+        self.ui.button_db_path.clicked.connect(self.set_sql_path)
+        
         self.ui.radio_mysql.toggled.connect(self.toggle_engine)
         self.ui.radio_sqlite.toggled.connect(self.toggle_engine)
         self.toggle_engine()
@@ -194,14 +207,23 @@ class MySQLOptions(QtGui.QDialog):
         # enable either the Add or the Remove button, depending on whether
         # there is already a configuration with the current name:
         if self.state == "connected":
+            d = self.get_values()
+
             if name not in self.config_dict:
-                self.ui.button_add.setEnabled(True)
+                if d["type"] == SQL_SQLITE:
+                    # Only enable the Add button if the SQLite path exists
+                    # or is empty (in which case the default path will be 
+                    # used):
+                    if d["path"] == "" or os.path.isdir(d["path"]):
+                        self.ui.button_add.setEnabled(True)
+                else:
+                    self.ui.button_add.setEnabled(True)
             else:
                 # only enable Replace button if current values are different
                 # from the stored values:
-                d = self.get_values()
-                
-                if d["type"] == SQL_MYSQL:
+                if d["type"] != self.config_dict[name]["type"]:
+                    self.ui.button_replace.setEnabled(True)
+                elif d["type"] == SQL_MYSQL:
                     if (d["host"] != self.config_dict[name]["host"] or
                         d["port"] != self.config_dict[name]["port"] or
                         d["user"] != self.config_dict[name]["user"] or
@@ -211,8 +233,15 @@ class MySQLOptions(QtGui.QDialog):
                         # Enable the Ok button:
                         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
                 elif d["type"] == SQL_SQLITE:
-                    # Enable the Ok button:
-                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                    # The SQLite db path can be empty (then, the default path 
+                    # will be used. Otherwise, it has to be an existing 
+                    # directory.
+                    if d["path"] == "" or os.path.isdir(d["path"]):
+                        # Enable the Replace button if the path is new:
+                        if (d["path"] != self.config_dict[name]["path"]):
+                            self.ui.button_replace.setEnabled(True)
+                        # Enable the Ok button:
+                        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
                     
                 # Select item in tree:
                 self.current_item = self.ui.tree_configuration.findItems(name, QtCore.Qt.MatchExactly, 0)[0]
@@ -222,6 +251,28 @@ class MySQLOptions(QtGui.QDialog):
                 
                 # Also, enable the Remove button:
                 self.ui.button_remove.setEnabled(True)
+
+    def set_sql_path(self):
+        d = self.get_values()
+        if d["path"] == "":
+            default_sql_path = "{}/databases".format(options.get_home_dir())
+            sql_path = default_sql_path
+        else:
+            sql_path = d["path"]
+
+        dialog = QtGui.QFileDialog(directory=sql_path, )
+        #dialog.setFileMode(QtGui.QFileDialog.Directory)
+        #try:
+            #dialog.setOption(QtGui.QFileDialog.ShowDirsOnly, True)
+            #dialog.setOption(QtGui.QFileDialog.HideNameFilterDetails, True)
+        #except AttributeError:
+            #dialog.setFileMode(QtGui.QFileDialog.Directory | QtGui.QFileDialog.DirectoryOnly)
+        #dialog.setAcceptMode(QtGui.QFileDialog.AcceptOpen)
+        name = QtGui.QFileDialog.getExistingDirectory(directory=sql_path, caption="Choose database directory – Coquery")
+        if name:
+            if type(name) == tuple:
+                name = name[0]
+            self.ui.input_db_path.setText(name)        
 
     def apply_configuration(self, item):
         self.current_configuration = self.config_dict[str(item.text(0))]
@@ -236,6 +287,7 @@ class MySQLOptions(QtGui.QDialog):
         if d["type"] == SQL_MYSQL:
             self.ui.radio_mysql.setChecked(True)
             self.ui.frame_mysql.show()
+            self.ui.frame_sqlite.hide()
 
             if d["host"] == "127.0.0.1":
                 self.ui.radio_local.setChecked(True)
@@ -249,6 +301,11 @@ class MySQLOptions(QtGui.QDialog):
         elif d["type"] == SQL_SQLITE:
             self.ui.radio_sqlite.setChecked(True)
             self.ui.frame_mysql.hide()
+            self.ui.frame_sqlite.show()
+            if d["path"]:
+                self.ui.input_db_path.setText(d["path"])
+            else:
+                self.ui.input_db_path.setText(self.default_path)
        
     def get_configuration(self):
         if self.current_server in self.config_dict:
@@ -264,6 +321,7 @@ class MySQLOptions(QtGui.QDialog):
                 "port": self.default_port,
                 "user": self.default_user,
                 "type": self.default_type,
+                "path": self.default_path,
                 "password": self.default_password}
     
     def get_values(self):
@@ -272,6 +330,9 @@ class MySQLOptions(QtGui.QDialog):
         d["host"] = self.get_hostname()
         d["port"] = int(self.ui.port.text())
         d["user"] = str(self.ui.user.text())
+        d["path"] = os.path.expanduser(str(self.ui.input_db_path.text()))
+        if d["path"] == "":
+            d["path"] = self.default_path
         d["password"] = str(self.ui.password.text())
         if self.ui.radio_mysql.isChecked():
             d["type"] = SQL_MYSQL
@@ -292,7 +353,6 @@ class MySQLOptions(QtGui.QDialog):
     def remove_configuration(self, name=None):
         if not name:
             name = str(self.ui.configuration_name.text())
-        print ("REMOVE ", name)
         current_item = self.ui.tree_configuration.findItems(name, QtCore.Qt.MatchExactly, 0)[0]
         self.ui.tree_configuration.takeTopLevelItem(
             self.ui.tree_configuration.indexOfTopLevelItem(current_item))
@@ -367,12 +427,12 @@ class MySQLOptions(QtGui.QDialog):
         Change the current database engine type.
         """
         self.ui.frame_mysql.hide()
+        self.ui.frame_sqlite.hide()
         if self.ui.radio_mysql.isChecked():
             self.ui.frame_mysql.show()
-            self.db_engine = SQL_MYSQL
         elif self.ui.radio_sqlite.isChecked():
-            self.db_engine = SQL_SQLITE
-        self.check_connection()
+            self.ui.frame_sqlite.show()
+        self.check_buttons()
             
     def check_connection(self):
         """ 
@@ -426,7 +486,7 @@ class MySQLOptions(QtGui.QDialog):
             pass
         
     def probe_host(self, hostname):
-        if self.db_engine == SQL_MYSQL:
+        if self.ui.radio_mysql.isChecked():
             try:
                 DB = sqlwrap.SqlDB(
                     Host=hostname,
@@ -444,7 +504,8 @@ class MySQLOptions(QtGui.QDialog):
                     self.noConnection.emit(e)
             else:
                 self.connected.emit()
-        elif db_type == SQL_SQLITE:
+        elif self.ui.radio_sqlite.isChecked():
+            # FIXME: Check that database path can be read 
             self.connected.emit()
     
     def keyPressEvent(self, e):
@@ -457,14 +518,14 @@ class MySQLOptions(QtGui.QDialog):
 
     def accept(self):
         self.current_server = str(self.ui.tree_configuration.currentItem().text(0))
-        super(MySQLOptions, self).accept()
+        super(ConnectionConfiguration, self).accept()
 
     def reject(self):
         self.reset_values()
-        super(MySQLOptions, self).reject()
+        super(ConnectionConfiguration, self).reject()
 
     def exec_(self):
-        super(MySQLOptions, self).exec_()
+        super(ConnectionConfiguration, self).exec_()
         if self.ui.tree_configuration.currentItem():
             return (self.config_dict, str(self.ui.tree_configuration.currentItem().text(0)))
         else:
@@ -472,12 +533,12 @@ class MySQLOptions(QtGui.QDialog):
         
     @staticmethod
     def choose(configuration_name, configuration_dict, parent=None):
-        dialog = MySQLOptions(configuration_name, configuration_dict, parent=parent)
+        dialog = ConnectionConfiguration(configuration_name, configuration_dict, parent=parent)
         return dialog.exec_()
 
 def main():
     app = QtGui.QApplication(sys.argv)
-    viewer = MySQLOptions.choose(None, {})
+    viewer = ConnectionConfiguration.choose(None, {})
     viewer.exec_()
     
 if __name__ == "__main__":

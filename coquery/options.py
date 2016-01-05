@@ -494,7 +494,7 @@ class Options(object):
                                     server_configuration[number][variable] = int(value)
                                 except ValueError:
                                     continue
-                            elif variable in ["name", "host", "type", "user", "password"]:
+                            elif variable in ["name", "host", "type", "user", "password", "path"]:
                                 server_configuration[number][variable] = value
                 for i in server_configuration:
                     d = server_configuration[i]
@@ -503,7 +503,9 @@ class Options(object):
                     if d["type"] == SQL_MYSQL:
                         required_vars = ["name", "host", "port", "user", "password"]
                     elif d["type"] == SQL_SQLITE:
-                        required_vars = ["name"]
+                        if "path" not in d:
+                            d["path"] = ""
+                        required_vars = ["name", "path"]
                     try:
                         if all(var in d for var in required_vars):
                             self.args.server_configuration[d["name"]] = d
@@ -1028,7 +1030,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
         raise ModuleIncompleteError(corpus_name, cfg.current_server, expected_classes)
     if hash:
         #return hashlib.md5(content.encode("utf-8"))
-        return hashlib.md5("MD5 hash not available")
+        return hashlib.md5("MD5 hash not available".encode("utf-8"))
 
 def set_current_server(name):
     """

@@ -1042,7 +1042,6 @@ The number of occurrences of each token matching the query string is counted. Th
     <property name="title">
      <string>&amp;File</string>
     </property>
-    <addaction name="action_open_input_file"/>
     <addaction name="action_view_log"/>
     <addaction name="separator"/>
     <addaction name="action_quit"/>
@@ -1070,7 +1069,7 @@ The number of occurrences of each token matching the query string is counted. Th
     <property name="title">
      <string>&amp;Preferences</string>
     </property>
-    <addaction name="action_mySQL_settings"/>
+    <addaction name="action_connection_settings"/>
     <addaction name="action_settings"/>
     <addaction name="separator"/>
    </widget>
@@ -1204,13 +1203,13 @@ The number of occurrences of each token matching the query string is counted. Th
     <string>Corpus &amp;statistics</string>
    </property>
   </action>
-  <action name="action_mySQL_settings">
+  <action name="action_connection_settings">
    <property name="icon">
     <iconset theme="server-database">
      <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>&amp;Database servers...</string>
+    <string>&amp;Database connections...</string>
    </property>
   </action>
   <action name="action_settings">

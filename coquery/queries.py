@@ -301,7 +301,9 @@ class TokenQuery(object):
             self._current_number_of_tokens = len(self._sub_query)
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
 
-            with self.Resource.SQLAlchemyConnect() as connection:
+            engine = self.Resource.get_engine()
+
+            with engine.connect() as connection:
                 # This SQLAlchemy optimization including the string folder 
                 # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
                 query_string = self.Resource.get_query_string(self, self._sub_query)
