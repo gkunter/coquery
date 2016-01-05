@@ -528,6 +528,7 @@ class SQLResource(BaseResource):
         super(SQLResource, self).__init__()
         self.lexicon = lexicon
         self.corpus = corpus
+        self.DB = None
         self.connect_to_database()
 
         # FIXME: in order to make this not depend on a fixed database layout 
@@ -550,13 +551,36 @@ class SQLResource(BaseResource):
             raise SQLNoConfigurationError
         if db_type not in SQL_ENGINES:
             raise RuntimeError("Database type '{}' not supported.".format(db_type))
-        db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
+        if db_type == SQL_SQLITE:
+            db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
+        else:
+            if self.DB:
+                db = self.DB
+            else:
+                db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
         logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
         return db
     
     def connect_to_database(self):
         self.DB = self.get_db()
-        
+    
+    def get_engine(self):
+        host, port, db_type, user, password = options.get_mysql_configuration()
+        if db_type == SQL_MYSQL:
+            engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
+                host=host,
+                port=port,
+                user=user, 
+                password=password,
+                db_name=self.db_name)
+        elif db_type == SQL_SQLITE:
+            engine_string = "sqlite+pysqlite:///{}".format(
+                self.DB.sqlite_path(self.db_name))
+        else:
+            raise RuntimeError("Database type '{}' not supported.".format(db_type))
+        engine = create_engine(engine_string)
+        return engine
+    
     def SQLAlchemyConnect(self):
         host, port, db_type, user, password = options.get_mysql_configuration()
         if db_type == SQL_MYSQL:
@@ -585,8 +609,10 @@ class SQLResource(BaseResource):
         for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table")]:
             table = getattr(self, rc_table)
             S = "SELECT COUNT(*) FROM {}".format(table)
-            self.DB.execute(S)
-            table_sizes[table] = self.DB.Cur.fetchone()[0]
+            db = self.resource.get_db()
+            cur = db.Con.cursor()
+            cur.execute(S)
+            table_sizes[table] = cur.fetchone()[0]
 
         # get distinct values for each feature:
         for rc_feature in dir(self):
@@ -607,8 +633,9 @@ class SQLResource(BaseResource):
                 pass
             else:
                 S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
-                self.DB.execute(S)
-                stats.append([table, column, table_sizes[table], self.DB.Cur.fetchone()[0]])
+                cur = self.DB.cursor()
+                cur.execute(S)
+                stats.append([table, column, table_sizes[table], cur.fetchone()[0]])
         
         df = pd.DataFrame(stats)
         # calculate ratio:
@@ -667,18 +694,24 @@ class SQLResource(BaseResource):
         else:
             start = token_id - left_span
 
+        db = self.get_db()
+        cur = db.Con.cursor()
+
         S = self.corpus.sql_string_get_wordid_in_range(
                 start, 
                 token_id - 1, origin_id)
-        self.DB.execute(S)
-        left_context_words = self.lexicon.get_orth([x for x, in self.DB.Cur])
+        
+        cur.execute(S)
+        
+        left_context_words = self.lexicon.get_orth([x for x, in cur])
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
         S = self.corpus.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
                 token_id + number_of_tokens + options.cfg.context_right - 1, origin_id)
-        self.DB.execute(S)
-        right_context_words = self.lexicon.get_orth([x for x, in self.DB.Cur])
+
+        cur.execute(S)
+        right_context_words = self.lexicon.get_orth([x for x, in cur])
         right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
         options.cfg.verbose = old_verbose
@@ -688,8 +721,8 @@ class SQLResource(BaseResource):
                     token_id,
                     token_id + number_of_tokens - 1,
                     origin_id)
-            self.DB.execute(S)
-            target_words = self.lexicon.get_orth([x for (x, ) in self.DB.Cur])
+            cur.execute(S)
+            target_words = self.lexicon.get_orth([x for (x, ) in cur])
         else:
             target_words = []
         return (left_context_words, target_words, right_context_words)
@@ -989,9 +1022,11 @@ class SQLLexicon(BaseLexicon):
             try:
                 L.append(self._word_cache[x])
             except KeyError:
-                self.resource.DB.execute("{}{}".format(S, x))
+                db = self.resource.get_db()
+                cur = db.Con.cursor()
+                cur.execute("{}{}".format(S, x))
                 try:
-                    orth = self.resource.DB.Cur.fetchone()[0]
+                    orth = cur.fetchone()[0]
                 except IndexError:
                     # no entry for this word_id -- return default value:
                     L.append("<NA>")
@@ -1000,6 +1035,7 @@ class SQLLexicon(BaseLexicon):
                     # add to cache:
                     self._word_cache[x] = orth
         return L
+    
     def sql_string_get_posid_list(self, token):
         where_string = self.sql_string_get_posid_list_where(token)
 
@@ -1086,8 +1122,9 @@ class SQLLexicon(BaseLexicon):
         S = self.sql_string_get_matching_wordids(token)
         
         db = self.resource.get_db()
-        db.execute(S)
-        query_results = db.fetch_all()
+        cur = db.Con.cursor()
+        cur.execute(S)
+        query_results = cur.fetchall()
         if not query_results:
             raise WordNotInLexiconError
         else:
@@ -1110,8 +1147,11 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_table, 
             self.resource.corpus_id, 
             token_id)
-        self.resource.DB.execute(S)
-        return self.resource.DB.Cur.fetchone()[0]
+        
+        db = self.resource.get_db()
+        cur = db.Con.cursor()
+        cur.execute(S)
+        return cur.fetchone()[0]
 
     def get_origin_data(self, token_id):
         """
@@ -1187,8 +1227,9 @@ class SQLCorpus(BaseCorpus):
             for x in filter_strings:
                 pass
             S = "SELECT COUNT(*) FROM {}".format(self.resource.corpus_table)
-            self.resource.DB.execute(S)
-            self._corpus_size_cache = self.resource.DB.Cur.fetchone()[0]
+            cur = self.resource.DB.cursor()
+            cur.execute(S)
+            self._corpus_size_cache = cur.fetchone()[0]
         return self._corpus_size_cache
 
     def get_frequency(self, s):
@@ -1219,8 +1260,10 @@ class SQLCorpus(BaseCorpus):
         else:
             S = "SELECT COUNT(*) FROM {0} WHERE {1}".format(
                 self.resource.corpus_table, " AND ".join(where_clauses))
-            self.resource.DB.execute(S)
-            freq = self.resource.DB.Cur.fetchone()[0]
+            db = self.resource.get_db()
+            cur = db.Con.cursor()
+            cur.execute(S)
+            freq = cur.fetchone()[0]
         self._frequency_cache[s] = freq
         return freq
 

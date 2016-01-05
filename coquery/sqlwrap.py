@@ -37,7 +37,6 @@ class SqlDB (object):
     """ A wrapper for MySQL. """
     def __init__(self, Host, Port, Type, User, Password, db_name=None, encoding="utf8", connect_timeout=60):
         self.Con = None
-        self.Cur = None
         if Type not in SQL_ENGINES:
             raise RuntimeError("Database type '{}' not supported.".format(Type))
         elif Type == SQL_MYSQL:
@@ -62,17 +61,16 @@ class SqlDB (object):
 
             except (pymysql.OperationalError, pymysql.InternalError) as e:
                 raise SQLInitializationError(e)
-            self.Cur = self.Con.cursor()
             self.set_variable("NAMES", encoding)
         elif Type == SQL_SQLITE:
             if db_name:
                 self.Con = sqlite3.connect(
                     os.path.join(options.get_home_dir(), "databases", "{}.db".format(db_name)))
-                self.Cur = self.Con.cursor()
             else:
                 raise SQLInitializationError("SQLite requires a database name")
         else:
             raise RuntimeError("Database type '{}' not supported.".format(Type))
+        self.db_type = Type
 
     @staticmethod
     def sqlite_path(db_name):
@@ -134,7 +132,6 @@ class SqlDB (object):
 
     def close(self):
         try:
-            self.Cur.close()
             self.Con.close()
         except (pymysql.ProgrammingError, pymysql.Error):
             pass
@@ -155,11 +152,12 @@ class SqlDB (object):
         if command in ["SHOW", "DESCRIBE", "SET", "RESET"]:
             return
         try:
-            self.Cur.execute("EXPLAIN %s" % S)
+            cur = self.Con.cursor()
+            cur.execute("EXPLAIN %s" % S)
         except pymysql.ProgrammingError as e:
             raise SQLProgrammingError(S + "\n"+ "%s" % e)
         else:
-            explain_table = self.Cur
+            explain_table = cur
             explain_table_rows = [[x[0] for x in explain_table.description]]
             for x in explain_table:
                 explain_table_rows.append([str(y) for y in x])
@@ -214,27 +212,24 @@ Value       no return value
             self.explain(S)
         logger.debug(S)
         try:
-            self.Cur.execute(S)
+            cur = self.Con.cursor()
+            cur.execute(S)
         except pymysql.Error as e:
             warnings.warn(str(e))
             raise e
 
-    def commit (self):
-        self.Con.commit ()
+    def commit(self):
+        self.Con.commit()
         
-    def rollback (self):
-        self.Con.rollback ()
+    def rollback(self):
+        self.Con.rollback()
 
-    def fetch_all (self):
-        return self.Cur.fetchall()
-
-    def next(self):
-        return self.Cur.fetchone()
-    
     def start_read_only(self):
-        self.Cur.execute("START TRANSACTION READ ONLY;")
+        cur = self.Con.cursor()
+        cur.execute("START TRANSACTION READ ONLY")
         
     def get_database_size(self, database):
         """ Returns the size of the database in bytes."""
-        self.Cur.execute("SELECT data_length+index_length FROM information_schema.tables WHERE table_schema = '{}'".format(database))
-        return self.Cur.fetchone()[0]
+        cur = self.Con.cursor()
+        cur.execute("SELECT data_length+index_length FROM information_schema.tables WHERE table_schema = '{}'".format(database))
+        return cur.fetchone()[0]
