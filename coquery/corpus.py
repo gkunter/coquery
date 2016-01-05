@@ -1159,21 +1159,23 @@ class SQLCorpus(BaseCorpus):
             except AttributeError:
                 pass
             
-            link_feature = [x for x in self.resource.get_resource_features() if getattr(self.resource, x) == column][0]
+            lst = [x for x in self.resource.get_resource_features() if getattr(self.resource, x) == column]
+            if lst:
+                link_feature = lst[0]
 
-            _, _, table, feature = self.resource.split_resource_feature(link_feature)
-            if table == "corpus":
-                _, _, tab, feat = self.resource.split_resource_feature(feature)
-                if feat == "id":
-                    id_column = getattr(self.resource, "{}_id".format(tab))
-                    table_name = getattr(self.resource, "{}_table".format(tab))
-                    S = "SELECT * FROM {} WHERE {} = {}".format(
-                        table_name,
-                        id_column,
-                        d[column])
-                    D = self.resource.DB.execute_cursor(S).fetchone()
-                    D.pop(id_column)
-                    l.append((table_name, D))
+                _, _, table, feature = self.resource.split_resource_feature(link_feature)
+                if table == "corpus":
+                    _, _, tab, feat = self.resource.split_resource_feature(feature)
+                    if feat == "id":
+                        id_column = getattr(self.resource, "{}_id".format(tab))
+                        table_name = getattr(self.resource, "{}_table".format(tab))
+                        S = "SELECT * FROM {} WHERE {} = {}".format(
+                            table_name,
+                            id_column,
+                            d[column])
+                        D = self.resource.DB.execute_cursor(S).fetchone()
+                        D.pop(id_column)
+                        l.append((table_name, D))
         return l
 
     def get_corpus_size(self):
