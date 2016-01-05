@@ -543,6 +543,22 @@ class SQLResource(BaseResource):
         else:
             options.cfg.token_origin_id = None
 
+    def get_engine(self):
+        host, port, db_type, user, password = options.get_mysql_configuration()
+        if db_type == SQL_MYSQL:
+            engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
+                host=host,
+                port=port,
+                user=user, 
+                password=password,
+                db_name=self.db_name)
+        elif db_type == SQL_SQLITE:
+            engine_string = "sqlite+pysqlite:///{}".format(
+                self.DB.sqlite_path(self.db_name))
+        else:
+            raise RuntimeError("Database type '{}' not supported.".format(db_type))
+        return create_engine(engine_string)
+    
     def get_db(self):
         try:
             host, port, db_type, user, password = options.get_mysql_configuration()
