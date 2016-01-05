@@ -548,9 +548,16 @@ class CoqueryApp(QtGui.QMainWindow):
                 pass
         self.change_corpus_features()
 
-    def change_corpus_features(self, prefix="", suffix=""):
-        """ Construct a new output option tree depending on the features
-        provided by the corpus given in 'corpus_label."""
+    def change_corpus_features(self):
+        """ 
+        Construct a new output option tree.
+        
+        The content of the tree depends on the features that are available in
+        the current resource. All features that were checked in the old output 
+        option tree will also be checked in the new one. In this way, users 
+        can easily change between corpora without loosing their output column 
+        selections.        
+        """
         
         if not options.cfg.current_resources:
             tree = self.create_output_options_tree()
@@ -634,7 +641,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
 
     def enable_corpus_widgets(self):
-        """ Enable all widgets that assume that a corpus is available."""
+        """ 
+        Enable all widgets that assume that a corpus is available.
+        """
         self.ui.centralwidget.setEnabled(True)
         self.ui.action_statistics.setEnabled(True)
         self.ui.action_remove_corpus.setEnabled(True)
