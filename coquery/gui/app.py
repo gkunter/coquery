@@ -1452,9 +1452,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if state:
             self.fill_combo_corpus()
-            self.ui.centralwidget.setEnabled(True)
+            self.ui.options_area.setDisabled(False)
         else:
-            self.ui.centralwidget.setEnabled(False)
+            self.ui.options_area.setDisabled(True)
         
         return state
 
