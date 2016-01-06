@@ -35,42 +35,57 @@ except ImportError:
 
 class SqlDB (object):
     """ A wrapper for MySQL. """
-    def __init__(self, Host, Port, Type, User, Password, db_name=None, encoding="utf8", connect_timeout=60):
+    def __init__(self, Host, Port, Type, User, Password, db_name=None, db_path="", encoding="utf8", connect_timeout=60):
         self.Con = None
-        if Type not in SQL_ENGINES:
-            raise RuntimeError("Database type '{}' not supported.".format(Type))
-        elif Type == SQL_MYSQL:
-            try:
-                if db_name:
-                    self.Con = pymysql.connect(
-                        host=Host, 
-                        port=Port, 
-                        user=User, 
-                        passwd=Password, 
-                        db=db_name,
-                        connect_timeout=connect_timeout,
-                        charset=encoding)
-                else:
-                    self.Con = pymysql.connect(
-                        host=Host, 
-                        port=Port, 
-                        user=User, 
-                        passwd=Password,
-                        connect_timeout=connect_timeout,
-                        charset=encoding)
+        self.db_type = Type
+        self.db_name = db_name
+        self.db_host = Host
+        self.db_port = Port
+        self.db_user = User
+        self.db_pass = Password
+        self.db_path = db_path
+        self.timeout = connect_timeout
+        self.encoding = encoding
 
-            except (pymysql.OperationalError, pymysql.InternalError) as e:
+        self.Con = self.get_connection()
+
+        if self.db_type == SQL_MYSQL:
+            self.set_variable("NAMES", self.encoding)
+
+    def get_connection(self):
+        if self.db_type not in SQL_ENGINES:
+            raise RuntimeError("Database type '{}' not supported.".format(self.db_type))
+        elif self.db_type == SQL_MYSQL:
+            try:
+                if self.db_name:
+                    connection = pymysql.connect(
+                        host=self.db_host, 
+                        port=self.db_port, 
+                        user=self.db_user, 
+                        passwd=self.db_pass, 
+                        db=self.db_name,
+                        connect_timeout=self.timeout,
+                        charset=self.encoding)
+                else:
+                    connection = pymysql.connect(
+                        host=self.db_host, 
+                        port=self.db_port, 
+                        user=self.db_user, 
+                        passwd=self.db_pass, 
+                        connect_timeout=self.timeout,
+                        charset=self.encoding)
+            except (pymysql.Error) as e:
                 raise SQLInitializationError(e)
-            self.set_variable("NAMES", encoding)
-        elif Type == SQL_SQLITE:
-            if db_name:
-                self.Con = sqlite3.connect(
-                    os.path.join(options.get_home_dir(), "databases", "{}.db".format(db_name)))
+        elif self.db_type == SQL_SQLITE:
+            if self.db_name:
+                if not self.db_path:
+                    self.db_path = os.path.join(options.get_home_dir(), "databases", "{}.db".format(self.db_name))
+                connection = sqlite3.connect(self.db_path)
             else:
                 raise SQLInitializationError("SQLite requires a database name")
         else:
-            raise RuntimeError("Database type '{}' not supported.".format(Type))
-        self.db_type = Type
+            raise RuntimeError("Database type '{}' not supported.".format(self.db_type))
+        return connection
 
     @staticmethod
     def sqlite_path(db_name):
@@ -180,15 +195,26 @@ class SqlDB (object):
             logger.debug("\n".join(log_rows))
 
     def execute_cursor(self, S, server_side=False):
+        def dict_factory(cursor, row):
+            d = {}
+            for i, column in enumerate(cursor.description):
+                d[column[0]] = row[i]
+            return d
+
         S = S.strip()
         if options.cfg.explain_queries:
             self.explain(S)
         logger.debug(S)
 
-        if server_side:
-            cursor = self.Con.cursor(pymysql.cursors.SSDictCursor)
-        else:
-            cursor = self.Con.cursor(pymysql.cursors.DictCursor)
+        if self.db_type == SQL_MYSQL:
+            if server_side:
+                cursor = self.Con.cursor(pymysql.cursors.SSDictCursor)
+            else:
+                cursor = self.Con.cursor(pymysql.cursors.DictCursor)
+        elif self.db_type == SQL_SQLITE:
+            con = self.get_connection()
+            con.row_factory = sqlite3.Row
+            cursor = con.cursor()
         cursor.execute(S)
         return cursor
     

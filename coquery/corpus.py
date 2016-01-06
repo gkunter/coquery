@@ -81,7 +81,6 @@ class BaseLexicon(object):
 
     def __init__(self):
         self.resource = None
-        self._word_cache = {}
         
     def is_part_of_speech(self, pos):
         """ 
@@ -530,6 +529,8 @@ class SQLResource(BaseResource):
         self.corpus = corpus
         self.DB = None
         self.connect_to_database()
+        self._word_cache = {}
+
 
         # FIXME: in order to make this not depend on a fixed database layout 
         # (here: 'source' and 'file' tables), we should check # for any table 
@@ -676,7 +677,63 @@ class SQLResource(BaseResource):
 
         return query_string
 
-    def get_context(self, token_id, number_of_tokens, case_sensitive):
+    def get_context(self, token_id, number_of_tokens, case_sensitive, db_connection):
+
+        def get_orth(word_id):
+            """ 
+            Return the orthographic forms of the word_ids.
+            
+            If word_id_list is not a list, it is converted into one.
+            
+            Parameters
+            ----------
+            word_id : value or list
+                A value or list of value designating the words_ids that are to 
+                be looked up.
+                
+            Returns
+            -------
+            L : list
+                A list of strings, giving the orthographic representation of the
+                words.
+            """
+            if not hasattr(word_id, "__iter__"):
+                word_id = [word_id]
+            
+            # if there is no attribute "corpus_word_id" in the resource, we have
+            # to assume that the identifies provided are already all the 
+            # information that we have on the words. This makes sense for 
+            # example in the case of dictionaries. So, in that case, we simply
+            # return the list:
+            if not hasattr(self, "corpus_word_id"):
+                return word_id
+
+            # prepare a partial SQL query:
+            S = "SELECT {} FROM {} WHERE {} = ".format(
+                        self.word_label, 
+                        self.word_table,
+                        self.word_id)
+
+            # build the word list:
+            L = []
+            cur = db_connection.cursor()
+            for x in word_id:
+                # check the word cache:
+                try:
+                    L.append(self._word_cache[x])
+                except KeyError:
+                    cur.execute("{}{}".format(S, x))
+                    try:
+                        orth = cur.fetchone()[0]
+                    except IndexError:
+                        # no entry for this word_id -- use default value:
+                        orth = "<NA>"
+                    finally:
+                        L.append(orth)
+                        # add to cache:
+                        self._word_cache[x] = orth
+            return L
+
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
         token_id = int(token_id)
@@ -694,38 +751,41 @@ class SQLResource(BaseResource):
         else:
             start = token_id - left_span
 
-        db = self.get_db()
-        cur = db.Con.cursor()
+        cur = db_connection.cursor()
 
+        left_context_words = []
+        right_context_words = []
+        string_context_words = []
+        
+        # Get words in left context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 start, 
-                token_id - 1, origin_id)
-        
+                token_id - 1, origin_id)        
         cur.execute(S)
         
-        left_context_words = self.lexicon.get_orth([x for x, in cur])
+        left_context_words = get_orth([x for x, in cur])
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
+        # Get words in right context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
                 token_id + number_of_tokens + options.cfg.context_right - 1, origin_id)
-
         cur.execute(S)
-        right_context_words = self.lexicon.get_orth([x for x, in cur])
+        
+        right_context_words = get_orth([x for x, in cur])
         right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
-        options.cfg.verbose = old_verbose
-
         if options.cfg.context_mode == CONTEXT_STRING:
+            # Get words matching the query:
             S = self.corpus.sql_string_get_wordid_in_range(
                     token_id,
                     token_id + number_of_tokens - 1,
                     origin_id)
             cur.execute(S)
-            target_words = self.lexicon.get_orth([x for (x, ) in cur])
-        else:
-            target_words = []
-        return (left_context_words, target_words, right_context_words)
+            string_context_words = get_orth([x for (x, ) in cur])
+
+        options.cfg.verbose = old_verbose
+        return (left_context_words, string_context_words, right_context_words)
 
     def get_context_sentence(self, sentence_id):
         raise NotImplementedError
@@ -980,62 +1040,6 @@ class SQLLexicon(BaseLexicon):
         #self.resource.DB.execute(self.sql_string_get_other_wordforms(current_word))
         #return [result[0] for result in self.resource.DB.Cur]
 
-    def get_orth(self, word_id):
-        """ 
-        Return the orthographic forms of the word_ids.
-        
-        If word_id_list is not a list, it is converted into one.
-        
-        Parameters
-        ----------
-        word_id : value or list
-            A value or list of value designating the words_ids that are to 
-            be looked up.
-            
-        Returns
-        -------
-        L : list
-            A list of strings, giving the orthographic representation of the
-            words.
-        """
-        if not hasattr(word_id, "__iter__"):
-            word_id = [word_id]
-        
-        # if there is no attribute "corpus_word_id" in the resource, we have
-        # to assume that the identifies provided are already all the 
-        # information that we have on the words. This makes sense for 
-        # example in the case of dictionaries. So, in that case, we simply
-        # return the list:
-        if not "corpus_word_id" in dir(self.resource):
-            return word_id
-        
-        # prepare a partial MySQL query:
-        S = "SELECT {} FROM {} WHERE {} = ".format(
-                    self.resource.word_label, 
-                    self.resource.word_table,
-                    self.resource.word_id)
-
-        # build the word list:
-        L = []
-        for x in word_id:
-            # check the word cache:
-            try:
-                L.append(self._word_cache[x])
-            except KeyError:
-                db = self.resource.get_db()
-                cur = db.Con.cursor()
-                cur.execute("{}{}".format(S, x))
-                try:
-                    orth = cur.fetchone()[0]
-                except IndexError:
-                    # no entry for this word_id -- return default value:
-                    L.append("<NA>")
-                else:
-                    L.append(orth)
-                    # add to cache:
-                    self._word_cache[x] = orth
-        return L
-    
     def sql_string_get_posid_list(self, token):
         where_string = self.sql_string_get_posid_list_where(token)
 
@@ -1078,7 +1082,7 @@ class SQLLexicon(BaseLexicon):
             word_id = self.resource.word_id
         else:
             word_table = self.resource.corpus_table
-            word_id = self.resource.corpus_word_id
+            word_id = self.resource.corpus_word
             
         self.table_list = [word_table]
         if token.lemma_specifiers:
@@ -1286,9 +1290,13 @@ class SQLCorpus(BaseCorpus):
             # lexicon:
             L = set(self.lexicon.get_matching_wordids(token))
             if L:
+                if WordTarget.endswith("_id"):
+                    L = [str(x) for x in L]
+                else:
+                    L = ["'{}'".format(x) for x in L]
                 where_clauses.append("{} IN ({})".format(
                     WordTarget, 
-                    ", ".join (map (str, L))))
+                    ", ".join(L)))
             else:
                 # is the empty word id list due to the stopword list?
                 if token.S not in ("%", ""):
@@ -1403,9 +1411,15 @@ class SQLCorpus(BaseCorpus):
 
         # create constraint lists:
         sub_list = set([])
+        
+        if hasattr(self.resource, "corpus_word_id"):
+            word_id_column = self.resource.corpus_word_id
+        elif hasattr(self.resource, "corpus_word"):
+            word_id_column = self.resource.corpus_word
+        
         where_clauses = self.get_whereclauses(
             current_token, 
-            self.resource.corpus_word_id, 
+            word_id_column,
             word_pos_column)
         for x in where_clauses:
             if x: 
@@ -2031,9 +2045,13 @@ class SQLCorpus(BaseCorpus):
             verbose=" -- sql_string_get_sentence_wordid" if options.cfg.verbose else "")
 
     def sql_string_get_wordid_in_range(self, start, end, origin_id):
+        if hasattr(self.resource, "corpus_word_id"):
+            word_id_column = self.resource.corpus_word_id
+        elif hasattr(self.resource, "corpus_word"):
+            word_id_column = self.resource.corpus_word
         if options.cfg.token_origin_id and origin_id:
             return "SELECT {corpus_wordid} from {corpus} WHERE {token_id} BETWEEN {start} AND {end} AND {corpus_source} = {this_source}".format(
-                corpus_wordid=self.resource.corpus_word_id,
+                corpus_wordid=word_id_column,
                 corpus=self.resource.corpus_table,
                 token_id=self.resource.corpus_id,
                 start=start, end=end,
@@ -2043,7 +2061,7 @@ class SQLCorpus(BaseCorpus):
             # if no source id is specified, simply return the tokens in
             # the corpus that are within the specified range.
             return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} AND {end} {verbose}".format(
-                corpus_wordid=self.resource.corpus_word_id,
+                corpus_wordid=word_id_column,
                 corpus=self.resource.corpus_table,
                 corpus_token=self.resource.corpus_id,
                 start=start, end=end,

@@ -319,14 +319,6 @@ class DBConnection(object):
         except TypeError:
             return None        
 
-    def dict_factory(self, cursor, row):
-        if self.db_type != SQL_SQLITE:
-            raise TypeError("Unexpected SQL engine type '{}'".format(self.db_type))
-        d = {}
-        for idx, col in enumerate(cursor.description):
-            d[col[0]] = row[idx]
-        return d
-
     def find(self, table_name, values, additional_variables=[], case=False):
         """ Obtain all records from table_name that match the column-value
         pairs given in the dict values."""
@@ -334,7 +326,7 @@ class DBConnection(object):
             cur = self.Con().cursor(mysql_cursors.DictCursor)
         elif self.db_type == SQL_SQLITE:
             con = self.Con()
-            con.row_factory = self.dict_factory
+            con.row_factory = sqlite3.Row
             cur = con.cursor()
         variables = list(values.keys()) + additional_variables
         where = []
