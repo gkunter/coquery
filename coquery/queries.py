@@ -412,7 +412,7 @@ class TokenQuery(object):
         def insert_kwic(row):
             left, target, right = self.Session.Resource.get_context(
                 row["coquery_invisible_corpus_id"], 
-                self._current_number_of_tokens, True)
+                self._current_number_of_tokens, True, connection)
             row["coq_context_left"] = corpus.collapse_words(left)
             row["coq_context_right"] = corpus.collapse_words(right)
             return row
@@ -420,7 +420,7 @@ class TokenQuery(object):
         def insert_sentence(row):
             left, target, right = self.Session.Resource.get_context(
                 row["coquery_invisible_corpus_id"], 
-                self._current_number_of_tokens, True)
+                self._current_number_of_tokens, True, connection)
             row["coq_context"] = corpus.collapse_words(left + [x.upper() for x in target] + right)
             return row
 
@@ -428,6 +428,8 @@ class TokenQuery(object):
             return df
         if not (options.cfg.context_left or options.cfg.context_right):
             return df
+        
+        connection = self.Session.Resource.get_db().Con
         if options.cfg.context_mode == CONTEXT_KWIC:
             df = df.apply(insert_kwic, axis=1)
         elif options.cfg.context_mode == CONTEXT_STRING:

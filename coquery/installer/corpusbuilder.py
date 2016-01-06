@@ -1692,6 +1692,20 @@ class BaseCorpusBuilder(corpus.BaseResource):
     @staticmethod
     def get_url():
         return "(no URL)"
+
+    @staticmethod
+    def get_modules():
+        """
+        Return the Python modules that are required by this builder class.
+        
+        Returns
+        -------
+        l : list of tuples
+            A list of tuples describing the Python modules that are required 
+            by this module. Each tuple consists of the module name, the 
+            package name, and the URL for this package.
+        """
+        return []
     
     @staticmethod
     def get_name():
