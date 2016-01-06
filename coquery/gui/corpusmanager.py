@@ -44,6 +44,7 @@ class CoqAccordionEntry(QtGui.QWidget):
         self._builder_class = None
         self._checksum = ""
         self._validation = ""
+        self._modules = []
         self.stack=stack
         
         self.verticalLayout_2 = QtGui.QVBoxLayout(self)
@@ -127,6 +128,10 @@ class CoqAccordionEntry(QtGui.QWidget):
         self._title = title
         self.change_description()
         
+    def setModules(self, modules):
+        self._modules = modules
+        self.change_description()
+        
     def setChecksum(self, checksum):
         self._checksum = checksum
         if self.validate_checksum(checksum):
@@ -156,13 +161,32 @@ class CoqAccordionEntry(QtGui.QWidget):
         self.change_description()
         
     def change_description(self):
+        string_list = []
+        if self._title:
+            if self._url:
+                string_list.append("<p><b>{name}</b> (<a href='{url}'>{url}</a>)</p>".format(
+                    name=self._title, url=self._url))
+            else:
+                string_list.append("<p><b>{}</b></p>".format(self._title))
+        if self._text:
+            string_list.append("<p><font size='100%'>{}</font></p>".format(self._text))
+        if self._references:
+            string_list.append(self._references)
+        if self._license:
+            string_list.append(self._license)
+        if self._modules:
+            l = []
+            for name, module, url in self._modules:
+                if url:
+                   s = "<p>{module} (<a href='{url}'>{url}</a>)</p>".format(
+                       module=module, url=url)
+                else:
+                   s = "<p>{}</p>".format(module)
+                l.append(s)
+            string_list.append("<p><b>Required additional Python modules</b></p>{}".format(
+                "".join(l)))
         self.corpus_description.setText(
-            "<p><b>{title}</b></p><p><font size='100%'>{desc}</font></p>{ref}{license}<p><b>URL: </b><a href='{url}'>{url}</p>".format(
-                title=self._title, 
-                desc=self._text, 
-                url=self._url, 
-                ref=self._references, 
-                license=self._license))
+            "".join(string_list))
 
     #def setup_ui(self):
         #self.corpus_entry = QtGui.QFrame(self)
@@ -343,6 +367,9 @@ class CorpusManager(QtGui.QDialog):
                     
                 if builder_class.get_license():
                     entry.setLicense("<p><b>License</b></p><p>{}</p>".format(builder_class.get_license()))
+
+                if builder_class.get_modules():
+                    entry.setModules(builder_class.get_modules())
 
                 entry.setupInstallState(name in options.cfg.current_resources)
                 entry.setBuilderClass(builder_class)
