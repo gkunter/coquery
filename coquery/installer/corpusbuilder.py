@@ -68,6 +68,7 @@ import os.path
 import string
 import imp
 import importlib
+import warnings
 
 import dbconnection
 import argparse
@@ -1716,13 +1717,26 @@ class BaseCorpusBuilder(corpus.BaseResource):
         return "unnamed"
 
     def initialize_build(self):
-        """ Start logging, start the timer."""
+        """ 
+        Initialize the corpus build.
+        
+        This method starts the logger and the timer. It also loads any Python 
+        module that is required by this CorpusBuilder class.
+        """
         self.start_time = time.time()
         self.logger.info("--- Starting ---")
         self.logger.info("Building corpus %s" % self.name)
         self.logger.info("Command line arguments: %s" % " ".join(sys.argv[1:]))
         if not self._widget:
             print("\n%s\n" % textwrap.TextWrapper(width=79).fill(" ".join(self.get_description())))
+            
+        for mod, package, url in self.get_modules():
+            try:
+                exec("import {}".format(module))
+            except ImportError:
+                raise DependencyError(package)
+
+            
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """
