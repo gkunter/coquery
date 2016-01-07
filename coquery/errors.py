@@ -27,6 +27,9 @@ class GenericException(Exception):
             S = "%s: '%s'" % (self.error_message, self.par)
         else:
             S = self.error_message
+        if hasattr(self, "additional"):
+            S = "<p>{}</p><p>{}</p>".format(
+                S, self.additional)
         logger.error(S)
         return S
 
@@ -136,13 +139,15 @@ class CorpusUnavailableError(NoTraceException):
     error_message = "No corpus available with given name"
 
 class DependencyError(NoTraceException):
-    def __init__(self, module):
+    def __init__(self, module, url=None):
         if type(module) == list:
             self.error_message = "Missing one of the following Python modules"
             self.par = "{} or {}".format(", ".join(module[:-1]), module[-1])
         else:
             self.error_message = "Missing the following Python module"
             self.par = "{}".format(module)
+        if url:
+            self.additional = "Go to <a href='{url}'>{url}</a> for details on how to obtain the module.".format(url=url)
 
 class QueryModeError(NoTraceException):
     error_message = "Query mode {mode} not supported by corpus {corpus}."
