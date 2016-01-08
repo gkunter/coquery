@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_CorpusInstaller(object):
     def setupUi(self, CorpusInstaller):
         CorpusInstaller.setObjectName(_fromUtf8("CorpusInstaller"))
-        CorpusInstaller.resize(797, 591)
+        CorpusInstaller.resize(640, 480)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -157,7 +157,7 @@ class Ui_CorpusInstaller(object):
 
     def retranslateUi(self, CorpusInstaller):
         CorpusInstaller.setWindowTitle(_translate("CorpusInstaller", "Corpus Installer – Coquery", None))
-        self.corpus_description.setText(_translate("CorpusInstaller", "<html><head/><body><p><span style=\" font-weight:600;\">Corpus installer</span></p><p>You have requested to install the corpus \'<span style=\" font-weight:600;\">{}\'</span> on the MySQL server \'{}\'.</p></body></html>", None))
+        self.corpus_description.setText(_translate("CorpusInstaller", "<html><head/><body><p><span style=\" font-weight:600;\">Corpus installer</span></p><p>You have requested to install \'<span style=\" font-weight:600;\">{}\'</span> using the database connection \'{}\'.</p></body></html>", None))
         self.label_5.setText(_translate("CorpusInstaller", "Install corpus data and corpus module (if you have a local database server)", None))
         self.label_6.setText(_translate("CorpusInstaller", "Only install corpus module (if you have a network database server)", None))
         self.label_8.setText(_translate("CorpusInstaller", "Path to corpus data files:", None))

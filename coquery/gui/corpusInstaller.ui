@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>797</width>
-    <height>591</height>
+    <width>640</width>
+    <height>480</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -47,7 +47,7 @@
       <item>
        <widget class="QLabel" name="corpus_description">
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Corpus installer&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You have requested to install the corpus '&lt;span style=&quot; font-weight:600;&quot;&gt;{}'&lt;/span&gt; on the MySQL server '{}'.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Corpus installer&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You have requested to install '&lt;span style=&quot; font-weight:600;&quot;&gt;{}'&lt;/span&gt; using the database connection '{}'.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
