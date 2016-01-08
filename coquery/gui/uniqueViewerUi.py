@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'uniqueViewer.ui'
 #
-# Created: Sun Nov 15 18:22:47 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -36,34 +35,6 @@ class Ui_UniqueViewer(object):
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout = QtGui.QVBoxLayout(self.frame)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
-        self.verticalLayout_3 = QtGui.QVBoxLayout()
-        self.verticalLayout_3.setSpacing(0)
-        self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
-        self.button_details = QtGui.QPushButton(self.frame)
-        self.button_details.setStyleSheet(_fromUtf8("text-align: left; padding: 4px; padding-left: 1px;"))
-        self.button_details.setFlat(False)
-        self.button_details.setObjectName(_fromUtf8("button_details"))
-        self.verticalLayout_3.addWidget(self.button_details)
-        self.frame_details = QtGui.QFrame(self.frame)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Minimum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.frame_details.sizePolicy().hasHeightForWidth())
-        self.frame_details.setSizePolicy(sizePolicy)
-        self.frame_details.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.frame_details.setFrameShadow(QtGui.QFrame.Sunken)
-        self.frame_details.setObjectName(_fromUtf8("frame_details"))
-        self.form_information = QtGui.QFormLayout(self.frame_details)
-        self.form_information.setFieldGrowthPolicy(QtGui.QFormLayout.ExpandingFieldsGrow)
-        self.form_information.setRowWrapPolicy(QtGui.QFormLayout.WrapLongRows)
-        self.form_information.setContentsMargins(-1, 0, -1, -1)
-        self.form_information.setHorizontalSpacing(10)
-        self.form_information.setObjectName(_fromUtf8("form_information"))
-        self.label = QtGui.QLabel(self.frame_details)
-        self.label.setObjectName(_fromUtf8("label"))
-        self.form_information.setWidget(0, QtGui.QFormLayout.LabelRole, self.label)
-        self.verticalLayout_3.addWidget(self.frame_details)
-        self.verticalLayout.addLayout(self.verticalLayout_3)
         self.label_inform = QtGui.QLabel(self.frame)
         self.label_inform.setObjectName(_fromUtf8("label_inform"))
         self.verticalLayout.addWidget(self.label_inform)
@@ -77,7 +48,7 @@ class Ui_UniqueViewer(object):
         self.treeWidget.header().setVisible(False)
         self.treeWidget.header().setSortIndicatorShown(False)
         self.verticalLayout.addWidget(self.treeWidget)
-        self.verticalLayout.setStretch(2, 1)
+        self.verticalLayout.setStretch(1, 1)
         self.verticalLayout_2.addWidget(self.frame)
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setSpacing(16)
@@ -99,8 +70,6 @@ class Ui_UniqueViewer(object):
 
     def retranslateUi(self, UniqueViewer):
         UniqueViewer.setWindowTitle(_translate("UniqueViewer", "View unique values – Coquery", None))
-        self.button_details.setText(_translate("UniqueViewer", "Corpus: {}, Column: {}", None))
-        self.label.setText(_translate("UniqueViewer", "Number of values: {}", None))
         self.label_inform.setText(_translate("UniqueViewer", "Retrieving values...", None))
 
 
