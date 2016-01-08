@@ -5,9 +5,12 @@ classes.py is part of Coquery.
 
 Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License. A 
+Coquery exception applies under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import unicode_literals
@@ -26,6 +29,97 @@ import options
 import queries
 from errors import *
 from defines import *
+
+class CoqDetailBox(QtGui.QWidget):
+    """
+    Define a QLayout class that has the QPushButton 'header' as a clickable 
+    header, and a QFrame 'box' which can show any content in an exapnding box 
+    below the button.
+    """
+    clicked = QtCore.Signal(QtGui.QWidget)
+    
+    def __init__(self, text, box=None, *args, **kwargs):
+        super(CoqDetailBox, self).__init__(*args, **kwargs)
+
+        if not box:
+            self.box = QtGui.QFrame(self)
+            self.box.setFrameShape(QtGui.QFrame.StyledPanel)
+            self.box.setFrameShadow(QtGui.QFrame.Sunken)
+        else:
+            self.box = box
+
+        self.frame = QtGui.QFrame(self)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
+        self.frame.setSizePolicy(sizePolicy)
+        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShadow(QtGui.QFrame.Raised)
+
+        self.header_layout = QtGui.QHBoxLayout()
+
+        self.header = QtGui.QPushButton(self.frame)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.header.sizePolicy().hasHeightForWidth())
+        self.header.setSizePolicy(sizePolicy)
+        self.header.setStyleSheet("text-align: left; padding: 4px; padding-left: 1px;")
+        self.header.clicked.connect(self.onClick)
+        self.header_layout.addWidget(self.header)
+        
+        self.verticalLayout_2 = QtGui.QVBoxLayout(self.frame)
+        self.verticalLayout_2.setMargin(0)
+        self.verticalLayout_2.setSpacing(0)
+        self.verticalLayout_2.addItem(self.header_layout)
+        self.verticalLayout_2.addWidget(self.box)
+
+        self.verticalLayout = QtGui.QVBoxLayout(self)
+        self.verticalLayout.addWidget(self.frame)
+        self.verticalLayout.setSpacing(0)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+
+        self._text = text
+        self._expanded = False
+        self.update()
+        self.setText(text)
+
+    def onClick(self):
+        self.clicked.emit(self)
+        self.toggle()
+
+    def replaceBox(self, widget):
+        self.verticalLayout.removeWidget(self.box)
+        self.verticalLayout.addWidget(widget)
+        widget.setParent(self)
+        self.box = widget
+        self.update()
+
+    def setText(self, text):
+        self._text = text
+        self.header.setText(self._text)
+        
+    def text(self):
+        return self._text
+
+    def toggle(self):
+        self._expanded = not self._expanded
+        self.update()
+
+    def update(self):
+        if self._expanded:
+            self.box.show()
+            self.header.setFlat(False)
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
+        else:
+            self.box.hide()
+            self.header.setFlat(True)
+            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
+        self.header.setIcon(icon)
+
+    def isExpanded(self):
+        return self._expanded
 
 class CoqTreeItem(QtGui.QTreeWidgetItem):
     """ 
