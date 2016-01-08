@@ -2,11 +2,14 @@
 """
 coq_install_ice_ng.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License. A 
+Coquery exception applies under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import unicode_literals
@@ -984,7 +987,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_license():
-        return "ICE Nigeria is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike license (<a href='https://creativecommons.org/licenses/by-nc-sa/3.0/'>CC BY-NC-SA 3.0</a> DE)."
+        return "ICE Nigeria is available under the terms of a Creative Commons Attribution-NonCommercial-ShareAlike license (<a href='https://creativecommons.org/licenses/by-nc-sa/3.0/'>CC BY-NC-SA 3.0</a> DE)."
         
     @staticmethod
     def get_references():

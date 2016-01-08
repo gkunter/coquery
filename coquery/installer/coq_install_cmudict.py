@@ -3,11 +3,14 @@
 """
 coq_install_cmudict.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License. A 
+Coquery exception applies under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import unicode_literals
@@ -54,7 +57,6 @@ class BuilderClass(BaseCorpusBuilder):
         # Transcript
         # A string value containing the phonological transcription using
         # ARPAbet.
-
         
         self.corpus_table = "Dictionary"
         self.corpus_id = "WordId"
@@ -112,7 +114,7 @@ class BuilderClass(BaseCorpusBuilder):
     
     @staticmethod
     def get_license():
-        return "CMUdict is licensed under a modified FreeBSD license."
+        return "CMUdict is available under the terms of a modified FreeBSD license."
     
     @staticmethod
     def get_description():

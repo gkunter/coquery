@@ -3,11 +3,14 @@
 """
 coq_install_bnc.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License. A 
+Coquery exception applies under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import unicode_literals 
@@ -515,7 +518,7 @@ class BuilderClass(BaseCorpusBuilder):
     
     @staticmethod
     def get_license():
-        return "The BNC is licensed under the terms of the <a href='http://www.natcorp.ox.ac.uk/docs/licence.html'>BNC User Licence</a>."
+        return "The BNC is available under the terms of the <a href='http://www.natcorp.ox.ac.uk/docs/licence.html'>BNC User Licence</a>."
         
     @staticmethod
     def get_references():
