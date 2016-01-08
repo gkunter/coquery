@@ -3,11 +3,14 @@
 """
 uniqueviewer.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License. A 
+Coquery exception applies under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import division
@@ -22,6 +25,7 @@ import sys
 import options
 import error_box
 import QtProgress
+import classes
 
 class UniqueViewer(QtGui.QWidget):
     def __init__(self, rc_feature=None, db_name=None, parent=None):
@@ -29,6 +33,20 @@ class UniqueViewer(QtGui.QWidget):
         
         self.ui = uniqueViewerUi.Ui_UniqueViewer()
         self.ui.setupUi(self)
+
+        self.ui.button_details = classes.CoqDetailBox("Corpus: {} – Column: {}")
+        self.ui.verticalLayout.insertWidget(0, self.ui.button_details)
+
+        self.ui.label = QtGui.QLabel("Number of values: {}")
+        self.ui.detail_layout = QtGui.QHBoxLayout()
+        self.ui.detail_layout.addWidget(self.ui.label)
+        self.ui.button_details.box.setLayout(self.ui.detail_layout)
+
+
+        self.ui.buttonBox.setDisabled(True)
+        self.ui.button_details.setDisabled(True)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(self.save_list)
 
         self.rc_feature = rc_feature
         self.db_name = db_name
@@ -48,41 +66,21 @@ class UniqueViewer(QtGui.QWidget):
             self.column = None
 
         self.ui.treeWidget.itemClicked.connect(self.entry_clicked)
-        self.ui.button_details.clicked.connect(self.toggle_details)
-        self.set_details()
 
-        self.ui.buttonBox.setDisabled(True)
-        self.ui.button_details.setDisabled(True)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(self.save_list)
-
-    def set_details(self):
-        if options.cfg.unique_view_details:
-            self.ui.frame_details.show()
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
-        else:
-            self.ui.frame_details.hide()
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
-        self.ui.button_details.setIcon(icon)
-
-    def toggle_details(self):
-        options.cfg.unique_view_details = not options.cfg.unique_view_details
-        self.set_details()
-        
     def get_unique(self):
         if not self.db_name:
             return
         import sqlwrap
         S = "SELECT DISTINCT {0} FROM {1} ORDER BY {0}".format(self.column, self.table)
 
-        self.DB = sqlwrap.SqlDB(
+        db = sqlwrap.SqlDB(
             *options.get_mysql_configuration(),
             db_name=self.db_name)
-        self.DB.execute(S)
-        self.data = [QtGui.QTreeWidgetItem(self.ui.treeWidget, [x[0]]) for x in self.DB.Cur]
+        cur = db.Con.cursor() 
+        cur.execute(S)
+        self.data = [QtGui.QTreeWidgetItem(self.ui.treeWidget, [x[0]]) for x in cur]
         for x in self.data:
             x.setToolTip(0, x.text(0))
-        self.DB.close()
 
     def finalize(self):
         self.ui.progress_bar.setRange(1,0)
