@@ -6,11 +6,14 @@ from __future__ import print_function
 """
 corpusbuilder.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License. A 
+Coquery exception applies under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 """ 
@@ -69,6 +72,7 @@ import string
 import imp
 import importlib
 import warnings
+import time
 
 import dbconnection
 import argparse
@@ -259,6 +263,8 @@ class Table(object):
         self._add_cache = dict()
         self._commited = {}
         self._col_names = None
+        self._connection = None
+        self._max_cache = 0
 
     @property
     def name(self):
@@ -267,7 +273,7 @@ class Table(object):
     @name.setter
     def name(self, s):
         self._name = s
-        
+
     def commit(self, db_connector, strange_check=False):
         """
         Commit the table content to the data base.
@@ -281,7 +287,8 @@ class Table(object):
         this ensures that all new table rows are commited, while at the same
         time preserving some memory space.
         """
-        
+        #print("add_cache", self.name)
+        #print(self._add_cache)
         if self._add_cache:
             if self.primary.name not in self._col_names:
                 fields = [self.primary.name] + self._col_names
@@ -321,25 +328,90 @@ class Table(object):
                 # Reset all new keys:
                 for row in new_keys:
                     self._add_cache[row] = (self._add_cache[row][0], None)
+
+    def flush_cache(self):
+        """
+        Commit the table content to the data base.
+        
+        This table commits the unsaved content of the table to the data base.
+        After commiting, the values of all table entries are set to None, and
+        only those data that have a value different from None will be 
+        commited the next time this method is called.
+        
+        As this method is usually called after a file has been processed, 
+        this ensures that all new table rows are commited, while at the same
+        time preserving some memory space.
+        """
+        #print("add_cache", self.name)
+        #print(self._add_cache)
+        if not self._connection:
+            return
+        if self._add_cache:
+            if self.primary.name not in self._col_names:
+                fields = [self.primary.name] + self._col_names
+            else:
+                fields = self._col_names
+            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
+                self._name, ", ".join(fields), ", ".join(["%s"] * len(fields)))
+            data = []
+            # build a list of all new entries, i.e. those for which the value
+            # is not Null
+            for row in self._add_cache:
+                row_id, row_data = self._add_cache[row]
+                if self.primary.name in self._col_names:
+                    data.append(list(row_data.values()))
+                else:
+                    data.append([row_id] + list(row_data.values()))
+
+            if data: 
+                try:
+                    self._connection.executemany(sql_string, data)
+                except TypeError as e:
+                    warnings.warn(sql_string)
+                    warnings.warn(str(e))
+                except Exception as e:
+                    print(e)
+                    print(sql_string)
+                    warnings.warn(sql_string)
+                    warnings.warn(str(e))
+                    raise e
+            self._add_cache = {}
+            self._connection.commit()
     
     def _add_next_with_primary(self, row):
-        """ Add a valid primary key to the data in the 'row' dictionary, 
-        and store the data in add cache of the table. """ 
+        """ 
+        Add a valid primary key to the data in the 'row' dictionary, 
+        and store the data in add cache of the table. 
+        """ 
         self._current_id += 1
         self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        if self._max_cache and len(self._add_cache) > self._max_cache:
+            self.flush_cache()
         return self._current_id
 
     def _add_next_no_primary(self, row):
-        """ Sotre the row in the add cache of the table. The primary key is 
-        expected to be already in the row, so it is not added."""
+        """ 
+        Store the row in the add cache of the table. The primary key is 
+        expected to be already in the row, so it is not added.
+        """
         self._current_id = row[self.primary.name]
         self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        if self._max_cache and len(self._add_cache) > self._max_cache:
+            self.flush_cache()
         return self._current_id
     
     def add(self, row):
-        """ Add a valid primary key to the data in the 'row' dictionary, 
-        and store the data in add cache of the table. """ 
-
+        """ 
+        Store the 'row' dictionary in the add cache of the table. If 
+        necessary, a valid primary key is added to the row.
+        
+        NOTE: To increase the performance, this method overwrites itself with 
+        either _add_next_no_primary() or _add_next_with_primary(), depending 
+        on whether the submitted row dictionary contains a primary key or not. 
+        In this way, the primary key test is done only for the first time a 
+        row is added to the table, which leads to somewhat faster execution 
+        times.        
+        """ 
         if not self._col_names:
             self._col_names = list(row.keys())
         if self.primary.name in self._col_names:
@@ -445,8 +517,8 @@ class Table(object):
             if column.name not in columns_added:
                 if db_type == SQL_MYSQL:
                     if column.primary:
-                        # do not add AUTO_INCREMENT to ENUMs:
-                        if column.data_type.upper().startswith("ENUM"):
+                        # do not add AUTO_INCREMENT to strings or ENUMs:
+                        if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
                             pattern = "{} {}"
                         else:
                             pattern = "{} {} AUTO_INCREMENT"
@@ -795,8 +867,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     return True
         return False
 
-    @staticmethod
-    def validate_files(l):
+    @classmethod
+    def validate_files(cls, l):
         """
         Validates the file list.
         
@@ -811,10 +883,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             A list of file names as created by get_file_list()
             
         """
-
-        found_list = [x for x in [os.path.basename(y) for y in l] if x.lower() in [y.lower() for y in BaseCorpusBuilder.expected_files]]
-        if len(found_list) < len(BaseCorpusBuilder.expected_files):
-            missing_list = [x for x in BaseCorpusBuilder.expected_files if x.lower() not in [y.lower() for y in found_list]]
+        found_list = [x for x in [os.path.basename(y) for y in l] if x.lower() in [y.lower() for y in cls.expected_files]]
+        if len(found_list) < len(cls.expected_files):
+            missing_list = [x for x in cls.expected_files if x.lower() not in [y.lower() for y in found_list]]
             sample = "<br/>".join(missing_list[:5])
             if len(missing_list) > 6:
                 sample = "{}</code>, and {} other files".format(sample, len(missing_list) - 3)
@@ -1368,9 +1439,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         ##resource = module.Resource
         ##print(resource)
         
-        
-        
-    
     def create_joined_table(self):
         pass
     
@@ -1414,17 +1482,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         self.Con.modify_field_type(table.name, column.name, ot)
                     except Exception as e:
                         print(e)
-                        raise e
-                    except (
-                        dbconnection.mysql.InterfaceError, 
-                        dbconnection.mysql.DataError,
-                        dbconnection.mysql.DatabaseError, 
-                        dbconnection.mysql.OperationalError, 
-                        dbconnection.mysql.IntegrityError, 
-                        dbconnection.mysql.InternalError, 
-                        dbconnection.mysql.ProgrammingError) as e:
-                        if self.logger:
-                            self.logger.warning(e)
+                        self.logger.warning(e)
                     else:
                         column.data_type = ot
                 column_count += 1
@@ -1490,16 +1548,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         length = None
 
                     self.Con.create_index(table, column, [column], index_length=length)
-                except (
-                        dbconnection.mysql.InterfaceError, 
-                        dbconnection.mysql.DataError,
-                        dbconnection.mysql.DatabaseError, 
-                        dbconnection.mysql.OperationalError, 
-                        dbconnection.mysql.IntegrityError, 
-                        dbconnection.mysql.InternalError, 
-                        dbconnection.mysql.ProgrammingError) as e:
-                    if self.logger:
-                        self.logger.warning(e)
+                except Exception as e:
+                    print(e)
+                    self.logger.warning(e)
                 
                 i += 1
                 if self._widget:
@@ -1730,13 +1781,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if not self._widget:
             print("\n%s\n" % textwrap.TextWrapper(width=79).fill(" ".join(self.get_description())))
             
-        for mod, package, url in self.get_modules():
+        for module, package, url in self.get_modules():
+            print(module, package, url)
             try:
                 exec("import {}".format(module))
             except ImportError:
                 raise DependencyError(package)
-
-            
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """
@@ -2041,10 +2091,10 @@ if use_gui:
             """
             if self.ui.radio_complete.isChecked():
                 try:
-                    self.builder_class.validate_files(
-                        self.builder_class.get_file_list(
+                    l = self.builder_class.get_file_list(
                             str(self.ui.input_path.text()),
-                            self.builder_class.file_filter))
+                            self.builder_class.file_filter)
+                    self.builder_class.validate_files(l)
                 except RuntimeError as e:
                     reply = QtGui.QMessageBox.question(
                         None, "Corpus path not valid – Coquery",
@@ -2225,3 +2275,80 @@ if use_gui:
             namespace.use_nltk = self.ui.use_pos_tagging.checkState()
             namespace.db_name = "coq_{}".format(namespace.name).lower()
             return namespace
+
+def create_installer_module(path, filename, name, user, db_name, tagged, directory, tokens, files):
+    """
+    Read the Python source of coq_install_generic.py, and modify it so that it 
+    can be stored as a custom installer module.
+    """
+    with codecs.open(os.path.join(path, "coq_install_generic.py"), "r") as input_file:
+        source = input_file.readlines()
+        
+    for current_line in source:
+        pass
+    
+    if tagged:
+        is_tagged_label = "POS-tagged text corpus"
+    else:
+        is_tagged_label = "text corpus"
+    now = time.strftime("%c")
+    description = ["The {} '{}' was created on {}{} from the text files in the directory {}. It contains {} tokens from {} text file{}.".format(
+        is_tagged_label, name, now, 
+        " by {}".format(user) if user else "", directory, tokens, 
+        files if files > 1 else "one", 
+        "s" if files > 1 else "")]
+    if tagged:
+        description.append("Part-of-speech tags were assigned using the currently best tagger from the Natural Language Toolkit (NLTK).")
+    
+    new_code = """
+    
+    @staticmethod
+    def get_name():
+        return "{name}"
+
+    @staticmethod
+    def get_db_name():
+        return "{db_name}"
+    
+    @staticmethod
+    def get_title():
+        return "{name}: a {is_tagged_corpus}"
+        
+    @staticmethod
+    def get_description():
+        return [{description}]""".format(name=name, 
+               db_name=db_name,
+               is_tagged_corpus=is_tagged_label,
+               description=" ".join(description))
+
+    new_doc_string = """
+This corpus installer was generated by the corpus query tool 
+Coquery (http://www.coquery.org).
+""".format(filename)
+
+    in_class = False
+    in_docstring = False
+    in_get_description = False
+
+    for x in source:
+        if x.startswith('"""'):
+            if not in_docstring:
+                in_docstring = True
+                yield '"""'
+                yield new_doc_string
+            else:
+                in_docstring = False
+        if in_docstring:
+            continue
+        
+        if not in_class:
+            if x.startswith("class BuilderClass"):
+                in_class = True
+                yield x
+                continue
+        else:
+            if not x.startswith("    "):
+                in_class = False
+                yield new_code
+
+        yield x
