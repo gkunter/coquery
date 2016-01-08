@@ -3,21 +3,23 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License. A 
+Coquery exception applies under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import unicode_literals
 
-import warnings
-try:
-    import chardet
-except ImportError:
-    warnings.warn("The Python library 'chardet' is not available. The encoding of the input text files cannot be determined automatically.")
-    warnings.warn("Using default Unicode encoding 'utf-8'.")
+#try:
+    #import chardet
+#except ImportError:
+    #warnings.warn("The Python library 'chardet' is not available. The encoding of the input text files cannot be determined automatically.")
+    #warnings.warn("Using default Unicode encoding 'utf-8'.")
 
 from corpusbuilder import *
 
@@ -39,56 +41,11 @@ class BuilderClass(BaseCorpusBuilder):
     def __init__(self, gui=False):
         # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui)
-        
-        # specify which features are provided by this corpus and lexicon:
-        #self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
-        #self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS"]
-        
-        #self.documentation_url = "(no URL availabe)"
 
-        # add table descriptions for the tables used in this database.
-        #
-        # Every table has a primary key that uniquely identifies each entry
-        # in the table. This primary key is used to link an entry from one
-        # table to an entry from another table. The name of the primary key
-        # stored in a string is given as the second argument to the function
-        # add_table_description().
-        #
-        # A table description is a dictionary with at least a 'CREATE' key
-        # which takes a list of strings as its value. Each of these strings
-        # represents a MySQL instruction that is used to create the table.
-        # Typically, this instruction is a column specification, but you can
-        # also add other table options for this table. Note that the primary
-        # key cannot be set manually.
-        # 
-        # Additionaly, the table description can have an 'INDEX' key which
-        # takes a list of tuples as its value. Each tuple has three 
-        # elements. The first element is a list of strings containing the
-        # column names that are to be indexed. The second element is an
-        # integer value specifying the index length for columns of Text
-        # types. The third element specifies the index type (e.g. 'HASH' or
-        # 'BTREE'). Note that not all MySQL storage engines support all 
-        # index types.
-        
-        # Add the main corpus table. Each row in this table represents a 
-        # token in the corpus. It has the following columns:
-        # 
-        # TokenId
-        # An int value containing the unique identifier of the token
-        #
-        # WordId
-        # An int value containing the unique identifier of the lexicon
-        # entry associated with this token.
-        #
-        # FileId
-        # An int value containing the unique identifier of the data file 
-        # that contains this token.
-        
-        
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
         #
-        # WordId
+        # WordId (Primary)
         # An int value containing the unique identifier of this word-form.
         #
         # LemmaId
@@ -117,7 +74,7 @@ class BuilderClass(BaseCorpusBuilder):
         # more than one token may be linked to each file in this table.
         # The table contains the following columns:
         #
-        # FileId
+        # FileId (Primary)
         # An int value containing the unique identifier of this file.
         # 
         # File 
@@ -131,6 +88,20 @@ class BuilderClass(BaseCorpusBuilder):
             Column(self.file_name, "TINYTEXT NOT NULL"),
             Column(self.file_path, "TINYTEXT NOT NULL")])
 
+        # Add the main corpus table. Each row in this table represents a 
+        # token in the corpus. It has the following columns:
+        # 
+        # TokenId (Primary)
+        # An int value containing the unique identifier of the token
+        #
+        # WordId
+        # An int value containing the unique identifier of the lexicon
+        # entry associated with this token.
+        #
+        # FileId
+        # An int value containing the unique identifier of the data file 
+        # that contains this token.
+        
         self.create_table_description(self.corpus_table,
             [Primary(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
@@ -139,12 +110,7 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def validate_files(l):
         if len(l) == 0:
-            raise RuntimeError("<p>No file could be found in the selected directory..</p> ")
-        
-
-    @staticmethod
-    def get_description():
-        return "This script creates the corpus '{}' by reading data from the files in {} to populate the MySQL database '{}' so that the database can be queried by Coquery.".format(self.name, self.arguments.path, self.arguments.db_name)
+            raise RuntimeError("<p>No file could be found in the selected directory.</p> ")
 
 def main():
     BuilderClass().build()
