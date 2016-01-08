@@ -1,11 +1,14 @@
 """
 dbconnection.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License. A 
+Coquery exception applies under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import unicode_literals 
@@ -36,6 +39,15 @@ insert_cache = defaultdict(list)
 
 class DBConnection(object):
     def __init__(self, db_user="mysql", db_host="localhost", db_type="mysql", db_port=3306, db_pass="mysql", local_infile=0, encoding="utf8", db_path=""):
+        self.db_type = db_type
+        self.db_host = db_host
+        self.db_port = db_port
+        self.db_user = db_user
+        self.db_passwd = db_pass
+        self.db_path = None
+        self.db_name = None
+        self._encoding = encoding
+
         if db_type == SQL_MYSQL:
             self._con = mysql.connect(
                 host=db_host, 
@@ -54,14 +66,6 @@ class DBConnection(object):
             self._con = None
         else:
             raise RuntimeError("Database type '{}' not supported.".format(db_type))
-        self.db_type = db_type
-        self.db_host = db_host
-        self.db_port = db_port
-        self.db_user = db_user
-        self.db_passwd = db_pass
-        self.db_path = None
-        self.db_name = None
-        self._encoding = encoding
 
     def Con(self):
         if self.db_type == SQL_MYSQL:
