@@ -3,11 +3,17 @@
 """
 app.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version. In addition, a Coquery exception applies as an Additional permission
+under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import unicode_literals
@@ -36,7 +42,7 @@ import classes
 import error_box
 import sqlwrap
 import queries
-import contextview
+import contextviewer
 
 from queryfilter import *
 
@@ -453,7 +459,7 @@ class CoqueryApp(QtGui.QMainWindow):
         except KeyError:
             QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
 
-        contextview.ContextView.display(self.Session.Corpus, int(token_id), int(origin_id), int(token_width), self)
+        contextviewer.ContextView.display(self.Session.Corpus, int(token_id), int(origin_id), int(token_width), self)
 
     def verify_file_name(self):
         file_name = str(self.ui.edit_file_name.text())
@@ -1354,9 +1360,10 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.corpus_manager = corpusmanager.CorpusManager(parent=self)        
             self.corpus_manager.show()
-            self.corpus_manager.read(path)
+            self.corpus_manager.read(path, "<b>System corpora</b>")
             if options.cfg.custom_installer_path:
-                self.corpus_manager.read(options.cfg.custom_installer_path)
+                self.corpus_manager.read(options.cfg.custom_installer_path, "<b>Custom corpora</b>")
+            self.corpus_manager.add_stretcher()
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
             result = self.corpus_manager.exec_()
