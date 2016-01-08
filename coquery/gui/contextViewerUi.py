@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'contextview.ui'
+# Form implementation generated from reading ui file 'contextViewer.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #
@@ -36,26 +36,6 @@ class Ui_ContextView(object):
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.box_context)
         self.verticalLayout_2.setContentsMargins(8, 6, 8, 6)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
-        self.verticalLayout = QtGui.QVBoxLayout()
-        self.verticalLayout.setSpacing(0)
-        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
-        self.button_ids = QtGui.QPushButton(self.box_context)
-        self.button_ids.setStyleSheet(_fromUtf8("text-align: left; padding: 4px; padding-left: 1px;"))
-        self.button_ids.setFlat(False)
-        self.button_ids.setObjectName(_fromUtf8("button_ids"))
-        self.verticalLayout.addWidget(self.button_ids)
-        self.frame_details = QtGui.QFrame(self.box_context)
-        self.frame_details.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.frame_details.setFrameShadow(QtGui.QFrame.Sunken)
-        self.frame_details.setObjectName(_fromUtf8("frame_details"))
-        self.form_information = QtGui.QFormLayout(self.frame_details)
-        self.form_information.setFieldGrowthPolicy(QtGui.QFormLayout.ExpandingFieldsGrow)
-        self.form_information.setRowWrapPolicy(QtGui.QFormLayout.WrapLongRows)
-        self.form_information.setContentsMargins(-1, 0, -1, -1)
-        self.form_information.setHorizontalSpacing(10)
-        self.form_information.setObjectName(_fromUtf8("form_information"))
-        self.verticalLayout.addWidget(self.frame_details)
-        self.verticalLayout_2.addLayout(self.verticalLayout)
         self.context_area = QtGui.QTextBrowser(self.box_context)
         self.context_area.setAutoFillBackground(False)
         self.context_area.setFrameShape(QtGui.QFrame.StyledPanel)
@@ -118,7 +98,6 @@ class Ui_ContextView(object):
 
     def retranslateUi(self, ContextView):
         ContextView.setWindowTitle(_translate("ContextView", "Context view – Coquery", None))
-        self.button_ids.setText(_translate("ContextView", "Token ID: {}, Source ID: {}", None))
         self.label_4.setText(_translate("ContextView", "&Context size:", None))
         self.spin_context_width.setSpecialValueText(_translate("ContextView", "none", None))
         self.spin_context_width.setSuffix(_translate("ContextView", " words", None))
