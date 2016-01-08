@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'corpusManager.ui'
 #
-# Created: Sun Sep  6 10:37:06 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -26,37 +25,34 @@ except AttributeError:
 class Ui_corpusManager(object):
     def setupUi(self, corpusManager):
         corpusManager.setObjectName(_fromUtf8("corpusManager"))
-        corpusManager.resize(944, 600)
+        corpusManager.resize(800, 600)
         self.verticalLayout = QtGui.QVBoxLayout(corpusManager)
-        self.verticalLayout.setSpacing(16)
-        self.verticalLayout.setContentsMargins(2, 0, 2, 0)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
-        self.scroll_area_corpus = QtGui.QScrollArea(corpusManager)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.MinimumExpanding)
+        self.frame_2 = QtGui.QFrame(corpusManager)
+        self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_2.setFrameShadow(frameShadow)
+        self.frame_2.setObjectName(_fromUtf8("frame_2"))
+        self.verticalLayout_2 = QtGui.QVBoxLayout(self.frame_2)
+        self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
+        self.list_corpora = QtGui.QScrollArea(self.frame_2)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.scroll_area_corpus.sizePolicy().hasHeightForWidth())
-        self.scroll_area_corpus.setSizePolicy(sizePolicy)
-        self.scroll_area_corpus.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.scroll_area_corpus.setFrameShadow(frameShadow)
-        self.scroll_area_corpus.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.scroll_area_corpus.setWidgetResizable(True)
-        self.scroll_area_corpus.setObjectName(_fromUtf8("scroll_area_corpus"))
-        self.scroll_area_content = QtGui.QWidget()
-        self.scroll_area_content.setGeometry(QtCore.QRect(0, 0, 934, 458))
-        self.scroll_area_content.setObjectName(_fromUtf8("scroll_area_content"))
-        self.horizontalLayout_2 = QtGui.QHBoxLayout(self.scroll_area_content)
-        self.horizontalLayout_2.setSpacing(0)
-        self.horizontalLayout_2.setMargin(0)
-        self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
-        self.corpus_stack = QtGui.QToolBox(self.scroll_area_content)
-        self.corpus_stack.setFrameShape(QtGui.QFrame.NoFrame)
-        self.corpus_stack.setFrameShadow(frameShadow)
-        self.corpus_stack.setObjectName(_fromUtf8("corpus_stack"))
-        
-        self.horizontalLayout_2.addWidget(self.corpus_stack)
-        self.scroll_area_corpus.setWidget(self.scroll_area_content)
-        self.verticalLayout.addWidget(self.scroll_area_corpus)
+        sizePolicy.setHeightForWidth(self.list_corpora.sizePolicy().hasHeightForWidth())
+        self.list_corpora.setSizePolicy(sizePolicy)
+        self.list_corpora.setFrameShape(QtGui.QFrame.NoFrame)
+        self.list_corpora.setWidgetResizable(True)
+        self.list_corpora.setObjectName(_fromUtf8("list_corpora"))
+        self.list_content = QtGui.QWidget()
+        self.list_content.setGeometry(QtCore.QRect(0, 0, 778, 492))
+        self.list_content.setObjectName(_fromUtf8("list_content"))
+        self.list_layout = QtGui.QVBoxLayout(self.list_content)
+        self.list_layout.setMargin(0)
+        self.list_layout.setSpacing(0)
+        self.list_layout.setObjectName(_fromUtf8("list_layout"))
+        self.list_corpora.setWidget(self.list_content)
+        self.verticalLayout_2.addWidget(self.list_corpora)
+        self.verticalLayout.addWidget(self.frame_2)
         self.frame = QtGui.QFrame(corpusManager)
         self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
         self.frame.setFrameShadow(frameShadow)
@@ -82,8 +78,6 @@ class Ui_corpusManager(object):
         self.verticalLayout.addWidget(self.buttonBox)
 
         self.retranslateUi(corpusManager)
-        self.corpus_stack.setCurrentIndex(0)
-        self.corpus_stack.layout().setSpacing(-1)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), corpusManager.accept)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), corpusManager.reject)
         QtCore.QMetaObject.connectSlotsByName(corpusManager)
