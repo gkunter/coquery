@@ -3,11 +3,14 @@
 """
 contextview.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License. A 
+Coquery exception applies under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import division
@@ -18,9 +21,11 @@ import os
 
 from pyqt_compat import QtCore, QtGui
 
-import contextviewUi
+import contextViewerUi
+
 import options
 import sqlwrap
+import classes
 
 class ContextView(QtGui.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, parent=None):
@@ -45,7 +50,7 @@ class ContextView(QtGui.QWidget):
         self.source_id = source_id
         self.token_width = token_width
         
-        self.ui = contextviewUi.Ui_ContextView()
+        self.ui = contextViewerUi.Ui_ContextView()
         self.ui.setupUi(self)
         
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
@@ -54,9 +59,14 @@ class ContextView(QtGui.QWidget):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.closeEvent)
 
         # Add clickable header
+        self.ui.button_ids = classes.CoqDetailBox("Token ID: {}, Source ID: {}")
+        self.ui.verticalLayout_2.insertWidget(0, self.ui.button_ids)
+        
+        self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
+        
         self.ui.button_ids.setText(str(self.ui.button_ids.text()).format(token_id, source_id))
-        self.ui.button_ids.clicked.connect(self.toggle_details)
-        self.set_details()
+        #self.ui.button_ids.clicked.connect(self.toggle_details)
+        #self.set_details()
         
         L = self.corpus.get_origin_data(token_id)
         for table, fields in sorted(L):
