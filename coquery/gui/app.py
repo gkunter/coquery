@@ -1436,6 +1436,8 @@ class CoqueryApp(QtGui.QMainWindow):
         state : bool
             True if a connection is available, or False otherwise.
         """
+        active_widget = options.cfg.app.focusWidget()
+        
         if options.cfg.current_server == None:
             state = False
         else:
@@ -1475,7 +1477,10 @@ class CoqueryApp(QtGui.QMainWindow):
             self.fill_combo_corpus()
             if self.ui.combo_corpus.count():
                 self.ui.options_area.setDisabled(False)
-        
+
+        if active_widget:
+            active_widget.setFocus()
+
         return state
 
     def connection_settings(self):
