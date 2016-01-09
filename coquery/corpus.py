@@ -598,7 +598,8 @@ class SQLResource(BaseResource):
         engine = create_engine(engine_string)
         return engine
     
-    def SQLAlchemyConnect(self):
+    @staticmethod
+    def SQLAlchemyConnect():
         host, port, db_type, user, password = options.get_mysql_configuration()
         if db_type == SQL_MYSQL:
             engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
@@ -609,7 +610,7 @@ class SQLResource(BaseResource):
                 db_name=self.db_name)
         elif db_type == SQL_SQLITE:
             engine_string = "sqlite+pysqlite:///{}".format(
-                self.DB.sqlite_path(self.db_name))
+                SqlDB.sqlite_path(self.db_name))
         else:
             raise RuntimeError("Database type '{}' not supported.".format(db_type))
         engine = create_engine(engine_string)
@@ -650,7 +651,8 @@ class SQLResource(BaseResource):
                 pass
             else:
                 S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
-                cur = self.DB.cursor()
+                db = self.resource.get_db()
+                cur = db.Con.cursor()
                 cur.execute(S)
                 stats.append([table, column, table_sizes[table], cur.fetchone()[0]])
         
@@ -1250,7 +1252,8 @@ class SQLCorpus(BaseCorpus):
             for x in filter_strings:
                 pass
             S = "SELECT COUNT(*) FROM {}".format(self.resource.corpus_table)
-            cur = self.resource.DB.cursor()
+            db = self.resource.get_db()
+            cur = db.Con.cursor()
             cur.execute(S)
             self._corpus_size_cache = cur.fetchone()[0]
         return self._corpus_size_cache
