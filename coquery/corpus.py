@@ -1035,12 +1035,13 @@ class SQLLexicon(BaseLexicon):
 
     def is_part_of_speech(self, pos):
         try:
-            self.resource.DB.execute(self.sql_string_is_part_of_speech(pos))
-            query_result = self.resource.DB.fetch_all()
+            db = self.resource.get_db()
+            cur = db.Con.cursor()
+            cur.execute(self.sql_string_is_part_of_speech(pos))
         except LexiconFeatureUnavailableError:
             return False
         else:
-            return len(query_result) > 0
+            return cur.rowcount > 0
     
     #def get_other_wordforms(self, Word):
         #""" Return a list of word_id containing all other entries in the
@@ -1073,8 +1074,10 @@ class SQLLexicon(BaseLexicon):
     def get_posid_list(self, token):
         """ Return a list of all PosIds that match the query token. """
         S = self.sql_string_get_posid_list(token)
-        self.resource.DB.execute(S)
-        return set([x[0] for x in self.resource.DB.fetch_all()])
+        db = self.resource.get_db()
+        cur = db.Con.cursor()
+        cur.execute(S)
+        return set([x[0] for x in cur])
 
     def get_stopword_ids(self):
         """
@@ -1144,14 +1147,14 @@ class SQLLexicon(BaseLexicon):
         db = self.resource.get_db()
         cur = db.Con.cursor()
         cur.execute(S)
-        query_results = cur.fetchall()
-        if not query_results:
+        if not cur:
+            print("How is this caught?")
             raise WordNotInLexiconError
         else:
             if stopwords:
-                return [x[0] for x in query_results if x[0] not in stopword_ids]
+                return [x[0] for x in cur if x[0] not in stopword_ids]
             else:
-                return [x[0] for x in query_results]
+                return [x[0] for x in cur]
         
 class SQLCorpus(BaseCorpus):
     def __init__(self):
