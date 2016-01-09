@@ -1258,47 +1258,80 @@ class CoqueryApp(QtGui.QMainWindow):
                 import webbrowser
                 webbrowser.open(url)
         
-    def remove_corpus(self, corpus_name):
+    def remove_corpus(self, corpus_name, adhoc_corpus):
+        """
+        Remove the database and corpus module for 'corpus_name'. If the 
+        corpus was created from a text directory, also remove the installer.
+        
+        Parameters
+        ----------
+        corpus_name : str 
+            The name of the corpus.
+        adhoc_corpus : bool 
+            True if the corpus was created using the "Build new corpus"
+            function, or False otherwise.
+        """
+        
         resource, _, _, module = options.cfg.current_resources[corpus_name]
         database = resource.db_name
 
-        # Try to estimate the file size:
-        db_con = options.cfg.server_configuration[options.cfg.current_server]
         try:
-            size = FileSize(sqlwrap.SqlDB(
-                db_con["host"], db_con["port"], 
-                db_con["user"], db_con["password"]).get_database_size(database))
+            host, port, db_type, user, password = options.get_mysql_configuration()
+        except ValueError:
+            raise SQLNoConfigurationError
+        else:
+            db = sqlwrap.SqlDB(host, port, db_type, user, password)
+
+        # Try to estimate the file size:
+        try:
+            size = FileSize(db.get_database_size(database))
         except  TypeError:
             size = FileSize(-1)
         response = QtGui.QMessageBox.warning(
             self, "Remove corpus", msg_corpus_remove.format(corpus=corpus_name, size=size), QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
         
         if response == QtGui.QMessageBox.Yes:
-            try:
-                self.Session.Corpus.resource.DB.close()
-            except AttributeError as e:
-                pass
             success = True
-            DB = sqlwrap.SqlDB(
-                db_con["host"], db_con["port"], db_con["user"], db_con["password"])
             self.start_progress_indicator()
             try:
-                DB.execute("DROP DATABASE {}".format(database))
-            except (sqlwrap.pymysql.Error) as e:
+                db.drop_database(database)
+            except Exception as e:
                 QtGui.QMessageBox.critical(
                     self, 
                     "Database error – Coquery", 
                     msg_remove_corpus_error.format(corpus=resource.name, code=e), 
                     QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                 success = False
-            finally:
-                DB.close()
+            try:
+                db.close()
+            except AttributeError as e:
+                pass
+
+            # Remove the corpus module:
             if success:
                 try:
-                    os.remove(module)
+                    if os.path.exists(module):
+                        os.remove(module)
                 except IOError:
                     QtGui.QMessageBox.critical(self, "Storage error – Coquery", msg_remove_corpus_disk_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     success = False
+                else:
+                    success = True
+            
+            # remove the corpus installer if the corpus was created from 
+            # text files:
+            if success and adhoc_corpus:
+                try:
+                    installer_path = os.path.join(
+                        options.get_home_dir(), "adhoc",
+                        "coq_install_{}.py".format(corpus_name))
+                    os.remove(installer_path)
+                except Exception as e:
+                    print(e)
+                    raise e
+                else:
+                    success = True
+
             self.stop_progress_indicator()
             options.set_current_server(options.cfg.current_server)
             self.fill_combo_corpus()
@@ -1308,10 +1341,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
             self.change_corpus()
             try:
-                self.corpus_manager.close()
+                self.corpus_manager.read()
             except AttributeError:
                 pass
-            self.corpus_manager = None
 
     def build_corpus(self):
         import coq_install_generic
@@ -1327,10 +1359,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.fill_combo_corpus()
             self.change_corpus()
             try:
-                self.corpus_manager.close()
+                self.corpus_manager.read()
             except AttributeError:
                 pass
-            self.corpus_manager = None
             
     def install_corpus(self, builder_class):
         import corpusbuilder
@@ -1344,15 +1375,12 @@ class CoqueryApp(QtGui.QMainWindow):
             self.fill_combo_corpus()
             self.change_corpus()
             try:
-                self.corpus_manager.close()
+                self.corpus_manager.read()
             except AttributeError:
                 pass
-            self.corpus_manager = None
             
     def manage_corpus(self):
         import corpusmanager
-        
-        path = os.path.join(sys.path[0], "installer")
         
         if self.corpus_manager:
             self.corpus_manager.raise_()
@@ -1360,10 +1388,6 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.corpus_manager = corpusmanager.CorpusManager(parent=self)        
             self.corpus_manager.show()
-            self.corpus_manager.read(path, "<b>System corpora</b>")
-            if options.cfg.custom_installer_path:
-                self.corpus_manager.read(options.cfg.custom_installer_path, "<b>Custom corpora</b>")
-            self.corpus_manager.add_stretcher()
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
             result = self.corpus_manager.exec_()
