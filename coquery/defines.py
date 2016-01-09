@@ -296,7 +296,7 @@ available for further queries before you install it again.</p>
 msg_remove_corpus_error = """
 <p><b>A database error occurred while deleting the corpus '{corpus}'.</b></p>
 <p>The corpus was <b>not</b> removed.</p>
-<p>The MySQL server returned the following error message:</p>
+<p>The database connection returned the following error message:</p>
 <p><code>{code}</code></p>
 <p>Please verify that the MySQL privileges for the current user allow you to
 delete databases.</p>
