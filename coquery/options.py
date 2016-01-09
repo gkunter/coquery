@@ -1180,6 +1180,7 @@ def get_home_dir(create=True):
     $COQ_HOME/coquery.cfg               configuration file
     $COQ_HOME/coquery.log               log files
     $COQ_HOME/installer/                additional corpus installers
+    $COQ_HOME/adhoc/                    corpus installer for custom text corpora
     $COQ_HOME/corpora/$MYSQL_CONFIG/    corpus modules installed by the user
     
     The location of $COQ_HOME depends on the operating system:
@@ -1216,6 +1217,10 @@ def get_home_dir(create=True):
         # create corpora directory if it doesn't exist yet:
         if not os.path.exists(os.path.join(coquery_home, "corpora")):
             os.makedirs(os.path.join(coquery_home, "corpora"))
+
+        # create adhoc directory if it doesn't exist yet:
+        if not os.path.exists(os.path.join(coquery_home, "adhoc")):
+            os.makedirs(os.path.join(coquery_home, "adhoc"))
 
         # create SQLite databases directory if it doesn't exist yet:
         if not os.path.exists(os.path.join(coquery_home, "databases")):
