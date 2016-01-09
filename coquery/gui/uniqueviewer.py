@@ -34,7 +34,7 @@ class UniqueViewer(QtGui.QWidget):
         self.ui = uniqueViewerUi.Ui_UniqueViewer()
         self.ui.setupUi(self)
 
-        self.ui.button_details = classes.CoqDetailBox("Corpus: {} – Column: {}")
+        self.ui.button_details = classes.CoqDetailBox(str("Corpus: {}   Column: {}"))
         self.ui.verticalLayout.insertWidget(0, self.ui.button_details)
 
         self.ui.label = QtGui.QLabel("Number of values: {}")
