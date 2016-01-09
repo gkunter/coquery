@@ -2,16 +2,23 @@
 """
 sqlwrap.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version. In addition, a Coquery exception applies as an Additional permission
+under GNU GPL version 3 section 7.
+
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
+exception, see <http://www.coquery.org/license/>.
 """
 
 from __future__ import unicode_literals
 import __init__
 
+import os
 import logging
 import warnings
 
@@ -19,7 +26,6 @@ try:
     logger = logging.getLogger(__init__.NAME)
 except AttributeError:
     pass
-import warnings
 
 from errors import *
 from defines import *
@@ -259,3 +265,10 @@ Value       no return value
         cur = self.Con.cursor()
         cur.execute("SELECT data_length+index_length FROM information_schema.tables WHERE table_schema = '{}'".format(database))
         return cur.fetchone()[0]
+
+    def drop_database(self, database_name):
+        if self.db_type == SQL_MYSQL:
+            cur = self.Con.cursor()
+            cur.execute("DROP DATABASE {}".format(database_name.split()[0]))
+        elif self.db_type == SQL_SQLITE:
+            os.remove(self.sqlite_path(database_name))
