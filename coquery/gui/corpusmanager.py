@@ -230,18 +230,12 @@ class CorpusManager(QtGui.QDialog):
         label : str or None 
             A label that can be added before the first installer widget.
         """
-        # if a label is provided, add it to the list:
-        if label:
-            header = QtGui.QLabel(label)
-            height = header.sizeHint().height()
-            if self.ui.list_layout.count() == 0:
-                # no top margin if this is the first widget in the layout:
-                header.setContentsMargins(0, 0, 0, int(height * 0.25))
-            else:
-                # add spacing otherwise:
-                header.setContentsMargins(0, int(height * 0.75), 0, int(height * 0.25))
-            self.ui.list_layout.addWidget(header)
         
+        if label:
+            header_row = self.ui.list_layout.count()
+
+        count = 0
+
         for root, dirnames, filenames in os.walk(path):
             installer_list = sorted(fnmatch.filter(filenames, 'coq_install_*.py'), reverse=True)
             
@@ -327,6 +321,22 @@ class CorpusManager(QtGui.QDialog):
                 # add entry to installer list:
                 self.detail_box.clicked.connect(lambda x: self.update_accordion(x))
                 self.ui.list_layout.addWidget(self.detail_box)
+                count += 1
+                
+        # if a label was provided and at least one installer added, insert 
+        # the header at the remembered position:
+        if label and count:
+            header = QtGui.QLabel(label)
+            height = header.sizeHint().height()
+            if header_row == 0:
+                # no top margin if this is the first widget in the layout:
+                header.setContentsMargins(0, 0, 0, int(height * 0.25))
+            else:
+                # add spacing otherwise:
+                header.setContentsMargins(0, int(height * 0.75), 0, int(height * 0.25))
+            self.ui.list_layout.insertWidget(header_row, header)
+        
+
 
     def update_accordion(self, detail_box):
         """
