@@ -5,15 +5,9 @@ app.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is free software; you can redistribute it and/or modify it under the
-terms of the GNU General Public License as published by the Free Software
-Foundation; either version 3 of the License, or (at your option) any later
-version. In addition, a Coquery exception applies as an Additional permission
-under GNU GPL version 3 section 7.
-
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
-exception, see <http://www.coquery.org/license/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
@@ -136,12 +130,20 @@ class CoqueryApp(QtGui.QMainWindow):
             self.show_no_corpus_message()
         
         options.cfg.main_window = self
-        # Resize the window if a previous size is available
-        try:
-            if options.cfg.height and options.cfg.width:
-                self.resize(options.cfg.width, options.cfg.height)
-        except AttributeError:
-            pass
+        options.settings = QtCore.QSettings(
+            os.path.join(options.get_home_dir(), "coquery.ini"),
+             QtCore.QSettings.IniFormat, self)
+
+        self.restoreGeometry(options.settings.value("main_geometry"))
+        self.restoreState(options.settings.value("main_state"))
+
+        ## Resize the window if a previous size is available
+        #try:
+            #if options.cfg.height and options.cfg.width:
+                #self.resize(options.cfg.width, options.cfg.height)
+        #except AttributeError:
+            #pass
+        
         
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -149,7 +151,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.create_output_options_tree()
         
         QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
-        self.ui.cloud_flow = FlowLayout(self.ui.tag_cloud, spacing = 1)
+        self.ui.cloud_flow = classes.CoqFlowLayout(self.ui.tag_cloud, spacing = 1)
 
         # add available resources to corpus dropdown box:
         corpora = [x for x in sorted(options.cfg.current_resources.keys())]
@@ -325,41 +327,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
 
     def help(self):
-        path = os.path.join(sys.path[0], "doc", "build", "qthelp", "coquery.qhc")
-
-        self.help_window = QtGui.QDialog(self)
-        self.help_window.engine = QtHelp.QHelpEngine(path, self)
-        self.help_window.engine.setupData()
-
-        self.help_window.browser = classes.CoqHelpBrowser(self.help_window.engine)
-        self.help_window.browser.setSource(QtCore.QUrl(
-            os.path.join(sys.path[0], "doc", "build", "qthelp", "index.html")))
-
-        self.help_window.engine.contentWidget().linkActivated.connect(lambda x: self.help_window.browser.setSource(x))
-        self.help_window.engine.indexWidget().linkActivated.connect(lambda x: self.help_window.browser.setSource(x))
-
-        tWidget = QtGui.QTabWidget()
-        tWidget.addTab(self.help_window.engine.contentWidget(), "Contents")
-        tWidget.addTab(self.help_window.engine.indexWidget(), "Index")
+        import helpviewer
         
-        horizSplitter = QtGui.QSplitter(QtCore.Qt.Horizontal)
-        horizSplitter.insertWidget(0, tWidget)
-        horizSplitter.insertWidget(1, self.help_window.browser)
-        
-        tWidget.setMaximumWidth(tWidget.minimumSizeHint().width() * 2)
-
-        #horizSplitter.hide()
-
-        layout = QtGui.QHBoxLayout(self.help_window)
-        layout.addWidget(horizSplitter)
-        
-        self.help_window.show()
-        self.help_window.exec_()
-
-        #self.help_window = QtGui.QDockWidget("Help", self)
-        #self.help_window.setWidget(self.horizSplitter)
-        #self.help_window.hide()
-        #self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.help_window)
+        self.helpviewer = helpviewer.HelpViewer()
+        self.helpviewer.show()
+        self.helpviewer.exec_()
 
     def show_corpus_menu(self):
         if self.ui.combo_corpus.count():
