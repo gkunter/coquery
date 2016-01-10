@@ -32,7 +32,7 @@ import pandas as pd
 import __init__
 from session import *
 from defines import *
-from pyqt_compat import QtCore, QtGui
+from pyqt_compat import QtCore, QtGui, QtHelp
 import QtProgress
 
 import coqueryUi, coqueryCompactUi
@@ -295,6 +295,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
+        self.ui.action_help.triggered.connect(self.help)
         self.ui.action_view_log.triggered.connect(self.show_log)
         self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
         
@@ -322,6 +323,43 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
+
+    def help(self):
+        path = os.path.join(sys.path[0], "doc", "build", "qthelp", "coquery.qhc")
+
+        self.help_window = QtGui.QDialog(self)
+        self.help_window.engine = QtHelp.QHelpEngine(path, self)
+        self.help_window.engine.setupData()
+
+        self.help_window.browser = classes.CoqHelpBrowser(self.help_window.engine)
+        self.help_window.browser.setSource(QtCore.QUrl(
+            os.path.join(sys.path[0], "doc", "build", "qthelp", "index.html")))
+
+        self.help_window.engine.contentWidget().linkActivated.connect(lambda x: self.help_window.browser.setSource(x))
+        self.help_window.engine.indexWidget().linkActivated.connect(lambda x: self.help_window.browser.setSource(x))
+
+        tWidget = QtGui.QTabWidget()
+        tWidget.addTab(self.help_window.engine.contentWidget(), "Contents")
+        tWidget.addTab(self.help_window.engine.indexWidget(), "Index")
+        
+        horizSplitter = QtGui.QSplitter(QtCore.Qt.Horizontal)
+        horizSplitter.insertWidget(0, tWidget)
+        horizSplitter.insertWidget(1, self.help_window.browser)
+        
+        tWidget.setMaximumWidth(tWidget.minimumSizeHint().width() * 2)
+
+        #horizSplitter.hide()
+
+        layout = QtGui.QHBoxLayout(self.help_window)
+        layout.addWidget(horizSplitter)
+        
+        self.help_window.show()
+        self.help_window.exec_()
+
+        #self.help_window = QtGui.QDockWidget("Help", self)
+        #self.help_window.setWidget(self.horizSplitter)
+        #self.help_window.hide()
+        #self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.help_window)
 
     def show_corpus_menu(self):
         if self.ui.combo_corpus.count():

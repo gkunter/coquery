@@ -30,6 +30,19 @@ import queries
 from errors import *
 from defines import *
 
+
+class CoqHelpBrowser(QtGui.QTextBrowser):
+    def __init__(self, help_engine, *args, **kwargs):
+        self.help_engine = help_engine
+        super(CoqHelpBrowser, self).__init__(*args, **kwargs)
+    
+    def loadResource(self, resource_type, name):
+        print(name, name.scheme())
+        if name.scheme() == "qthelp":
+            return self.help_engine.fileData(name)
+        else:
+            return super(CoqHelpBrowser, self).loadResource(resource_type, name)
+
 class CoqDetailBox(QtGui.QWidget):
     """
     Define a QLayout class that has the QPushButton 'header' as a clickable 

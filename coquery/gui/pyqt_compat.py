@@ -5,6 +5,7 @@ pyqt = False
 try:
     import PySide.QtCore as QtCore
     import PySide.QtGui as QtGui
+    import PySide.QtHelp as QtHelp
     pyside = True
 except ImportError:
     try:
@@ -12,6 +13,7 @@ except ImportError:
         sip.setapi('QVariant', 2)        
         import PyQt4.QtCore as QtCore
         import PyQt4.QtGui as QtGui
+        import PyQt4.QtHelp as QtHelp
         pyqt = True
     except ImportError:
         raise ImportError('Neither PyQt4 nor PySide available')
