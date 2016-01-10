@@ -1,5 +1,7 @@
-Query help
-==========
+.. _syntax:
+
+Query syntax
+============
 
 Query strings
 -------------
