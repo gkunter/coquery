@@ -1428,11 +1428,11 @@ class CoqueryApp(QtGui.QMainWindow):
         if not self.last_results_saved and options.cfg.ask_on_quit:
             response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_unsaved_data, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
-                accept_event()
+                accept_close()
             else:
                 event.ignore()            
         else:
-            accept_event()
+            accept_close()
         
     def settings(self):
         import settings

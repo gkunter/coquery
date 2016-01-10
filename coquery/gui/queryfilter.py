@@ -16,7 +16,7 @@ import random
 import sys
 
 from pyqt_compat import QtCore, QtGui
-from classes import CoqFlowLayout
+import classes
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -188,7 +188,7 @@ class CoqTagBox(QtGui.QWidget):
         sizePolicy.setHeightForWidth(self.scroll_content.sizePolicy().hasHeightForWidth())                                           
         self.scroll_content.setSizePolicy(sizePolicy)                                                                                
 
-        self.cloud_area = FlowLayout(spacing=5)                                                                 
+        self.cloud_area = classes.CoqFlowLayout(spacing=5)                                                                 
         self.scroll_content.setLayout(self.cloud_area)
         self.scroll_area.setWidget(self.scroll_content)                                                                              
         

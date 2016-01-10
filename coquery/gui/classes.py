@@ -860,7 +860,6 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         else:
             return super(CoqProbabilityDelegate, self).get_background(option, index)
 
-
 class CoqFlowLayout(QtGui.QLayout):
     """ Define a QLayout with flowing widgets that reorder automatically. """
  
