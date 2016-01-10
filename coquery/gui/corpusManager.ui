@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>890</width>
     <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Corpus manager  – Coquery</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0,0">
    <item>
     <widget class="QFrame" name="frame_2">
      <property name="frameShape">
@@ -26,7 +26,7 @@
       <item>
        <widget class="QScrollArea" name="list_corpora">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -42,8 +42,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>778</width>
-           <height>492</height>
+           <width>868</width>
+           <height>470</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="list_layout">
