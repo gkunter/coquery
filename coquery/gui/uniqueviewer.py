@@ -5,12 +5,11 @@ uniqueviewer.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License. A 
-Coquery exception applies under GNU GPL version 3 section 7.
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
-exception, see <http://www.coquery.org/license/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import division
@@ -66,6 +65,13 @@ class UniqueViewer(QtGui.QWidget):
             self.column = None
 
         self.ui.treeWidget.itemClicked.connect(self.entry_clicked)
+        try:
+            self.restoreGeometry(options.settings.value("uniqueviewer_geometry"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("uniqueviewer_geometry", self.saveGeometry())
 
     def get_unique(self):
         if not self.db_name:
@@ -111,9 +117,6 @@ class UniqueViewer(QtGui.QWidget):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
-
-    def closeEvent(self, e):
-        self.close()
 
     def onException(self):
         errorbox.ErrorBox.show(self.exc_info, self.exception)

@@ -629,6 +629,15 @@ class VisualizerDialog(QtGui.QWidget):
         
         self.toolbar = None
         self.canvas = None
+        
+        try:
+            self.resize(options.settings.value("visualizer_size"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("visualizer_size", self.size())
+        self.close()
 
     def add_visualizer(self, visualizer):
         """ Add a Visualizer instance to the visualization dialog. Also, 
@@ -692,9 +701,6 @@ class VisualizerDialog(QtGui.QWidget):
             self.canvas.close()
         self.ui.verticalLayout.removeWidget(self.canvas)
         self.canvas = None
-        
-    def closeEvent(self, event):
-        self.close()
         
     def close(self, *args):
         """ Close the visualizer widget, disconnect the signals, and remove 

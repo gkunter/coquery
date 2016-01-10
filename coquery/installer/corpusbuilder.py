@@ -8,12 +8,9 @@ corpusbuilder.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License. A 
-Coquery exception applies under GNU GPL version 3 section 7.
-
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
-exception, see <http://www.coquery.org/license/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 """ 
@@ -1992,7 +1989,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             yield x
 
 if use_gui:
-    import options
     import corpusInstallerUi
     import error_box
     import QtProgress
@@ -2057,6 +2053,15 @@ if use_gui:
             self.ui.corpus_description.setText(
                 str(self.ui.corpus_description.text()).format(
                     builder_class.get_title(), options.cfg.current_server))
+
+            self.ui.treeWidget.itemClicked.connect(self.entry_clicked)
+            try:
+                self.restoreGeometry(options.settings.value("corpusinstaller_geometry"))
+            except TypeError:
+                pass
+
+        def closeEvent(self, event):
+            options.settings.setValue("corpusinstaller_geometry", self.saveGeometry())
 
         def validate_dialog(self, check_path=True):
             self.ui.input_path.setStyleSheet("")
@@ -2309,6 +2314,13 @@ if use_gui:
             self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=False))
             self.ui.corpus_name.textChanged.connect(lambda: self.validate_dialog(check_path=False))
             self.ui.corpus_name.setFocus()
+            try:
+                self.restoreGeometry(options.settings.value("corpusbuilder_geometry"))
+            except TypeError:
+                pass
+
+        def closeEvent(self, event):
+            options.settings.setValue("corpusbuilder_geometry", self.saveGeometry())
         
         def validate_dialog(self, check_path=True):
             if hasattr(self.ui, "corpus_name"):

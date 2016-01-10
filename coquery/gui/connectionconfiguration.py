@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """
-MySQLOptions.py is part of Coquery.
+Connectionconfiguration.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
@@ -165,6 +165,14 @@ class ConnectionConfiguration(QtGui.QDialog):
         self.ui.radio_mysql.toggled.connect(self.toggle_engine)
         self.ui.radio_sqlite.toggled.connect(self.toggle_engine)
         self.toggle_engine()
+        
+        try:
+            self.restoreGeometry(options.settings.value("connectionconfiguration_geometry"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("connectionconfiguration_geometry", self.saveGeometry())
 
     def update_connection(self, state, exc=None):
         if state == "noConnection":

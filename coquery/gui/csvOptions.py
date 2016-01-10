@@ -3,20 +3,21 @@
 """
 csvOptions.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from pyqt_compat import QtGui, QtCore
-import csvOptionsUi
 import sys
 import pandas as pd
 import numpy as np
 
+from pyqt_compat import QtGui, QtCore
+import csvOptionsUi
 from errors import *
+import options
 
 class MyTableModel(QtCore.QAbstractTableModel):
 
@@ -101,6 +102,14 @@ class CSVOptions(QtGui.QDialog):
         self.ui.FilePreviewArea.clicked.connect(self.click_column)
 
         self.set_new_separator()
+
+        try:
+            self.restoreGeometry(options.settings.value("csvoptions_geometry"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("csvoptions_geometry", self.saveGeometry())
         
     @staticmethod
     def getOptions(path, default=None, parent=None, icon=None):

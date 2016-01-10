@@ -1,9 +1,23 @@
+# -*- coding: utf-8 -*-
+
+"""
+createuser.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import division
 from __future__ import unicode_literals
 
+import sys
+
 from pyqt_compat import QtCore, QtGui
 import createUserUi
-import sys
+import options
 
 class CreateUser(QtGui.QDialog):
     def __init__(self, name=None, password=None, parent=None):
@@ -27,6 +41,14 @@ class CreateUser(QtGui.QDialog):
         self.ui.check_show_passwords.stateChanged.connect(self.toggle_passwords)
 
         self.check_password()
+
+        try:
+            self.restoreGeometry(options.settings.value("createuser_geometry"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("createuser_geometry", self.saveGeometry())
 
     def check_okay(self):
         if not self.ui.root_name.text() or not self.ui.root_password.text() or self.ui.new_password.text() != self.ui.new_password_check.text():

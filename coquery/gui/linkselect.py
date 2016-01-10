@@ -2,12 +2,13 @@
 """
 linkselect.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -33,6 +34,14 @@ class LinkSelect(QtGui.QDialog):
         self.insert_data()
         self.ui.treeWidget.itemActivated.connect(self.selected)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+
+        try:
+            self.restoreGeometry(options.settings.value("linkselect_geometry"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("linkselect_geometry", self.saveGeometry())
         
     def selected(self):
         item = self.ui.treeWidget.selectedItems()[0]
@@ -70,10 +79,6 @@ class LinkSelect(QtGui.QDialog):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
             
-    def closeEvent(self, *args):
-        options.cfg.link_select_view_height = self.height()
-        options.cfg.link_select_view_width = self.width()        
-        
     @staticmethod
     def display(feature, corpus_omit, parent=None):
         dialog = LinkSelect(feature, corpus_omit, parent=parent)        

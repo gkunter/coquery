@@ -5,12 +5,9 @@ contextview.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License. A 
-Coquery exception applies under GNU GPL version 3 section 7.
-
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
-exception, see <http://www.coquery.org/license/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import division
@@ -75,6 +72,21 @@ class ContextView(QtGui.QWidget):
                 self.add_source_label(label, fields[label])
         
         self.update_context()
+
+        try:
+            self.resize(options.settings.value("contextviewer_size"))
+        except TypeError:
+            pass
+
+        try:
+            self.ui.slider_context_width.setValue(options.settings.value("contextviewer_words"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, *args):
+        options.cfg.main_window.widget_list.remove(self)
+        options.settings.setValue("contextviewer_size", self.size())
+        options.settings.setValue("contextviewer_words", self.ui.slider_context_width.value())
         
     def add_source_label(self, name, content=None):
         """ 
@@ -153,27 +165,10 @@ class ContextView(QtGui.QWidget):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
             
-    def closeEvent(self, *args):
-        options.cfg.context_view_height = self.height()
-        options.cfg.context_view_width = self.width()
-        options.cfg.context_view_words = self.ui.slider_context_width.value()
-        options.cfg.main_window.widget_list.remove(self)
-        
     @staticmethod
     def display(resource, token_id, source_id, token_width, parent=None):
         dialog = ContextView(resource, token_id, source_id, token_width, parent=None)        
-        try:
-            dialog.ui.slider_context_width.setValue(options.cfg.context_view_words)
-        except AttributeError:
-            pass
-        try:
-            dialog.resize(dialog.width(), options.cfg.context_view_height)
-        except AttributeError:
-            pass
-        try:
-            dialog.resize(options.cfg.context_view_width, dialog.height())
-        except AttributeError:
-            pass
+
         dialog.setVisible(True)
         options.cfg.main_window.widget_list.append(dialog)
 

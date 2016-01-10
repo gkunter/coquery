@@ -1,3 +1,15 @@
+# -*- coding: utf-8 -*-
+
+"""
+errorbox.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import division
 from __future__ import unicode_literals
 
@@ -30,6 +42,11 @@ class ErrorBox(QtGui.QDialog):
             
         self.ui.trace_area.setText(error_text)
         
+        try:
+            self.resize(options.settings.value("errorbox_size"))
+        except TypeError:
+            pass
+        
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.accept()
@@ -37,21 +54,11 @@ class ErrorBox(QtGui.QDialog):
     @staticmethod
     def show(exc_info, exception=None, no_trace=False, parent=None):
         dialog = ErrorBox(exc_info, exception, no_trace=no_trace, parent=parent)
-        try:
-            dialog.resize(dialog.width(), options.cfg.error_box_height)
-        except AttributeError:
-            pass
-        try:
-            dialog.resize(options.cfg.error_box_width, dialog.height())
-        except AttributeError:
-            pass
         result = dialog.exec_()
         return None
 
-    def done(self, *args):
-        options.cfg.error_box_height = self.height()
-        options.cfg.error_box_width = self.width()
-        super(ErrorBox, self).done(*args)
+    def closeEvent(self, *args):
+        options.settings.setValue("errorbox_size", self.size())
 
             
 def main():

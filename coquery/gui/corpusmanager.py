@@ -5,12 +5,9 @@ corpusmanager.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License. A 
-Coquery exception applies under GNU GPL version 3 section 7.
-
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
-exception, see <http://www.coquery.org/license/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
@@ -212,6 +209,10 @@ class CorpusManager(QtGui.QDialog):
         super(CorpusManager, self).__init__(parent)
         self.ui = corpusManagerUi.Ui_corpusManager()
         self.ui.setupUi(self)
+        try:
+            self.restoreGeometry(options.settings.value("corpusmanager_geometry"))
+        except TypeError:
+            pass
 
         self.paths = []
         self.last_detail_box = None
@@ -355,9 +356,8 @@ class CorpusManager(QtGui.QDialog):
             self.last_detail_box.toggle()
         self.last_detail_box = detail_box            
 
-    def closeEvent(self, *args):
-        options.cfg.corpus_manager_view_height = self.height()
-        options.cfg.corpus_manager_view_width = self.width()
+    def closeEvent(self, event):
+        options.settings.setValue("corpusmanager_geometry", self.saveGeometry())
         options.set_current_server(options.cfg.current_server)
                     
 def main():

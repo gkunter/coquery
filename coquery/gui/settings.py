@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
+
 """
 settings.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+
 import sys
+
 from pyqt_compat import QtGui, QtCore
 import settingsUi
+import options
 
 class Settings(QtGui.QDialog):
     def __init__(self, options, parent=None):
@@ -27,6 +31,13 @@ class Settings(QtGui.QDialog):
         self.ui.button_visualizer_path.clicked.connect(self.select_visualizer_path)                                        
         
         self.set_ui_options()
+        try:
+            self.restoreGeometry(options.settings.value("settings_geometry"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("settings_geometry", self.saveGeometry())
         
     def select_installer_path(self):
         name = QtGui.QFileDialog.getExistingDirectory(options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)

@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 
+"""
+settings.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 import codecs
 import pandas as pd
 
@@ -38,7 +48,6 @@ class CoqStopwordDelegate(QtGui.QStyledItemDelegate):
         painter.setPen(QtGui.QPen(QtCore.Qt.black))
         value = index.data(QtCore.Qt.DisplayRole)
         painter.drawText(option.rect, QtCore.Qt.AlignLeft, value)
-        
 
         painter.restore()
 
@@ -75,7 +84,7 @@ class CoqStopwordList(QtGui.QListWidget):
         self.add_item = None
  
         self.setItemDelegate(CoqStopwordDelegate(parent=self))
- 
+
     def onClick(self, item):
         if item == self.add_item:
             #self.add_item.setText("")
@@ -114,6 +123,15 @@ class Stopwords(QtGui.QDialog):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Open).clicked.connect(self.open_list)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
 
+        try:
+            self.restoreGeometry(options.settings.value("stopwords_geometry"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("stopwords_geometry", self.saveGeometry())
+        self.close()
+ 
     def reset_list(self):
         response = QtGui.QMessageBox.question(self, "Clear stop word list", msg_clear_stopwords, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
         if response == QtGui.QMessageBox.Yes:

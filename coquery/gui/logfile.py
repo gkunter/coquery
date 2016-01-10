@@ -2,12 +2,13 @@
 """
 logfile.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+
 from __future__ import unicode_literals
 
 import sys
@@ -15,6 +16,7 @@ import sys
 from pyqt_compat import QtCore, QtGui
 import logfileUi
 import classes
+import options
 
 class LogfileViewer(QtGui.QDialog):
     def __init__(self, parent=None):
@@ -30,6 +32,14 @@ class LogfileViewer(QtGui.QDialog):
         self.log_proxy.sortCaseSensitivity = False
         self.ui.log_table.setModel(self.log_proxy)
         self.ui.log_table.horizontalHeader().setStretchLastSection(True)        
+
+        try:
+            self.restoreGeometry(options.settings.value("logfile_geometry"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("logfile_geometry", self.saveGeometry())
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
