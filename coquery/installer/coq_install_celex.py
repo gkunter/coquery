@@ -118,9 +118,9 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.morphword_table = "emw"
         self.morphword_id = "IdNum"
-        self.morphword_label = "Word__Word"
-        self.morphword_flecttype = "Word__FlectType"
-        self.morphword_transinfl = "Word__TransInfl"
+        self.morphword_label = "Word_Word"
+        self.morphword_flecttype = "Word_FlectType"
+        self.morphword_transinfl = "Word_TransInfl"
 
         self.morphlemma_table = "eml"
         self.morphlemma_id = "IdNum"
