@@ -37,11 +37,7 @@ class BuilderClass(BaseCorpusBuilder):
             installer runs on the console.
         """
         super(BuilderClass, self).__init__(gui, *args)
-        self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
 
-        self.documentation_url = BNCBuilder.get_url()
-        
-               
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
         #
@@ -381,7 +377,6 @@ class BuilderClass(BaseCorpusBuilder):
             age = person.find("age").text.strip()
         else:
             age = person.attrib.get("age", "")
-        
         # During parsing of the XML tree, the attribute "xml:id" is
         # interpreted as a qualified name (which it probably isn't).
         # Thus, the 'xml' part is replaced by the namespace, which for
@@ -423,13 +418,11 @@ class BuilderClass(BaseCorpusBuilder):
                 return match.group(1)
             else:
                 return S
-        
         header = root.find("teiHeader")
         file_desc = header.find("fileDesc")
         encoding_desc = header.find("encodingDesc")
         profile_desc = header.find("profileDesc")
         revision_desc = header.find("revisionDesc")
-        
         # Get the date:
         creation = profile_desc.find("creation")
         date_element = creation.find("date")
