@@ -1419,16 +1419,20 @@ class CoqueryApp(QtGui.QMainWindow):
         self.save_configuration()
             
     def closeEvent(self, event):
+        def accept_close():
+            options.settings.setValue("main_geometry", self.saveGeometry())
+            options.settings.setValue("main_state", self.saveState())
+            self.shutdown()
+            event.accept()
+
         if not self.last_results_saved and options.cfg.ask_on_quit:
             response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_unsaved_data, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
-                self.shutdown()
-                event.accept()
+                accept_event()
             else:
                 event.ignore()            
         else:
-            self.shutdown()
-            event.accept()
+            accept_event()
         
     def settings(self):
         import settings

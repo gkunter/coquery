@@ -77,16 +77,18 @@ class ContextView(QtGui.QWidget):
             self.resize(options.settings.value("contextviewer_size"))
         except TypeError:
             pass
-
         try:
             self.ui.slider_context_width.setValue(options.settings.value("contextviewer_words"))
         except TypeError:
             pass
+        try:
+            self.show_details = options.settings.value("contextviewer_details")
 
     def closeEvent(self, *args):
         options.cfg.main_window.widget_list.remove(self)
         options.settings.setValue("contextviewer_size", self.size())
         options.settings.setValue("contextviewer_words", self.ui.slider_context_width.value())
+        options.settings.setValue("contextviewer_details", self.show_details)
         
     def add_source_label(self, name, content=None):
         """ 
@@ -129,7 +131,7 @@ class ContextView(QtGui.QWidget):
             self.ui.source_content.setText(content)
 
     def set_details(self):
-        if options.cfg.context_view_details:
+        if self.show_details:
             self.ui.frame_details.show()
             icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
         else:
@@ -138,7 +140,7 @@ class ContextView(QtGui.QWidget):
         self.ui.button_ids.setIcon(icon)
 
     def toggle_details(self):
-        options.cfg.context_view_details = not options.cfg.context_view_details
+        self.show_details = not self.show_details
         self.set_details()
         
     def spin_changed(self):

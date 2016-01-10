@@ -99,8 +99,6 @@ class Options(object):
         self.args.column_visibility = {}
         self.args.row_visibility = {}
         self.args.row_color = {}
-        self.args.context_view_details = False
-        self.args.unique_view_details = False
         # Set defaults for CSV files:
         self.args.query_column_number = 1
         self.args.skip_lines = 0
@@ -692,21 +690,6 @@ class Options(object):
                                                 self.args.column_width[column] = int(value)
                                     except ValueError:
                                         pass
-                            # restore window sizes:
-                            if name.startswith(
-                                ("context_view_", 
-                                 "error_box_", 
-                                 "context_manager_", 
-                                 "function_apply_", 
-                                 "unique_view_",
-                                 "rename_column_")):
-                                try:
-                                    vars(self.args)[name] = int(value)
-                                except ValueError:
-                                    if name == "context_view_details":
-                                        self.args.context_view_details = value == "True"
-                                    elif name == "unique_view_details":
-                                        self.args.unique_view_details = value == "True"
                             
 cfg = None
 
@@ -801,9 +784,6 @@ def save_configuration():
     if cfg.gui:
         if not "gui" in config.sections():
             config.add_section("gui")
-        window_size = cfg.main_window.size()
-        config.set("gui", "height", window_size.height())
-        config.set("gui", "width", window_size.width())
 
         if cfg.stopword_list:
             config.set("gui", "stopword_list", 
@@ -863,64 +843,6 @@ def save_configuration():
             config.set("gui", "save_query_string", cfg.save_query_string)
         except AttributeError:
             config.set("gui", "save_query_string", True)
-
-        try:
-            config.set("gui", "context_view_width", cfg.context_view_width)
-        except AttributeError:
-            pass
-        try:
-            config.set("gui", "context_view_height", cfg.context_view_height)
-        except AttributeError:
-            pass
-        try:
-            config.set("gui", "context_view_words", cfg.context_view_words)
-        except AttributeError:
-            pass
-        try:
-            config.set("gui", "context_view_details", cfg.context_view_details)
-        except AttributeError:
-            pass
-        try:
-            config.set("gui", "unique_view_details", cfg.unique_view_details)
-        except AttributeError:
-            pass
-
-        try:
-            config.set("gui", "function_apply_width", cfg.function_apply_width)
-        except AttributeError:
-            pass
-        try:
-            config.set("gui", "function_apply_height", cfg.function_apply_height)
-        except AttributeError:
-            pass
-
-        try:
-            config.set("gui", "rename_column_width", cfg.rename_column_width)
-        except AttributeError:
-            pass
-        try:
-            config.set("gui", "rename_column_height", cfg.rename_column_height)
-        except AttributeError:
-            pass
-
-
-        try:
-            config.set("gui", "corpus_manager_view_width", cfg.corpus_manager_view_width)
-        except AttributeError:
-            pass
-        try:
-            config.set("gui", "corpus_manager_view_height", cfg.corpus_manager_view_height)
-        except AttributeError:
-            pass
-        
-        try:
-            config.set("gui", "error_box_width", cfg.error_box_width)
-        except AttributeError:
-            pass
-        try:
-            config.set("gui", "error_box_height", cfg.error_box_height)
-        except AttributeError:
-            pass
 
     with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)

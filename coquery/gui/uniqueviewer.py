@@ -41,6 +41,10 @@ class UniqueViewer(QtGui.QWidget):
         self.ui.detail_layout.addWidget(self.ui.label)
         self.ui.button_details.box.setLayout(self.ui.detail_layout)
 
+        try:
+            self.ui.button_details.setExpanded(options.settings.getValue("uniqueviewer_details"))
+        except TypeError:
+            pass
 
         self.ui.buttonBox.setDisabled(True)
         self.ui.button_details.setDisabled(True)
@@ -70,8 +74,21 @@ class UniqueViewer(QtGui.QWidget):
         except TypeError:
             pass
 
+        
+                try:
+            config.set("gui", "context_view_details", cfg.context_view_details)
+        except AttributeError:
+            pass
+        try:
+            config.set("gui", "unique_view_details", cfg.unique_view_details)
+        except AttributeError:
+            pass
+
+
+
     def closeEvent(self, event):
         options.settings.setValue("uniqueviewer_geometry", self.saveGeometry())
+        options.settings.setValue("uniqueviewer_details", self.button_details.isExpanded())
 
     def get_unique(self):
         if not self.db_name:
