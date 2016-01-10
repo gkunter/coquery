@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+pyqt_compat.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
 pyside = False
 pyqt = False
@@ -19,14 +30,11 @@ except ImportError:
         raise ImportError('Neither PyQt4 nor PySide available')
 
 if pyqt:
-    print("Using PyQt.")
     QtCore.Signal = QtCore.pyqtSignal
     QtCore.Slot = QtCore.pyqtSlot
     QtCore.Property = QtCore.pyqtProperty
     QtCore.QString = str
 else:
-    
-    print("Using PySide.")
     QtCore.pyqtSignal = QtCore.Signal
     QtCore.pyqtSlot = QtCore.Slot
     QtCore.pyqtProperty = QtCore.Property
