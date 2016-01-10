@@ -124,8 +124,7 @@ class CoqAccordionEntry(QtGui.QWidget):
             msg = msg_rejected_install
             default = QtGui.QMessageBox.No
             box = QtGui.QMessageBox.critical
-            
-        msg = msg.format(corpus=self._name)
+        #msg = msg.format(corpus=self._name)
 
         #response = box(None, 
             #"Unvalidated corpus installer – Coquery", 
@@ -256,33 +255,33 @@ class CorpusManager(QtGui.QDialog):
                     module_path = os.path.join(root, fullpath)
                     basename, ext = os.path.splitext(os.path.basename(fullpath))
 
-                    # Validate the file, i.e. determine whether the file contains
-                    # only those instructions that are allowed for installer 
-                    # modules.
+                    ## Validate the file, i.e. determine whether the file contains
+                    ## only those instructions that are allowed for installer 
+                    ## modules.
                     
-                    try:
-                        hashsum = options.validate_module(module_path, 
-                                expected_classes=["BuilderClass"], 
-                                whitelisted_modules="all",
-                                allow_if = True).hexdigest()
-                    except (IllegalCodeInModuleError,
-                            IllegalFunctionInModuleError,
-                            IllegalImportInModuleError,
-                            ModuleIncompleteError) as e:
-                        QtGui.QMessageBox.critical(
-                            None, "Corpus validation error – Coquery", 
-                            msg_invalid_installer.format(name=basename, code=str(e)), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                        continue
-                    except (ImportError, SyntaxError) as e:
-                        msg = msg_corpus_broken.format(
-                            name=basename,
-                            type=sys.exc_info()[0],
-                            code=sys.exc_info()[1])
-                        logger.error(msg)
-                        QtGui.QMessageBox.critical(
-                            None, "Corpus error – Coquery", 
-                            msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                        continue
+                    #try:
+                        #hashsum = options.validate_module(module_path, 
+                                #expected_classes=["BuilderClass"], 
+                                #whitelisted_modules="all",
+                                #allow_if = True).hexdigest()
+                    #except (IllegalCodeInModuleError,
+                            #IllegalFunctionInModuleError,
+                            #IllegalImportInModuleError,
+                            #ModuleIncompleteError) as e:
+                        #QtGui.QMessageBox.critical(
+                            #None, "Corpus validation error – Coquery", 
+                            #msg_invalid_installer.format(name=basename, code=str(e)), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                        #continue
+                    #except (ImportError, SyntaxError) as e:
+                        #msg = msg_corpus_broken.format(
+                            #name=basename,
+                            #type=sys.exc_info()[0],
+                            #code=sys.exc_info()[1])
+                        #logger.error(msg)
+                        #QtGui.QMessageBox.critical(
+                            #None, "Corpus error – Coquery", 
+                            #msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                        #continue
                         
                     # load the module:
                     module = imp.load_source(basename, module_path)
@@ -302,7 +301,7 @@ class CorpusManager(QtGui.QDialog):
                         entry._adhoc = hasattr(builder_class, "_is_adhoc")
                         entry.setName(name)
                         
-                        entry.setChecksum(hashsum)
+                        #entry.setChecksum(hashsum)
 
                     
                         title = builder_class.get_title()
