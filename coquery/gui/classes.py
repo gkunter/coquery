@@ -129,6 +129,10 @@ class CoqDetailBox(QtGui.QWidget):
             icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
         self.header.setIcon(icon)
 
+    def setExpanded(self, b):
+        self._expanded = b
+        self.update()
+
     def isExpanded(self):
         return self._expanded
 
