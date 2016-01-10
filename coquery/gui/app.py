@@ -269,7 +269,7 @@ class CoqueryApp(QtGui.QMainWindow):
         layout.addWidget(self.ui.status_message)
         layout.addWidget(self.ui.status_progress)
         layout.addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum))        
-        layout.addWidget(QtGui.QLabel("Database server: "))
+        layout.addWidget(QtGui.QLabel("Connection: "))
         layout.addWidget(self.ui.combo_config)
 
         self.statusBar().layout().setContentsMargins(0, 0, 0, 0)
