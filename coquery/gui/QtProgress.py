@@ -12,7 +12,7 @@ from pyqt_compat import QtCore, QtGui
 import time
 import sys, os
 from errors import *
-from error_box import ErrorBox 
+from errorbox import ErrorBox 
 
 class ProgressIndicator(QtGui.QDialog):
     def __init__(self, FUN, finalize=None, label="", parent=None, *args):

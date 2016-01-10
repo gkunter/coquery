@@ -23,7 +23,7 @@ import uniqueViewerUi
 import sys
 
 import options
-import error_box
+import errorbox
 import QtProgress
 import classes
 
@@ -116,7 +116,7 @@ class UniqueViewer(QtGui.QWidget):
         self.close()
 
     def onException(self):
-        error_box.ErrorBox.show(self.exc_info, self.exception)
+        errorbox.ErrorBox.show(self.exc_info, self.exception)
 
     def save_list(self):
         name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.uniques_file_path)

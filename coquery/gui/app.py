@@ -33,7 +33,7 @@ import coqueryUi, coqueryCompactUi
 
 import classes
 #import results 
-import error_box
+import errorbox
 import sqlwrap
 import queries
 import contextviewer
@@ -826,7 +826,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if type(self.exception) == NoLemmaInformationError:
             QtGui.QMessageBox.critical(self, "Disk error", msg_no_lemma_information)
         else:
-            error_box.ErrorBox.show(self.exc_info, self.exception)
+            errorbox.ErrorBox.show(self.exc_info, self.exception)
         self.showMessage("Query failed.")
         self.set_query_button()
         self.stop_progress_indicator()
@@ -1188,9 +1188,9 @@ class CoqueryApp(QtGui.QMainWindow):
         except CollocationNoContextError as e:
             QtGui.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except RuntimeError as e:
-            error_box.ErrorBox.show(sys.exc_info(), no_trace=True)
+            errorbox.ErrorBox.show(sys.exc_info(), no_trace=True)
         except Exception as e:
-            error_box.ErrorBox.show(sys.exc_info(), e)
+            errorbox.ErrorBox.show(sys.exc_info(), e)
         else:
             self.set_stop_button()
             self.showMessage("Running query...")
@@ -1250,7 +1250,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     self, "Visualization error – Coquery",
                     str(e))
             except Exception as e:
-                error_box.ErrorBox.show(sys.exc_info())
+                errorbox.ErrorBox.show(sys.exc_info())
         
     def save_configuration(self):
         self.getGuiValues()
@@ -1363,7 +1363,7 @@ class CoqueryApp(QtGui.QMainWindow):
         try:
             result = builder.display()
         except Exception as e:
-            error_box.ErrorBox.show(sys.exc_info())
+            errorbox.ErrorBox.show(sys.exc_info())
         if result:
             options.set_current_server(options.cfg.current_server)
         self.fill_combo_corpus()
@@ -1380,7 +1380,7 @@ class CoqueryApp(QtGui.QMainWindow):
         try:
             result = builder.display()
         except Exception as e:
-            error_box.ErrorBox.show(sys.exc_info())
+            errorbox.ErrorBox.show(sys.exc_info())
         self.fill_combo_corpus()
         self.change_corpus()
         try:
