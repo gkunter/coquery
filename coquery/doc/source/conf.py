@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Coquery documentation build configuration file, created by
-# sphinx-quickstart on Fri Aug 21 09:56:59 2015.
+# sphinx-quickstart on Sun Jan 10 01:10:02 2016.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -20,11 +19,7 @@ import shlex
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('/coquery'))
-sys.path.insert(0, os.path.abspath("coquery"))
-sys.path.insert(0, os.path.abspath("coquery/installer"))
-sys.path.insert(0, os.path.abspath("coquery/visualizations"))
-print(os.path.abspath("coquery"))
+#sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration ------------------------------------------------
 
@@ -36,9 +31,6 @@ print(os.path.abspath("coquery"))
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'numpydoc'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -56,9 +48,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'Coquery'
-copyright = '2015, Gero Kunter'
-author = 'Gero Kunter'
+project = u'Coquery'
+copyright = u'2016, Gero Kunter'
+author = u'Gero Kunter'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -84,7 +76,7 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = []
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -111,7 +103,7 @@ pygments_style = 'sphinx'
 #keep_warnings = False
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = True
+todo_include_todos = False
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -197,8 +189,8 @@ html_static_path = ['_static']
 
 # Language to be used for generating the HTML full-text search index.
 # Sphinx supports the following languages:
-#   'da', 'de', 'en', 'es', 'fi', 'fr', 'h', 'it', 'ja'
-#   'nl', 'no', 'pt', 'ro', 'r', 'sv', 'tr'
+#   'da', 'de', 'en', 'es', 'fi', 'fr', 'hu', 'it', 'ja'
+#   'nl', 'no', 'pt', 'ro', 'ru', 'sv', 'tr'
 #html_search_language = 'en'
 
 # A dictionary with options for the search language support, empty by default.
@@ -232,8 +224,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'Coquery.tex', 'Coquery Documentation',
-   'Gero Kunter', 'manual'),
+  (master_doc, 'Coquery.tex', u'Coquery Documentation',
+   u'Gero Kunter', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -262,7 +254,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'coquery', 'Coquery Documentation',
+    (master_doc, 'coquery', u'Coquery Documentation',
      [author], 1)
 ]
 
@@ -276,7 +268,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'Coquery', 'Coquery Documentation',
+  (master_doc, 'Coquery', u'Coquery Documentation',
    author, 'Coquery', 'One line description of project.',
    'Miscellaneous'),
 ]
