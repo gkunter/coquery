@@ -167,12 +167,12 @@ class ConnectionConfiguration(QtGui.QDialog):
         self.toggle_engine()
         
         try:
-            self.restoreGeometry(options.settings.value("connectionconfiguration_geometry"))
+            self.resize(options.settings.value("connectionconfiguration_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("connectionconfiguration_geometry", self.saveGeometry())
+        options.settings.setValue("connectionconfiguration_size", self.size())
 
     def update_connection(self, state, exc=None):
         if state == "noConnection":

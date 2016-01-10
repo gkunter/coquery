@@ -70,12 +70,10 @@ class UniqueViewer(QtGui.QWidget):
 
         self.ui.treeWidget.itemClicked.connect(self.entry_clicked)
         try:
-            self.restoreGeometry(options.settings.value("uniqueviewer_geometry"))
+            self.resize(options.settings.value("uniqueviewer_size"))
         except TypeError:
             pass
-
-        
-                try:
+        try:
             config.set("gui", "context_view_details", cfg.context_view_details)
         except AttributeError:
             pass
@@ -84,10 +82,8 @@ class UniqueViewer(QtGui.QWidget):
         except AttributeError:
             pass
 
-
-
     def closeEvent(self, event):
-        options.settings.setValue("uniqueviewer_geometry", self.saveGeometry())
+        options.settings.setValue("uniqueviewer_size", self.size())
         options.settings.setValue("uniqueviewer_details", self.button_details.isExpanded())
 
     def get_unique(self):

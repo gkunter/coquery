@@ -210,7 +210,7 @@ class CorpusManager(QtGui.QDialog):
         self.ui = corpusManagerUi.Ui_corpusManager()
         self.ui.setupUi(self)
         try:
-            self.restoreGeometry(options.settings.value("corpusmanager_geometry"))
+            self.resize(options.settings.value("corpusmanager_size"))
         except TypeError:
             pass
 
@@ -357,7 +357,7 @@ class CorpusManager(QtGui.QDialog):
         self.last_detail_box = detail_box            
 
     def closeEvent(self, event):
-        options.settings.setValue("corpusmanager_geometry", self.saveGeometry())
+        options.settings.setValue("corpusmanager_size", self.size())
         options.set_current_server(options.cfg.current_server)
                     
 def main():

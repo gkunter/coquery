@@ -113,12 +113,12 @@ class FigureOptions(QtGui.QDialog):
         self.ui.label_main.setFocus(True)
 
         try:
-            self.restoreGeometry(options.settings.value("figureoptions_geometry"))
+            self.resize(options.settings.value("figureoptions_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("figureoptions_geometry", self.saveGeometry())
+        options.settings.setValue("figureoptions_size", self.size())
         
     def _change_to_custom(self):
         self.ui.radio_custom.setEnabled(True)

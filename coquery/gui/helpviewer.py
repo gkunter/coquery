@@ -51,10 +51,10 @@ class HelpViewer(QtGui.QDialog):
         self.HorizontalLayout.addWidget(self.splitter)
 
         try:
-            self.restoreGeometry(options.settings.value("help_geometry"))
+            self.resize(options.settings.value("help_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("help_geometry", self.saveGeometry())
+        options.settings.setValue("help_size", self.size())
         

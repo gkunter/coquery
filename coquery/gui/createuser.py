@@ -43,12 +43,12 @@ class CreateUser(QtGui.QDialog):
         self.check_password()
 
         try:
-            self.restoreGeometry(options.settings.value("createuser_geometry"))
+            self.resize(options.settings.value("createuser_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("createuser_geometry", self.saveGeometry())
+        options.settings.setValue("createuser_size", self.size())
 
     def check_okay(self):
         if not self.ui.root_name.text() or not self.ui.root_password.text() or self.ui.new_password.text() != self.ui.new_password_check.text():

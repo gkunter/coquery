@@ -36,12 +36,12 @@ class LinkSelect(QtGui.QDialog):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
 
         try:
-            self.restoreGeometry(options.settings.value("linkselect_geometry"))
+            self.resize(options.settings.value("linkselect_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("linkselect_geometry", self.saveGeometry())
+        options.settings.setValue("linkselect_size", self.size())
         
     def selected(self):
         item = self.ui.treeWidget.selectedItems()[0]

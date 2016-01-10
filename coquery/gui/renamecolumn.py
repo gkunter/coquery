@@ -52,12 +52,12 @@ class RenameColumnDialog(QtGui.QDialog):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Reset).clicked.connect(
             lambda x: self.ui.edit_column_name.setText(header_name))
         try:
-            self.restoreGeometry(options.settings.value("renamecolumn_geometry"))
+            self.resize(options.settings.value("renamecolumn_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("renamecolumn_geometry", self.saveGeometry())
+        options.settings.setValue("renamecolumn_size", self.size())
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:

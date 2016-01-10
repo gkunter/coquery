@@ -32,12 +32,12 @@ class Settings(QtGui.QDialog):
         
         self.set_ui_options()
         try:
-            self.restoreGeometry(options.settings.value("settings_geometry"))
+            self.resize(options.settings.value("settings_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("settings_geometry", self.saveGeometry())
+        options.settings.setValue("settings_size", self.size())
         
     def select_installer_path(self):
         name = QtGui.QFileDialog.getExistingDirectory(options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)

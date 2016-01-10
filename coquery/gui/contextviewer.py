@@ -83,6 +83,8 @@ class ContextView(QtGui.QWidget):
             pass
         try:
             self.show_details = options.settings.value("contextviewer_details")
+        except TypeError:
+            pass
 
     def closeEvent(self, *args):
         options.cfg.main_window.widget_list.remove(self)

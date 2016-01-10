@@ -104,12 +104,12 @@ class CSVOptions(QtGui.QDialog):
         self.set_new_separator()
 
         try:
-            self.restoreGeometry(options.settings.value("csvoptions_geometry"))
+            self.resize(options.settings.value("csvoptions_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("csvoptions_geometry", self.saveGeometry())
+        options.settings.setValue("csvoptions_size", self.size())
         
     @staticmethod
     def getOptions(path, default=None, parent=None, icon=None):

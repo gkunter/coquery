@@ -2054,14 +2054,13 @@ if use_gui:
                 str(self.ui.corpus_description.text()).format(
                     builder_class.get_title(), options.cfg.current_server))
 
-            self.ui.treeWidget.itemClicked.connect(self.entry_clicked)
             try:
-                self.restoreGeometry(options.settings.value("corpusinstaller_geometry"))
+                self.resize(options.settings.value("corpusinstaller_size"))
             except TypeError:
                 pass
 
         def closeEvent(self, event):
-            options.settings.setValue("corpusinstaller_geometry", self.saveGeometry())
+            options.settings.setValue("corpusinstaller_size", self.size())
 
         def validate_dialog(self, check_path=True):
             self.ui.input_path.setStyleSheet("")
@@ -2315,12 +2314,12 @@ if use_gui:
             self.ui.corpus_name.textChanged.connect(lambda: self.validate_dialog(check_path=False))
             self.ui.corpus_name.setFocus()
             try:
-                self.restoreGeometry(options.settings.value("corpusbuilder_geometry"))
+                self.resize(options.settings.value("corpusbuilder_size"))
             except TypeError:
                 pass
 
         def closeEvent(self, event):
-            options.settings.setValue("corpusbuilder_geometry", self.saveGeometry())
+            options.settings.setValue("corpusbuilder_size", self.size())
         
         def validate_dialog(self, check_path=True):
             if hasattr(self.ui, "corpus_name"):

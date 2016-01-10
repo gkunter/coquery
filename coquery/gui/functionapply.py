@@ -52,17 +52,16 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.label_func4.setText(str(self.ui.label_func4.text()).format("{}.{}".format(table, feature)))
         
         try:
-            self.restoreGeometry(options.settings.value("functionapply_geometry"))
+            self.resize(options.settings.value("functionapply_size"))
         except TypeError:
             pass
-
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
 
     def closeEvent(self, *args):
-        options.settings.setValue("functionapply_geometry", self.saveGeometry())
+        options.settings.setValue("functionapply_size", self.size())
         
     @staticmethod
     def display(table, feature, parent=None):

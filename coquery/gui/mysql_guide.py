@@ -27,12 +27,12 @@ class MySqlGuide(QtGui.QWizard):
         self.ui.logo_label.setPixmap(logo.scaledToHeight(200))
         self.show()
         try:
-            self.restoreGeometry(options.settings.value("sqlguide_geometry"))
+            self.resize(options.settings.value("sqlguide_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("sqlguide_geometry", self.saveGeometry())
+        options.settings.setValue("sqlguide_size", self.size())
         
     @staticmethod
     def display(parent=None):

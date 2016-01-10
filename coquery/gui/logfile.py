@@ -34,12 +34,12 @@ class LogfileViewer(QtGui.QDialog):
         self.ui.log_table.horizontalHeader().setStretchLastSection(True)        
 
         try:
-            self.restoreGeometry(options.settings.value("logfile_geometry"))
+            self.resize(options.settings.value("logfile_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("logfile_geometry", self.saveGeometry())
+        options.settings.setValue("logfile_size", self.size())
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:

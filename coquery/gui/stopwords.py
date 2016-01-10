@@ -124,12 +124,12 @@ class Stopwords(QtGui.QDialog):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
 
         try:
-            self.restoreGeometry(options.settings.value("stopwords_geometry"))
+            self.resize(options.settings.value("stopwords_size"))
         except TypeError:
             pass
 
     def closeEvent(self, event):
-        options.settings.setValue("stopwords_geometry", self.saveGeometry())
+        options.settings.setValue("stopwords_size", self.size())
         self.close()
  
     def reset_list(self):
