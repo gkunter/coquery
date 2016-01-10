@@ -53,17 +53,14 @@ class ContextView(QtGui.QWidget):
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
         self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
         self.ui.slider_context_width.setTracking(True)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.closeEvent)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
 
         # Add clickable header
         self.ui.button_ids = classes.CoqDetailBox("Token ID: {}, Source ID: {}")
-        self.ui.verticalLayout_2.insertWidget(0, self.ui.button_ids)
-        
-        self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
-        
         self.ui.button_ids.setText(str(self.ui.button_ids.text()).format(token_id, source_id))
-        #self.ui.button_ids.clicked.connect(self.toggle_details)
-        #self.set_details()
+        self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", str(not self.ui.button_ids.isExpanded())))
+        self.ui.verticalLayout_2.insertWidget(0, self.ui.button_ids)
+        self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
         
         L = self.corpus.get_origin_data(token_id)
         for table, fields in sorted(L):
@@ -78,19 +75,18 @@ class ContextView(QtGui.QWidget):
         except TypeError:
             pass
         try:
-            self.ui.slider_context_width.setValue(options.settings.value("contextviewer_words"))
+            self.ui.slider_context_width(options.settings.value("contextviewer_words"))
         except TypeError:
             pass
-        try:
-            self.show_details = options.settings.value("contextviewer_details")
-        except TypeError:
-            pass
+        val = options.settings.value("contextviewer_details") != "False"
+        if val:
+            self.ui.button_ids.setExpanded(val)
+        else:
+            self.ui.button_ids.setExpanded(False)
 
     def closeEvent(self, *args):
-        options.cfg.main_window.widget_list.remove(self)
         options.settings.setValue("contextviewer_size", self.size())
         options.settings.setValue("contextviewer_words", self.ui.slider_context_width.value())
-        options.settings.setValue("contextviewer_details", self.show_details)
         
     def add_source_label(self, name, content=None):
         """ 
@@ -124,6 +120,7 @@ class ContextView(QtGui.QWidget):
                 if not name.endswith(":"):
                     name += ":"
             self.ui.source_name.setText(name)
+            
         if content:
             content = str(content).strip()
             if os.path.exists(content) or "://" in content:
@@ -132,19 +129,6 @@ class ContextView(QtGui.QWidget):
                 self.ui.source_content.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
             self.ui.source_content.setText(content)
 
-    def set_details(self):
-        if self.show_details:
-            self.ui.frame_details.show()
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
-        else:
-            self.ui.frame_details.hide()
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
-        self.ui.button_ids.setIcon(icon)
-
-    def toggle_details(self):
-        self.show_details = not self.show_details
-        self.set_details()
-        
     def spin_changed(self):
         self.ui.slider_context_width.valueChanged.disconnect(self.slider_changed)
         self.ui.slider_context_width.setValue(self.ui.spin_context_width.value())
@@ -169,13 +153,6 @@ class ContextView(QtGui.QWidget):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
             
-    @staticmethod
-    def display(resource, token_id, source_id, token_width, parent=None):
-        dialog = ContextView(resource, token_id, source_id, token_width, parent=None)        
-
-        dialog.setVisible(True)
-        options.cfg.main_window.widget_list.append(dialog)
-
 def main():
     app = QtGui.QApplication(sys.argv)
     viewer = ContextView(None, None, None, None, 0)

@@ -469,7 +469,10 @@ class CoqueryApp(QtGui.QMainWindow):
         except KeyError:
             QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
 
-        contextviewer.ContextView.display(self.Session.Corpus, int(token_id), int(origin_id), int(token_width), self)
+        viewer = contextviewer.ContextView(
+            self.Session.Corpus, int(token_id), int(origin_id), int(token_width))
+        viewer.show()
+        self.widget_list.append(viewer)
 
     def verify_file_name(self):
         file_name = str(self.ui.edit_file_name.text())
@@ -1407,32 +1410,25 @@ class CoqueryApp(QtGui.QMainWindow):
             self.corpus_manager = None
             self.fill_combo_corpus()
             
-    def shutdown(self):
-        """ Shut down the application by removing all open widgets and saving
-        the configuration. """
-        for x in self.widget_list:
-            try:
-                x.close()
-            except:
-                pass
-            del x
-        self.save_configuration()
-            
     def closeEvent(self, event):
-        def accept_close():
+        def shutdown():
             options.settings.setValue("main_geometry", self.saveGeometry())
             options.settings.setValue("main_state", self.saveState())
-            self.shutdown()
+            while self.widget_list:
+                x = self.widget_list.pop(0)
+                x.close()
+                del x
+            self.save_configuration()
             event.accept()
 
         if not self.last_results_saved and options.cfg.ask_on_quit:
             response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_unsaved_data, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
             if response == QtGui.QMessageBox.Yes:
-                accept_close()
+                shutdown()
             else:
                 event.ignore()            
         else:
-            accept_close()
+            shutdown()
         
     def settings(self):
         import settings
