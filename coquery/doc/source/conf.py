@@ -21,6 +21,11 @@ import shlex
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
+sys.path.insert(0, os.path.abspath("../.."))
+sys.path.insert(1, os.path.abspath("../../installer"))
+sys.path.insert(2, os.path.abspath("../../visualizations"))
+
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -31,6 +36,8 @@ import shlex
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'numpydoc'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
