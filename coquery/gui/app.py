@@ -1379,7 +1379,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
             self.change_corpus()
             try:
-                self.corpus_manager.read()
+                self.corpus_manager.update()
             except AttributeError:
                 pass
 
@@ -1394,12 +1394,12 @@ class CoqueryApp(QtGui.QMainWindow):
             error_box.ErrorBox.show(sys.exc_info())
         if result:
             options.set_current_server(options.cfg.current_server)
-            self.fill_combo_corpus()
-            self.change_corpus()
-            try:
-                self.corpus_manager.read()
-            except AttributeError:
-                pass
+        self.fill_combo_corpus()
+        self.change_corpus()
+        try:
+            self.corpus_manager.update()
+        except AttributeError:
+            pass
             
     def install_corpus(self, builder_class):
         import corpusbuilder
@@ -1409,13 +1409,12 @@ class CoqueryApp(QtGui.QMainWindow):
             result = builder.display()
         except Exception as e:
             error_box.ErrorBox.show(sys.exc_info())
-        if result:
-            self.fill_combo_corpus()
-            self.change_corpus()
-            try:
-                self.corpus_manager.read()
-            except AttributeError:
-                pass
+        self.fill_combo_corpus()
+        self.change_corpus()
+        try:
+            self.corpus_manager.update()
+        except AttributeError:
+            pass
             
     def manage_corpus(self):
         import corpusmanager
