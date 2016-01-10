@@ -238,11 +238,11 @@ class CorpusManager(QtGui.QDialog):
         """
  
         # clear existing installer list:
-        for i in range(self.ui.list_layout.count()):
-            item = self.ui.list_layout.takeAt(0)
-            widget = item.widget()
-            del widget
-            del item
+        QtGui.QWidget().setLayout(self.ui.list_content.layout())
+
+        self.ui.list_layout = QtGui.QVBoxLayout(self.ui.list_content)
+        self.ui.list_layout.setMargin(0)
+        self.ui.list_layout.setSpacing(0)
         
         for path, label in self.paths:
             header_row = self.ui.list_layout.count()
