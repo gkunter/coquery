@@ -59,7 +59,7 @@ class BuilderClass(BaseCorpusBuilder):
         # Lemma_POS
         # A text value containing the part-of-speech code of the lemma. This
         # code set is much more restricted than the CLAWS5 tag set.
-        
+        #
         # Type
         # An enum containing the type of the token.
 
@@ -71,31 +71,13 @@ class BuilderClass(BaseCorpusBuilder):
         self.word_lemma_pos = "Lemma_POS"
         self.word_type = "Type"
 
-#2015-11-16 21:01:12,710 INFO     Optimising column Files.Path from TINYTEXT NOT NULL to CHAR(39) NOT NULL
-#2015-11-16 21:01:12,782 INFO     Optimising column Files.Filename from TINYTEXT NOT NULL to CHAR(3) NOT NULL
-#2015-11-16 21:01:14,196 INFO     Optimising column Lexicon.Word from VARCHAR(133) NOT NULL to VARCHAR(131) NOT NULL
-#2015-11-16 21:01:23,597 INFO     Optimising column Lexicon.Lemma from VARCHAR(133) NOT NULL to VARCHAR(131) NOT NULL
-#2015-11-16 21:01:32,645 INFO     Optimising column Lexicon.C5_POS from VARCHAR(7) NOT NULL to ENUM('AJ0','AJ0-AV0','AJ0-NN1','AJ0-VVD','AJ0-VVG','AJ0-VVN','AJC','AJS','AT0','AV0','AV0-AJ0','AVP','AVP-PRP','AVQ','AVQ-CJS','CJC','CJS','CJS-AVQ','CJS-PRP','CJT','CJT-DT0','CRD','CRD-PNI','DPS','DT0','DT0-CJT','DTQ','EX0','ITJ','NN0','NN1','NN1-AJ0','NN1-NP0','NN1-VVB','NN1-VVG','NN2','NN2-VVZ','NP0','NP0-NN1','ORD','PNI','PNI-CRD','PNP','PNQ','PNX','POS','PRF','PRP','PRP-AVP','PRP-CJS','PUNCT','TO0','UNC','VBB','VBD','VBG','VBI','VBN','VBZ','VDB','VDD','VDG','VDI','VDN','VDZ','VHB','VHD','VHG','VHI','VHN','VHZ','VM0','VVB','VVB-NN1','VVD','VVD-AJ0','VVD-VVN','VVG','VVG-AJ0','VVG-NN1','VVI','VVN','VVN-AJ0','VVN-VVD','VVZ','VVZ-NN2','XX0','ZZ0') NOT NULL
-#2015-11-16 21:01:43,547 INFO     Optimising column Lexicon.Lemma_POS from ENUM('ADJ','ADV','ART','CONJ','INTERJ','PREP','PRON','SUBST','UNC','VERB', 'PUNCT') to ENUM('ADJ','ADV','ART','CONJ','INTERJ','PREP','PRON','PUNCT','SUBST','UNC','VERB') NOT NULL
-#2015-11-16 21:01:52,050 INFO     Optimising column Lexicon.Type from ENUM('c', 'w') to ENUM('c','w') NOT NULL
-#2015-11-16 21:02:01,877 INFO     Optimising column tags.TagId from MEDIUMINT(6) UNSIGNED NOT NULL to MEDIUMINT(7) UNSIGNED NOT NULL
-#2015-11-16 21:02:37,588 INFO     Optimising column tags.Type from ENUM('open', 'close', 'empty') to ENUM('close','empty','open') NOT NULL
-#2015-11-16 21:03:17,103 INFO     Optimising column tags.Tag from TINYTEXT NOT NULL to ENUM('align','bibl','corr','div','event','gap','head','hi','item','l','label','lg','list','mw','note','p','pause','pb','quote','s','shift','sp','speaker','stage','stext','trunc','unclear','vocal','wtext') NOT NULL
-#2015-11-16 21:03:54,918 INFO     Optimising column Speakers.Speaker from TINYTEXT NOT NULL to VARCHAR(8) NOT NULL
-#2015-11-16 21:03:54,976 INFO     Optimising column Speakers.Age from TINYTEXT NOT NULL to ENUM('','-82+','0','1','10','10+','11','12','13','13+','14','14+','15','16','17','17+','18','19','2','20','20+','21','21+','22','23','24','25','25+','26','27','28','29','3','3+','30','30+','31','32','33','34','35','35+','36','37','38','39','4','40','40+','41','42','43','44','45','45+','46','46+','47','48','48+','49','5','50','50+','51','52','53','54','55','55+','56','57','58','59','6','60','60+','61','62','63','64','65','65+','66','67','68','69','7','70','70+','71','72','73','74','75','75+','76','77','78','79','8','80','80+','81','82','84','86','87','89','9','92','93','95') NOT NULL
-#2015-11-16 21:03:55,061 INFO     Optimising column Speakers.Sex from TINYTEXT NOT NULL to ENUM('f','m','u') NOT NULL
-#2015-11-16 21:03:55,186 INFO     Optimising column Sentences.Sentence_id from SMALLINT(4) UNSIGNED NOT NULL to CHAR(0) NOT NULL
-#2015-11-16 21:03:55,235 WARNING  (1167, "The used storage engine can't index column 'Sentence_id'")
-#2015-11-16 21:04:41,527 INFO     Optimising column Corpus.Sentence_id from SMALLINT(4) UNSIGNED NOT NULL to ENUM('1') NOT NULL
-
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-             Column(self.word_label, "VARCHAR(133) NOT NULL"),
-             Column(self.word_lemma, "VARCHAR(133) NOT NULL"),
-             Column(self.word_pos, "VARCHAR(7) NOT NULL"), 
-             #Column(self.word_pos, "ENUM('AJ0','AJ0-AV0','AJ0-NN1','AJ0-VVD','AJ0-VVG','AJ0-VVN','AJC','AJS','AT0','AV0','AV0-AJ0','AVP','AVP-PRP','AVQ','AVQ-CJS','CJC','CJS','CJS-AVQ','CJS-PRP','CJT','CJT-DT0','CRD','CRD-PNI','DPS','DT0','DT0-CJT','DTQ','EX0','ITJ','NN0','NN1','NN1-AJ0','NN1-NP0','NN1-VVB','NN1-VVG','NN2','NN2-VVZ','None','NP0','NP0-NN1','ORD','PNI','PNI-CRD','PNP','PNQ','PNX','POS','PRF','PRP','PRP-AVP','PRP-CJS','PUL','PUN','PUQ','PUR','TO0','UNC','VBB','VBD','VBG','VBI','VBN','VBZ','VDB','VDD','VDG','VDI','VDN','VDZ','VHB','VHD','VHG','VHI','VHN','VHZ','VM0','VVB','VVB-NN1','VVD','VVD-AJ0','VVD-VVN','VVG','VVG-AJ0','VVG-NN1','VVI','VVN','VVN-AJ0','VVN-VVD','VVZ','VVZ-NN2','XX0','ZZ0')"),
-             Column(self.word_lemma_pos, "ENUM('ADJ','ADV','ART','CONJ','INTERJ','PREP','PRON','SUBST','UNC','VERB', 'PUNCT')"),
-             Column(self.word_type, "ENUM('c', 'w')")])
+             Column(self.word_label, "VARCHAR(131) NOT NULL"),
+             Column(self.word_lemma, "VARCHAR(131) NOT NULL"),
+             Column(self.word_pos, "ENUM('AJ0','AJ0-AV0','AJ0-NN1','AJ0-VVD','AJ0-VVG','AJ0-VVN','AJC','AJS','AT0','AV0','AV0-AJ0','AVP','AVP-PRP','AVQ','AVQ-CJS','CJC','CJS','CJS-AVQ','CJS-PRP','CJT','CJT-DT0','CRD','CRD-PNI','DPS','DT0','DT0-CJT','DTQ','EX0','ITJ','NN0','NN1','NN1-AJ0','NN1-NP0','NN1-VVB','NN1-VVG','NN2','NN2-VVZ','NP0','NP0-NN1','ORD','PNI','PNI-CRD','PNP','PNQ','PNX','POS','PRF','PRP','PRP-AVP','PRP-CJS','PUNCT','TO0','UNC','VBB','VBD','VBG','VBI','VBN','VBZ','VDB','VDD','VDG','VDI','VDN','VDZ','VHB','VHD','VHG','VHI','VHN','VHZ','VM0','VVB','VVB-NN1','VVD','VVD-AJ0','VVD-VVN','VVG','VVG-AJ0','VVG-NN1','VVI','VVN','VVN-AJ0','VVN-VVD','VVZ','VVZ-NN2','XX0','ZZ0') NOT NULL"), 
+             Column(self.word_lemma_pos, "ENUM('ADJ','ADV','ART','CONJ','INTERJ','PREP','PRON','PUNCT','SUBST','UNC','VERB') NOT NULL"),
+             Column(self.word_type, "ENUM('c', 'w') NOT NULL")])
 
         # Add the file table. Each row in this table represents an XML file
         # that has been incorporated into the corpus. Each token from the
@@ -120,7 +102,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(self.file_table,
             [Primary(self.file_id, "SMALLINT(4) UNSIGNED NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL"),
-             Column(self.file_name, "TINYTEXT NOT NULL")])
+             Column(self.file_name, "CHAR(7) NOT NULL")])
 
         # Add the speaker table. Each row in this table represents a speaker
         # who has contributed to the recordings in the BNC. Each sentence
@@ -128,7 +110,7 @@ class BuilderClass(BaseCorpusBuilder):
         # table, and more than one sentence may be linked to each speaker.
         # The table contains the following columns:
         #
-        # id
+        # Speaker
         # A string value containing the label used in the BNC to refer to 
         # this speaker. It is used in the who attributes of the XML <u> 
         # elements as well as the xml:id attribute of the <person> element 
@@ -153,11 +135,9 @@ class BuilderClass(BaseCorpusBuilder):
         
         self.create_table_description(self.speaker_table,
             [Primary(self.speaker_id, "SMALLINT(4) UNSIGNED NOT NULL"),
-             Column(self.speaker_label, "TINYTEXT NOT NULL"),
-             Column(self.speaker_age, "TINYTEXT NOT NULL"),
-             #Column(self.speaker_age, "ENUM('-82+','0','1','10','10+','11','12','13','13+','14','14+','15','16','17','17+','18','19','2','20','20+','21','21+','22','23','24','25','25+','26','27','28','29','3','3+','30','30+','31','32','33','34','35','35+','36','37','38','39','4','40','40+','41','42','43','44','45','45+','46','46+','47','48','48+','49','5','50','50+','51','52','53','54','55','55+','56','57','58','59','6','60','60+','61','62','63','64','65','65+','66','67','68','69','7','70','70+','71','72','73','74','75','75+','76','77','78','79','8','80','80+','81','82','84','86','87','89','9','92','93','95','unknown')"),
-             #Column(self.speaker_sex, "ENUM('f','m','u')")])
-             Column(self.speaker_sex, "TINYTEXT NOT NULL")])
+             Column(self.speaker_label, "VARCHAR(8) NOT NULL"),
+             Column(self.speaker_age, "ENUM('','-82+','0','1','10','10+','11','12','13','13+','14','14+','15','16','17','17+','18','19','2','20','20+','21','21+','22','23','24','25','25+','26','27','28','29','3','3+','30','30+','31','32','33','34','35','35+','36','37','38','39','4','40','40+','41','42','43','44','45','45+','46','46+','47','48','48+','49','5','50','50+','51','52','53','54','55','55+','56','57','58','59','6','60','60+','61','62','63','64','65','65+','66','67','68','69','7','70','70+','71','72','73','74','75','75+','76','77','78','79','8','80','80+','81','82','84','86','87','89','9','92','93','95') NOT NULL"),
+             Column(self.speaker_sex, "ENUM('f','m','u') NOT NULL")])
        
         # Add the sentence table. Each row in this table represents a 
         # sentence from the XML file. Each token in the corpus table is 
