@@ -1621,10 +1621,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
     
     def ask_overwrite(self, warning_msg, existing_code, output_code):
         existing_code = existing_code.split("\n")
-        print("\n|".join(existing_code))
         output_code = output_code.split("\n")
-        print("\n|".join(output_code))
         if not self._widget:
+            print("\n|".join(existing_code))
+            print("\n|".join(output_code))
             while True:
                 print("Enter Y to overwrite the existing version.")
                 print("Enter N to keep the existing version.")
@@ -1640,8 +1640,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         sys.stdout.write(x)
             return response.upper() == "Y"
         else:
-            warning_msg = "<p>{}</p><p>Do you really want to overwrite the existing version?</p>".format(warning_msg)
-            return QtGui.QMessageBox.question(self._widget, "Library exists.", warning_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
+            return True
+            #warning_msg = "<p>{}</p><p>Do you really want to overwrite the existing version?</p>".format(warning_msg)
+            #return QtGui.QMessageBox.question(self._widget, "Library exists.", warning_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
                 
     def build_write_module(self):
         """ Write a Python module with the necessary specifications to the
@@ -1696,26 +1697,27 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if not os.path.exists(corpus_path):
             os.makedirs(corpus_path)
         path = os.path.join(corpus_path, "{}.py".format(self.name))
-        # Handle existing versions of the corpus module
-        if os.path.exists(path):
-            # Read existing code as string:
-            with codecs.open(path, "r") as input_file:
-                existing_code = input_file.read()
-            # Keep if existing code is the same as the new code:
-            if existing_code == self.module_content:
-                self.logger.info("Identical corpus module %s already exists." % path)
-                return
-            # Ask if the existing code should be overwritten:
-            else:
-                msq_module_exists = "A different version of the corpus module already exists in %s." % path
-                try:
-                    self.logger.warning(msq_module_exists)
-                except NameError:
-                    pass
-                if self.ask_overwrite(msq_module_exists, existing_code, self.module_content):
-                    self.logger.warning("Overwriting existing corpus module.")
-                else:
-                    return
+
+        ## Handle existing versions of the corpus module
+        #if os.path.exists(path):
+            ## Read existing code as string:
+            #with codecs.open(path, "r") as input_file:
+                #existing_code = input_file.read()
+            ## Keep if existing code is the same as the new code:
+            #if existing_code == self.module_content:
+                #self.logger.info("Identical corpus module %s already exists." % path)
+                #return
+            ## Ask if the existing code should be overwritten:
+            #else:
+                #msq_module_exists = "A different version of the corpus module already exists in %s." % path
+                #try:
+                    #self.logger.warning(msq_module_exists)
+                #except NameError:
+                    #pass
+                #if self.ask_overwrite(msq_module_exists, existing_code, self.module_content):
+                    #self.logger.warning("Overwriting existing corpus module.")
+                #else:
+                    #return
         
         # write module code:
         with codecs.open(path, "w") as output_file:
