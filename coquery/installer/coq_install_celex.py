@@ -88,7 +88,6 @@ class BuilderClass(BaseCorpusBuilder):
         self.word_syntaxlemma_id = "IdNumLemma"
         self.word_orthocnt = "Word_OrthoCnt"
         self.word_orthostatus = "Word_OrthoStatus"
-        self.word_cobspellfreq = "Word_CobSpellFreq"
         self.word_cobspelldev = "Word_CobSpellDev"
         self.word_wordsyldia = "Word_WordSylDia"
         
@@ -99,133 +98,122 @@ class BuilderClass(BaseCorpusBuilder):
         self.lemma_cob = "Lemma_Cob"
         self.lemma_orthocnt = "Lemma_OrthoCnt"
         self.lemma_orthostatus = "Lemma_OrthoStatus"
-        self.lemma_cobspellfreq = "Lemma_CobSpellFreq"
         self.lemma_cobspelldev = "Lemma_CobSpellDev"
         self.lemma_headsyldia = "Lemma_HeadSylDia"
         
         self.transcript_table = "epw"
         self.transcript_id = "IdNum"
-        self.transcript_label = "PhonoWord_Word"
-        self.transcript_cob = "PhonoWord_Cob"
-        self.transcript_proncnt = "PhonoWord_PronCnt"
-        self.transcript_phonstrsdisc = "PhonoWord_PhonStrsDISC"
-        self.transcript_phoncvbr = "PhonoWord_PhonCVBr"
-        self.transcript_phonsylbclx = "PhonoWord_PhonSylBCLX"
+        self.transcript_label = "Word_PhonStrsDISC"
+        self.transcript_proncnt = "Word_PronCnt"
+        self.transcript_phoncvbr = "Word_PhonCVBr"
+        self.transcript_phonsylbclx = "Word_PhonSylBCLX"
 
         self.phonolemma_table = "epl"
         self.phonolemma_id = "IdNum"
-        self.phonolemma_label = "PhonoLemma_Head"
-        self.phonolemma_cob = "PhonoLemma_Cob"
-        self.phonolemma_proncnt = "PhonoLemma_PronCnt"
-        self.phonolemma_phonstrsdisc = "PhonoLemma_PhonStrsDISC"
-        self.phonolemma_phoncvbr = "PhonoLemma_PhonCVBr"
-        self.phonolemma_phonsylbclx = "PhonoLemma_PhonSylBCLX"
+        self.phonolemma_label = "Lemma_Head"
+        self.phonolemma_proncnt = "Lemma_PronCnt"
+        self.phonolemma_phonstrsdisc = "Lemma_PhonStrsDISC"
+        self.phonolemma_phoncvbr = "Lemma_PhonCVBr"
+        self.phonolemma_phonsylbclx = "Lemma_PhonSylBCLX"
 
         self.morphword_table = "emw"
         self.morphword_id = "IdNum"
-        self.morphword_label = "MorphWord_Word"
-        self.morphword_cob = "MorphWord_Cob"
-        self.morphword_flecttype = "MorphWord_FlectType"
-        self.morphword_transinfl = "MorphWord_TransInfl"
+        self.morphword_label = "Word__Word"
+        self.morphword_flecttype = "Word__FlectType"
+        self.morphword_transinfl = "Word__TransInfl"
 
         self.morphlemma_table = "eml"
         self.morphlemma_id = "IdNum"
-        self.morphlemma_label = "MorphLemma_Head"
-        self.morphlemma_cob = "MorphLemma_Cob"
-        self.morphlemma_morphstatus = "MorphLemma_MorphStatus"
-        self.morphlemma_lang = "MorphLemma_Lang"
-        self.morphlemma_morphcnt = "MorphLemma_MorphCnt"
-        self.morphlemma_nvaffcomp = "MorphLemma_NVAffComp"
-        self.morphlemma_der = "MorphLemma_Der"
-        self.morphlemma_comp = "MorphLemma_Comp"
-        self.morphlemma_dercomp = "MorphLemma_DerComp"
-        self.morphlemma_def = "MorphLemma_Def"
-        self.morphlemma_imm = "MorphLemma_Imm"
-        self.morphlemma_immsubcat = "MorphLemma_ImmSubCat"
-        self.morphlemma_immsa = "MorphLemma_ImmSA"
-        self.morphlemma_immallo = "MorphLemma_ImmAllo"
-        self.morphlemma_immsubst = "MorphLemma_ImmSubst"
-        self.morphlemma_immopac = "MorphLemma_ImmOpac"
-        self.morphlemma_transder = "MorphLemma_TransDer"
-        self.morphlemma_imminfix = "MorphLemma_ImmInfix"
-        self.morphlemma_immrevers = "MorphLemma_ImmRevers"
-        self.morphlemma_flatsa = "MorphLemma_FlatSA"
-        self.morphlemma_struclab = "MorphLemma_StrucLab"
-        self.morphlemma_strucallo = "MorphLemma_StrucAllo"
-        self.morphlemma_strucsubst = "MorphLemma_StrucSubst"
-        self.morphlemma_strucopac = "MorphLemma_StrucOpac"
+        self.morphlemma_label = "Lemma_Head"
+        self.morphlemma_morphstatus = "Lemma_MorphStatus"
+        self.morphlemma_lang = "Lemma_Lang"
+        self.morphlemma_morphcnt = "Lemma_MorphCnt"
+        self.morphlemma_nvaffcomp = "Lemma_NVAffComp"
+        self.morphlemma_der = "Lemma_Der"
+        self.morphlemma_comp = "Lemma_Comp"
+        self.morphlemma_dercomp = "Lemma_DerComp"
+        self.morphlemma_def = "Lemma_Def"
+        self.morphlemma_imm = "Lemma_Imm"
+        self.morphlemma_immsubcat = "Lemma_ImmSubCat"
+        self.morphlemma_immsa = "Lemma_ImmSA"
+        self.morphlemma_immallo = "Lemma_ImmAllo"
+        self.morphlemma_immsubst = "Lemma_ImmSubst"
+        self.morphlemma_immopac = "Lemma_ImmOpac"
+        self.morphlemma_transder = "Lemma_TransDer"
+        self.morphlemma_imminfix = "Lemma_ImmInfix"
+        self.morphlemma_immrevers = "Lemma_ImmRevers"
+        self.morphlemma_flatsa = "Lemma_FlatSA"
+        self.morphlemma_struclab = "Lemma_StrucLab"
+        self.morphlemma_strucallo = "Lemma_StrucAllo"
+        self.morphlemma_strucsubst = "Lemma_StrucSubst"
+        self.morphlemma_strucopac = "Lemma_StrucOpac"
 
         self.syntaxlemma_table = "esl"
-        self.syntaxlemma_id = "SyntaxLemma_IdNum"
-        self.syntaxlemma_label = "SyntaxLemma_Head"
-        self.syntaxlemma_cob = "SyntaxLemma_Cob"
-        self.syntaxlemma_classnum = "SyntaxLemma_ClassNum"
-        self.syntaxlemma_c_n = "SyntaxLemma_C_N"
-        self.syntaxlemma_unc_n = "SyntaxLemma_Unc_N"
-        self.syntaxlemma_sing_n = "SyntaxLemma_Sing_N"
-        self.syntaxlemma_plu_n = "SyntaxLemma_Plu_N"
-        self.syntaxlemma_grc_n = "SyntaxLemma_GrC_N"
-        self.syntaxlemma_grunc_n = "SyntaxLemma_GrUnc_N"
-        self.syntaxlemma_attr_n = "SyntaxLemma_Attr_N"
-        self.syntaxlemma_postpos_n = "SyntaxLemma_PostPos_N"
-        self.syntaxlemma_voc_n = "SyntaxLemma_Voc_N"
-        self.syntaxlemma_proper_n = "SyntaxLemma_Proper_N"
-        self.syntaxlemma_exp_n = "SyntaxLemma_Exp_N"
-        self.syntaxlemma_trans_v = "SyntaxLemma_Trans_V"
-        self.syntaxlemma_transcomp_v = "SyntaxLemma_TransComp_V"
-        self.syntaxlemma_intrans_v = "SyntaxLemma_Intrans_V"
-        self.syntaxlemma_ditrans_v = "SyntaxLemma_Ditrans_V"
-        self.syntaxlemma_link_v = "SyntaxLemma_Link_V"
-        self.syntaxlemma_phr_v = "SyntaxLemma_Phr_V"
-        self.syntaxlemma_prep_v = "SyntaxLemma_Prep_V"
-        self.syntaxlemma_phrprep_v = "SyntaxLemma_PhrPrep_V"
-        self.syntaxlemma_exp_v = "SyntaxLemma_Exp_V"
-        self.syntaxlemma_ord_a = "SyntaxLemma_Ord_A"
-        self.syntaxlemma_attr_a = "SyntaxLemma_Attr_A"
-        self.syntaxlemma_pred_a = "SyntaxLemma_Pred_A"
-        self.syntaxlemma_postpos_a = "SyntaxLemma_PostPos_A"
-        self.syntaxlemma_exp_a = "SyntaxLemma_Exp_A"
-        self.syntaxlemma_ord_adv = "SyntaxLemma_Ord_ADV"
-        self.syntaxlemma_pred_adv = "SyntaxLemma_Pred_ADV"
-        self.syntaxlemma_postpos_adv = "SyntaxLemma_PostPos_ADV"
-        self.syntaxlemma_comb_adv = "SyntaxLemma_Comb_ADV"
-        self.syntaxlemma_exp_adv = "SyntaxLemma_Exp_ADV"
-        self.syntaxlemma_card_num = "SyntaxLemma_Card_NUM"
-        self.syntaxlemma_ord_num = "SyntaxLemma_Ord_NUM"
-        self.syntaxlemma_exp_num = "SyntaxLemma_Exp_NUM"
-        self.syntaxlemma_pers_pron = "SyntaxLemma_Pers_PRON"
-        self.syntaxlemma_dem_pron = "SyntaxLemma_Dem_PRON"
-        self.syntaxlemma_poss_pron = "SyntaxLemma_Poss_PRON"
-        self.syntaxlemma_refl_pron = "SyntaxLemma_Refl_PRON"
-        self.syntaxlemma_wh_pron = "SyntaxLemma_Wh_PRON"
-        self.syntaxlemma_det_pron = "SyntaxLemma_Det_PRON"
-        self.syntaxlemma_pron_pron = "SyntaxLemma_Pron_PRON"
-        self.syntaxlemma_exp_pron = "SyntaxLemma_Exp_PRON"
-        self.syntaxlemma_cor_c = "SyntaxLemma_Cor_C"
-        self.syntaxlemma_sub_c = "SyntaxLemma_Sub_C"
+        self.syntaxlemma_id = "Lemma_IdNum"
+        self.syntaxlemma_label = "Lemma_Head"
+        self.syntaxlemma_classnum = "Lemma_ClassNum"
+        self.syntaxlemma_c_n = "Lemma_C_N"
+        self.syntaxlemma_unc_n = "Lemma_Unc_N"
+        self.syntaxlemma_sing_n = "Lemma_Sing_N"
+        self.syntaxlemma_plu_n = "Lemma_Plu_N"
+        self.syntaxlemma_grc_n = "Lemma_GrC_N"
+        self.syntaxlemma_grunc_n = "Lemma_GrUnc_N"
+        self.syntaxlemma_attr_n = "Lemma_Attr_N"
+        self.syntaxlemma_postpos_n = "Lemma_PostPos_N"
+        self.syntaxlemma_voc_n = "Lemma_Voc_N"
+        self.syntaxlemma_proper_n = "Lemma_Proper_N"
+        self.syntaxlemma_exp_n = "Lemma_Exp_N"
+        self.syntaxlemma_trans_v = "Lemma_Trans_V"
+        self.syntaxlemma_transcomp_v = "Lemma_TransComp_V"
+        self.syntaxlemma_intrans_v = "Lemma_Intrans_V"
+        self.syntaxlemma_ditrans_v = "Lemma_Ditrans_V"
+        self.syntaxlemma_link_v = "Lemma_Link_V"
+        self.syntaxlemma_phr_v = "Lemma_Phr_V"
+        self.syntaxlemma_prep_v = "Lemma_Prep_V"
+        self.syntaxlemma_phrprep_v = "Lemma_PhrPrep_V"
+        self.syntaxlemma_exp_v = "Lemma_Exp_V"
+        self.syntaxlemma_ord_a = "Lemma_Ord_A"
+        self.syntaxlemma_attr_a = "Lemma_Attr_A"
+        self.syntaxlemma_pred_a = "Lemma_Pred_A"
+        self.syntaxlemma_postpos_a = "Lemma_PostPos_A"
+        self.syntaxlemma_exp_a = "Lemma_Exp_A"
+        self.syntaxlemma_ord_adv = "Lemma_Ord_ADV"
+        self.syntaxlemma_pred_adv = "Lemma_Pred_ADV"
+        self.syntaxlemma_postpos_adv = "Lemma_PostPos_ADV"
+        self.syntaxlemma_comb_adv = "Lemma_Comb_ADV"
+        self.syntaxlemma_exp_adv = "Lemma_Exp_ADV"
+        self.syntaxlemma_card_num = "Lemma_Card_NUM"
+        self.syntaxlemma_ord_num = "Lemma_Ord_NUM"
+        self.syntaxlemma_exp_num = "Lemma_Exp_NUM"
+        self.syntaxlemma_pers_pron = "Lemma_Pers_PRON"
+        self.syntaxlemma_dem_pron = "Lemma_Dem_PRON"
+        self.syntaxlemma_poss_pron = "Lemma_Poss_PRON"
+        self.syntaxlemma_refl_pron = "Lemma_Refl_PRON"
+        self.syntaxlemma_wh_pron = "Lemma_Wh_PRON"
+        self.syntaxlemma_det_pron = "Lemma_Det_PRON"
+        self.syntaxlemma_pron_pron = "Lemma_Pron_PRON"
+        self.syntaxlemma_exp_pron = "Lemma_Exp_PRON"
+        self.syntaxlemma_cor_c = "Lemma_Cor_C"
+        self.syntaxlemma_sub_c = "Lemma_Sub_C"
 
         self.create_table_description(self.phonolemma_table,
             [Primary(self.phonolemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.phonolemma_label, "VARCHAR(34) NOT NULL"),
-             Column(self.phonolemma_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.phonolemma_proncnt, "ENUM('1','10','11','12','13','14','15','16','18','2','20','21','24','25','3','30','32','36','4','40','48','5','6','60','7','8','9') NOT NULL"),
              Column(self.phonolemma_phonstrsdisc, "VARCHAR(40) NOT NULL"),
              Column(self.phonolemma_phoncvbr, "VARCHAR(53) NOT NULL"),
              Column(self.phonolemma_phonsylbclx, "VARCHAR(53) NOT NULL")])
 
-        self.create_table_description(self.phonoword_table,
-            [Primary(self.phonoword_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.phonoword_label, "VARCHAR(35) NOT NULL"),
-             Column(self.phonoword_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-             Column(self.phonoword_proncnt, "ENUM('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','18','20','21','24','25','28','30','32','36','40','48','60') NOT NULL"),
-             Column(self.phonoword_phonstrsdisc, "VARCHAR(41) NOT NULL"),
-             Column(self.phonoword_phoncvbr, "VARCHAR(53) NOT NULL"),
-             Column(self.phonoword_phonsylbclx, "VARCHAR(53) NOT NULL")])
+        self.create_table_description(self.transcript_table,
+            [Primary(self.transcript_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.transcript_label, "VARCHAR(41) NOT NULL"),
+             Column(self.transcript_proncnt, "ENUM('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','18','20','21','24','25','28','30','32','36','40','48','60') NOT NULL"),
+             Column(self.transcript_phoncvbr, "VARCHAR(53) NOT NULL"),
+             Column(self.transcript_phonsylbclx, "VARCHAR(53) NOT NULL")])
 
         self.create_table_description(self.morphlemma_table,
             [Primary(self.morphlemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.morphlemma_label, "VARCHAR(34) NOT NULL"),
-             Column(self.morphlemma_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.morphlemma_morphstatus, "ENUM('C','F','I','M','O','R','U','Z') NOT NULL"),
              Column(self.morphlemma_lang, "ENUM('','A','B','D','F','G','I','L','S') NOT NULL"),
              Column(self.morphlemma_morphcnt, "ENUM('0','1','2','3','4','5','8') NOT NULL"),
@@ -252,14 +240,12 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(self.morphword_table,
             [Primary(self.morphword_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.morphword_label, "VARCHAR(35) NOT NULL"),
-             Column(self.morphword_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.morphword_flecttype, "ENUM('a1S','a1Sr','a2S','a2Sr','a3S','a3Sr','aP','aPr','b','c','e1S','e2S','e2Sr','e3S','e3Sr','eP','i','P','pa','par','pe','Pr','S','X') NOT NULL"),
              Column(self.morphword_transinfl, "ENUM('','@','@ @','@ @ @','@ @ @ @','@ @ @ @ @','@ @ @ @ @+s','@ @ @ @-y+ies','@ @ @ @+es','@ @ @ @+s','@ @ @-y+ies','@ @ @+ed','@ @ @+es','@ @ @+ing','@ @ @+s','@ @-e+ing','@ @-f+ves','@ @-fe+ves','@ @-y+ied','@ @-y+ier','@ @-y+ies','@ @-y+iest','@ @+bed','@ @+bing','@ @+d','@ @+ed','@ @+es','@ @+ged','@ @+ging','@ @+ing','@ @+led','@ @+ling','@ @+ped','@ @+ping','@ @+red','@ @+ring','@ @+s','@ @+ted','@ @+ting','@-e+ing','@-e+ing @','@-e+ing @ @','@-ey+ier','@-ey+iest','@-f+ves','@-fe+ves','@-y+ied','@-y+ied @','@-y+ied @ @','@-y+ier','@-y+ier @','@-y+ies','@-y+ies @','@-y+ies @ @','@-y+ies @ @ @','@-y+iest','@-y+iest @','@+@d','@+@ing','@+@s','@+bed','@+bed @','@+bed @ @','@+ber','@+best','@+bing','@+bing @','@+bing @ @','@+d','@+d @','@+d @ @','@+ded','@+ded @','@+der','@+dest','@+ding','@+ding @','@+ed','@+ed @','@+ed @ @','@+ed @ @ @','@+er','@+er @','@+er @ @','@+es','@+es @','@+es @ @','@+es @ @ @','@+est','@+est @','@+ged','@+ged @','@+ged @ @','@+ger','@+gest','@+ging','@+ging @','@+ging @ @','@+ing','@+ing @','@+ing @ @','@+ing @ @ @','@+ked','@+ked @','@+king','@+king @','@+led','@+led @','@+ler','@+lest','@+ling','@+ling @','@+med','@+med @','@+mer','@+mest','@+ming','@+ming @','@+ned','@+ned @','@+ner','@+ner @','@+nest','@+nest @','@+ning','@+ning @','@+ning @ @','@+ped','@+ped @','@+ped @ @','@+ping','@+ping @','@+ping @ @','@+r','@+r @','@+red','@+red @','@+ring','@+ring @','@+s','@+s @','@+s @ @','@+s @ @ @','@+sed','@+sed @','@+ses','@+ses @','@+sing','@+sing @','@+st','@+st @','@+ted','@+ted @','@+ted @ @','@+ter','@+ter @','@+test','@+test @','@+ting','@+ting @','@+ting @ @','@+ved','@+ved @','@+ving','@+ving @','@+zed','@+zes','@+zing','IRR') NOT NULL")])
 
         self.create_table_description(self.syntaxlemma_table,
             [Primary(self.syntaxlemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.syntaxlemma_label, "VARCHAR(34) NOT NULL"),
-             Column(self.syntaxlemma_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.syntaxlemma_classnum, "ENUM('1','10','11','12','13','14','15','2','3','4','5','6','7','8','9') NOT NULL"),
              Column(self.syntaxlemma_c_n, "ENUM('N','Y') NOT NULL"),
              Column(self.syntaxlemma_unc_n, "ENUM('N','Y') NOT NULL"),
@@ -312,24 +298,22 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.lemma_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.lemma_orthocnt, "ENUM('1','2','3','4','5') NOT NULL"),
              Column(self.lemma_orthostatus, "ENUM('B') NOT NULL"),
-             Column(self.lemma_cobspellfreq, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.lemma_cobspelldev, "MEDIUMINT(5) UNSIGNED NOT NULL"),
              Column(self.lemma_headsyldia, "VARCHAR(42) NOT NULL")])
 
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Link(self.word_phonoword_id, self.phonoword_table),
-             Link(self.word_morphword_id, self.morphword_table),
              Column(self.word_label, "VARCHAR(35) NOT NULL"),
              Column(self.word_worddia, "VARCHAR(35) NOT NULL"),
              Column(self.word_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Link(self.word_lemma_id, self.lemma_table),
+             Link(self.word_transcript_id, self.transcript_table),
              Link(self.word_phonolemma_id, self.phonolemma_table),
+             Link(self.word_morphword_id, self.morphword_table),
              Link(self.word_morphlemma_id, self.morphlemma_table),
              Link(self.word_syntaxlemma_id, self.syntaxlemma_table),
              Column(self.word_orthocnt, "ENUM('1','2','3','4','5') NOT NULL"),
              Column(self.word_orthostatus, "ENUM('B') NOT NULL"),
-             Column(self.word_cobspellfreq, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.word_cobspelldev, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.word_wordsyldia, "VARCHAR(43) NOT NULL")])
 
@@ -381,7 +365,7 @@ class BuilderClass(BaseCorpusBuilder):
                         self._value_word_lemma_id,
                         self._value_word_orthocnt,
                         self._value_word_orthostatus,
-                        self._value_word_cobspellfreq,
+                        _,
                         self._value_word_cobspelldev,
                         self._value_word_wordsyldia) = columns[:9]
                         self._value_word_label = dia_to_unicode(self._value_word_worddia)
@@ -393,7 +377,6 @@ class BuilderClass(BaseCorpusBuilder):
                             self.word_lemma_id: self._value_word_lemma_id,
                             self.word_orthocnt: self._value_word_orthocnt,
                             self.word_orthostatus: self._value_word_orthostatus,
-                            self.word_cobspellfreq: self._value_word_cobspellfreq,
                             self.word_cobspelldev: self._value_word_cobspelldev,
                             self.word_wordsyldia: self._value_word_wordsyldia})
                     elif component == "eol":
@@ -402,7 +385,7 @@ class BuilderClass(BaseCorpusBuilder):
                         self._value_lemma_cob,
                         self._value_lemma_orthocnt,
                         self._value_lemma_orthostatus,
-                        self._value_lemma_cobspellfreq,
+                        _,
                         self._value_lemma_cobspelldev,
                         self._value_lemma_headsyldia) = columns[:8]
                         self._value_lemma_label = dia_to_unicode(self._value_lemma_headdia)
@@ -414,34 +397,31 @@ class BuilderClass(BaseCorpusBuilder):
                             self.lemma_cob: self._value_lemma_cob,
                             self.lemma_orthocnt: self._value_lemma_orthocnt,
                             self.lemma_orthostatus: self._value_lemma_orthostatus,
-                            self.lemma_cobspellfreq: self._value_lemma_cobspellfreq,
                             self.lemma_cobspelldev: self._value_lemma_cobspelldev,
                             self.lemma_headsyldia: self._value_lemma_headsyldia})
                     
                     elif component == "epw":
-                        (self._value_phonoword_id, 
-                        self._value_phonoword_label,
-                        self._value_phonoword_cob,
-                        _, 
-                        self._value_phonoword_proncnt,
+                        (self._value_transcript_id, 
                         _,
-                        self._value_phonoword_phonstrsdisc,
-                        self._value_phonoword_phoncvbr,
-                        self._value_phonoword_phonsylbclx) = columns[:9]
+                        _,
+                        _, 
+                        self._value_transcript_proncnt,
+                        _,
+                        self._value_transcript_label,
+                        self._value_transcript_phoncvbr,
+                        self._value_transcript_phonsylbclx) = columns[:9]
 
-                        self.table(self.phonoword_table).add(
-                            {self.phonoword_id: self._value_phonoword_id,
-                            self.phonoword_label: self._value_phonoword_label,
-                            self.phonoword_cob: self._value_phonoword_cob,
-                            self.phonoword_proncnt: self._value_phonoword_proncnt,
-                            self.phonoword_phonstrsdisc: self._value_phonoword_phonstrsdisc,
-                            self.phonoword_phoncvbr: self._value_phonoword_phoncvbr,
-                            self.phonoword_phonsylbclx: self._value_phonoword_phonsylbclx})
+                        self.table(self.transcript_table).add(
+                            {self.transcript_id: self._value_transcript_id,
+                            self.transcript_label: self._value_transcript_label,
+                            self.transcript_proncnt: self._value_transcript_proncnt,
+                            self.transcript_phoncvbr: self._value_transcript_phoncvbr,
+                            self.transcript_phonsylbclx: self._value_transcript_phonsylbclx})
                     
                     elif component == "epl":
                         (self._value_phonolemma_id, 
                         self._value_phonolemma_label,
-                        self._value_phonolemma_cob,
+                        _,
                         self._value_phonolemma_proncnt,
                         _,
                         self._value_phonolemma_phonstrsdisc,
@@ -451,7 +431,6 @@ class BuilderClass(BaseCorpusBuilder):
                         self.table(self.phonolemma_table).add(
                             {self.phonolemma_id: self._value_phonolemma_id,
                             self.phonolemma_label: self._value_phonolemma_label,
-                            self.phonolemma_cob: self._value_phonolemma_cob,
                             self.phonolemma_proncnt: self._value_phonolemma_proncnt,
                             self.phonolemma_phonstrsdisc: self._value_phonolemma_phonstrsdisc,
                             self.phonolemma_phoncvbr: self._value_phonolemma_phoncvbr,
@@ -460,7 +439,7 @@ class BuilderClass(BaseCorpusBuilder):
                     elif component == "emw":
                         (self._value_morphword_id,
                         self._value_morphword_label,
-                        self._value_morphword_cob,
+                        _,
                         _,
                         self._value_morphword_flecttype,
                         self._value_morphword_transinfl) = columns[:6]
@@ -468,14 +447,13 @@ class BuilderClass(BaseCorpusBuilder):
                         self.table(self.morphword_table).add(
                             {self.morphword_id: self._value_morphword_id,
                             self.morphword_label: self._value_morphword_label,
-                            self.morphword_cob: self._value_morphword_cob,
                             self.morphword_flecttype: self._value_morphword_flecttype,
                             self.morphword_transinfl: self._value_morphword_transinfl})
                     
                     elif component == "eml":
                         (self._value_morphlemma_id,
                         self._value_morphlemma_label,
-                        self._value_morphlemma_cob,
+                        _,
                         self._value_morphlemma_morphstatus,
                         self._value_morphlemma_lang,
                         self._value_morphlemma_morphcnt,
@@ -502,7 +480,6 @@ class BuilderClass(BaseCorpusBuilder):
                         self.table(self.morphlemma_table).add(
                             {self.morphlemma_id: self._value_morphlemma_id,
                             self.morphlemma_label: self._value_morphlemma_label,
-                            self.morphlemma_cob: self._value_morphlemma_cob,
                             self.morphlemma_morphstatus: self._value_morphlemma_morphstatus,
                             self.morphlemma_lang: self._value_morphlemma_lang,
                             self.morphlemma_morphcnt: self._value_morphlemma_morphcnt,
@@ -527,57 +504,56 @@ class BuilderClass(BaseCorpusBuilder):
                             self.morphlemma_strucopac: self._value_morphlemma_strucopac})
 
                     elif component == "esl":
-                        (self._value_syntaxlemma_id,                          
-                        self._value_syntaxlemma_label,                        
-                        self._value_syntaxlemma_cob,                          
-                        self._value_syntaxlemma_classnum,                     
-                        self._value_syntaxlemma_c_n,                          
-                        self._value_syntaxlemma_unc_n,                        
-                        self._value_syntaxlemma_sing_n,                       
-                        self._value_syntaxlemma_plu_n,                        
-                        self._value_syntaxlemma_grc_n,                        
-                        self._value_syntaxlemma_grunc_n,                      
-                        self._value_syntaxlemma_attr_n,                       
-                        self._value_syntaxlemma_postpos_n,                    
-                        self._value_syntaxlemma_voc_n,                        
-                        self._value_syntaxlemma_proper_n,                     
-                        self._value_syntaxlemma_exp_n,                        
-                        self._value_syntaxlemma_trans_v,                      
-                        self._value_syntaxlemma_transcomp_v,                  
-                        self._value_syntaxlemma_intrans_v,                    
-                        self._value_syntaxlemma_ditrans_v,                    
-                        self._value_syntaxlemma_link_v,                       
-                        self._value_syntaxlemma_phr_v,                        
-                        self._value_syntaxlemma_prep_v,                       
-                        self._value_syntaxlemma_phrprep_v,                    
-                        self._value_syntaxlemma_exp_v,                        
-                        self._value_syntaxlemma_ord_a,                        
-                        self._value_syntaxlemma_attr_a,                       
-                        self._value_syntaxlemma_pred_a,                       
-                        self._value_syntaxlemma_postpos_a,                    
-                        self._value_syntaxlemma_exp_a,                        
-                        self._value_syntaxlemma_ord_adv,                      
-                        self._value_syntaxlemma_pred_adv,                     
-                        self._value_syntaxlemma_postpos_adv,                  
-                        self._value_syntaxlemma_comb_adv,                     
-                        self._value_syntaxlemma_exp_adv,                      
-                        self._value_syntaxlemma_card_num,                     
-                        self._value_syntaxlemma_ord_num,                      
-                        self._value_syntaxlemma_exp_num,                      
-                        self._value_syntaxlemma_pers_pron,                    
-                        self._value_syntaxlemma_dem_pron,                     
-                        self._value_syntaxlemma_poss_pron,                    
-                        self._value_syntaxlemma_refl_pron,                    
-                        self._value_syntaxlemma_wh_pron,                      
-                        self._value_syntaxlemma_det_pron,                     
-                        self._value_syntaxlemma_pron_pron,                    
-                        self._value_syntaxlemma_exp_pron,                     
+                        (self._value_syntaxlemma_id,
+                        self._value_syntaxlemma_label,
+                        _,
+                        self._value_syntaxlemma_classnum,
+                        self._value_syntaxlemma_c_n,
+                        self._value_syntaxlemma_unc_n,
+                        self._value_syntaxlemma_sing_n,
+                        self._value_syntaxlemma_plu_n,
+                        self._value_syntaxlemma_grc_n,
+                        self._value_syntaxlemma_grunc_n,
+                        self._value_syntaxlemma_attr_n,
+                        self._value_syntaxlemma_postpos_n,
+                        self._value_syntaxlemma_voc_n,
+                        self._value_syntaxlemma_proper_n,
+                        self._value_syntaxlemma_exp_n,
+                        self._value_syntaxlemma_trans_v,
+                        self._value_syntaxlemma_transcomp_v,
+                        self._value_syntaxlemma_intrans_v,
+                        self._value_syntaxlemma_ditrans_v,
+                        self._value_syntaxlemma_link_v,
+                        self._value_syntaxlemma_phr_v,
+                        self._value_syntaxlemma_prep_v,
+                        self._value_syntaxlemma_phrprep_v,
+                        self._value_syntaxlemma_exp_v,
+                        self._value_syntaxlemma_ord_a,
+                        self._value_syntaxlemma_attr_a,
+                        self._value_syntaxlemma_pred_a,
+                        self._value_syntaxlemma_postpos_a,
+                        self._value_syntaxlemma_exp_a,
+                        self._value_syntaxlemma_ord_adv,
+                        self._value_syntaxlemma_pred_adv,
+                        self._value_syntaxlemma_postpos_adv,
+                        self._value_syntaxlemma_comb_adv,
+                        self._value_syntaxlemma_exp_adv,
+                        self._value_syntaxlemma_card_num,
+                        self._value_syntaxlemma_ord_num,
+                        self._value_syntaxlemma_exp_num,
+                        self._value_syntaxlemma_pers_pron,
+                        self._value_syntaxlemma_dem_pron,
+                        self._value_syntaxlemma_poss_pron,
+                        self._value_syntaxlemma_refl_pron,
+                        self._value_syntaxlemma_wh_pron,
+                        self._value_syntaxlemma_det_pron,
+                        self._value_syntaxlemma_pron_pron,
+                        self._value_syntaxlemma_exp_pron,
                         self._value_syntaxlemma_cor_c,
                         self._value_syntaxlemma_sub_c) = columns[:47]         
                         self.table(self.syntaxlemma_table).add(               
                             {self.syntaxlemma_id: self._value_syntaxlemma_id, 
                             self.syntaxlemma_label: self._value_syntaxlemma_label, 
-                            self.syntaxlemma_cob: self._value_syntaxlemma_cob, 
                             self.syntaxlemma_classnum: self._value_syntaxlemma_classnum, 
                             self.syntaxlemma_c_n: self._value_syntaxlemma_c_n, 
                             self.syntaxlemma_unc_n: self._value_syntaxlemma_unc_n, 
