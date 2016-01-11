@@ -134,8 +134,14 @@ class CoqueryApp(QtGui.QMainWindow):
             os.path.join(options.get_home_dir(), "coquery.ini"),
              QtCore.QSettings.IniFormat, self)
 
-        self.restoreGeometry(options.settings.value("main_geometry"))
-        self.restoreState(options.settings.value("main_state"))
+        try:
+            self.restoreGeometry(options.settings.value("main_geometry"))
+        except TypeError:
+            pass
+        try:
+            self.restoreState(options.settings.value("main_state"))
+        except TypeError:
+            pass
 
         ## Resize the window if a previous size is available
         #try:
