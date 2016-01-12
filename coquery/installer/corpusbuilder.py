@@ -835,15 +835,15 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 return
         self.Con.commit()
 
-    @staticmethod
-    def get_file_list(path, file_filter):
+    @classmethod
+    def get_file_list(cls, path, file_filter):
         """ 
         Return a list of valid file names from the given path.
         
         This method recursively searches in the directory ``path`` and its
         subdirectories for files that match the file filter specified in 
         the class attribute ``file_filter``.
-        
+
         Parameters
         ----------
         path : string
@@ -852,13 +852,19 @@ class BaseCorpusBuilder(corpus.BaseResource):
         Returns
         -------
         l : list
-            A list of strings, each representing a file name        
+            A list of strings, each representing a file name       
+            
         """
         L = []
+        expect = list(cls.expected_files)
         for source_path, folders, files in os.walk(path):
             for current_file in files:
                 full_name = os.path.join(source_path, current_file)
-                if not file_filter or fnmatch.fnmatch(current_file, file_filter):
+                if cls.expected_files:
+                    if current_file in expect:
+                        L.append(full_name)
+                        expect.remove(current_file)
+                elif not file_filter or fnmatch.fnmatch(current_file, file_filter):
                     L.append(full_name)
         return L
     
