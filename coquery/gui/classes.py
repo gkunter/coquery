@@ -283,7 +283,14 @@ class CoqTreeWidget(QtGui.QTreeWidget):
                 state = QtCore.Qt.Unchecked
         for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
             if root.objectName() == object_name:
-                root.setChecked(column, state)
+                try:
+                    root.setChecked(column, state)
+                except AttributeError:
+                    # The corpus table raises this exception, but it seems 
+                    # that this is not really a problem.
+                    # FIXME: Figure out why this happens, and remove the 
+                    # cause
+                    pass
                 self.update(root, column)
             for child in [root.child(i) for i in range(root.childCount())]:
                 if child.objectName() == object_name:
