@@ -18,6 +18,7 @@ import classes
 
 import sys
 import corpusManagerUi
+import corpusbuilder
 import fnmatch
 import os
 import imp
@@ -47,6 +48,8 @@ class CoqAccordionEntry(QtGui.QWidget):
         self._modules = []
         self._stack = stack
         self._adhoc = False
+        self._language = ""
+        self._code = ""
         
         self.verticalLayout_2 = QtGui.QVBoxLayout(self)
         self.corpus_description_frame = QtGui.QFrame(self)
@@ -137,6 +140,13 @@ class CoqAccordionEntry(QtGui.QWidget):
         self._title = title
         self.change_description()
         
+    def setLanguage(self, language, code):
+        if language != corpusbuilder.BaseCorpusBuilder.get_language():
+            self._language = language
+        if code != corpusbuilder.BaseCorpusBuilder.get_language_code():
+            self._code = code
+        self.change_description()
+        
     def setModules(self, modules):
         self._modules = modules
         self.change_description()
@@ -183,6 +193,9 @@ class CoqAccordionEntry(QtGui.QWidget):
                 string_list.append("<p><b>{}</b></p>".format(self._title))
         if self._text:
             string_list.append("<p><font size='100%'>{}</font></p>".format(self._text))
+        if self._language or self._code:
+            string_list.append("<p><b>Language</b></p><p>{}{}</p>".format(
+                self._language, " ({})".format(self._code) if self._code else ""))
         if self._references:
             string_list.append(self._references)
         if self._license:
@@ -315,6 +328,9 @@ class CorpusManager(QtGui.QDialog):
                             entry.setDescription(
                                 "".join(["<p>{}</p>".format(x) for x in builder_class.get_description()]))
                             
+                        entry.setLanguage(builder_class.get_language(),
+                                    builder_class.get_language_code())      
+                        
                         if builder_class.get_references():
                             references = "".join(["<p><span style='padding-left: 2em; text-indent: 2em;'>{}</span></p>".format(x) for x in builder_class.get_references()])
                             entry.setReferences("<p><b>References</b>{}".format(references))
