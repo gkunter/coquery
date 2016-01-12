@@ -942,10 +942,11 @@ class SQLLexicon(BaseLexicon):
         
         sub_clauses = []
         
-        lexicon_features = [x for x, _ in self.resource.get_lexicon_features()]
-        
         if token.lemma_specifiers:
-            if not ("lemma_label" in lexicon_features or "word_lemma" in lexicon_features or "corpus_lemma" in lexicon_features):
+            if not (
+                hasattr(self.resource, "lemma_label") or
+                hasattr(self.resource, "word_lemma") or
+                hasattr(self.resource, "corpus_lemma")):
                 raise NoLemmaInformationError
             
             specifier_list = token.lemma_specifiers
@@ -1097,30 +1098,46 @@ class SQLLexicon(BaseLexicon):
         """ returns a string that may be used to query all word_ids that
         match the token specification."""
         self.where_list = [self.sql_string_get_wordid_list_where(token)]
-        if "word_table" in dir(self.resource):
+        if hasattr(self.resource, "word_table"):
             word_table = self.resource.word_table
             word_id = self.resource.word_id
+            try:
+                if hasattr(self.resource, "word_lemma_id"):
+                    word_lemma = self.resource.word_lemma_id
+                else:
+                    word_lemma = self.resource.word_lemma
+            except AttributeError:
+                # no lemma entry for words
+                pass
         else:
             word_table = self.resource.corpus_table
-            word_id = self.resource.corpus_word
+            word_id = self.resource.corpus_id
+            try:
+                if hasattr(self.resource, "corpus_lemma_id"):
+                    word_lemma = self.resource.corpus_lemma_id
+                else:
+                    word_lemma = self.resource.corpus_lemma
+            except AttributeError:
+                # no lemma entry for words
+                pass
             
         self.table_list = [word_table]
         if token.lemma_specifiers:
-            if "lemma_table" in dir(self.resource):
+            if hasattr(self.resource, "lemma_table"):
                 self.table_list.append("LEFT JOIN {} AS COQ_LEMMA_TABLE ON {}.{} = COQ_LEMMA_TABLE.{}".format(
                     self.resource.lemma_table,
-                    self.resource.word_table,
-                    self.resource.word_lemma_id,
+                    word_table,
+                    word_lemma,
                     self.resource.lemma_id))
         if token.class_specifiers:
-            if "pos_table" in dir(self.resource):
+            if hasattr(self.resource, "pos_table":
                 self.table_list.append("LEFT JOIN {} AS COQ_POS_TABLE ON {}.{} = COQ_POS_TABLE.{}".format(
                     self.resource.pos_table,
                     word_table,
                     self.resource.word_pos_id,
                     self.resource.pos_id))
         if token.transcript_specifiers:
-            if "transcript_table" in dir(self.resource):
+            if hasattr(self.resource, "transcript_table"):
                 self.table_list.append("LEFT JOIN {} AS COQ_TRANSCRIPT_TABLE ON {}.{} = COQ_TRANSCRIPT_TABLE.{}".format(
                     self.resource.transcript_table,
                     word_table,
@@ -1436,7 +1453,8 @@ class SQLCorpus(BaseCorpus):
         if hasattr(self.resource, "corpus_word_id"):
             word_id_column = self.resource.corpus_word_id
         elif hasattr(self.resource, "corpus_word"):
-            word_id_column = self.resource.corpus_word
+            #word_id_column = self.resource.corpus_word
+            word_id_column = self.resource.corpus_id
         
         where_clauses = self.get_whereclauses(
             current_token, 
