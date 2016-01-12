@@ -142,6 +142,7 @@ class DBConnection(object):
         try:
             return cursor.execute(command)
         except Exception as e:
+            print(e)
             warnings.warn("An error occurred when executing MySQL command '{}'.".format(command))
             raise e
 
