@@ -299,7 +299,7 @@ class SessionCommandLine(Session):
             logger.info("{} queries".format(len(options.cfg.query_list)))
         for query_string in options.cfg.query_list:
             if self.query_type:
-                new_query = self.query_type(query_string, self, tokens.COCAToken)
+                new_query = self.query_type(query_string, self)
             else: 
                 raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
             self.query_list.append(new_query)
