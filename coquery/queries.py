@@ -607,7 +607,11 @@ class DistinctQuery(TokenQuery):
     @classmethod
     def aggregate_data(cls, df, resource):
         vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
-        df = df.drop_duplicates(subset=vis_cols)
+        try:
+            df = df.drop_duplicates(subset=vis_cols)
+        except ValueError:
+            # ValueError is raised if df is empty
+            pass
         df = df.reset_index(drop=True)
         return df
 
