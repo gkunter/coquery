@@ -5,14 +5,10 @@ coq_install_celex.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License. A 
-Coquery exception applies under GNU GPL version 3 section 7.
-
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
-exception, see <http://www.coquery.org/license/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
 from __future__ import unicode_literals
 from __future__ import print_function
 
@@ -65,136 +61,132 @@ def dia_to_unicode(s):
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "e??.cd"
 
+    corpus_table = "eow"
+    corpus_id = "IdNum"
+    corpus_transcript_id = "IdNum"
+    corpus_morphword_id = "IdNum"
+    corpus_word = "Word"
+    corpus_worddia = "WordDia"
+    corpus_cob = "Word_Cob"
+    corpus_lemma_id = "IdNumLemma"
+    corpus_phonolemma_id = "IdNumLemma"
+    corpus_morphlemma_id = "IdNumLemma"
+    corpus_syntaxlemma_id = "IdNumLemma"
+    corpus_orthocnt = "Word_OrthoCnt"
+    corpus_orthostatus = "Word_OrthoStatus"
+    corpus_cobspelldev = "Word_CobSpellDev"
+    corpus_wordsyldia = "Word_WordSylDia"
+    
+    lemma_table = "eol"
+    lemma_id = "IdNum"
+    lemma_label = "Head"
+    lemma_headdia = "HeadDia"
+    lemma_cob = "Lemma_Cob"
+    lemma_orthocnt = "Lemma_OrthoCnt"
+    lemma_orthostatus = "Lemma_OrthoStatus"
+    lemma_cobspelldev = "Lemma_CobSpellDev"
+    lemma_headsyldia = "Lemma_HeadSylDia"
+    
+    transcript_table = "epw"
+    transcript_id = "IdNum"
+    transcript_label = "Word_PhonStrsDISC"
+    transcript_proncnt = "Word_PronCnt"
+    transcript_phoncvbr = "Word_PhonCVBr"
+    transcript_phonsylbclx = "Word_PhonSylBCLX"
+
+    phonolemma_table = "epl"
+    phonolemma_id = "IdNum"
+    phonolemma_label = "Lemma_Head"
+    phonolemma_proncnt = "Lemma_PronCnt"
+    phonolemma_phonstrsdisc = "Lemma_PhonStrsDISC"
+    phonolemma_phoncvbr = "Lemma_PhonCVBr"
+    phonolemma_phonsylbclx = "Lemma_PhonSylBCLX"
+
+    morphword_table = "emw"
+    morphword_id = "IdNum"
+    morphword_label = "Word_Word"
+    morphword_flecttype = "Word_FlectType"
+    morphword_transinfl = "Word_TransInfl"
+
+    morphlemma_table = "eml"
+    morphlemma_id = "IdNum"
+    morphlemma_label = "Lemma_Head"
+    morphlemma_morphstatus = "Lemma_MorphStatus"
+    morphlemma_lang = "Lemma_Lang"
+    morphlemma_morphcnt = "Lemma_MorphCnt"
+    morphlemma_nvaffcomp = "Lemma_NVAffComp"
+    morphlemma_der = "Lemma_Der"
+    morphlemma_comp = "Lemma_Comp"
+    morphlemma_dercomp = "Lemma_DerComp"
+    morphlemma_def = "Lemma_Def"
+    morphlemma_imm = "Lemma_Imm"
+    morphlemma_immsubcat = "Lemma_ImmSubCat"
+    morphlemma_immsa = "Lemma_ImmSA"
+    morphlemma_immallo = "Lemma_ImmAllo"
+    morphlemma_immsubst = "Lemma_ImmSubst"
+    morphlemma_immopac = "Lemma_ImmOpac"
+    morphlemma_transder = "Lemma_TransDer"
+    morphlemma_imminfix = "Lemma_ImmInfix"
+    morphlemma_immrevers = "Lemma_ImmRevers"
+    morphlemma_flatsa = "Lemma_FlatSA"
+    morphlemma_struclab = "Lemma_StrucLab"
+    morphlemma_strucallo = "Lemma_StrucAllo"
+    morphlemma_strucsubst = "Lemma_StrucSubst"
+    morphlemma_strucopac = "Lemma_StrucOpac"
+
+    syntaxlemma_table = "esl"
+    syntaxlemma_id = "Lemma_IdNum"
+    syntaxlemma_label = "Lemma_Head"
+    syntaxlemma_classnum = "Lemma_ClassNum"
+    syntaxlemma_c_n = "Lemma_C_N"
+    syntaxlemma_unc_n = "Lemma_Unc_N"
+    syntaxlemma_sing_n = "Lemma_Sing_N"
+    syntaxlemma_plu_n = "Lemma_Plu_N"
+    syntaxlemma_grc_n = "Lemma_GrC_N"
+    syntaxlemma_grunc_n = "Lemma_GrUnc_N"
+    syntaxlemma_attr_n = "Lemma_Attr_N"
+    syntaxlemma_postpos_n = "Lemma_PostPos_N"
+    syntaxlemma_voc_n = "Lemma_Voc_N"
+    syntaxlemma_proper_n = "Lemma_Proper_N"
+    syntaxlemma_exp_n = "Lemma_Exp_N"
+    syntaxlemma_trans_v = "Lemma_Trans_V"
+    syntaxlemma_transcomp_v = "Lemma_TransComp_V"
+    syntaxlemma_intrans_v = "Lemma_Intrans_V"
+    syntaxlemma_ditrans_v = "Lemma_Ditrans_V"
+    syntaxlemma_link_v = "Lemma_Link_V"
+    syntaxlemma_phr_v = "Lemma_Phr_V"
+    syntaxlemma_prep_v = "Lemma_Prep_V"
+    syntaxlemma_phrprep_v = "Lemma_PhrPrep_V"
+    syntaxlemma_exp_v = "Lemma_Exp_V"
+    syntaxlemma_ord_a = "Lemma_Ord_A"
+    syntaxlemma_attr_a = "Lemma_Attr_A"
+    syntaxlemma_pred_a = "Lemma_Pred_A"
+    syntaxlemma_postpos_a = "Lemma_PostPos_A"
+    syntaxlemma_exp_a = "Lemma_Exp_A"
+    syntaxlemma_ord_adv = "Lemma_Ord_ADV"
+    syntaxlemma_pred_adv = "Lemma_Pred_ADV"
+    syntaxlemma_postpos_adv = "Lemma_PostPos_ADV"
+    syntaxlemma_comb_adv = "Lemma_Comb_ADV"
+    syntaxlemma_exp_adv = "Lemma_Exp_ADV"
+    syntaxlemma_card_num = "Lemma_Card_NUM"
+    syntaxlemma_ord_num = "Lemma_Ord_NUM"
+    syntaxlemma_exp_num = "Lemma_Exp_NUM"
+    syntaxlemma_pers_pron = "Lemma_Pers_PRON"
+    syntaxlemma_dem_pron = "Lemma_Dem_PRON"
+    syntaxlemma_poss_pron = "Lemma_Poss_PRON"
+    syntaxlemma_refl_pron = "Lemma_Refl_PRON"
+    syntaxlemma_wh_pron = "Lemma_Wh_PRON"
+    syntaxlemma_det_pron = "Lemma_Det_PRON"
+    syntaxlemma_pron_pron = "Lemma_Pron_PRON"
+    syntaxlemma_exp_pron = "Lemma_Exp_PRON"
+    syntaxlemma_cor_c = "Lemma_Cor_C"
+    syntaxlemma_sub_c = "Lemma_Sub_C"
+
     expected_files = sorted(["eow.cd", "eol.cd", "epw.cd", "epl.cd", "emw.cd", "eml.cd", "esl.cd"])
     
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui, *args)
-
-        self.corpus_table = "eow"
-        self.corpus_id = "IdNum"
-        self.corpus_word_id = "IdNum"
-        
-        self.word_table = "eow"
-        self.word_id = "IdNum"
-        self.word_transcript_id = "IdNum"
-        self.word_morphword_id = "IdNum"
-        self.word_label = "Word"
-        self.word_worddia = "WordDia"
-        self.word_cob = "Word_Cob"
-        self.word_lemma_id = "IdNumLemma"
-        self.word_phonolemma_id = "IdNumLemma"
-        self.word_morphlemma_id = "IdNumLemma"
-        self.word_syntaxlemma_id = "IdNumLemma"
-        self.word_orthocnt = "Word_OrthoCnt"
-        self.word_orthostatus = "Word_OrthoStatus"
-        self.word_cobspelldev = "Word_CobSpellDev"
-        self.word_wordsyldia = "Word_WordSylDia"
-        
-        self.lemma_table = "eol"
-        self.lemma_id = "IdNum"
-        self.lemma_label = "Head"
-        self.lemma_headdia = "HeadDia"
-        self.lemma_cob = "Lemma_Cob"
-        self.lemma_orthocnt = "Lemma_OrthoCnt"
-        self.lemma_orthostatus = "Lemma_OrthoStatus"
-        self.lemma_cobspelldev = "Lemma_CobSpellDev"
-        self.lemma_headsyldia = "Lemma_HeadSylDia"
-        
-        self.transcript_table = "epw"
-        self.transcript_id = "IdNum"
-        self.transcript_label = "Word_PhonStrsDISC"
-        self.transcript_proncnt = "Word_PronCnt"
-        self.transcript_phoncvbr = "Word_PhonCVBr"
-        self.transcript_phonsylbclx = "Word_PhonSylBCLX"
-
-        self.phonolemma_table = "epl"
-        self.phonolemma_id = "IdNum"
-        self.phonolemma_label = "Lemma_Head"
-        self.phonolemma_proncnt = "Lemma_PronCnt"
-        self.phonolemma_phonstrsdisc = "Lemma_PhonStrsDISC"
-        self.phonolemma_phoncvbr = "Lemma_PhonCVBr"
-        self.phonolemma_phonsylbclx = "Lemma_PhonSylBCLX"
-
-        self.morphword_table = "emw"
-        self.morphword_id = "IdNum"
-        self.morphword_label = "Word_Word"
-        self.morphword_flecttype = "Word_FlectType"
-        self.morphword_transinfl = "Word_TransInfl"
-
-        self.morphlemma_table = "eml"
-        self.morphlemma_id = "IdNum"
-        self.morphlemma_label = "Lemma_Head"
-        self.morphlemma_morphstatus = "Lemma_MorphStatus"
-        self.morphlemma_lang = "Lemma_Lang"
-        self.morphlemma_morphcnt = "Lemma_MorphCnt"
-        self.morphlemma_nvaffcomp = "Lemma_NVAffComp"
-        self.morphlemma_der = "Lemma_Der"
-        self.morphlemma_comp = "Lemma_Comp"
-        self.morphlemma_dercomp = "Lemma_DerComp"
-        self.morphlemma_def = "Lemma_Def"
-        self.morphlemma_imm = "Lemma_Imm"
-        self.morphlemma_immsubcat = "Lemma_ImmSubCat"
-        self.morphlemma_immsa = "Lemma_ImmSA"
-        self.morphlemma_immallo = "Lemma_ImmAllo"
-        self.morphlemma_immsubst = "Lemma_ImmSubst"
-        self.morphlemma_immopac = "Lemma_ImmOpac"
-        self.morphlemma_transder = "Lemma_TransDer"
-        self.morphlemma_imminfix = "Lemma_ImmInfix"
-        self.morphlemma_immrevers = "Lemma_ImmRevers"
-        self.morphlemma_flatsa = "Lemma_FlatSA"
-        self.morphlemma_struclab = "Lemma_StrucLab"
-        self.morphlemma_strucallo = "Lemma_StrucAllo"
-        self.morphlemma_strucsubst = "Lemma_StrucSubst"
-        self.morphlemma_strucopac = "Lemma_StrucOpac"
-
-        self.syntaxlemma_table = "esl"
-        self.syntaxlemma_id = "Lemma_IdNum"
-        self.syntaxlemma_label = "Lemma_Head"
-        self.syntaxlemma_classnum = "Lemma_ClassNum"
-        self.syntaxlemma_c_n = "Lemma_C_N"
-        self.syntaxlemma_unc_n = "Lemma_Unc_N"
-        self.syntaxlemma_sing_n = "Lemma_Sing_N"
-        self.syntaxlemma_plu_n = "Lemma_Plu_N"
-        self.syntaxlemma_grc_n = "Lemma_GrC_N"
-        self.syntaxlemma_grunc_n = "Lemma_GrUnc_N"
-        self.syntaxlemma_attr_n = "Lemma_Attr_N"
-        self.syntaxlemma_postpos_n = "Lemma_PostPos_N"
-        self.syntaxlemma_voc_n = "Lemma_Voc_N"
-        self.syntaxlemma_proper_n = "Lemma_Proper_N"
-        self.syntaxlemma_exp_n = "Lemma_Exp_N"
-        self.syntaxlemma_trans_v = "Lemma_Trans_V"
-        self.syntaxlemma_transcomp_v = "Lemma_TransComp_V"
-        self.syntaxlemma_intrans_v = "Lemma_Intrans_V"
-        self.syntaxlemma_ditrans_v = "Lemma_Ditrans_V"
-        self.syntaxlemma_link_v = "Lemma_Link_V"
-        self.syntaxlemma_phr_v = "Lemma_Phr_V"
-        self.syntaxlemma_prep_v = "Lemma_Prep_V"
-        self.syntaxlemma_phrprep_v = "Lemma_PhrPrep_V"
-        self.syntaxlemma_exp_v = "Lemma_Exp_V"
-        self.syntaxlemma_ord_a = "Lemma_Ord_A"
-        self.syntaxlemma_attr_a = "Lemma_Attr_A"
-        self.syntaxlemma_pred_a = "Lemma_Pred_A"
-        self.syntaxlemma_postpos_a = "Lemma_PostPos_A"
-        self.syntaxlemma_exp_a = "Lemma_Exp_A"
-        self.syntaxlemma_ord_adv = "Lemma_Ord_ADV"
-        self.syntaxlemma_pred_adv = "Lemma_Pred_ADV"
-        self.syntaxlemma_postpos_adv = "Lemma_PostPos_ADV"
-        self.syntaxlemma_comb_adv = "Lemma_Comb_ADV"
-        self.syntaxlemma_exp_adv = "Lemma_Exp_ADV"
-        self.syntaxlemma_card_num = "Lemma_Card_NUM"
-        self.syntaxlemma_ord_num = "Lemma_Ord_NUM"
-        self.syntaxlemma_exp_num = "Lemma_Exp_NUM"
-        self.syntaxlemma_pers_pron = "Lemma_Pers_PRON"
-        self.syntaxlemma_dem_pron = "Lemma_Dem_PRON"
-        self.syntaxlemma_poss_pron = "Lemma_Poss_PRON"
-        self.syntaxlemma_refl_pron = "Lemma_Refl_PRON"
-        self.syntaxlemma_wh_pron = "Lemma_Wh_PRON"
-        self.syntaxlemma_det_pron = "Lemma_Det_PRON"
-        self.syntaxlemma_pron_pron = "Lemma_Pron_PRON"
-        self.syntaxlemma_exp_pron = "Lemma_Exp_PRON"
-        self.syntaxlemma_cor_c = "Lemma_Cor_C"
-        self.syntaxlemma_sub_c = "Lemma_Sub_C"
 
         self.create_table_description(self.phonolemma_table,
             [Primary(self.phonolemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
@@ -301,21 +293,21 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.lemma_cobspelldev, "MEDIUMINT(5) UNSIGNED NOT NULL"),
              Column(self.lemma_headsyldia, "VARCHAR(42) NOT NULL")])
 
-        self.create_table_description(self.word_table,
-            [Primary(self.word_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.word_label, "VARCHAR(35) NOT NULL"),
-             Column(self.word_worddia, "VARCHAR(35) NOT NULL"),
-             Column(self.word_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-             Link(self.word_lemma_id, self.lemma_table),
-             Link(self.word_transcript_id, self.transcript_table),
-             Link(self.word_phonolemma_id, self.phonolemma_table),
-             Link(self.word_morphword_id, self.morphword_table),
-             Link(self.word_morphlemma_id, self.morphlemma_table),
-             Link(self.word_syntaxlemma_id, self.syntaxlemma_table),
-             Column(self.word_orthocnt, "ENUM('1','2','3','4','5') NOT NULL"),
-             Column(self.word_orthostatus, "ENUM('B') NOT NULL"),
-             Column(self.word_cobspelldev, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.word_wordsyldia, "VARCHAR(43) NOT NULL")])
+        self.create_table_description(self.corpus_table,
+            [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.corpus_word, "VARCHAR(35) NOT NULL"),
+             Column(self.corpus_worddia, "VARCHAR(35) NOT NULL"),
+             Column(self.corpus_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+             Link(self.corpus_lemma_id, self.lemma_table),
+             Link(self.corpus_transcript_id, self.transcript_table),
+             Link(self.corpus_phonolemma_id, self.phonolemma_table),
+             Link(self.corpus_morphword_id, self.morphword_table),
+             Link(self.corpus_morphlemma_id, self.morphlemma_table),
+             Link(self.corpus_syntaxlemma_id, self.syntaxlemma_table),
+             Column(self.corpus_orthocnt, "ENUM('1','2','3','4','5') NOT NULL"),
+             Column(self.corpus_orthostatus, "ENUM('B') NOT NULL"),
+             Column(self.corpus_cobspelldev, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.corpus_wordsyldia, "VARCHAR(43) NOT NULL")])
 
     def build_load_files(self):
         files = [x for x in sorted(self.get_file_list(self.arguments.path, self.file_filter)) if os.path.basename(x).lower() in BuilderClass.expected_files]
@@ -359,26 +351,27 @@ class BuilderClass(BaseCorpusBuilder):
                     current_line = current_line.strip()
                     columns = current_line.split("\\")
                     if component == "eow":
-                        (self._value_word_id,
-                        self._value_word_worddia,
-                        self._value_word_cob,
-                        self._value_word_lemma_id,
-                        self._value_word_orthocnt,
-                        self._value_word_orthostatus,
+                        (self._value_corpus_id,
+                        self._value_corpus_worddia,
+                        self._value_corpus_cob,
+                        self._value_corpus_lemma_id,
+                        self._value_corpus_orthocnt,
+                        self._value_corpus_orthostatus,
                         _,
-                        self._value_word_cobspelldev,
-                        self._value_word_wordsyldia) = columns[:9]
-                        self._value_word_label = dia_to_unicode(self._value_word_worddia)
-                        self.table(self.word_table).add(
-                            {self.word_id: self._value_word_id,
-                            self.word_label: self._value_word_label,
-                            self.word_worddia: self._value_word_worddia,
-                            self.word_cob: self._value_word_cob,
-                            self.word_lemma_id: self._value_word_lemma_id,
-                            self.word_orthocnt: self._value_word_orthocnt,
-                            self.word_orthostatus: self._value_word_orthostatus,
-                            self.word_cobspelldev: self._value_word_cobspelldev,
-                            self.word_wordsyldia: self._value_word_wordsyldia})
+                        self._value_corpus_cobspelldev,
+                        self._value_corpus_wordsyldia) = columns[:9]
+                        self._value_corpus_word = dia_to_unicode(self._value_corpus_worddia)
+                        self.table(self.corpus_table).add(
+                            {self.corpus_id: self._value_corpus_id,
+                            self.corpus_word: self._value_corpus_word,
+                            self.corpus_worddia: self._value_corpus_worddia,
+                            self.corpus_cob: self._value_corpus_cob,
+                            self.corpus_lemma_id: self._value_corpus_lemma_id,
+                            self.corpus_orthocnt: self._value_corpus_orthocnt,
+                            self.corpus_orthostatus: self._value_corpus_orthostatus,
+                            self.corpus_cobspelldev: self._value_corpus_cobspelldev,
+                            self.corpus_wordsyldia: self._value_corpus_wordsyldia})
+                    
                     elif component == "eol":
                         (self._value_lemma_id,
                         self._value_lemma_headdia,
@@ -616,6 +609,14 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_db_name():
         return "celex"
+    
+    @staticmethod
+    def get_language():
+        return "English"
+    
+    @staticmethod
+    def get_language_code():
+        return "en"
     
     @staticmethod
     def get_references():
