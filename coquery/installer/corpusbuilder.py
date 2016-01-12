@@ -1767,6 +1767,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
         return "(no title)"
 
     @staticmethod
+    def get_language():
+        return "(unspecified)"
+    
+    @staticmethod
+    def get_language_code():
+        return "(unspecified)"
+
+    @staticmethod
     def get_description():
         return []
 
@@ -1819,7 +1827,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
             try:
                 exec("import {}".format(module))
             except ImportError:
-                raise DependencyError(package)
+                raise DependencyError(package, url)
+        asd
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """
@@ -2148,8 +2157,11 @@ if use_gui:
             
         def install_exception(self):
             self.state = "failed"
-            if type(self.exception) == RuntimeError:
+            if isinstance(self.exception, RuntimeError):
                 QtGui.QMessageBox.critical(self, "Installation error – Coquery",
+                                           str(self.exception))
+            elif isinstance(self.exception, DependencyError):
+                QtGui.QMessageBox.critical(self, "Missing Python module – Coquery",
                                            str(self.exception))
             else:
                 errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
