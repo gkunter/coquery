@@ -605,6 +605,8 @@ class CoqueryApp(QtGui.QMainWindow):
         # {table}_table_{other}
         for table in tables:
             for var in list(table_dict[table]):
+                if var == "corpus_id":
+                    continue
                 if (var.endswith("_table") or var.endswith("_id") or var.startswith("{}_table".format(table))) or "_denorm_" in var:
                     table_dict[table].remove(var)
                     
@@ -1544,8 +1546,9 @@ class CoqueryApp(QtGui.QMainWindow):
             output_features = []
             for child in [node.child(i) for i in range(node.childCount())]:
                 output_features += traverse_output_columns(child)
-            if node.checkState(0) == QtCore.Qt.Checked and not node.objectName().rpartition("_")[-1] == "table" and not node.isDisabled():
+            if node.checkState(0) == QtCore.Qt.Checked and not node.isDisabled():
                 output_features.append(node.objectName())
+                
             return output_features
         
         def get_external_links(node):
