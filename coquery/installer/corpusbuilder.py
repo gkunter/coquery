@@ -146,14 +146,14 @@ class NLTKTokenizerError(Exception):
         logger.error("The NLTK tokenizer failed. This may be caused by a missing NLTK component. Please consult the 'Installing NLTK Data' guide on http://www.nltk.org/data.html for instructions on how to add the necessary components. Alternatively, you may want to use --no-nltk argument to disable the use of NLTK.")
         logger.error(e)
         if use_gui:
-            error_box.ErrorBox.show(sys.exc_info(), self)
+            errorbox.ErrorBox.show(sys.exc_info(), self)
         
 class NLTKTaggerError(Exception):
     def __init__(self, e, logger):
         logger.error("The NLTK tagger failed. This may be caused by a missing NLTK component. Please consult the 'Installing NLTK Data' guide on http://www.nltk.org/data.html for instructions on how to add the necessary components. Alternatively, you may want to use --no-nltk argument to disable the use of NLTK.")
         logger.error(e)
         if use_gui:
-            error_box.ErrorBox.show(sys.exc_info(), self)
+            errorbox.ErrorBox.show(sys.exc_info(), self)
 
 class MethodNotImplementedError(Exception):
     msg = "Function not implemented."
@@ -1990,7 +1990,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
 if use_gui:
     import corpusInstallerUi
-    import error_box
+    import errorbox
     import QtProgress
     from defines import * 
     
@@ -2146,7 +2146,7 @@ if use_gui:
                 QtGui.QMessageBox.critical(self, "Installation error – Coquery",
                                            str(self.exception))
             else:
-                error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
+                errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
 
         def reject(self):
             try:
@@ -2215,9 +2215,9 @@ if use_gui:
             #try:
                 #self.do_install()
             #except RuntimeError as e:
-                #error_box.ErrorBox.show(sys.exc_info(), e, no_trace=True)
+                #errorbox.ErrorBox.show(sys.exc_info(), e, no_trace=True)
             #except Exception as e:
-                #error_box.ErrorBox.show(sys.exc_info(), e)
+                #errorbox.ErrorBox.show(sys.exc_info(), e)
             #else:
                 #self.finish_install()
 
@@ -2373,7 +2373,7 @@ if use_gui:
                 QtGui.QMessageBox.critical(self, "Corpus building error – Coquery",
                                            str(self.exception))
             else:
-                error_box.ErrorBox.show(self.exc_info, self, no_trace=False)
+                errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
 
         def finish_install(self, *args, **kwargs):
             super(BuilderGui, self).finish_install(*args, **kwargs)
