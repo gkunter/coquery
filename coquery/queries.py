@@ -233,8 +233,7 @@ class TokenQuery(object):
     This class manages the query string, and is responsible for the output 
     of the query results. 
     """
-    def __init__(self, S, Session, token_class):
-        self.token_class = token_class
+    def __init__(self, S, Session):
         self.query_list = tokens.preprocess_query(S)
         self.query_string = S
         self.Session = Session
@@ -307,12 +306,20 @@ class TokenQuery(object):
                 # This SQLAlchemy optimization including the string folder 
                 # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
                 query_string = self.Resource.get_query_string(self, self._sub_query)
-                if options.cfg.verbose:
-                    logger.info(query_string)
-                results = connection.execution_options(stream_results=True).execute(query_string)
-                df = pd.DataFrame(self.string_folder(results))
-                df.columns = results.keys()
-                results = None
+                if not query_string:
+                    df = pd.DataFrame()
+                else:
+                    if options.cfg.verbose:
+                        logger.info(query_string)
+                    try:
+                        results = connection.execution_options(stream_results=True).execute(query_string)
+                    except Exception as e:
+                        print(query_string)
+                        print(e)
+                        raise e
+                    df = pd.DataFrame(self.string_folder(results))
+                    df.columns = results.keys()
+                    results = None
 
             df = self.insert_static_data(df)
             df = self.insert_context(df)
@@ -457,6 +464,7 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
+        print(self.Session.output_order)
         if "coquery_invisible_corpus_id" not in list(df.columns.values):
             df["coquery_invisible_corpus_id"] = np.NaN
         for column in self.Session.output_order:
@@ -678,6 +686,7 @@ class FrequencyQuery(TokenQuery):
         
         if len(df.index) == 0:
             result = pd.DataFrame({"coq_frequency": [0]})
+            print(dir(options.cfg))
         elif len(group_columns) == 0:
             # if no grouping variables are selected, simply return the first
             # row of the data frame together with the total length of the 
@@ -795,7 +804,7 @@ class CollocationQuery(TokenQuery):
                     pass
         return df
 
-    def __init__(self, S, Session, token_class):
+    def __init__(self, S, Session):
         self.left_span = options.cfg.context_left
         self.right_span = options.cfg.context_right
         
@@ -807,7 +816,7 @@ class CollocationQuery(TokenQuery):
         S = "{}{}{}".format("* " * self.left_span, S, " *" * self.right_span)
 
         # and then use this string for a normal TokenQuery:
-        super(CollocationQuery, self).__init__(S, Session, token_class)
+        super(CollocationQuery, self).__init__(S, Session)
         self.Session.output_order = self.Session.header
 
     @staticmethod
