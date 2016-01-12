@@ -897,9 +897,8 @@ class SQLResource(BaseResource):
                 elif options.cfg.context_mode == CONTEXT_SENTENCE:
                     select_list.append("coq_context")
 
-        if options.cfg.token_origin_id:
-            select_list.append("coquery_invisible_corpus_id")
-            select_list.append("coquery_invisible_number_of_tokens")
+        select_list.append("coquery_invisible_corpus_id")
+        select_list.append("coquery_invisible_number_of_tokens")
         return select_list
 
 class SQLLexicon(BaseLexicon):
@@ -2033,10 +2032,8 @@ class SQLCorpus(BaseCorpus):
         # construct the query string from the token query parts:
         query_string = " ".join(query_string_part)
 
-        # Whenever a origin is given, if no other column is selected, the 
-        # token id is automatically added to the output fields:
-        if options.cfg.token_origin_id or not final_select:
-            final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
+        # Always add the corpus id to the output fields:
+        final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
 
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(set(final_select)))
         
