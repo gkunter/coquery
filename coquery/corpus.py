@@ -138,14 +138,6 @@ class BaseLexicon(object):
 class BaseResource(object):
     """
     """
-    # Add internal table that can be used to access system information:
-    coquery_query_string = "Query string"
-    coquery_expanded_query_string = "Expanded query string"
-    coquery_query_file = "Input file"
-    coquery_current_date = "Current date"
-    coquery_current_time = "Current time"
-    coquery_query_token = "Query token"
-
     # add internal table that can be used to access frequency information:
     coquery_query_string = "Query string"
     coquery_expanded_query_string = "Expanded query string"
@@ -398,8 +390,10 @@ class BaseResource(object):
         for x in table_dict:
             if x not in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
-                    if not y.endswith("_id") and not y.startswith("{}_table".format(x)):
-                        corpus_variables.append((y, type(cls).__getattribute__(cls, y)))    
+                    if y == "corpus_id":
+                        corpus_variables.append((y, cls.corpus_id))    
+                    elif not y.endswith("_id") and not y.startswith("{}_table".format(x)):
+                        corpus_variables.append((y, getattr(cls, y)))
         return corpus_variables
     
     @classmethod
@@ -834,6 +828,7 @@ class SQLResource(BaseResource):
         
         lexicon_features = [x for x, _ in cls.get_lexicon_features() if x in options.cfg.selected_features]
         corpus_features = [x for x, _ in cls.get_corpus_features() if x in options.cfg.selected_features]
+
         max_token_count = query.Session.get_max_token_count()
         # the initial select list contains the columns from the input file
         # (if present):
@@ -1130,7 +1125,7 @@ class SQLLexicon(BaseLexicon):
                     word_lemma,
                     self.resource.lemma_id))
         if token.class_specifiers:
-            if hasattr(self.resource, "pos_table":
+            if hasattr(self.resource, "pos_table"):
                 self.table_list.append("LEFT JOIN {} AS COQ_POS_TABLE ON {}.{} = COQ_POS_TABLE.{}".format(
                     self.resource.pos_table,
                     word_table,
