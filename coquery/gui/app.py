@@ -316,7 +316,9 @@ class CoqueryApp(QtGui.QMainWindow):
             lambda: self.visualize_data("treemap"))
         self.ui.action_heat_map.triggered.connect(
             lambda: self.visualize_data("heatmap"))
-        
+        self.ui.action_bubble_chart.triggered.connect(
+            lambda: self.visualize_data("bubbleplot"))
+            
         self.ui.action_barchart_plot.triggered.connect(
             lambda: self.visualize_data("barplot"))
         self.ui.action_stacked_barchart_plot.triggered.connect(
