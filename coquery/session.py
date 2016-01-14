@@ -168,10 +168,38 @@ class Session(object):
         Apply the aggegate function from the current query type to the 
         data table produced in this session.
         """
-        self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
-        self.output_object.fillna("", inplace=True)
-        self.output_object.index = range(1, len(self.output_object.index) + 1)
+        if not hasattr(self, "frequency_table"):
+            self.frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus)
+            self.frequency_table.fillna("", inplace=True)
+            self.frequency_table.index = range(1, len(self.frequency_table.index) + 1)
 
+        if self.query_type != queries.FrequencyQuery:
+            self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
+            self.output_object.fillna("", inplace=True)
+            self.output_object.index = range(1, len(self.output_object.index) + 1)
+        else:
+            self.output_object = self.frequency_table
+        
+        self.filter_data()
+        
+    def filter_data(self, column="coq_frequency"):
+        """
+        Apply the frequency filters to the output object.
+        """
+        for filt in options.cfg.filter_list:
+            if filt.var == options.cfg.freq_label:
+                try:
+                    self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]
+                except AttributeError:
+                    pass
+        columns = [x for x in self.data_table.columns if not x.startswith("coquery_invisible") and x != column]
+
+        for col in columns:
+            #print(self.data_table.head())
+            self.data_table[col]
+            self.frequency_table[col]
+            self.data_table = self.data_table[self.data_table[col].apply(lambda x: x in list(self.frequency_table[col]))]
+        
     def translate_header(self, header, ignore_alias=False):
         """ 
         Return a string that contains the display name for the header 

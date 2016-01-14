@@ -464,7 +464,6 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-        print(self.Session.output_order)
         if "coquery_invisible_corpus_id" not in list(df.columns.values):
             df["coquery_invisible_corpus_id"] = np.NaN
         for column in self.Session.output_order:
@@ -587,7 +586,7 @@ class TokenQuery(object):
     @classmethod
     def aggregate_it(cls, df, resource):
         agg = cls.aggregate_data(df, resource)
-        agg = cls.filter_data(agg, cls.filter_list)
+        #agg = cls.filter_data(agg, cls.filter_list)
         agg_cols = list(agg.columns.values)
         for col in list(agg_cols):
             if col.startswith("coquery_invisible"):
@@ -731,29 +730,29 @@ class FrequencyQuery(TokenQuery):
         
         return result
 
-    @staticmethod
-    def filter_data(df, filter_list):
-        """ 
-        Apply the frequency filters to the frequency column. 
+    #@staticmethod
+    #def filter_data(df, filter_list, column="coq_frequency"):
+        #""" 
+        #Apply the frequency filters to the frequency column. 
         
-        Parameters
-        ----------
-        df : DataFrame
-            The data frame to be filtered.
+        #Parameters
+        #----------
+        #df : DataFrame
+            #The data frame to be filtered.
 
-        Returns
-        -------
-        df : DataFrame
-            A new data frame that contains the filtered rows from the 
-            argument data frame.
-        """
-        for filt in filter_list:
-            if filt.var == options.cfg.freq_label:
-                try:
-                    df = df[df["coq_frequency"].apply(filt.check_number)]
-                except AttributeError:
-                    pass
-        return df
+        #Returns
+        #-------
+        #df : DataFrame
+            #A new data frame that contains the filtered rows from the 
+            #argument data frame.
+        #"""
+        #for filt in filter_list:
+            #if filt.var == options.cfg.freq_label:
+                #try:
+                    #df = df[df[column].apply(filt.check_number)]
+                #except AttributeError:
+                    #pass
+        #return df
 
 class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
@@ -784,29 +783,29 @@ class CollocationQuery(TokenQuery):
     def insert_context(self, df):
         return df
     
-    @staticmethod
-    def filter_data(df, filter_list):
-        """ 
-        Apply the frequency filters to the collocate frequency column. 
+    #@staticmethod
+    #def filter_data(df, filter_list):
+        #""" 
+        #Apply the frequency filters to the collocate frequency column. 
         
-        Parameters
-        ----------
-        df : DataFrame
-            The data frame to be filtered.
+        #Parameters
+        #----------
+        #df : DataFrame
+            #The data frame to be filtered.
 
-        Returns
-        -------
-        df : DataFrame
-            A new data frame that contains the filtered rows from the 
-            argument data frame.
-        """
-        for filt in filter_list:
-            if filt.var == options.cfg.freq_label:
-                try:
-                    df = df[df["coq_collocate_frequency"].apply(filt.check_number)]
-                except (AttributeError, KeyError):
-                    pass
-        return df
+        #Returns
+        #-------
+        #df : DataFrame
+            #A new data frame that contains the filtered rows from the 
+            #argument data frame.
+        #"""
+        #for filt in filter_list:
+            #if filt.var == options.cfg.freq_label:
+                #try:
+                    #df = df[df["coq_collocate_frequency"].apply(filt.check_number)]
+                #except (AttributeError, KeyError):
+                    #pass
+        #return df
 
     def __init__(self, S, Session):
         self.left_span = options.cfg.context_left
