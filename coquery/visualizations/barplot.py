@@ -1,4 +1,13 @@
-""" Bar chart visualization """
+# -*- coding: utf-8 -*-
+""" 
+barplot.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from __future__ import division
 from __future__ import print_function
@@ -276,5 +285,3 @@ class Visualizer(vis.BaseVisualizer):
                 frameon=True, 
                 framealpha=0.7, 
                 loc="lower left").draggable()
-        # Try to make the figure fit into the area nicely:
-        #self.g.fig.tight_layout()
