@@ -544,7 +544,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if not self.Session:
             return
         
-        self.query_thread = QtProgress.ProgressThread(self.Session.aggregate_data, self)
+        self.query_thread = QtProgress.ProgressThread(self.Session.aggregate_data, parent=self)
         self.query_thread.taskFinished.connect(self.finish_reaggregation)
         self.query_thread.taskException.connect(self.exception_during_query)
 
@@ -1208,7 +1208,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.set_stop_button()
             self.showMessage("Running query...")
             self.start_progress_indicator()
-            self.query_thread = QtProgress.ProgressThread(self.new_session.run_queries, self)
+            self.query_thread = QtProgress.ProgressThread(self.new_session.run_queries, parent=self)
             self.query_thread.taskFinished.connect(self.finalize_query)
             self.query_thread.taskException.connect(self.exception_during_query)
             self.query_thread.start()
@@ -1224,7 +1224,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.Session = StatisticsSession()
         self.showMessage("Gathering corpus statistics...")
         self.start_progress_indicator()
-        self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, self)
+        self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, parent=self)
         self.query_thread.taskFinished.connect(self.finalize_query)
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
