@@ -7,9 +7,9 @@ from __future__ import unicode_literals
 """ 
 visualizer.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
@@ -62,7 +62,7 @@ from pyqt_compat import QtGui, QtCore, pyside
 
 import options
 sys.path.append(os.path.join(sys.path[0], "../gui/"))
-from QtProgress import ProgressIndicator
+import QtProgress
 import visualizerUi
 from defines import *
 from errors import *
@@ -126,7 +126,7 @@ class CoqNavigationToolbar(NavigationToolbar):
             self.parent.visualizer.options.update(new_values)
             self.parent.update_plot()
 
-class BaseVisualizer(object):
+class BaseVisualizer(QtCore.QObject):
     """ 
     Define a class that contains the code to visualize data in several
     ways. 
@@ -139,15 +139,18 @@ class BaseVisualizer(object):
     are specified in :func:`draw`. This method is usually called externally 
     by :func:`VisualizerDialog.Plot`. 
     """
-    
-    def __init__(self, data_model, data_view):
+
+    def __init__(self, data_model, data_view, parent = None):
+        super(BaseVisualizer, self).__init__(parent=parent)
         self._model = None
         self._view = None
         self.options = {}
         self.set_data_source(data_model, data_view)
         self.set_defaults()
         self.setup_figure()
-    
+
+        self.function = self.draw
+
     def set_defaults(self):
         if not self.options.get("color_number"):
             self.options["color_number"] = len(self._levels[-1])
@@ -165,8 +168,7 @@ class BaseVisualizer(object):
                 self.options["color_palette"] = "RdPu"
             
         if not self.options.get("color_palette_values"):
-            self.options["color_palette_values"] = self.set_palette_values(
-                self.options["color_number"])
+            self.set_palette_values(self.options["color_number"])
 
     def set_palette_values(self, n=None):
         """
@@ -179,8 +181,7 @@ class BaseVisualizer(object):
             
         self.options["color_palette_values"] = sns.color_palette(
                 self.options["color_palette"], n)
-
-                                                                                                                            
+                                                                                                                         
     def _validate_layout(func):
         def func_wrapper(self):
             if self._col_wrap:
@@ -522,8 +523,6 @@ class BaseVisualizer(object):
             #if label:
                 #self.subplot.xaxis.set_label(label)
 
-
-
     def get_font_scale(self, default=12):
         """ 
         Return the scaling factor of the current font, relative to a default
@@ -621,6 +620,10 @@ class VisualizerDialog(QtGui.QWidget):
         
         self.ui = visualizerUi.Ui_Visualizer()
         self.ui.setupUi(self)
+        self.ui.progress_bar.setRange(0, 0)
+        self.ui.box_visualize.hide()
+        self.ui.progress_bar.hide()
+        self.ui.label.hide()
         self.ui.button_close.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
         
         self.setWindowIcon(options.cfg.icon)
@@ -783,25 +786,45 @@ class VisualizerDialog(QtGui.QWidget):
         else:
             self.connect_signals()
 
-    def plot_it(self):
-        print("starting")
-        self.visualizer.setup_figure()
-        self.visualizer.start_draw_thread()
-        print("done")
-
     def Plot(self, model, view, visualizer_class, parent=None, **kwargs):
         """ Use the visualization type given as 'visualizer_class' to display
         the data given in the abstract data table 'model', using the table 
         view given in 'view'. """
         dialog = self
         self.smooth = kwargs.get("smooth", False)
-        visualizer = visualizer_class(model, view, **kwargs)
-        if not visualizer._table.empty:
-            dialog.setVisible(True)
-            dialog.add_visualizer(visualizer)
-            dialog.add_matplot()
-            self.visualizer.draw()
+        self.visualizer = visualizer_class(model, view, parent=None, **kwargs)
+        if not self.visualizer._table.empty:
+            self.setVisible(True)
+            self.connect_signals()
+            options.cfg.main_window.widget_list.append(self)
+            self.add_matplot()
             
+            self.thread = QtProgress.ProgressThread(self.visualizer.draw, parent=self)
+            self.thread.taskStarted.connect(self.startplot)
+            self.thread.taskFinished.connect(self.finishplot)
+
+            self.visualizer.moveToThread(self.thread)
+            self.thread.start()
+
+    def startplot(self):
+        self.ui.box_visualize.hide()
+        self.ui.frame.setDisabled(True)        
+        self.ui.frame_placeholder.show()
+        self.ui.progress_bar.show()
+        self.ui.label.show()
+        self.repaint()
+
+    def finishplot(self):
+        self.ui.frame_placeholder.hide()
+        self.ui.progress_bar.hide()
+        self.ui.label.hide()        
+        self.ui.box_visualize.show()
+        self.ui.frame.setDisabled(False)        
+        self.repaint()
+        
+        self.visualizer.g.fig.canvas.draw()
+        self.visualizer.g.fig.tight_layout()
+  
 if __name__ == "__main__":
     unittest.main()
             

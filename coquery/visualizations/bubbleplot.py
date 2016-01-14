@@ -8,6 +8,7 @@ Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+
 from __future__ import unicode_literals
 from __future__ import division
 import math
@@ -64,15 +65,16 @@ class Visualizer(vis.BaseVisualizer):
             def r(freq):
                 return math.sqrt(freq / math.pi)
 
-            def rotate_vector((x, y), angle):
+            def rotate_vector(v, angle):
                 """
                 Rotate the vector (x, y) by the given angle.
                 
                 Returns
                 -------
-                (nx, ny) : tuple
+                v : tuple
                     The rotated vector.
                 """
+                (x, y) = v
                 cos_theta = math.cos(angle)
                 sin_theta = math.sin(angle)
                 return x*cos_theta - y*sin_theta, x*sin_theta + y*cos_theta
@@ -96,8 +98,8 @@ class Visualizer(vis.BaseVisualizer):
                 else:
                     return math.acos(x)
             
-            def angle_vect((x1, y1), (x2, y2)):
-                return math.atan2(x1*y2 - y1*x2, x1*x2 + y1*y2)  # atan2(y, x) or atan2(sin, cos)
+            #def angle_vect((x1, y1), (x2, y2)):
+                #return math.atan2(x1*y2 - y1*x2, x1*x2 + y1*y2)  # atan2(y, x) or atan2(sin, cos)
             
             def get_position(i, a, n):
                 """
@@ -267,7 +269,6 @@ class Visualizer(vis.BaseVisualizer):
 
         sns.despine(self.g.fig, 
                     left=True, right=True, top=True, bottom=True)
-        self.g.fig.tight_layout()
 
         self.map_data(plot_facet)
 

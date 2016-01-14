@@ -2,9 +2,9 @@
 """ 
 timeseries.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
@@ -164,6 +164,5 @@ class Visualizer(vis.BaseVisualizer):
         #self.setup_axis("X")
         if len(self._groupby) == 2:
             self.g.fig.get_axes()[-1].legend(title=self._groupby[0], framealpha=0.7, frameon=True, loc="lower left").draggable()
-        self.g.fig.tight_layout()
 
 logger = logging.getLogger(__init__.NAME)

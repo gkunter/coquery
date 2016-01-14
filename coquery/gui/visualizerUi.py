@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'visualizer.ui'
 #
-# Created: Wed Oct 14 18:08:30 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -30,6 +29,16 @@ class Ui_Visualizer(object):
         self.verticalLayout_2 = QtGui.QVBoxLayout(Visualizer)
         self.verticalLayout_2.setSpacing(20)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
+        self.frame_placeholder = QtGui.QFrame(Visualizer)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.frame_placeholder.sizePolicy().hasHeightForWidth())
+        self.frame_placeholder.setSizePolicy(sizePolicy)
+        self.frame_placeholder.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_placeholder.setFrameShadow(frameShadow)
+        self.frame_placeholder.setObjectName(_fromUtf8("frame_placeholder"))
+        self.verticalLayout_2.addWidget(self.frame_placeholder)
         self.box_visualize = QtGui.QFrame(Visualizer)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -67,6 +76,18 @@ class Ui_Visualizer(object):
         self.verticalLayout_2.addWidget(self.frame)
         self.horizontalLayout_2 = QtGui.QHBoxLayout()
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
+        self.label = QtGui.QLabel(Visualizer)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
+        self.label.setObjectName(_fromUtf8("label"))
+        self.horizontalLayout_2.addWidget(self.label)
+        self.progress_bar = QtGui.QProgressBar(Visualizer)
+        self.progress_bar.setProperty("value", 24)
+        self.progress_bar.setObjectName(_fromUtf8("progress_bar"))
+        self.horizontalLayout_2.addWidget(self.progress_bar)
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem)
         self.button_close = QtGui.QPushButton(Visualizer)
@@ -79,6 +100,7 @@ class Ui_Visualizer(object):
 
     def retranslateUi(self, Visualizer):
         Visualizer.setWindowTitle(_translate("Visualizer", "Data visualization – Coquery", None))
+        self.label.setText(_translate("Visualizer", "Visualizing... ", None))
         self.button_close.setText(_translate("Visualizer", "&Close", None))
 
 
