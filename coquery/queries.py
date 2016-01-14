@@ -464,7 +464,6 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-        print(self.Session.output_order)
         if "coquery_invisible_corpus_id" not in list(df.columns.values):
             df["coquery_invisible_corpus_id"] = np.NaN
         for column in self.Session.output_order:
