@@ -882,17 +882,15 @@ class CoqueryApp(QtGui.QMainWindow):
         # show menu about the column
         menu = QtGui.QMenu("Column options", self)
 
-        if not selection:
-            if point:
-                header = self.ui.data_preview.horizontalHeader()
-                index = header.logicalIndexAt(point.x())
-                column = self.table_model.header[index]
+        if point:
+            header = self.ui.data_preview.horizontalHeader()
+            index = header.logicalIndexAt(point.x())
+            column = self.table_model.header[index]
+            if column not in selection:
                 selection = [column]
 
-        column = selection[0]
+        display_name = ", ".join([options.cfg.main_window.Session.translate_header(x) for x in selection])
 
-        display_name = options.cfg.main_window.Session.translate_header(column)
-        
         action = QtGui.QWidgetAction(self)
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
         label.setAlignment(QtCore.Qt.AlignCenter)
@@ -900,32 +898,40 @@ class CoqueryApp(QtGui.QMainWindow):
         menu.addAction(action)
         menu.addSeparator()
 
-        if not options.cfg.column_visibility.get(column, True):
-            action = QtGui.QAction("&Show column", self)
-            action.triggered.connect(lambda: self.toggle_visibility(column))
-            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
-            menu.addAction(action)
+        if len(selection) > 1:
+            suffix = "s"
         else:
-            action = QtGui.QAction("&Hide column", self)
-            action.triggered.connect(lambda: self.toggle_visibility(column))
+            suffix = ""
+
+        if not all([options.cfg.column_visibility.get(x, True) for x in selection]):
+            action = QtGui.QAction("&Show column{}".format(suffix), self)
+            action.triggered.connect(lambda a: self.show_columns(selection))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
             menu.addAction(action)
-            menu.addSeparator()
 
+        if not all([not options.cfg.column_visibility.get(x, True) for x in selection]):
+            action = QtGui.QAction("&Hide column{}".format(suffix), self)
+            action.triggered.connect(lambda a: self.hide_columns(selection))
+            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
+            menu.addAction(action)
+
+        if len(selection) == 1:
             action = QtGui.QAction("&Rename column...", self)
             action.triggered.connect(lambda: self.rename_column(column))
             menu.addAction(action)
 
-            if column in options.cfg.column_color:
-                action = QtGui.QAction("&Reset color", self)
-                action.triggered.connect(lambda: self.reset_color(column))
-                menu.addAction(action)
-    
-            action = QtGui.QAction("&Change color...", self)
-            action.triggered.connect(lambda: self.change_color(column))
+        if set(selection).intersection(set(options.cfg.column_color.keys())):
+            action = QtGui.QAction("&Reset color{}".format(suffix), self)
+            action.triggered.connect(lambda: self.reset_colors(selection))
             menu.addAction(action)
-            menu.addSeparator()
 
+        action = QtGui.QAction("&Change color{}...".format(suffix), self)
+        action.triggered.connect(lambda: self.change_colors(selection))
+        menu.addAction(action)
+        
+        menu.addSeparator()
+        if len(selection) == 1:
+            column = selection[0]
             group = QtGui.QActionGroup(self, exclusive=True)
             action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
             action.triggered.connect(lambda: self.change_sorting_order(column, SORT_NONE))
@@ -1063,6 +1069,41 @@ class CoqueryApp(QtGui.QMainWindow):
                                            current_name)
         options.cfg.column_names[column] = name
 
+    def hide_columns(self, selection):
+        """
+        Show the columns in the selection.
+
+        Parameters
+        ----------
+        selection : list
+            A list of column names.
+        """
+        for column in selection:
+            options.cfg.column_visibility[column] = False
+        self.update_columns()
+
+    def show_columns(self, selection):
+        """
+        Show the columns in the selection.
+
+        Parameters
+        ----------
+        selection : list
+            A list of column names.
+        """
+        for column in selection:
+            options.cfg.column_visibility[column] = True
+        self.update_columns()
+
+    def update_columns(self):
+        """
+        Update the table by emitting the adequate signals.
+        
+        This method emits geometriesChanged, layoutChanged and 
+        columnVisibilityChanged signals, and also resorts the table if 
+        necessary.
+        """
+
     def toggle_visibility(self, column):
         """ 
         Show again a hidden column, or hide a visible column.
@@ -1072,12 +1113,7 @@ class CoqueryApp(QtGui.QMainWindow):
         column : column index
         """
         options.cfg.column_visibility[column] = not options.cfg.column_visibility.get(column, True)
-        self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
-        # Resort the data if this is a sorting column:
-        if column in self.table_model.sort_columns:
-            self.table_model.sort(0, QtCore.Qt.AscendingOrder)
-        self.table_model.layoutChanged.emit()
-        self.table_model.columnVisibilityChanged.emit()
+        self.update_columns()
 
     def set_row_visibility(self, selection, state):
         """ 
@@ -1103,17 +1139,36 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.verticalHeader().geometriesChanged.emit()
         self.table_model.layoutChanged.emit()
 
-    def reset_color(self, column):
-        try:
-            options.cfg.column_color.pop(column)
-            self.table_model.layoutChanged.emit()
-        except KeyError:
-            pass
+    def reset_colors(self, selection):
+        """
+        Reset the colors of the columns in the selection.
 
-    def change_color(self, column):
+        Parameters
+        ----------
+        selection : list
+            A list of column names.
+        """
+        for column in selection:
+            try:
+                options.cfg.column_color.pop(column)
+                self.table_model.layoutChanged.emit()
+            except KeyError:
+                pass
+
+    def change_colors(self, selection):
+        """
+        Change the colors of the columns in the selection to one
+        selected from a dialog.
+
+        Parameters
+        ----------
+        selection : list
+            A list of column names.
+        """
         col = QtGui.QColorDialog.getColor()
         if col.isValid():
-            options.cfg.column_color[column] = col.name()
+            for column in selection:
+                options.cfg.column_color[column] = col.name()
         
     def reset_row_color(self, selection):
         for x in selection:
