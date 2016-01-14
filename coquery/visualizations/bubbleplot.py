@@ -113,12 +113,18 @@ class Visualizer(vis.BaseVisualizer):
                 well as I and N. A and N themselves do not have to be tangent 
                 (they can be, though). 
 
+                Raises
+                ------
+                e : ValueError
+                    A ValueError exception is raised if no valid position 
+                    exists.
+
                 Parameters
                 ----------
                 i, a, n : int 
                     The index of the next bubble (i), the anchor bubble (a),
                     and the neighboring bubble (n).
-                
+
                 """
                 # get radii:
                 r_a = df_freq.iloc[a]["r"]
@@ -211,7 +217,6 @@ class Visualizer(vis.BaseVisualizer):
             ax = plt.gca()
             
             self.set_palette_values(len(set(df_freq[self._groupby[-1]])))
-            
 
             self.max_x = 0
             self.max_y = 0
@@ -220,29 +225,37 @@ class Visualizer(vis.BaseVisualizer):
             ax.set_aspect(1)
             
             a = 0
-            n = 1
-    
+
             self.pos = [(None, None)] * len(df_freq.index)
-            self.pos[0] = 0, 0
             
-            anchor = df_freq.iloc[a]
-            draw_circle(a)
-
-            if len(df_freq) > 0:
-                self.pos[1] = self.pos[0][0] + df_freq.iloc[0]["r"] + df_freq.iloc[1]["r"], self.pos[0][1]
-                draw_circle(n)
-
             completed = 0
-            for i in range(n + 1, len(df_freq.index)):
-                self.pos[i] = get_position(i, a, n)
-                while get_intersections(i, completed, n) and a < i:
-                    a = a + 1
-                    completed = a
-                    try:
-                        self.pos[i] = get_position(i, a, n)
-                    except ValueError:
-                        continue
+            for i in range(len(df_freq.index)):
+                if i == 0:
+                    self.pos[i] = 0, 0
+                elif i == 1:
+                    self.pos[1] = self.pos[0][0] + df_freq.iloc[0]["r"] + df_freq.iloc[1]["r"], self.pos[0][1]
+                else:
+                    self.pos[i] = get_position(i, a, n)
+                    while get_intersections(i, completed, n) and a < i:
+                        a = a + 1
+                        # Intersections not only trigger an anchor bubble change,
+                        # they also indicate that a closed ring of bubbles has 
+                        # been completed. All bubbles within the closed ring do
+                        # not have to be considered for collision detections, so
+                        # keeping track of the completed bubbles speeds up the 
+                        # algorithm:
+                        completed = a
+                        # If there is no position at which the next bubble can be 
+                        # placed so that it is tangent to both the neighbor and 
+                        # the anchor, get_position() raises a ValueError 
+                        # exception.
+                        try:
+                            self.pos[i] = get_position(i, a, n)
+                        except ValueError:
+                            continue
+
                 draw_circle(i)
+                # The current bubble becomes the new neighbor bubble:
                 n = i
                     
             ax.set_ylim(self.min_y * 1.05, self.max_y * 1.05)
