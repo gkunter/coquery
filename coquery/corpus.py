@@ -349,6 +349,24 @@ class BaseResource(object):
         D["rc_features"] = sorted(available_features)
         D["rc_requested_features"] = sorted(requested_features)
         return D
+
+    @classmethod
+    def get_feature_from_name(cls, name):
+        """
+        Get all resource features that match the given display name.
+        
+        Parameters
+        ----------
+        name : str 
+            The display name for which to search 
+            
+        Returns
+        -------
+        l : list 
+            A list of strings, each representing a resource feature that has 
+            the same display name as 'name'.
+        """
+        return [x for x in cls.get_resource_features() if getattr(cls, x) == name]
     
     @classmethod
     def get_sub_tree(cls, rc_table, tree_structure):
@@ -1213,44 +1231,67 @@ class SQLCorpus(BaseCorpus):
             return []
         l = []
         
+        # get the complete row from the corpus table for the current token:
         S = "SELECT * FROM {} WHERE {} = {}".format(
             self.resource.corpus_table,
             self.resource.corpus_id,
             token_id)
         d = self.resource.DB.execute_cursor(S).fetchone()
+        print(d, dir(d), list(d.keys()))
 
-        for column in d:
+        # as each of the columns could potentially link to origin information,
+        # we go through all of them:
+        for column in d.keys():
+            # exclude the Token ID:
             if column == self.resource.corpus_id:
                 continue
             # do not look into the word column of the corpus:
             try:
                 if column == self.resource.corpus_word_id:
                     continue
-            except AttributeError:
-                pass
-            try:
                 if column == self.resource.corpus_word:
                     continue
             except AttributeError:
                 pass
-            
-            lst = [x for x in self.resource.get_resource_features() if getattr(self.resource, x) == column]
-            if lst:
-                link_feature = lst[0]
 
-                _, _, table, feature = self.resource.split_resource_feature(link_feature)
-                if table == "corpus":
-                    _, _, tab, feat = self.resource.split_resource_feature(feature)
-                    if feat == "id":
-                        id_column = getattr(self.resource, "{}_id".format(tab))
-                        table_name = getattr(self.resource, "{}_table".format(tab))
-                        S = "SELECT * FROM {} WHERE {} = {}".format(
-                            table_name,
-                            id_column,
-                            d[column])
-                        D = self.resource.DB.execute_cursor(S).fetchone()
-                        D.pop(id_column)
-                        l.append((table_name, D))
+            # Now, look for all features in the resource that the corpus table
+            # links to. In order to do so, we first get a list of all feature 
+            # names that match the current column, deterimine whether they are 
+            # a feature of the corpus table, and if so, whether they link to 
+            # a different table. If that is the case, we get all fields from 
+            # that table that match the current entry, and add the information 
+            # to the origin data list:
+
+            # get the resource feature name from the corpus table that belongs 
+            # to the current column display name:
+            try:
+                rc_feature = [x for x in self.resource.get_feature_from_name(column) if x.startswith("corpus_")][0]
+            except IndexError:
+                continue
+    
+            # obtain the field name from the resource name:
+            _, _, _, feature = self.resource.split_resource_feature(rc_feature)
+            # determine whether the field name is a linking field:
+            _, _, tab, feat = self.resource.split_resource_feature(feature)
+            if feat == "id":
+                id_column = getattr(self.resource, "{}_id".format(tab))
+                table_name = getattr(self.resource, "{}_table".format(tab))
+                S = "SELECT * FROM {} WHERE {} = {}".format(
+                table_name,
+                    id_column,
+                    d[column])
+                # Fetch all fields from the linked table for the current 
+                # token:
+                row = self.resource.DB.execute_cursor(S).fetchone()
+                if row:
+                    # This somewhat complicated code is required because 
+                    # the SQLite connections only indirectly support named 
+                    # cursors:
+                    keys = list(row.keys())
+                    keys.remove(id_column)
+                    D = dict(zip(keys, [row[x] for x in keys]))
+                    ## append the row data to the list:
+                    l.append((table_name, D))
         return l
 
     def get_corpus_size(self):

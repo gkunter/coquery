@@ -170,14 +170,50 @@ class Session(object):
         frequency_table.index = range(1, len(frequency_table.index) + 1)
         return frequency_table
 
-    def aggregate_data(self):
+    def aggregate_data(self, recalculate=True):
         """
         Apply the aggegate function from the current query type to the 
         data table produced in this session.
         """
+        # if no explicit recalculation is requested, try to use a cached 
+        # output object for the current query type:
+        if not recalculate:
+            if self.query_type == queries.FrequencyQuery and hasattr(self, "_cached_frequency_table"):
+                self.output_object = self._cached_frequency_table
+                return
+            if self.query_type == queries.DistinctQuery and hasattr(self, "_cached_unique_table"):
+                self.output_object = self._cached_unique_table
+                return
+            if self.query_type == queries.CollocationQuery and hasattr(self, "_cached_collocation_table"):
+                self.output_object = self._cached_collocation_table
+                return
+        else:
+            # forget all cached output objects:
+            try:
+                del self._cached_frequency_table
+            except (NameError, AttributeError):
+                pass
+            try:
+                del self._cached_collocation_table
+            except (NameError, AttributeError):
+                pass
+            try:
+                del self._cached_unique_table
+            except (NameError, AttributeError):
+                pass
+
+        # Recalculate the output object for the current query type:
         self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
+
+        # cache the output object for the current query type:
+        if self.query_type == queries.FrequencyQuery:
+            self._cached_frequency_table = self.output_object
+        elif self.query_type == queries.DistinctQuery:
+            self._cached_unique_table = self.output_object
+        elif self.query_type == queries.CollocationQuery:
+            self._cached_collocation_table = self.output_object
 
     def filter_data(self, column="coq_frequency"):
         """
