@@ -21,7 +21,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         super(TestQueryToken, self).runTest()
     
     def setUp(self):
-        self.lexicon = TestLexicon(BaseResource())
+        self.lexicon = TestLexicon()
     
     def test_word_only(self):
         token = self.token_type("word", self.lexicon)
