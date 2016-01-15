@@ -605,8 +605,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 options.cfg.row_visibility.get(self.content.index[index.row()], True))
     
     def data(self, index, role):
-        """ Return a representation of the data cell indexed by 'index', 
-        using the specified Qt role. """
+        """ 
+        Return a representation of the data cell indexed by 'index', using 
+        the specified Qt role. 
+        
+        Note that the foreground and background colors of the cells are 
+        handled by the delegate CoqResultCellDelegate().
+        """
         
         if not index.isValid():
             return None
@@ -633,36 +638,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                             return unicode(value)
             else:
                 return "[hidden]"
-        # ForegroundRole: return the colour of the column, or the default if
-        # no color is specified:
-        elif role == QtCore.Qt.ForegroundRole:
-            if self.is_visible(index):
-                # return row color if specified:
-                try:
-                    col = options.cfg.row_color[self.content.index[index.row()]]
-                    return QtGui.QColor(col)
-                except KeyError:
-                    pass
-                # return column color if specified:
-                try:
-                    col = options.cfg.column_color[self.header[index.column()]]
-                    return QtGui.QColor(col)
-                except KeyError:
-                    # return default color
-                    return None
-            else:
-                # return light grey for hidden cells:
-                return options.cfg.app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Text)
-                
-        elif role == QtCore.Qt.BackgroundRole:
-            if self.is_visible(index):
-                color_group = QtGui.QPalette.Normal
-            else:
-                color_group = QtGui.QPalette.Disabled
-            if self.content.index[index.row()] & 1:
-                return options.cfg.app.palette().color(color_group, QtGui.QPalette.Base)
-            else:
-                return options.cfg.app.palette().color(color_group, QtGui.QPalette.AlternateBase)
         # TextAlignmentRole: return the alignment of the column:
         elif role == QtCore.Qt.TextAlignmentRole:
             column = self.header[index.column()]
@@ -804,21 +779,48 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         options.cfg.main_window.showMessage("Error during sorting.")
         errorbox.ErrorBox.show(self.exc_info, self.exception)
 
-def get_background(option, index):
-    if option.state & QtGui.QStyle.State_Selected:
-        return options.cfg.app.palette().color(QtGui.QPalette().Highlight)
-    else:
-        return index.data(QtCore.Qt.BackgroundRole)
-
-def get_foreground(option, index):
-    if option.state & QtGui.QStyle.State_MouseOver:
-        return options.cfg.app.palette().color(QtGui.QPalette().Link)
-    elif option.state & QtGui.QStyle.State_Selected:
-        return options.cfg.app.palette().color(QtGui.QPalette().HighlightedText)
-    else:
-        return index.data(QtCore.Qt.ForegroundRole)
-
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
+    def __init__(self, *args, **kwargs):
+        super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
+        self._app = options.cfg.app
+        self._table = options.cfg.main_window.table_model
+    
+    def get_foreground(self, option, index):
+        if option.state & QtGui.QStyle.State_MouseOver:
+            return self._app.palette().color(QtGui.QPalette().Link)
+        elif option.state & QtGui.QStyle.State_Selected:
+            return self._app.palette().color(QtGui.QPalette().HighlightedText)
+        else:
+            if self._table.is_visible(index):            
+                try:
+                    col = options.cfg.row_color[self._table.content.index[index.row()]]
+                    return QtGui.QColor(col)
+                except KeyError:
+                    pass
+                # return column color if specified:
+                try:
+                    col = options.cfg.column_color[self._table.header[index.column()]]
+                    return QtGui.QColor(col)
+                except KeyError:
+                    # return default color
+                    return None
+            else:
+                # return light grey for hidden cells:
+                return self._app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Text)
+
+    def get_background(self, option, index):
+        if option.state & QtGui.QStyle.State_Selected:
+            return self._app.palette().color(QtGui.QPalette().Highlight)
+        else:
+            if self._table.is_visible(index):
+                color_group = QtGui.QPalette.Normal
+            else:
+                color_group = QtGui.QPalette.Disabled
+            if index.row() & 1:
+                return self._app.palette().color(color_group, QtGui.QPalette.Base)
+            else:
+                return self._app.palette().color(color_group, QtGui.QPalette.AlternateBase)
+
     def sizeHint(self, option, index):
         rect = options.cfg.metrics.boundingRect(unicode(index.data(QtCore.Qt.DisplayRole)))
         return rect.adjusted(0, 0, 15, 0).size()
@@ -843,8 +845,8 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             font = painter.font()
             font.setUnderline(True)
             painter.setFont(font)
-        fg = get_foreground(option, index)
-        bg = get_background(option, index)
+        fg = self.get_foreground(option, index)
+        bg = self.get_background(option, index)
         if bg:
             painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
