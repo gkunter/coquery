@@ -122,8 +122,6 @@ class Session(object):
 
         self.start_time = datetime.datetime.now()
         self.end_time = None
-        if options.cfg.gui:
-            self.storage_created = False
         
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
@@ -138,10 +136,13 @@ class Session(object):
 
         self.end_time = datetime.datetime.now()
         self.data_table.index = range(1, len(self.data_table.index) + 1)
+
+        self.frequency_table = self.get_frequency_table()
         
-        self.aggregate_data()
+        self.filter_data()
 
         if not options.cfg.gui:
+            self.aggregate_data()
             if not options.cfg.output_path:
                 output_file = sys.stdout
             else:
@@ -163,6 +164,12 @@ class Session(object):
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
 
+    def get_frequency_table(self):
+        frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus)
+        frequency_table.fillna("", inplace=True)
+        frequency_table.index = range(1, len(frequency_table.index) + 1)
+        return frequency_table
+
     def aggregate_data(self):
         """
         Apply the aggegate function from the current query type to the 
@@ -172,6 +179,23 @@ class Session(object):
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
+    def filter_data(self, column="coq_frequency"):
+        """
+        Apply the frequency filters to the output object.
+        """
+        if not options.cfg.filter_list:
+            return 
+        for filt in options.cfg.filter_list:
+            if filt.var == options.cfg.freq_label:
+                try:
+                    self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]
+                except AttributeError:
+                    pass
+        columns = [x for x in self.data_table.columns if not x.startswith("coquery_invisible") and x != column]
+
+        for col in columns:
+            self.data_table = self.data_table[self.data_table[col].apply(lambda x: x in list(self.frequency_table[col]))]
+        
     def translate_header(self, header, ignore_alias=False):
         """ 
         Return a string that contains the display name for the header 

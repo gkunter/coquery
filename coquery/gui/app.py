@@ -535,7 +535,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.stop_progress_indicator()
         self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header()
-    
+        self.show_query_status()
+            
     def reaggregate(self, query_type=None):
         """
         Reaggregate the current data table when changing the visibility of
@@ -543,7 +544,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         if not self.Session:
             return
-        
+        self.unfiltered_tokens = len(self.Session.data_table.index)
         self.query_thread = QtProgress.ProgressThread(self.Session.aggregate_data, parent=self)
         self.query_thread.taskFinished.connect(self.finish_reaggregation)
         self.query_thread.taskException.connect(self.exception_during_query)
@@ -554,6 +555,25 @@ class CoqueryApp(QtGui.QMainWindow):
             self.Session.query_type.add_output_columns(self.Session)
         self.start_progress_indicator()
         self.query_thread.start()
+
+    def show_query_status(self):
+        try:
+            diff = (datetime.datetime.now() - self.Session.start_time)
+        except TypeError:
+            duration_str = "NA"
+        else:
+            duration = diff.seconds
+            if duration > 3600:
+                duration_str = "{} hrs, {} min, {} s".format(duration // 3600, duration % 3600 // 60, duration % 60)
+            elif duration > 60:
+                duration_str = "{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3])
+            else:
+                duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
+
+        self.showMessage("Tokens: {:<8}   Data rows: {:<8}   Query duration: {:<10}".format(
+            self.unfiltered_tokens, 
+            len(self.table_model.content.index),
+            duration_str))
 
     def change_corpus(self):
         """ 
@@ -712,8 +732,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setEnabled(True)
         self.ui.menu_Results.setEnabled(True)
         self.ui.menuAnalyse.setEnabled(True)
-        
-        self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header()
 
         self.ui.data_preview.setModel(self.table_model)
@@ -858,24 +876,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread = None
         self.showMessage("Preparing results table...")
         self.Session = self.new_session
+        self.reaggregate()
         self.display_results()
         self.set_query_button()
         self.stop_progress_indicator()
 
-        try:
-            diff = (datetime.datetime.now() - self.Session.start_time)
-        except TypeError:
-            duration_str = "NA"
-        else:
-            duration = diff.seconds
-            if duration > 3600:
-                duration_str = "{} hrs, {} min, {} s".format(duration // 3600, duration % 3600 // 60, duration % 60)
-            elif duration > 60:
-                duration_str = "{} min, {}.{} s".format(duration // 60, duration % 60, str(diff.microseconds)[:3])
-            else:
-                duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
-        self.showMessage("Number of rows: {:<8}      Query duration: {:<10}".format(
-            len(self.Session.output_object.index), duration_str))
         options.cfg.app.alert(self, 10)
         
     def get_column_context_menu(self, selection=[], point=None):
@@ -1103,6 +1108,11 @@ class CoqueryApp(QtGui.QMainWindow):
         columnVisibilityChanged signals, and also resorts the table if 
         necessary.
         """
+        # Resort the data if this is a sorting column:
+        self.table_model.sort(0, QtCore.Qt.AscendingOrder)
+        self.table_model.layoutChanged.emit()
+        self.table_model.columnVisibilityChanged.emit()
+        self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
 
     def toggle_visibility(self, column):
         """ 
