@@ -1833,7 +1833,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 exec("import {}".format(module))
             except ImportError:
                 raise DependencyError(package, url)
-        asd
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """
