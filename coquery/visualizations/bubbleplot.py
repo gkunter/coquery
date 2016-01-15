@@ -191,7 +191,7 @@ class Visualizer(vis.BaseVisualizer):
                 ax.add_artist(circ)
                 circ.set_edgecolor("black")
                 
-                ax.text(x, y, "{}: {}".format(label, freq), ha="center")
+                ax.text(x, y, "{}: {}".format(label.replace(" | ", "\n"), freq), ha="center", va="center")
                 
                 self.max_x = max(self.max_x, x + rad)
                 self.max_y = max(self.max_y, y + rad)
@@ -246,7 +246,7 @@ class Visualizer(vis.BaseVisualizer):
                         # not have to be considered for collision detections, so
                         # keeping track of the completed bubbles speeds up the 
                         # algorithm:
-                        completed = a
+                        #completed = a
                         # If there is no position at which the next bubble can be 
                         # placed so that it is tangent to both the neighbor and 
                         # the anchor, get_position() raises a ValueError 
