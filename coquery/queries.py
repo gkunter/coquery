@@ -683,13 +683,11 @@ class FrequencyQuery(TokenQuery):
         # nor currently hidden:
         group_columns = [x for x in columns if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
         sample_columns = [x for x in columns if x not in group_columns]
-        
         # Add a frequency column:
         df["coq_frequency"] = 0
         
         if len(df.index) == 0:
             result = pd.DataFrame({"coq_frequency": [0]})
-            print(dir(options.cfg))
         elif len(group_columns) == 0:
             # if no grouping variables are selected, simply return the first
             # row of the data frame together with the total length of the 
@@ -727,7 +725,7 @@ class FrequencyQuery(TokenQuery):
             result.coq_frequency[result.coquery_invisible_corpus_id == ""] = 0
         except (TypeError, AttributeError):
             pass
-        
+
         return result
 
     #@staticmethod
