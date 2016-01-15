@@ -449,13 +449,21 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_aggregate_uniques.toggled.connect(self.toggle_frequency_columns)
 
         self.ui.radio_aggregate_collocations.clicked.connect(
-            lambda x: self.reaggregate(query_type=queries.CollocationQuery))
+            lambda x: self.reaggregate(
+                query_type=queries.CollocationQuery,
+                recalculate=False))
         self.ui.radio_aggregate_frequencies.clicked.connect(
-            lambda x: self.reaggregate(query_type=queries.FrequencyQuery))
+            lambda x: self.reaggregate(
+                query_type=queries.FrequencyQuery,
+                recalculate=False))
         self.ui.radio_aggregate_uniques.clicked.connect(
-            lambda x: self.reaggregate(query_type=queries.DistinctQuery))
+            lambda x: self.reaggregate(
+                query_type=queries.DistinctQuery,
+                recalculate=False))
         self.ui.radio_aggregate_none.clicked.connect(
-            lambda x: self.reaggregate(query_type=queries.TokenQuery))
+            lambda x: self.reaggregate(
+                query_type=queries.TokenQuery,
+                recalculate=False))
 
         
     def result_column_resize(self, index, old, new):
@@ -535,9 +543,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.stop_progress_indicator()
         self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header()
+        self.display_results()
         self.show_query_status()
             
-    def reaggregate(self, query_type=None):
+    def reaggregate(self, query_type=None, recalculate=True):
         """
         Reaggregate the current data table when changing the visibility of
         the table columns.
@@ -545,7 +554,8 @@ class CoqueryApp(QtGui.QMainWindow):
         if not self.Session:
             return
         self.unfiltered_tokens = len(self.Session.data_table.index)
-        self.query_thread = QtProgress.ProgressThread(self.Session.aggregate_data, parent=self)
+        
+        self.query_thread = QtProgress.ProgressThread(self.Session.aggregate_data, parent=self, recalculate=recalculate)
         self.query_thread.taskFinished.connect(self.finish_reaggregation)
         self.query_thread.taskException.connect(self.exception_during_query)
 
@@ -557,8 +567,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.start()
 
     def show_query_status(self):
+        if not hasattr(self.Session, "end_time"):
+            self.Session.end_time = datetime.datetime.now()
         try:
-            diff = (datetime.datetime.now() - self.Session.start_time)
+            diff = (self.Session.end_time - self.Session.start_time)
         except TypeError:
             duration_str = "NA"
         else:
@@ -570,7 +582,7 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
 
-        self.showMessage("Tokens: {:<8}   Data rows: {:<8}   Query duration: {:<10}".format(
+        self.showMessage("Tokens: {:<8}   Data rows: {:<8}   Duration of last query: {:<10}".format(
             self.unfiltered_tokens, 
             len(self.table_model.content.index),
             duration_str))
@@ -877,11 +889,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.showMessage("Preparing results table...")
         self.Session = self.new_session
         self.reaggregate()
-        self.display_results()
         self.set_query_button()
         self.stop_progress_indicator()
-
-        options.cfg.app.alert(self, 10)
+        
+        # Create an alert in the system taskbar to indicate that the query has 
+        # completed:
+        options.cfg.app.alert(self, 0)
         
     def get_column_context_menu(self, selection=[], point=None):
         # show menu about the column
