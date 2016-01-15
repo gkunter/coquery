@@ -936,7 +936,6 @@ class SQLLexicon(BaseLexicon):
         # FIXME: this needs to be revised. 
         
         sub_clauses = []
-        
         if token.lemma_specifiers:
             if not (
                 hasattr(self.resource, "lemma_label") or
@@ -966,20 +965,20 @@ class SQLLexicon(BaseLexicon):
                 
         for word in specifier_list:
             if word != "%":
-                token = tokens.COCAWord(word, self, replace=False, parse=False)
-                token.negated = token.negated
-                if not isinstance(token.S, unicode):
-                    S = unicode(token.S)
+                dummy_token = tokens.COCAWord(word, self, replace=False, parse=False)
+                dummy_token.negated = token.negated
+                if not isinstance(dummy_token.S, unicode):
+                    S = unicode(dummy_token.S)
                 else:
-                    S = token.S
+                    S = dummy_token.S
                 # take care of quotation marks:
                 S = S.replace('"', '""')
-                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(token), S))
+                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(dummy_token), S))
                 
         for transcript in token.transcript_specifiers:
             if transcript:
-                token = tokens.COCAWord(transcript, self, replace=False, parse=False)
-                token.negated = token.negated
+                dummy_token = tokens.COCAWord(transcript, self, replace=False, parse=False)
+                dummy_token.negated = token.negated
                 if "transcript_table" not in dir(self.resource):
                     target = "{}.{}".format(
                         self.resource.word_table, 
@@ -992,9 +991,9 @@ class SQLLexicon(BaseLexicon):
                         self.resource.transcript_table,
                         self.resource.transcript_label)
                 # take care of quotation marks:
-                S = str(token)
+                S = str(dummy_token)
                 S = S.replace('"', '""')
-                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(token), S))
+                sub_clauses.append('%s %s "%s"' % (new_target, self.resource.get_operator(dummy_token), S))
         
         where_clauses = []
         if sub_clauses:
