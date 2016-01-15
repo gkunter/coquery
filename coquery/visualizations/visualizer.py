@@ -178,8 +178,9 @@ class BaseVisualizer(QtCore.QObject):
             n = self.options["color_number"]
         else:
             self.options["color_number"] = n
-            
-        self.options["color_palette_values"] = sns.color_palette(
+
+        if self.options["color_palette"] != "custom":
+            self.options["color_palette_values"] = sns.color_palette(
                 self.options["color_palette"], n)
                                                                                                                          
     def _validate_layout(func):

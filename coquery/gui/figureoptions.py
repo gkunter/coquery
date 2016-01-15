@@ -152,6 +152,9 @@ class FigureOptions(QtGui.QDialog):
             self._change_to_custom()
     
     def change_palette_length(self):
+        self.ui.radio_custom.setEnabled(True)
+        self.ui.radio_custom.setChecked(True)
+        self.custom_palette = self.get_current_palette()
         self.test_palette()
     
     def set_current_palette(self, palette):
