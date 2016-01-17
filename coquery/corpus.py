@@ -442,8 +442,8 @@ class BaseResource(object):
         else:
             return func.split(".")[-1]
 
-    @staticmethod
-    def get_referent_feature(rc_feature):
+    @classmethod
+    def get_referent_feature(cls, rc_feature):
         """
         Get the referent feature name of a rc_feature.
         
@@ -464,7 +464,18 @@ class BaseResource(object):
         -------
         resource : string
         """
-        
+
+        func, db_name, table, feature = cls.split_resource_feature(rc_feature)
+        if db_name == cls.db_name:
+            return "{}_{}".format(table, feature)
+        else:
+            for link, external_feature in options.cfg.external_links:
+                if external_feature == "{}_{}".format(table, feature):
+                    return link.rc_feature
+                print(link.rc_feature, external_feature, rc_feature)
+                #if rc_feature == link.rc_feature:
+                    #return link.key_feature
+            
         if "." not in rc_feature:
             return rc_feature
         elif rc_feature.startswith("func.") and rc_feature.count(".") == 1:
@@ -480,6 +491,7 @@ class BaseResource(object):
     def is_lexical(cls, rc_feature):
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         resource = cls.get_referent_feature(rc_feature)
+        print(resource, lexicon_features)
         return resource in lexicon_features
     
     @classmethod

@@ -1917,6 +1917,7 @@ class CoqueryApp(QtGui.QMainWindow):
             child_func = classes.CoqTreeFuncItem()
             child_func.setObjectName("func.{}".format(item.objectName()))
             child_func.setFunction(func)
+            child_func.rc_feature = item.rc_feature
             child_func.setText(column, label)
             child_func.setCheckState(column, QtCore.Qt.Checked)
 
