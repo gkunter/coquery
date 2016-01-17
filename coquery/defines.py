@@ -60,7 +60,6 @@ CONTEXT_SENTENCE = "Sentence"
 
 COLUMN_NAMES = {
     "coq_frequency": "Frequency", 
-    "coq_freq_per_milion": "Frequency (pmw)",
     "coq_context_left": "Left context",
     "coq_context_right": "Right context",
     "coq_context_string": "Context",
@@ -78,8 +77,9 @@ COLUMN_NAMES = {
     "coquery_expanded_query_string": "Expanded query string",
     "coquery_query_string": "Query string",
     
-    "frequency_relative_frequency": "Proportion",
-    "frequency_per_million_words": "pmw"
+    "statistics_relative_frequency": "Proportion",
+    "statistics_per_million_words": "Frequency (pmw)",
+    "statistics_entropy": "Query entropy",
         }
 
 DEFAULT_CONFIGURATION = "Default"

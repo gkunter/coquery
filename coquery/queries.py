@@ -496,6 +496,13 @@ class TokenQuery(object):
                     df[column] = L[n-1]
                 except IndexError:
                     df[column] = ""
+            elif column == "statistics_entropy":
+                columns = [x for x in df.columns if not x.startswith("coquery_invisible") and not x == column]
+                # get a frequency table for the current data frame:
+                freqs = df.groupby(columns).count().reset_index()
+                # calculate the propabilities of the different results:
+                props = freqs[freqs.columns[-1]].apply(lambda x: x / len(df.index))
+                df[column] = -props.apply(lambda x: x * math.log(x, 2)).sum()
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
@@ -544,8 +551,11 @@ class TokenQuery(object):
 
         func_counter = collections.Counter()
         for rc_feature, fun, _ in options.cfg.selected_functions:
-            resource = self.Resource.get_feature_from_function(rc_feature)
-
+            _, db, table, feature = self.Resource.split_resource_feature(rc_feature)
+            if db != self.Resource.db_name:
+                resource = "{}_{}_{}".format(db, table, feature)
+            else:
+                resource = "{}_{}".format(table, feature)
             func_counter[resource] += 1
             fc = func_counter[resource]
                         
@@ -709,14 +719,14 @@ class FrequencyQuery(TokenQuery):
             # functions to each group, and return the aggregated data frame:
             result = cls.do_the_grouping(df, group_columns, aggr_dict)
 
-        if "coquery_relative_frequency" in options.cfg.selected_features:
+        if "statistics_relative_frequency" in options.cfg.selected_features:
             total_frequency = result.coq_frequency.sum()
-            result["coquery_relative_frequency"] = result["coq_frequency"].apply(
+            result["statistics_relative_frequency"] = result["coq_frequency"].apply(
                 lambda x: x / total_frequency)
 
-        if "coquery_per_million_words" in options.cfg.selected_features:
+        if "statistics_per_million_words" in options.cfg.selected_features:
             corpus_size = resource.get_corpus_size()
-            result["coquery_per_million_words"] = result["coq_frequency"].apply(
+            result["statistics_per_million_words"] = result["coq_frequency"].apply(
                 lambda x: x / (corpus_size / 1000000))
 
         # entries with no corpus_id are the result of empty frequency 

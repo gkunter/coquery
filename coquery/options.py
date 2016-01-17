@@ -59,6 +59,7 @@ class Options(object):
         self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
         self.args.filter_list = []
         self.args.stopword_list = []
+        self.args.disabled_columns = set([])
         self.args.version = self.version
         self.args.query_label = ""
         self.args.input_path = ""
