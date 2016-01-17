@@ -4,11 +4,12 @@ import os.path
 import sys
 
 sys.path.append(os.path.normpath(os.path.join(sys.path[0], "..")))
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../corpora")))
+sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../gui")))
+sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../corpora/Default")))
 import defines
 import corpus
 import options
-import ice_ng
+import ICE_NG as ice_ng
 import argparse
 
 class TestCorpus(unittest.TestCase):
@@ -19,6 +20,7 @@ class TestCorpus(unittest.TestCase):
         options.cfg.external_links = {
             u'cmudict.word_transcript': (
                 u'cmudict.word_table.word_label', u'word_table.word_label')}    
+    
     def test_is_lexical(self):
         self.assertTrue(self.resource.is_lexical("word_label"))
         self.assertTrue(self.resource.is_lexical("func.word_label"))
