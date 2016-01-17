@@ -147,6 +147,12 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         self._link_by = None
         self._func = None
 
+    def isLinked(self):
+        """
+        Return True if the entry represenets a linked table.
+        """
+        return self._link_by != None
+
     def setText(self, column, text, *args):
         super(CoqTreeItem, self).setText(column, text)
         if self.parent():
@@ -233,12 +239,14 @@ class CoqTreeLinkItem(CoqTreeItem):
     """
     Define a CoqTreeItem class that represents a linked table.
     """
-    def setLink(self, from_item, link):
-        self._link_by = (from_item, link)
+    def setLink(self, link):
+        self._link_by = link
+        self.link = link
         
     def setText(self, column, text, *args):
         super(CoqTreeLinkItem, self).setText(column, text)
-        source, target = text.split(" ► ")
+        #source, target = text.split(" ► ")
+        source, target = text.split(" > ")
         self.setToolTip(column, "External table:\n{},\nlinked by column:\n{}".format(target, source))
 
 class CoqTreeFuncItem(CoqTreeItem):
@@ -320,7 +328,8 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         if not item:
             return
 
-        if str(item.objectName()).startswith("coquery") or str(item.objectName()).startswith("frequency_"):
+        # no context menu for etnries from the special tables
+        if str(item.objectName()).startswith("coquery") or str(item.objectName()).startswith("statistics"):
             return
 
         # show self.menu about the column
@@ -567,7 +576,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.set_data(pd.DataFrame())
         
     def set_header(self, header = None): 
-        self.header = [x for x in self.content.columns.values if not x.startswith("coquery_invisible")]
+        self.header = [x for x in self.content.columns.values if not x.startswith("coquery_invisible") and not x in options.cfg.disabled_columns]
         for i, x in enumerate(self.header):
             self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
         self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(self.header))
@@ -625,7 +634,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 
                 if role == QtCore.Qt.ToolTipRole:
                     if isinstance(value, (float, np.float64)):
-                        return "<div>{}</div>".format(QtCore.Qt.escape(("{:.%if}" % options.cfg.digits).format(str(value))))
+                        return "<div>{}</div>".format(QtCore.Qt.escape(("{:.%if}" % options.cfg.digits).format(value)))
                     else:
                         return "<div>{}</div>".format(QtCore.Qt.escape(str(value)))
                 else:

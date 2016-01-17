@@ -37,7 +37,6 @@ class FunctionDialog(QtGui.QDialog):
     def __init__(self, table, feature, parent=None):
         
         super(FunctionDialog, self).__init__(parent)
-        self.omit_tables = ["coquery", "corpus"]
         self.ui = functionApplyUi.Ui_FunctionDialog()
         self.ui.setupUi(self)
         try:
