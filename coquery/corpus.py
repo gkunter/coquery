@@ -146,10 +146,12 @@ class BaseResource(object):
     coquery_current_time = "Current time"
     coquery_query_token = "Query token"
 
-    coquery_relative_frequency = "Relative frequency"
-    coquery_per_million_words = "Per million words"
+    statistics_table = "Statistics"
+    statistics_relative_frequency = COLUMN_NAMES["statistics_relative_frequency"]
+    statistics_per_million_words = COLUMN_NAMES["statistics_per_million_words"]
+    statistics_entropy = COLUMN_NAMES["statistics_entropy"]
 
-    special_table_list = ["coquery", "frequency", "tag"]
+    special_table_list = ["coquery", "statistics", "tag"]
 
     render_token_style = "background: lightyellow"
 
@@ -168,8 +170,8 @@ class BaseResource(object):
         --------
         tup : tuple
             A tuple consisting of a boolean specificing whether it is a 
-            function, the database name (can be empty), the resource table
-            name, and the feature name
+            function, the database name, the resource table name, and the 
+            feature name
         """
         is_function = rc_feature.startswith("func.")
         if is_function:
@@ -225,6 +227,7 @@ class BaseResource(object):
             List of strings containing the resource feature names
         """
         tables = [x.partition("_")[0] for x in dir(cls) if not x.startswith("_") and x.endswith("_table")]
+        tables.append("statistics")
         tables.append("coquery")
         return [x for x in dir(cls) if "_" in x and x.partition("_")[0] in tables]
 
@@ -467,6 +470,7 @@ class BaseResource(object):
         elif rc_feature.startswith("func.") and rc_feature.count(".") == 1:
             return rc_feature.rpartition("func.")[-1]
         else:
+            raise RuntimeError("get_referent_feature")
             prefix_stripped = rc_feature.rpartition("func.")[-1]
             external, internal = options.cfg.external_links[prefix_stripped]
             internal_table, internal_feature = internal.split(".")
@@ -704,7 +708,6 @@ class SQLResource(BaseResource):
             query_string = ""
             
         Query.Session.output_order = self.get_select_list(Query)
-
         return query_string
 
     def get_context(self, token_id, number_of_tokens, case_sensitive, db_connection):
@@ -858,28 +861,39 @@ class SQLResource(BaseResource):
                 select_list += ["coq_{}_{}".format(rc_feature, x+1) for x in range(max_token_count)]
             elif rc_feature in corpus_features:
                 select_list.append("coq_{}_1".format(rc_feature))
+            
+            # Special case 'Coquery' table:
             elif rc_feature.startswith("coquery_"):
                 if rc_feature == "coquery_query_token": 
                     select_list += ["coquery_query_token_{}".format(x + 1) for x in range(max_token_count)]
                 else:
                     select_list.append(rc_feature)
+            # Special case 'Statistics' table:
+            elif rc_feature.startswith("statistics_"):
+                select_list.append(rc_feature)
 
         # linked columns
-        for rc_feature in options.cfg.external_links:
-            if rc_feature not in options.cfg.selected_features:
+        for link, rc_feature in options.cfg.external_links:
+            if "{}.{}".format(link.db_name, rc_feature) not in options.cfg.selected_features:
+                logger.warn("{}.{}".format(link.db_name, rc_feature))
                 continue
             if rc_feature.startswith("func"):
                 continue
-            external_table, external_feature = rc_feature.split(".")
-            linked_feature = "{}_{}".format(external_table, external_feature)
-            if cls.is_lexical(rc_feature):
+            linked_feature = "{}_{}".format(link.db_name, rc_feature)
+            if cls.is_lexical(link.key_feature):
                 select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
             else:
                 select_list.append("coq_{}_1".format(linked_feature))
-
+        
         # functions:
         func_counter = Counter()
         for rc_feature in options.cfg.selected_features:
+            func, db, table, feature = cls.split_resource_feature(rc_feature)
+            if func:
+                if db != cls.db_name:
+                    resource1 = "{}_{}_{}".format(db, table, feature)
+                else:
+                    resource1 = "{}_{}".format(table, feature)
             if rc_feature.startswith("func."):
                 if rc_feature.count(".") > 1:
                     resource = "_".join(rc_feature.split(".")[1:])
@@ -912,6 +926,7 @@ class SQLResource(BaseResource):
 
         select_list.append("coquery_invisible_corpus_id")
         select_list.append("coquery_invisible_number_of_tokens")
+        
         return select_list
 
 class SQLLexicon(BaseLexicon):
@@ -1237,7 +1252,6 @@ class SQLCorpus(BaseCorpus):
             self.resource.corpus_id,
             token_id)
         d = self.resource.DB.execute_cursor(S).fetchone()
-        print(d, dir(d), list(d.keys()))
 
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
@@ -1428,7 +1442,6 @@ class SQLCorpus(BaseCorpus):
         s : string
             The partial MySQL string.
         """
-            
         # corpus variables will only be included in the token query string if 
         # this is the first query token.
         if number == 0:
@@ -1458,11 +1471,9 @@ class SQLCorpus(BaseCorpus):
                     '{} {} "{}"'.format(
                         getattr(self.resource, rc_feature), op, value_list[0]))
 
-        for linked in options.cfg.external_links:
-            external, internal = options.cfg.external_links[linked]
-            internal_feature = internal.rpartition(".")[-1]
-            if internal_feature not in requested_features:
-                requested_features.append(internal_feature)
+        for link, _ in options.cfg.external_links:
+            if link.key_feature not in requested_features:
+                requested_features.append(link.key_feature)
 
         # make sure that the word_id is always included in the query:
         requested_features.append("corpus_word_id")
@@ -1542,7 +1553,7 @@ class SQLCorpus(BaseCorpus):
             else:
                 function = False
 
-            if rc_table in ("coquery_table", "frequency_table", "tag_table"):
+            if rc_table in ["{}_table".format(x) for x in self.resource.special_table_list]:
                 continue
 
             if rc_table not in required_tables:
@@ -1562,47 +1573,44 @@ class SQLCorpus(BaseCorpus):
         # create a list of the tables 
         select_list = set([])
         for rc_table in required_tables:
-            # FIXME: This section needs to be simplified!
-            # FIXME: change to split_resource_feature
-            # linked table?
-            if "." in rc_table and not rc_table.startswith("func."):
-                external_corpus, rc_table = rc_table.split(".")
-                resource = options.cfg.current_resources[external_corpus][0]
-                table = resource.__getattribute__(resource, rc_table)
-                
-                column_list = []
-                for linked in options.cfg.external_links:
-                    if linked.startswith("func"):
-                        _, rc_corpus, rc_feature = linked.split(".")
-                    else:
-                        rc_corpus, rc_feature = linked.split(".")
-                    if rc_corpus == external_corpus:
-                        name = "coq_{}_{}_{}".format(external_corpus, rc_feature, number +1)
-                        variable_string = "{} AS {}".format(
-                            resource.__getattribute__(resource, rc_feature),
-                            name)
-                        column_list.append(variable_string)
-                        select_list.add(name)
+            func, db_name, table, feature = self.resource.split_resource_feature(rc_table)
 
-                        external, internal = options.cfg.external_links[linked]
-                        internal_feature = internal.rpartition(".")[-1]
-                        external_feature = external.rpartition(".")[-1]
+            if db_name != self.resource.db_name:
+                # handle linked tables
+                column_list = []
+                # get the link object for the requested external table:
+                for link, rc_feature in options.cfg.external_links:
+                    resource = options.cfg.current_resources[link.resource][0]
+                    if link.db_name == db_name:
+                        feature_name = "coq_{}_{}_{}".format(
+                            link.db_name,
+                            rc_feature,
+                            number+1)
+                        variable_string = "{} AS {}".format(
+                            getattr(resource, rc_feature),
+                            feature_name)
                         linking_variable = "{} AS coq_{}_{}_{}".format(
-                            resource.__getattribute__(resource, external_feature),
-                            external_corpus,
-                            external_feature, number+1)
-                        
+                            link.feature_name, 
+                            link.db_name, link.rc_feature, number +1)
+                        column_list.append(variable_string)
                         column_list.append(linking_variable)
-                                        
+                        select_list.add(feature_name)
+                        break
+                
+                # construct subquery that joins the external table:
                 columns = ", ".join(set(column_list))
-                alias = "coq_{}_{}".format(external_corpus, table).upper()
-                S = "INNER JOIN (SELECT {columns} FROM {corpus}.{table}) AS {alias} ON coq_{internal_feature}_{n} = coq_{corpus}_{external_feature}_{n}".format(columns=columns, n=number+1, internal_feature=internal_feature, corpus=external_corpus, table=table, external_feature=external_feature, alias=alias)
+                alias = "coq_{}_{}".format(db_name, table).upper()
+                S = "INNER JOIN (SELECT {columns} FROM {corpus}.{table}) AS {alias} ON coq_{internal_feature}_{n} = coq_{corpus}_{external_feature}_{n}".format(
+                    columns=columns, n=number+1, 
+                    internal_feature=link.key_feature, 
+                    corpus=db_name, table=link.table_name, 
+                    external_feature=link.rc_feature, alias=alias)
                 external_links.append(S)
             else:
                 rc_tab = rc_table.split("_")[0]
                 sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
                 parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree) 
-                table = self.resource.__getattribute__(rc_table)
+                table = getattr(self.resource, rc_table)
                 if parent_tree:
                     rc_parent = parent_tree["rc_table_name"]
                 else:
@@ -1617,7 +1625,7 @@ class SQLCorpus(BaseCorpus):
                         name = "coq_{}_{}".format(rc_feature, number+1)
 
                     variable_string = "{} AS {}".format(
-                        self.resource.__getattribute__(rc_feature.split("func.")[-1]),
+                        getattr(self.resource, rc_feature.split("func.")[-1]),
                         name)
                     column_list.add(variable_string)
                     select_list.add(name)
@@ -1908,7 +1916,6 @@ class SQLCorpus(BaseCorpus):
                     pass
                     #final_select.append("coq_{}_1".format(rc_feature))
 
-
         #for rc_feature in options.cfg.selected_features:
             #select_feature = "coq_{}_1".format(rc_feature)
             #if rc_feature in corpus_features or rc_feature in lexicon_features:
@@ -2033,25 +2040,21 @@ class SQLCorpus(BaseCorpus):
                             else:
                                 final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
 
+
         # add any external feature that is not a function:
-        for linked in options.cfg.external_links:
-            if linked.startswith("func."):
-                continue
+        for link, rc_feature in options.cfg.external_links:
+            #if link.startswith("func."):
+                #continue
 
-            external, internal = options.cfg.external_links[linked]
-            internal_feature = internal.split(".")[-1]
-            external_corpus, external_feature = linked.split(".")
-
-            if self.resource.is_lexical(linked):
+            if self.resource.is_lexical(link.key_feature):
                 for i in range(Query.Session.get_max_token_count()):
                     if options.cfg.align_quantified:
                         if i in positions_lexical_items:
-                            final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
+                            final_select.append("coq_{}_{}_{}".format(link.db_name, rc_feature, i+1))
                     else:
-                        final_select.append("coq_{}_{}_{}".format(external_corpus, external_feature, i+1))
+                        final_select.append("coq_{}_{}_{}".format(link.db_name, rc_feature, i+1))
             else:
-                final_select.append("coq_{}_{}_1".format(external_corpus, external_feature))
-
+                final_select.append("coq_{}_{}_1".format(link.db_name, rc_feature))
 
         # add the corpus features in the preferred order:
         for rc_feature in self.resource.get_preferred_output_order():
@@ -2066,7 +2069,8 @@ class SQLCorpus(BaseCorpus):
                 break
             if any([x == rc_feature for x, _ in self.resource.get_lexicon_features()]):
                 break
-            if not rc_feature.startswith("coquery_") and not rc_feature.startswith("frequency_"):
+            db, _, table, _ = self.resource.split_resource_feature(rc_feature)
+            if table not in self.resource.special_table_list:
                 if "." not in rc_feature:
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 

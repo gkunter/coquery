@@ -21,11 +21,25 @@ import options
 from defines import *
 from classes import CoqTreeItem
 
+class Link(object):
+    def __init__(self, tree_item, ignore_case=True):
+        self.resource = tree_item.parent().parent().objectName()
+        resource = options.cfg.current_resources[self.resource][0] 
+
+        self.rc_feature = tree_item.objectName()
+        self.table = "{}".format(tree_item.parent().objectName())
+        self.db_name = resource.db_name
+        self.case = ignore_case
+        
+        self.table_name = getattr(resource, "{}_table".format(self.table))
+        self.feature_name = getattr(resource, self.rc_feature)
+        self.label = ".".join([self.resource, self.table_name, self.feature_name])
+
 class LinkSelect(QtGui.QDialog):
     def __init__(self, feature, corpus_omit = [], parent=None):
         
         super(LinkSelect, self).__init__(parent)
-        self.omit_tables = ["coquery"]
+        self.omit_tables = ["coquery", "statistics"]
         self.corpus_omit = corpus_omit
         self.ui = linkselectUi.Ui_LinkSelect()
         self.ui.setupUi(self)
@@ -86,13 +100,7 @@ class LinkSelect(QtGui.QDialog):
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             selected = dialog.ui.treeWidget.selectedItems()[0]
-            
-            feature = selected.objectName()
-            table = selected.parent().objectName()
-            corpus = selected.parent().parent().objectName()
-            ignore_case = dialog.ui.checkBox.checkState()
-            
-            return (corpus, table, feature, ignore_case)
+            return Link(selected, dialog.ui.checkBox.checkState())
         else:
             return None
         

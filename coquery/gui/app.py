@@ -531,13 +531,18 @@ class CoqueryApp(QtGui.QMainWindow):
     
     def toggle_frequency_columns(self):
         for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-            if root.objectName().startswith("coquery"):
+            if root.objectName().startswith("statistics"):
                 for child in [root.child(i) for i in range(root.childCount())]:
-                    if child.objectName() in ("coquery_relative_frequency", "coquery_per_million_words"):
+                    if child.objectName() in ("statistics_relative_frequency", "statistics_per_million_words"):
                         if self.ui.radio_aggregate_frequencies.isChecked():
                             child.setDisabled(False)
+                            try:
+                                options.cfg.disabled_columns.remove(child.objectName())
+                            except KeyError:
+                                pass
                         else:
                             child.setDisabled(True)
+                            options.cfg.disabled_columns.add(child.objectName())
     
     def finish_reaggregation(self):
         self.stop_progress_indicator()
@@ -555,16 +560,16 @@ class CoqueryApp(QtGui.QMainWindow):
             return
         self.unfiltered_tokens = len(self.Session.data_table.index)
         
-        self.query_thread = QtProgress.ProgressThread(self.Session.aggregate_data, parent=self, recalculate=recalculate)
-        self.query_thread.taskFinished.connect(self.finish_reaggregation)
-        self.query_thread.taskException.connect(self.exception_during_query)
+        self.thread = QtProgress.ProgressThread(self.Session.aggregate_data, parent=self, recalculate=recalculate)
+        self.thread.taskFinished.connect(self.finish_reaggregation)
+        self.thread.taskException.connect(self.exception_during_query)
 
         if query_type and query_type != self.Session.query_type:
             self.Session.query_type.remove_output_columns(self.Session)
             self.Session.query_type = query_type
             self.Session.query_type.add_output_columns(self.Session)
         self.start_progress_indicator()
-        self.query_thread.start()
+        self.thread.start()
 
     def show_query_status(self):
         if not hasattr(self.Session, "end_time"):
@@ -650,6 +655,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 tables.remove(x)
                 tables.insert(0, x)
         tables.remove("coquery")
+        tables.remove("statistics")
+        tables.append("statistics")
         tables.append("coquery")
 
 
@@ -1626,28 +1633,25 @@ class CoqueryApp(QtGui.QMainWindow):
             output_features = []
             for child in [node.child(i) for i in range(node.childCount())]:
                 output_features += traverse_output_columns(child)
-            if node.checkState(0) == QtCore.Qt.Checked and not node.isDisabled():
+            if node.checkState(0) == QtCore.Qt.Checked and not node.isDisabled() and not node.objectName().endswith("_table"):
                 output_features.append(node.objectName())
                 
             return output_features
         
         def get_external_links(node):
-            output_features = {}
+            output_features = []
             for child in [node.child(i) for i in range(node.childCount())]:
-                output_features.update(get_external_links(child))
+                output_features += get_external_links(child)
             if node.checkState(0) == QtCore.Qt.Checked:
-                if node.parent() and node.parent()._link_by:
-                    link_name = node.objectName().rpartition("func.")[-1]
-                    output_features.update({
-                        link_name: (
-                            "{}.{}".format(node.parent().objectName(),
-                            node.parent()._link_by[1]),
-                            node.parent()._link_by[0])})
-
-                    #output_features[link_name].append(
-                        #("{}.{}".format(node.parent().objectName(),
-                        #node.parent()._link_by[1]),
-                        #node.parent()._link_by[0]))
+                try:
+                    parent = node.parent()
+                except AttributeError:
+                    print("Warning: Node has no parent")
+                    logger.warn("Warning: Node has no parent")
+                    return output_features
+                if parent and parent.isLinked():
+                    link = parent.link
+                    output_features.append((link, node.rc_feature))
             return output_features
 
         def get_functions(node):
@@ -1708,19 +1712,17 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             
-            options.cfg.external_links = {}
-            #options.cfg.external_links = defaultdict(list)
+            # get all external links:
+            options.cfg.external_links = []
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                options.cfg.external_links.update(get_external_links(root))
-            #print("External links:")
-            #for x in options.cfg.external_links:
-                #print(x, options.cfg.external_links[x])
+                options.cfg.external_links += get_external_links(root)
             
-            # Go throw options tree widget to get all checked output columns:
+            # get all checked output columns:
             options.cfg.selected_features = []
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
                 options.cfg.selected_features += traverse_output_columns(root)
 
+            # get all functions:
             options.cfg.selected_functions = []
             for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
                 func = get_functions(root)
@@ -1805,31 +1807,31 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.toggle_frequency_columns()
 
-    def select_table(self):
-        """
-        Open a table select widget.
+    #def select_table(self):
+        #"""
+        #Open a table select widget.
         
-        The table select widget contains a QTreeWidget with all corpora 
-        except the currently active one as parents, and the respective tables
-        as children.
+        #The table select widget contains a QTreeWidget with all corpora 
+        #except the currently active one as parents, and the respective tables
+        #as children.
         
-        The return tuple contains the corpus and the table name. 
+        #The return tuple contains the corpus and the table name. 
         
-        Returns
-        -------
-        (corpus, table) : tuple
-            The name of the corpus and the name of the table from that corpus
-            as feature strings. 
-        """
+        #Returns
+        #-------
+        #(corpus, table) : tuple
+            #The name of the corpus and the name of the table from that corpus
+            #as feature strings. 
+        #"""
         
         
-        corpus, table, feature = linkselect.LinkSelect.display(self)
+        #corpus, table, feature = linkselect.LinkSelect.display(self)
         
-        corpus = "bnc"
-        table = "word"
-        feature_name = "word_label"
+        #corpus = "bnc"
+        #table = "word"
+        #feature_name = "word_label"
         
-        return (corpus, table, feature_name)
+        #return (corpus, table, feature_name)
 
     def add_link(self, item):
         """
@@ -1856,28 +1858,34 @@ class CoqueryApp(QtGui.QMainWindow):
         if not link:
             return
         else:
-            corpus, table_name, feature_name, case = link
+            link.key_feature = str(item.objectName())
             item.setExpanded(True)
             
-            resource = options.cfg.current_resources[corpus][0]
-            table = resource.get_table_dict()[table_name]
+            tree = classes.CoqTreeLinkItem()
+            tree.setText(column, "{} > {}.{}".format(str(item.text(0)), link.resource, link.table_name))
+            tree.setCheckState(column, False)
+            tree.setLink(link)
+            tree.setObjectName("{}.{}_table".format(link.db_name, link.table))
             
-            new_table = classes.CoqTreeLinkItem()
-            new_table.setObjectName("{}.{}_table".format(corpus, table_name))
-            
-            position = self.ui.options_tree.indexOfTopLevelItem(item.parent()) +1
-            self.ui.options_tree.insertTopLevelItem(position, new_table)
-            new_table.setLink("{}.{}".format(item.parent().objectName(), item.objectName()), feature_name)
-            new_table.setText(column, "{} ► {}.{}".format(str(item.text(0)), corpus, table_name))
-            new_table.setCheckState(column, False)
-            
-            for rc_feature in table:
-                if rc_feature.rpartition("_")[-1] not in ("id", "table") and rc_feature != feature_name:
+            resource = options.cfg.current_resources[link.resource][0]
+            table = resource.get_table_dict()[link.table]
+
+            # fill new tree with the features from the linked table (exclude
+            # the linking feature):
+            for rc_feature in [x for x in table if x != link.rc_feature]:
+                _, _, _, feature = resource.split_resource_feature(rc_feature)
+                # exclude special resource features
+                if feature not in ("id", "table"):
                     new_item = classes.CoqTreeItem()
                     new_item.setText(0, getattr(resource, rc_feature))
-                    new_item.setObjectName("{}.{}".format(corpus, rc_feature))
+                    new_item.rc_feature = rc_feature
+                    new_item.setObjectName("{}.{}".format(link.db_name, rc_feature))
                     new_item.setCheckState(column, False)
-                    new_table.addChild(new_item)
+                    tree.addChild(new_item)
+
+            # Insert newly created table:
+            position = self.ui.options_tree.indexOfTopLevelItem(item.parent()) +1
+            self.ui.options_tree.insertTopLevelItem(position, tree)
             
     def add_function(self, item):
         """
