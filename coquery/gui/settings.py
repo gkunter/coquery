@@ -17,9 +17,9 @@ import settingsUi
 import options
 
 class Settings(QtGui.QDialog):
-    def __init__(self, options, parent=None):
+    def __init__(self, _options, parent=None):
         super(Settings, self).__init__(parent)
-        self.options = options
+        self._options = _options
         self.ui = settingsUi.Ui_SettingsDialog()
         self.ui.setupUi(self)
         self.ui.check_ignore_punctuation.setEnabled(False)

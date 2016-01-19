@@ -17,6 +17,7 @@ import sys
 
 from pyqt_compat import QtCore, QtGui
 import classes
+import options
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
