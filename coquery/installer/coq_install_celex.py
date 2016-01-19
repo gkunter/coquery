@@ -16,6 +16,7 @@ import codecs
 import unicodedata
 
 from corpusbuilder import *
+from defines import *
 
 def dia_to_unicode(s):
     """
@@ -63,7 +64,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     corpus_table = "eow"
     corpus_id = "IdNum"
-    corpus_transcript_id = "IdNum"
+    corpus_phonoword_id = "IdNum"
     corpus_morphword_id = "IdNum"
     corpus_word = "Word"
     corpus_worddia = "WordDia"
@@ -87,16 +88,17 @@ class BuilderClass(BaseCorpusBuilder):
     lemma_cobspelldev = "Lemma_CobSpellDev"
     lemma_headsyldia = "Lemma_HeadSylDia"
     
-    transcript_table = "epw"
-    transcript_id = "IdNum"
-    transcript_label = "Word_PhonStrsDISC"
-    transcript_proncnt = "Word_PronCnt"
-    transcript_phoncvbr = "Word_PhonCVBr"
-    transcript_phonsylbclx = "Word_PhonSylBCLX"
+    phonoword_table = "epw"
+    phonoword_id = "IdNum"
+    phonoword_word = "Word"
+    phonoword_phonstrsdisc = "Word_PhonStrsDISC"
+    phonoword_proncnt = "Word_PronCnt"
+    phonoword_phoncvbr = "Word_PhonCVBr"
+    phonoword_phonsylbclx = "Word_PhonSylBCLX"
 
     phonolemma_table = "epl"
     phonolemma_id = "IdNum"
-    phonolemma_label = "Lemma_Head"
+    phonolemma_head = "Head"
     phonolemma_proncnt = "Lemma_PronCnt"
     phonolemma_phonstrsdisc = "Lemma_PhonStrsDISC"
     phonolemma_phoncvbr = "Lemma_PhonCVBr"
@@ -104,13 +106,13 @@ class BuilderClass(BaseCorpusBuilder):
 
     morphword_table = "emw"
     morphword_id = "IdNum"
-    morphword_label = "Word_Word"
+    morphword_word = "Word"
     morphword_flecttype = "Word_FlectType"
     morphword_transinfl = "Word_TransInfl"
 
     morphlemma_table = "eml"
     morphlemma_id = "IdNum"
-    morphlemma_label = "Lemma_Head"
+    morphlemma_head = "Head"
     morphlemma_morphstatus = "Lemma_MorphStatus"
     morphlemma_lang = "Lemma_Lang"
     morphlemma_morphcnt = "Lemma_MorphCnt"
@@ -136,8 +138,9 @@ class BuilderClass(BaseCorpusBuilder):
 
     syntaxlemma_table = "esl"
     syntaxlemma_id = "Lemma_IdNum"
-    syntaxlemma_label = "Lemma_Head"
+    syntaxlemma_head = "Head"
     syntaxlemma_classnum = "Lemma_ClassNum"
+    syntaxlemma_class = "Lemma_Class"
     syntaxlemma_c_n = "Lemma_C_N"
     syntaxlemma_unc_n = "Lemma_Unc_N"
     syntaxlemma_sing_n = "Lemma_Sing_N"
@@ -190,23 +193,24 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.phonolemma_table,
             [Primary(self.phonolemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-             Column(self.phonolemma_label, "VARCHAR(34) NOT NULL"),
+             Column(self.phonolemma_head, "VARCHAR(34) NOT NULL"),
              Column(self.phonolemma_proncnt, "ENUM('1','10','11','12','13','14','15','16','18','2','20','21','24','25','3','30','32','36','4','40','48','5','6','60','7','8','9') NOT NULL"),
              Column(self.phonolemma_phonstrsdisc, "VARCHAR(40) NOT NULL"),
              Column(self.phonolemma_phoncvbr, "VARCHAR(53) NOT NULL"),
              Column(self.phonolemma_phonsylbclx, "VARCHAR(53) NOT NULL")])
 
-        self.create_table_description(self.transcript_table,
-            [Primary(self.transcript_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.transcript_label, "VARCHAR(41) NOT NULL"),
-             Column(self.transcript_proncnt, "ENUM('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','18','20','21','24','25','28','30','32','36','40','48','60') NOT NULL"),
-             Column(self.transcript_phoncvbr, "VARCHAR(53) NOT NULL"),
-             Column(self.transcript_phonsylbclx, "VARCHAR(53) NOT NULL")])
+        self.create_table_description(self.phonoword_table,
+            [Primary(self.phonoword_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.phonoword_phonstrsdisc, "VARCHAR(41) NOT NULL"),
+             Column(self.phonoword_word, "VARCHAR(35) NOT NULL"),
+             Column(self.phonoword_proncnt, "ENUM('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','18','20','21','24','25','28','30','32','36','40','48','60') NOT NULL"),
+             Column(self.phonoword_phoncvbr, "VARCHAR(53) NOT NULL"),
+             Column(self.phonoword_phonsylbclx, "VARCHAR(53) NOT NULL")])
 
         self.create_table_description(self.morphlemma_table,
             [Primary(self.morphlemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-             Column(self.morphlemma_label, "VARCHAR(34) NOT NULL"),
              Column(self.morphlemma_morphstatus, "ENUM('C','F','I','M','O','R','U','Z') NOT NULL"),
+             Column(self.morphlemma_head, "VARCHAR(34) NOT NULL"),
              Column(self.morphlemma_lang, "ENUM('','A','B','D','F','G','I','L','S') NOT NULL"),
              Column(self.morphlemma_morphcnt, "ENUM('0','1','2','3','4','5','8') NOT NULL"),
              Column(self.morphlemma_nvaffcomp, "ENUM('N','Y') NOT NULL"),
@@ -231,14 +235,15 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.morphword_table,
             [Primary(self.morphword_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.morphword_label, "VARCHAR(35) NOT NULL"),
+             Column(self.morphword_word, "VARCHAR(35) NOT NULL"),
              Column(self.morphword_flecttype, "ENUM('a1S','a1Sr','a2S','a2Sr','a3S','a3Sr','aP','aPr','b','c','e1S','e2S','e2Sr','e3S','e3Sr','eP','i','P','pa','par','pe','Pr','S','X') NOT NULL"),
              Column(self.morphword_transinfl, "ENUM('','@','@ @','@ @ @','@ @ @ @','@ @ @ @ @','@ @ @ @ @+s','@ @ @ @-y+ies','@ @ @ @+es','@ @ @ @+s','@ @ @-y+ies','@ @ @+ed','@ @ @+es','@ @ @+ing','@ @ @+s','@ @-e+ing','@ @-f+ves','@ @-fe+ves','@ @-y+ied','@ @-y+ier','@ @-y+ies','@ @-y+iest','@ @+bed','@ @+bing','@ @+d','@ @+ed','@ @+es','@ @+ged','@ @+ging','@ @+ing','@ @+led','@ @+ling','@ @+ped','@ @+ping','@ @+red','@ @+ring','@ @+s','@ @+ted','@ @+ting','@-e+ing','@-e+ing @','@-e+ing @ @','@-ey+ier','@-ey+iest','@-f+ves','@-fe+ves','@-y+ied','@-y+ied @','@-y+ied @ @','@-y+ier','@-y+ier @','@-y+ies','@-y+ies @','@-y+ies @ @','@-y+ies @ @ @','@-y+iest','@-y+iest @','@+@d','@+@ing','@+@s','@+bed','@+bed @','@+bed @ @','@+ber','@+best','@+bing','@+bing @','@+bing @ @','@+d','@+d @','@+d @ @','@+ded','@+ded @','@+der','@+dest','@+ding','@+ding @','@+ed','@+ed @','@+ed @ @','@+ed @ @ @','@+er','@+er @','@+er @ @','@+es','@+es @','@+es @ @','@+es @ @ @','@+est','@+est @','@+ged','@+ged @','@+ged @ @','@+ger','@+gest','@+ging','@+ging @','@+ging @ @','@+ing','@+ing @','@+ing @ @','@+ing @ @ @','@+ked','@+ked @','@+king','@+king @','@+led','@+led @','@+ler','@+lest','@+ling','@+ling @','@+med','@+med @','@+mer','@+mest','@+ming','@+ming @','@+ned','@+ned @','@+ner','@+ner @','@+nest','@+nest @','@+ning','@+ning @','@+ning @ @','@+ped','@+ped @','@+ped @ @','@+ping','@+ping @','@+ping @ @','@+r','@+r @','@+red','@+red @','@+ring','@+ring @','@+s','@+s @','@+s @ @','@+s @ @ @','@+sed','@+sed @','@+ses','@+ses @','@+sing','@+sing @','@+st','@+st @','@+ted','@+ted @','@+ted @ @','@+ter','@+ter @','@+test','@+test @','@+ting','@+ting @','@+ting @ @','@+ved','@+ved @','@+ving','@+ving @','@+zed','@+zes','@+zing','IRR') NOT NULL")])
 
         self.create_table_description(self.syntaxlemma_table,
             [Primary(self.syntaxlemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-             Column(self.syntaxlemma_label, "VARCHAR(34) NOT NULL"),
+             Column(self.syntaxlemma_head, "VARCHAR(34) NOT NULL"),
              Column(self.syntaxlemma_classnum, "ENUM('1','10','11','12','13','14','15','2','3','4','5','6','7','8','9') NOT NULL"),
+             Column(self.syntaxlemma_class, "ENUM('A','ABB','ADV','ART','C','CCON','I','LET','N','NUM','PREP','PRON','SCON','TO','V') NOT NULL"),
              Column(self.syntaxlemma_c_n, "ENUM('N','Y') NOT NULL"),
              Column(self.syntaxlemma_unc_n, "ENUM('N','Y') NOT NULL"),
              Column(self.syntaxlemma_sing_n, "ENUM('N','Y') NOT NULL"),
@@ -282,7 +287,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.syntaxlemma_exp_pron, "ENUM('N','Y') NOT NULL"),
              Column(self.syntaxlemma_cor_c, "ENUM('N','Y') NOT NULL"),
              Column(self.syntaxlemma_sub_c, "ENUM('N','Y') NOT NULL")])
-
+            
         self.create_table_description(self.lemma_table,
             [Primary(self.lemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.lemma_label, "VARCHAR(34) NOT NULL"),
@@ -299,7 +304,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.corpus_worddia, "VARCHAR(35) NOT NULL"),
              Column(self.corpus_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Link(self.corpus_lemma_id, self.lemma_table),
-             Link(self.corpus_transcript_id, self.transcript_table),
+             Link(self.corpus_phonoword_id, self.phonoword_table),
              Link(self.corpus_phonolemma_id, self.phonolemma_table),
              Link(self.corpus_morphword_id, self.morphword_table),
              Link(self.corpus_morphlemma_id, self.morphlemma_table),
@@ -308,6 +313,10 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.corpus_orthostatus, "ENUM('B') NOT NULL"),
              Column(self.corpus_cobspelldev, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.corpus_wordsyldia, "VARCHAR(43) NOT NULL")])
+
+        self.map_query_item(QUERY_ITEM_TRANSCRIPT, "phonoword_phonstrsdisc")
+        self.map_query_item(QUERY_ITEM_POS, "syntaxlemma_class")
+        
 
     def build_load_files(self):
         files = [x for x in sorted(self.get_file_list(self.arguments.path, self.file_filter)) if os.path.basename(x).lower() in BuilderClass.expected_files]
@@ -331,7 +340,7 @@ class BuilderClass(BaseCorpusBuilder):
             elif component == "eol":
                 s = "Orthography lemmas"
             elif component == "esl":
-                s = "Syntax word forms"
+                s = "Syntax lemmas"
             else:
                 component = None
 
@@ -394,26 +403,27 @@ class BuilderClass(BaseCorpusBuilder):
                             self.lemma_headsyldia: self._value_lemma_headsyldia})
                     
                     elif component == "epw":
-                        (self._value_transcript_id, 
-                        _,
+                        (self._value_phonoword_id, 
+                        self._value_phonoword_word,
                         _,
                         _, 
-                        self._value_transcript_proncnt,
+                        self._value_phonoword_proncnt,
                         _,
-                        self._value_transcript_label,
-                        self._value_transcript_phoncvbr,
-                        self._value_transcript_phonsylbclx) = columns[:9]
+                        self._value_phonoword_phonstrsdisc,
+                        self._value_phonoword_phoncvbr,
+                        self._value_phonoword_phonsylbclx) = columns[:9]
 
-                        self.table(self.transcript_table).add(
-                            {self.transcript_id: self._value_transcript_id,
-                            self.transcript_label: self._value_transcript_label,
-                            self.transcript_proncnt: self._value_transcript_proncnt,
-                            self.transcript_phoncvbr: self._value_transcript_phoncvbr,
-                            self.transcript_phonsylbclx: self._value_transcript_phonsylbclx})
+                        self.table(self.phonoword_table).add(
+                            {self.phonoword_id: self._value_phonoword_id,
+                             self.phonoword_word: self._value_phonoword_word,
+                            self.phonoword_phonstrsdisc: self._value_phonoword_phonstrsdisc,
+                            self.phonoword_proncnt: self._value_phonoword_proncnt,
+                            self.phonoword_phoncvbr: self._value_phonoword_phoncvbr,
+                            self.phonoword_phonsylbclx: self._value_phonoword_phonsylbclx})
                     
                     elif component == "epl":
                         (self._value_phonolemma_id, 
-                        self._value_phonolemma_label,
+                         self._value_phonolemma_head,
                         _,
                         self._value_phonolemma_proncnt,
                         _,
@@ -423,7 +433,7 @@ class BuilderClass(BaseCorpusBuilder):
 
                         self.table(self.phonolemma_table).add(
                             {self.phonolemma_id: self._value_phonolemma_id,
-                            self.phonolemma_label: self._value_phonolemma_label,
+                             self.phonolemma_head: self._value_phonolemma_head,
                             self.phonolemma_proncnt: self._value_phonolemma_proncnt,
                             self.phonolemma_phonstrsdisc: self._value_phonolemma_phonstrsdisc,
                             self.phonolemma_phoncvbr: self._value_phonolemma_phoncvbr,
@@ -431,7 +441,7 @@ class BuilderClass(BaseCorpusBuilder):
                     
                     elif component == "emw":
                         (self._value_morphword_id,
-                        self._value_morphword_label,
+                        self._value_morphword_word,
                         _,
                         _,
                         self._value_morphword_flecttype,
@@ -439,13 +449,13 @@ class BuilderClass(BaseCorpusBuilder):
 
                         self.table(self.morphword_table).add(
                             {self.morphword_id: self._value_morphword_id,
-                            self.morphword_label: self._value_morphword_label,
+                             self.morphword_word: self._value_morphword_word,
                             self.morphword_flecttype: self._value_morphword_flecttype,
                             self.morphword_transinfl: self._value_morphword_transinfl})
                     
                     elif component == "eml":
                         (self._value_morphlemma_id,
-                        self._value_morphlemma_label,
+                         self._value_morphlemma_head,
                         _,
                         self._value_morphlemma_morphstatus,
                         self._value_morphlemma_lang,
@@ -472,7 +482,7 @@ class BuilderClass(BaseCorpusBuilder):
 
                         self.table(self.morphlemma_table).add(
                             {self.morphlemma_id: self._value_morphlemma_id,
-                            self.morphlemma_label: self._value_morphlemma_label,
+                            self.morphlemma_head: self._value_morphlemma_head,
                             self.morphlemma_morphstatus: self._value_morphlemma_morphstatus,
                             self.morphlemma_lang: self._value_morphlemma_lang,
                             self.morphlemma_morphcnt: self._value_morphlemma_morphcnt,
@@ -498,7 +508,7 @@ class BuilderClass(BaseCorpusBuilder):
 
                     elif component == "esl":
                         (self._value_syntaxlemma_id,
-                        self._value_syntaxlemma_label,
+                        self._value_syntaxlemma_head,
                         _,
                         self._value_syntaxlemma_classnum,
                         self._value_syntaxlemma_c_n,
@@ -543,11 +553,19 @@ class BuilderClass(BaseCorpusBuilder):
                         self._value_syntaxlemma_pron_pron,
                         self._value_syntaxlemma_exp_pron,
                         self._value_syntaxlemma_cor_c,
-                        self._value_syntaxlemma_sub_c) = columns[:47]         
+                        self._value_syntaxlemma_sub_c) = columns[:47] 
+                        
+                        class_map = dict(zip([str(x) for x in range(1, 16)],
+                            ["N", "A", "NUM", "V", "ART", "PRON", "ADV",
+                             "PREP", "C", "I", "SCON", "CCON", "LET", "ABB", 
+                             "TO"]))
+                        self._value_syntaxlemma_class = class_map[self._value_syntaxlemma_classnum]
+                        
                         self.table(self.syntaxlemma_table).add(               
                             {self.syntaxlemma_id: self._value_syntaxlemma_id, 
-                            self.syntaxlemma_label: self._value_syntaxlemma_label, 
+                            self.syntaxlemma_head: self._value_syntaxlemma_head, 
                             self.syntaxlemma_classnum: self._value_syntaxlemma_classnum, 
+                            self.syntaxlemma_class: self._value_syntaxlemma_class, 
                             self.syntaxlemma_c_n: self._value_syntaxlemma_c_n, 
                             self.syntaxlemma_unc_n: self._value_syntaxlemma_unc_n, 
                             self.syntaxlemma_sing_n: self._value_syntaxlemma_sing_n, 
