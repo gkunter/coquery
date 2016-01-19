@@ -124,7 +124,12 @@ class CoqDetailBox(QtGui.QWidget):
             self.header.setFlat(False)
             icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
         else:
-            self.box.hide()
+            try:
+                self.box.hide()
+            except RuntimeError:
+                # The box may have been deleted already, which raises a 
+                # harmless RuntimeError
+                pass
             self.header.setFlat(True)
             icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
         self.header.setIcon(icon)
@@ -154,7 +159,6 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         return self._link_by != None
 
     def setText(self, column, text, *args):
-        super(CoqTreeItem, self).setText(column, text)
         if self.parent():
             parent = self.parent().objectName()
         feature = unicode(self.objectName())
@@ -164,6 +168,8 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
             self.setToolTip(column, "Special column:\n{}".format(text))
         else:
             self.setToolTip(column, "Data column:\n{}".format(text))
+
+        super(CoqTreeItem, self).setText(column, text)
 
     def setObjectName(self, name):
         """ Store resource variable name as object name. """
@@ -224,7 +230,8 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         
         # propagate check state to children:
         for child in [self.child(i) for i in range(self.childCount())]:
-            child.setCheckState(column, check_state)
+            if not isinstance(child, CoqTreeLinkItem):
+                child.setCheckState(column, check_state)
         # adjust check state of parent, but not if linked:
         if self.parent() and not self._link_by:
             if not self.parent().check_children():
@@ -245,9 +252,7 @@ class CoqTreeLinkItem(CoqTreeItem):
         
     def setText(self, column, text, *args):
         super(CoqTreeLinkItem, self).setText(column, text)
-        #source, target = text.split(" ► ")
-        source, target = text.split(" > ")
-        self.setToolTip(column, "External table:\n{},\nlinked by column:\n{}".format(target, source))
+        self.setToolTip(column, "External table: {}\nLinked by: {}".format(text, self.link.feature_name))
 
 class CoqTreeFuncItem(CoqTreeItem):
     """

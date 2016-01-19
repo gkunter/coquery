@@ -533,16 +533,15 @@ class CoqueryApp(QtGui.QMainWindow):
         for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
             if root.objectName().startswith("statistics"):
                 for child in [root.child(i) for i in range(root.childCount())]:
-                    if child.objectName() in ("statistics_relative_frequency", "statistics_per_million_words"):
-                        if self.ui.radio_aggregate_frequencies.isChecked():
-                            child.setDisabled(False)
-                            try:
-                                options.cfg.disabled_columns.remove(child.objectName())
-                            except KeyError:
-                                pass
-                        else:
-                            child.setDisabled(True)
-                            options.cfg.disabled_columns.add(child.objectName())
+                    if self.ui.radio_aggregate_frequencies.isChecked():
+                        child.setDisabled(False)
+                        try:
+                            options.cfg.disabled_columns.remove(child.objectName())
+                        except KeyError:
+                            pass
+                    else:
+                        child.setDisabled(True)
+                        options.cfg.disabled_columns.add(child.objectName())
     
     def finish_reaggregation(self):
         self.stop_progress_indicator()
@@ -570,6 +569,17 @@ class CoqueryApp(QtGui.QMainWindow):
             self.Session.query_type.add_output_columns(self.Session)
         self.start_progress_indicator()
         self.thread.start()
+
+    def get_icon(self, s):
+        """
+        Return an icon that matches the given string.
+        """
+        icon = QtGui.QIcon()
+        if "picol" in s:
+            icon.addFile(os.path.join(sys.path[0], "icons", "picol", "{}.svg".format(s)))
+        else:
+            icon.addFile(os.path.join(sys.path[0], "icons", "{}.svg".format(s)))
+        return icon
 
     def show_query_status(self):
         if not hasattr(self.Session, "end_time"):
@@ -658,8 +668,7 @@ class CoqueryApp(QtGui.QMainWindow):
         tables.remove("statistics")
         tables.append("statistics")
         tables.append("coquery")
-
-
+        
         last_checked = self.ui.options_tree.get_checked()
 
         tree = self.create_output_options_tree()
@@ -685,7 +694,32 @@ class CoqueryApp(QtGui.QMainWindow):
                 leaf.setObjectName(coqueryUi._fromUtf8(var))
                 root.addChild(leaf)
                 label = getattr(self.resource, var)
+                # Add labels if this feature is mapped to a query item type
+                try:
+                    if var == self.resource.query_item_word:
+                        label = "{} [Word]".format(label)
+                except AttributeError:
+                    pass
+                try:
+                    if var == self.resource.query_item_lemma:
+                        label = "{} [Lemma]".format(label)
+                except AttributeError:
+                    pass
+                try:
+                    if var == self.resource.query_item_transcript:
+                        label = "{} [Transcript]".format(label)
+                except AttributeError:
+                    pass
+                try:
+                    if var == self.resource.query_item_pos:
+                        label = "{} [POS]".format(label)
+                except AttributeError:
+                    pass
                 leaf.setText(0, label)
+                if label != getattr(self.resource, var):
+                    leaf.setIcon(0, self.get_icon("tag"))
+                    root.setIcon(0, self.get_icon("tag"))
+
                 if var in last_checked: 
                     leaf.setCheckState(0, QtCore.Qt.Checked)
                 else:
@@ -873,8 +907,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.status_server.setText(S)
     
     def exception_during_query(self):
-        if type(self.exception) == NoLemmaInformationError:
-            QtGui.QMessageBox.critical(self, "Disk error", msg_no_lemma_information)
+        if isinstance(self.exception, UnsupportedQueryItemError):
+            QtGui.QMessageBox.critical(self, "Error in query string – Coquery", str(self.exception), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         else:
             errorbox.ErrorBox.show(self.exc_info, self.exception)
         self.showMessage("Query failed.")
@@ -1564,8 +1598,6 @@ class CoqueryApp(QtGui.QMainWindow):
         state : bool
             True if a connection is available, or False otherwise.
         """
-        active_widget = options.cfg.app.focusWidget()
-        
         if options.cfg.current_server == None:
             state = False
         else:
@@ -1579,35 +1611,43 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 state = False
 
-        # Choose a suitable icon:
-        if state:
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogYesButton)
-        else:
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogNoButton)
-
-        index = self.ui.combo_config.findText(options.cfg.current_server)
+        # Only do something if the current connection status has changed:
+        if state != self.last_connection_state:
+            # Remember the item that has focus:
+            active_widget = options.cfg.app.focusWidget()
             
-        # add new entry with suitable icon, remove old icon and reset index:
-        try:
-            self.ui.combo_config.currentIndexChanged.disconnect()
-        except TypeError:
-            pass
-        self.ui.combo_config.insertItem(index + 1, icon, options.cfg.current_server)
-        self.ui.combo_config.setCurrentIndex(index + 1)
-        self.ui.combo_config.removeItem(index)
-        self.ui.combo_config.setCurrentIndex(index)
-        self.last_connection_state = state
-        self.last_index = index
-        self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
+            # Choose a suitable icon for the connection combo box:
+            if state:
+                icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogYesButton)
+            else:
+                icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogNoButton)
 
-        self.ui.options_area.setDisabled(True)
-        if state:
-            self.fill_combo_corpus()
-            if self.ui.combo_corpus.count():
-                self.ui.options_area.setDisabled(False)
+                
+            # Disconnect the currentIndexChanged signal to avoid infinite
+            # recursive loop:
+            try:
+                self.ui.combo_config.currentIndexChanged.disconnect()
+            except TypeError:
+                pass
+            # add new entry with suitable icon, remove old icon and reset index:
+            index = self.ui.combo_config.findText(options.cfg.current_server)
+            self.ui.combo_config.insertItem(index + 1, icon, options.cfg.current_server)
+            self.ui.combo_config.setCurrentIndex(index + 1)
+            self.ui.combo_config.removeItem(index)
+            self.ui.combo_config.setCurrentIndex(index)
+            self.last_connection_state = state
+            self.last_index = index
+            # reconnect currentIndexChanged signal:
+            self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
 
-        if active_widget:
-            active_widget.setFocus()
+            self.ui.options_area.setDisabled(True)
+            if state:
+                self.fill_combo_corpus()
+                if self.ui.combo_corpus.count():
+                    self.ui.options_area.setDisabled(False)
+
+            if active_widget:
+                active_widget.setFocus()
 
         return state
 
@@ -1862,9 +1902,9 @@ class CoqueryApp(QtGui.QMainWindow):
             item.setExpanded(True)
             
             tree = classes.CoqTreeLinkItem()
-            tree.setText(column, "{} > {}.{}".format(str(item.text(0)), link.resource, link.table_name))
-            tree.setCheckState(column, False)
             tree.setLink(link)
+            tree.setText(column, "{}.{}.{}".format(link.resource, link.table_name, link.feature_name))
+            tree.setCheckState(column, False)
             tree.setObjectName("{}.{}_table".format(link.db_name, link.table))
             
             resource = options.cfg.current_resources[link.resource][0]
@@ -1883,9 +1923,8 @@ class CoqueryApp(QtGui.QMainWindow):
                     new_item.setCheckState(column, False)
                     tree.addChild(new_item)
 
-            # Insert newly created table:
-            position = self.ui.options_tree.indexOfTopLevelItem(item.parent()) +1
-            self.ui.options_tree.insertTopLevelItem(position, tree)
+            # Insert newly created table as a child of the linked item:
+            item.addChild(tree)
             
     def add_function(self, item):
         """
