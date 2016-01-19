@@ -48,7 +48,7 @@ class BuilderClass(BaseCorpusBuilder):
         # and the lexicon table (which is required for word look-up). It
         # has the following columns:
         # 
-        # WordId
+        # ID
         # An int value containing the unique identifier of the lexicon
         # entry associated with this token.
         #
@@ -59,8 +59,7 @@ class BuilderClass(BaseCorpusBuilder):
         # ARPAbet.
         
         self.corpus_table = "Dictionary"
-        self.corpus_id = "WordId"
-        self.corpus_word_id = "WordId"
+        self.corpus_id = "ID"
         self.corpus_word = "Word"
         self.corpus_transcript = "Transcript"
         
@@ -89,7 +88,7 @@ class BuilderClass(BaseCorpusBuilder):
             if current_line and not current_line.startswith (";;;"):
                 word, transcript = current_line.split ("  ")
                 self.add_token_to_corpus(
-                    {self.corpus_word_id: i+1, 
+                    {self.corpus_id: i+1, 
                     self.corpus_word: word,
                     self.corpus_transcript: transcript})
             if self._widget and not i % 100:
