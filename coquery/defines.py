@@ -20,26 +20,15 @@ import math
 import itertools
 import gc
 
-# The following flags are used to indicate which fields are provided by the 
-# lexicon of a corpus, and also to access the fields of the value of 
-# BaseLexicon.get_entry(WordId):
+DEFAULT_MISSING_VALUE = "<NA>"
 
-LEX_WORDID = "word_id"  # Lexicon entries provide a WordId (obligatory)
-LEX_ORTH = "orth"       # Lexicon entries provide an orthographic 
-                        # representation of word-forms (obligatory)
-LEX_LEMMA = "lemma"     # Lexicon entries provide a lemma identifier
-LEX_POS = "pos"         # Lexicon entries provide a part-of-speech identifier
-LEX_PHON = "phon"       # Lexicon entries provide a phonological 
-                        # representation
-LEX_FREQ = "freq"       # Lexicon entries provide a frequency measure
-
-CORP_SOURCE = "source"
-CORP_SPEAKER = "speaker"
-CORP_CONTEXT = "context"
-CORP_FILENAME = "filename"
-CORP_TIMING = "time"
-CORP_STATISTICS = "statistics"
-CORP_SENTENCE = "sentence"
+# The following labels are used to refer to the different types of query 
+# tokens, e.g. in corpusbuilder.py when mapping the different query item
+# types to different fields in the data base:
+QUERY_ITEM_WORD = "query_item_word"
+QUERY_ITEM_LEMMA = "query_item_lemma"
+QUERY_ITEM_TRANSCRIPT = "query_item_transcript"
+QUERY_ITEM_POS = "query_item_pos"
 
 QUERY_MODE_TOKENS = "TOKEN"
 QUERY_MODE_FREQUENCIES = "FREQ"
@@ -79,7 +68,7 @@ COLUMN_NAMES = {
     
     "statistics_relative_frequency": "Proportion",
     "statistics_per_million_words": "Frequency (pmw)",
-    "statistics_entropy": "Query entropy",
+    "statistics_entropy": "Entropy",
         }
 
 DEFAULT_CONFIGURATION = "Default"
