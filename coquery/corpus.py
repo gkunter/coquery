@@ -77,8 +77,6 @@ class BaseLexicon(object):
     """
     Define a base lexicon class.
     """
-    provides = [LEX_WORDID, LEX_ORTH]
-
     def __init__(self):
         self.resource = None
         
@@ -194,7 +192,7 @@ class BaseResource(object):
 
     @classmethod
     def get_preferred_output_order(cls):
-        prefer = ["corpus_word", "word_label", "word_pos", "pos_label", "word_transcript", "transcript_label", "word_lemma", "lemma_label"]
+        prefer = ["corpus_word", "word_label", "word_pos", "pos_label", "word_transcript", "transcript_label", "word_lemma", "lemma_label", "lemma_pos"]
         
         all_features = cls.get_resource_features()
         order = []
@@ -443,6 +441,15 @@ class BaseResource(object):
             return func.split(".")[-1]
 
     @classmethod
+    def get_field(cls, rc_feature):
+        """
+        Get a full SQL field name for the resource feature.
+        """
+        _, _, table, _ = cls.split_resource_feature(rc_feature)
+        return "{}.{}".format(
+            getattr(cls, "{}_table".format(table)), getattr(cls, rc_feature))
+
+    @classmethod
     def get_referent_feature(cls, rc_feature):
         """
         Get the referent feature name of a rc_feature.
@@ -491,7 +498,6 @@ class BaseResource(object):
     def is_lexical(cls, rc_feature):
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         resource = cls.get_referent_feature(rc_feature)
-        print(resource, lexicon_features)
         return resource in lexicon_features
     
     @classmethod
@@ -514,15 +520,6 @@ class BaseResource(object):
                 table_name = getattribute(cls, table)
                 filter_list.append((variable, column_name, table_name, filt._op, filt._value_list, filt._value_range))
         return filter_list
-
-    @classmethod
-    def provides_pos(cls):
-        """
-        Return True if part-of-speech information is available for this 
-        resource.
-        """
-        features = cls.get_resource_features()
-        return "word_pos" in features or "pos_tabel" in features or "corpus_pos" in features
 
 class BaseCorpus(object):
     provides = []
@@ -745,39 +742,67 @@ class SQLResource(BaseResource):
             if not hasattr(word_id, "__iter__"):
                 word_id = [word_id]
             
-            # if there is no attribute "corpus_word_id" in the resource, we have
-            # to assume that the identifies provided are already all the 
-            # information that we have on the words. This makes sense for 
-            # example in the case of dictionaries. So, in that case, we simply
-            # return the list:
-            if not hasattr(self, "corpus_word_id"):
-                return word_id
+                if hasattr(self, QUERY_ITEM_WORD):
+                    rc_feature = getattr(self, QUERY_ITEM_WORD)
+                    _, _, table, feature = self.split_resource_feature(rc_feature)
+                    S = "SELECT {} FROM {} WHERE {} = ".format(
+                        getattr(self, rc_feature),
+                        getattr(self, "{}_table".format(table)),
+                        getattr(self, "{}_id".format(table)))
 
-            # prepare a partial SQL query:
-            S = "SELECT {} FROM {} WHERE {} = ".format(
-                        self.word_label, 
-                        self.word_table,
-                        self.word_id)
+                    # build the word list:
+                    L = []
+                    cur = db_connection.cursor()
+                    for x in word_id:
+                        # check the word cache:
+                        try:
+                            L.append(self._word_cache[x])
+                        except KeyError:
+                            cur.execute("{}{}".format(S, x))
+                            try:
+                                orth = cur.fetchone()[0]
+                            except IndexError:
+                                # no entry for this word_id -- use default value:
+                                orth = DEFAULT_MISSING_VALUE
+                            finally:
+                                L.append(orth)
+                                # add to cache:
+                                self._word_cache[x] = orth
+                    return L
+            else:
+                # if there is no attribute "corpus_word_id" in the resource, we
+                # have to assume that the identifies provided are already all the 
+                # information that we have on the words. This makes sense for 
+                # example in the case of dictionaries. So, in that case, we simply
+                # return the list:
+                if not hasattr(self, "corpus_word_id"):
+                    return word_id
 
-            # build the word list:
-            L = []
-            cur = db_connection.cursor()
-            for x in word_id:
-                # check the word cache:
-                try:
-                    L.append(self._word_cache[x])
-                except KeyError:
-                    cur.execute("{}{}".format(S, x))
+                # prepare a partial SQL query:
+                S = "SELECT {} FROM {} WHERE {} = ".format(
+                            self.word_label, 
+                            self.word_table,
+                            self.word_id)
+
+                # build the word list:
+                L = []
+                cur = db_connection.cursor()
+                for x in word_id:
+                    # check the word cache:
                     try:
-                        orth = cur.fetchone()[0]
-                    except IndexError:
-                        # no entry for this word_id -- use default value:
-                        orth = "<NA>"
-                    finally:
-                        L.append(orth)
-                        # add to cache:
-                        self._word_cache[x] = orth
-            return L
+                        L.append(self._word_cache[x])
+                    except KeyError:
+                        cur.execute("{}{}".format(S, x))
+                        try:
+                            orth = cur.fetchone()[0]
+                        except IndexError:
+                            # no entry for this word_id -- use default value:
+                            orth = "<NA>"
+                        finally:
+                            L.append(orth)
+                            # add to cache:
+                            self._word_cache[x] = orth
+                return L
 
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
@@ -944,173 +969,57 @@ class SQLResource(BaseResource):
 class SQLLexicon(BaseLexicon):
     entry_cache = {}
     
-    #def sql_string_get_other_wordforms(self, match):
-        #if "lemma_table" not in dir(self.resource):
-            #word_lemma_column = self.resource.word_lemma
-        #else:
-            #word_lemma_column = self.resource.word_lemma_id
-            
-        #return 'SELECT {word_id} FROM {word_table} WHERE {word_lemma_id} IN (SELECT {word_lemma_id} FROM {word_table} WHERE {word_label} {operator} "{match}")'.format(
-            #word_id=self.resource.word_id,
-            #word_table=self.resource.word_table,
-            #word_label=self.resource.word_label,
-            #word_lemma_id=word_lemma_column,
-            #operator=self.resource.get_operator(match),
-            #match=match)
-    
     def sql_string_get_posid_list_where(self, token):
         comparing_operator = self.resource.get_operator(token)
         where_clauses = []
+        target = self.resource.get_field(getattr(self.resource, QUERY_ITEM_POS))
         for current_pos in token.class_specifiers:
-            #current_token = tokens.COCAToken(current_pos, self)
-            current_token = current_pos
-            if "pos_label" in dir(self.resource):
-                pos_label = self.resource.pos_label
-            else:
-                pos_label = self.resource.word_pos
-            S = '{} {} "{}"'.format(
-                pos_label,
-                comparing_operator, 
-                current_token)
+            S = '{} {} "{}"'.format(target, comparing_operator, current_pos)
             where_clauses.append (S)
         return "(%s)" % "OR ".join (where_clauses)
     
-    def sql_string_get_wordid_list_where(self, token):
-        """ Returns a MySQL string that will return a list of all word_ids
-        that match the given token. """
-        # FIXME: this needs to be revised. 
-        
-        sub_clauses = []
-        if token.lemma_specifiers:
-            if not (
-                hasattr(self.resource, "lemma_label") or
-                hasattr(self.resource, "word_lemma") or
-                hasattr(self.resource, "corpus_lemma")):
-                raise NoLemmaInformationError
-            
-            specifier_list = token.lemma_specifiers
-            if "lemma_table" in dir(self.resource):
-                target = "COQ_LEMMA_TABLE.{}".format(
-                    self.resource.lemma_label)
-            elif "word_table" in dir(self.resource):
-                target = "{}.{}".format(
-                    self.resource.word_table, self.resource.word_lemma)
-            else:
-                target = "{}.{}".format(
-                    self.resource.corpus_table, self.resource.corpus_lemma)
-                
-        else:
-            specifier_list = token.word_specifiers
-            if "word_table" in dir(self.resource):
-                target = "{}.{}".format(
-                    self.resource.word_table, self.resource.word_label)
-            else:
-                target = "{}.{}".format(
-                    self.resource.corpus_table, self.resource.corpus_word)
-                
-        for word in specifier_list:
-            if word != "%":
-                dummy_token = tokens.COCAWord(word, self, replace=False, parse=False)
-                dummy_token.negated = token.negated
-                if not isinstance(dummy_token.S, unicode):
-                    S = unicode(dummy_token.S)
-                else:
-                    S = dummy_token.S
-                # take care of quotation marks:
-                S = S.replace('"', '""')
-                sub_clauses.append('%s %s "%s"' % (target, self.resource.get_operator(dummy_token), S))
-                
-        for transcript in token.transcript_specifiers:
-            if transcript:
-                dummy_token = tokens.COCAWord(transcript, self, replace=False, parse=False)
-                dummy_token.negated = token.negated
-                if "transcript_table" not in dir(self.resource):
-                    target = "{}.{}".format(
-                        self.resource.word_table, 
-                        self.resource.word_transcript)
-                elif self.resource.transcript_table != self.resource.word_table:
-                    target = "COQ_TRANSCRIPT_TABLE.{}".format(
-                        self.resource.transcript_label)
-                else:
-                    target = "{}.{}".format(
-                        self.resource.transcript_table,
-                        self.resource.transcript_label)
-                # take care of quotation marks:
-                S = str(dummy_token)
-                S = S.replace('"', '""')
-                sub_clauses.append('%s %s "%s"' % (new_target, self.resource.get_operator(dummy_token), S))
-        
-        where_clauses = []
-        if sub_clauses:
-            where_clauses.append("(%s)" % " OR ".join (sub_clauses))
-        if token.class_specifiers and self.resource.provides_pos():
-            where_clauses.append(self.sql_string_get_posid_list_where(token))
-        return " AND ".join(where_clauses)
-            
     def sql_string_is_part_of_speech(self, pos):
         current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
-        lexicon_features = [x for x, _ in self.resource.get_lexicon_features()]
-        if "pos_table" in lexicon_features:
-            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                self.resource.pos_id, 
-                self.resource.pos_table, 
-                self.resource.pos_label,
-                self.resource.get_operator(current_token),
-                pos)
-        elif "word_pos" in lexicon_features:
-            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                self.resource.word_pos,
-                self.resource.word_table,
-                self.resource.word_pos,
-                self.resource.get_operator(current_token),
-                pos)
-        elif "corpus_pos" in lexicon_features:
-            return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                self.resource.corpus_pos,
-                self.resource.corpus_table,
-                self.resource.corpus_pos,
-                self.resource.get_operator(current_token),
-                pos)
-        else:
-            raise LexiconFeatureUnavailableError
+        rc_feature = getattr(self.resource, QUERY_ITEM_POS)
+        _, _, table, _ = self.resource.split_resource_feature(rc_feature)
+        return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+            getattr(self.resource, "{}_id".format(table)),
+            getattr(self.resource, "{}_table".format(table)),
+            getattr(self.resource, rc_feature),
+            self.resource.get_operator(current_token),
+            pos)
 
     def is_part_of_speech(self, pos):
-        try:
+        if hasattr(self.resource, QUERY_ITEM_POS):
             db = self.resource.get_db()
             cur = db.Con.cursor()
             cur.execute(self.sql_string_is_part_of_speech(pos))
-        except LexiconFeatureUnavailableError:
-            return False
-        else:
             return cur.rowcount > 0
-    
-    #def get_other_wordforms(self, Word):
-        #""" Return a list of word_id containing all other entries in the
-        #lexicon which have the same lemma as the word given as an argument.
-        #""" 
-
-        #if LEX_LEMMA not in self.provides:
-            #raise LexiconUnsupportedFunctionError
-        
-        #current_word = tokens.COCAWord(Word, self, replace=False)
-        ## create an inner join of lexicon, containing all rows that match
-        ## the string stored in current_word:
-        #self.resource.DB.execute(self.sql_string_get_other_wordforms(current_word))
-        #return [result[0] for result in self.resource.DB.Cur]
-
-    def sql_string_get_posid_list(self, token):
-        where_string = self.sql_string_get_posid_list_where(token)
-
-        if "pos_table" in dir(self.resource):
-            return "SELECT {word_table}.{word_pos} FROM {word_table} INNER JOIN {pos_table} ON {pos_table}.{pos_id} = {word_table}.{word_pos} WHERE {where_string}".format(
-                word_pos=self.resource.word_pos_id,
-                word_table=self.resource.word_table,
-                pos_table=self.resource.pos_table,
-                pos_id=self.resource.pos_id,
-                where_string=where_string)
         else:
-            return "SELECT {} FROM {} WHERE {}".format(
-                self.resource.word_pos, self.resource.word_table, where_string)
+            raise UnsupportedQueryItemError("Part-of-speech")
+    
+    def sql_string_get_posid_list(self, token):
+        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
+        _, _, w_table, _ = self.resource.split_resource_feature(word_feature)
+        word_table = getattr(self.resource, "{}_table".format(w_table))
+        word_id = getattr(self.resource, "{}_id".format(w_table))
+    
+        pos_feature = getattr(self.resource, QUERY_ITEM_POS)
+        pos_field = getattr(self.resource, pos_feature)
+        _, _, p_table, _ = self.resource.split_resource_feature(pos_feature)
+        pos_table = getattr(self.resource, "{}_table".format(p_table))
+        pos_id = getattr(self.resource, "{}_id".format(p_table))
+        
+        self.table_list = [word_table]
+        
+        if p_table != w_table:
+            self.joined_tables = [word_table]
+            self.add_table_path(word_feature, pos_feature)
+            where_string = self.sql_string_get_wordid_list_where(token)
+        else:
+            where_string = self.sql_string_get_posid_list_where(token)
+        return "SELECT {}.{} FROM {} WHERE {}".format(
+            pos_table, pos_field, " ".join(self.table_list), where_string)
 
     def get_posid_list(self, token):
         """ Return a list of all PosIds that match the query token. """
@@ -1133,61 +1042,92 @@ class SQLLexicon(BaseLexicon):
             self._cached_stopword_ids = id_list
         return self._cached_stopword_ids
 
+    def sql_string_get_wordid_list_where(self, token):
+        """ 
+        Return an SQL string that contains the WHERE conditions matching the 
+        token.
+        
+        Returns
+        -------
+        S : str 
+            A strin that can be used in an SQL query created in 
+            get_wordid_list().
+        """
+        where_clauses = []
+        for spec_list, label in [(token.word_specifiers, QUERY_ITEM_WORD),
+                                (token.lemma_specifiers, QUERY_ITEM_LEMMA),
+                                (token.class_specifiers, QUERY_ITEM_POS),
+                                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT)]:
+            sub_clauses = []
+            rc_feature = getattr(self.resource, label, "")
+            if rc_feature and spec_list:
+                target = self.resource.get_field(rc_feature)
+                for spec in spec_list:
+                    if spec != "%":
+                        dummy = tokens.COCAWord(spec, self, replace=False, parse=False)
+                        dummy.negated = token.negated
+                        if not isinstance(dummy.S, unicode):
+                            S = unicode(dummy.S)
+                        else:
+                            S = dummy.S
+                        S = S.replace('"', '""')
+                        sub_clauses.append('{} {} "{}"'.format(
+                            target, self.resource.get_operator(dummy), S))
+            if sub_clauses:
+                where_clauses.append("({})".format(" OR ".join(sub_clauses)))
+        return " AND ".join(where_clauses)
+            
+    def add_table_path(self, start_feature, end_feature):
+        """
+        Add the join string  needed to access end_feature from the table 
+        containing start_feature.
+        
+        This method modifies the class attributes joined_tables (to keep
+        track of tables that are already included in the join) and 
+        table_list (wich contains the join strings).
+        """
+        _, _, last_table, _ = self.resource.split_resource_feature(start_feature)
+        _, _, end_table, _ = self.resource.split_resource_feature(end_feature)
+
+        table_path = self.resource.get_table_path(last_table, end_table)
+        for table in table_path[1:]:
+            if table not in self.joined_tables:
+                self.table_list.append("LEFT JOIN {table} ON {table}.{table_id} = {prev_table}.{prev_table_id}".format(
+                    table=getattr(self.resource, "{}_table".format(table)),
+                    table_id=getattr(self.resource, "{}_id".format(table)),
+                    prev_table=getattr(self.resource, "{}_table".format(last_table)),
+                    prev_table_id=getattr(self.resource, "{}_{}_id".format(last_table, table))))
+                self.joined_tables.append(table)
+            last_table = table
+
     def sql_string_get_matching_wordids(self, token):
         """ returns a string that may be used to query all word_ids that
-        match the token specification."""
-        self.where_list = [self.sql_string_get_wordid_list_where(token)]
-        if hasattr(self.resource, "word_table"):
-            word_table = self.resource.word_table
-            word_id = self.resource.word_id
-            try:
-                if hasattr(self.resource, "word_lemma_id"):
-                    word_lemma = self.resource.word_lemma_id
-                else:
-                    word_lemma = self.resource.word_lemma
-            except AttributeError:
-                # no lemma entry for words
-                pass
-        else:
-            word_table = self.resource.corpus_table
-            word_id = self.resource.corpus_id
-            try:
-                if hasattr(self.resource, "corpus_lemma_id"):
-                    word_lemma = self.resource.corpus_lemma_id
-                else:
-                    word_lemma = self.resource.corpus_lemma
-            except AttributeError:
-                # no lemma entry for words
-                pass
-            
+        match the token specification."""       
+        
+        try:
+            word_feature = getattr(self.resource, QUERY_ITEM_WORD)
+        except AttributeError:
+            raise UnsupportedQueryItemError("Word")
+
+        _, _, table, _ = self.resource.split_resource_feature(word_feature)
+        word_table = getattr(self.resource, "{}_table".format(table))
+        word_id = getattr(self.resource, "{}_id".format(table))
+        
+        self.joined_tables = [word_table]
         self.table_list = [word_table]
+        
         if token.lemma_specifiers:
-            if hasattr(self.resource, "lemma_table"):
-                self.table_list.append("LEFT JOIN {} AS COQ_LEMMA_TABLE ON {}.{} = COQ_LEMMA_TABLE.{}".format(
-                    self.resource.lemma_table,
-                    word_table,
-                    word_lemma,
-                    self.resource.lemma_id))
+            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_LEMMA))
+
         if token.class_specifiers:
-            if hasattr(self.resource, "pos_table"):
-                self.table_list.append("LEFT JOIN {} AS COQ_POS_TABLE ON {}.{} = COQ_POS_TABLE.{}".format(
-                    self.resource.pos_table,
-                    word_table,
-                    self.resource.word_pos_id,
-                    self.resource.pos_id))
+            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_POS))
+
         if token.transcript_specifiers:
-            if hasattr(self.resource, "transcript_table"):
-                self.table_list.append("LEFT JOIN {} AS COQ_TRANSCRIPT_TABLE ON {}.{} = COQ_TRANSCRIPT_TABLE.{}".format(
-                    self.resource.transcript_table,
-                    word_table,
-                    self.resource.word_transcript_id,
-                    self.resource.transcript_id))
-        where_string = " AND ".join(self.where_list)
+            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_TRANSCRIPT))
+            
+        where_string = self.sql_string_get_wordid_list_where(token)
         S = "SELECT {}.{} FROM {} WHERE {}".format(
-                word_table,
-                word_id,
-                " ".join(self.table_list),
-                where_string)
+                word_table, word_id, " ".join(self.table_list), where_string)
         return S
 
     def get_matching_wordids(self, token, stopwords=True):
@@ -1373,20 +1313,29 @@ class SQLCorpus(BaseCorpus):
     def get_whereclauses(self, token, WordTarget, PosTarget):
         if not token:
             return []
+
         where_clauses = []
-        # FIXME: This is a hard-coded special case for 'coca'. Ugh. Instead,
-        # it should probably be a check against 'self_joined' or something
-        # like that
-        if self.resource.name == "coca":
-            L = set(self.lexicon.get_matching_wordids(token))
-            if L:
-                return ["{} IN ({})".format(
-                    WordTarget, ", ".join(["{}".format(x) for x in L]))]
-    
-        if token.word_specifiers or token.lemma_specifiers or token.transcript_specifiers:
-            # if there is a token with either a wordform, lemma, or token
-            # specification, then get the list of matching word_ids from the 
-            # lexicon:
+
+        ##FIXME: This is a hard-coded special case for 'coca'. Ugh. Instead,
+        ##it should probably be a check against 'self_joined' or something
+        ##like that
+        #if self.resource.name == "COCA":
+            #L = set(self.lexicon.get_matching_wordids(token))
+            #if L:
+                #return ["{} IN ({})".format(
+                    #WordTarget, ", ".join(["{}".format(x) for x in L]))]
+
+        # if only a class specification is given, this specification is
+        # used as the where clause:
+        if token.class_specifiers and not (token.word_specifiers or token.lemma_specifiers or token.transcript_specifiers):
+            L = self.lexicon.get_posid_list(token)
+            if L: 
+                where_clauses.append("{} IN ({})".format(
+                    PosTarget, ", ".join (["'{}'".format(x) for x in L])))
+        # if there is a token with either a wordform, lemma, or token
+        # specification, then get the list of matching word_ids from the 
+        # lexicon:
+        else:
             L = set(self.lexicon.get_matching_wordids(token))
             if L:
                 if WordTarget.endswith("_id"):
@@ -1394,23 +1343,11 @@ class SQLCorpus(BaseCorpus):
                 else:
                     L = ["'{}'".format(x) for x in L]
                 where_clauses.append("{} IN ({})".format(
-                    WordTarget, 
-                    ", ".join(L)))
+                    WordTarget, ", ".join(L)))
             else:
                 # is the empty word id list due to the stopword list?
                 if token.S not in ("%", ""):
                     raise WordNotInLexiconError
-
-        else:
-            # if only a class specification is given, this specification is
-            # used as the where clause:
-            if token.class_specifiers:                
-                L = self.lexicon.get_posid_list(token)
-                if L: 
-                    where_clauses.append("{} IN ({})".format(
-                        PosTarget, 
-                        ", ".join (["'%s'" % x for x in L])))
-
         return where_clauses
     
     def sql_string_run_query_filter_list(self, self_joined):
@@ -1490,20 +1427,15 @@ class SQLCorpus(BaseCorpus):
         # make sure that the word_id is always included in the query:
         requested_features.append("corpus_word_id")
 
-        # make sure that the tables and features that are required to 
-        # match the current token are also requested as features:
         try:
-            if "pos_table" not in dir(self.resource):
-                pos_feature = "word_pos"
-            else:
-                pos_feature = "word_pos_id"
+            pos_feature = getattr(self.resource, QUERY_ITEM_POS)
         except AttributeError:
             word_pos_column = None
+            pos_feature = ""
         else:
-            try:
-                word_pos_column = getattr(self.resource, pos_feature)
-            except AttributeError:
-                word_pos_column = None
+            word_pos_column = getattr(self.resource, pos_feature)
+        # make sure that the tables and features that are required to 
+        # match the current token are also requested as features:
 
         # create constraint lists:
         sub_list = set([])
@@ -1528,7 +1460,6 @@ class SQLCorpus(BaseCorpus):
                     s = "NOT ({})".format(" AND ".join(sub_list))
                 else:
                     s = " AND ".join(sub_list)
-
             if current_token.S in ["%", ""] or not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
                 stopwords = self.lexicon.get_stopword_ids()
                 if stopwords:
@@ -1545,7 +1476,8 @@ class SQLCorpus(BaseCorpus):
             if s:
                 if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
                     requested_features.append(pos_feature)
-                    rc_where_constraints["word_table"].add(s)
+                    _, _, table, _ = self.resource.split_resource_feature(pos_feature)
+                    rc_where_constraints["{}_table".format(table)].add(s)
                 else:
                     rc_where_constraints["corpus_table"].add(s)
 
