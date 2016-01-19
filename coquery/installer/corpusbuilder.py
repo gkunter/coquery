@@ -179,11 +179,16 @@ class Resource(SQLResource):
 {resource_code}
     
 class Lexicon(SQLLexicon):
-    provides = {lexicon_provides}
+    '''
+    Corpus-specific code
+    '''
     
 {lexicon_code}
+
 class Corpus(SQLCorpus):
-    provides = {corpus_provides}
+    '''
+    Corpus-specific code
+    '''
     
 {corpus_code}
 """
@@ -200,16 +205,28 @@ class Column(object):
     primary = False
     key = False
     
-    def __init__(self, name, data_type, index=True):
-        """ Initialize the column. 'name' is the column name, 'data_type' is
-        the MySQL data type for this column. If 'index' is True (the 
-        default), an index will be created for this column."""
+    def __init__(self, name, data_type, index_length=None):
+        """ 
+        Initialize the column
+        
+        Parameters
+        ----------
+        name : str 
+            The name of the column 
+        data_type : str 
+            A MySQL data type description 
+        index_length : int or None 
+            The length of the index for this column. If None, the index length 
+            will be determined automatically, which can take quite some time 
+            for larger corpora.
+        """
+
         self._name = name
         self._data_type = data_type
-        self._index = index
+        self.index_length = index_length        
         
     def __repr__(self):
-        return "Column({}, {}, {})".format(self._name, self._data_type, self._index)
+        return "Column({}, {}, {})".format(self._name, self._data_type, self.index_length)
         
     @property
     def name(self):
@@ -263,7 +280,7 @@ class Primary(Column):
         super(Primary, self).__init__(name, data_type, False)
 
     def __repr__(self):
-        return "Primary(name='{}', data_type='{}', {})".format(self._name, self._data_type, self._index)
+        return "Primary(name='{}', data_type='{}', {})".format(self._name, self._data_type, self.index_length)
         
 class Link(Column):
     """ Define a Column class that links a table to another table. In MySQL
@@ -590,8 +607,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     module_code = None
     name = None
     table_description = None
-    lexicon_features = None
-    #corpus_features = None
+    
     arguments = None
     name = None
     additional_arguments = None
@@ -608,10 +624,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def __init__(self, gui=False):
         self.module_code = module_code
         self.table_description = {}
-        self.lexicon_features = []
-        #self.corpus_features = []
         self._time_features = []
-        #self._tables = {}
         self._id_count = {}
         self._primary_keys = {}
         self._interrupted = False
@@ -622,7 +635,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._corpus_id = 0
         self._widget = gui
         self._file_list = []
-        
+
         self._source_count = collections.Counter()
         
         # set up argument parser:
@@ -671,10 +684,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
              Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
              Column(self.tag_label, "TINYTEXT NOT NULL"),
              Link(self.tag_corpus_id, self.corpus_table),
-             Column(self.tag_attribute, "TINYTEXT NOT NULL", index=False)])
+             Column(self.tag_attribute, "TINYTEXT NOT NULL")])
 
         self.add_index_to_blocklist(("tags", self.tag_label))
-        self.add_index_to_blocklist(("tags", self.tag_type))
         self.add_index_to_blocklist(("tags", self.tag_type))
         self.add_index_to_blocklist(("tags", self.tag_attribute))
 
@@ -937,6 +949,30 @@ class BaseCorpusBuilder(corpus.BaseResource):
             lines = []
         return "".join(lines)
 
+    def map_query_item(self, item_type, rc_feature):
+        """
+        Maps a query item type to the given resource feature
+        
+        Parameters
+        ----------
+        item_type : str 
+            One of the string constants from defines.py: 
+            QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_TRANSCRIPT,
+            QUERY_ITEM_POS
+            
+        rc_feature : str 
+            The resource feature that will be used to access the information 
+            needed for the query item type specified by 'item_type'.
+        """
+        if item_type == QUERY_ITEM_WORD:
+            self.query_item_word = rc_feature
+        elif item_type == QUERY_ITEM_LEMMA:
+            self.query_item_lemma = rc_feature
+        elif item_type == QUERY_ITEM_TRANSCRIPT:
+            self.query_item_transcript = rc_feature
+        elif item_type == QUERY_ITEM_POS:
+            self.query_item_pos = rc_feature
+
     def add_time_feature(self, x):
         self._time_features.append(x)
     
@@ -1080,12 +1116,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 # additional labels if provided by the lexicon:
                 word_dict = {}
                 word_dict[self.word_label] = word
-                if "LEX_LEMMA" in self.lexicon_features:
-                    word_dict[self.word_lemma_id] = self.get_lemma_id(word)
-                if "LEX_POS" in self.lexicon_features:
-                    word_dict[self.word_pos] = self.get_pos_id(word)
-                if "LEX_PHON" in self.lexicon_features:
-                    word_dict[self.word_transcript_id] = self.get_transcript_id(word)
+                #if "LEX_LEMMA" in self.lexicon_features:
+                    #word_dict[self.word_lemma_id] = self.get_lemma_id(word)
+                #if "LEX_POS" in self.lexicon_features:
+                    #word_dict[self.word_pos] = self.get_pos_id(word)
+                #if "LEX_PHON" in self.lexicon_features:
+                    #word_dict[self.word_transcript_id] = self.get_transcript_id(word)
 
                 # get a word id for the current word:
                 word_id = self.table(self.word_table).get_or_insert(word_dict)
@@ -1169,8 +1205,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             tokens = [x.strip() for x in tokens if x.strip()]
             if not pos_map:
                 pos_map = zip(tokens, [""] * len(tokens))
-                if "LEX_POS" in self.lexicon_features:
-                    self.lexicon_features.remove("LEX_POS")
             
             for current_token, current_pos in pos_map:
                 # any punctuation at the beginning of the token is added to the
@@ -1574,7 +1608,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     
                     # indices for TEXT/BLOB columns require a key length:
                     if this_column.base_type.endswith("TEXT") or this_column.base_type.endswith("BLOB"):
-                        length = self.Con.get_index_length(table, column)
+                        if this_column.index_length:
+                            length = this_column.index_length
+                        else:
+                            length = self.Con.get_index_length(table, column)
                     else:
                         length = None
 
@@ -1595,6 +1632,67 @@ class BaseCorpusBuilder(corpus.BaseResource):
     @staticmethod
     def get_class_variables():
         return dir(BaseCorpusBuilder)
+
+    def set_query_items(self):
+        """
+        Setup the mapping between query item types and resource features.
+        
+        This method generates the attributes that specifies in the corpus 
+        module in which field the program should look when looking for word, 
+        lemma, transcription, or part-of-speech information. These mappings 
+        can be set in the corpus installer by using the add_query_item() 
+        method.
+        
+        If no specific add_query_item() method is called for a query type, 
+        a list of default resource features will be probed. If one of the 
+        resource features are provided by the corpus, that feature will be 
+        used when evaluating the respective query item.
+
+        Mappings are realized by instanciating the class attributes 
+        query_item_word, query_item_lemma, query_item_transcript, and 
+        query_item_pos. If no mapping has been set for one of these query 
+        item types either by explicitly calling add_query_item() or by 
+        providing a resource feature that is in the default lists, that 
+        attribute will not be provided by the corpus module. In effect, that 
+        query item type will not be available for that corpus.
+        
+        These are the default resource features (in order; the first will be 
+        considered first):
+        
+        Query item type Resource features
+        --------------------------------------------------------------------
+        Word            word_label, corpus_label
+        Lemma           lemma_label, word_lemma, corpus_lemma
+        Transcript      transcript_label, word_transcript, corpus_transcript
+        POS_label       pos_label, word_pos, lemma_pos, corpus_pos
+        
+        Returns
+        -------
+        s : str 
+            A string that sets the 
+        
+        """
+        l = []
+        if not hasattr(self, "query_item_word"):
+            for x in ["word_label", "corpus_word"]:
+                if hasattr(self, x):
+                    self.query_item_word = x
+                    break
+        if not hasattr(self, "query_item_lemma"):
+            for x in ["lemma_label", "word_lemma", "corpus_lemma"]:
+                if hasattr(self, x):
+                    self.query_item_lemma = x
+                    break
+        if not hasattr(self, "query_item_transcript"):
+            for x in ["transcript_label", "word_transcript", "corpus_transcript"]:
+                if hasattr(self, x):
+                    self.query_item_transcript = x
+                    break
+        if not hasattr(self, "query_item_pos"):
+            for x in ["pos_label", "word_pos", "lemma_pos", "corpus_pos"]:
+                if hasattr(self, x):
+                    self.query_item_pos = x
+                    break
 
     def verify_corpus(self):
         """
@@ -1656,8 +1754,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
         
         base_variables = type(self).get_class_variables()
 
+        # set_query_items() initializes those class variables that map the 
+        # different query item types to resource features from the class.
+        # In order to make these mappings available in the corpus module,
+        # this is called before the module is written:
+        self.set_query_items()
+
         # all class variables that are defined in this class and which...
-        # - are note stored in the base class
+        # - are not stored in the base class
         # - do not start with an underscore '_'
         # - are not class methods
         # are considered to be part of the database specification and will
@@ -1677,17 +1781,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     variable_name, self.__dict__[variable_name]))
         variable_code = "\n".join(variable_strings)
         
-        lexicon_provides = "[{}]".format(", ".join(self.lexicon_features))
-        corpus_provides = "[]"
-
         self.module_content = self.module_code.format(
                 name=self.name,
                 display_name=self.get_name(),
                 db_name=self.arguments.db_name,
                 url=self.get_url(),
                 variables=variable_code,
-                lexicon_provides=lexicon_provides,
-                corpus_provides=corpus_provides,
                 corpus_code=self.get_corpus_code(),
                 lexicon_code=self.get_lexicon_code(),
                 resource_code=self.get_resource_code())
@@ -1958,7 +2057,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
         
         if self.arguments.use_nltk:
             is_tagged_label = "POS-tagged text corpus"
-            tagging_state = "Part-of-speech tags were assigned using <code>{}</code>, the currently recommended tagger from the Natural Language Toolkit (NLTK). NLTK used data from WordNet for lemmatization.".format(nltk.tag._POS_TAGGER.split("/")[1])
+            try:
+                tagging_state = "Part-of-speech tags were assigned using <code>{}</code>, the currently recommended tagger from the Natural Language Toolkit (NLTK). NLTK used data from WordNet for lemmatization.".format(nltk.tag._POS_TAGGER.split("/")[1])
+            except:
+                tagging_state = "Part-of-speech tags were assigned using the default tagger from the Natural Language Toolkit (NLTK). NLTK used data from WordNet for lemmatization."
         else:
             is_tagged_label = "text corpus"
             tagging_state = "Part-of-speech tags are not available for this corpus."
