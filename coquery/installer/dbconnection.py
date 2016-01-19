@@ -225,8 +225,12 @@ class DBConnection(object):
             if not max_c or x[3] > max_c[3]:
                 max_c = x
             if x[3] >= coverage:
+                print("{}.{}: index length {}".format(table_name, column_name, x[0]))
+                logger.info("{}.{}: index length {}".format(table_name, column_name, x[0]))
                 return int(x[0])
         if max_c:
+            print("{}.{}: index length {}".format(table_name, column_name, max_c[0]))
+            logger.info("{}.{}: index length {}".format(table_name, column_name, max_c[0]))
             return int(max_c[0])
         return None
     
