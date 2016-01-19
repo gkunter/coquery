@@ -62,7 +62,6 @@ class corpus_code():
                 pass
             context.append(' <span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span> '.format(anon_type))
 
-
         return context
 
     def renderer_close_element(self, tag, attributes):
@@ -287,9 +286,9 @@ class BuilderClass(BaseCorpusBuilder):
         'ess_03.xml.pos', 'ess_12.xml.pos', 'ess_02.xml.pos', 
         'ess_04.xml.pos', 'ess_08.xml.pos', 'nov_14.xml.pos', 
         'nov_03.xml.pos', 'nov_07.xml.pos', 'nov_04.xml.pos', 
-        'nov_15.xml.pos', 'nov_13.xml.pos', 'Nov_05.xml.pos', 
+        'nov_15.xml.pos', 'nov_13.xml.pos', 'nov_05.xml.pos', 
         'nov_16.xml.pos', 'nov_11.xml.pos', 'nov_20.xml.pos', 
-        'Nov_06.xml.pos', 'nov_02.xml.pos', 'nov_01.xml.pos', 
+        'nov_06.xml.pos', 'nov_02.xml.pos', 'nov_01.xml.pos', 
         'nov_08.xml.pos', 'nov_09.xml.pos', 'nov_19.xml.pos', 
         'nov_12.xml.pos', 'nov_10.xml.pos', 'nov_18.xml.pos', 
         'nov_17.xml.pos', 'bl_28.xml.pos', 'bl_60.xml.pos', 
@@ -400,7 +399,7 @@ class BuilderClass(BaseCorpusBuilder):
         'adm_23.xml.pos', 'adm_06.xml.pos', 'adm_01.xml.pos', 
         'adm_12.xml.pos', 'adm_25.xml.pos', 'adm_24.xml.pos', 
         'adm_19.xml.pos', 'adm_16.xml.pos', 'adm_08.xml.pos', 
-        'Adm_03.xml.pos', 'adm_14.xml.pos', 'adm_22.xml.pos', 
+        'adm_03.xml.pos', 'adm_14.xml.pos', 'adm_22.xml.pos', 
         'adm_27.xml.pos', 'adm_05.xml.pos', 'adm_29.png.xml.pos', 
         'adm_11.xml.pos', 'adm_10.xml.pos', 'ed_16.xml.pos', 
         'ed_14.xml.pos', 'ed_06.xml.pos', 'ed_25.xml.pos', 
@@ -412,8 +411,6 @@ class BuilderClass(BaseCorpusBuilder):
         'ed_04.xml.pos', 'ed_12.xml.pos', 'ed_13.xml.pos', 
         'ed_05.xml.pos', 'ed_24.xml.pos', 'ed_21.xml.pos', 
         'ed_07.xml.pos', 'ed_08.xml.pos', 'ed_03.xml.pos'] 
-
-
 
     def __init__(self, gui=False, *args):
         """
