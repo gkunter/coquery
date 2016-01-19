@@ -181,31 +181,38 @@ class Session(object):
             if self.query_type == queries.FrequencyQuery and hasattr(self, "_cached_frequency_table"):
                 self.output_object = self._cached_frequency_table
                 return
-            if self.query_type == queries.DistinctQuery and hasattr(self, "_cached_unique_table"):
+            elif self.query_type == queries.DistinctQuery and hasattr(self, "_cached_unique_table"):
                 self.output_object = self._cached_unique_table
                 return
-            if self.query_type == queries.CollocationQuery and hasattr(self, "_cached_collocation_table"):
+            elif self.query_type == queries.CollocationQuery and hasattr(self, "_cached_collocation_table"):
                 self.output_object = self._cached_collocation_table
                 return
-        else:
-            # forget all cached output objects:
-            try:
-                del self._cached_frequency_table
-            except (NameError, AttributeError):
-                pass
-            try:
-                del self._cached_collocation_table
-            except (NameError, AttributeError):
-                pass
-            try:
-                del self._cached_unique_table
-            except (NameError, AttributeError):
-                pass
+
+        # forget all cached output objects:
+        try:
+            del self._cached_frequency_table
+        except (NameError, AttributeError):
+            pass
+        try:
+            del self._cached_collocation_table
+        except (NameError, AttributeError):
+            pass
+        try:
+            del self._cached_unique_table
+        except (NameError, AttributeError):
+            pass
 
         # Recalculate the output object for the current query type:
         self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
+
+        if self.query_type == queries.FrequencyQuery:
+            if ("statistics_relative_frequency" in options.cfg.selected_features
+                or "statistics_entropy" in options.cfg.selected_features):
+                self.output_object["statistics_relative_frequency"] = (self.output_object["coq_frequency"].apply(lambda x: x / self.output_object["coq_frequency"].sum()))
+            if "statistics_entropy" in options.cfg.selected_features:
+                self.output_object["statistics_entropy"] = -self.output_object["statistics_relative_frequency"].apply(lambda x: x * math.log(x, 2)).sum()
 
         # cache the output object for the current query type:
         if self.query_type == queries.FrequencyQuery:

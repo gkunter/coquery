@@ -312,7 +312,7 @@ class TokenQuery(object):
                     if options.cfg.verbose:
                         logger.info(query_string)
                     try:
-                        results = connection.execution_options(stream_results=True).execute(query_string)
+                        results = connection.execution_options(stream_results=True).execute(query_string.replace("%", "%%"))
                     except Exception as e:
                         print(query_string)
                         print(e)
@@ -496,13 +496,6 @@ class TokenQuery(object):
                     df[column] = L[n-1]
                 except IndexError:
                     df[column] = ""
-            elif column == "statistics_entropy":
-                columns = [x for x in df.columns if not x.startswith("coquery_invisible") and not x == column]
-                # get a frequency table for the current data frame:
-                freqs = df.groupby(columns).count().reset_index()
-                # calculate the propabilities of the different results:
-                props = freqs[freqs.columns[-1]].apply(lambda x: x / len(df.index))
-                df[column] = -props.apply(lambda x: x * math.log(x, 2)).sum()
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
@@ -718,11 +711,6 @@ class FrequencyQuery(TokenQuery):
             # group the data frame by the group columns, apply the aggregate
             # functions to each group, and return the aggregated data frame:
             result = cls.do_the_grouping(df, group_columns, aggr_dict)
-
-        if "statistics_relative_frequency" in options.cfg.selected_features:
-            total_frequency = result.coq_frequency.sum()
-            result["statistics_relative_frequency"] = result["coq_frequency"].apply(
-                lambda x: x / total_frequency)
 
         if "statistics_per_million_words" in options.cfg.selected_features:
             corpus_size = resource.get_corpus_size()
