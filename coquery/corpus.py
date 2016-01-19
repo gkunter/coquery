@@ -224,10 +224,17 @@ class BaseResource(object):
         l : list 
             List of strings containing the resource feature names
         """
-        tables = [x.partition("_")[0] for x in dir(cls) if not x.startswith("_") and x.endswith("_table")]
-        tables.append("statistics")
-        tables.append("coquery")
-        return [x for x in dir(cls) if "_" in x and x.partition("_")[0] in tables]
+        # create a list with all split resources:
+        split_features = [cls.split_resource_feature(x) for x in dir(cls) if "_" in x and not x.startswith("_")]
+
+        # create a list of table names from the resource features:
+        tables = [table for _, _, table, feature in split_features if feature == "table"]
+        # add special tables:
+        tables += cls.special_table_list
+        
+        # return the features that can be constructed from the feature name 
+        # and the table:
+        return ["{}_{}".format(table, feature) for _, _, table, feature in split_features if table in tables]
 
     @classmethod
     def get_table_dict(cls):
@@ -422,15 +429,19 @@ class BaseResource(object):
         variables are returned that all resource variable names that are 
         desendants of table 'word'. """
         table_dict = cls.get_table_dict()
-        if "word" not in table_dict:
+        try:
+            _, _, table, _ = cls.split_resource_feature(getattr(cls, QUERY_ITEM_WORD))
+        except AttributeError:
             return []
-        lexicon_tables = cls.get_table_tree("word")
+        if table == "corpus":
+            return []
+        lexicon_tables = cls.get_table_tree(table)
         lexicon_variables = []
         for x in table_dict:
             if x in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
                     if not y.endswith("_id") and not y.startswith("{}_table".format(x)):
-                        lexicon_variables.append((y, type(cls).__getattribute__(cls, y)))    
+                        lexicon_variables.append((y, getattr(cls, y)))    
         return lexicon_variables
     
     @staticmethod
@@ -928,17 +939,9 @@ class SQLResource(BaseResource):
             func, db, table, feature = cls.split_resource_feature(rc_feature)
             if func:
                 if db != cls.db_name:
-                    resource1 = "{}_{}_{}".format(db, table, feature)
+                    resource = "{}_{}_{}".format(db, table, feature)
                 else:
-                    resource1 = "{}_{}".format(table, feature)
-            if rc_feature.startswith("func."):
-                if rc_feature.count(".") > 1:
-                    resource = "_".join(rc_feature.split(".")[1:])
-                    #external, internal = options.cfg.external_links[rc_feature]
-                    #is_lexical = internal.split(".")[-1] in lexicon_features
-                else:
-                    resource = rc_feature.split(".")[-1]
-                    #is_lexical = resource in lexicon_features
+                    resource = "{}_{}".format(table, feature)
 
                 func_counter[resource] += 1
                 fc = func_counter[resource]
