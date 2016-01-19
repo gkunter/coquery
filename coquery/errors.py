@@ -121,7 +121,12 @@ class ModuleIncompleteError(NoTraceException):
     def __init__(self, module, configuration, element_list):
         self.par = ""
         self.error_message = self.error_message.format(module, configuration, ", ".join(element_list))
-    
+
+class UnsupportedQueryItemError(NoTraceException):
+    error_message = "The current corpus does not support query items of the type '{}'. Please change your query string."
+    def __init__(self, query_item_type):
+        self.par = ""
+        self.error_message = self.error_message.format(query_item_type)
 
 class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
