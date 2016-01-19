@@ -213,7 +213,7 @@ class BuilderClass(BaseCorpusBuilder):
     file_filter = "*.xml.pos"
 
     corpus_table = "Corpus"
-    corpus_id = "TokenId"
+    corpus_id = "ID"
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
     corpus_source_id = "SourceId"
