@@ -210,6 +210,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.setup_hooks()
         self.setup_menu_actions()
+        self.setup_icons()
         
         self.change_corpus()
 
@@ -221,7 +222,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setEnabled(False)
         self.ui.menu_Results.setEnabled(False)
         self.ui.menuAnalyse.setEnabled(False)
-        
+        self.ui.action_save_results.setEnabled(False)
+        self.ui.action_copy_to_clipboard.setEnabled(False)
+
         # set splitter stretches:
         self.ui.splitter.setStretchFactor(0,0)
         self.ui.splitter.setStretchFactor(1,1)
@@ -288,7 +291,20 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer = QtCore.QTimer()
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
-        
+
+    def setup_icons(self):
+        self.ui.action_help.setIcon(self.get_icon("life-buoy"))
+        self.ui.action_connection_settings.setIcon(self.get_icon("database"))
+        self.ui.action_settings.setIcon(self.get_icon("wrench-screwdriver"))
+        self.ui.action_build_corpus.setIcon(self.get_icon("sign-add"))
+        self.ui.action_manage_corpus.setIcon(self.get_icon("database_2"))
+        self.ui.action_corpus_documentation.setIcon(self.get_icon("sign-info"))
+        self.ui.action_statistics.setIcon(self.get_icon("monitor"))
+        #self.ui.action_quit.setIcon(self.get_icon("sign-error"))
+        self.ui.action_view_log.setIcon(self.get_icon("calendar-clock"))
+        #self.ui.action_save_results.setIcon(self.get_icon("floppy"))
+        #self.ui.button_browse_file.setIcon(self.get_icon("folder"))
+        self.ui.button_file_options.setIcon(self.get_icon("file-excel"))
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
@@ -303,7 +319,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
         self.ui.action_help.triggered.connect(self.help)
-        self.ui.action_help.setIcon(self.get_icon("life-buoy"))
         self.ui.action_view_log.triggered.connect(self.show_log)
         self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
         
@@ -351,8 +366,20 @@ class CoqueryApp(QtGui.QMainWindow):
             
 
     def show_results_menu(self):
-        
         self.ui.menu_Results.clear()
+
+        # Add Output column entry:
+        self.ui.action_output_options = QtGui.QAction(self.ui.menu_Results)
+        self.ui.menu_Results.addAction(self.ui.action_output_options)
+        if self.ui.options_tree.selectedItems():
+            self.ui.action_output_options.setDisabled(False)
+            self.ui.action_output_options.setText(_translate("MainWindow", "Output column", None))
+            self.ui.menuOutputOptions = self.get_output_column_menu(selection=self.ui.options_tree.selectedItems())
+        else:
+            self.ui.action_output_options.setDisabled(True)
+            self.ui.action_output_options.setText(_translate("MainWindow", "No output column selected.", None))
+            
+        self.ui.menu_Results.addSeparator()
 
         select = self.ui.data_preview.selectionModel()
         if not select:
@@ -364,27 +391,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.menuDisabled.setDisabled(True)
             self.ui.menu_Results.addAction(self.ui.menuDisabled)
             return
-
-        # Add clipboard menu entry:
-        self.ui.action_copy_to_clipboard = QtGui.QAction(self.ui.menu_Results)
-        self.ui.action_copy_to_clipboard.setText(_translate("MainWindow", "&Copy to clipboard", None))
-        self.ui.action_copy_to_clipboard.setShortcut(_translate("MainWindow", "Ctrl+C", None))
-        icon = QtGui.QIcon.fromTheme(_fromUtf8("edit-copy"))
-        self.ui.action_copy_to_clipboard.setIcon(icon)
-        self.ui.action_copy_to_clipboard.triggered.connect(self.copy_to_clipboard)
-        self.ui.menu_Results.addAction(self.ui.action_copy_to_clipboard)
-        self.ui.action_copy_to_clipboard.setDisabled(True)
-
-        # Add save menu entry:
-        self.ui.action_save_results = QtGui.QAction(self.ui.menu_Results)
-        self.ui.action_save_results.setText(_translate("MainWindow", "&Save...", None))
-        self.ui.action_save_results.setShortcut(_translate("MainWindow", "Ctrl+S", None))
-        icon = QtGui.QIcon.fromTheme(_fromUtf8("document-save"))
-        self.ui.action_save_results.setIcon(icon)
-        self.ui.action_save_results.triggered.connect(self.save_results)
-        self.ui.menu_Results.addAction(self.ui.action_save_results)
-
-        self.ui.menu_Results.addSeparator()        
 
         # Check if columns are selected
         if select.selectedColumns():
@@ -785,6 +791,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setEnabled(True)
         self.ui.menu_Results.setEnabled(True)
         self.ui.menuAnalyse.setEnabled(True)
+        self.ui.action_save_results.setEnabled(True)
+        self.ui.action_copy_to_clipboard.setEnabled(True)
+        
         self.table_model.set_header()
 
         self.ui.data_preview.setModel(self.table_model)
@@ -936,6 +945,64 @@ class CoqueryApp(QtGui.QMainWindow):
         # Create an alert in the system taskbar to indicate that the query has 
         # completed:
         options.cfg.app.alert(self, 0)
+        
+    def get_output_column_menu(self, selection=[], point=None):
+        if point:
+            item = self.ui.options_tree.itemAt(point)
+        else:
+            item = selection[0]
+        if not item:
+            return
+
+        # no context menu for etnries from the special tables
+        if str(item.objectName()).startswith("coquery") or str(item.objectName()).startswith("statistics"):
+            return
+
+        # show self.menu about the column
+        menu = QtGui.QMenu("Output column options", self)
+        action = QtGui.QWidgetAction(self)
+        label = QtGui.QLabel("<b>{}</b>".format(item.text(0)), self)
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        action.setDefaultWidget(label)
+        menu.addAction(action)
+        
+        if not str(item.objectName()).endswith("_table"):
+            add_link = QtGui.QAction("&Link to external table", self)
+            add_function = QtGui.QAction("&Add a function", self)
+            remove_link = QtGui.QAction("&Remove link", self)
+            remove_function = QtGui.QAction("&Remove function", self)
+            
+            parent = item.parent()
+
+            if not item._func:
+                view_unique = QtGui.QAction("View &unique values", self)
+                view_unique.triggered.connect(lambda: self.show_unique_values(item))
+                menu.addAction(view_unique)
+                view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
+                menu.addSeparator()
+            
+            if item._func:
+                menu.addAction(remove_function)
+            else:
+                if item._link_by or (parent and parent._link_by):
+                    menu.addAction(remove_link)
+                else:
+                    menu.addAction(add_link)
+                menu.addAction(add_function)
+
+            return menu
+            
+            #menu.popup(self.mapToGlobal(point))
+            #action = self.menu.exec_()
+
+            #if action == add_link:
+                #self.addLink.emit(item)
+            #elif action == add_function:
+                #self.addFunction.emit(item)
+            #elif action in (remove_link, remove_function):
+                #self.removeItem.emit(item)
+
+
         
     def get_column_context_menu(self, selection=[], point=None):
         # show menu about the column
