@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 settings.py is part of Coquery.
 
@@ -13,14 +12,15 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 import sys
 
 from pyqt_compat import QtGui, QtCore
-import settingsUi
+from ui.settingsUi import Ui_SettingsDialog
+
 import options
 
 class Settings(QtGui.QDialog):
     def __init__(self, _options, parent=None):
         super(Settings, self).__init__(parent)
         self._options = _options
-        self.ui = settingsUi.Ui_SettingsDialog()
+        self.ui = Ui_SettingsDialog()
         self.ui.setupUi(self)
         self.ui.check_ignore_punctuation.setEnabled(False)
         self.ui.check_experimental.setEnabled(False)

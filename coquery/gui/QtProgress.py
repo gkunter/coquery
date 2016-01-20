@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 QtProgress.py is part of Coquery.
 
@@ -8,11 +9,13 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from pyqt_compat import QtCore, QtGui
 import time
 import sys, os
+
+from pyqt_compat import QtCore, QtGui
+from ui.errorbox import ErrorBox 
+
 from errors import *
-from errorbox import ErrorBox 
 
 class ProgressIndicator(QtGui.QDialog):
     def __init__(self, FUN, finalize=None, label="", parent=None, *args):

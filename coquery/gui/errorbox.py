@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 errorbox.py is part of Coquery.
 
@@ -13,18 +12,20 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyqt_compat import QtCore, QtGui
-import options
-import errorUi
-from errors import *
 import sys
+
+from pyqt_compat import QtCore, QtGui
+from ui.errorUi import Ui_ErrorDialog
+
+import options
+from errors import *
 
 class ErrorBox(QtGui.QDialog):
     def __init__(self, exc_info, exception, no_trace=False, message="", parent=None):
         
         super(ErrorBox, self).__init__(parent)
         
-        self.ui = errorUi.Ui_ErrorDialog()
+        self.ui = Ui_ErrorDialog()
         self.ui.setupUi(self)
         self.setWindowIcon(options.cfg.icon)
         self.ui.icon_label.setPixmap(QtGui.QIcon.fromTheme("dialog-error").pixmap(32, 32))

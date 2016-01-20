@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 settings.py is part of Coquery.
 
@@ -14,7 +13,8 @@ import codecs
 import pandas as pd
 
 from pyqt_compat import QtCore, QtGui
-import stopwordsUi
+from ui.stopwordsUi import Ui_Stopwords
+
 import queryfilter
 import options
 from defines import *
@@ -50,7 +50,6 @@ class CoqStopwordDelegate(QtGui.QStyledItemDelegate):
         painter.drawText(option.rect, QtCore.Qt.AlignLeft, value)
 
         painter.restore()
-
         
 class CoqAddWord(CoqStopWord):
     def __init__(self, *args):
@@ -110,7 +109,7 @@ class Stopwords(QtGui.QDialog):
     def __init__(self, filename, default=None, parent=None, icon=None):
         super(Stopwords, self).__init__(parent)
         
-        self.ui = stopwordsUi.Ui_Stopwords()
+        self.ui = Ui_Stopwords()
         self.ui.setupUi(self)
         self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
         self.ui.stopword_list.close()

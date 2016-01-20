@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 queryfilter.py is part of Coquery.
 
@@ -16,6 +15,7 @@ import random
 import sys
 
 from pyqt_compat import QtCore, QtGui
+
 import classes
 import options
 

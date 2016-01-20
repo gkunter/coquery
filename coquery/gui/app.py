@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 app.py is part of Coquery.
 
@@ -27,9 +26,9 @@ import __init__
 from session import *
 from defines import *
 from pyqt_compat import QtCore, QtGui, QtHelp
-import QtProgress
 
-import coqueryUi, coqueryCompactUi
+import QtProgress
+import ui.coqueryUi, ui.coqueryCompactUi
 
 import classes
 #import results 
@@ -110,9 +109,9 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
 
         if size.height() < 1024 or size.width() < 1024:
-            self.ui = coqueryCompactUi.Ui_MainWindow()
+            self.ui = ui.coqueryCompactUi.Ui_MainWindow()
         else:
-            self.ui = coqueryUi.Ui_MainWindow()
+            self.ui = ui.coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
         
         self.setup_app()
@@ -304,6 +303,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
         self.ui.action_help.triggered.connect(self.help)
+        self.ui.action_help.setIcon(self.get_icon("life-buoy"))
         self.ui.action_view_log.triggered.connect(self.show_log)
         self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
         
@@ -578,7 +578,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if "picol" in s:
             icon.addFile(os.path.join(sys.path[0], "icons", "picol", "{}.svg".format(s)))
         else:
-            icon.addFile(os.path.join(sys.path[0], "icons", "{}.svg".format(s)))
+            icon.addFile(os.path.join(sys.path[0], "icons", "small-n-flat", "{}.svg".format(s)))
         return icon
 
     def show_query_status(self):
@@ -676,7 +676,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # populate the tree with a root for each table:
         for table in tables:
             root = classes.CoqTreeItem()
-            root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
+            root.setObjectName(ui.coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
             try:
                 label = getattr(self.resource, str("{}_table".format(table)))
@@ -691,7 +691,7 @@ class CoqueryApp(QtGui.QMainWindow):
             # add a leaf for each table variable, in alphabetical order:
             for _, var in sorted([(getattr(self.resource, x), x) for x in table_dict[table]]):
                 leaf = classes.CoqTreeItem()
-                leaf.setObjectName(coqueryUi._fromUtf8(var))
+                leaf.setObjectName(ui.coqueryUi._fromUtf8(var))
                 root.addChild(leaf)
                 label = getattr(self.resource, var)
                 # Add labels if this feature is mapped to a query item type

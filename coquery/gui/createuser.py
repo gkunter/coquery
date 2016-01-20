@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 createuser.py is part of Coquery.
 
@@ -16,7 +15,7 @@ from __future__ import unicode_literals
 import sys
 
 from pyqt_compat import QtCore, QtGui
-import createUserUi
+from ui.createUserUi import Ui_CreateUser
 import options
 
 class CreateUser(QtGui.QDialog):
@@ -24,7 +23,7 @@ class CreateUser(QtGui.QDialog):
         
         super(CreateUser, self).__init__(parent)
         
-        self.ui = createUserUi.Ui_CreateUser()
+        self.ui = Ui_CreateUser()
         self.ui.setupUi(self)
 
         if name:

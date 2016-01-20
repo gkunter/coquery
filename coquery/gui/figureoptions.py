@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 figureoptions.py is part of Coquery.
 
@@ -17,7 +16,8 @@ import seaborn as sns
 import matplotlib as mpl
 
 from pyqt_compat import QtGui, QtCore
-import figureOptionsUi
+from ui.figureOptionsUi import Ui_FigureOptions
+
 import options
 
 class CoqColorItem(QtGui.QListWidgetItem):
@@ -48,7 +48,7 @@ class FigureOptions(QtGui.QDialog):
         
         self.options = default
         self.parent = parent
-        self.ui = figureOptionsUi.Ui_FigureOptions()
+        self.ui = Ui_FigureOptions()
         self.ui.setupUi(self)
         
         # set up labels tab:

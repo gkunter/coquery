@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 csvOptions.py is part of Coquery.
 
@@ -15,7 +14,8 @@ import pandas as pd
 import numpy as np
 
 from pyqt_compat import QtGui, QtCore
-import csvOptionsUi
+from ui.csvOptionsUi import Ui_FileOptions
+
 from errors import *
 import options
 
@@ -69,7 +69,7 @@ class CSVOptions(QtGui.QDialog):
         
         self.file_content = None
         
-        self.ui = csvOptionsUi.Ui_FileOptions()
+        self.ui = Ui_FileOptions()
         self.ui.setupUi(self)
         
         for x in quote_chars:

@@ -14,7 +14,8 @@ from __future__ import unicode_literals
 import sys
 
 from pyqt_compat import QtCore, QtGui
-import logfileUi
+from ui.logfileUi import Ui_logfileDialog
+
 import classes
 import options
 
@@ -23,7 +24,7 @@ class LogfileViewer(QtGui.QDialog):
         
         super(LogfileViewer, self).__init__(parent)
         
-        self.ui = logfileUi.Ui_logfileDialog()
+        self.ui = Ui_logfileDialog()
         self.ui.setupUi(self)
         
         self.log_table = classes.LogTableModel(self)

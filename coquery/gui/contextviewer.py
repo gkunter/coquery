@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 contextview.py is part of Coquery.
 
@@ -17,8 +16,7 @@ import sys
 import os
 
 from pyqt_compat import QtCore, QtGui
-
-import contextViewerUi
+from ui.contextViewerUi import Ui_ContextView
 
 import options
 import sqlwrap
@@ -47,7 +45,7 @@ class ContextView(QtGui.QWidget):
         self.source_id = source_id
         self.token_width = token_width
         
-        self.ui = contextViewerUi.Ui_ContextView()
+        self.ui = Ui_ContextView()
         self.ui.setupUi(self)
         
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
