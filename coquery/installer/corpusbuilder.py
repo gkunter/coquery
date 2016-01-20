@@ -2110,7 +2110,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             yield x
 
 if use_gui:
-    import corpusInstallerUi
+    from ui.corpusInstallerUi import Ui_CorpusInstaller
     import errorbox
     import QtProgress
     from defines import * 
@@ -2135,7 +2135,7 @@ if use_gui:
             
             self.state = None
             
-            self.ui = corpusInstallerUi.Ui_CorpusInstaller()
+            self.ui = Ui_CorpusInstaller()
             self.ui.setupUi(self)
             self.ui.progress_box.hide()
             self.ui.button_input_path.clicked.connect(self.select_path)

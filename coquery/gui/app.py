@@ -1775,9 +1775,9 @@ class CoqueryApp(QtGui.QMainWindow):
         logfile.LogfileViewer.view()
 
     def show_about(self):
-        import aboutUi
+        from ui.aboutUi import Ui_AboutDialog
         dialog = QtGui.QDialog(self)
-        dialog.ui = aboutUi.Ui_AboutDialog()
+        dialog.ui = Ui_AboutDialog()
         dialog.ui.setupUi(dialog)
 
         image = QtGui.QImage(self.logo)

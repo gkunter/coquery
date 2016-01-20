@@ -13,7 +13,7 @@ import time
 import sys, os
 
 from pyqt_compat import QtCore, QtGui
-from ui.errorbox import ErrorBox 
+from errorbox import ErrorBox 
 
 from errors import *
 

@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 """ 
 visualizer.py is part of Coquery.
 
@@ -42,6 +37,11 @@ the current results table in the form of one or more barcharts, and  :mod:`visua
 indicate the position within the corpus for each token in the result table.
 """
 
+
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import sys
 import os
 import collections
@@ -52,6 +52,7 @@ import __init__
 
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
 
 try:
     import seaborn as sns
@@ -59,19 +60,17 @@ except ImportError:
     raise RuntimeError
 
 from pyqt_compat import QtGui, QtCore, pyside
-
-import options
-sys.path.append(os.path.join(sys.path[0], "../gui/"))
-import QtProgress
-import visualizerUi
-from defines import *
-from errors import *
-
-import matplotlib as mpl
 # Tell matplotlib if PySide is being used:
 if pyside:
     mpl.use("Qt4Agg")
     mpl.rcParams["backend.qt4"] = "PySide"
+
+from ui.visualizerUi import Ui_Visualizer
+import QtProgress
+
+import options
+from defines import *
+from errors import *
 
 # import required matplotlib classes
 from matplotlib.figure import Figure
@@ -79,8 +78,6 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backend_bases import key_press_handler
 import matplotlib.pyplot as plt
-
-
 
 #def table_to_tree(table, label="count"):
     #""" Return a tree that contains a tree representation of the table. It

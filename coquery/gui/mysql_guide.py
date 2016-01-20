@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import sys
 
 from pyqt_compat import QtCore, QtGui
-from mysql_guideUi import Ui_mysql_guide
+from ui.mysql_guideUi import Ui_mysql_guide
 
 import options
 

@@ -18,7 +18,7 @@ import sys
 import pandas as pd
 
 from pyqt_compat import QtCore, QtGui
-from uniqueViewerUi import Ui_UniqueViewer
+from ui.uniqueViewerUi import Ui_UniqueViewer
 
 import options
 import errorbox
