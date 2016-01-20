@@ -1119,7 +1119,7 @@ The number of occurrences of each token matching the query string is counted. Th
    </widget>
    <widget class="QMenu" name="menu_Results">
     <property name="title">
-     <string>&amp;Results</string>
+     <string>&amp;Output</string>
     </property>
    </widget>
    <addaction name="menuFile"/>
