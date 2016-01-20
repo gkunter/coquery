@@ -499,17 +499,21 @@ class ConnectionConfiguration(QtGui.QDialog):
                 DB = sqlwrap.SqlDB(
                     Host=hostname,
                     Port=self.ui.port.value(),
+                    Type=SQL_MYSQL,
                     User=str(self.ui.user.text()),
                     connect_timeout=60,
                     Password=str(self.ui.password.text()))
-                DB.Cur.execute("SELECT VERSION()")
-                x = DB.Cur.fetchone()
+                cur = DB.Con.cursor()
+                cur.execute("SELECT VERSION()")
+                x = cur.fetchone()
                 DB.close()
             except SQLInitializationError as e:
                 if "access denied" in str(e).lower():
                     self.accessDenied.emit(e)
                 else:
                     self.noConnection.emit(e)
+            except Exception as e:
+                print(e)
             else:
                 self.connected.emit()
         elif self.ui.radio_sqlite.isChecked():
