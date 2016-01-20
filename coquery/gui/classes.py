@@ -20,7 +20,7 @@ import pandas as pd
 import __init__
 from pyqt_compat import QtCore, QtGui
 import QtProgress
-import ui.errorbox as errorbox
+import errorbox as errorbox
 
 import queryfilter
 import options
