@@ -255,7 +255,8 @@ class DBConnection(object):
     def get_field_type(self, table_name, column_name):
         cur = self.Con().cursor()
         if self.db_type == SQL_MYSQL:
-            self.execute(cur, "SHOW FIELDS FROM %s WHERE Field = '%s'" % (table_name, column_name), override=True)
+            S = "SHOW FIELDS FROM %s WHERE Field = '%s'" % (table_name, column_name)
+            self.execute(cur, S, override=True)
             Results = cur.fetchone()
             try:
                 if isinstance(Results, bytes):
@@ -272,7 +273,9 @@ class DBConnection(object):
         elif self.db_type == SQL_SQLITE:
             S = "PRAGMA table_info({})".format(table_name)
             self.execute(cur, S)
-            for result in cur.fetchall():
+            for row in cur.fetchall():
+                result = dict(zip("cid", "name", "type", "notnull", "dflt_value", "pk"),
+                              row)
                 column = result["name"]
                 data_type = result["type"]
                 not_null = result["notnull"]
@@ -281,7 +284,7 @@ class DBConnection(object):
                         return "{} NOT NULL".format(data_type)
                     else:
                         return str(data_type)
-                    
+
     def get_optimal_field_type(self, table_name, column_name):
         if self.db_type == SQL_SQLITE:
             return self.get_field_type(table_name, column_name)
