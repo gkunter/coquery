@@ -97,6 +97,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.csv_options = None
         self.query_thread = None
         self.last_results_saved = True
+        self.last_connection = None
         self.last_connection_state = None
         self.last_index = None
         self.corpus_manager = None
@@ -1422,7 +1423,7 @@ class CoqueryApp(QtGui.QMainWindow):
         except ValueError:
             raise SQLNoConfigurationError
         else:
-            db = sqlwrap.SqlDB(host, port, db_type, user, password)
+            db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=database)
 
         # Try to estimate the file size:
         try:
@@ -1612,7 +1613,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 state = False
 
         # Only do something if the current connection status has changed:
-        if state != self.last_connection_state:
+        if state != self.last_connection_state or options.cfg.current_server != self.last_connection:
             # Remember the item that has focus:
             active_widget = options.cfg.app.focusWidget()
             
@@ -1636,6 +1637,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.combo_config.removeItem(index)
             self.ui.combo_config.setCurrentIndex(index)
             self.last_connection_state = state
+            self.last_connection = options.cfg.current_server
             self.last_index = index
             # reconnect currentIndexChanged signal:
             self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
