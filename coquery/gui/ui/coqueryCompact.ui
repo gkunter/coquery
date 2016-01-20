@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>778</width>
-    <height>417</height>
+    <height>425</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1051,15 +1051,17 @@ The number of occurrences of each token matching the query string is counted. Th
      <x>0</x>
      <y>0</y>
      <width>778</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>&amp;File</string>
     </property>
-    <addaction name="action_open_input_file"/>
     <addaction name="action_save_results"/>
+    <addaction name="actionCopy_results_to_clipboard"/>
+    <addaction name="separator"/>
+    <addaction name="action_view_log"/>
     <addaction name="separator"/>
     <addaction name="action_quit"/>
    </widget>
@@ -1068,6 +1070,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <string>&amp;Help</string>
     </property>
     <addaction name="action_help"/>
+    <addaction name="action_mysql_server_help"/>
     <addaction name="separator"/>
     <addaction name="action_about_coquery"/>
    </widget>
@@ -1085,10 +1088,9 @@ The number of occurrences of each token matching the query string is counted. Th
     <property name="title">
      <string>&amp;Preferences</string>
     </property>
-    <addaction name="action_mySQL_settings"/>
+    <addaction name="action_connection_settings"/>
     <addaction name="action_settings"/>
     <addaction name="separator"/>
-    <addaction name="action_view_log"/>
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
@@ -1101,14 +1103,6 @@ The number of occurrences of each token matching the query string is counted. Th
      <addaction name="action_percentage_area_plot"/>
      <addaction name="action_stacked_area_plot"/>
      <addaction name="action_line_plot"/>
-    </widget>
-    <widget class="QMenu" name="menuFrequency_maps">
-     <property name="title">
-      <string>Frequency maps</string>
-     </property>
-     <addaction name="action_heat_map"/>
-     <addaction name="action_tree_map"/>
-     <addaction name="action_word_cloud"/>
     </widget>
     <widget class="QMenu" name="menuCorpus_locations">
      <property name="title">
@@ -1125,13 +1119,28 @@ The number of occurrences of each token matching the query string is counted. Th
      <addaction name="action_Stacked_bars"/>
      <addaction name="action_barchart_plot"/>
     </widget>
+    <widget class="QMenu" name="menuFrequency_maps">
+     <property name="title">
+      <string>Frequency maps</string>
+     </property>
+     <addaction name="action_heat_map"/>
+     <addaction name="action_tree_map"/>
+     <addaction name="action_word_cloud"/>
+     <addaction name="action_bubble_chart"/>
+    </widget>
     <addaction name="menuCorpus_locations"/>
     <addaction name="menuFrequencies"/>
     <addaction name="menuTime_data"/>
     <addaction name="menuFrequency_maps"/>
    </widget>
+   <widget class="QMenu" name="menuResults">
+    <property name="title">
+     <string>Results</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
+   <addaction name="menuResults"/>
    <addaction name="menuAnalyse"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHilfe"/>
@@ -1214,7 +1223,7 @@ The number of occurrences of each token matching the query string is counted. Th
     <string>Corpus &amp;statistics</string>
    </property>
   </action>
-  <action name="action_mySQL_settings">
+  <action name="action_connection_settings">
    <property name="icon">
     <iconset theme="server-database">
      <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
@@ -1377,6 +1386,24 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_view_log">
    <property name="text">
     <string>View log...</string>
+   </property>
+  </action>
+  <action name="actionCopy_results_to_clipboard">
+   <property name="icon">
+    <iconset theme="edit-copy"/>
+   </property>
+   <property name="text">
+    <string>Copy results to clipboard...</string>
+   </property>
+  </action>
+  <action name="action_bubble_chart">
+   <property name="text">
+    <string>Bubble chart</string>
+   </property>
+  </action>
+  <action name="action_mysql_server_help">
+   <property name="text">
+    <string>MySQL server guide</string>
    </property>
   </action>
  </widget>

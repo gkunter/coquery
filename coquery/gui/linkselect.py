@@ -12,10 +12,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyqt_compat import QtCore, QtGui
-
 import sys
-import linkselectUi
+
+from pyqt_compat import QtCore, QtGui
+from ui.linkselectUi import Ui_LinkSelect
 
 import options
 from defines import *
@@ -41,7 +41,7 @@ class LinkSelect(QtGui.QDialog):
         super(LinkSelect, self).__init__(parent)
         self.omit_tables = ["coquery", "statistics"]
         self.corpus_omit = corpus_omit
-        self.ui = linkselectUi.Ui_LinkSelect()
+        self.ui = Ui_LinkSelect()
         self.ui.setupUi(self)
         self.ui.label.setText(str(self.ui.label.text()).format(resource_feature=feature))
         self.ui.label_2.setText(str(self.ui.label_2.text()).format(resource_feature=feature))

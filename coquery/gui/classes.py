@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 classes.py is part of Coquery.
 
@@ -21,10 +20,12 @@ import pandas as pd
 import __init__
 from pyqt_compat import QtCore, QtGui
 import QtProgress
+import errorbox as errorbox
+
 import queryfilter
 import options
 import queries
-import errorbox
+
 from errors import *
 from defines import *
 

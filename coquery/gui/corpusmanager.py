@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 corpusmanager.py is part of Coquery.
 
@@ -13,12 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import division
 
-from pyqt_compat import QtCore, QtGui
-import classes
-
 import sys
-import corpusManagerUi
-import corpusbuilder
 import fnmatch
 import os
 import imp
@@ -31,6 +25,12 @@ sys.path.append(os.path.join(sys.path[0], "../installer"))
 import options
 from errors import *
 from defines import *
+
+from pyqt_compat import QtCore, QtGui
+from ui.corpusManagerUi import Ui_corpusManager
+
+import classes
+import corpusbuilder
 
 class CoqAccordionEntry(QtGui.QWidget):
     """ Define a QWidget that can be used as an entry in a accordion list."""
@@ -220,7 +220,7 @@ class CorpusManager(QtGui.QDialog):
 
     def __init__(self, parent=None):
         super(CorpusManager, self).__init__(parent)
-        self.ui = corpusManagerUi.Ui_corpusManager()
+        self.ui = Ui_corpusManager()
         self.ui.setupUi(self)
         try:
             self.resize(options.settings.value("corpusmanager_size"))

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 uniqueviewer.py is part of Coquery.
 
@@ -15,11 +14,11 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
+import sys
 import pandas as pd
 
 from pyqt_compat import QtCore, QtGui
-import uniqueViewerUi
-import sys
+from ui.uniqueViewerUi import Ui_UniqueViewer
 
 import options
 import errorbox
@@ -30,7 +29,7 @@ class UniqueViewer(QtGui.QWidget):
     def __init__(self, rc_feature=None, db_name=None, parent=None):
         super(UniqueViewer, self).__init__(parent)
         
-        self.ui = uniqueViewerUi.Ui_UniqueViewer()
+        self.ui = Ui_UniqueViewer()
         self.ui.setupUi(self)
 
         self.ui.button_details = classes.CoqDetailBox(str("Corpus: {}   Column: {}"))

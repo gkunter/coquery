@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 renamecolumn.py is part of Coquery.
 
@@ -13,12 +12,12 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyqt_compat import QtCore, QtGui
-
 import sys
 import re
 
-import renameColumnUi
+from pyqt_compat import QtCore, QtGui
+from renameColumnUi import Ui_Dialog
+
 import options
 
 def func_regexp(x, s):
@@ -40,7 +39,7 @@ class RenameColumnDialog(QtGui.QDialog):
         
         super(RenameColumnDialog, self).__init__(parent)
 
-        self.ui = renameColumnUi.Ui_Dialog()
+        self.ui = Ui_Dialog()
         self.ui.setupUi(self)
 
 

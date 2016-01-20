@@ -12,11 +12,12 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyqt_compat import QtCore, QtGui
-
 import sys
 import re
-import functionApplyUi
+
+from pyqt_compat import QtCore, QtGui
+from ui.functionApplyUi import Ui_FunctionDialog
+
 import options
 
 def func_regexp(x, s):
@@ -37,7 +38,7 @@ class FunctionDialog(QtGui.QDialog):
     def __init__(self, table, feature, parent=None):
         
         super(FunctionDialog, self).__init__(parent)
-        self.ui = functionApplyUi.Ui_FunctionDialog()
+        self.ui = Ui_FunctionDialog()
         self.ui.setupUi(self)
         try:
             table = str(table)

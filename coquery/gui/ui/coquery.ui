@@ -1035,13 +1035,16 @@ The number of occurrences of each token matching the query string is counted. Th
      <x>0</x>
      <y>0</y>
      <width>1053</width>
-     <height>34</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <addaction name="action_save_results"/>
+    <addaction name="action_copy_to_clipboard"/>
+    <addaction name="separator"/>
     <addaction name="action_view_log"/>
     <addaction name="separator"/>
     <addaction name="action_quit"/>
@@ -1085,13 +1088,6 @@ The number of occurrences of each token matching the query string is counted. Th
      <addaction name="action_stacked_area_plot"/>
      <addaction name="action_line_plot"/>
     </widget>
-    <widget class="QMenu" name="menuCorpus_locations">
-     <property name="title">
-      <string>&amp;Corpus locations</string>
-     </property>
-     <addaction name="action_barcode_plot"/>
-     <addaction name="action_beeswarm_plot"/>
-    </widget>
     <widget class="QMenu" name="menuFrequencies">
      <property name="title">
       <string>&amp;Bar charts</string>
@@ -1109,6 +1105,13 @@ The number of occurrences of each token matching the query string is counted. Th
      <addaction name="action_word_cloud"/>
      <addaction name="action_bubble_chart"/>
     </widget>
+    <widget class="QMenu" name="menuCorpus_locations">
+     <property name="title">
+      <string>&amp;Corpus locations</string>
+     </property>
+     <addaction name="action_barcode_plot"/>
+     <addaction name="action_beeswarm_plot"/>
+    </widget>
     <addaction name="menuCorpus_locations"/>
     <addaction name="menuFrequencies"/>
     <addaction name="menuTime_data"/>
@@ -1116,7 +1119,7 @@ The number of occurrences of each token matching the query string is counted. Th
    </widget>
    <widget class="QMenu" name="menu_Results">
     <property name="title">
-     <string>&amp;Results</string>
+     <string>&amp;Output</string>
     </property>
    </widget>
    <addaction name="menuFile"/>
@@ -1144,18 +1147,6 @@ The number of occurrences of each token matching the query string is counted. Th
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
-   </property>
-  </action>
-  <action name="action_save_results">
-   <property name="icon">
-    <iconset theme="document-save">
-     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Save results...</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+S</string>
    </property>
   </action>
   <action name="action_help">
@@ -1405,6 +1396,26 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_bubble_chart">
    <property name="text">
     <string>&amp;Bubble chart</string>
+   </property>
+  </action>
+  <action name="action_save_results">
+   <property name="icon">
+    <iconset theme="document-save">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Save results...</string>
+   </property>
+  </action>
+  <action name="action_copy_to_clipboard">
+   <property name="icon">
+    <iconset theme="edit-copy">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Copy results to clipboard</string>
    </property>
   </action>
  </widget>

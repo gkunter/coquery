@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 Connectionconfiguration.py is part of Coquery.
 
@@ -20,13 +19,13 @@ import string
 import sys
 
 from pyqt_compat import QtCore, QtGui
-import connectionConfigurationUi
+import QtProgress
+from ui.connectionConfigurationUi import Ui_ConnectionConfig
 
 import sqlwrap
 import options
 from errors import *
 from defines import *
-import QtProgress
 
 def check_valid_host(s):
     """
@@ -118,7 +117,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         self.backup_server = name
         self.config_dict = dict(config_dict)
         
-        self.ui = connectionConfigurationUi.Ui_ConnectionConfig()
+        self.ui = Ui_ConnectionConfig()
         self.ui.setupUi(self)
         
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
