@@ -260,11 +260,14 @@ Value       no return value
         cur = self.Con.cursor()
         cur.execute("START TRANSACTION READ ONLY")
         
-    def get_database_size(self, database):
+    def get_database_size(self, database_name):
         """ Returns the size of the database in bytes."""
-        cur = self.Con.cursor()
-        cur.execute("SELECT data_length+index_length FROM information_schema.tables WHERE table_schema = '{}'".format(database))
-        return cur.fetchone()[0]
+        if self.db_type == SQL_MYSQL:
+            cur = self.Con.cursor()
+            cur.execute("SELECT data_length+index_length FROM information_schema.tables WHERE table_schema = '{}'".format(database_name))
+            return cur.fetchone()[0]
+        elif self.db_type == SQL_SQLITE:
+            return os.path.getsize(self.sqlite_path(database_name))
 
     def drop_database(self, database_name):
         if self.db_type == SQL_MYSQL:
