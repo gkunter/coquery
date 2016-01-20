@@ -318,7 +318,10 @@ class TokenQuery(object):
                         print(e)
                         raise e
                     df = pd.DataFrame(self.string_folder(results))
-                    df.columns = results.keys()
+                    if not len(df.index):
+                        df = pd.DataFrame(columns=results.keys())
+                    else:
+                        df.columns = results.keys()
                     results = None
 
             df = self.insert_static_data(df)
