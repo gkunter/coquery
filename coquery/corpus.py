@@ -611,7 +611,7 @@ class SQLResource(BaseResource):
                 db = self.DB
             else:
                 db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
-        logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
+                logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
         return db
     
     def connect_to_database(self):
@@ -730,7 +730,7 @@ class SQLResource(BaseResource):
         Query.Session.output_order = self.get_select_list(Query)
         return query_string
 
-    def get_context(self, token_id, number_of_tokens, case_sensitive, db_connection):
+    def get_context(self, token_id, origin_id, number_of_tokens, case_sensitive, db_connection):
 
         def get_orth(word_id):
             """ 
@@ -763,15 +763,14 @@ class SQLResource(BaseResource):
 
                     # build the word list:
                     L = []
-                    cur = db_connection.cursor()
                     for x in word_id:
                         # check the word cache:
                         try:
                             L.append(self._word_cache[x])
                         except KeyError:
-                            cur.execute("{}{}".format(S, x))
+                            results = db_connection.execute("{}{}".format(S, x))
                             try:
-                                orth = cur.fetchone()[0]
+                                orth = results.fetchone()[0][0]
                             except IndexError:
                                 # no entry for this word_id -- use default value:
                                 orth = DEFAULT_MISSING_VALUE
@@ -797,15 +796,15 @@ class SQLResource(BaseResource):
 
                 # build the word list:
                 L = []
-                cur = db_connection.cursor()
+                #cur = db_connection.cursor()
                 for x in word_id:
                     # check the word cache:
                     try:
                         L.append(self._word_cache[x])
                     except KeyError:
-                        cur.execute("{}{}".format(S, x))
+                        results = db_connection.execute("{}{}".format(S, x))
                         try:
-                            orth = cur.fetchone()[0]
+                            orth = results.fetchone()[0]
                         except IndexError:
                             # no entry for this word_id -- use default value:
                             orth = "<NA>"
@@ -818,10 +817,6 @@ class SQLResource(BaseResource):
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
         token_id = int(token_id)
-        
-        origin_id = self.corpus.get_source_id(token_id)
-        if not origin_id:
-            origin_id = self.corpus.get_file_id(token_id)
 
         old_verbose = options.cfg.verbose
         options.cfg.verbose = False
@@ -832,8 +827,6 @@ class SQLResource(BaseResource):
         else:
             start = token_id - left_span
 
-        cur = db_connection.cursor()
-
         left_context_words = []
         right_context_words = []
         string_context_words = []
@@ -842,18 +835,19 @@ class SQLResource(BaseResource):
         S = self.corpus.sql_string_get_wordid_in_range(
                 start, 
                 token_id - 1, origin_id)        
-        cur.execute(S)
         
-        left_context_words = get_orth([x for x, in cur])
+        results = db_connection.execute(S)
+        
+        left_context_words = get_orth([x for x, in results])
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
         # Get words in right context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
                 token_id + number_of_tokens + options.cfg.context_right - 1, origin_id)
-        cur.execute(S)
+        results = db_connection.execute(S)
         
-        right_context_words = get_orth([x for x, in cur])
+        right_context_words = get_orth([x for x, in results])
         right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
         if options.cfg.context_mode == CONTEXT_STRING:
@@ -862,8 +856,8 @@ class SQLResource(BaseResource):
                     token_id,
                     token_id + number_of_tokens - 1,
                     origin_id)
-            cur.execute(S)
-            string_context_words = get_orth([x for (x, ) in cur])
+            results = db_connection.execute(S)
+            string_context_words = get_orth([x for (x, ) in results])
 
         options.cfg.verbose = old_verbose
         return (left_context_words, string_context_words, right_context_words)
@@ -963,6 +957,7 @@ class SQLResource(BaseResource):
                     select_list.append("coq_context")
                 elif options.cfg.context_mode == CONTEXT_SENTENCE:
                     select_list.append("coq_context")
+                select_list.append("coquery_invisible_origin_id")
 
         select_list.append("coquery_invisible_corpus_id")
         select_list.append("coquery_invisible_number_of_tokens")
@@ -1997,7 +1992,6 @@ class SQLCorpus(BaseCorpus):
                             else:
                                 final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
 
-
         # add any external feature that is not a function:
         for link, rc_feature in options.cfg.external_links:
             #if link.startswith("func."):
@@ -2042,6 +2036,10 @@ class SQLCorpus(BaseCorpus):
                 final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
             else:
                 final_select.append("coq_{}_1".format(rc_feature))
+
+        # add coquery_invisible_origin_id if a context is requested:
+        if options.cfg.context_left or options.cfg.context_right:
+            final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
 
         # construct the query string from the token query parts:
         query_string = " ".join(query_string_part)

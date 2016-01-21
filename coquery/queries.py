@@ -324,8 +324,8 @@ class TokenQuery(object):
                         df.columns = results.keys()
                     results = None
 
-            df = self.insert_static_data(df)
-            df = self.insert_context(df)
+                df = self.insert_static_data(df)
+                df = self.insert_context(df, connection)
             self.add_output_columns(self.Session)
 
             if not options.cfg.case_sensitive and len(df.index) > 0:
@@ -418,10 +418,12 @@ class TokenQuery(object):
             return n
         return L[n]
     
-    def insert_context(self, df):
+    def insert_context(self, df, connection):
+        print(df.head())
         def insert_kwic(row):
             left, target, right = self.Session.Resource.get_context(
                 row["coquery_invisible_corpus_id"], 
+                row["coquery_invisible_origin_id"],
                 self._current_number_of_tokens, True, connection)
             row["coq_context_left"] = corpus.collapse_words(left)
             row["coq_context_right"] = corpus.collapse_words(right)
@@ -430,6 +432,7 @@ class TokenQuery(object):
         def insert_sentence(row):
             left, target, right = self.Session.Resource.get_context(
                 row["coquery_invisible_corpus_id"], 
+                row["coquery_invisible_origin_id"],
                 self._current_number_of_tokens, True, connection)
             row["coq_context"] = corpus.collapse_words(left + [x.upper() for x in target] + right)
             return row
@@ -439,7 +442,6 @@ class TokenQuery(object):
         if not (options.cfg.context_left or options.cfg.context_right):
             return df
         
-        connection = self.Session.Resource.get_db().Con
         if options.cfg.context_mode == CONTEXT_KWIC:
             df = df.apply(insert_kwic, axis=1)
         elif options.cfg.context_mode == CONTEXT_STRING:
@@ -779,7 +781,7 @@ class StatisticsQuery(TokenQuery):
             return df.append(self.results_frame)
 
 class CollocationQuery(TokenQuery):
-    def insert_context(self, df):
+    def insert_context(self, df, connection):
         return df
     
     #@staticmethod
