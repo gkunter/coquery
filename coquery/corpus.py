@@ -1060,10 +1060,11 @@ class SQLLexicon(BaseLexicon):
         for spec_list, label in [(token.word_specifiers, QUERY_ITEM_WORD),
                                 (token.lemma_specifiers, QUERY_ITEM_LEMMA),
                                 (token.class_specifiers, QUERY_ITEM_POS),
-                                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT)]:
+                                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT),
+                                (token.gloss_specifiers, QUERY_ITEM_GLOSS)]:
             sub_clauses = []
             rc_feature = getattr(self.resource, label, "")
-            if rc_feature and spec_list:
+            if spec_list:
                 target = self.resource.get_field(rc_feature)
                 for spec in spec_list:
                     if spec != "%":
@@ -1107,11 +1108,7 @@ class SQLLexicon(BaseLexicon):
         """ returns a string that may be used to query all word_ids that
         match the token specification."""       
         
-        try:
-            word_feature = getattr(self.resource, QUERY_ITEM_WORD)
-        except AttributeError:
-            raise UnsupportedQueryItemError("Word")
-
+        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
         _, _, table, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(table))
         word_id = getattr(self.resource, "{}_id".format(table))
@@ -1127,6 +1124,9 @@ class SQLLexicon(BaseLexicon):
 
         if token.transcript_specifiers:
             self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_TRANSCRIPT))
+
+        if token.gloss_specifiers:
+            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_GLOSS))
             
         where_string = self.sql_string_get_wordid_list_where(token)
         S = "SELECT {}.{} FROM {} WHERE {}".format(
@@ -1318,6 +1318,16 @@ class SQLCorpus(BaseCorpus):
             return []
 
         where_clauses = []
+        
+        # Make sure that the token contains only those query item types that 
+        # are actually supported by the resource:
+        for spec_list, label, item_type in [(token.word_specifiers, QUERY_ITEM_WORD, "Word"),
+                                (token.lemma_specifiers, QUERY_ITEM_LEMMA, "Lemma"),
+                                (token.class_specifiers, QUERY_ITEM_POS, "Part-of-speech"),
+                                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT, "Transcription"),
+                                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss")]:
+            if spec_list and not hasattr(self.resource, label):
+                raise UnsupportedQueryItemError(item_type)
 
         ##FIXME: This is a hard-coded special case for 'coca'. Ugh. Instead,
         ##it should probably be a check against 'self_joined' or something

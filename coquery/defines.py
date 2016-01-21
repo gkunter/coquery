@@ -29,6 +29,7 @@ QUERY_ITEM_WORD = "query_item_word"
 QUERY_ITEM_LEMMA = "query_item_lemma"
 QUERY_ITEM_TRANSCRIPT = "query_item_transcript"
 QUERY_ITEM_POS = "query_item_pos"
+QUERY_ITEM_GLOSS = "query_item_gloss"
 
 QUERY_MODE_TOKENS = "TOKEN"
 QUERY_MODE_FREQUENCIES = "FREQ"

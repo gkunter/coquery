@@ -721,6 +721,11 @@ class CoqueryApp(QtGui.QMainWindow):
                         label = "{} [POS]".format(label)
                 except AttributeError:
                     pass
+                try:
+                    if var == self.resource.query_item_gloss:
+                        label = "{} [Gloss]".format(label)
+                except AttributeError:
+                    pass
                 leaf.setText(0, label)
                 if label != getattr(self.resource, var):
                     leaf.setIcon(0, self.get_icon("tag"))

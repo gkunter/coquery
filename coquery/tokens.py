@@ -18,6 +18,7 @@ This module defines classes that represent tokens in a query string.
 # word_specifiers     a list of strings that specify word-forms
 # lemma_specifiers    a list of strings that specifies lemmas
 # class_specifiers    a list of strings that specifies part-of-speech
+# gloss_specifiers    a list of strings that specify glosses
 # negated             a boolean flag that indicates negation
 #
 # The method parse() is used to translate the token string into these
@@ -53,6 +54,7 @@ class QueryToken(object):
         self.class_specifiers = []
         self.lemma_specifiers = []
         self.transcript_specifiers = []
+        self.gloss_specifiers = []
         self.negated = False
         if parse:
             self.parse()
@@ -153,6 +155,13 @@ class COCAToken(QueryToken):
         self.class_specifiers = []
         self.lemma_specifiers = []        
         self.transcript_specifiers = []
+        self.gloss_specifiers = []
+
+        word_specification = None
+        lemma_specification = None
+        class_specification = None
+        transcript_specification = None
+        gloss_specification = None
 
         while self.S.startswith(self.NegationChar):
             self.negated = not self.negated
@@ -160,15 +169,19 @@ class COCAToken(QueryToken):
         
         if self.S == "//" or self.S == "[]":
             word_specification = self.S
-            lemma_specification = None
-            class_specification = None
-            transcript_specification = None
         else:
             match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", self.S)
             if not match:
                 match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}", self.S)
 
             word_specification = match.groupdict()["word"]
+            # word specification that begin and end with quotation marks '"'
+            # are considered gloss specifications:
+            if word_specification and re.match('".+"', word_specification):
+                gloss_specification = word_specification
+                word_specification = None
+                gloss_specification = gloss_specification.strip('"')
+
             lemma_specification = match.groupdict()["lemma"]
             transcript_specification = match.groupdict()["trans"]
             try:
@@ -184,6 +197,8 @@ class COCAToken(QueryToken):
             self.lemma_specifiers = [x.strip() for x in lemma_specification.split("|") if x.strip()]
         if class_specification:
             self.class_specifiers = [x.strip() for x in class_specification.split("|") if x.strip()]
+        if gloss_specification:
+            self.gloss_specifiers = [x.strip() for x in gloss_specification.split("|") if x.strip()]
         
         if lemma_specification and not class_specification:
             # check if all elements pass as part-of-speech-tags:
