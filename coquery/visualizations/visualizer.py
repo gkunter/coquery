@@ -9,6 +9,11 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+
 """
 This module provides the base classes required for data visualization:
 
@@ -36,12 +41,6 @@ folder of the Coquery installation. For instance,
 the current results table in the form of one or more barcharts, and  :mod:`visualizations/barcodeplot.py` contains the subclass :class:`BarcodeVisualizer` which draws a barcode plot where vertical lines 
 indicate the position within the corpus for each token in the result table.
 """
-
-
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import sys
 import os
 import collections
@@ -616,7 +615,7 @@ class VisualizerDialog(QtGui.QWidget):
     def __init__(self, parent=None):
         super(VisualizerDialog, self).__init__(parent)
         
-        self.ui = visualizerUi.Ui_Visualizer()
+        self.ui = Ui_Visualizer()
         self.ui.setupUi(self)
         self.ui.progress_bar.setRange(0, 0)
         self.ui.box_visualize.hide()
