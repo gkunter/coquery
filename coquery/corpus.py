@@ -433,8 +433,8 @@ class BaseResource(object):
             _, _, table, _ = cls.split_resource_feature(getattr(cls, QUERY_ITEM_WORD))
         except AttributeError:
             return []
-        if table == "corpus":
-            return []
+        #if table == "corpus":
+            #return []
         lexicon_tables = cls.get_table_tree(table)
         lexicon_variables = []
         for x in table_dict:
@@ -921,7 +921,7 @@ class SQLResource(BaseResource):
                 continue
             if rc_feature.startswith("func"):
                 continue
-            linked_feature = "{}_{}".format(link.db_name, rc_feature)
+            linked_feature = "{}${}".format(link.db_name, rc_feature)
             if cls.is_lexical(link.key_feature):
                 select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
             else:
@@ -1534,14 +1534,14 @@ class SQLCorpus(BaseCorpus):
                 for link, rc_feature in options.cfg.external_links:
                     resource = options.cfg.current_resources[link.resource][0]
                     if link.db_name == db_name:
-                        feature_name = "coq_{}_{}_{}".format(
+                        feature_name = "coq_{}${}_{}".format(
                             link.db_name,
                             rc_feature,
                             number+1)
                         variable_string = "{} AS {}".format(
                             getattr(resource, rc_feature),
                             feature_name)
-                        linking_variable = "{} AS coq_{}_{}_{}".format(
+                        linking_variable = "{} AS coq_{}${}_{}".format(
                             link.feature_name, 
                             link.db_name, link.rc_feature, number +1)
                         column_list.append(variable_string)
@@ -1552,7 +1552,7 @@ class SQLCorpus(BaseCorpus):
                 # construct subquery that joins the external table:
                 columns = ", ".join(set(column_list))
                 alias = "coq_{}_{}".format(db_name, table).upper()
-                S = "INNER JOIN (SELECT {columns} FROM {corpus}.{table}) AS {alias} ON coq_{internal_feature}_{n} = coq_{corpus}_{external_feature}_{n}".format(
+                S = "INNER JOIN (SELECT {columns} FROM {corpus}.{table}) AS {alias} ON coq_{internal_feature}_{n} = coq_{corpus}${external_feature}_{n}".format(
                     columns=columns, n=number+1, 
                     internal_feature=link.key_feature, 
                     corpus=db_name, table=link.table_name, 
@@ -2001,11 +2001,11 @@ class SQLCorpus(BaseCorpus):
                 for i in range(Query.Session.get_max_token_count()):
                     if options.cfg.align_quantified:
                         if i in positions_lexical_items:
-                            final_select.append("coq_{}_{}_{}".format(link.db_name, rc_feature, i+1))
+                            final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
                     else:
-                        final_select.append("coq_{}_{}_{}".format(link.db_name, rc_feature, i+1))
+                        final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
             else:
-                final_select.append("coq_{}_{}_1".format(link.db_name, rc_feature))
+                final_select.append("coq_{}${}_1".format(link.db_name, rc_feature))
 
         # add the corpus features in the preferred order:
         for rc_feature in self.resource.get_preferred_output_order():
