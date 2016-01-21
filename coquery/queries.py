@@ -419,7 +419,6 @@ class TokenQuery(object):
         return L[n]
     
     def insert_context(self, df, connection):
-        print(df.head())
         def insert_kwic(row):
             left, target, right = self.Session.Resource.get_context(
                 row["coquery_invisible_corpus_id"], 
