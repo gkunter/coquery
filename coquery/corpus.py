@@ -433,8 +433,8 @@ class BaseResource(object):
             _, _, table, _ = cls.split_resource_feature(getattr(cls, QUERY_ITEM_WORD))
         except AttributeError:
             return []
-        if table == "corpus":
-            return []
+        #if table == "corpus":
+            #return []
         lexicon_tables = cls.get_table_tree(table)
         lexicon_variables = []
         for x in table_dict:
@@ -611,7 +611,7 @@ class SQLResource(BaseResource):
                 db = self.DB
             else:
                 db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
-        logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
+                logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
         return db
     
     def connect_to_database(self):
@@ -730,7 +730,7 @@ class SQLResource(BaseResource):
         Query.Session.output_order = self.get_select_list(Query)
         return query_string
 
-    def get_context(self, token_id, number_of_tokens, case_sensitive, db_connection):
+    def get_context(self, token_id, origin_id, number_of_tokens, case_sensitive, db_connection):
 
         def get_orth(word_id):
             """ 
@@ -763,15 +763,14 @@ class SQLResource(BaseResource):
 
                     # build the word list:
                     L = []
-                    cur = db_connection.cursor()
                     for x in word_id:
                         # check the word cache:
                         try:
                             L.append(self._word_cache[x])
                         except KeyError:
-                            cur.execute("{}{}".format(S, x))
+                            results = db_connection.execute("{}{}".format(S, x))
                             try:
-                                orth = cur.fetchone()[0]
+                                orth = results.fetchone()[0][0]
                             except IndexError:
                                 # no entry for this word_id -- use default value:
                                 orth = DEFAULT_MISSING_VALUE
@@ -797,15 +796,15 @@ class SQLResource(BaseResource):
 
                 # build the word list:
                 L = []
-                cur = db_connection.cursor()
+                #cur = db_connection.cursor()
                 for x in word_id:
                     # check the word cache:
                     try:
                         L.append(self._word_cache[x])
                     except KeyError:
-                        cur.execute("{}{}".format(S, x))
+                        results = db_connection.execute("{}{}".format(S, x))
                         try:
-                            orth = cur.fetchone()[0]
+                            orth = results.fetchone()[0]
                         except IndexError:
                             # no entry for this word_id -- use default value:
                             orth = "<NA>"
@@ -818,10 +817,6 @@ class SQLResource(BaseResource):
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
         token_id = int(token_id)
-        
-        origin_id = self.corpus.get_source_id(token_id)
-        if not origin_id:
-            origin_id = self.corpus.get_file_id(token_id)
 
         old_verbose = options.cfg.verbose
         options.cfg.verbose = False
@@ -832,8 +827,6 @@ class SQLResource(BaseResource):
         else:
             start = token_id - left_span
 
-        cur = db_connection.cursor()
-
         left_context_words = []
         right_context_words = []
         string_context_words = []
@@ -842,18 +835,19 @@ class SQLResource(BaseResource):
         S = self.corpus.sql_string_get_wordid_in_range(
                 start, 
                 token_id - 1, origin_id)        
-        cur.execute(S)
         
-        left_context_words = get_orth([x for x, in cur])
+        results = db_connection.execute(S)
+        
+        left_context_words = get_orth([x for x, in results])
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
         # Get words in right context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
                 token_id + number_of_tokens + options.cfg.context_right - 1, origin_id)
-        cur.execute(S)
+        results = db_connection.execute(S)
         
-        right_context_words = get_orth([x for x, in cur])
+        right_context_words = get_orth([x for x, in results])
         right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
         if options.cfg.context_mode == CONTEXT_STRING:
@@ -862,8 +856,8 @@ class SQLResource(BaseResource):
                     token_id,
                     token_id + number_of_tokens - 1,
                     origin_id)
-            cur.execute(S)
-            string_context_words = get_orth([x for (x, ) in cur])
+            results = db_connection.execute(S)
+            string_context_words = get_orth([x for (x, ) in results])
 
         options.cfg.verbose = old_verbose
         return (left_context_words, string_context_words, right_context_words)
@@ -927,7 +921,7 @@ class SQLResource(BaseResource):
                 continue
             if rc_feature.startswith("func"):
                 continue
-            linked_feature = "{}_{}".format(link.db_name, rc_feature)
+            linked_feature = "{}${}".format(link.db_name, rc_feature)
             if cls.is_lexical(link.key_feature):
                 select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
             else:
@@ -963,6 +957,7 @@ class SQLResource(BaseResource):
                     select_list.append("coq_context")
                 elif options.cfg.context_mode == CONTEXT_SENTENCE:
                     select_list.append("coq_context")
+                select_list.append("coquery_invisible_origin_id")
 
         select_list.append("coquery_invisible_corpus_id")
         select_list.append("coquery_invisible_number_of_tokens")
@@ -1060,10 +1055,11 @@ class SQLLexicon(BaseLexicon):
         for spec_list, label in [(token.word_specifiers, QUERY_ITEM_WORD),
                                 (token.lemma_specifiers, QUERY_ITEM_LEMMA),
                                 (token.class_specifiers, QUERY_ITEM_POS),
-                                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT)]:
+                                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT),
+                                (token.gloss_specifiers, QUERY_ITEM_GLOSS)]:
             sub_clauses = []
             rc_feature = getattr(self.resource, label, "")
-            if rc_feature and spec_list:
+            if spec_list:
                 target = self.resource.get_field(rc_feature)
                 for spec in spec_list:
                     if spec != "%":
@@ -1107,11 +1103,7 @@ class SQLLexicon(BaseLexicon):
         """ returns a string that may be used to query all word_ids that
         match the token specification."""       
         
-        try:
-            word_feature = getattr(self.resource, QUERY_ITEM_WORD)
-        except AttributeError:
-            raise UnsupportedQueryItemError("Word")
-
+        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
         _, _, table, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(table))
         word_id = getattr(self.resource, "{}_id".format(table))
@@ -1127,6 +1119,9 @@ class SQLLexicon(BaseLexicon):
 
         if token.transcript_specifiers:
             self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_TRANSCRIPT))
+
+        if token.gloss_specifiers:
+            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_GLOSS))
             
         where_string = self.sql_string_get_wordid_list_where(token)
         S = "SELECT {}.{} FROM {} WHERE {}".format(
@@ -1318,6 +1313,16 @@ class SQLCorpus(BaseCorpus):
             return []
 
         where_clauses = []
+        
+        # Make sure that the token contains only those query item types that 
+        # are actually supported by the resource:
+        for spec_list, label, item_type in [(token.word_specifiers, QUERY_ITEM_WORD, "Word"),
+                                (token.lemma_specifiers, QUERY_ITEM_LEMMA, "Lemma"),
+                                (token.class_specifiers, QUERY_ITEM_POS, "Part-of-speech"),
+                                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT, "Transcription"),
+                                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss")]:
+            if spec_list and not hasattr(self.resource, label):
+                raise UnsupportedQueryItemError(item_type)
 
         ##FIXME: This is a hard-coded special case for 'coca'. Ugh. Instead,
         ##it should probably be a check against 'self_joined' or something
@@ -1529,14 +1534,14 @@ class SQLCorpus(BaseCorpus):
                 for link, rc_feature in options.cfg.external_links:
                     resource = options.cfg.current_resources[link.resource][0]
                     if link.db_name == db_name:
-                        feature_name = "coq_{}_{}_{}".format(
+                        feature_name = "coq_{}${}_{}".format(
                             link.db_name,
                             rc_feature,
                             number+1)
                         variable_string = "{} AS {}".format(
                             getattr(resource, rc_feature),
                             feature_name)
-                        linking_variable = "{} AS coq_{}_{}_{}".format(
+                        linking_variable = "{} AS coq_{}${}_{}".format(
                             link.feature_name, 
                             link.db_name, link.rc_feature, number +1)
                         column_list.append(variable_string)
@@ -1547,7 +1552,7 @@ class SQLCorpus(BaseCorpus):
                 # construct subquery that joins the external table:
                 columns = ", ".join(set(column_list))
                 alias = "coq_{}_{}".format(db_name, table).upper()
-                S = "INNER JOIN (SELECT {columns} FROM {corpus}.{table}) AS {alias} ON coq_{internal_feature}_{n} = coq_{corpus}_{external_feature}_{n}".format(
+                S = "INNER JOIN (SELECT {columns} FROM {corpus}.{table}) AS {alias} ON coq_{internal_feature}_{n} = coq_{corpus}${external_feature}_{n}".format(
                     columns=columns, n=number+1, 
                     internal_feature=link.key_feature, 
                     corpus=db_name, table=link.table_name, 
@@ -1987,7 +1992,6 @@ class SQLCorpus(BaseCorpus):
                             else:
                                 final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
 
-
         # add any external feature that is not a function:
         for link, rc_feature in options.cfg.external_links:
             #if link.startswith("func."):
@@ -1997,11 +2001,11 @@ class SQLCorpus(BaseCorpus):
                 for i in range(Query.Session.get_max_token_count()):
                     if options.cfg.align_quantified:
                         if i in positions_lexical_items:
-                            final_select.append("coq_{}_{}_{}".format(link.db_name, rc_feature, i+1))
+                            final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
                     else:
-                        final_select.append("coq_{}_{}_{}".format(link.db_name, rc_feature, i+1))
+                        final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
             else:
-                final_select.append("coq_{}_{}_1".format(link.db_name, rc_feature))
+                final_select.append("coq_{}${}_1".format(link.db_name, rc_feature))
 
         # add the corpus features in the preferred order:
         for rc_feature in self.resource.get_preferred_output_order():
@@ -2032,6 +2036,10 @@ class SQLCorpus(BaseCorpus):
                 final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
             else:
                 final_select.append("coq_{}_1".format(rc_feature))
+
+        # add coquery_invisible_origin_id if a context is requested:
+        if options.cfg.context_left or options.cfg.context_right:
+            final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
 
         # construct the query string from the token query parts:
         query_string = " ".join(query_string_part)

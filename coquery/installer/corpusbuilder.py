@@ -957,7 +957,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         item_type : str 
             One of the string constants from defines.py: 
             QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_TRANSCRIPT,
-            QUERY_ITEM_POS
+            QUERY_ITEM_POS, QUERY_ITEM_GLOSS
             
         rc_feature : str 
             The resource feature that will be used to access the information 
@@ -971,6 +971,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.query_item_transcript = rc_feature
         elif item_type == QUERY_ITEM_POS:
             self.query_item_pos = rc_feature
+        elif item_type == QUERY_ITEM_GLOSS:
+            self.query_item_gloss = rc_feature
 
     def add_time_feature(self, x):
         self._time_features.append(x)
@@ -1653,12 +1655,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
         used when evaluating the respective query item.
 
         Mappings are realized by instanciating the class attributes 
-        query_item_word, query_item_lemma, query_item_transcript, and 
-        query_item_pos. If no mapping has been set for one of these query 
-        item types either by explicitly calling add_query_item() or by 
-        providing a resource feature that is in the default lists, that 
-        attribute will not be provided by the corpus module. In effect, that 
-        query item type will not be available for that corpus.
+        query_item_word, query_item_lemma, query_item_transcript, 
+        query_item_gloss, and query_item_pos. If no mapping has been 
+        set for one of these query item types either by explicitly calling 
+        add_query_item() or by providing a resource feature that is in the 
+        default lists, that attribute will not be provided by the corpus 
+        module. In effect, that query item type will not be available for 
+        that corpus.
         
         These are the default resource features (in order; the first will be 
         considered first):
@@ -1668,7 +1671,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         Word            word_label, corpus_label
         Lemma           lemma_label, word_lemma, corpus_lemma
         Transcript      transcript_label, word_transcript, corpus_transcript
-        POS_label       pos_label, word_pos, lemma_pos, corpus_pos
+        Gloss           gloss_label, word_gloss, lemma_gloss, corpus_gloss
+        POS             pos_label, word_pos, lemma_pos, corpus_pos
         
         Returns
         -------
@@ -1696,6 +1700,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
             for x in ["pos_label", "word_pos", "lemma_pos", "corpus_pos"]:
                 if hasattr(self, x):
                     self.query_item_pos = x
+                    break
+        if not hasattr(self, "query_item_gloss"):
+            for x in ["gloss_label", "word_gloss", 
+                        "lemma_gloss", "corpus_gloss"]:
+                if hasattr(self, x):
+                    self.query_item_gloss = x
                     break
 
     def verify_corpus(self):

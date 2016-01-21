@@ -287,6 +287,20 @@ class Session(object):
         if header.startswith("coq_"):
             header = header.partition("coq_")[2]
 
+        res_prefix = ""
+        
+        # handle external columns:
+        if "$" in header:
+            db_name, header = header.split("$")
+            for x in options.cfg.current_resources:
+                resource, _, _, _ = options.cfg.current_resources[x]
+                if resource.db_name == db_name:
+                    res_prefix = "{}.".format(resource.name)
+                    break
+        else:
+            resource = self.Resource
+            
+
         rc_feature, _, number = header.rpartition("_")
         
         # If there is only one query token, number is set to "" so that no
@@ -300,19 +314,19 @@ class Session(object):
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
                 pass
-            return "{}{}".format(COLUMN_NAMES[rc_feature], number)
+            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
         
         # special treatment of lexicon freatures:
-        if rc_feature in [x for x, _ in self.Resource.get_lexicon_features()]:
+        if rc_feature in [x for x, _ in resource.get_lexicon_features()]:
             try:
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
                 pass
-            return "{}{}".format(self.Resource.__getattribute__(str(rc_feature)), number)
+            return "{}{}{}".format(res_prefix, getattr(resource, str(rc_feature)), number)
 
         # treat any other feature that is provided by the corpus:
         try:
-            return "{}".format(self.Resource.__getattribute__(str(rc_feature)))
+            return "{}{}".format(res_prefix, getattr(resource, str(rc_feature)))
         except AttributeError:
             pass
 
@@ -324,23 +338,24 @@ class Session(object):
         if rc_feature.startswith("func_"):
             func_counter = collections.Counter()
             for res, _, label in options.cfg.selected_functions:
-                resource = res.rpartition(".")[-1]
-                func_counter[resource] += 1
-                fc = func_counter[resource]
+                res = res.rpartition(".")[-1]
+                func_counter[res] += 1
+                fc = func_counter[res]
                 
-                new_name = "func_{}_{}".format(resource, fc)
+                new_name = "func_{}_{}".format(res, fc)
                 if new_name == rc_feature:
-                    column_name = self.Resource.__getattribute__(str(resource))
+                    column_name = getattr(resource, res)
                     function_label = label
                     break
             else:
-                column_name = resource
+                column_name = res
                 function_label = rc_feature
             try:
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
                 pass
-            return str(function_label).replace(column_name, "{}{}".format(column_name, number))
+            return str(function_label).replace(column_name, "{}{}{}".format(
+                res_prefix, column_name, number))
 
         # other features:
         if rc_feature in COLUMN_NAMES:
@@ -348,7 +363,7 @@ class Session(object):
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
                 pass
-            return "{}{}".format(COLUMN_NAMES[rc_feature], number)
+            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
 
         return header
 
