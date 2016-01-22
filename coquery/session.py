@@ -348,7 +348,10 @@ class Session(object):
                     function_label = label
                     break
             else:
-                column_name = res
+                if options.cfg.selected_functions:
+                    column_name = res
+                else:
+                    column_name = "UNKNOWN"
                 function_label = rc_feature
             try:
                 number = self.quantified_number_labels[int(number) - 1]
