@@ -73,9 +73,9 @@ from errors import *
 
 # import required matplotlib classes
 from matplotlib.figure import Figure
+from matplotlib.backend_bases import key_press_handler
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.backend_bases import key_press_handler
 import matplotlib.pyplot as plt
 
 #def table_to_tree(table, label="count"):
@@ -135,11 +135,13 @@ class BaseVisualizer(QtCore.QObject):
     are specified in :func:`draw`. This method is usually called externally 
     by :func:`VisualizerDialog.Plot`. 
     """
+    _plot_frequency = False
 
     def __init__(self, data_model, data_view, parent = None):
         super(BaseVisualizer, self).__init__(parent=parent)
         self._model = None
         self._view = None
+        self._df = None
         self.options = {}
         self.set_data_source(data_model, data_view)
         self.set_defaults()
@@ -148,20 +150,29 @@ class BaseVisualizer(QtCore.QObject):
         self.function = self.draw
 
     def set_defaults(self):
-        if not self.options.get("color_number"):
-            self.options["color_number"] = len(self._levels[-1])
-        if not self.options.get("label_legend_columns", 0):
-            self.options["label_legend_columns"] = 1
-        if not self.options.get("color_palette"):
-            if len(self._levels) == 0:
+        if self._plot_frequency:
+            if not self.options.get("color_number"):
+                self.options["color_number"] = 1
+            if not self.options.get("label_legend_columns", 0):
+                self.options["label_legend_columns"] = 1
+            if not self.options.get("color_palette"):
                 self.options["color_palette"] = "Paired"
                 self.options["color_number"] = 1
-            elif len(self._levels[-1]) in (2, 4, 6):
-                self.options["color_palette"] = "Paired"
-            elif len(self._groupby) == 2:
-                self.options["color_palette"] = "Paired"
-            else:
-                self.options["color_palette"] = "RdPu"
+        else:
+            if not self.options.get("color_number"):
+                self.options["color_number"] = len(self._levels[-1])
+            if not self.options.get("label_legend_columns", 0):
+                self.options["label_legend_columns"] = 1
+            if not self.options.get("color_palette"):
+                if len(self._levels) == 0:
+                    self.options["color_palette"] = "Paired"
+                    self.options["color_number"] = 1
+                elif len(self._levels[-1]) in (2, 4, 6):
+                    self.options["color_palette"] = "Paired"
+                elif len(self._groupby) == 2:
+                    self.options["color_palette"] = "Paired"
+                else:
+                    self.options["color_palette"] = "RdPu"
             
         if not self.options.get("color_palette_values"):
             self.set_palette_values(self.options["color_number"])
@@ -181,6 +192,8 @@ class BaseVisualizer(QtCore.QObject):
                                                                                                                          
     def _validate_layout(func):
         def func_wrapper(self):
+            if self._plot_frequency:
+                return func(self)
             if self._col_wrap:
                 if self._col_wrap > 16:
                     raise VisualizationInvalidLayout
@@ -192,6 +205,12 @@ class BaseVisualizer(QtCore.QObject):
                 raise VisualizationInvalidLayout
             return func(self)
         return func_wrapper
+    
+    def set_data_table(self, df):
+        self._df = df
+        
+    def get_data_table(self):
+        return self._df
     
     @_validate_layout
     def setup_figure(self):
@@ -291,22 +310,27 @@ class BaseVisualizer(QtCore.QObject):
 
         if not options.cfg.main_window.Session:
             raise VisualizationNoDataError
-
         
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()
         column_order = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
-        column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and x != "coq_frequency"]
+        if self._plot_frequency:
+            column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True)]
+        else:
+            column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and x != "coq_frequency"]
 
         column_order.append("coquery_invisible_corpus_id")
 
         try:
             self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
-        except AttributeError:
+        except NameError:
             self._time_columns = []
-            
-        self._table = options.cfg.main_window.Session.data_table[column_order]
-        
+       
+        try:
+            self._table = self._df[column_order]
+        except TypeError:
+            self._table = options.cfg.main_window.Session.data_table[column_order]
+
         self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
         
         # get list of visible rows:
@@ -319,7 +343,8 @@ class BaseVisualizer(QtCore.QObject):
         # how many dimensions the data table has.
 
         self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object]]
-
+        self._number_columns = [x for x in self._table.select_dtypes(include=["int", "float"]).columns if not x.startswith("coquery_invisible")]
+        
         if self.dimensionality:
             self._groupby = self._factor_columns[-self.dimensionality:]
         else:
@@ -358,8 +383,8 @@ class BaseVisualizer(QtCore.QObject):
             print("col_wrap:     ", self._col_wrap)
             print("row_factor:   ", self._row_factor)
             print("time_columns: ", self._time_columns)
-        if not self._groupby:
-            raise VisualizationNoDataError
+        #if not self._groupby:
+            #raise VisualizationNoDataError
 
     def adjust_fonts(self, size):
         """
@@ -691,7 +716,6 @@ class VisualizerDialog(QtGui.QWidget):
             self.canvas.setParent(self.ui.box_visualize)
             self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
             self.canvas.setFocus()
-            self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
 
         if not self.toolbar:
             self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
@@ -703,6 +727,7 @@ class VisualizerDialog(QtGui.QWidget):
             self.ui.navigation_layout.addWidget(self.toolbar)
         else:
             self.toolbar.canvas = self.canvas
+        self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
 
     def remove_matplot(self):
         """ 
@@ -739,8 +764,9 @@ class VisualizerDialog(QtGui.QWidget):
         toolbar. """
         try:
             key_press_handler(event, self.canvas, self.toolbar)
-        except (ValueError, AttributeError) as e:
-            logger.warn("The keypress '{}' could not be handled correctly by the graph library.".format(event.key))
+        except Exception as e:
+            print(e)
+            raise e
             
     def connect_signals(self):
         """ Connect the dataChanged signal of the abstract data table and the 

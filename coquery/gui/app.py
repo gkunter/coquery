@@ -335,6 +335,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_bubble_chart.triggered.connect(
             lambda: self.visualize_data("bubbleplot"))
             
+        self.ui.action_kde_plot.triggered.connect(
+            lambda: self.visualize_data("densityplot"))
+        self.ui.action_ecd_plot.triggered.connect(
+            lambda: self.visualize_data("densityplot", cumulative=True))
+            
         self.ui.action_barchart_plot.triggered.connect(
             lambda: self.visualize_data("barplot"))
         self.ui.action_stacked_barchart_plot.triggered.connect(
@@ -2018,7 +2023,7 @@ class CoqueryApp(QtGui.QMainWindow):
         column = 0
         parent = item.parent()
         
-        response  = functionapply.FunctionDialog.display(
+        response = functionapply.FunctionDialog.display(
             table=str(parent.text(0)),
             feature=str(item.text(0)), parent=self)
         
@@ -2030,7 +2035,7 @@ class CoqueryApp(QtGui.QMainWindow):
             child_func = classes.CoqTreeFuncItem()
             child_func.setObjectName("func.{}".format(item.objectName()))
             child_func.setFunction(func)
-            child_func.rc_feature = item.rc_feature
+            child_func.rc_feature = item.objectName()
             child_func.setText(column, label)
             child_func.setCheckState(column, QtCore.Qt.Checked)
 

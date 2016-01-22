@@ -1035,7 +1035,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <x>0</x>
      <y>0</y>
      <width>1053</width>
-     <height>23</height>
+     <height>34</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1112,10 +1112,18 @@ The number of occurrences of each token matching the query string is counted. Th
      <addaction name="action_barcode_plot"/>
      <addaction name="action_beeswarm_plot"/>
     </widget>
+    <widget class="QMenu" name="menuDensity_plots">
+     <property name="title">
+      <string>Density plots</string>
+     </property>
+     <addaction name="action_kde_plot"/>
+     <addaction name="action_ecd_plot"/>
+    </widget>
     <addaction name="menuCorpus_locations"/>
     <addaction name="menuFrequencies"/>
     <addaction name="menuTime_data"/>
     <addaction name="menuFrequency_maps"/>
+    <addaction name="menuDensity_plots"/>
    </widget>
    <widget class="QMenu" name="menu_Results">
     <property name="title">
@@ -1416,6 +1424,16 @@ The number of occurrences of each token matching the query string is counted. Th
    </property>
    <property name="text">
     <string>Copy results to clipboard</string>
+   </property>
+  </action>
+  <action name="action_kde_plot">
+   <property name="text">
+    <string>Kernel Density Estimate</string>
+   </property>
+  </action>
+  <action name="action_ecd_plot">
+   <property name="text">
+    <string>Estimated cumulative distribution</string>
    </property>
   </action>
  </widget>
