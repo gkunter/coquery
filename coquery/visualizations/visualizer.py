@@ -153,7 +153,7 @@ class BaseVisualizer(QtCore.QObject):
         if self._plot_frequency:
             if not self.options.get("color_number"):
                 self.options["color_number"] = 1
-            if not self.options.get("label_legend_columns", 0):
+            if not self.options.get("label_legend_columns"):
                 self.options["label_legend_columns"] = 1
             if not self.options.get("color_palette"):
                 self.options["color_palette"] = "Paired"
@@ -161,7 +161,7 @@ class BaseVisualizer(QtCore.QObject):
         else:
             if not self.options.get("color_number"):
                 self.options["color_number"] = len(self._levels[-1])
-            if not self.options.get("label_legend_columns", 0):
+            if not self.options.get("label_legend_columns"):
                 self.options["label_legend_columns"] = 1
             if not self.options.get("color_palette"):
                 if len(self._levels) == 0:
@@ -705,6 +705,8 @@ class VisualizerDialog(QtGui.QWidget):
         self.add_matplot()
             
         self.visualizer.draw()
+        self.visualizer.g.fig.tight_layout()
+
         if self.smooth:
             self.spinner.setEnabled(True)
 
