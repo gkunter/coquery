@@ -34,6 +34,25 @@ class Visualizer(vis.BaseVisualizer):
         self._plot_frequency = True
         super(Visualizer, self).__init__(*args, **kwargs)
 
+    def set_defaults(self):
+        self.options["color_palette"] = "Paired"
+        if self._levels:
+            self.options["color_number"] = len(self._levels[-1])
+        else:
+            self.options["color_number"] = 1
+
+        if len(self._number_columns) == 1:
+            if self.cumulative:
+                self.options["label_y_axis"] = "Cumulative probability"
+            else:
+                self.options["label_y_axis"] = "Density"
+            self.options["label_x_axis"] = self._number_columns[-1]
+            if len(self._groupby) == 1:
+                self.options["label_legend"] = self._groupby[-1]
+            
+        super(Visualizer, self).set_defaults()
+
+
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
@@ -41,21 +60,27 @@ class Visualizer(vis.BaseVisualizer):
     def draw(self, **kwargs):
         
         def plot_facet(data, color, **kwargs):
+            colors = dict(zip(
+                self._levels[0],
+                self.options["color_palette_values"]))
             try:
                 if len(self._number_columns) > 1:
                     sns.kdeplot(
                         data[self._number_columns[-2]],
                         data[self._number_columns[-1]],
                         shade=True,
+                        shade_lowest=False,
                         color=color,
                         cumulative=self.cumulative,
                         ax=plt.gca())
                 elif len(self._number_columns) == 1:
-                    sns.kdeplot(data[self._number_columns[-1]],
-                             color=color,
-                             shade=True,
-                             cumulative=self.cumulative,
-                             ax=plt.gca())
+                    if len(self._groupby) == 1:
+                        for x in self._levels[-1]:
+                            sns.kdeplot(data[data[self._groupby[-1]] == x][self._number_columns[-1]],
+                                color=colors[x],
+                                shade=True,
+                                cumulative=self.cumulative,
+                                ax=plt.gca())
             except Exception as e:
                 print(e)
             #ct.plot(kind="area", ax=plt.gca(), stacked=True, color=self.get_palette(), **kwargs)
@@ -63,5 +88,25 @@ class Visualizer(vis.BaseVisualizer):
         self.map_data(plot_facet)
         
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
+
+        category_levels = self._levels[-1]
+        legend_bar = [
+            plt.Rectangle(
+                (0, 0), 1, 1,
+                fc=self.options["color_palette_values"][i], 
+                edgecolor="none") for i, _ in enumerate(category_levels)
+            ]
+        try:
+            print(legend_bar)
+            self.g.fig.get_axes()[-1].legend(
+                legend_bar, category_levels,
+                ncol=self.options["label_legend_columns"],
+                title=self.options["label_legend"], 
+                frameon=True, 
+                framealpha=0.7, 
+                loc="lower left").draggable()
+        except Exception as e:
+            print(e)
+            raise e
         
 logger = logging.getLogger(__init__.NAME)
