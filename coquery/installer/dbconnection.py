@@ -23,11 +23,13 @@ import copy
 from collections import defaultdict
 import sqlite3
 
-import pymysql as mysql
-import pymysql.cursors as mysql_cursors
-
-from defines import *
 import options
+
+if options._use_mysql:
+    import pymysql
+    import pymysql.cursors
+        
+from defines import *
 import logging
 
 verbose = False
@@ -38,6 +40,9 @@ insert_cache = defaultdict(list)
 
 class DBConnection(object):
     def __init__(self, db_user="mysql", db_host="localhost", db_type="mysql", db_port=3306, db_pass="mysql", local_infile=0, encoding="utf8", db_path=""):
+        if db_type == SQL_MYSQL and not options._use_mysql:
+            raise DependencyError("pymysql")
+        
         self.db_type = db_type
         self.db_host = db_host
         self.db_port = db_port
@@ -48,7 +53,7 @@ class DBConnection(object):
         self._encoding = encoding
 
         if db_type == SQL_MYSQL:
-            self._con = mysql.connect(
+            self._con = pymysql.connect(
                 host=db_host, 
                 user=db_user, 
                 passwd=db_pass,
@@ -91,7 +96,7 @@ class DBConnection(object):
                 for x in cur:
                     if x[0] == database_name.split()[0]:
                         return database_name
-            except mysql.ProgrammingError as ex:
+            except pymysql.ProgrammingError as ex:
                 warning.warn(ex)
                 if cur:
                     warning.warn(cur.messages)
@@ -334,7 +339,7 @@ class DBConnection(object):
         """ Obtain all records from table_name that match the column-value
         pairs given in the dict values."""
         if self.db_type == SQL_MYSQL:
-            cur = self.Con().cursor(mysql_cursors.DictCursor)
+            cur = self.Con().cursor(pymysql_cursors.DictCursor)
         elif self.db_type == SQL_SQLITE:
             con = self.Con()
             con.row_factory = sqlite3.Row
