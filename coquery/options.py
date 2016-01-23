@@ -80,6 +80,7 @@ class Options(object):
         self.args.corpora_path = os.path.join(sys.path[0], "corpora")
         self.args.custom_corpora_path = os.path.join(self.args.coquery_home, "corpora")
         self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
+        self.args._use_mysql = True
         
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
@@ -195,9 +196,13 @@ class Options(object):
         # whether a GUI is requested. This parse doesn't raise an argument 
         # error.
         args, unknown = self.parser.parse_known_args()
-        self.args.gui = args.gui
-        
+        if _use_qt:
+            self.args.gui = args.gui
+        else:
+            self.args.gui = False
+            
         self.read_configuration()
+        self.setup_default_connection()
         try:
             if args.corpus:
                 self.args.corpus = args.corpus
@@ -472,6 +477,17 @@ class Options(object):
         
         logger.info("Command line parameters: " + self.args.parameter_string)
         
+    def setup_default_connection(self):
+        """
+        Create a default SQLite connection if no connection has been 
+        configured so far.
+        """
+        if not self.args.current_server:
+            d = {"name": "Default", "type": SQL_SQLITE, "path": ""}
+            self.args.server_configuration[d["name"]] = d
+            self.args.current_server = d["name"]
+            self.args.current_resources = get_available_resources(self.args.current_server)
+
     def read_configuration(self):
         if os.path.exists(self.cfg.config_path):
             logger.info("Using configuration file %s" % self.cfg.config_path)
@@ -971,7 +987,6 @@ def set_current_server(name):
         The name of the MySQL configuration
     """
     global cfg
-    
     cfg.current_server = name
     if name:
         cfg.current_resources = get_available_resources(name)
@@ -1063,6 +1078,7 @@ def get_available_resources(configuration):
                     warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
                     raise e
                 except Exception as e:
+                    print(corpus_name, e)
                     raise e
                 try:
                     d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
@@ -1201,6 +1217,45 @@ def encode_query_string(s):
         str_list.append(s)
     return ",".join(['"{}"'.format(x) for x in str_list])
         
+def has_module(name):
+    """
+    Check if the Python module 'name' is available.
+    
+    Parameters
+    ----------
+    name : str 
+        The name of the Python module, as used in an import instruction.
+        
+    This function uses ideas from this Stack Overflow question:
+    http://stackoverflow.com/questions/14050281/
+        
+    Returns
+    -------
+    b : bool
+        True if the module exists, or False otherwise.
+    """
+
+    if sys.version_info > (3, 3):
+        import importlib
+        return importlib.util.find_spec(name) is not None
+    elif sys.version_info > (2, 7, 99):
+        import importlib
+        return importlib.find_loader(name) is not None
+    else:
+        import pkgutil
+        return pkgutil.find_loader(name) is not None
+
+_recent_python = sys.version_info < (2, 7)
+_use_nltk = has_module("nltk")
+_use_mysql = has_module("pymysql")
+_use_seaborn = has_module("seaborn")
+_use_qt = has_module("PyQt4") or has_module("PySide")
+
+missing_modules = []
+for mod in ["sqlalchemy", "pandas", "numpy"]:
+    if not has_module(mod):
+        missing_modules.append(mod)
+
 try:
     logger = logging.getLogger(__init__.NAME)
 except AttributeError:
