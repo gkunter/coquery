@@ -93,6 +93,14 @@ msg_clear_stopwords = """
 <p>Click <b>Yes</b> if you really want to delete all stop words in the list,
 or <b>No</b> if you want to leave the stop word list unchanged.</p>
 """
+msg_missing_modules = """
+<p><b>Not all required Python modules could be found.</b><p>
+<p>Some of the Python modules that are required to run and use Coquery could 
+not be located on your system. The missing modules are:</p>
+<p><code>{}</code></p>
+<p>Please refer to <a href="http://coquery.org/documentation/">http://coquery.org/documentation</a>
+for instructions how to install the required modules.</p>
+"""
 msg_missing_seaborn_module = """
 <p><b>One of the required Python module could not be loaded.</b></p>
 <p>The Python module called 'seaborn' does not appear to be installed on this 
