@@ -1677,7 +1677,6 @@ class CoqueryApp(QtGui.QMainWindow):
         state : bool
             True if a connection is available, or False otherwise.
         """
-        print(options.cfg.current_server, type(options.cfg.current_server))
         if not options.cfg.current_server:
             state = False
             return False
