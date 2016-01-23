@@ -212,6 +212,10 @@ class ConnectionConfiguration(QtGui.QDialog):
         # exit if no configuration name has been entered:
         if not name:
             return
+        # exit if the configuration name is "Default", because this name is 
+        # reserved:
+        if name == "Default":
+            return
 
         d = self.get_values()
 

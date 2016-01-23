@@ -479,10 +479,9 @@ class Options(object):
         
     def setup_default_connection(self):
         """
-        Create a default SQLite connection if no connection has been 
-        configured so far.
+        Create the default SQLite connection.
         """
-        if not self.args.current_server:
+        if not self.args.current_server or "Default" not in self.args.server_configuration:
             d = {"name": "Default", "type": SQL_SQLITE, "path": ""}
             self.args.server_configuration[d["name"]] = d
             self.args.current_server = d["name"]
