@@ -68,7 +68,7 @@ def main():
 
     check_system()
 
-    from session import *
+    import session
 
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (__init__.NAME, __init__.__version__))
@@ -137,14 +137,14 @@ def main():
     else:
         # Choose the appropriate Session type instance:
         if options.cfg.MODE == QUERY_MODE_STATISTICS:
-            Session = StatisticsSession()
+            Session = session.StatisticsSession()
         else:
             if options.cfg.input_path:
-                Session = SessionInputFile()
+                Session = session.SessionInputFile()
             elif options.cfg.query_list:
-                Session = SessionCommandLine()
+                Session = session.SessionCommandLine()
             else:
-                Session = SessionStdIn()
+                Session = session.SessionStdIn()
         
         # Catch keyboard interruptions:
         try:
