@@ -13,8 +13,13 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 from collections import *
-from sqlalchemy import create_engine
-import pandas as pd
+try:
+    from sqlalchemy import create_engine
+    import pandas as pd
+except ImportError:
+    # Missing dependencies are handled in check_system() from coquery.py,
+    # so we can pass any ImportError here.
+    pass
 
 from errors import *
 import tokens
