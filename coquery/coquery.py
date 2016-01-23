@@ -32,16 +32,10 @@ import time
 import logging
 import logging.handlers
 
+import __init__
 from errors import *
 import options
-
-try:
-    from session import *
-except DependencyError as e:
-    (str(e))
-    sys.exit(1)
-    
-import __init__
+from defines import *
 
 def set_logger(log_file_path):
     logger = logging.getLogger(__init__.NAME)
@@ -52,15 +46,34 @@ def set_logger(log_file_path):
     logging.captureWarnings(True)
     return logger
 
-def main():
-    coquery_home = options.get_home_dir()
+def check_system():
+    if options.missing_modules:
+        if options._use_qt:
+            from pyqt_compat import QtGui, QtCore
+            app = QtGui.QApplication(sys.argv)
+            QtGui.QMessageBox.critical(None, 
+                "Missing dependencies – Coquery",
+                msg_missing_modules.format("<br/>".join([str(x) for x in options.missing_modules])))
+        else:
+            print(msg_missing_modules.format(options.missing_modules))
+        sys.exit(1)
 
+def main():
+    options.process_options()
+    coquery_home = options.get_home_dir()
     logger = set_logger(os.path.join(coquery_home, "coquery.log"))
+
+    if options._use_qt:
+        sys.path.append(os.path.join(sys.path[0], "gui"))
+
+    check_system()
+
+    from session import *
+
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (__init__.NAME, __init__.__version__))
     logger.info("{}".format(sys.version))
     try:
-        options.process_options()
         options.cfg.coquery_home = coquery_home
         options.cfg.log_file_path = os.path.join(coquery_home, "coquery.log")
 
@@ -94,7 +107,6 @@ def main():
     
     # Run the Application GUI?
     if options.cfg.gui:
-        sys.path.append(os.path.join(sys.path[0], "gui"))
         from pyqt_compat import QtGui, QtCore
         from app import CoqueryApp
         from app import GuiHandler
