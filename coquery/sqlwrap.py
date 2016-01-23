@@ -4,18 +4,13 @@ sqlwrap.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is free software; you can redistribute it and/or modify it under the
-terms of the GNU General Public License as published by the Free Software
-Foundation; either version 3 of the License, or (at your option) any later
-version. In addition, a Coquery exception applies as an Additional permission
-under GNU GPL version 3 section 7.
-
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>. For the Coquery 
-exception, see <http://www.coquery.org/license/>.
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
+
 import __init__
 
 import os
@@ -32,16 +27,17 @@ from defines import *
 import options
 
 import sqlite3
-
-try:
+if options._use_mysql:
     import pymysql
     import pymysql.cursors
-except ImportError:
-    raise DependencyError("pymysql")
 
 class SqlDB (object):
     """ A wrapper for MySQL. """
     def __init__(self, Host, Port, Type, User, Password, db_name=None, db_path="", encoding="utf8", connect_timeout=60):
+        
+        if Type == SQL_MYSQL and not options._use_mysql:
+            raise DependencyError("pymysql", "https://github.com/PyMySQL/PyMySQL")
+        
         self.Con = None
         self.db_type = Type
         self.db_name = db_name
