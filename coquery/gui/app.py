@@ -159,10 +159,10 @@ class CoqueryApp(QtGui.QMainWindow):
         QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
         self.ui.cloud_flow = classes.CoqFlowLayout(self.ui.tag_cloud, spacing = 1)
 
-        # add available resources to corpus dropdown box:
-        corpora = [x for x in sorted(options.cfg.current_resources.keys())]
-
-        self.ui.combo_corpus.addItems(corpora)
+        if options.cfg.current_resources:
+            # add available resources to corpus dropdown box:
+            corpora = [x for x in sorted(options.cfg.current_resources.keys())]
+            self.ui.combo_corpus.addItems(corpora)
         
         # chamge the default query string edit to the sublassed edit class:
         self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
@@ -175,7 +175,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.filter_box = classes.QueryFilterBox(self)
         filter_examples = ["Year > 1999", "Gender is m", "Genre in MAG, NEWS", 
                        "Year in 2005-2010", "Year = 2012", "File is b0*"]
-        self.ui.filter_box.edit_tag.setPlaceholderText("e.g. {}".format(random.sample(filter_examples, 1)[0]))
+        self.ui.filter_box.edit_tag.setPlaceholderText("{} {}".format(
+            _translate("MainWindow", "e.g.", None), random.sample(filter_examples, 1)[0]))
 
         self.stopwords_label = str(self.ui.button_stopwords.text())
         self.set_stopword_button()
@@ -280,7 +281,7 @@ class CoqueryApp(QtGui.QMainWindow):
         layout.addWidget(self.ui.status_message)
         layout.addWidget(self.ui.status_progress)
         layout.addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum))        
-        layout.addWidget(QtGui.QLabel("Connection: "))
+        layout.addWidget(QtGui.QLabel(_translate("MainWindow", "Connection: ", None)))
         layout.addWidget(self.ui.combo_config)
 
         self.statusBar().layout().setContentsMargins(0, 0, 0, 0)
@@ -1652,8 +1653,8 @@ class CoqueryApp(QtGui.QMainWindow):
     def change_mysql_configuration(self, name):
         self.ui.combo_config.clear()
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
-        options.set_current_server(str(name))
         if name:
+            options.set_current_server(str(name))
             index = self.ui.combo_config.findText(name)
             self.ui.combo_config.setCurrentIndex(index)
             db_con = options.cfg.server_configuration[name]
@@ -1676,8 +1677,10 @@ class CoqueryApp(QtGui.QMainWindow):
         state : bool
             True if a connection is available, or False otherwise.
         """
-        if options.cfg.current_server == None:
+        print(options.cfg.current_server, type(options.cfg.current_server))
+        if not options.cfg.current_server:
             state = False
+            return False
         else:
             db_con = options.cfg.server_configuration[options.cfg.current_server]
             if db_con["type"] == SQL_MYSQL:
@@ -1868,7 +1871,7 @@ class CoqueryApp(QtGui.QMainWindow):
         dialog.ui.label_pixmap.setAlignment(QtCore.Qt.AlignCenter)
 
         dialog.ui.label_description.setText(
-            str(dialog.ui.label_description.text()).format(version=__init__.__version__, date=__init__.DATE))
+            unicode(dialog.ui.label_description.text()).format(version=__init__.__version__, date=__init__.DATE))
         dialog.exec_()
 
     def setGUIDefaults(self):
