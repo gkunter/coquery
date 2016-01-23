@@ -30,7 +30,11 @@ class GenericException(Exception):
         if hasattr(self, "additional"):
             S = "<p>{}</p><p>{}</p>".format(
                 S, self.additional)
-        logger.error(S)
+        try:
+            logger.error(S)
+        except Exception as e:
+            print(S)
+            print(e)
         return S
 
 class NoTraceException(GenericException):
