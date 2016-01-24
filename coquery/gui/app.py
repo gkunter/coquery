@@ -540,6 +540,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.options_tree.close()
         self.ui.options_list.addWidget(tree)
         self.ui.options_tree = tree
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.ui.options_tree.sizePolicy().hasHeightForWidth())
+        self.ui.options_tree.setSizePolicy(sizePolicy)
+
         return tree
     
     def toggle_frequency_columns(self):
@@ -1492,44 +1498,55 @@ class CoqueryApp(QtGui.QMainWindow):
             True if the corpus was created using the "Build new corpus"
             function, or False otherwise.
         """
-        
-        resource, _, _, module = options.cfg.current_resources[corpus_name]
-        database = resource.db_name
-
         try:
-            host, port, db_type, user, password = options.get_mysql_configuration()
-        except ValueError:
-            raise SQLNoConfigurationError
+            resource, _, _, _ = options.cfg.current_resources[corpus_name]
+        except KeyError:
+            if adhoc_corpus:
+                database = "coq_{}".format(corpus_name.lower())
+            else:
+                database = ""
+            size = FileSize(0)
+            module = ""
         else:
-            db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=database)
+            database = resource.db_name
 
-        # Try to estimate the file size:
-        try:
-            size = FileSize(db.get_database_size(database))
-        except  TypeError:
-            size = FileSize(-1)
+        if database:
+            try:
+                host, port, db_type, user, password = options.get_mysql_configuration()
+            except ValueError:
+                raise SQLNoConfigurationError
+            else:
+                db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=database)
+
+            # Try to estimate the file size:
+            try:
+                size = FileSize(db.get_database_size(database))
+            except  TypeError:
+                size = FileSize(-1)
+                
         response = QtGui.QMessageBox.warning(
             self, "Remove corpus", msg_corpus_remove.format(corpus=corpus_name, size=size), QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
         
         if response == QtGui.QMessageBox.Yes:
             success = True
             self.start_progress_indicator()
-            try:
-                db.drop_database(database)
-            except Exception as e:
-                QtGui.QMessageBox.critical(
-                    self, 
-                    "Database error – Coquery", 
-                    msg_remove_corpus_error.format(corpus=resource.name, code=e), 
-                    QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                success = False
-            try:
-                db.close()
-            except AttributeError as e:
-                pass
+            if database:
+                try:
+                    db.drop_database(database)
+                except Exception as e:
+                    QtGui.QMessageBox.critical(
+                        self, 
+                        "Database error – Coquery", 
+                        msg_remove_corpus_error.format(corpus=resource.name, code=e), 
+                        QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                    success = False
+                try:
+                    db.close()
+                except AttributeError as e:
+                    pass
 
             # Remove the corpus module:
-            if success:
+            if success and module:
                 try:
                     if os.path.exists(module):
                         os.remove(module)
