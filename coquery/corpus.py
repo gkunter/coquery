@@ -85,18 +85,6 @@ class BaseLexicon(object):
     def __init__(self):
         self.resource = None
         
-    def is_part_of_speech(self, pos):
-        """ 
-        DESCRIPTION
-        is_part_of_speech(pos) returns True if the content of the argument
-        pos is considered a valid part-of-speech label for the lexicon. 
-        Otherwise, it returns False.
-        
-        VALUE
-        <type 'bool'>
-        """
-        raise LexiconFeatureUnavailableError("Part-of-speech")
-
     def check_pos_list(self, L):
         """ Returns the number of elements for which 
         Corpus.is_part_of_speech() is True, i.e. the number of
@@ -543,14 +531,6 @@ class BaseCorpus(object):
     def __init__(self):
         self.lexicon = None
         self.resource = None
-        
-    def get_corpus_size(self):
-        """ Return the number of tokens in the corpus, taking the current 
-        filter restrictions into account."""
-        raise CorpusUnsupportedFunctionError
-
-    #def provides_feature(self, x):
-        #return x in self.provides + self.lexicon.provides
 
 class SQLResource(BaseResource):
     def get_operator(self, Token):
@@ -985,19 +965,20 @@ class SQLLexicon(BaseLexicon):
         current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
         rc_feature = getattr(self.resource, QUERY_ITEM_POS)
         _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-        return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+        S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
             getattr(self.resource, "{}_id".format(table)),
             getattr(self.resource, "{}_table".format(table)),
             getattr(self.resource, rc_feature),
             self.resource.get_operator(current_token),
             pos)
+        return S
 
     def is_part_of_speech(self, pos):
         if hasattr(self.resource, QUERY_ITEM_POS):
             db = self.resource.get_db()
             cur = db.Con.cursor()
             cur.execute(self.sql_string_is_part_of_speech(pos))
-            return cur.rowcount > 0
+            return len(cur.fetchall()) > 0
         else:
             raise UnsupportedQueryItemError("Part-of-speech")
     
