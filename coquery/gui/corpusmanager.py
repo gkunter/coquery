@@ -95,7 +95,7 @@ class CoqAccordionEntry(QtGui.QWidget):
             else:
                 self.button_install.setText("Reinstall")
 
-        if installed:
+        if installed or self._adhoc:
             self.button_remove = QtGui.QPushButton(entry_widget)
             self.button_remove.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogDiscardButton))
             entry_widget.header_layout.addWidget(self.button_remove)
