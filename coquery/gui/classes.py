@@ -50,7 +50,7 @@ class CoqDetailBox(QtGui.QWidget):
     """
     clicked = QtCore.Signal(QtGui.QWidget)
     
-    def __init__(self, text, box=None, *args, **kwargs):
+    def __init__(self, text, box=None, alternative=None, *args, **kwargs):
         super(CoqDetailBox, self).__init__(*args, **kwargs)
 
         if not box:
@@ -59,6 +59,7 @@ class CoqDetailBox(QtGui.QWidget):
             self.box.setFrameShadow(QtGui.QFrame.Sunken)
         else:
             self.box = box
+
 
         self.frame = QtGui.QFrame(self)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
@@ -93,6 +94,7 @@ class CoqDetailBox(QtGui.QWidget):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
 
         self._text = text
+        self._alternative = alternative
         self._expanded = False
         self.update()
         self.setText(text)
@@ -110,10 +112,12 @@ class CoqDetailBox(QtGui.QWidget):
 
     def setText(self, text):
         self._text = text
-        self.header.setText(self._text)
         
     def text(self):
         return self._text
+
+    def setExpandedText(self, alternative):
+        self._alternative = alternative
 
     def toggle(self):
         self._expanded = not self._expanded
@@ -123,8 +127,10 @@ class CoqDetailBox(QtGui.QWidget):
         if self._expanded:
             self.box.show()
             self.header.setFlat(False)
+            self.header.setText(self._alternative)
             icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
         else:
+            self.header.setText(self._text)
             try:
                 self.box.hide()
             except RuntimeError:
