@@ -88,6 +88,16 @@ except NameError:
     long = int
 
 
+msg_nltk_error = """
+<p><b>The NLTK tagger or tokenizer failed.</b></p>
+<p>Tagging or tokenizing using NLTK is not available because one of the 
+required components is not installed. The error text generated was:</p>
+<p><code>{}</code></p>
+<p>Please consult the 'Installing NLTK 
+Data' guide on <a href="http://www.nltk.org/data.html">http://www.nltk.org/data.html</a>
+for instructions on how to add the missing components.
+"""
+
 msg_clear_stopwords = """
 <p><b>You have requested to reset the list of stop words.</b></p>
 <p>Click <b>Yes</b> if you really want to delete all stop words in the list,
@@ -340,6 +350,7 @@ class FileSize(long):
         if val < 1:
             # Can't take log(0) in any base.
             i, v = 0, 0
+            exp = 0
         else:
             exp = int(math.log(val,1024))+1
             v = val / math.pow(1024, exp)
