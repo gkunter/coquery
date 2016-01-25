@@ -2155,17 +2155,21 @@ class CorpusClass(object):
 
         tab = options.cfg.main_window.Session.data_table
 
+        def expand_row(x):
+            self.id_list += list(range(x.coquery_invisible_corpus_id, x.end))
+
         # create a list of all token ids that are also listed in the results
         # table:
-        id_list = []
-        #tab = tab[tab.coquery_invisible_origin_id == source_id]
-        #tab["end"] = tab.apply(
-            #lambda x: x["coquery_invisible_corpus_id"] + x["coquery_invisible_number_of_tokens"],
-            #axis=1)
-        #for x in tab.index:
-            #id_list += [y for y in range(
-                #int(tab.loc[x].coquery_invisible_corpus_id), 
-                #int(tab.loc[x].end))]
+        self.id_list = []
+        tab = tab[(tab.coquery_invisible_corpus_id> token_id - 1000) & (
+            tab.coquery_invisible_corpus_id < token_id + 1000 + token_width)]
+        tab["end"] = tab[["coquery_invisible_corpus_id", 
+                          "coquery_invisible_number_of_tokens"]].sum(axis=1)
+
+        # the function expand_row has the side effect that it adds the 
+        # token id range for each row to the list self.id_list
+        tab.apply(expand_row, axis=1)
+        
 
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
@@ -2290,7 +2294,7 @@ class CorpusClass(object):
                 # process the context word:
                 
                 # highlight words that are in the results table:
-                if context_token_id in id_list:
+                if context_token_id in self.id_list:
                     context.append("<span style='{}'; >".format(self.resource.render_token_style))
                 # additional highlight if the word is the target word:
                 if token_id <= context_token_id < token_id + token_width:
@@ -2298,7 +2302,7 @@ class CorpusClass(object):
                 context.append(word)
                 if token_id <= context_token_id < token_id + token_width:
                     context.append("</b>")
-                if context_token_id in id_list:
+                if context_token_id in self.id_list:
                     context.append("</span>")
             
             # process all closing elements:
