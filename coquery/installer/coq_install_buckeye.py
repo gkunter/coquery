@@ -40,7 +40,7 @@ class BuilderClass(BaseCorpusBuilder):
     word_label = "Text"
     word_pos = "POS"
     word_transcript = "Transcript"
-    word_lemmatranscript = "Lemma Transcript"
+    word_lemmatranscript = "Lemma_Transcript"
     
     file_table = "Files"
     file_id = "FileId"
