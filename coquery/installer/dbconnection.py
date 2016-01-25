@@ -339,7 +339,7 @@ class DBConnection(object):
         """ Obtain all records from table_name that match the column-value
         pairs given in the dict values."""
         if self.db_type == SQL_MYSQL:
-            cur = self.Con().cursor(pymysql_cursors.DictCursor)
+            cur = self.Con().cursor(pymysql.cursors.DictCursor)
         elif self.db_type == SQL_SQLITE:
             con = self.Con()
             con.row_factory = sqlite3.Row
