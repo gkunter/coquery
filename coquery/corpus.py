@@ -1453,12 +1453,15 @@ class SQLCorpus(BaseCorpus):
         # create constraint lists:
         sub_list = set([])
         
+        
         if hasattr(self.resource, "corpus_word_id"):
             word_id_column = self.resource.corpus_word_id
         elif hasattr(self.resource, "corpus_word"):
             #word_id_column = self.resource.corpus_word
             word_id_column = self.resource.corpus_id
-        
+        else:
+            word_id_column = None
+            
         where_clauses = self.get_whereclauses(
             current_token, 
             word_id_column,
