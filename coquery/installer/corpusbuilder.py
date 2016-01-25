@@ -1458,7 +1458,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         #print(options.cfg.current_resources)
         #print(self.get_name())
-        resource = options.cfg.current_resources[self.name][0]
+        #resource = options.cfg.current_resources[self.name][0]
         #print(resource.get_corpus_features())
         pass
         #print(self.module_content)
