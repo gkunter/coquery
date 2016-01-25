@@ -1235,7 +1235,7 @@ def has_module(name):
     """
 
     if sys.version_info > (3, 3):
-        import importlib
+        import importlib.util
         return importlib.util.find_spec(name) is not None
     elif sys.version_info > (2, 7, 99):
         import importlib
