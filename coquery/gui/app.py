@@ -1499,7 +1499,7 @@ class CoqueryApp(QtGui.QMainWindow):
             function, or False otherwise.
         """
         try:
-            resource, _, _, _ = options.cfg.current_resources[corpus_name]
+            resource, _, _, module = options.cfg.current_resources[corpus_name]
         except KeyError:
             if adhoc_corpus:
                 database = "coq_{}".format(corpus_name.lower())
@@ -1515,22 +1515,27 @@ class CoqueryApp(QtGui.QMainWindow):
                 host, port, db_type, user, password = options.get_mysql_configuration()
             except ValueError:
                 raise SQLNoConfigurationError
-            else:
-                db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=database)
 
-            # Try to estimate the file size:
             try:
-                size = FileSize(db.get_database_size(database))
-            except  TypeError:
+                db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=database)
+            except:
+                db = None
+            if db:
+                # Try to estimate the file size:
+                try:
+                    size = FileSize(db.get_database_size(database))
+                except TypeError:
+                    size = FileSize(-1)
+            else:
                 size = FileSize(-1)
-                
+
         response = QtGui.QMessageBox.warning(
             self, "Remove corpus", msg_corpus_remove.format(corpus=corpus_name, size=size), QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
         
         if response == QtGui.QMessageBox.Yes:
             success = True
             self.start_progress_indicator()
-            if database:
+            if db:
                 try:
                     db.drop_database(database)
                 except Exception as e:
