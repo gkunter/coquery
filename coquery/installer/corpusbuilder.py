@@ -1506,10 +1506,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             for column in table.columns:
                 try:
-                    ot = self.Con.get_optimal_field_type(table.name, column.name)
+                    ot = self.Con.get_optimal_field_type(table.name, column.name).strip()
                 except TypeError:
                     continue
-                dt = self.Con.get_field_type(table.name, column.name)
+                dt = self.Con.get_field_type(table.name, column.name).strip()
                 if dt.lower() != ot.lower():
                     try:
                         ot = ot.decode("utf-8")
