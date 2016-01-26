@@ -985,12 +985,21 @@ class SQLLexicon(BaseLexicon):
         current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
         rc_feature = getattr(self.resource, QUERY_ITEM_POS)
         _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-        return "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+        if self.DB.db_type == SQL_MYSQL:
+            S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
             getattr(self.resource, "{}_id".format(table)),
             getattr(self.resource, "{}_table".format(table)),
             getattr(self.resource, rc_feature),
             self.resource.get_operator(current_token),
             pos)
+        else:
+            S = "SELECT {} FROM {} WHERE {} {} '{}' COLLATE NOCASE LIMIT 1".format(
+            getattr(self.resource, "{}_id".format(table)),
+            getattr(self.resource, "{}_table".format(table)),
+            getattr(self.resource, rc_feature),
+            self.resource.get_operator(current_token),
+            pos)
+        return S
 
     def is_part_of_speech(self, pos):
         if hasattr(self.resource, QUERY_ITEM_POS):
@@ -1075,7 +1084,10 @@ class SQLLexicon(BaseLexicon):
                         else:
                             S = dummy.S
                         S = S.replace('"', '""')
-                        sub_clauses.append('{} {} "{}"'.format(
+                        format_string = '{} {} "{}"'
+                        if self.resource.DB.db_type == SQL_SQLITE and not options.cfg.case_sensitive:
+                            format_string = '{} {} "{}" COLLATE NOCASE'
+                        sub_clauses.append(format_string.format(
                             target, self.resource.get_operator(dummy), S))
             if sub_clauses:
                 where_clauses.append("({})".format(" OR ".join(sub_clauses)))
@@ -1130,7 +1142,7 @@ class SQLLexicon(BaseLexicon):
             
         where_string = self.sql_string_get_wordid_list_where(token)
         S = "SELECT {}.{} FROM {} WHERE {}".format(
-                word_table, word_id, " ".join(self.table_list), where_string)
+            word_table, word_id, " ".join(self.table_list), where_string)
         return S
 
     def get_matching_wordids(self, token, stopwords=True):
