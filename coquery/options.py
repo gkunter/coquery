@@ -77,8 +77,8 @@ class Options(object):
         self.args.corpus_source_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.expanduser("~")
         self.args.stopwords_file_path = os.path.expanduser("~")
-        self.args.corpora_path = os.path.join(sys.path[0], "corpora")
-        self.args.custom_corpora_path = os.path.join(self.args.coquery_home, "corpora")
+        self.args.connection_path = os.path.join(self.args.coquery_home, "connections")
+        
         self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
         self.args._use_mysql = True
         
@@ -561,15 +561,11 @@ class Options(object):
                             self.args.context_mode = config_file.get("main", "context_mode")
                         except NoOptionError:
                             self.args.context_mode = CONTEXT_KWIC
-                        
                         try:
-                            self.args.corpora_path = config_file.get("main", "corpora_path")
+                            self.args.connection_path = config_file.get("main", "connection_path")
                         except NoOptionError:
                             pass
-                        try:
-                            self.args.custom_corpora_path = config_file.get("main", "custom_corpora_path")
-                        except NoOptionError:
-                            pass
+
                         try:
                             self.args.custom_installer_path = config_file.get("main", "custom_installer_path")
                         except NoOptionError:
@@ -756,9 +752,8 @@ def save_configuration():
         config.set("main", "csv_quote_char", cfg.quote_char)
     config.set("main", "one_by_one", cfg.server_side)
     config.set("main", "context_mode", cfg.context_mode)
-    config.set("main", "corpora_path", cfg.corpora_path)
-    if cfg.custom_corpora_path:
-        config.set("main", "custom_corpora_path", cfg.custom_corpora_path)
+    config.set("main", "connection_path", cfg.connection_path)
+    
     if cfg.custom_installer_path:
         config.set("main", "custom_installer_path", cfg.custom_installer_path)
         
@@ -992,6 +987,14 @@ def set_current_server(name):
     else:
         cfg.current_resources = None
 
+    path = os.path.join(get_home_dir(), "connections", name)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    if cfg.server_configuration[name]["type"] == SQL_SQLITE:
+        path = os.path.join(get_home_dir(), "databases", name)
+        if not os.path.exists(path):
+            os.makedirs(path)
+
 def get_resource_of_database(db_name):
     """
     Get the resource that uses the database.
@@ -1040,50 +1043,47 @@ def get_available_resources(configuration):
     if configuration == None:
         return d
     
-    # corpus modules can reside either in the system-wide path stored in 
-    # cfg.corpora_path, or in the user path cfg.custom_corpora_path:
-    for current_path in [cfg.corpora_path, cfg.custom_corpora_path]:
-        corpus_path = os.path.join(current_path, configuration)
-        if os.path.exists(corpus_path):
-            # add corpus_path to sys.path so that modules can be imported from
-            # that location:
-            old_sys_path = list(sys.path)
-            sys.path.append(os.path.join(corpus_path))
+    corpus_path = os.path.join(cfg.connection_path, configuration)
+    if os.path.exists(corpus_path):
+        # add corpus_path to sys.path so that modules can be imported from
+        # that location:
+        old_sys_path = list(sys.path)
+        sys.path.append(os.path.join(corpus_path))
 
-            # create the directory if it doesn't exist yet: 
-            # cycle through the modules in the corpus path:
-            for module_name in glob.glob(os.path.join(corpus_path, "*.py")):
-                corpus_name, ext = os.path.splitext(os.path.basename(module_name))
-                try:
-                    validate_module(
-                        module_name, 
-                        expected_classes = ["Resource", "Corpus", "Lexicon"],
-                        whitelisted_modules = ["corpus", "__future__"],
-                        allow_if = False,
-                        hash = False)
-                except (ModuleIncompleteError, 
-                        IllegalImportInModuleError, IllegalFunctionInModuleError,
-                        IllegalCodeInModuleError) as e:
-                    warnings.warn(str(e))
-                except SyntaxError as e:
-                    warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-                    continue
-                except IndentationError as e:
-                    warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-                    continue
-                try:
-                    module = importlib.import_module(corpus_name)
-                except SyntaxError as e:
-                    warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-                    raise e
-                except Exception as e:
-                    print(corpus_name, e)
-                    raise e
-                try:
-                    d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
-                except (AttributeError, ImportError) as e:
-                    warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
-            sys.path = old_sys_path
+        # create the directory if it doesn't exist yet: 
+        # cycle through the modules in the corpus path:
+        for module_name in glob.glob(os.path.join(corpus_path, "*.py")):
+            corpus_name, ext = os.path.splitext(os.path.basename(module_name))
+            try:
+                validate_module(
+                    module_name, 
+                    expected_classes = ["Resource", "Corpus", "Lexicon"],
+                    whitelisted_modules = ["corpus", "__future__"],
+                    allow_if = False,
+                    hash = False)
+            except (ModuleIncompleteError, 
+                    IllegalImportInModuleError, IllegalFunctionInModuleError,
+                    IllegalCodeInModuleError) as e:
+                warnings.warn(str(e))
+            except SyntaxError as e:
+                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+                continue
+            except IndentationError as e:
+                warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+                continue
+            try:
+                module = importlib.import_module(corpus_name)
+            except SyntaxError as e:
+                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+                raise e
+            except Exception as e:
+                print(corpus_name, e)
+                raise e
+            try:
+                d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
+            except (AttributeError, ImportError) as e:
+                warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+        sys.path = old_sys_path
     return d
 
 def get_resource(name, configuration):
@@ -1119,7 +1119,7 @@ def get_home_dir(create=True):
     $COQ_HOME/coquery.log               log files
     $COQ_HOME/installer/                additional corpus installers
     $COQ_HOME/adhoc/                    corpus installer for custom text corpora
-    $COQ_HOME/corpora/$MYSQL_CONFIG/    corpus modules installed by the user
+    $COQ_HOME/connections/$MYSQL_CONFIG/ corpus modules installed by the user
     
     The location of $COQ_HOME depends on the operating system:
     
@@ -1152,10 +1152,10 @@ def get_home_dir(create=True):
         if not os.path.exists(os.path.join(coquery_home, "installer")):
             os.makedirs(os.path.join(coquery_home, "installer"))
             
-        # create corpora directory if it doesn't exist yet:
-        if not os.path.exists(os.path.join(coquery_home, "corpora")):
-            os.makedirs(os.path.join(coquery_home, "corpora"))
-
+        # create connection directory if it doesn't exist yet:
+        if not os.path.exists(os.path.join(coquery_home, "connections")):
+            os.makedirs(os.path.join(coquery_home, "connections"))
+    
         # create adhoc directory if it doesn't exist yet:
         if not os.path.exists(os.path.join(coquery_home, "adhoc")):
             os.makedirs(os.path.join(coquery_home, "adhoc"))
