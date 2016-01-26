@@ -620,7 +620,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("-l", help="load source files", action="store_true")
         self.parser.add_argument("-c", help="create database tables", action="store_true")
         self.parser.add_argument("-w", help="write corpus module", action="store_true")
-        self.parser.add_argument("--corpus_path", help="target location of the corpus library (default: $COQUERY_HOME/corpora)", type=str)
         self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
         self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
         self.additional_arguments()
@@ -680,8 +679,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 self.arguments.use_nltk = False
             if not self.arguments.db_name:
                 self.arguments.db_name = self.arguments.name
-            if not self.arguments.corpus_path:
-                self.arguments.corpus_path = options.cfg.corpora_path
             self.name = self.arguments.name
             
     def additional_arguments(self):
@@ -1276,17 +1273,18 @@ class BaseCorpusBuilder(corpus.BaseResource):
         5. Call xml_postprocess_tag(element) for tag actions when leaving
 
         """
-        self.xml_preprocess_tag(element)
+
+        #self.xml_preprocess_tag(element, self._corpus_id+1)
         if element.text:
             self.xml_process_content(element.text)
         if list(element):
             for child in element:
                 self.xml_process_element(child)
-        if element.tail:
-            self.xml_process_tail(element.tail)
-        self.xml_postprocess_tag(element)
+        if element.tail.strip():
+            self.xml_process_tail(element.tail.strip())
+        #self.xml_postprocess_tag(element, self._corpus_id+1)
     
-    def xml_preprocess_tag(self, element):
+    def xml_preprocess_tag(self, element, this_id):
         """ Take any action that is triggered by the tag when entering the 
         element."""
         pass
@@ -1297,10 +1295,41 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def xml_process_tail(self, element):
         pass
     
-    def xml_postprocess_tag(self, element):
+    def xml_postprocess_tag(self, element, this_id):
         """ Take any action that is triggered by the tag when leaving the 
         element."""
         pass
+
+    def tag_token(self, token_id, tag, attributes, op=False, cl=False):
+        """
+        Add a tag to the specified token.
+        
+        Parameters
+        ----------
+        token_id : int 
+            The ID of the token to be tagged 
+        tag : str 
+            The tag type
+        attributes : dict
+            A dictionary containing the attributes for the tag 
+        op, cl: bool 
+            Set 'op' to True if the tag is an opening tag. Set 'cl' to 
+            True if the tag is a closing tag. If neither or both are True, 
+            a ValueError exception is raised.
+        """
+        if (op and cl) or (not op and not cl):
+            raise ValueError
+        if op:
+            tag_type = "open"
+        else:
+            tag_type = "close"
+            
+        self.table(self.tag_table).add(
+            {self.tag_label: "{}".format(tag),
+                self.tag_corpus_id: token_id,
+                self.tag_type: tag_type,
+                self.tag_attribute: ", ".join(
+                    ["{}={}".format(x, attributes[x]) for x in attributes])})
 
     def tag_next_token(self, tag, attributes):
         """ Add an entry to the tag table that marks the next corpus_id.
@@ -1347,7 +1376,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         
         self.table(self.tag_table).add(
             {self.tag_label: "{}".format(tag),
-                self.tag_corpus_id: self._corpus_id,
+                self.tag_corpus_id: self._corpus_id - 1,
                 self.tag_type: "close",
                 self.tag_attribute: ", ".join(
                     ["{}={}".format(x, attributes[x]) for x in attributes])})
@@ -1736,19 +1765,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
         path : str 
             The path to the corpus module.
         """
-        if os.access(options.cfg.corpora_path, os.W_OK|os.X_OK):
-            # If the program has access to the default corpus path 
-            # (a subdirectory of the main source tree), use that path:
-            corpus_path = os.path.join(options.cfg.corpora_path, options.cfg.current_server)
-        else:
-            # Otherwise, use the custom corpus path (usually a subdirectory 
-            # of the user's home).
-            corpus_path = os.path.join(options.cfg.custom_corpora_path, options.cfg.current_server)
-        
-        if not os.path.exists(corpus_path):
-            os.makedirs(corpus_path)
-            
-        return os.path.join(corpus_path, "{}.py".format(self.name))
+        return os.path.join(
+            options.cfg.connection_path, 
+            options.cfg.current_server, 
+            "{}.py".format(self.name))
 
     def build_write_module(self):
         """ Write a Python module with the necessary specifications to the
@@ -1924,10 +1944,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
         - the corpus module
         - the corpus installer in case of adhoc corpora
         """
-        try:
-            self.Con.drop_database(self.arguments.db_name)
-        except:
-            pass
+        if self.arguments.c:
+            try:
+                self.Con.drop_database(self.arguments.db_name)
+            except:
+                pass
 
         path = self.get_module_path(self.arguments.name)
         try:
@@ -2361,6 +2382,7 @@ if options._use_qt:
         def get_arguments_from_gui(self):
             namespace = argparse.Namespace()
             namespace.verbose = False
+            namespace.use_nltk = False
             
             if self.ui.radio_only_module.isChecked():
                 namespace.o = False
@@ -2390,7 +2412,6 @@ if options._use_qt:
             except ValueError:
                 raise SQLNoConfigurationError
             namespace.current_server = options.cfg.current_server
-            namespace.corpus_path = os.path.join(sys.path[0], "corpora/", namespace.current_server)
             
             return namespace
 
