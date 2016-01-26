@@ -72,7 +72,7 @@ import importlib
 import warnings
 import time
 
-import dbconnection
+import sqlwrap
 import argparse
 import re
 import time
@@ -279,6 +279,9 @@ class Table(object):
         self._connection = None
         self._max_cache = 0
 
+    def setDB(self, DB):
+        self._DB = DB
+
     @property
     def name(self):
         return self._name
@@ -287,7 +290,7 @@ class Table(object):
     def name(self, s):
         self._name = s
 
-    def commit(self, db_connector, strange_check=False):
+    def commit(self, strange_check=False):
         """
         Commit the table content to the data base.
         
@@ -307,8 +310,12 @@ class Table(object):
                 fields = [self.primary.name] + self._col_names
             else:
                 fields = self._col_names
+            if DB.db_type == SQL_MYSQL:
+                placeholder = "%s"
+            else:
+                placeholder = "?"
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self._name, ", ".join(fields), ", ".join(["%s"] * len(fields)))
+                self._name, ", ".join(fields), ", ".join([placeholder] * len(fields)))
             data = []
             new_keys = []
             # build a list of all new entries, i.e. those for which the value
@@ -327,8 +334,10 @@ class Table(object):
                     new_keys.append(row)
 
             if data: 
+                print(self._DB)
+                print(sql_string)
                 try:
-                    db_connector.executemany(sql_string, data)
+                    self._DB.executemany(sql_string, data)
                 except TypeError as e:
                     warnings.warn(sql_string)
                     warnings.warn(str(e))
@@ -357,8 +366,7 @@ class Table(object):
         """
         #print("add_cache", self.name)
         #print(self._add_cache)
-        if not self._connection:
-            return
+
         if self._add_cache:
             if self.primary.name not in self._col_names:
                 fields = [self.primary.name] + self._col_names
@@ -378,7 +386,7 @@ class Table(object):
 
             if data: 
                 try:
-                    self._connection.executemany(sql_string, data)
+                    self._DB.executemany(sql_string, data)
                 except TypeError as e:
                     warnings.warn(sql_string)
                     warnings.warn(str(e))
@@ -389,7 +397,7 @@ class Table(object):
                     warnings.warn(str(e))
                     raise e
             self._add_cache = {}
-            self._connection.commit()
+            self._DB.commit()
     
     def _add_next_with_primary(self, row):
         """ 
@@ -709,7 +717,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             return
 
         for table in self._new_tables:
-            self._new_tables[table].commit(self.Con, strange_check=True)
+            self._new_tables[table].commit(strange_check=True)
 
         if self._corpus_buffer:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
@@ -717,8 +725,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             data = [list(row.values()) for row in self._corpus_buffer]
             if data: 
                 try:
-                    self.Con.executemany(sql_string, tuple(data))
-                    self.Con.commit()
+                    self.DB.executemany(sql_string, tuple(data))
                 except TypeError as e:
                     print(e)
                     warnings.warn(sql_string)
@@ -726,7 +733,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     raise(e)
             self._corpus_buffer = []        
             
-        self.Con.commit()
+        self.DB.commit()
 
     def create_table_description(self, table_name, column_list):
         """
@@ -800,7 +807,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         :func:``create_table_description``).
         """
         
-        self.Con.start_transaction()
+        self.DB.start_transaction()
         self.add_tag_table()
 
         # initialize progress bars:
@@ -809,15 +816,16 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
 
         for i, current_table in enumerate(self._new_tables):
-            if not self.Con.has_table(current_table):
-                self.Con.create_table(
+            self._new_tables[current_table].setDB(self.DB)
+            if not self.DB.has_table(current_table):
+                self.DB.create_table(
                     current_table, 
                     self._new_tables[current_table].get_create_string(self.arguments.db_type))
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
             if self.interrupted:
                 return
-        self.Con.commit()
+        self.DB.commit()
 
     @classmethod
     def get_file_list(cls, path, file_filter):
@@ -1435,7 +1443,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         for i, file_name in enumerate(self._file_list):
             if self.interrupted:
                 return
-            if not self.Con.find(self.file_table, {self.file_path: file_name}):
+            if not self.DB.find(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
                 self.process_file(file_name)
@@ -1498,7 +1506,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
             
         column_count = 0
-        self.Con.start_transaction()
+        self.DB.start_transaction()
         for table_name in self._new_tables:
             table = self._new_tables[table_name]
             if self.interrupted:
@@ -1506,10 +1514,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             for column in table.columns:
                 try:
-                    ot = self.Con.get_optimal_field_type(table.name, column.name)
+                    ot = self.DB.get_optimal_field_type(table.name, column.name)
                 except TypeError:
                     continue
-                dt = self.Con.get_field_type(table.name, column.name)
+                dt = self.DB.get_field_type(table.name, column.name)
                 if dt.lower() != ot.lower():
                     try:
                         ot = ot.decode("utf-8")
@@ -1518,7 +1526,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     self.logger.info("Optimising column {}.{} from {} to {}".format(
                         table.name, column.name, dt, ot))
                     try:
-                        self.Con.modify_field_type(table.name, column.name, ot)
+                        self.DB.modify_field_type(table.name, column.name, ot)
                     except Exception as e:
                         print(e)
                         self.logger.warning(e)
@@ -1531,7 +1539,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         if self.interrupted:
             return
-        self.Con.commit()
+        self.DB.commit()
         
     def add_index_to_blocklist(self, index):
         self._blocklist.add(index)
@@ -1568,13 +1576,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
 
         index_count = 0
-        self.Con.start_transaction()
+        self.DB.start_transaction()
         i = 0
         for table, column in index_list:
             if self.interrupted:
                 return
 
-            if not self.Con.has_index(table, column):
+            if not self.DB.has_index(table, column):
                 self.logger.info("Creating index {} on table '{}'".format(
                     column, table))
                 try:
@@ -1585,11 +1593,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         if this_column.index_length:
                             length = this_column.index_length
                         else:
-                            length = self.Con.get_index_length(table, column)
+                            length = self.DB.get_index_length(table, column)
                     else:
                         length = None
 
-                    self.Con.create_index(table, column, [column], index_length=length)
+                    self.DB.create_index(table, column, [column], index_length=length)
                 except Exception as e:
                     print(e)
                     self.logger.warning(e)
@@ -1601,7 +1609,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self.interrupted:
             return
 
-        self.Con.commit()
+        self.DB.commit()
 
     @staticmethod
     def get_class_variables():
@@ -1693,11 +1701,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
             descriptions exist, or False otherwise.
         """
         no_fail = True
-        if not self.Con.has_database(self.arguments.db_name):
+        if not self.DB.has_database(self.arguments.db_name):
             no_fail = False
             self.logger.warning("Database {} not found.".format(self.arguments.db_name))
         for x in self.table_description:
-            if not self.Con.has_table(x):
+            if not self.DB.has_table(x):
                 self.logger.warning("Table {} not found.".format(x))
                 no_fail = False
         return no_fail
@@ -1810,26 +1818,27 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def setup_db(self):
         """ Create a connection to the server, and creates the database if
         necessary."""
-        dbconnection.verbose = self.arguments.verbose
-        dbconnection.logger = self.logger
-        self.Con = dbconnection.DBConnection(
-            db_host=self.arguments.db_host,
-            db_user=self.arguments.db_user,
-            db_type=self.arguments.db_type,
-            db_pass=self.arguments.db_password,
-            db_port=self.arguments.db_port,
+        self.DB = sqlwrap.SqlDB(
+            Host=self.arguments.db_host,
+            Port=self.arguments.db_port,
+            Type=self.arguments.db_type,
+            User=self.arguments.db_user,
+            Password=self.arguments.db_password,
+            db_name=self.arguments.db_name,
             local_infile=1)
-        if self.Con.has_database(self.arguments.db_name) and self.arguments.c:
-            self.Con.drop_database(self.arguments.db_name)
+        
+        if self.DB.has_database(self.arguments.db_name) and self.arguments.c:
+            self.DB.drop_database(self.arguments.db_name)
         if self.arguments.c:
-            self.Con.create_database(self.arguments.db_name)
-        self.Con.use_database(self.arguments.db_name)
+            self.DB.create_database(self.arguments.db_name)
+        self.DB.use_database(self.arguments.db_name)
 
         if self.arguments.db_type == SQL_MYSQL:
-            cursor = self.Con.Con().cursor()
-            self.Con.execute(cursor, "SET autocommit=0")
-            self.Con.execute(cursor, "SET unique_checks=0")
-            self.Con.execute(cursor, "SET foreign_key_checks=0")
+            self.DB.set_variable("NAMES", self.arguments.encoding)
+            self.DB.set_variable("CHARACTER SET", self.arguments.encoding)
+            self.DB.set_variable("autocommit", 0)
+            self.DB.set_variable("unique_checks", 0)
+            self.DB.set_variable("foreign_key_checks", 0)
 
     def add_building_stage(self, stage):
         """ The parameter stage is a function that will be executed
@@ -1928,7 +1937,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         - the corpus installer in case of adhoc corpora
         """
         try:
-            self.Con.drop_database(self.arguments.db_name)
+            self.DB.drop_database(self.arguments.db_name)
         except:
             pass
 
@@ -1952,7 +1961,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.logger.info("--- Interrupted (after %.3f seconds) ---" % (time.time() - self.start_time))
         else:
             self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
-        self.Con.close()
+        self.DB.close()
 
     def build(self):
         """ 
@@ -2546,9 +2555,13 @@ if options._use_qt:
                     db_host, db_port, db_type, db_user, db_password = options.get_mysql_configuration()
                 except ValueError:
                     raise SQLNoConfigurationError
-                Con = dbconnection.DBConnection(
-                    db_user=db_user, db_host=db_host, db_type=db_type, db_port=db_port, db_pass=db_password)
-                db_exists = Con.has_database("coq_{}".format(str(self.ui.corpus_name.text()).lower()))
+                DB = sqlwrap.SqlDB(
+                    Host=self.arguments.db_host,
+                    Port=self.arguments.db_port,
+                    Type=self.arguments.db_type,
+                    User=self.arguments.db_user,
+                    Password=self.arguments.db_password)
+                db_exists = DB.has_database("coq_{}".format(str(self.ui.corpus_name.text()).lower()))
                 # regardless of whether only the module or the whole corpus
                 # is requested, the corpus needs a name:
                 if not str(self.ui.corpus_name.text()):
