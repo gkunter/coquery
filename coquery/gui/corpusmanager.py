@@ -18,9 +18,8 @@ import os
 import imp
 import logging
 
-sys.path.append(os.path.join(sys.path[0], ".."))
 import __init__
-sys.path.append(os.path.join(sys.path[0], "../installer"))
+sys.path.append(os.path.join(sys.path[0], "installer"))
 
 import options
 from errors import *
