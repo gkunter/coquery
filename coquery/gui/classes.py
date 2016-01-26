@@ -94,7 +94,10 @@ class CoqDetailBox(QtGui.QWidget):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
 
         self._text = text
-        self._alternative = alternative
+        if alternative:
+            self._alternative = alternative
+        else:
+            self._alternative = text
         self._expanded = False
         self.update()
         self.setText(text)
