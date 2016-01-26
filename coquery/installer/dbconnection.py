@@ -81,7 +81,11 @@ class DBConnection(object):
 
     @staticmethod
     def sqlite_path(db_name):
-        return os.path.join(options.get_home_dir(), "databases", "{}.db".format(db_name))
+        return os.path.join(
+            options.get_home_dir(), 
+            "databases", 
+            options.cfg.current_server,
+            "{}.db".format(db_name))
 
     def start_transaction(self):
         if self.db_type == SQL_MYSQL:
