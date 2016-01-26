@@ -1498,6 +1498,8 @@ class CoqueryApp(QtGui.QMainWindow):
             True if the corpus was created using the "Build new corpus"
             function, or False otherwise.
         """
+        import removecorpus
+
         try:
             resource, _, _, module = options.cfg.current_resources[corpus_name]
         except KeyError:
@@ -1505,37 +1507,30 @@ class CoqueryApp(QtGui.QMainWindow):
                 database = "coq_{}".format(corpus_name.lower())
             else:
                 database = ""
-            size = FileSize(0)
             module = ""
         else:
             database = resource.db_name
 
         if database:
-            try:
-                host, port, db_type, user, password = options.get_mysql_configuration()
-            except ValueError:
-                raise SQLNoConfigurationError
-
+            host, port, db_type, user, password = options.get_mysql_configuration()
             try:
                 db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=database)
             except:
                 db = None
-            if db:
-                # Try to estimate the file size:
-                try:
-                    size = FileSize(db.get_database_size(database))
-                except TypeError:
-                    size = FileSize(-1)
-            else:
-                size = FileSize(-1)
 
-        response = QtGui.QMessageBox.warning(
-            self, "Remove corpus", msg_corpus_remove.format(corpus=corpus_name, size=size), QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
-        
-        if response == QtGui.QMessageBox.Yes:
+        response = removecorpus.RemoveCorpusDialog.select(
+            corpus_name, 
+            options.cfg.current_server,
+            adhoc_corpus)
+        if response and QtGui.QMessageBox.question(
+            self,
+            "Remove corpus – Coquery",
+            "Do you really want to remove the selected corpus components?",
+            QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel) == QtGui.QMessageBox.Ok:
+            rm_module, rm_database, rm_installer = response
             success = True
-            self.start_progress_indicator()
-            if db:
+
+            if rm_database and db:
                 try:
                     db.drop_database(database)
                 except Exception as e:
@@ -1551,7 +1546,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     pass
 
             # Remove the corpus module:
-            if success and module:
+            if rm_module and success and module:
                 try:
                     if os.path.exists(module):
                         os.remove(module)
@@ -1563,7 +1558,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
             # remove the corpus installer if the corpus was created from 
             # text files:
-            if success and adhoc_corpus:
+            if rm_installer and success and adhoc_corpus:
                 try:
                     installer_path = os.path.join(
                         options.get_home_dir(), "adhoc",
@@ -1575,10 +1570,9 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     success = True
 
-            self.stop_progress_indicator()
             options.set_current_server(options.cfg.current_server)
             self.fill_combo_corpus()
-            if success:
+            if success and (rm_installer or rm_database or rm_module):
                 logger.warning("Removed corpus {}.".format(corpus_name))
                 self.showMessage("Removed corpus {}.".format(corpus_name))
 
