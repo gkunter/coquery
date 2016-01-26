@@ -90,8 +90,7 @@ import difflib
 import options
 
 if options._use_qt:
-    sys.path.append(os.path.join(sys.path[0], "../gui"))
-    sys.path.append(os.path.join(sys.path[0], ".."))
+    sys.path.append(os.path.join(sys.path[0], "gui"))
     from pyqt_compat import QtCore, QtGui
 
 import corpus
@@ -1274,17 +1273,17 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         """
 
-        #self.xml_preprocess_tag(element, self._corpus_id+1)
+        self.xml_preprocess_tag(element)
         if element.text:
             self.xml_process_content(element.text)
         if list(element):
             for child in element:
                 self.xml_process_element(child)
-        if element.tail.strip():
+        if element.tail is not None and element.tail.strip():
             self.xml_process_tail(element.tail.strip())
-        #self.xml_postprocess_tag(element, self._corpus_id+1)
+        self.xml_postprocess_tag(element)
     
-    def xml_preprocess_tag(self, element, this_id):
+    def xml_preprocess_tag(self, element):
         """ Take any action that is triggered by the tag when entering the 
         element."""
         pass
@@ -1295,7 +1294,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def xml_process_tail(self, element):
         pass
     
-    def xml_postprocess_tag(self, element, this_id):
+    def xml_postprocess_tag(self, element):
         """ Take any action that is triggered by the tag when leaving the 
         element."""
         pass
