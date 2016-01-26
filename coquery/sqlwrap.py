@@ -81,7 +81,7 @@ class SqlDB (object):
         elif self.db_type == SQL_SQLITE:
             if self.db_name:
                 if not self.db_path:
-                    self.db_path = os.path.join(options.get_home_dir(), "databases", "{}.db".format(self.db_name))
+                    self.db_path = self.sqlite_path(self.db_name)
                 connection = sqlite3.connect(self.db_path)
             else:
                 raise SQLInitializationError("SQLite requires a database name")
@@ -91,7 +91,11 @@ class SqlDB (object):
 
     @staticmethod
     def sqlite_path(db_name):
-        return os.path.join(options.get_home_dir(), "databases", "{}.db".format(db_name))
+        return os.path.join(
+            options.get_home_dir(), 
+            "databases", 
+            options.cfg.current_server,
+            "{}.db".format(db_name))
 
     @staticmethod
     def test_connection(host, port, user, password, connect_timeout=60):
