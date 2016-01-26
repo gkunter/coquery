@@ -780,23 +780,6 @@ class SQLResource(BaseResource):
     def connect_to_database(self):
         self.DB = self.get_db()
     
-    def get_engine(self):
-        host, port, db_type, user, password = options.get_mysql_configuration()
-        if db_type == SQL_MYSQL:
-            engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
-                host=host,
-                port=port,
-                user=user, 
-                password=password,
-                db_name=self.db_name)
-        elif db_type == SQL_SQLITE:
-            engine_string = "sqlite+pysqlite:///{}".format(
-                self.DB.sqlite_path(self.db_name))
-        else:
-            raise RuntimeError("Database type '{}' not supported.".format(db_type))
-        engine = create_engine(engine_string)
-        return engine
-    
     @staticmethod
     def SQLAlchemyConnect():
         host, port, db_type, user, password = options.get_mysql_configuration()
@@ -2153,6 +2136,9 @@ class CorpusClass(object):
         be displayed. The area in which the context is shown is a QLabel
         named widget.ui.context_area. """
 
+        if not (self.resource, QUERY_ITEM_WORD):
+            raise UnsupportedQueryItemError
+
         tab = options.cfg.main_window.Session.data_table
 
         def expand_row(x):
@@ -2169,7 +2155,6 @@ class CorpusClass(object):
         # the function expand_row has the side effect that it adds the 
         # token id range for each row to the list self.id_list
         tab.apply(expand_row, axis=1)
-        
 
         start = max(0, token_id - context_width)
         end = token_id + token_width + context_width - 1
@@ -2184,9 +2169,9 @@ class CorpusClass(object):
                 origin_id = self.resource.corpus_sentence_id
 
         if "tag_table" in dir(self.resource):
-            format_string = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_table}.{tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
+            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word} AS COQ_WORD, {tag}, {tag_table}.{tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
         else:
-            format_string = "SELECT {corpus}.{corpus_id}, {word} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
+            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word} AS COQ_WORD FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
             
         if origin_id:
             format_string += " AND {corpus}.{source_id} = {current_source_id}"
@@ -2226,13 +2211,19 @@ class CorpusClass(object):
                 current_source_id=source_id,
                 start=start, end=end)
 
-        cur = self.resource.DB.execute_cursor(S)
-        entities = {}
+        engine = self.resource.get_engine()
 
-        for row in cur:
-            if row[self.resource.corpus_id] not in entities:
-                entities[row[self.resource.corpus_id]] = []
-            entities[row[self.resource.corpus_id]].append(row)
+        if options.cfg.verbose:
+            logger.info(S)
+        try:
+            df = pd.read_sql(S, engine)
+        except Exception as e:
+            print(S)
+            print(e)
+            raise e
+
+        if options.cfg.verbose:
+            print(df)
 
         context = deque()
         # we need to keep track of any opening and closing tag that does not
@@ -2240,39 +2231,26 @@ class CorpusClass(object):
         opened_elements = []
         closed_elements = []
         
-        for context_token_id in sorted(entities):
-            if options.cfg.verbose:
-                print()
-                print("TOKEN ", context_token_id)
-                print()
+        #for context_token_id in sorted(entities):
+        for context_token_id in sorted(df.COQ_TOKEN_ID.unique()):
             opening_elements = []
             closing_elements = []
             word = ""
    
-            if "tag_id" in dir(self.resource):
-                # create lists of opening and closing elements, and get the 
-                # current word:
-                for x in sorted(entities[context_token_id],
-                            key=lambda x:x[self.resource.tag_id]):
-                    tag_type = x[self.resource.tag_type]
-                    if tag_type:
-                        if tag_type in ("open", "empty"):
-                            opening_elements.append(x)
-                        if tag_type in ("close", "empty"):
-                            closing_elements.append(x)
-            word = entities[context_token_id][0][self.resource.word_label]
-            
-            if options.cfg.verbose:
-                if opening_elements:
-                    print("OPENING")
-                    print("\t", opening_elements)
-                    print()
-                if closing_elements:
-                    print("CLOSING")
-                    print("\t", closing_elements)
-                    print()
-                    
-                print("WORD", word)
+            #if "tag_id" in dir(self.resource):
+                ## create lists of opening and closing elements, and get the 
+                ## current word:
+                #for x in sorted(entities[context_token_id],
+                            #key=lambda x:x[self.resource.tag_id]):
+                    #tag_type = x[self.resource.tag_type]
+                    #if tag_type:
+                        #if tag_type in ("open", "empty"):
+                            #opening_elements.append(x)
+                        #if tag_type in ("close", "empty"):
+                            #closing_elements.append(x)
+
+            #word = entities[context_token_id][0][self.resource.word_label]
+            word = df[df.COQ_TOKEN_ID == context_token_id].COQ_WORD.iloc[0]
             
             # process all opening elements:
             for element in opening_elements:
