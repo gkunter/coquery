@@ -33,7 +33,7 @@ if options._use_mysql:
 
 class SqlDB (object):
     """ A wrapper for MySQL. """
-    def __init__(self, Host, Port, Type, User, Password, db_name=None, db_path="", encoding="utf8", connect_timeout=60):
+    def __init__(self, Host, Port, Type, User, Password, db_name=None, db_path="", encoding="utf8", connect_timeout=60, local_infile=0):
         
         if Type == SQL_MYSQL and not options._use_mysql:
             raise DependencyError("pymysql", "https://github.com/PyMySQL/PyMySQL")
@@ -48,11 +48,28 @@ class SqlDB (object):
         self.db_path = db_path
         self.timeout = connect_timeout
         self.encoding = encoding
+        self.local_infile = local_infile
 
         self.Con = self.get_connection()
 
         if self.db_type == SQL_MYSQL:
             self.set_variable("NAMES", self.encoding)
+
+    def create_database(self, db_name):
+        if self.db_type == SQL_MYSQL:
+            cur = self.Con.cursor()
+            cur.execute("CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name.split()[0]))
+        elif self.db_type == SQL_SQLITE:
+            # SQLite databases are created when making a connection to them
+            pass
+
+    def use_database(self, db_name):
+        if self.db_type == SQL_MYSQL:
+            cur = self.Con.cursor()
+            cur.execute("USE {}".format(db_name.split()[0]))
+        elif self.db_type == SQL_SQLITE:
+            self.db_path = SqlDB.sqlite_path(db_name)
+        self.Con = self.get_connection()
 
     def get_connection(self):
         if self.db_type not in SQL_ENGINES:
@@ -67,6 +84,7 @@ class SqlDB (object):
                         passwd=self.db_pass, 
                         db=self.db_name,
                         connect_timeout=self.timeout,
+                        local_infile=self.local_infile,
                         charset=self.encoding)
                 else:
                     connection = pymysql.connect(
@@ -75,6 +93,7 @@ class SqlDB (object):
                         user=self.db_user, 
                         passwd=self.db_pass, 
                         connect_timeout=self.timeout,
+                        local_infile=self.local_infile,
                         charset=self.encoding)
             except (pymysql.Error) as e:
                 raise SQLInitializationError(e)
@@ -93,6 +112,120 @@ class SqlDB (object):
     def sqlite_path(db_name):
         return os.path.join(options.get_home_dir(), "databases", "{}.db".format(db_name))
 
+    def has_database(self, db_name):
+        """
+        Check if the database 'db_name' exists on the current connection.
+        
+        Parameters
+        ----------
+        db_name : str 
+            The name of the database 
+            
+        Returns
+        -------
+        b : bool 
+            True if the database exists, or False otherwise.
+        """
+        if self.db_type == SQL_MYSQL:
+            cur = self.Con.cursor()
+            cur.execute("SHOW DATABASES")
+            try:
+                for x in cur:
+                    if x[0] == db_name.split()[0]:
+                        return db_name
+            except pymysql.ProgrammingError as ex:
+                warning.warn(ex)
+                if cur:
+                    warning.warn(cur.messages)
+                else:
+                    warning.warn(self.Con.messages)
+            return False
+        elif self.db_type == SQL_SQLITE:
+            return os.path.exists(SqlDB.sqlite_path(db_name))
+
+    def has_table(self, table_name):
+        """
+        Check if the table 'table_name' exists in the current database.
+        
+        Parameters
+        ----------
+        table_name : str 
+            The name of the table
+            
+        Returns
+        -------
+        b : bool 
+            True if the table exists, or False otherwise.
+        """
+        cur = self.Con.cursor()
+        if self.db_type == SQL_MYSQL:
+            return bool(con.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name)))
+        elif self.db_type == SQL_SQLITE:
+            S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table_name)
+            return bool(cur.execute(S).fetchall())
+
+    def create_table(self, table_name, description):
+        """
+        Create a new table 'table_name' using the specification from
+        'description'.
+        
+        Parameters
+        ----------
+        table_name : str 
+            The name of the new table 
+        description : str 
+            The SQL string used to create the new table
+        """
+        cur = self.Con.cursor()
+        return cur.execute('CREATE TABLE {} ({})'.format(table_name, description))
+
+    def find(self, table_name, values, additional_variables=[], case=False):
+        """ 
+        Obtain all records from table_name that match the column-value
+        pairs given in the dict values.
+        
+        Parameters
+        ----------
+        table_name : str 
+            The name of the table 
+        values : dict 
+            A dictionary with column names as keys and cell contents as values
+        additional_variables : list
+            Not supported anymore
+        case : bool
+            Set to True if the find should be case-sensitive, or False 
+            otherwise.
+            
+        Returns
+        -------
+        l : list of tuples 
+            A list of tuples, each representing a row from the data table 
+            that match the provided values
+        """
+        assert additional_variables == [], "Parameter 'additional_variables' is no longer supported by DB.find()"
+        
+        if self.db_type == SQL_MYSQL:
+            cur = self.Con.cursor(pymysql.cursors.DictCursor)
+        elif self.db_type == SQL_SQLITE:
+            con = self.Con
+            con.row_factory = sqlite3.Row
+            cur = con.cursor()
+        variables = list(values.keys()) + additional_variables
+        where = []
+        for column, value in values.items():
+            where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
+        if case:
+            S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table_name, " AND BINARY ".join(where))
+        else:
+            S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table_name, " AND ".join(where))
+        S = S.replace("\\", "\\\\")
+        try:
+            cur.execute(S)
+        except Exception as e:
+            print(e)
+            raise e
+        return cur.fetchall()
+        
     @staticmethod
     def test_connection(host, port, user, password, connect_timeout=60):
         """
@@ -143,9 +276,9 @@ class SqlDB (object):
         except NameError:
             string_classes = (str)
         if isinstance(value, string_classes):
-            self.execute("SET {} '{}'".format(variable, value))
+            cur.execute("SET {} '{}'".format(variable, value))
         else:
-            self.execute("SET {}={}".format(variable, value))
+            cur.execute("SET {}={}".format(variable, value))
 
     def close(self):
         try:
@@ -219,22 +352,225 @@ class SqlDB (object):
             cursor = con.cursor()
         cursor.execute(S)
         return cursor
-    
-    def executemany(self, S, data):
+
+    def get_field_type(self, table_name, column_name):
+        """
+        Obtain the current SQL field type for the specified column.
+        
+        Parameters
+        ----------
+        table_name, column_name : str 
+            The name of the table and the column, respectively
+            
+        Returns
+        -------
+        s : str 
+            A string containing the current SQL field type for the specified 
+            column.
+        """
         cur = self.Con.cursor()
-        cur.executemany(S, data)
+        if self.db_type == SQL_MYSQL:
+            S = "SHOW FIELDS FROM %s WHERE Field = '%s'" % (table_name, column_name)
+            cur.execute(S)
+            Results = cur.fetchone()
+            try:
+                if isinstance(Results, bytes):
+                    Results = Results.decode("utf-8")
+            except NameError:
+                Results = str(Results)
+            if Results:
+                field_type = Results[1]
+                if Results[2] == "NO":
+                    field_type += " NOT NULL"
+                return str(field_type)
+            else:
+                return None
+            
+        elif self.db_type == SQL_SQLITE:
+            S = "PRAGMA table_info({})".format(table_name)
+            cur.execute(S)
+            for row in cur:
+                result = dict(zip("cid", "name", "type", "notnull", "dflt_value", "pk"),
+                              row)
+                column = result["name"]
+                data_type = result["type"]
+                not_null = result["notnull"]
+                if column == column_name:
+                    if not_null:
+                        return "{} NOT NULL".format(data_type)
+                    else:
+                        return str(data_type)
+
+    def get_optimal_field_type(self, table_name, column_name):
+        """
+        Obtain the optimal field type for the specified column.
+        
+        This method is not supported for SQLite databases. Here, the return 
+        value is always the current field type of the column.
+        
+        Parameters
+        ----------
+        table_name, column_name : str 
+            The name of the table and the column, respectively
+            
+        Returns
+        -------
+        s : str 
+            A string containing the optimal SQL field type for the specified 
+            column.
+        """
+        if self.db_type == SQL_SQLITE:
+            return self.get_field_type(table_name, column_name)
+        cur = self.Con.cursor()
+        cur.execute("SELECT %s FROM %s PROCEDURE ANALYSE()" % (column_name, table_name), override=True)
+        x = cur.fetchone()[-1]
+        try:
+            if isinstance(x, bytes):
+                x = x.decode("utf-8")
+        except NameError:
+            x = str(x)
+        return x
+        
+    def modify_field_type(self, table_name, column_name, new_type):
+        """
+        Change the field type of the specified column to the new type.
+        
+        Parameters
+        ----------
+        table_name, column_name : str 
+            The name of the table and the column, respectively
+        new_type : str 
+            A string containing the new SQL field type for the specified 
+            column.
+        """
+        old_field = self.get_field_type(table_name, column_name)
+        cur = self.Con.cursor()
+        cur.execute("ALTER TABLE %s MODIFY %s %s" % (table_name, column_name, new_type))
+        if options.cfg.verbose:
+            logger.info("ALTER TABLE %s MODIFY %s %s" % (table_name, column_name, new_type))
+
+    def has_index(self, table_name, index_name):
+        """
+        Check if the specified column has an index.
+        
+        Parameters
+        ----------
+        table_name, column_name : str 
+            The name of the table and the column, respectively
+            
+        Returns
+        -------
+        b : bool 
+            True if the column has an index, or False otherwise.
+        """
+        cur = self.Con.cursor()
+        if self.db_type == SQL_MYSQL:
+            return bool(cur.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table_name, index_name)))
+        elif self.db_type == SQL_SQLITE:
+            cur.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl_name = '{}'".format(index_name, table_name))
+            return bool(len(cur.fetchall()))
     
+    def get_index_length(self, table_name, column_name, coverage=0.95):
+        """
+        Return the index length that is required for the given coverage.
+        
+        If the current SQL engine is SQL_SQLITE, this method always returns
+        None.
+        
+        Parameters
+        ----------
+        table_name, column_name : str 
+            The name of the table and the column, respectively
+            
+        coverage : float
+            The coverage percentage that the index should cover. Default: 0.95
+        
+        Returns
+        -------
+        number : int 
+            The first character length that reaches the given coverage, or 
+            None if the coverage cannot be reached.
+        """
+        
+        if self.db_type == SQL_SQLITE:
+            return None
+        
+        S = """
+        SELECT len,
+            COUNT(DISTINCT SUBSTR({column}, 1, len)) AS number,
+            total,
+            ROUND(COUNT(DISTINCT SUBSTR({column}, 1, len)) / total, 2) AS coverage 
+        FROM   {table}
+        INNER JOIN (
+            SELECT COUNT(DISTINCT {column}) total 
+            FROM   {table}
+            WHERE  {column} != "") count_total
+        INNER JOIN (
+            SELECT @x := @x + 1 AS len
+            FROM   {table}, (SELECT @x := 0) count_init
+            LIMIT  32) count_inc
+        GROUP BY len""".format(
+            table=table_name, column=column_name)
+        cur = self.Con.cursor()
+        cur.execute(S)
+        max_c = None
+        for x in cur:
+            if not max_c or x[3] > max_c[3]:
+                max_c = x
+            if x[3] >= coverage:
+                print("{}.{}: index length {}".format(table_name, column_name, x[0]))
+                logger.info("{}.{}: index length {}".format(table_name, column_name, x[0]))
+                return int(x[0])
+        if max_c:
+            print("{}.{}: index length {}".format(table_name, column_name, max_c[0]))
+            logger.info("{}.{}: index length {}".format(table_name, column_name, max_c[0]))
+            return int(max_c[0])
+        return None
+    
+    def create_index(self, table_name, index_name, variables, index_length=None):
+        """
+        Create an index for the specified column table.
+        
+        Parameters
+        ----------
+        table_name : str 
+            The name of the table
+            
+        index_name : str 
+            The name of the new index
+            
+        variables : list 
+            A list of strings representing the column names that are to be 
+            indexed.
+            
+        index_length : int or None
+            The length of the index (applies to TEXT or BLOB fields)
+        """
+        cur = self.Con.cursor()
+
+        # Do not create an index if the table is empty:
+        cur.execute("SELECT * FROM {} LIMIT 1".format(table_name))
+        if not cur.fetchone():
+            return
+        
+        if index_length:
+            variables = ["%s(%s)" % (variables[0], index_length)]
+        S = 'CREATE INDEX {} ON {}({})'.format(
+            index_name, table_name, ",".join(variables))
+        cur.execute(S)
+
+    def start_transaction(self):
+        if self.db_type == SQL_MYSQL:
+            cur = self.Con.cursor()
+            cur.execute("START TRANSACTION")
+
+    def executemany(self, s, d):
+        cur = self.Con.cursor()
+        if self.db_type == SQL_SQLITE:
+            s = s.replace("%s", "?")
+        cur.executemany(s, d)
+
     def execute(self, S):
-        """
-Call        execute(self, S, ForceExecution=False)
-Summary     Executes the SQL command string provided in S, or pretend to do 
-            so if options.cfg.dry_run is True and the SQL command is a modifying 
-            command. The parameter ForceExecution can be used to override 
-            options.cfg.dry_run.
-            if options.cfg.ExplainQueries is True, an SQL EXPLAIN command will be
-            executed as well, and the output will be displayed.
-Value       no return value
-        """
         S = S.strip()
         if options.cfg.explain_queries:
             self.explain(S)
