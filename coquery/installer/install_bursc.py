@@ -9,7 +9,7 @@ import corpusbuilder
 
 # The class corpus_code contains the Python source code that will be
 # embedded into the corpus library. It provides the Python code that will
-# override the default class methods of SQLCorpus by methods that are
+# override the default class methods of CorpusClass by methods that are
 # tailored for the Buckeye corpus.
 #
 class corpus_code():

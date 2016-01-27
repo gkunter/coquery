@@ -165,13 +165,11 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.lemma_adverbial, "ENUM('','Y') NOT NULL"),
              Column(self.lemma_alternatives, "VARCHAR(35) NOT NULL"),
              Column(self.lemma_apertiumparadigm, "TEXT NOT NULL"),
-             #Column(self.lemma_apertiumparadigm, """ENUM('?/abib__n','?/arbuna__n_f','?/armug__n_m','?/obla__adj_f','?/u?__adj','?at/i__adj','?l/iqa__n_f','?omb__n_m','/belt__n_f','/iblaq__adj','/ilbiera?__adv','/imbag?ad__adv','/ma__adv','/wild__n_m','att/ri?i__n_f','b/niedem__n_m','ba?ri__n_m','barrani__adj','bg?/id__adj','bojkot/t__n_m','bsa??it/u__adj','buff/u__n_m','differenti__adj','dixx__n_m','double_cons','eminent__adj','ener?ija__n_f','entit/à__n_f','epi/ku__adj','ewl/ieni__adj','Ewrope/w__adj','f/artas__adj','first_cons','first_vowel','g?/ama__n_GD','g?/ibien__n_GD','g?ar/bi__n_m','G?awdxi__n','gowl__n_m','gri?__adj','haddiem__n','hemm__adv','i-/erbg?a__n','il-/biera?__adv','immedjatament__adv','imxarr/ab__adj','is-/Sibt__n','ispettur__n_mf','it-/Tnejn__n','Kattoli/ku__n','kif__adv','kwadr/u__adj','lab/ra__n_f','Lhud__n','m/ewta__n_f','ma?mu?__adj','Malta__np','Malti__adj','maz/za__n_f','mg?a??/el__adj','miel/a?__adj','mis/lem__n_m','mistied/en__adj','mniss/el__adj','molestja__n_f','moviment__n_m','nativ__adj','ohxon__adj','Olimpjadi__np','p/asta?__n_m','parti__n_m','pjanet/a__n_m','Portugi?__n','profet/a__n_m','propost/a__n_f','q/arn__n_m','q/ormi__n_m','qarrej__n_m','qot/na__n_f','rebbie?__n_m','rebbieg?a__n_f','rettili__n_m','ri?/el__n_m','rq/iq__adj','s?ubij/a__n_f','s/alva??__n_m','San__np','se__adv','stampa__n_f','stazzjon__n_f','Taljan__n','teknolo?i/ku__adj','tib/na__n_f','Tibet__np','tik/ka__n_f','tni??is__n_m','tor/k__n_m','trib/ù__n_m','two_cons','unjoni__n_f','wer/?__n_m','wies/a\'__adj','xal/la__n_f','xir/ja__n_f')"""),
              Column(self.lemma_archaic, "ENUM('','Y') NOT NULL"),
-             Column(self.lemma_created, "TEXT NOT NULL"),
-             Column(self.lemma_derived_form, "TINYINT(1) NOT NULL"),
+             Column(self.lemma_created, "VARCHAR(26) NOT NULL"),
+             Column(self.lemma_derived_form, "ENUM('0','1','2','3','5','6','7','8','9','10') NOT NULL"),
              Column(self.lemma_ditransitive, "ENUM('','N','Y') NOT NULL"),
              Column(self.lemma_features, "ENUM('','toponym') NOT NULL"),
-             #Column(self.lemma_feedback, """ENUM('','"o" minflok "a" f\'diversi verbi.','dfinnieu --> dfinnieh','Dictionnaries have : ti?ti?bor in Dictionaries (Vassalli, Aquilina, Serracino-Inglott) and in Standard Maltese','First vowel a is missing in verb inflections','G?-D-W','Hi Michael!  The perfect conjugation looks wrong.  Thanks!','I think the imperfect negative should be e.g. nitkellimx','I think you\'ve put a g instead of g?','imperf. = a - e,  mhux o - o','impf. =  i - a  --> jitlaq .....','Impf. = a - i ','incorrect Vowels in Impf and Imp. nibda, nibdew, ...','incorrectThe meaning is incorrect','J-W-M ?','jin?g?u mhux jin?u   P3 Pl','Maybe "xitla"/"xtieli"  should be added...','Na?seb hemm ?ball: l-"O??ett dirett" P2 Pl u P3 Pl iridu jinqalbu. Grazzi a-a,   mhux i-o.  ','naqra?','nfidthux','nifhemx = nifhimx ....  e??.','niftiehmu, mhux niftehmu .........','nilg?ob -> nilg?abtilg?ob -> tilg?ab ; jilg?ab ; nilag?bu ; jilag?bu : http://www.illum.com.mt/sports/intervista/39186/ilbasketball_huwa_ajjitha#.VeGSsZe68a1','Please can the conjugations be added?','rkibthux','s?antu <-> s?anuimperf. =  i - o','sej?et mhux sej?iet P3, Sg. Fem.','Should P3 Pl Perfect tense be urew, not urejna','sraqthux should be sraqtux. There must be something wrong with all Perfective P1 Sg P3 Sg Masc Negative','t?ajjartu <-> t?ajru;   P2 Pl <-> P3 Pl','Trid ti?i: kkalzrat')"""),
              Column(self.lemma_feedback, "TEXT NOT NULL"),
              Column(self.lemma_form, "ENUM('','accretive','comparative','diminutive','mimated','participle','verablnoun','verbalnoun') NOT NULL"),             
              Column(self.lemma_frequency, "INT NOT NULL"),
@@ -180,14 +178,14 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.lemma_headword, "TEXT NOT NULL"),             
              Column(self.lemma_hypothetical, "ENUM('','N','Y') NOT NULL"),
              Column(self.lemma_intransitive, "ENUM('','N','Y') NOT NULL"),
-             Column(self.lemma_modified, "TEXT NOT NULL"),             
+             Column(self.lemma_modified, "VARCHAR(26) NOT NULL"),             
              Column(self.lemma_notduplicate, "ENUM('','N','Y') NOT NULL"),
              Column(self.lemma_number, "ENUM('','s') NOT NULL"),
-             Column(self.lemma_onomastictype, "ENUM('','anthroponym','toponym','other') NOT NULL"),             
+             Column(self.lemma_onomastictype, "ENUM('','anthroponym','other','toponym') NOT NULL"),
              Column(self.lemma_participle, "ENUM('','N','Y') NOT NULL"),
              Column(self.lemma_pending, "ENUM('','N','Y') NOT NULL"),
-             Column(self.lemma_pos, "ENUM('','VERB','NOUN','ADJ','DET','NUM','ADV','ADP','PRON','CONJ','PROPN','PART','INTJ','X') NOT NULL"),
-             Column(self.lemma_radicals, "TEXT NOT NULL", index_length=7),
+             Column(self.lemma_pos, "ENUM('','ADJ','ADP','ADV','CONJ','DET','INTJ','NOUN','NUM','PART','PRON','PROPN','VERB','X') NOT NULL"),
+             Column(self.lemma_radicals, "TINYTEXT NOT NULL", index_length=7),
              Link(self.lemma_root_id, self.root_table),             
              Column(self.lemma_transcript, "VARCHAR(29) NOT NULL"),             
              Column(self.lemma_verbalnoun, "ENUM('','Y') NOT NULL")])           
@@ -199,25 +197,25 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.corpus_alternatives, "VARCHAR(26) NOT NULL"),
              Column(self.corpus_archaic, "ENUM('','N','Y') NOT NULL"),
              Column(self.corpus_aspect, "ENUM('','imp','impf','pastpart','perf') NOT NULL"),
-             Column(self.corpus_created, "CHAR(26) NOT NULL"),
-             Column(self.corpus_dir_obj, "ENUM('','p1_sg','p2_sg','p3_sg_m','p3_sg_f','p1_pl','p2_pl','p3_pl','p3_pl_mf','p2_sg_mf','p2_pl_mf','p1_pl_mf','p1_sg_mf') NOT NULL"),
+             Column(self.corpus_created, "VARCHAR(26) NOT NULL"),
+             Column(self.corpus_dir_obj, "ENUM('','p1_pl','p1_pl_mf','p1_sg','p1_sg_mf','p2_pl','p2_pl_mf','p2_sg','p2_sg_mf','p3_pl','p3_pl_mf','p3_sg_f','p3_sg_m') NOT NULL"),
              Column(self.corpus_form, "ENUM('','comparative','diminutive','interrogative','mimated','superlative','verbalnoun') NOT NULL"),
              Column(self.corpus_full, "CHAR(50) NOT NULL"),
              Column(self.corpus_gender, "ENUM('','f','m','mf','pl','u') NOT NULL"),
              Column(self.corpus_generated, "ENUM('','N','Y') NOT NULL"),
              Column(self.corpus_gloss, "ENUM('','(obsolete) Harder, more compact or solid','A bray','A chiselling. Nuance','A confession','A flirtatious person. Girl-flirt','A lazy worker who stops frequently from work','A piercing','A short rest from work','A stripping, undressing','a swim','A weeding','a young man','a young woman','Balder','boy, child, son','Breathing. Enabling something to breathe','Causing someone to incur expenses','children, offspring','Closer, nearer','Expenditure','Fatter, stouter','Fiercer, harsher','Flirting, making love','flushes: rushes of blood wo the face during menopause or pregnancy','Frequent/repeated stone-dressing','girl, child, daughter','great grandfather','great grandmother','great grandparents','Growth/spread of dog-grass','Growth/spreading of Bermuda grass','Gust of wind; a blowin, a swelling; inflation','Holier; superlative l-eqdes/l-aqdes, the holiest','Hotter, warmer','Inflation. Swelling of face, whitlow, etc.','Migration of birds','Migrations of birds','More ancient, older','More beautiful','More nauseating','Nose','Nostrils','nun','Outbreak of flu, epidemic','Part of a crumbled wall of a field','Penetration','Penetrations','Piercing, communicating (room with another)','Piercings','Purer, more purified','Self-conceit','Short for aktar mis?ut, naughtier, more troublesome; more perverse','Shorter','Shying, skittishness (of horses)','Small bellows','Smaller/younger','Sourer','Spending, expenses, expenditure','Spending, incurring expenses','Stone-dressing','Taking umbrage at something. Shying','Taller/longer','trifles','Wider, broader','witch','young women') NOT NULL"),
              Column(self.corpus_hypothetical, "ENUM('','N','Y') NOT NULL"),
-             Column(self.corpus_ind_obj, "ENUM('','p1_sg','p2_sg','p3_sg_m','p3_sg_f','p1_pl','p3_pl','p2_pl','p2_sg_mf','p3_pl_mf','p1_sg_mf','p2_pl_mf','p1_pl_mf') NOT NULL"),
+             Column(self.corpus_ind_obj, "ENUM('','p1_pl','p1_pl_mf','p1_sg','p1_sg_mf','p2_pl','p2_pl_mf','p2_sg','p2_sg_mf','p3_pl','p3_pl_mf','p3_sg_f','p3_sg_m') NOT NULL"),
              Link(self.corpus_lemma_id, self.lemma_table),
-             Column(self.corpus_modified, "CHAR(26) NOT NULL"),
+             Column(self.corpus_modified, "VARCHAR(26) NOT NULL"),
              Column(self.corpus_number, "ENUM('','coll','dl','pl','pl_ind','pl_pl','sg','sgv','sp') NOT NULL"),
              Column(self.corpus_pattern, "ENUM('','CCCVCCVC','CCCVCVC','CCCVVCVC','CCVCCV','CCVCCVC','CCVCVC','CCVVC','CCVVCCVC','CCVVCV','CCVVCVC','CVCCCVCCVC','CVCCV','CVCCVC','CVCCVCV','CVCCVCVCCVC','CVCVC','CVCVCCCVCVC','CVCVCV','CVCVCVCCVC','CVVC','CVVCCVC','CVVCVC','VCCCV','VCCCVCVC','VCCCVCVCCVC','VCCVCCVVCVC','VCCVCVC','VCCVCVCCVC','VCCVVC','VCCVVCV','VCVCCVC','VCVVC','VCVVCV','VCVVCVC','VCVVCVCVC','VVCCV','VVCVC')"),
-             Column(self.corpus_transcript, "TEXT NOT NULL"),
+             Column(self.corpus_transcript, "VARCHAR(13) NOT NULL"),
              Column(self.corpus_plural_form, "ENUM('','counted') NOT NULL"),
-             Column(self.corpus_polarity, "ENUM('','pos','neg') NOT NULL"),
-             Column(self.corpus_possessor, "ENUM('', '1 Sg','2 Sg','3 Sg F','3 Sg M','1 Pl','2 Pl','3 Pl') NOT NULL"),
+             Column(self.corpus_polarity, "ENUM('','neg','pos') NOT NULL"),
+             Column(self.corpus_possessor, "ENUM('','1 Pl','1 Sg','2 Pl','2 Sg','3 Pl','3 Sg F','3 Sg M') NOT NULL"),
              Link(self.corpus_source_id, self.source_table),
-             Column(self.corpus_subject, "ENUM('','p1_sg','p2_sg','p3_sg_m','p3_sg_f','p1_pl','p2_pl','p3_pl','p2_sg_mf','p1_pl_mf','p1_sg_mf','p2_pl_mf','_sg_m','_sg_f','_pl_mf','p3_pl_mf') NOT NULL")])
+             Column(self.corpus_subject, "ENUM('','_pl_mf','_sg_f','_sg_m','p1_pl','p1_pl_mf','p1_sg','p1_sg_mf','p2_pl','p2_pl_mf','p2_sg','p2_sg_mf','p3_pl','p3_pl_mf','p3_sg_f','p3_sg_m') NOT NULL")])
                 
         self.add_time_feature(self.source_year)
     
@@ -260,8 +258,9 @@ class BuilderClass(BaseCorpusBuilder):
                 for entry in bson.decode_file_iter(input_file):
                     
                     if filename == "sources.bson":
+                        print(entry)
                         self._source_id = len(self._source_dict) + 1
-                        self._source_dict[str(entry["_id"])] = self._source_id
+                        self._source_dict[str(entry["key"])] = self._source_id
                         d = {
                             self.source_id: self._source_id,
                             self.source_label: entry.get("title", ""),
@@ -269,6 +268,7 @@ class BuilderClass(BaseCorpusBuilder):
                             self.source_author: entry.get("author", ""),
                             self.source_key: entry.get("key", ""),
                             self.source_note: entry.get("note", "")}
+                        print(json.dumps(d, indent=4))
                         self.table(self.source_table).add(d)
                     
                     elif filename == "roots.bson":
@@ -351,8 +351,6 @@ class BuilderClass(BaseCorpusBuilder):
                         source_id = None
                         source_list = entry.get("sources")
                         if source_list:
-                            print(source_list)
-                            print(self._source_dict)
                             try:
                                 source_id = self._source_dict[source_list[0]]
                             except KeyError:
@@ -416,8 +414,6 @@ class BuilderClass(BaseCorpusBuilder):
                             self.corpus_word: entry.get("surface_form", "")}
                         self.table(self.corpus_table).add(d)
                         phon = entry.get("phonetic")
-                        if phon:
-                            print(phon, type(phon))
 
                         if self._widget and not self._corpus_id % max_cache:
                             self._widget.progressUpdate.emit(self._corpus_id // max_cache)
@@ -528,6 +524,7 @@ if __name__ == "__main__":
 #2016-01-25 18:31:05,437 INFO     Creating index Possessor on table 'Wordforms'
 #2016-01-25 18:31:19,523 INFO     Creating index Source on table 'Wordforms'
 #2016-01-25 18:31:19,530 WARNING  (1167, "The used storage engine can't index column 'Source'")
+# FIXED
 #2016-01-25 18:31:19,576 INFO     Creating index Subject on table 'Wordforms'
 #2016-01-25 18:31:33,991 INFO     Creating index Identifier on table 'Sources'
 #2016-01-25 18:31:34,012 INFO     Creating index Title on table 'Sources'

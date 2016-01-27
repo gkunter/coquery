@@ -215,6 +215,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         # exit if the configuration name is "Default", because this name is 
         # reserved:
         if name == "Default":
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
             return
 
         d = self.get_values()

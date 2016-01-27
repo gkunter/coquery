@@ -317,6 +317,8 @@ class TokenQuery(object):
                         print(query_string)
                         print(e)
                         raise e
+                    finally:
+                        connection.close()
                     df = pd.DataFrame(self.string_folder(results))
                     if not len(df.index):
                         df = pd.DataFrame(columns=results.keys())

@@ -124,11 +124,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.column_width = {}
         self.column_color = {}
         
-        # A non-modal dialog is shown if no corpus resource is available.
-        # The dialog contains some assistance on how to build a new corpus.
-        if not options.cfg.current_resources:
-            self.show_no_corpus_message()
-        
         options.cfg.main_window = self
         options.settings = QtCore.QSettings(
             os.path.join(options.get_home_dir(), "coquery.ini"),
@@ -790,20 +785,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_statistics.setEnabled(False)
         self.ui.action_remove_corpus.setEnabled(False)
 
-    def show_no_corpus_message(self):
-        """ Show a non-modal message box informing the user that no corpus
-        module is available. This message box will be automatically closed 
-        if a corpus resource is available."""
-        self.msg_box_no_corpus = QtGui.QMessageBox(self)
-        self.msg_box_no_corpus.setWindowTitle("No corpus available – Coquery")
-        self.msg_box_no_corpus.setText(msg_no_corpus)
-        self.msg_box_no_corpus.setInformativeText(msg_details)
-        self.msg_box_no_corpus.setStandardButtons(QtGui.QMessageBox.Ok)
-        self.msg_box_no_corpus.setDefaultButton(QtGui.QMessageBox.Ok)
-        self.msg_box_no_corpus.setWindowModality(QtCore.Qt.NonModal)
-        self.msg_box_no_corpus.setIcon(QtGui.QMessageBox.Warning)
-        self.msg_box_no_corpus.show()
-        
     def display_results(self):
         self.ui.box_aggregation_mode.show()
         self.ui.data_preview.setEnabled(True)
@@ -1583,6 +1564,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.showMessage("Removed corpus {}.".format(corpus_name))
 
             self.change_corpus()
+            
             try:
                 self.corpus_manager.update()
             except AttributeError:

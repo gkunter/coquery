@@ -94,9 +94,6 @@ if options._use_qt:
     sys.path.append(os.path.join(sys.path[0], ".."))
     from pyqt_compat import QtCore, QtGui
 
-if options._use_nltk:
-    import nltk
-
 import corpus
 from errors import *
 
@@ -150,14 +147,14 @@ class Resource(SQLResource):
 {variables}
 {resource_code}
     
-class Lexicon(SQLLexicon):
+class Lexicon(LexiconClass):
     '''
     Corpus-specific code
     '''
     
 {lexicon_code}
 
-class Corpus(SQLCorpus):
+class Corpus(CorpusClass):
     '''
     Corpus-specific code
     '''
@@ -303,8 +300,6 @@ class Table(object):
         this ensures that all new table rows are commited, while at the same
         time preserving some memory space.
         """
-        #print("add_cache", self.name)
-        #print(self._add_cache)
         if self._add_cache:
             if self.primary.name not in self._col_names:
                 fields = [self.primary.name] + self._col_names
@@ -364,9 +359,6 @@ class Table(object):
         this ensures that all new table rows are commited, while at the same
         time preserving some memory space.
         """
-        #print("add_cache", self.name)
-        #print(self._add_cache)
-
         if self._add_cache:
             if self.primary.name not in self._col_names:
                 fields = [self.primary.name] + self._col_names
@@ -906,9 +898,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             A list of file names as created by get_file_list()
             
         """
-        found_list = [x for x in [os.path.basename(y) for y in l] if x.lower() in [y.lower() for y in cls.expected_files]]
-        if len(found_list) < len(cls.expected_files):
-            missing_list = [x for x in cls.expected_files if x.lower() not in [y.lower() for y in found_list]]
+        found_list = [x for x in [os.path.basename(y) for y in l] if x in cls.expected_files]
+        if len(set(found_list)) < len(set(cls.expected_files)):
+            missing_list = [x for x in cls.expected_files if x not in found_list]
             sample = "<br/>".join(missing_list[:5])
             if len(missing_list) > 6:
                 sample = "{}</code>, and {} other files".format(sample, len(missing_list) - 3)
@@ -1147,6 +1139,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         # if possible, use NLTK for lemmatization, tokenization, and tagging:
         if self.arguments.use_nltk:
+            import nltk
+
             # the WordNet lemmatizer will be used to obtain the lemma for a
             # given word:
             self._lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
@@ -1514,10 +1508,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             for column in table.columns:
                 try:
-                    ot = self.DB.get_optimal_field_type(table.name, column.name)
+                    ot = self.DB.get_optimal_field_type(table.name, column.name).strip()
                 except TypeError:
                     continue
-                dt = self.DB.get_field_type(table.name, column.name)
+                dt = self.DB.get_field_type(table.name, column.name).strip()
                 if dt.lower() != ot.lower():
                     try:
                         ot = ot.decode("utf-8")
@@ -1921,6 +1915,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 exec("import {}".format(module))
             except ImportError:
                 raise DependencyError(package, url)
+        if self.arguments.use_nltk:
+            import nltk
         
     def remove_build(self):
         """
@@ -2373,6 +2369,7 @@ if options._use_qt:
         def get_arguments_from_gui(self):
             namespace = argparse.Namespace()
             namespace.verbose = False
+            namespace.use_nltk = False
             
             if self.ui.radio_only_module.isChecked():
                 namespace.o = False
@@ -2411,23 +2408,11 @@ if options._use_qt:
         button_label = "&Build"
         window_title = "Corpus builder – Coquery"
 
-        def __init__(self, builder_class, parent=None):
-            def pos_check():
-                """
-                This is called when the NLTK box is checked or unchecked.
-                """
-                def check():
-                    return self._nltk_lemmatize and self._nltk_tokenize and self._nltk_tagging
-                    
-                if self.ui.use_pos_tagging.isChecked() and not check():
-                    self.ui.use_pos_tagging.setChecked(False)
-                    import nltkdatafiles
-                    response = nltkdatafiles.NLTKDatafiles.ask(self.nltk_exception, parent=self)
-                    if response:
-                        self.test_nltk()
-                        if check():
-                            self.ui.use_pos_tagging.setChecked(True)
+        _nltk_lemmatize = False
+        _nltk_tokenize = False
+        _nltk_tagging = False
 
+        def __init__(self, builder_class, parent=None):
             super(BuilderGui, self).__init__(builder_class, parent)
             self.ui.input_path.textChanged.disconnect()
 
@@ -2474,12 +2459,8 @@ if options._use_qt:
                 self.ui.label_pos_tagging.setEnabled(False)
                 self.ui.use_pos_tagging.setEnabled(False)
             else:
-                self.test_nltk()
-                if not self._nltk_lemmatize or not self._nltk_tokenize or not self._nltk_tagging:
-                    self.ui.use_pos_tagging.clicked.connect(pos_check)
-                    self.ui.use_pos_tagging.setChecked(False)
-                else:
-                    self.ui.use_pos_tagging.setChecked(True)
+                self.ui.use_pos_tagging.setChecked(False)
+                self.ui.use_pos_tagging.clicked.connect(self.pos_check)
             self.ui.label_pos_tagging.setText(" ".join(label_text))
 
             self.ui.gridLayout.addLayout(check_layout, 2, 0)
@@ -2497,6 +2478,27 @@ if options._use_qt:
             except TypeError:
                 pass
 
+        def pos_check(self):
+            """
+            This is called when the NLTK box is checked or unchecked.
+            """
+            def check():
+                return self._nltk_lemmatize and self._nltk_tokenize and self._nltk_tagging
+            
+            if hasattr(self, "_testing"):
+                return
+            self._testing = True
+            self.test_nltk()
+            if self.ui.use_pos_tagging.isChecked() and not check():
+                self.ui.use_pos_tagging.setChecked(False)
+                import nltkdatafiles
+                response = nltkdatafiles.NLTKDatafiles.ask(self.nltk_exception, parent=self)
+                if response:
+                    self.test_nltk()
+                    if check():
+                        self.ui.use_pos_tagging.setChecked(True)
+            self._testing = False
+
         def test_nltk(self):
             """
             Test NLTK.
@@ -2504,43 +2506,56 @@ if options._use_qt:
             This function raises a RuntimeError with the error condition as the 
             parameter if there is a problem with NLTK.
             """
-            # test lemmatizer:
-            nltk_exceptions = []
-            try:
-                nltk.stem.wordnet.WordNetLemmatizer().lemmatize("Test")
-            except LookupError as e:
-                s = str(e).replace("\n", "").strip("*")
-                match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
-                if match:
-                    nltk_exceptions.append(match.group(1))
-                self._nltk_lemmatize = False
-            else:
-                self._nltk_lemmatize = True
+            label_text = str(self.ui.label_pos_tagging.text())
+            self.ui.label_pos_tagging.setText("{} <b>(testing...)</b>".format(label_text))
+            self.ui.buttonBox.setEnabled(False)
 
-            # test tokenzie:
-            try:
-                nltk.sent_tokenize("test")
-            except LookupError as e:
-                s = str(e).replace("\n", "")
-                match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
-                if match:
-                    nltk_exceptions.append(match.group(1))
+            if options._use_nltk:
+                import nltk
+                # test lemmatizer:
+                nltk_exceptions = []
+                try:
+                    nltk.stem.wordnet.WordNetLemmatizer().lemmatize("Test")
+                except LookupError as e:
+                    s = str(e).replace("\n", "").strip("*")
+                    match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
+                    if match:
+                        nltk_exceptions.append(match.group(1))
+                    self._nltk_lemmatize = False
+                else:
+                    self._nltk_lemmatize = True
+
+                # test tokenzie:
+                try:
+                    nltk.sent_tokenize("test")
+                except LookupError as e:
+                    s = str(e).replace("\n", "")
+                    match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
+                    if match:
+                        nltk_exceptions.append(match.group(1))
+                    self._nltk_tokenize = False
+                else:
+                    self._nltk_tokenize = True
+                
+                # test tagging:
+                try:
+                    nltk.pos_tag("test")
+                except LookupError as e:
+                    s = str(e).replace("\n", "")
+                    match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
+                    if match:
+                        nltk_exceptions.append(match.group(1))
+                    self._nltk_tagging = False
+                else:
+                    self._nltk_tagging = True
+                self.nltk_exception = "<br/>".join(nltk_exceptions)
+            else:
+                self._nltk_lemmatize = False
                 self._nltk_tokenize = False
-            else:
-                self._nltk_tokenize = True
-            
-            # test tagging:
-            try:
-                nltk.pos_tag("test")
-            except LookupError as e:
-                s = str(e).replace("\n", "")
-                match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
-                if match:
-                    nltk_exceptions.append(match.group(1))
                 self._nltk_tagging = False
-            else:
-                self._nltk_tagging = True
-            self.nltk_exception = "<br/>".join(nltk_exceptions)
+                self.nltk_exception = ""
+            self.ui.label_pos_tagging.setText(label_text)
+            self.ui.buttonBox.setEnabled(True)
 
         def closeEvent(self, event):
             options.settings.setValue("corpusbuilder_size", self.size())
