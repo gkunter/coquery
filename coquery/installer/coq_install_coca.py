@@ -102,7 +102,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(self.word_table,
             [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(43) NOT NULL"),
-             Column(self.word_lemma, "TINYTEXT NOT NULL"),
+             Column(self.word_lemma, "VARCHAR(24) NOT NULL"),
              Column(self.word_pos, "VARCHAR(24) NOT NULL")])
 
         self.create_table_description(self.file_table,
@@ -119,8 +119,8 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.source_year, "ENUM('1990','1991','1992','1993','1994','1995','1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012') NOT NULL"),
              Column(self.source_genre, "ENUM('ACAD','FIC','MAG','NEWS','SPOK') NOT NULL"),
              Link(self.source_subgenre_id, self.subgenre_table),
-             Column(self.source_label, "TINYTEXT NOT NULL"),
-             Column(self.source_title, "TINYTEXT NOT NULL")])
+             Column(self.source_label, "VARCHAR(177) NOT NULL"),
+             Column(self.source_title, "VARCHAR(255) NOT NULL")])
             
         self.create_table_description(self.corpus_table,
             [Primary(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
@@ -130,18 +130,6 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_time_feature(self.source_year)
     
     @staticmethod
-    def get_file_list(path, file_filter):
-        L = []
-        for source_path, folders, files in os.walk(path):
-            for current_file in files:
-                full_name = os.path.join(source_path, current_file)
-                if (fnmatch.fnmatch(current_file, file_filter) or 
-                    current_file in BuilderClass.special_files):
-                    L.append(full_name)
-
-        return L
-        
-    @staticmethod
     def get_name():
         return "COCA"
 
@@ -149,6 +137,14 @@ class BuilderClass(BaseCorpusBuilder):
     def get_db_name():
         return "coca"
     
+    @staticmethod
+    def get_language():
+        return "English"
+    
+    @staticmethod
+    def get_language_code():
+        return "en-US"
+        
     @staticmethod
     def get_title():
         return "Corpus of Contemporary American English"
@@ -267,6 +263,7 @@ class BuilderClass(BaseCorpusBuilder):
                     finally:
                         os.remove(temp_file.name)
 
+            self.store_filename(file_name)
             if self._widget:
                 self._widget.progressUpdate.emit(count + 1)
 
