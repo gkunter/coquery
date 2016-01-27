@@ -249,7 +249,7 @@ class CorpusManager(QtGui.QDialog):
         Read the installers from the path, and add a widget for each to the 
         installer list.
         """
- 
+        options.cfg.current_resources = options.get_available_resources(options.cfg.current_server)
         # clear existing installer list:
         QtGui.QWidget().setLayout(self.ui.list_content.layout())
 

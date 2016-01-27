@@ -85,6 +85,8 @@ class GuiHandler(logging.StreamHandler):
 class CoqueryApp(QtGui.QMainWindow):
     """ Coquery as standalone application. """
 
+    corpusListUpdated = QtCore.Signal()
+
     def __init__(self, parent=None):
         """ Initialize the main window. This sets up any widget that needs
         spetial care, and also sets up some special attributes that relate
@@ -1551,13 +1553,9 @@ class CoqueryApp(QtGui.QMainWindow):
             if success and (rm_installer or rm_database or rm_module):
                 logger.warning("Removed corpus {}.".format(corpus_name))
                 self.showMessage("Removed corpus {}.".format(corpus_name))
-
+                self.corpusListUpdated.emit()
+                
             self.change_corpus()
-            
-            try:
-                self.corpus_manager.update()
-            except AttributeError:
-                pass
 
     def build_corpus(self):
         import coq_install_generic
@@ -1572,10 +1570,7 @@ class CoqueryApp(QtGui.QMainWindow):
             options.set_current_server(options.cfg.current_server)
         self.fill_combo_corpus()
         self.change_corpus()
-        try:
-            self.corpus_manager.update()
-        except AttributeError:
-            pass
+        self.corpusListUpdated.emit()
             
     def install_corpus(self, builder_class):
         import corpusbuilder
@@ -1587,10 +1582,7 @@ class CoqueryApp(QtGui.QMainWindow):
             errorbox.ErrorBox.show(sys.exc_info())
         self.fill_combo_corpus()
         self.change_corpus()
-        try:
-            self.corpus_manager.update()
-        except AttributeError:
-            pass
+        self.corpusListUpdated.emit()
             
     def manage_corpus(self):
         import corpusmanager
@@ -1603,6 +1595,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.corpus_manager.show()
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
+            self.corpusListUpdated.connect(self.corpus_manager.update)
+            
             result = self.corpus_manager.exec_()
             try:
                 self.corpus_manager.close()
