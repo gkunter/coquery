@@ -100,7 +100,7 @@ class BuilderClass(BaseCorpusBuilder):
         super(BuilderClass, self).__init__(gui, *args)
 
         self.create_table_description(self.word_table,
-            [Primary(self.word_id, "MEDIUMINT(8) UNSIGNED NOT NULL"),
+            [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(43) NOT NULL"),
              Column(self.word_lemma, "TINYTEXT NOT NULL"),
              Column(self.word_pos, "VARCHAR(24) NOT NULL")])
