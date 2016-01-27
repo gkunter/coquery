@@ -1167,7 +1167,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             
             # use a dumb tokenizer that simply splits the file content by 
             # spaces:            
-            tokens = raw_text.split(" ")
+            tokens = raw_text.replace("\n", " ").split(" ")
             tokens = [x.strip() for x in tokens if x.strip()]
             if not pos_map:
                 pos_map = zip(tokens, [""] * len(tokens))
@@ -1212,7 +1212,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         # get word id, and create new word if necessary:
         word_dict = {self.word_lemma: lemma, 
                     self.word_label: token_string}
-        if token_pos and "word_pos" in dir(self):
+        if token_pos and hasattr(self, "word_pos"):
             word_dict[self.word_pos] = token_pos 
         word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
         
@@ -2355,7 +2355,12 @@ if options._use_qt:
 
             self.installStarted.emit()
             self.accepted = True
-            self.builder = self.builder_class(gui = self)
+            if hasattr(self, "_nltk_tagging"):
+                pos = self._nltk_tagging
+                self.builder = self.builder_class(pos=pos, gui=self)
+            else:
+                self.builder = self.builder_class(gui=self)
+
             self.builder.logger = self.logger
             self.builder.arguments = self.get_arguments_from_gui()
             self.builder.name = self.builder.arguments.name
