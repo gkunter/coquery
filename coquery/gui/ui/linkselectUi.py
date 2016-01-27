@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'linkselect.ui'
 #
-# Created: Thu Sep  3 00:18:32 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -26,13 +25,15 @@ except AttributeError:
 class Ui_LinkSelect(object):
     def setupUi(self, LinkSelect):
         LinkSelect.setObjectName(_fromUtf8("LinkSelect"))
-        LinkSelect.resize(655, 480)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        LinkSelect.resize(554, 464)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(LinkSelect.sizePolicy().hasHeightForWidth())
         LinkSelect.setSizePolicy(sizePolicy)
         self.verticalLayout_2 = QtGui.QVBoxLayout(LinkSelect)
+        self.verticalLayout_2.setContentsMargins(6, 8, 6, 8)
+        self.verticalLayout_2.setSpacing(16)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.frame = QtGui.QFrame(LinkSelect)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
@@ -44,40 +45,36 @@ class Ui_LinkSelect(object):
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.frame)
-        self.verticalLayout_3.setSpacing(20)
-        self.verticalLayout_3.setMargin(10)
+        self.verticalLayout_3.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
+        self.verticalLayout_3.setContentsMargins(6, 8, 6, 8)
+        self.verticalLayout_3.setSpacing(16)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.label = QtGui.QLabel(self.frame)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
         self.label.setSizePolicy(sizePolicy)
+        self.label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.label.setWordWrap(True)
         self.label.setObjectName(_fromUtf8("label"))
         self.verticalLayout_3.addWidget(self.label)
-        self.verticalLayout = QtGui.QVBoxLayout()
-        self.verticalLayout.setSpacing(0)
-        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
-        self.label_2 = QtGui.QLabel(self.frame)
-        self.label_2.setObjectName(_fromUtf8("label_2"))
-        self.verticalLayout.addWidget(self.label_2)
         self.treeWidget = QtGui.QTreeWidget(self.frame)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.treeWidget.sizePolicy().hasHeightForWidth())
+        self.treeWidget.setSizePolicy(sizePolicy)
         self.treeWidget.setAlternatingRowColors(False)
         self.treeWidget.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
         self.treeWidget.setVerticalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
-        self.treeWidget.setIndentation(40)
         self.treeWidget.setAnimated(True)
         self.treeWidget.setAllColumnsShowFocus(True)
-        self.treeWidget.setHeaderHidden(True)
         self.treeWidget.setColumnCount(1)
         self.treeWidget.setObjectName(_fromUtf8("treeWidget"))
-        self.treeWidget.header().setVisible(False)
-        self.treeWidget.header().setCascadingSectionResizes(False)
-        self.treeWidget.header().setSortIndicatorShown(False)
-        self.treeWidget.header().setStretchLastSection(True)
-        self.verticalLayout.addWidget(self.treeWidget)
-        self.verticalLayout_3.addLayout(self.verticalLayout)
+        self.treeWidget.header().setVisible(True)
+        self.verticalLayout_3.addWidget(self.treeWidget)
+        self.verticalLayout_3.setStretch(1, 1)
         self.verticalLayout_2.addWidget(self.frame)
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
@@ -93,6 +90,7 @@ class Ui_LinkSelect(object):
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.horizontalLayout.addWidget(self.buttonBox)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
+        self.verticalLayout_2.setStretch(0, 1)
 
         self.retranslateUi(LinkSelect)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), LinkSelect.accept)
@@ -101,8 +99,7 @@ class Ui_LinkSelect(object):
 
     def retranslateUi(self, LinkSelect):
         LinkSelect.setWindowTitle(_translate("LinkSelect", "Select link column – Coquery", None))
-        self.label.setText(_translate("LinkSelect", "<html><head/><body><p>You can link a data table from another corpus to the currently selected corpus by choosing a link column from the selector below. The content in the link column is compared to the content of the column <span style=\" font-weight:600;\">\'{resource_feature}\'</span> from the currently selected corpus. If the contents match, the columns from the linked data table can be included in the results view by selecting them as additional output columns.</p><p><span style=\" font-weight:600;\">Note:</span> If you select an external output column, query result from the currently selected corpus that does not match an entry in the linked external table are <span style=\" font-weight:600;\">dropped</span> from the results table. In other words, only complete records with data from the currently selected corpus and the external data table are queried.</p><p><span style=\" font-weight:600;\">Note:</span>  If you select an external output column, the time needed to execute the query may increase significantly.</p></body></html>", None))
-        self.label_2.setText(_translate("LinkSelect", "Link <b>{resource_feature}</b> to...", None))
+        self.label.setText(_translate("LinkSelect", "<html><head/><body><p><span style=\" font-weight:600;\">Link to an external table</span></p><p>You can link the column <span style=\" font-weight:600;\">\'{resource_feature}\'</span> from \'{corpus}\' to a column from a table in a different corpus. The remaining columns from this external table will then be available as output columns.</p><p><span style=\" font-weight:600;\">Note:</span> If you select an output column from an external table, only those tokens from the corpus \'{corpus}\' will be shown that also have a matching entry in the linked external table. Tokens without a matching entry in the external table will not be shown in the query results.</p></body></html>", None))
         self.treeWidget.headerItem().setText(0, _translate("LinkSelect", "Corpus", None))
         self.checkBox.setText(_translate("LinkSelect", "Ignore case when comparing contents.", None))
 

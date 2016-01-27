@@ -122,9 +122,7 @@ class LexiconClass(object):
             if self.is_part_of_speech(CurrentPos):
                 count += 1
         return count
-
-    entry_cache = {}
-    
+                                                            
     def sql_string_get_posid_list_where(self, token):
         comparing_operator = self.resource.get_operator(token)
         where_clauses = []
@@ -138,7 +136,15 @@ class LexiconClass(object):
         current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
         rc_feature = getattr(self.resource, QUERY_ITEM_POS)
         _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-        S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+        if self.DB.db_type == SQL_MYSQL:
+            S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+            getattr(self.resource, "{}_id".format(table)),
+            getattr(self.resource, "{}_table".format(table)),
+            getattr(self.resource, rc_feature),
+            self.resource.get_operator(current_token),
+            pos)
+        else:
+            S = "SELECT {} FROM {} WHERE {} {} '{}' COLLATE NOCASE LIMIT 1".format(
             getattr(self.resource, "{}_id".format(table)),
             getattr(self.resource, "{}_table".format(table)),
             getattr(self.resource, rc_feature),
@@ -229,7 +235,10 @@ class LexiconClass(object):
                         else:
                             S = dummy.S
                         S = S.replace('"', '""')
-                        sub_clauses.append('{} {} "{}"'.format(
+                        format_string = '{} {} "{}"'
+                        if self.resource.DB.db_type == SQL_SQLITE and not options.cfg.case_sensitive:
+                            format_string = '{} {} "{}" COLLATE NOCASE'
+                        sub_clauses.append(format_string.format(
                             target, self.resource.get_operator(dummy), S))
             if sub_clauses:
                 where_clauses.append("({})".format(" OR ".join(sub_clauses)))
@@ -709,6 +718,27 @@ class BaseResource(object):
                 table_name = getattribute(cls, table)
                 filter_list.append((variable, column_name, table_name, filt._op, filt._value_list, filt._value_range))
         return filter_list
+    
+    @classmethod
+    def get_query_item_map(cls):
+        """
+        Return the mapping of query item types to resource features for the 
+        resource.
+        
+        Returns
+        -------
+        d : dict 
+            A dictionary with the query item type constants from defines.py as 
+            keys and the resource feature that this query item type is mapped 
+            to as values. Query item types that are not supported by the 
+            resource will have no key in this dictionary.
+        """
+        item_map = {}
+        for x in (QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
+                  QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
+            if hasattr(cls, x):
+                item_map[x] = getattr(cls, x)
+        return item_map
 
 class SQLResource(BaseResource):
     def get_operator(self, Token):
@@ -1111,7 +1141,7 @@ class SQLResource(BaseResource):
         return select_list
 
 class CorpusClass(object):
-
+    
     def __init__(self):
         self.lexicon = None
         self.resource = None
