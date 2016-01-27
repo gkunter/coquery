@@ -31,7 +31,6 @@ import QtProgress
 import ui.coqueryUi, ui.coqueryCompactUi
 
 import classes
-#import results 
 import errorbox
 import sqlwrap
 import queries
@@ -39,7 +38,7 @@ import contextviewer
 
 from queryfilter import *
 
-# load visualizations
+# add required paths:
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
 sys.path.append(os.path.join(sys.path[0], "installer"))
 
@@ -627,10 +626,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.disable_corpus_widgets()
         else:
             self.enable_corpus_widgets()
-            try:
-                self.msg_box_no_corpus.close()
-            except AttributeError:
-                pass
 
         if self.ui.combo_corpus.count():
             corpus_name = str(self.ui.combo_corpus.currentText())
@@ -1754,39 +1749,6 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
         
-        def traverse_output_columns(node):
-            output_features = []
-            for child in [node.child(i) for i in range(node.childCount())]:
-                output_features += traverse_output_columns(child)
-            if node.checkState(0) == QtCore.Qt.Checked and not node.isDisabled() and not node.objectName().endswith("_table"):
-                output_features.append(node.objectName())
-                
-            return output_features
-        
-        def get_external_links(node):
-            output_features = []
-            for child in [node.child(i) for i in range(node.childCount())]:
-                output_features += get_external_links(child)
-            if node.checkState(0) == QtCore.Qt.Checked:
-                try:
-                    parent = node.parent()
-                except AttributeError:
-                    print("Warning: Node has no parent")
-                    logger.warn("Warning: Node has no parent")
-                    return output_features
-                if parent and parent.isLinked():
-                    link = parent.link
-                    output_features.append((link, node.rc_feature))
-            return output_features
-
-        def get_functions(node):
-            functions = []
-            for child in [node.child(i) for i in range(node.childCount())]:
-                functions += get_functions(child)
-            if node.checkState(0) == QtCore.Qt.Checked and node._func:
-                functions.append((node.objectName(), node._func, str(node.text(0))))
-            return functions 
-
         if options.cfg:
             options.cfg.corpus = str(self.ui.combo_corpus.currentText())
         
@@ -1837,23 +1799,94 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             
-            # get all external links:
-            options.cfg.external_links = []
-            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                options.cfg.external_links += get_external_links(root)
-            
-            # get all checked output columns:
-            options.cfg.selected_features = []
-            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                options.cfg.selected_features += traverse_output_columns(root)
-
-            # get all functions:
-            options.cfg.selected_functions = []
-            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                func = get_functions(root)
-                options.cfg.selected_functions += func
+            options.cfg.external_links = self.get_external_links()
+            options.cfg.selected_features = self.get_selected_features()
+            options.cfg.selected_functions = self.get_functions()
 
             return True
+
+    def get_selected_features(self):
+        """
+        Traverse through the output columns tree and obtain all features that 
+        are checked.
+
+        Returns
+        -------
+        l : list 
+            A list of resource features that were checked in the tree widget.
+        """
+        def traverse(node):
+            checked = []
+            for child in [node.child(i) for i in range(node.childCount())]:
+                checked += traverse(child)
+            if node.checkState(0) == QtCore.Qt.Checked and not node.isDisabled() and not node.objectName().endswith("_table"):
+                checked.append(node.objectName())
+            return checked
+
+        tree = self.ui.options_tree
+        l = []
+        for root in [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]:
+            l += traverse(root)
+        return l
+        
+    def get_external_links(self):
+        """
+        Traverse through the output columns tree and obtain all external links 
+        that are checked.
+        
+        Returns
+        -------
+        l : list 
+            A list of tuples. The first element of each tuple is a Link object 
+            (defined in linkselect.py), and the second element is a string 
+            specifying the resource feature that establishes the link.
+        """
+        def traverse(node):
+            checked = []
+            for child in [node.child(i) for i in range(node.childCount())]:
+                checked += traverse(child)
+            if node.checkState(0) == QtCore.Qt.Checked:
+                try:
+                    parent = node.parent()
+                except AttributeError:
+                    print("Warning: Node has no parent")
+                    logger.warn("Warning: Node has no parent")
+                    return checked
+                if parent and parent.isLinked():
+                    checked.append((parent.link, node.rc_feature))
+            return checked
+
+        tree = self.ui.options_tree
+        l = []
+        for root in [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]:
+            l += traverse(root)
+        return l
+
+    def get_functions(self):
+        """
+        Traverse through the output columns tree and obtain all functions that 
+        are checked.
+        
+        Returns
+        -------
+        l : list 
+            A list of tuples. The first element of each tuple is the resource 
+            feature, the second element is the function, and the third element
+            is the name of the function as it appears in the tree widget. 
+        """
+        def traverse(node):
+            checked = []
+            for child in [node.child(i) for i in range(node.childCount())]:
+                checked += traverse(child)
+            if node.checkState(0) == QtCore.Qt.Checked and node._func:
+                checked.append((node.objectName(), node._func, str(node.text(0))))
+            return checked
+
+        tree = self.ui.options_tree
+        l = []
+        for root in [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]:
+            l += traverse(root)
+        return l
 
     def show_log(self):
         import logfile
@@ -1977,6 +2010,7 @@ class CoqueryApp(QtGui.QMainWindow):
         column = 0
         link = linkselect.LinkSelect.display(
             feature=str(item.text(0)),
+            corpus=str(self.ui.combo_corpus.currentText()),
             corpus_omit=str(self.ui.combo_corpus.currentText()), 
             parent=self)
         
