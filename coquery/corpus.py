@@ -1119,7 +1119,6 @@ class SQLResource(BaseResource):
         
         return select_list
 
-<<<<<<< HEAD
 class CorpusClass(object):
     
     def __init__(self):
