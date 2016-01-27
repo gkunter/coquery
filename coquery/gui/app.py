@@ -491,11 +491,11 @@ class CoqueryApp(QtGui.QMainWindow):
             token_width = data["coquery_invisible_number_of_tokens"]
         except KeyError:
             QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
-
-        viewer = contextviewer.ContextView(
-            self.Session.Corpus, int(token_id), int(origin_id), int(token_width))
-        viewer.show()
-        self.widget_list.append(viewer)
+        if token_id and origin_id and token_width:
+            viewer = contextviewer.ContextView(
+                self.Session.Corpus, int(token_id), int(origin_id), int(token_width))
+            viewer.show()
+            self.widget_list.append(viewer)
 
     def verify_file_name(self):
         file_name = str(self.ui.edit_file_name.text())
