@@ -768,6 +768,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.combo_corpus.setEnabled(True)
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
 
+        if options.cfg.current_resources:
+            self.enable_corpus_widgets()
+        else:
+            self.disable_corpus_widgets()
+            
     def enable_corpus_widgets(self):
         """ 
         Enable all widgets that assume that a corpus is available.
