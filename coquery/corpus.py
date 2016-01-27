@@ -718,6 +718,27 @@ class BaseResource(object):
                 table_name = getattribute(cls, table)
                 filter_list.append((variable, column_name, table_name, filt._op, filt._value_list, filt._value_range))
         return filter_list
+    
+    @classmethod
+    def get_query_item_map(cls):
+        """
+        Return the mapping of query item types to resource features for the 
+        resource.
+        
+        Returns
+        -------
+        d : dict 
+            A dictionary with the query item type constants from defines.py as 
+            keys and the resource feature that this query item type is mapped 
+            to as values. Query item types that are not supported by the 
+            resource will have no key in this dictionary.
+        """
+        item_map = {}
+        for x in (QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
+                  QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
+            if hasattr(cls, x):
+                item_map[x] = getattr(cls, x)
+        return item_map
 
 class SQLResource(BaseResource):
     def get_operator(self, Token):
