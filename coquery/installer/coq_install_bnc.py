@@ -1154,6 +1154,14 @@ class BuilderClass(BaseCorpusBuilder):
         return "bnc"
 
     @staticmethod
+    def get_language():
+        return "English"
+    
+    @staticmethod
+    def get_language_code():
+        return "en-GB"
+
+    @staticmethod
     def get_title():
         return "British National Corpus – XML edition"
 

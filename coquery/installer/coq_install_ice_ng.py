@@ -976,6 +976,14 @@ class BuilderClass(BaseCorpusBuilder):
         return "ice_ng"
 
     @staticmethod
+    def get_language():
+        return "English"
+    
+    @staticmethod
+    def get_language_code():
+        return "en-NG"
+        
+    @staticmethod
     def get_title():
         return "International Corpus of English – Nigeria"
 
