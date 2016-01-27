@@ -31,8 +31,43 @@ def _annotate_heatmap(self, ax, mesh):
     except Exception as e:
         print(e)
         raise e
-sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
+    
+def _axis_ticklabels_overlap(labels, fig):
+    """Return a boolean for whether the list of ticklabels have overlaps.
 
+    Parameters
+    ----------
+    labels : list of ticklabels
+
+    Returns
+    -------
+    overlap : boolean
+        True if any of the labels overlap.
+
+    """
+    if not labels:
+        return False
+
+    # Use the method from http://stackoverflow.com/questions/22667224/ to
+    # get a renderer even on backends where they are normally unavailable:
+    if hasattr(fig.canvas, "get_renderer"):
+        renderer = fig.canvas.get_renderer()
+    else:
+        import io
+        fig.canvas.print_pdf(io.BytesIO())
+        renderer = fig._cachedRenderer
+
+    try:
+        bboxes = [l.get_window_extent(renderer) for l in labels]
+        overlaps = [b.count_overlaps(bboxes) for b in bboxes]
+        return max(overlaps) > 1
+    except RuntimeError as e:
+        print("RT", e)
+        # Issue on macosx backend rasies an error in the above code
+        return False
+
+    
+sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality=2
@@ -64,7 +99,19 @@ class Visualizer(vis.BaseVisualizer):
                 cbar=False,
                 fmt="g",
                 vmax=vmax,
+                #ax=plt.gca(),
                 linewidths=1)
+            try:
+                ax = self.g.fig.gca()
+                xtl = ax.get_xticklabels()
+                ytl = ax.get_yticklabels()
+                if _axis_ticklabels_overlap(xtl, self.g.fig):
+                    self.g.fig.setp(xtl, rotation="vertical")
+                if _axis_ticklabels_overlap(ytl, self.g.fig):
+                    self.g.fig.setp(ytl, rotation="horizontal")
+            except Exception as e:
+                print(str(e))
+                raise e
             
         if len(self._groupby) < 2:
             # create a dummy cross tab with one dimension containing empty
@@ -82,19 +129,6 @@ class Visualizer(vis.BaseVisualizer):
                 linewidths=1)
         else:
             plot_facet = plot
-            #plot_facet = lambda data, color: sns.heatmap(
-                #get_crosstab(
-                    #data, 
-                    #self._groupby[0], 
-                    #self._groupby[1], 
-                    #self._levels[0], 
-                    #self._levels[1]),
-                #robust=True,
-                #annot=True,
-                #cbar=False,
-                #fmt="g",
-                #vmax=vmax,
-                #linewidths=1)
 
             vmax = pd.crosstab(
                 [self._table[x] for x in [self._row_factor, self._groupby[0]] if x != None],

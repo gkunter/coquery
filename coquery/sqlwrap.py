@@ -215,7 +215,7 @@ class SqlDB (object):
                 cursor = self.Con.cursor(pymysql.cursors.DictCursor)
         elif self.db_type == SQL_SQLITE:
             con = self.get_connection()
-            con.row_factory = sqlite3.Row
+            con.row_factory = dict_factory
             cursor = con.cursor()
         cursor.execute(S)
         return cursor

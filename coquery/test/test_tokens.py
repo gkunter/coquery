@@ -8,9 +8,9 @@ import sys
 
 sys.path.append(os.path.normpath(os.path.join(sys.path[0], "..")))
 import tokens
-from corpus import BaseLexicon, BaseResource
+from corpus import LexiconClass, BaseResource
 
-class TestLexicon(BaseLexicon):
+class TestLexicon(LexiconClass):
     def is_part_of_speech(self, pos):
         return pos in ["N", "V"]
 
