@@ -307,6 +307,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
         self.ui.action_save_results.triggered.connect(self.save_results)
+        self.ui.action_copy_to_clipboard.triggered.connect(self.copy_to_clipboard)
         self.ui.action_quit.triggered.connect(self.close)
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
         self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
@@ -895,7 +896,13 @@ class CoqueryApp(QtGui.QMainWindow):
             # exclude invisble rows:
             tab = tab.iloc[~tab.index.isin(pd.Series(options.cfg.row_visibility.keys()))]
             if to_clipboard:
-                tab.to_clipboard(excel=False)
+                cb = QtGui.QApplication.clipboard()
+                cb.clear(mode=cb.Clipboard)
+                cb.setText(tab.to_csv(
+                    sep=str("\t"),
+                    index=False,
+                    header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
+                    encoding=options.cfg.output_encoding), mode=cb.Clipboard)
             else:
                 tab.to_csv(name,
                         sep=options.cfg.output_separator,
