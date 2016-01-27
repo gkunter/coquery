@@ -891,9 +891,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             A list of file names as created by get_file_list()
             
         """
-        found_list = [x for x in [os.path.basename(y) for y in l] if x.lower() in [y.lower() for y in cls.expected_files]]
-        if len(found_list) < len(cls.expected_files):
-            missing_list = [x for x in cls.expected_files if x.lower() not in [y.lower() for y in found_list]]
+        found_list = [x for x in [os.path.basename(y) for y in l] if x in cls.expected_files]
+        if len(set(found_list)) < len(set(cls.expected_files)):
+            missing_list = [x for x in cls.expected_files if x not in found_list]
             sample = "<br/>".join(missing_list[:5])
             if len(missing_list) > 6:
                 sample = "{}</code>, and {} other files".format(sample, len(missing_list) - 3)
@@ -2361,6 +2361,7 @@ if options._use_qt:
         def get_arguments_from_gui(self):
             namespace = argparse.Namespace()
             namespace.verbose = False
+            namespace.use_nltk = False
             
             if self.ui.radio_only_module.isChecked():
                 namespace.o = False
