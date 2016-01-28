@@ -308,7 +308,7 @@ class CorpusManager(QtGui.QDialog):
                     entry = CoqAccordionEntry(stack=self)
 
                     name = builder_class.get_name()
-                    self.detail_box = classes.CoqDetailBox(name, entry)
+                    self.detail_box = classes.CoqDetailBox(name, entry, alternative=name)
 
                     if basename != "coq_install_generic":
                         entry._adhoc = hasattr(builder_class, "_is_adhoc")
