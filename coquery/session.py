@@ -423,7 +423,7 @@ class SessionInputFile(Session):
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
                     except AttributeError:
                         continue
-                    new_query = self.query_type(query_string, self, tokens.COCAToken)
+                    new_query = self.query_type(query_string, self)
                     new_query.input_frame = pd.DataFrame(
                         [current_line], columns=self.header)
                     self.query_list.append(new_query)
@@ -450,7 +450,7 @@ class SessionStdIn(Session):
                 else:
                     if read_lines >= options.cfg.skip_lines:
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
-                        new_query = self.query_type(query_string, self, tokens.COCAToken)
+                        new_query = self.query_type(query_string, self)
                         self.query_list.append(new_query)
                 self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
             read_lines += 1
