@@ -887,10 +887,13 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
 
 class CoqProbabilityDelegate(CoqResultCellDelegate):
     def get_background(self, option, index):
-        value = float(index.data(QtCore.Qt.DisplayRole))
-        if  value > 1:
-            return QtGui.QColor("lightyellow")
-        else:
+        try:
+            value = float(index.data(QtCore.Qt.DisplayRole))
+            if  value > 1:
+                return QtGui.QColor("lightyellow")
+            else:
+                return super(CoqProbabilityDelegate, self).get_background(option, index)
+        except ValueError:
             return super(CoqProbabilityDelegate, self).get_background(option, index)
 
 class CoqFlowLayout(QtGui.QLayout):
