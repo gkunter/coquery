@@ -1023,7 +1023,7 @@ class CoqueryApp(QtGui.QMainWindow):
             if column not in selection:
                 selection = [column]
 
-        display_name = ", ".join([options.cfg.main_window.Session.translate_header(x) for x in selection])
+        display_name = "<br/>".join([options.cfg.main_window.Session.translate_header(x) for x in selection])
 
         action = QtGui.QWidgetAction(self)
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
