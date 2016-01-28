@@ -136,7 +136,7 @@ class LexiconClass(object):
         current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
         rc_feature = getattr(self.resource, QUERY_ITEM_POS)
         _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-        if self.DB.db_type == SQL_MYSQL:
+        if self.resource.DB.db_type == SQL_MYSQL:
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
             getattr(self.resource, "{}_id".format(table)),
             getattr(self.resource, "{}_table".format(table)),
@@ -2206,16 +2206,15 @@ class CorpusClass(object):
                 start=max(0, token_id - 1000), 
                 end=token_id + token_width + 999)
 
-        engine = self.resource.get_engine()
-
         if options.cfg.verbose:
             logger.info(S)
-        try:
-            df = pd.read_sql(S, engine)
-        except Exception as e:
-            print(S)
-            print(e)
-            raise e
+        with self.resource.get_engine() as engine:
+            try:
+                df = pd.read_sql(S, engine)
+            except Exception as e:
+                print(S)
+                print(e)
+                raise e
         try:
             df = df.sort_values(by=["COQ_TOKEN_ID", "COQ_TAG_ID"])
         except AttributeError:
