@@ -317,7 +317,7 @@ class BaseVisualizer(QtCore.QObject):
         if self._plot_frequency:
             column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True)]
         else:
-            column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and x != "coq_frequency"]
+            column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and not x.startswith("statistics")]
 
         column_order.append("coquery_invisible_corpus_id")
 
