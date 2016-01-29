@@ -332,9 +332,11 @@ class BaseResource(object):
     coquery_query_token = "Query token"
 
     statistics_table = "Statistics"
-    statistics_relative_frequency = COLUMN_NAMES["statistics_relative_frequency"]
     statistics_per_million_words = COLUMN_NAMES["statistics_per_million_words"]
-    statistics_entropy = COLUMN_NAMES["statistics_entropy"]
+    statistics_overall_proportion = COLUMN_NAMES["statistics_overall_proportion"]
+    statistics_overall_entropy = COLUMN_NAMES["statistics_overall_entropy"]
+    statistics_query_proportion = COLUMN_NAMES["statistics_query_proportion"]
+    statistics_query_entropy = COLUMN_NAMES["statistics_query_entropy"]
 
     special_table_list = ["coquery", "statistics", "tag"]
 

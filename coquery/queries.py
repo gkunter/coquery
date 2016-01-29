@@ -186,7 +186,7 @@ class QueryFilter(object):
         var, op, value_range, value_list = self.parse_filter(s)
         if not var:
             return False
-        variable_names = [name.lower() for  _, name in self.resource.get_corpus_features() + [("coq_frequency", "freq")]]
+        variable_names = [name.lower() for  _, name in self.resource.get_corpus_features() + [("statistics_frequency", "freq")]]
         if var.lower() not in variable_names:
             return False
         if variable_names.count(var.lower()) > 1:
@@ -469,8 +469,28 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-        if "coquery_invisible_corpus_id" not in list(df.columns.values):
-            df["coquery_invisible_corpus_id"] = np.NaN
+        
+        if "statistics_query_entropy" in self.Session.output_order or "statistics_query_proportion" in self.Session.output_order:
+            columns = [x for x in df.columns if not x.startswith("coquery_invisible")]
+            # get a frequency table for the current data frame:
+            if options.cfg.case_sensitive:
+                self.freqs = df.groupby(columns).count().reset_index()
+            else:
+                df2 = df
+                for column in df2.columns:
+                    if df2[column].dtype == object:
+                        df2[column] = df2[column].str.lower()
+                self.freqs = df2.groupby(columns).count().reset_index()
+            columns.append("statistics_frequency")
+            self.freqs.columns = columns
+            columns.remove("statistics_frequency")
+            # calculate the propabilities of the different results:
+            self.freqs["statistics_query_proportion"] = self.freqs.statistics_frequency.divide(len(df.index))
+            if len(self.freqs.index) == 1:
+                self.entropy = 0
+            else:
+                self.entropy = -self.freqs.statistics_query_proportion.apply(lambda x: x * math.log(x, 2)).sum()
+
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
                 df[column] = self._current_number_of_tokens
@@ -501,6 +521,10 @@ class TokenQuery(object):
                     df[column] = L[n-1]
                 except IndexError:
                     df[column] = ""
+            elif column == "statistics_query_entropy":
+                df[column] = self.entropy
+            elif column == "statistics_query_proportion":
+                df = pd.merge(df, self.freqs, on=columns)
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
@@ -636,25 +660,13 @@ class FrequencyQuery(TokenQuery):
     
     @staticmethod
     def add_output_columns(session):
-        if "coq_entropy" not in session.output_order:
-            session.output_order.append("coq_entropy")
-        if "coq_relative_frequency" not in session.output_order:
-            session.output_order.append("coq_relative_frequency")
-        if "coq_frequency" not in session.output_order:
-            session.output_order.append("coq_frequency")
+        if "statistics_frequency" not in session.output_order:
+            session.output_order.append("statistics_frequency")
 
     @staticmethod
     def remove_output_columns(session):
         try:
-            session.output_order.remove("coq_frequency")
-        except ValueError:
-            pass
-        try:
-            session.output_order.remove("coq_entropy")
-        except ValueError:
-            pass
-        try:
-            session.output_order.remove("coq_relative_frequency")
+            session.output_order.remove("statistics_frequency")
         except ValueError:
             pass
         
@@ -684,12 +696,12 @@ class FrequencyQuery(TokenQuery):
         
         # Drop frequency column if it is already in the data frame (this is
         # needed for re-aggregation):
-        if "coq_frequency" in list(df.columns.values):
-            df.drop("coq_frequency", axis=1, inplace=True)
-        if "coq_entropy" in list(df.columns.values):
-            df.drop("coq_entropy", axis=1, inplace=True)
-        if "coq_relative_frequency" in list(df.columns.values):
-            df.drop("coq_relative_frequency", axis=1, inplace=True)
+        if "statistics_frequency" in list(df.columns.values):
+            df.drop("statistics_frequency", axis=1, inplace=True)
+        if "statistics_overall_entropy" in list(df.columns.values):
+            df.drop("statistics_overall_entropy", axis=1, inplace=True)
+        if "statistics_overall_proportion" in list(df.columns.values):
+            df.drop("statistics_overall_proportion", axis=1, inplace=True)
 
         columns = []
         for x in df.columns.values:
@@ -705,10 +717,10 @@ class FrequencyQuery(TokenQuery):
         group_columns = [x for x in columns if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
         sample_columns = [x for x in columns if x not in group_columns]
         # Add a frequency column:
-        df["coq_frequency"] = 0
+        df["statistics_frequency"] = 0
         
         if len(df.index) == 0:
-            result = pd.DataFrame({"coq_frequency": [0]})
+            result = pd.DataFrame({"statistics_frequency": [0]})
         elif len(group_columns) == 0:
             # if no grouping variables are selected, simply return the first
             # row of the data frame together with the total length of the 
@@ -716,14 +728,14 @@ class FrequencyQuery(TokenQuery):
             freq = len(df.index)
             df = df.iloc[[0]]
             result = df 
-            result["coq_frequency"] = freq
+            result["statistics_frequency"] = freq
         else:
             # create a dictionary that contains the aggregate functions for
             # the different columns. For the sampling columns, this function
             # simply returns the first entry in the column, and for the 
             # frequency column, the function returns the length of the 
             # column:
-            aggr_dict = {"coq_frequency": len}
+            aggr_dict = {"statistics_frequency": len}
             aggr_dict.update(
                 {col: lambda x: x.head(1) for col in sample_columns})
             # group the data frame by the group columns, apply the aggregate
@@ -732,19 +744,19 @@ class FrequencyQuery(TokenQuery):
 
         if "statistics_per_million_words" in options.cfg.selected_features:
             corpus_size = resource.get_corpus_size()
-            result["statistics_per_million_words"] = result["coq_frequency"].apply(
+            result["statistics_per_million_words"] = result["statistics_frequency"].apply(
                 lambda x: x / (corpus_size / 1000000))
 
-        result["coq_relative_frequency"] = result.coq_frequency.divide(result.coq_frequency.sum())
+        result["statistics_overall_proportion"] = result.statistics_frequency.divide(result.statistics_frequency.sum())
         if len(result.index) == 1:
-            result["coq_entropy"] = 0
+            result["statistics_overall_entropy"] = 0
         else:
-            result["coq_entropy"] = -result.coq_relative_frequency.apply(lambda x: x * math.log(x, 2)).sum()
+            result["statistics_overall_entropy"] = -result.statistics_overall_proportion.apply(lambda x: x * math.log(x, 2)).sum()
 
         # entries with no corpus_id are the result of empty frequency 
         # queries. Their frequency is set to zero:
         try:
-            result.coq_frequency[result.coquery_invisible_corpus_id == ""] = 0
+            result.statistics_frequency[result.coquery_invisible_corpus_id == ""] = 0
         except (TypeError, AttributeError):
             pass
 
@@ -867,27 +879,6 @@ class CollocationQuery(TokenQuery):
         left = left_context_span[left_cols].stack().value_counts()
         right = right_context_span[right_cols].stack().value_counts()
 
-        ## Build a lookup table for contexts. This table is used to provide
-        ## the corpus_id to the collocations table so that # the entries can 
-        ## be clicked to see an example of that collocation.
-        ## The lookup table is basically a long data frame containing all
-        ## collocate words 
-        #lookup_header = ["coq_word_label", "coquery_invisible_corpus_id"]
-        #lookup = pd.DataFrame(columns=lookup_header)
-        #for i in range(1, left_span + 1):
-            #tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id"]]
-            #col = tmp_table.columns.values
-            #col[0] = "coq_word_label"
-            #tmp_table.columns = col
-            #lookup = lookup.append(tmp_table)
-        #for i in range(cls.get_max_tokens() + 1 - right_span, cls.get_max_tokens() + 1):
-            #tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id"]]
-            #col = tmp_table.columns.values
-            #col[0] = "coq_word_label"
-            #tmp_table.columns = col
-            #lookup = lookup.append(tmp_table)
-        #lookup["coquery_invisible_number_of_tokens"] = cls.get_max_tokens()
-
         all_words = set(left.index + right.index)
         
         left = left.reindex(all_words).fillna(0).astype(int)
@@ -897,29 +888,24 @@ class CollocationQuery(TokenQuery):
         collocates = collocates.reset_index()
         collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
         collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
-        collocates["coq_frequency"] = collocates["coq_collocate_label"].apply(resource.get_frequency)
-        #collocates["coquery_query_string"] = cls._query_string
+        collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(resource.get_frequency)
+        print(collocates.head())
         collocates["coq_conditional_probability"] = collocates.apply(
             lambda x: cls.conditional_propability(
                 x["coq_collocate_frequency_left"],
-                x["coq_frequency"]) if x["coq_frequency"] else None, 
+                x["statistics_frequency"]) if x["statistics_frequency"] else None, 
             axis=1)
         
         collocates["coq_mutual_information"] = collocates.apply(
             lambda x: cls.mutual_information(
                     f_1=len(df.index),
-                    f_2=x["coq_frequency"], 
+                    f_2=x["statistics_frequency"], 
                     f_coll=x["coq_collocate_frequency"],
                     size=corpus_size, 
                     span=left_span + right_span),
             axis=1)
 
-        #collocates = collocates.merge(lookup, on="coq_collocate_label", how="left")
-        
         collocates = collocates.dropna()
-        
-        #cls.Session.output_order = collocates.columns.values
-        #collocates = cls.filter_data(collocates, cls.Session.filter_list)
         aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
 
         return aggregate
@@ -927,119 +913,15 @@ class CollocationQuery(TokenQuery):
     @staticmethod
     def add_output_columns(session):
         session.output_order = []
-        for label in ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "coq_frequency", "coq_conditional_probability", "coq_mutual_information", "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens"]:
+        for label in ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability", "coq_mutual_information", "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens"]:
             if label not in session.output_order:
                 session.output_order.append(label)
 
-
-    #def write_results(self, output_file):
-        #self.Session.output_order = self.Session.header
-        #count_left = collections.Counter()
-        #count_right = collections.Counter()
-        #count_total = collections.Counter()
-        
-        #left_span = options.cfg.context_left
-        #right_span = options.cfg.context_right
-
-        #features = []
-        #lexicon_features = self.Resource.get_lexicon_features()
-        #for rc_feature in options.cfg.selected_features:
-            #if rc_feature in [x for x, _ in lexicon_features]:
-                #features.append("coq_{}".format(rc_feature))
-            
-        #self.corpus_size = self.Corpus.get_corpus_size()
-        #query_freq = 0
-        #context_info = {}
-
-        #df = pd.DataFrame(self.Results)
-
-        #fix_col = ["coquery_invisible_corpus_id"]
-
-        ## FIXME: Be more generic than always using coq_word_label!
-        #left_cols = ["coq_word_label_{}".format(x + 1) for x in range(options.cfg.context_left)]
-        #right_cols = ["coq_word_label_{}".format(x + self.get_max_tokens() - options.cfg.context_right + 1) for x in range(options.cfg.context_right)]
-        #left_context_span = df[fix_col + left_cols]
-        #right_context_span = df[fix_col + right_cols]
-        #if not options.cfg.case_sensitive:
-            #for column in left_cols:
-                #left_context_span[column] = left_context_span[column].apply(lambda x: x.lower())
-            #for column in right_cols:
-                #right_context_span[column] = right_context_span[column].apply(lambda x: x.lower())
-
-        #left = left_context_span[left_cols].stack().value_counts()
-        #right = right_context_span[right_cols].stack().value_counts()
-
-        ## Build a lookup table for contexts. This table is used to provide
-        ## the corpus_id to the collocations table so that # the entries can 
-        ## be clicked to see an example of that collocation.
-        ## The lookup table is basically a long data frame containing all
-        ## collocate words 
-        #lookup_header = ["coq_word_label", "coquery_invisible_corpus_id"]
-        #lookup = pd.DataFrame(columns=lookup_header)
-        #for i in range(1, left_span + 1):
-            #tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id"]]
-            #col = tmp_table.columns.values
-            #col[0] = "coq_word_label"
-            #tmp_table.columns = col
-            #lookup = lookup.append(tmp_table)
-        #for i in range(self.get_max_tokens() + 1 - right_span, self.get_max_tokens() + 1):
-            #tmp_table = df[["coq_word_label_{}".format(i),"coquery_invisible_corpus_id"]]
-            #col = tmp_table.columns.values
-            #col[0] = "coq_word_label"
-            #tmp_table.columns = col
-            #lookup = lookup.append(tmp_table)
-        #lookup["coquery_invisible_number_of_tokens"] = self.get_max_tokens()
-
-        #all_words = set(left.index + right.index)
-        
-        #left = left.reindex(all_words).fillna(0).astype(int)
-        #right = right.reindex(all_words).fillna(0).astype(int)
-        
-        #collocates = pd.concat([left, right], axis=1)
-        #collocates = collocates.reset_index()
-        #collocates.columns = ["coq_word_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
-        #collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
-        #collocates["coq_frequency"] = collocates["coq_word_label"].apply(self.Corpus.get_frequency)
-        #collocates["coquery_query_string"] = self._query_string
-        #collocates["coq_conditional_probability"] = collocates.apply(
-            #lambda x: self.conditional_propability(
-                #x["coq_collocate_frequency_left"],
-                #x["coq_frequency"]) if x["coq_frequency"] else None, 
-            #axis=1)
-        
-        #collocates["coq_mutual_information"] = collocates.apply(
-            #lambda x: self.mutual_information(
-                    #f_1=len(df.index),
-                    #f_2=x["coq_frequency"], 
-                    #f_coll=x["coq_collocate_frequency"],
-                    #size=self.corpus_size, 
-                    #span=self.left_span + self.right_span),
-            #axis=1)
-
-        #collocates = collocates.merge(lookup, on="coq_word_label", how="left")
-        
-        #collocates = collocates.dropna()
-        
-        #self.Session.output_order = collocates.columns.values
-
-        #collocates = self.filter_data(collocates, self.Session.filter_list)
-        #aggregate = collocates.drop_duplicates(subset="coq_word_label")
-
-        #if options.cfg.gui:
-            ## append the data frame to the existing data frame
-            #self.Session.data_table = collocates
-            #self.Session.output_object = pd.concat([self.Session.output_object, aggregate])
-        #else:
-            ## write data frame to output_file as a CSV file, using the 
-            ## current output_separator. Encoding is always "utf-8".
-            #collocates[vis_cols].to_csv(output_object, 
-                #header=None if self.Session.header_shown else [self.Session.translate_header(x) for x in vis_cols], 
-                #sep=options.cfg.output_separator,
-                #encoding=options.cfg.output_encoding,
-                #index=False)
-            ## remember that the header columns have already been included in
-            ## the output so that multiple queries in a single session do not
-            ## produce multiple headers:
-            #self.Session.header_shown = True
+    @staticmethod
+    def remove_output_columns(session):
+        session.output_order = []
+        for label in ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability", "coq_mutual_information", "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens"]:
+            if label in session.output_order:
+                session.output_order.remove(label)
         
 logger = logging.getLogger(__init__.NAME)

@@ -207,13 +207,6 @@ class Session(object):
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
-        if self.query_type == queries.FrequencyQuery:
-            if ("statistics_relative_frequency" in options.cfg.selected_features
-                or "statistics_entropy" in options.cfg.selected_features):
-                self.output_object["statistics_relative_frequency"] = (self.output_object["coq_frequency"].apply(lambda x: x / self.output_object["coq_frequency"].sum()))
-            if "statistics_entropy" in options.cfg.selected_features:
-                self.output_object["statistics_entropy"] = -self.output_object["statistics_relative_frequency"].apply(lambda x: x * math.log(x, 2)).sum()
-
         # cache the output object for the current query type:
         if self.query_type == queries.FrequencyQuery:
             self._cached_frequency_table = self.output_object
@@ -222,7 +215,7 @@ class Session(object):
         elif self.query_type == queries.CollocationQuery:
             self._cached_collocation_table = self.output_object
 
-    def filter_data(self, column="coq_frequency"):
+    def filter_data(self, column="statistics_frequency"):
         """
         Apply the frequency filters to the output object.
         """
@@ -273,7 +266,7 @@ class Session(object):
             return options.cfg.query_label
 
         # treat frequency columns:
-        if header == "coq_frequency":
+        if header == "statistics_frequency":
             if options.cfg.query_label:
                 return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
             else:

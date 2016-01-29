@@ -49,16 +49,11 @@ CONTEXT_COLUMNS = "Columns"
 CONTEXT_SENTENCE = "Sentence"
 
 COLUMN_NAMES = {
-    "coq_frequency": "Frequency", 
-    "coq_relative_frequency": "Relative frequency",
-    "coq_entropy": "Entropy",
     "coq_context_left": "Left context",
     "coq_context_right": "Right context",
     "coq_context_string": "Context",
-    "coq_collocate_word_label": "Collocate word",
-    "coq_collocate_lemma_label": "Collocate lemma",
-    "coq_collocate_pos_label": "Collocate POS",
-    "coq_collocate_transcript_label": "Collocate transcript",
+    "coq_collocate_label": "Collocate",
+    #"coq_collocate_lemma_label": "Collocate lemma",
     "coq_collocate_frequency": "Collocate frequency",
     "coq_collocate_frequency_left": "Left context frequency",
     "coq_collocate_frequency_right": "Right context frequency",
@@ -69,9 +64,12 @@ COLUMN_NAMES = {
     "coquery_expanded_query_string": "Expanded query string",
     "coquery_query_string": "Query string",
     
-    "statistics_relative_frequency": "Proportion",
+    "statistics_frequency": "Frequency", 
+    "statistics_overall_proportion": "Overall proportion",
+    "statistics_overall_entropy": "Overall entropy",
+    "statistics_query_proportion": "Query proportion",
     "statistics_per_million_words": "Frequency (pmw)",
-    "statistics_entropy": "Entropy",
+    "statistics_query_entropy": "Query entropy",
         }
 
 DEFAULT_CONFIGURATION = "Default"
