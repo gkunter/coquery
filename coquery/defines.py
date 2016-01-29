@@ -50,6 +50,8 @@ CONTEXT_SENTENCE = "Sentence"
 
 COLUMN_NAMES = {
     "coq_frequency": "Frequency", 
+    "coq_relative_frequency": "Relative frequency",
+    "coq_entropy": "Entropy",
     "coq_context_left": "Left context",
     "coq_context_right": "Right context",
     "coq_context_string": "Context",

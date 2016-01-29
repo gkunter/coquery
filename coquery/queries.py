@@ -626,19 +626,20 @@ class FrequencyQuery(TokenQuery):
     """ 
     FrequencyQuery is a subclass of TokenQuery.
     
-    In this subclass, :func:`write_results` creates an aggregrate table of
+    In this subclass, :func:`aggregate_data` creates an aggregrate table of
     the data frame containing the query results. The results are grouped by 
     all columns that are currently visible. The invisible coulmns are sampled 
     so that each aggregate row contains the first value from each aggregate 
     group. The aggregate table contains an additional column with the lengths
     of the groups as a frequency value.
-    
-    The aggregated table is also filtered by applying the currently active
-    frequency filters.
     """
     
     @staticmethod
     def add_output_columns(session):
+        if "coq_entropy" not in session.output_order:
+            session.output_order.append("coq_entropy")
+        if "coq_relative_frequency" not in session.output_order:
+            session.output_order.append("coq_relative_frequency")
         if "coq_frequency" not in session.output_order:
             session.output_order.append("coq_frequency")
 
@@ -646,6 +647,14 @@ class FrequencyQuery(TokenQuery):
     def remove_output_columns(session):
         try:
             session.output_order.remove("coq_frequency")
+        except ValueError:
+            pass
+        try:
+            session.output_order.remove("coq_entropy")
+        except ValueError:
+            pass
+        try:
+            session.output_order.remove("coq_relative_frequency")
         except ValueError:
             pass
         
@@ -677,6 +686,10 @@ class FrequencyQuery(TokenQuery):
         # needed for re-aggregation):
         if "coq_frequency" in list(df.columns.values):
             df.drop("coq_frequency", axis=1, inplace=True)
+        if "coq_entropy" in list(df.columns.values):
+            df.drop("coq_entropy", axis=1, inplace=True)
+        if "coq_relative_frequency" in list(df.columns.values):
+            df.drop("coq_relative_frequency", axis=1, inplace=True)
 
         columns = []
         for x in df.columns.values:
@@ -722,6 +735,12 @@ class FrequencyQuery(TokenQuery):
             result["statistics_per_million_words"] = result["coq_frequency"].apply(
                 lambda x: x / (corpus_size / 1000000))
 
+        result["coq_relative_frequency"] = result.coq_frequency.divide(result.coq_frequency.sum())
+        if len(result.index) == 1:
+            result["coq_entropy"] = 0
+        else:
+            result["coq_entropy"] = -result.coq_relative_frequency.apply(lambda x: x * math.log(x, 2)).sum()
+
         # entries with no corpus_id are the result of empty frequency 
         # queries. Their frequency is set to zero:
         try:
@@ -730,30 +749,6 @@ class FrequencyQuery(TokenQuery):
             pass
 
         return result
-
-    #@staticmethod
-    #def filter_data(df, filter_list, column="coq_frequency"):
-        #""" 
-        #Apply the frequency filters to the frequency column. 
-        
-        #Parameters
-        #----------
-        #df : DataFrame
-            #The data frame to be filtered.
-
-        #Returns
-        #-------
-        #df : DataFrame
-            #A new data frame that contains the filtered rows from the 
-            #argument data frame.
-        #"""
-        #for filt in filter_list:
-            #if filt.var == options.cfg.freq_label:
-                #try:
-                    #df = df[df[column].apply(filt.check_number)]
-                #except AttributeError:
-                    #pass
-        #return df
 
 class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
@@ -784,30 +779,6 @@ class CollocationQuery(TokenQuery):
     def insert_context(self, df, connection):
         return df
     
-    #@staticmethod
-    #def filter_data(df, filter_list):
-        #""" 
-        #Apply the frequency filters to the collocate frequency column. 
-        
-        #Parameters
-        #----------
-        #df : DataFrame
-            #The data frame to be filtered.
-
-        #Returns
-        #-------
-        #df : DataFrame
-            #A new data frame that contains the filtered rows from the 
-            #argument data frame.
-        #"""
-        #for filt in filter_list:
-            #if filt.var == options.cfg.freq_label:
-                #try:
-                    #df = df[df["coq_collocate_frequency"].apply(filt.check_number)]
-                #except (AttributeError, KeyError):
-                    #pass
-        #return df
-
     def __init__(self, S, Session):
         self.left_span = options.cfg.context_left
         self.right_span = options.cfg.context_right
