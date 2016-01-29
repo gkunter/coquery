@@ -342,7 +342,7 @@ class BaseVisualizer(QtCore.QObject):
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
 
-        self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object]]
+        self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object] if not x in self._time_columns]
         self._number_columns = [x for x in self._table.select_dtypes(include=["int", "float"]).columns if not x.startswith("coquery_invisible")]
         
         if self.dimensionality:

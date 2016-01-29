@@ -41,7 +41,7 @@ class Visualizer(vis.BaseVisualizer):
 
     def set_defaults(self):
         if self.percentage:
-            self.options["label_y_axis"] = "Percentage!"
+            self.options["label_y_axis"] = "Percentage"
         else:
             if self.area:
                 self.options["label_y_axis"] = "Cummulative frequency"
@@ -97,8 +97,6 @@ class Visualizer(vis.BaseVisualizer):
         # pandas >= 0.17.0 has changed the Timestamp API. Check that this
         # is still working!
         version = [int(x) for x in pd.__version__.split(".")]
-        if version[0] >= 0 and version[1] > 16:
-            logger.warning("Behaviour of Timeseries has changed in pandas 0.17.0. This may cause problems in Coquery.")
         try:
              return pd.Timestamp("{}".format(
                 (pd.Timestamp("{}".format(x)).year // self.bandwidth) * self.bandwidth)).year
