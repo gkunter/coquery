@@ -69,7 +69,6 @@ class SqlDB (object):
             cur.execute("USE {}".format(db_name.split()[0]))
         elif self.db_type == SQL_SQLITE:
             self.db_path = SqlDB.sqlite_path(db_name)
-        self.Con = self.get_connection()
 
     def get_connection(self):
         if self.db_type not in SQL_ENGINES:
@@ -163,7 +162,7 @@ class SqlDB (object):
         """
         cur = self.Con.cursor()
         if self.db_type == SQL_MYSQL:
-            return bool(con.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name)))
+            return bool(cur.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name)))
         elif self.db_type == SQL_SQLITE:
             S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table_name)
             return bool(cur.execute(S).fetchall())
