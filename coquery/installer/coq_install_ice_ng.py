@@ -913,8 +913,8 @@ class BuilderClass(BaseCorpusBuilder):
             The input string with known encoding errors fixed.
         """
         
-        # apparently, tje character sequence â marks any faulty encoding,
-        # and the next character is the actual encoding error. The probelm
+        # apparently, the character sequence â marks any faulty encoding,
+        # and the next character is the actual encoding error. The problem
         # is that in ICE_NG, this three-character sequence can be split up
         # into two 'words', e.g. for the dash in Pr_13.txt, line 36 
         # ('hereas others – notably top officials'). In Pr_13.xml.pos, this

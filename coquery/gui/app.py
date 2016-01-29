@@ -1373,11 +1373,6 @@ class CoqueryApp(QtGui.QMainWindow):
         
     def run_query(self):
         self.getGuiValues()
-        # Lazily close an existing database connection:
-        try:
-            self.Session.Corpus.resource.DB.close()
-        except AttributeError as e:
-            pass
         self.showMessage("Preparing query...")
         try:
             if self.ui.radio_query_string.isChecked():

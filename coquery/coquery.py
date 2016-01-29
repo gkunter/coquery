@@ -49,7 +49,7 @@ def set_logger(log_file_path):
 def check_system():
     if options.missing_modules:
         if options._use_qt:
-            from pyqt_compat import QtGui, QtCore
+            from pyqt_compat import QtGui
             app = QtGui.QApplication(sys.argv)
             QtGui.QMessageBox.critical(None, 
                 "Missing dependencies – Coquery",
@@ -107,7 +107,7 @@ def main():
     
     # Run the Application GUI?
     if options.cfg.gui:
-        from pyqt_compat import QtGui, QtCore
+        from pyqt_compat import QtGui
         from app import CoqueryApp
         from app import GuiHandler
 

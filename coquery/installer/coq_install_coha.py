@@ -17,7 +17,6 @@ import itertools
 import tempfile
 
 from corpusbuilder import *
-import dbconnection
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "????.txt"
