@@ -902,7 +902,10 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         painter.save()
 
         align = index.data(QtCore.Qt.TextAlignmentRole)
-        value = float(index.data(QtCore.Qt.DisplayRole))
+        try:
+            value = float(index.data(QtCore.Qt.DisplayRole))
+        except ValueError:
+            value = None
         
         # show content as a link on mouse-over:
         if option.state & QtGui.QStyle.State_MouseOver:
@@ -914,7 +917,9 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         if bg:
             painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
-            if not option.state & QtGui.QStyle.State_Selected:
+            if option.state & QtGui.QStyle.State_Selected:
+                painter.fillRect(option.rect, bg)
+            elif value:
                 rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
                 rect.setWidth(option.rect.width() * value)
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
