@@ -300,12 +300,12 @@ class TokenQuery(object):
             self._current_number_of_tokens = len(self._sub_query)
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
 
-            engine = self.Resource.get_engine()
-
-            with engine.connect() as connection:
-                # This SQLAlchemy optimization including the string folder 
-                # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
-                query_string = self.Resource.get_query_string(self, self._sub_query)
+            # This SQLAlchemy optimization including the string folder 
+            # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
+            query_string = self.Resource.get_query_string(self, self._sub_query)
+            self.Resource.DB.close()
+            
+            with self.Resource.get_engine().connect() as connection:
                 if not query_string:
                     df = pd.DataFrame()
                 else:
@@ -327,7 +327,8 @@ class TokenQuery(object):
 
                 df = self.insert_static_data(df)
                 df = self.insert_context(df, connection)
-            self.add_output_columns(self.Session)
+                connection.close()
+                self.add_output_columns(self.Session)
 
             if not options.cfg.case_sensitive and len(df.index) > 0:
                 for x in df.columns:
@@ -889,7 +890,6 @@ class CollocationQuery(TokenQuery):
         collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
         collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
         collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(resource.get_frequency)
-        print(collocates.head())
         collocates["coq_conditional_probability"] = collocates.apply(
             lambda x: cls.conditional_propability(
                 x["coq_collocate_frequency_left"],
