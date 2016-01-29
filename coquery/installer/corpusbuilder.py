@@ -304,7 +304,7 @@ class Table(object):
                 fields = [self.primary.name] + self._col_names
             else:
                 fields = self._col_names
-            if DB.db_type == SQL_MYSQL:
+            if self._DB.db_type == SQL_MYSQL:
                 placeholder = "%s"
             else:
                 placeholder = "?"
@@ -328,8 +328,6 @@ class Table(object):
                     new_keys.append(row)
 
             if data: 
-                print(self._DB)
-                print(sql_string)
                 try:
                     self._DB.executemany(sql_string, data)
                 except TypeError as e:
@@ -1837,7 +1835,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             Type=self.arguments.db_type,
             User=self.arguments.db_user,
             Password=self.arguments.db_password,
-            db_name=self.arguments.db_name,
             local_infile=1)
         
         if self.DB.has_database(self.arguments.db_name) and self.arguments.c:
@@ -1847,8 +1844,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.DB.use_database(self.arguments.db_name)
 
         if self.arguments.db_type == SQL_MYSQL:
-            self.DB.set_variable("NAMES", self.arguments.encoding)
-            self.DB.set_variable("CHARACTER SET", self.arguments.encoding)
+            self.DB.set_variable("NAMES", "utf8")
+            self.DB.set_variable("CHARACTER SET", "utf8mb4")
             self.DB.set_variable("autocommit", 0)
             self.DB.set_variable("unique_checks", 0)
             self.DB.set_variable("foreign_key_checks", 0)
@@ -2595,11 +2592,7 @@ if options._use_qt:
                 except ValueError:
                     raise SQLNoConfigurationError
                 DB = sqlwrap.SqlDB(
-                    Host=self.arguments.db_host,
-                    Port=self.arguments.db_port,
-                    Type=self.arguments.db_type,
-                    User=self.arguments.db_user,
-                    Password=self.arguments.db_password)
+                    Host=db_host, Port=db_port, Type=db_type, User=db_user, Password=db_password)
                 db_exists = DB.has_database("coq_{}".format(str(self.ui.corpus_name.text()).lower()))
                 # regardless of whether only the module or the whole corpus
                 # is requested, the corpus needs a name:
