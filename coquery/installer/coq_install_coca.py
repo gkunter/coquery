@@ -17,7 +17,6 @@ import itertools
 import tempfile
 
 from corpusbuilder import *
-import dbconnection
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.txt"
@@ -245,23 +244,8 @@ class BuilderClass(BaseCorpusBuilder):
 
                     # load the temporary file containing a chunk from the big 
                     # file into the matching table name:
-                    try:
-                        self.Con.load_infile(temp_file.name, table, arguments)
-                    except dbconnection.mysql.OperationalError as e:
-                        raise RuntimeError("""
-                            <p><b>The file '{}' could not be loaded into the database.</b></p>
-                            <p>While attempting to load the file into the database, the 
-                            following error occurred:</p>
-                            <p><code>{}</code></p>
-                            <p>One possible cause of this error is that your MySQL 
-                            database server is not configured to allow LOCAL INFILE 
-                            loading of data files. Please ask the administrator of 
-                            your MySQL server to ensure that the option 
-                            <code>local-infile=1</code> is set in the <code>[mysql]</code>
-                            section of the server configuration file.</p>
-                            """.format(file_name, e))
-                    finally:
-                        os.remove(temp_file.name)
+                    self.Con.load_infile(temp_file.name, table, arguments)
+                    os.remove(temp_file.name)
 
             self.store_filename(file_name)
             if self._widget:
