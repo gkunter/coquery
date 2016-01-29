@@ -207,13 +207,6 @@ class Session(object):
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
-        if self.query_type == queries.FrequencyQuery:
-            if ("statistics_relative_frequency" in options.cfg.selected_features
-                or "statistics_entropy" in options.cfg.selected_features):
-                self.output_object["statistics_relative_frequency"] = (self.output_object["coq_frequency"].apply(lambda x: x / self.output_object["coq_frequency"].sum()))
-            if "statistics_entropy" in options.cfg.selected_features:
-                self.output_object["statistics_entropy"] = -self.output_object["statistics_relative_frequency"].apply(lambda x: x * math.log(x, 2)).sum()
-
         # cache the output object for the current query type:
         if self.query_type == queries.FrequencyQuery:
             self._cached_frequency_table = self.output_object
@@ -222,7 +215,7 @@ class Session(object):
         elif self.query_type == queries.CollocationQuery:
             self._cached_collocation_table = self.output_object
 
-    def filter_data(self, column="coq_frequency"):
+    def filter_data(self, column="statistics_frequency"):
         """
         Apply the frequency filters to the output object.
         """
@@ -273,7 +266,7 @@ class Session(object):
             return options.cfg.query_label
 
         # treat frequency columns:
-        if header == "coq_frequency":
+        if header == "statistics_frequency":
             if options.cfg.query_label:
                 return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
             else:
@@ -423,7 +416,7 @@ class SessionInputFile(Session):
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
                     except AttributeError:
                         continue
-                    new_query = self.query_type(query_string, self, tokens.COCAToken)
+                    new_query = self.query_type(query_string, self)
                     new_query.input_frame = pd.DataFrame(
                         [current_line], columns=self.header)
                     self.query_list.append(new_query)
@@ -450,7 +443,7 @@ class SessionStdIn(Session):
                 else:
                     if read_lines >= options.cfg.skip_lines:
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
-                        new_query = self.query_type(query_string, self, tokens.COCAToken)
+                        new_query = self.query_type(query_string, self)
                         self.query_list.append(new_query)
                 self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
             read_lines += 1

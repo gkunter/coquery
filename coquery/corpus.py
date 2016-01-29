@@ -136,7 +136,7 @@ class LexiconClass(object):
         current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
         rc_feature = getattr(self.resource, QUERY_ITEM_POS)
         _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-        if self.DB.db_type == SQL_MYSQL:
+        if self.resource.DB.db_type == SQL_MYSQL:
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
             getattr(self.resource, "{}_id".format(table)),
             getattr(self.resource, "{}_table".format(table)),
@@ -332,9 +332,11 @@ class BaseResource(object):
     coquery_query_token = "Query token"
 
     statistics_table = "Statistics"
-    statistics_relative_frequency = COLUMN_NAMES["statistics_relative_frequency"]
     statistics_per_million_words = COLUMN_NAMES["statistics_per_million_words"]
-    statistics_entropy = COLUMN_NAMES["statistics_entropy"]
+    statistics_overall_proportion = COLUMN_NAMES["statistics_overall_proportion"]
+    statistics_overall_entropy = COLUMN_NAMES["statistics_overall_entropy"]
+    statistics_query_proportion = COLUMN_NAMES["statistics_query_proportion"]
+    statistics_query_entropy = COLUMN_NAMES["statistics_query_entropy"]
 
     special_table_list = ["coquery", "statistics", "tag"]
 
@@ -718,6 +720,27 @@ class BaseResource(object):
                 table_name = getattribute(cls, table)
                 filter_list.append((variable, column_name, table_name, filt._op, filt._value_list, filt._value_range))
         return filter_list
+    
+    @classmethod
+    def get_query_item_map(cls):
+        """
+        Return the mapping of query item types to resource features for the 
+        resource.
+        
+        Returns
+        -------
+        d : dict 
+            A dictionary with the query item type constants from defines.py as 
+            keys and the resource feature that this query item type is mapped 
+            to as values. Query item types that are not supported by the 
+            resource will have no key in this dictionary.
+        """
+        item_map = {}
+        for x in (QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
+                  QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
+            if hasattr(cls, x):
+                item_map[x] = getattr(cls, x)
+        return item_map
 
 class SQLResource(BaseResource):
     def get_operator(self, Token):
@@ -1126,6 +1149,7 @@ class CorpusClass(object):
         self.resource = None
         self._frequency_cache = {}
         self._corpus_size_cache = None
+        self._context_cache = {}
 
     def get_source_id(self, token_id):
         if not options.cfg.token_origin_id:
@@ -2130,44 +2154,7 @@ class CorpusClass(object):
         else:
             return []
 
-    def render_context(self, token_id, source_id, token_width, context_width, widget):
-        """ Return a visual representation of the context around the 
-        specified token. The result is shown in an instance of the 
-        ContextView class.
-        
-        The most simple visual representation of the context is a plain text
-        display, but in principle, a corpus might implement a more elaborate
-        renderer. For example, a corpus may contain information about the
-        page layout, and the renderer could use that information to create a
-        facsimile of the original page.
-        
-        The renderer can interact with the widget in which the context will
-        be displayed. The area in which the context is shown is a QLabel
-        named widget.ui.context_area. """
-
-        if not (self.resource, QUERY_ITEM_WORD):
-            raise UnsupportedQueryItemError
-
-        tab = options.cfg.main_window.Session.data_table
-
-        def expand_row(x):
-            self.id_list += list(range(x.coquery_invisible_corpus_id, x.end))
-
-        # create a list of all token ids that are also listed in the results
-        # table:
-        self.id_list = []
-        tab = tab[(tab.coquery_invisible_corpus_id> token_id - 1000) & (
-            tab.coquery_invisible_corpus_id < token_id + 1000 + token_width)]
-        tab["end"] = tab[["coquery_invisible_corpus_id", 
-                          "coquery_invisible_number_of_tokens"]].sum(axis=1)
-
-        # the function expand_row has the side effect that it adds the 
-        # token id range for each row to the list self.id_list
-        tab.apply(expand_row, axis=1)
-
-        start = max(0, token_id - context_width)
-        end = token_id + token_width + context_width - 1
-            
+    def _read_context_for_renderer(self, token_id, source_id, token_width):
         origin_id = ""
         try:
             origin_id = self.resource.corpus_source_id
@@ -2177,16 +2164,15 @@ class CorpusClass(object):
             except AttributeError:
                 origin_id = self.resource.corpus_sentence_id
 
-        if "tag_table" in dir(self.resource):
-            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word} AS COQ_WORD, {tag}, {tag_table}.{tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
+        if hasattr(self.resource, "tag_table"):
+            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word} AS COQ_WORD, {tag} AS COQ_TAG_TAG, {tag_table}.{tag_type} AS COQ_TAG_TYPE, {attribute} AS COQ_ATTRIBUTE, {tag_id} AS COQ_TAG_ID FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
         else:
             format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word} AS COQ_WORD FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
             
         if origin_id:
             format_string += " AND {corpus}.{source_id} = {current_source_id}"
     
-        if "tag_table" in dir(self.resource):
-        
+        if hasattr(self.resource, "tag_table"):
             S = format_string.format(
                 corpus=self.resource.corpus_table,
                 corpus_id=self.resource.corpus_id,
@@ -2205,7 +2191,8 @@ class CorpusClass(object):
                 attribute=self.resource.tag_attribute,
                 
                 current_source_id=source_id,
-                start=start, end=end)
+                start=max(0, token_id - 1000), 
+                end=token_id + token_width + 999)
         else:
             S = format_string.format(
                 corpus=self.resource.corpus_table,
@@ -2218,53 +2205,94 @@ class CorpusClass(object):
                 word_id=self.resource.word_id,
                 
                 current_source_id=source_id,
-                start=start, end=end)
-
-        engine = self.resource.get_engine()
+                start=max(0, token_id - 1000), 
+                end=token_id + token_width + 999)
 
         if options.cfg.verbose:
             logger.info(S)
+        with self.resource.get_engine() as engine:
+            try:
+                df = pd.read_sql(S, engine)
+            except Exception as e:
+                print(S)
+                print(e)
+                raise e
         try:
-            df = pd.read_sql(S, engine)
-        except Exception as e:
-            print(S)
-            print(e)
-            raise e
+            df = df.sort_values(by=["COQ_TOKEN_ID", "COQ_TAG_ID"])
+        except AttributeError:
+            df = df.sort(columns=["COQ_TOKEN_ID", "COQ_TAG_ID"])
+        self._context_cache[(token_id, source_id, token_width)] = df
+        
+    def render_context(self, token_id, source_id, token_width, context_width, widget):
+        """ Return a visual representation of the context around the 
+        specified token. The result is shown in an instance of the 
+        ContextView class.
+        
+        The most simple visual representation of the context is a plain text
+        display, but in principle, a corpus might implement a more elaborate
+        renderer. For example, a corpus may contain information about the
+        page layout, and the renderer could use that information to create a
+        facsimile of the original page.
+        
+        The renderer can interact with the widget in which the context will
+        be displayed. The area in which the context is shown is a QLabel
+        named widget.ui.context_area. """
 
-        if options.cfg.verbose:
-            print(df)
+        if not (self.resource, QUERY_ITEM_WORD):
+            raise UnsupportedQueryItemError
 
+        if not (token_id, source_id, token_width) in self._context_cache:
+            self._read_context_for_renderer(token_id, source_id, token_width)
+        df = self._context_cache[(token_id, source_id, token_width)]
+
+        context_start = max(0, token_id - context_width)
+        context_end = token_id + token_width + context_width - 1
+
+        def expand_row(x):
+            self.id_list += list(range(x.coquery_invisible_corpus_id, x.end))
+
+        # create a list of all token ids that are also listed in the results
+        # table:
+        self.id_list = []
+        tab = options.cfg.main_window.Session.data_table
+        tab = tab[(tab.coquery_invisible_corpus_id> token_id - 1000) & (
+            tab.coquery_invisible_corpus_id < token_id + 1000 + token_width)]
+        tab["end"] = tab[["coquery_invisible_corpus_id", 
+                          "coquery_invisible_number_of_tokens"]].sum(axis=1)
+
+        # the function expand_row has the side effect that it adds the 
+        # token id range for each row to the list self.id_list
+        tab.apply(expand_row, axis=1)
+            
         context = deque()
         # we need to keep track of any opening and closing tag that does not
         # have its matching tag in the selected context:
         opened_elements = []
         closed_elements = []
-        
-        #for context_token_id in sorted(entities):
-        for context_token_id in sorted(df.COQ_TOKEN_ID.unique()):
+    
+        for context_token_id in [x for x in range(context_start, context_end) if x in df.COQ_TOKEN_ID.unique()]:
             opening_elements = []
             closing_elements = []
             word = ""
    
-            #if "tag_id" in dir(self.resource):
-                ## create lists of opening and closing elements, and get the 
-                ## current word:
-                #for x in sorted(entities[context_token_id],
-                            #key=lambda x:x[self.resource.tag_id]):
-                    #tag_type = x[self.resource.tag_type]
-                    #if tag_type:
-                        #if tag_type in ("open", "empty"):
-                            #opening_elements.append(x)
-                        #if tag_type in ("close", "empty"):
-                            #closing_elements.append(x)
+            df_sub = df[df.COQ_TOKEN_ID == context_token_id]
+            if "COQ_TAG_ID" in df_sub.columns:
+                for x in df_sub.index:
+                    if df_sub.COQ_TAG_TYPE[x] is not None:
+                        if df_sub.COQ_TAG_TYPE[x] == "open":
+                            opening_elements.append(x)
+                        if df_sub.COQ_TAG_TYPE[x] == "empty":
+                            opening_elements.append(x)
+                            closing_elements.append(x)
+                        if df_sub.COQ_TAG_TYPE[x] == "close":
+                            closing_elements.append(x)
 
-            #word = entities[context_token_id][0][self.resource.word_label]
-            word = df[df.COQ_TOKEN_ID == context_token_id].COQ_WORD.iloc[0]
+            word = df_sub.COQ_WORD.iloc[0]
             
             # process all opening elements:
-            for element in opening_elements:
-                tag = element[self.resource.tag_label]
-                attr = element[self.resource.tag_attribute]
+            for ix in opening_elements:
+                tag = df_sub.loc[ix].COQ_TAG_TAG
+                attr = df_sub.loc[ix].COQ_ATTRIBUTE
                 if attr:
                     try:
                         attributes = dict([x.split("=") for x in attr.split(",")])
@@ -2292,10 +2320,10 @@ class CorpusClass(object):
                 if context_token_id in self.id_list:
                     context.append("</span>")
             
-            # process all closing elements:
-            for element in closing_elements:
-                tag = element[self.resource.tag_label]
-                attr = element[self.resource.tag_attribute]
+            # process all opening elements:
+            for ix in closing_elements:
+                tag = df_sub.loc[ix].COQ_TAG_TAG
+                attr = df_sub.loc[ix].COQ_ATTRIBUTE
                 if attr:
                     try:
                         attributes = dict([x.split("=") for x in attr.split(",")])

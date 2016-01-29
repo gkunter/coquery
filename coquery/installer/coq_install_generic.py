@@ -22,20 +22,19 @@ from corpusbuilder import *
 
 class BuilderClass(BaseCorpusBuilder):
     corpus_table = "Corpus"
-    corpus_id = "TokenId"
+    corpus_id = "ID"
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
     word_table = "Lexicon"
     word_id = "WordId"
     word_lemma = "Lemma"
     word_label = "Word"
-    word_pos = "POS"
     file_table = "Files"
     file_id = "FileId"
     file_name = "Filename"
     file_path = "Path"
 
-    def __init__(self, gui=False):
+    def __init__(self, gui=False, pos=True):
         # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui)
 
@@ -59,11 +58,18 @@ class BuilderClass(BaseCorpusBuilder):
         # A text value containing the part-of-speech label of this 
         # word-form.
         
-        self.create_table_description(self.word_table,
-            [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-            Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
-            Column(self.word_pos, "VARCHAR(12) NOT NULL"),
-            Column(self.word_label, "VARCHAR(40) NOT NULL")])
+        if pos:
+            self.word_pos = "POS"
+            self.create_table_description(self.word_table,
+                [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+                Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
+                Column(self.word_pos, "VARCHAR(12) NOT NULL"),
+                Column(self.word_label, "VARCHAR(40) NOT NULL")])
+        else:
+            self.create_table_description(self.word_table,
+                [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+                Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
+                Column(self.word_label, "VARCHAR(40) NOT NULL")])
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the

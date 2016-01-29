@@ -31,7 +31,6 @@ import QtProgress
 import ui.coqueryUi, ui.coqueryCompactUi
 
 import classes
-#import results 
 import errorbox
 import sqlwrap
 import queries
@@ -39,7 +38,7 @@ import contextviewer
 
 from queryfilter import *
 
-# load visualizations
+# add required paths:
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
 sys.path.append(os.path.join(sys.path[0], "installer"))
 
@@ -85,6 +84,8 @@ class GuiHandler(logging.StreamHandler):
 
 class CoqueryApp(QtGui.QMainWindow):
     """ Coquery as standalone application. """
+
+    corpusListUpdated = QtCore.Signal()
 
     def __init__(self, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -306,6 +307,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
         self.ui.action_save_results.triggered.connect(self.save_results)
+        self.ui.action_copy_to_clipboard.triggered.connect(self.copy_to_clipboard)
         self.ui.action_quit.triggered.connect(self.close)
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
         self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
@@ -492,11 +494,11 @@ class CoqueryApp(QtGui.QMainWindow):
             token_width = data["coquery_invisible_number_of_tokens"]
         except KeyError:
             QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
-
-        viewer = contextviewer.ContextView(
-            self.Session.Corpus, int(token_id), int(origin_id), int(token_width))
-        viewer.show()
-        self.widget_list.append(viewer)
+        if token_id and origin_id and token_width:
+            viewer = contextviewer.ContextView(
+                self.Session.Corpus, int(token_id), int(origin_id), int(token_width))
+            viewer.show()
+            self.widget_list.append(viewer)
 
     def verify_file_name(self):
         file_name = str(self.ui.edit_file_name.text())
@@ -627,10 +629,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.disable_corpus_widgets()
         else:
             self.enable_corpus_widgets()
-            try:
-                self.msg_box_no_corpus.close()
-            except AttributeError:
-                pass
 
         if self.ui.combo_corpus.count():
             corpus_name = str(self.ui.combo_corpus.currentText())
@@ -771,6 +769,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.combo_corpus.setEnabled(True)
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
 
+        if options.cfg.current_resources:
+            self.enable_corpus_widgets()
+        else:
+            self.disable_corpus_widgets()
+            
     def enable_corpus_widgets(self):
         """ 
         Enable all widgets that assume that a corpus is available.
@@ -811,7 +814,7 @@ class CoqueryApp(QtGui.QMainWindow):
         for i in range(header.count()):
             column = self.table_model.header[header.logicalIndex(i)]
 
-            if column in ("coq_conditional_probability"):
+            if column in ("coq_conditional_probability", "statistics_overall_proportion", "statistics_query_proportion"):
                 deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
             else:
                 deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
@@ -893,7 +896,13 @@ class CoqueryApp(QtGui.QMainWindow):
             # exclude invisble rows:
             tab = tab.iloc[~tab.index.isin(pd.Series(options.cfg.row_visibility.keys()))]
             if to_clipboard:
-                tab.to_clipboard(excel=False)
+                cb = QtGui.QApplication.clipboard()
+                cb.clear(mode=cb.Clipboard)
+                cb.setText(tab.to_csv(
+                    sep=str("\t"),
+                    index=False,
+                    header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
+                    encoding=options.cfg.output_encoding), mode=cb.Clipboard)
             else:
                 tab.to_csv(name,
                         sep=options.cfg.output_separator,
@@ -1014,7 +1023,7 @@ class CoqueryApp(QtGui.QMainWindow):
             if column not in selection:
                 selection = [column]
 
-        display_name = ", ".join([options.cfg.main_window.Session.translate_header(x) for x in selection])
+        display_name = "<br/>".join([options.cfg.main_window.Session.translate_header(x) for x in selection])
 
         action = QtGui.QWidgetAction(self)
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
@@ -1479,6 +1488,8 @@ class CoqueryApp(QtGui.QMainWindow):
             True if the corpus was created using the "Build new corpus"
             function, or False otherwise.
         """
+        import removecorpus
+
         try:
             resource, _, _, module = options.cfg.current_resources[corpus_name]
         except KeyError:
@@ -1486,37 +1497,30 @@ class CoqueryApp(QtGui.QMainWindow):
                 database = "coq_{}".format(corpus_name.lower())
             else:
                 database = ""
-            size = FileSize(0)
             module = ""
         else:
             database = resource.db_name
 
         if database:
-            try:
-                host, port, db_type, user, password = options.get_mysql_configuration()
-            except ValueError:
-                raise SQLNoConfigurationError
-
+            host, port, db_type, user, password = options.get_mysql_configuration()
             try:
                 db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=database)
             except:
                 db = None
-            if db:
-                # Try to estimate the file size:
-                try:
-                    size = FileSize(db.get_database_size(database))
-                except TypeError:
-                    size = FileSize(-1)
-            else:
-                size = FileSize(-1)
 
-        response = QtGui.QMessageBox.warning(
-            self, "Remove corpus", msg_corpus_remove.format(corpus=corpus_name, size=size), QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
-        
-        if response == QtGui.QMessageBox.Yes:
+        response = removecorpus.RemoveCorpusDialog.select(
+            corpus_name, 
+            options.cfg.current_server,
+            adhoc_corpus)
+        if response and QtGui.QMessageBox.question(
+            self,
+            "Remove corpus – Coquery",
+            "Do you really want to remove the selected corpus components?",
+            QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel) == QtGui.QMessageBox.Ok:
+            rm_module, rm_database, rm_installer = response
             success = True
-            self.start_progress_indicator()
-            if db:
+
+            if rm_database and db:
                 try:
                     db.drop_database(database)
                 except Exception as e:
@@ -1532,7 +1536,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     pass
 
             # Remove the corpus module:
-            if success and module:
+            if rm_module and success and module:
                 try:
                     if os.path.exists(module):
                         os.remove(module)
@@ -1544,7 +1548,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
             # remove the corpus installer if the corpus was created from 
             # text files:
-            if success and adhoc_corpus:
+            if rm_installer and success and adhoc_corpus:
                 try:
                     installer_path = os.path.join(
                         options.get_home_dir(), "adhoc",
@@ -1556,19 +1560,14 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     success = True
 
-            self.stop_progress_indicator()
             options.set_current_server(options.cfg.current_server)
             self.fill_combo_corpus()
-            if success:
+            if success and (rm_installer or rm_database or rm_module):
                 logger.warning("Removed corpus {}.".format(corpus_name))
                 self.showMessage("Removed corpus {}.".format(corpus_name))
-
+                self.corpusListUpdated.emit()
+                
             self.change_corpus()
-            
-            try:
-                self.corpus_manager.update()
-            except AttributeError:
-                pass
 
     def build_corpus(self):
         import coq_install_generic
@@ -1583,10 +1582,7 @@ class CoqueryApp(QtGui.QMainWindow):
             options.set_current_server(options.cfg.current_server)
         self.fill_combo_corpus()
         self.change_corpus()
-        try:
-            self.corpus_manager.update()
-        except AttributeError:
-            pass
+        self.corpusListUpdated.emit()
             
     def install_corpus(self, builder_class):
         import corpusbuilder
@@ -1598,10 +1594,7 @@ class CoqueryApp(QtGui.QMainWindow):
             errorbox.ErrorBox.show(sys.exc_info())
         self.fill_combo_corpus()
         self.change_corpus()
-        try:
-            self.corpus_manager.update()
-        except AttributeError:
-            pass
+        self.corpusListUpdated.emit()
             
     def manage_corpus(self):
         import corpusmanager
@@ -1614,6 +1607,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.corpus_manager.show()
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
+            self.corpusListUpdated.connect(self.corpus_manager.update)
+            
             result = self.corpus_manager.exec_()
             try:
                 self.corpus_manager.close()
@@ -1754,39 +1749,6 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
         
-        def traverse_output_columns(node):
-            output_features = []
-            for child in [node.child(i) for i in range(node.childCount())]:
-                output_features += traverse_output_columns(child)
-            if node.checkState(0) == QtCore.Qt.Checked and not node.isDisabled() and not node.objectName().endswith("_table"):
-                output_features.append(node.objectName())
-                
-            return output_features
-        
-        def get_external_links(node):
-            output_features = []
-            for child in [node.child(i) for i in range(node.childCount())]:
-                output_features += get_external_links(child)
-            if node.checkState(0) == QtCore.Qt.Checked:
-                try:
-                    parent = node.parent()
-                except AttributeError:
-                    print("Warning: Node has no parent")
-                    logger.warn("Warning: Node has no parent")
-                    return output_features
-                if parent and parent.isLinked():
-                    link = parent.link
-                    output_features.append((link, node.rc_feature))
-            return output_features
-
-        def get_functions(node):
-            functions = []
-            for child in [node.child(i) for i in range(node.childCount())]:
-                functions += get_functions(child)
-            if node.checkState(0) == QtCore.Qt.Checked and node._func:
-                functions.append((node.objectName(), node._func, str(node.text(0))))
-            return functions 
-
         if options.cfg:
             options.cfg.corpus = str(self.ui.combo_corpus.currentText())
         
@@ -1837,23 +1799,94 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             
-            # get all external links:
-            options.cfg.external_links = []
-            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                options.cfg.external_links += get_external_links(root)
-            
-            # get all checked output columns:
-            options.cfg.selected_features = []
-            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                options.cfg.selected_features += traverse_output_columns(root)
-
-            # get all functions:
-            options.cfg.selected_functions = []
-            for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-                func = get_functions(root)
-                options.cfg.selected_functions += func
+            options.cfg.external_links = self.get_external_links()
+            options.cfg.selected_features = self.get_selected_features()
+            options.cfg.selected_functions = self.get_functions()
 
             return True
+
+    def get_selected_features(self):
+        """
+        Traverse through the output columns tree and obtain all features that 
+        are checked.
+
+        Returns
+        -------
+        l : list 
+            A list of resource features that were checked in the tree widget.
+        """
+        def traverse(node):
+            checked = []
+            for child in [node.child(i) for i in range(node.childCount())]:
+                checked += traverse(child)
+            if node.checkState(0) == QtCore.Qt.Checked and not node.isDisabled() and not node.objectName().endswith("_table"):
+                checked.append(node.objectName())
+            return checked
+
+        tree = self.ui.options_tree
+        l = []
+        for root in [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]:
+            l += traverse(root)
+        return l
+        
+    def get_external_links(self):
+        """
+        Traverse through the output columns tree and obtain all external links 
+        that are checked.
+        
+        Returns
+        -------
+        l : list 
+            A list of tuples. The first element of each tuple is a Link object 
+            (defined in linkselect.py), and the second element is a string 
+            specifying the resource feature that establishes the link.
+        """
+        def traverse(node):
+            checked = []
+            for child in [node.child(i) for i in range(node.childCount())]:
+                checked += traverse(child)
+            if node.checkState(0) == QtCore.Qt.Checked:
+                try:
+                    parent = node.parent()
+                except AttributeError:
+                    print("Warning: Node has no parent")
+                    logger.warn("Warning: Node has no parent")
+                    return checked
+                if parent and parent.isLinked():
+                    checked.append((parent.link, node.rc_feature))
+            return checked
+
+        tree = self.ui.options_tree
+        l = []
+        for root in [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]:
+            l += traverse(root)
+        return l
+
+    def get_functions(self):
+        """
+        Traverse through the output columns tree and obtain all functions that 
+        are checked.
+        
+        Returns
+        -------
+        l : list 
+            A list of tuples. The first element of each tuple is the resource 
+            feature, the second element is the function, and the third element
+            is the name of the function as it appears in the tree widget. 
+        """
+        def traverse(node):
+            checked = []
+            for child in [node.child(i) for i in range(node.childCount())]:
+                checked += traverse(child)
+            if node.checkState(0) == QtCore.Qt.Checked and node._func:
+                checked.append((node.objectName(), node._func, str(node.text(0))))
+            return checked
+
+        tree = self.ui.options_tree
+        l = []
+        for root in [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]:
+            l += traverse(root)
+        return l
 
     def show_log(self):
         import logfile
@@ -1977,6 +2010,7 @@ class CoqueryApp(QtGui.QMainWindow):
         column = 0
         link = linkselect.LinkSelect.display(
             feature=str(item.text(0)),
+            corpus=str(self.ui.combo_corpus.currentText()),
             corpus_omit=str(self.ui.combo_corpus.currentText()), 
             parent=self)
         

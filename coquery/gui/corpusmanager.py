@@ -18,9 +18,8 @@ import os
 import imp
 import logging
 
-sys.path.append(os.path.join(sys.path[0], ".."))
 import __init__
-sys.path.append(os.path.join(sys.path[0], "../installer"))
+sys.path.append(os.path.join(sys.path[0], "installer"))
 
 import options
 from errors import *
@@ -250,7 +249,7 @@ class CorpusManager(QtGui.QDialog):
         Read the installers from the path, and add a widget for each to the 
         installer list.
         """
- 
+        options.cfg.current_resources = options.get_available_resources(options.cfg.current_server)
         # clear existing installer list:
         QtGui.QWidget().setLayout(self.ui.list_content.layout())
 
@@ -309,7 +308,7 @@ class CorpusManager(QtGui.QDialog):
                     entry = CoqAccordionEntry(stack=self)
 
                     name = builder_class.get_name()
-                    self.detail_box = classes.CoqDetailBox(name, entry)
+                    self.detail_box = classes.CoqDetailBox(name, entry, alternative=name)
 
                     if basename != "coq_install_generic":
                         entry._adhoc = hasattr(builder_class, "_is_adhoc")

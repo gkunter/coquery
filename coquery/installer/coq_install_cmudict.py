@@ -109,6 +109,14 @@ class BuilderClass(BaseCorpusBuilder):
         return "cmudict"
     
     @staticmethod
+    def get_language():
+        return "English"
+    
+    @staticmethod
+    def get_language_code():
+        return "en-US"
+        
+    @staticmethod
     def get_license():
         return "CMUdict is available under the terms of a modified FreeBSD license."
     

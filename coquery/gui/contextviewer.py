@@ -54,8 +54,7 @@ class ContextView(QtGui.QWidget):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
 
         # Add clickable header
-        self.ui.button_ids = classes.CoqDetailBox("Token ID: {}, Source ID: {}")
-        self.ui.button_ids.setText(str(self.ui.button_ids.text()).format(token_id, source_id))
+        self.ui.button_ids = classes.CoqDetailBox("Token ID: {}, Source ID: {}".format(token_id, source_id))
         self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", str(not self.ui.button_ids.isExpanded())))
         self.ui.verticalLayout_2.insertWidget(0, self.ui.button_ids)
         self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
@@ -65,7 +64,7 @@ class ContextView(QtGui.QWidget):
             self.add_source_label(table)
             for label in sorted(fields.keys()):
                 self.add_source_label(label, fields[label])
-        
+
         self.update_context()
 
         try:

@@ -22,26 +22,26 @@ from corpusbuilder import *
 from bibliography import *
 
 class corpus_code():
-    def get_tag_translate(self, tag):
-        translate_dict = {
-            "p": "p",
-            "punctuation": "",
-            "heading": "h1",
-            "boldface": "b",
-            "italics": "i",
-            "underline": "u",
-            "superscript": "sup",
-            "subscript": "sup",
-            "text": "html", 
-            "deleted": "s",
-            "other-language": "span style='font-style: italic;'",
-            "quote": "span style='font-style: italic; color: darkgrey; '",
-            "error": "s"}
-        if tag in translate_dict:
-            return translate_dict[tag]
-        else:
-            print("unsupported tag: ", tag)
-            return tag
+    #def get_tag_translate(self, tag):
+        #translate_dict = {
+            #"p": "p",
+            #"punctuation": "",
+            #"heading": "h1",
+            #"boldface": "b",
+            #"italics": "i",
+            #"underline": "u",
+            #"superscript": "sup",
+            #"subscript": "sup",
+            #"text": "html", 
+            #"deleted": "s",
+            #"other-language": "span style='font-style: italic;'",
+            #"quote": "span style='font-style: italic; color: darkgrey; '",
+            #"error": "s"}
+        #if tag in translate_dict:
+            #return translate_dict[tag]
+        #else:
+            #print("unsupported tag: ", tag)
+            #return tag
 
     def renderer_open_element(self, tag, attributes):
         context = super(Corpus, self).renderer_open_element(tag, attributes)
@@ -576,24 +576,29 @@ class BuilderClass(BaseCorpusBuilder):
         self._corpus_code = corpus_code
         
 
-    def xml_preprocess_tag(self, element):
-        self.tag_next_token(element.tag, element.attrib)
-        #if element.text or list(element):
-            #self.tag_next_token(element.tag, element.attrib)
-        #else:
-            #self.add_empty_tag(element.tag, element.attrib)
-            #if element.tag == "x-anonym-x":
-                ## ICE-NG contains anonymized labels for names, placenames,
-                ## and other nouns. Insert a special label in that case:
-                #self._word_id = self.table_get(self.word_table, 
-                        #{self.word_label: "ANONYMIZED", 
-                        #self.word_lemma: "ANONYMIZED", 
-                        #self.word_pos: "np"}, case=True)
+    #def xml_preprocess_tag(self, element):
+        #self.tag_token(self._corpus_id, element.tag, element.attrib, op=True)
+        ##self.tag_next_token(element.tag, element.attrib)
+        ##if element.text or list(element):
+            ##self.tag_next_token(element.tag, element.attrib)
+        ##else:
+            ##self.add_empty_tag(element.tag, element.attrib)
+            ##if element.tag == "x-anonym-x":
+                ### ICE-NG contains anonymized labels for names, placenames,
+                ### and other nouns. Insert a special label in that case:
+                ##self._word_id = self.table_get(self.word_table, 
+                        ##{self.word_label: "ANONYMIZED", 
+                        ##self.word_lemma: "ANONYMIZED", 
+                        ##self.word_pos: "np"}, case=True)
 
-    def xml_postprocess_tag(self, element):
-        # mon-empty tag
-        #if element.text or list(element):
-            self.tag_last_token(element.tag, element.attrib)
+    #def xml_postprocess_tag(self, element, this_id):
+        #if element.tag == "x-anonym-x":
+            #print(this_id, "closing")
+            #assert this_id == self._last_opened, self._current_file
+        #self.tag_token(this_id, element.tag, element.attrib, cl=True)
+        ## mon-empty tag
+        ##if element.text or list(element):
+            ##self.tag_last_token(element.tag, element.attrib)
 
     def process_text(self, text):
         for row in text.splitlines():
@@ -975,6 +980,14 @@ class BuilderClass(BaseCorpusBuilder):
     def get_db_name():
         return "ice_ng"
 
+    @staticmethod
+    def get_language():
+        return "English"
+    
+    @staticmethod
+    def get_language_code():
+        return "en-NG"
+        
     @staticmethod
     def get_title():
         return "International Corpus of English – Nigeria"

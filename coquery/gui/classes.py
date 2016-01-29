@@ -94,7 +94,10 @@ class CoqDetailBox(QtGui.QWidget):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
 
         self._text = text
-        self._alternative = alternative
+        if alternative:
+            self._alternative = alternative
+        else:
+            self._alternative = text
         self._expanded = False
         self.update()
         self.setText(text)
@@ -838,9 +841,9 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             else:
                 color_group = QtGui.QPalette.Disabled
             if index.row() & 1:
-                return self._app.palette().color(color_group, QtGui.QPalette.Base)
-            else:
                 return self._app.palette().color(color_group, QtGui.QPalette.AlternateBase)
+            else:
+                return self._app.palette().color(color_group, QtGui.QPalette.Base)
 
     def sizeHint(self, option, index):
         rect = options.cfg.metrics.boundingRect(unicode(index.data(QtCore.Qt.DisplayRole)))
@@ -871,7 +874,9 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         if bg:
             painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
-            painter.fillRect(option.rect, bg)
+            if option.state & QtGui.QStyle.State_Selected:
+                painter.fillRect(option.rect, bg)
+            
         if fg:
             painter.setPen(QtGui.QPen(fg))
         try:
@@ -883,13 +888,61 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             painter.restore()
 
 class CoqProbabilityDelegate(CoqResultCellDelegate):
-    def get_background(self, option, index):
-        value = float(index.data(QtCore.Qt.DisplayRole))
-        if  value > 1:
-            return QtGui.QColor("lightyellow")
-        else:
-            return super(CoqProbabilityDelegate, self).get_background(option, index)
+    def paint(self, painter, option, index):
+        """
+        Paint the results cell.
+        
+        The paint method of the cell delegates takes the representation
+        from the table's :func:`data` method, using the DecorationRole role.
+        On mouse-over, the cell is rendered like a clickable link.
+        """
+        content = unicode(index.data(QtCore.Qt.DisplayRole))
+        if not content:
+            return
+        painter.save()
 
+        align = index.data(QtCore.Qt.TextAlignmentRole)
+        try:
+            value = float(index.data(QtCore.Qt.DisplayRole))
+        except ValueError:
+            value = None
+        
+        # show content as a link on mouse-over:
+        if option.state & QtGui.QStyle.State_MouseOver:
+            font = painter.font()
+            font.setUnderline(True)
+            painter.setFont(font)
+        fg = self.get_foreground(option, index)
+        bg = self.get_background(option, index)
+        if bg:
+            painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
+            painter.setBackground(bg)
+            if option.state & QtGui.QStyle.State_Selected:
+                painter.fillRect(option.rect, bg)
+            elif value:
+                rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
+                rect.setWidth(option.rect.width() * value)
+                painter.fillRect(rect, QtGui.QColor("lightgreen"))
+        if fg:
+            painter.setPen(QtGui.QPen(fg))
+        try:
+            if align & QtCore.Qt.AlignLeft:
+                painter.drawText(option.rect.adjusted(2, 0, 2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
+            else:
+                painter.drawText(option.rect.adjusted(-2, 0, -2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
+        finally:
+            painter.restore()
+
+    def get_background(self, option, index):
+        try:
+            value = float(index.data(QtCore.Qt.DisplayRole))
+            if  value > 1:
+                return QtGui.QColor("lightyellow")
+            else:
+                return super(CoqProbabilityDelegate, self).get_background(option, index)
+        except ValueError:
+            return super(CoqProbabilityDelegate, self).get_background(option, index)
+        
 class CoqFlowLayout(QtGui.QLayout):
     """ Define a QLayout with flowing widgets that reorder automatically. """
  
