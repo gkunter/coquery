@@ -171,13 +171,7 @@ class Session(object):
         Closing the session essentially means that the database connection 
         for this session is closed.
         """
-        try:
-            self.Resource.close_database()
-        except Exception as e:
-            print(str(e))
-            logger.warning("Could not correctly close the database connection: {}".format(e))
-            
-
+        self.Resource.close_db()
         
     def get_frequency_table(self):
         frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus)

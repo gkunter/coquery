@@ -792,6 +792,16 @@ class SQLResource(BaseResource):
             raise RuntimeError("Database type '{}' not supported.".format(db_type))
         return create_engine(engine_string)
     
+    def close_db(self):
+        if self.DB:
+            try:
+                self.DB.close()
+            except Exception as e:
+                print(str(e))
+                logger.warning("Could not correctly close the database connection: {}".format(e))
+                pass
+        self.DB = None
+    
     def get_db(self):
         try:
             host, port, db_type, user, password = options.get_mysql_configuration()
@@ -1195,8 +1205,8 @@ class CorpusClass(object):
             self.resource.corpus_table,
             self.resource.corpus_id,
             token_id)
-        d = self.resource.DB.execute_cursor(S).fetchone()
-
+        db = self.resource.get_db()
+        d = db.execute_cursor(S).fetchone()
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
         for column in d.keys():
@@ -1240,7 +1250,7 @@ class CorpusClass(object):
                     d[column])
                 # Fetch all fields from the linked table for the current 
                 # token:
-                row = self.resource.DB.execute_cursor(S).fetchone()
+                row = db.execute_cursor(S).fetchone()
                 if row:
                     # This somewhat complicated code is required because 
                     # the SQLite connections only indirectly support named 
@@ -1250,6 +1260,7 @@ class CorpusClass(object):
                     D = dict(zip(keys, [row[x] for x in keys]))
                     ## append the row data to the list:
                     l.append((table_name, D))
+        db.close()
         return l
 
     def get_corpus_size(self):
@@ -2210,13 +2221,9 @@ class CorpusClass(object):
 
         if options.cfg.verbose:
             logger.info(S)
-        with self.resource.get_engine() as engine:
-            try:
-                df = pd.read_sql(S, engine)
-            except Exception as e:
-                print(S)
-                print(e)
-                raise e
+
+        df = pd.read_sql(S, self.resource.get_engine())
+
         try:
             df = df.sort_values(by=["COQ_TOKEN_ID", "COQ_TAG_ID"])
         except AttributeError:
@@ -2238,6 +2245,9 @@ class CorpusClass(object):
         be displayed. The area in which the context is shown is a QLabel
         named widget.ui.context_area. """
 
+        def expand_row(x):
+            self.id_list += list(range(x.coquery_invisible_corpus_id, x.end))
+
         if not (self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
 
@@ -2247,9 +2257,6 @@ class CorpusClass(object):
 
         context_start = max(0, token_id - context_width)
         context_end = token_id + token_width + context_width - 1
-
-        def expand_row(x):
-            self.id_list += list(range(x.coquery_invisible_corpus_id, x.end))
 
         # create a list of all token ids that are also listed in the results
         # table:
@@ -2274,7 +2281,7 @@ class CorpusClass(object):
             opening_elements = []
             closing_elements = []
             word = ""
-   
+
             df_sub = df[df.COQ_TOKEN_ID == context_token_id]
             if "COQ_TAG_ID" in df_sub.columns:
                 for x in df_sub.index:
