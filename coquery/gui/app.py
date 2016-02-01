@@ -1779,20 +1779,9 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.input_path = str(self.ui.edit_file_name.text())
 
             # get context options:
-            try:
-                options.cfg.context_left = self.ui.context_left_span.value()
-                options.cfg.context_right = self.ui.context_right_span.value()
-                if self.ui.context_words_as_columns.checkState():
-                    options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-                else:
-                    options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-            except AttributeError:
-                if options.cfg.context_mode == CONTEXT_KWIC:
-                    options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-                elif options.cfg.context_mode == CONTEXT_COLUMNS:
-                   options.cfg.context_columns = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-                else:
-                    options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+            options.cfg.context_left = self.ui.context_left_span.value()
+            options.cfg.context_right = self.ui.context_right_span.value()
+            options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
             
             options.cfg.external_links = self.get_external_links()
             options.cfg.selected_features = self.get_selected_features()
@@ -1941,7 +1930,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if options.cfg.context_mode == CONTEXT_STRING:
             self.ui.radio_context_mode_string.setChecked(True)
         elif options.cfg.context_mode == CONTEXT_COLUMNS:
-            self.ui.radio_context_mode_column.setChecked(True)
+            self.ui.radio_context_mode_columns.setChecked(True)
         else:
             self.ui.radio_context_mode_kwic.setChecked(True)
             

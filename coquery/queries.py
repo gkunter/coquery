@@ -437,6 +437,17 @@ class TokenQuery(object):
                 self._current_number_of_tokens, True, connection)
             row["coq_context"] = corpus.collapse_words(left + [x.upper() for x in target] + right)
             return row
+        
+        def insert_columns(row):
+            left, target, right = self.Session.Resource.get_context(
+                row["coquery_invisible_corpus_id"], 
+                row["coquery_invisible_origin_id"],
+                self._current_number_of_tokens, True, connection)
+            for i in range(len(left)):
+                row["coq_context_lc{}".format(len(left) - i)] = left[i]
+            for i in range(len(right)):
+                row["coq_context_rc{}".format(i + 1)] = right[i]
+            return row
 
         if not options.cfg.token_origin_id:
             return df
@@ -447,9 +458,10 @@ class TokenQuery(object):
             df = df.apply(insert_kwic, axis=1)
         elif options.cfg.context_mode == CONTEXT_STRING:
             df = df.apply(insert_sentence, axis=1)
+        elif options.cfg.context_mode == CONTEXT_COLUMNS:
+            df = df.apply(insert_columns, axis=1)
         #elif options.cfg.context_mode == CONTEXT_SENTENCE:
             #current_result["coq_context"] = collapse_word(self.get_context_sentence())
-
         return df
     
     def insert_static_data(self, df):
