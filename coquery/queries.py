@@ -421,20 +421,15 @@ class TokenQuery(object):
     
     def insert_context(self, df, connection):
         def insert_kwic(row):
-            left, target, right = self.Session.Resource.get_context(
-                row["coquery_invisible_corpus_id"], 
-                row["coquery_invisible_origin_id"],
-                self._current_number_of_tokens, True, connection)
-            row["coq_context_left"] = corpus.collapse_words(left)
-            row["coq_context_right"] = corpus.collapse_words(right)
+            row["coq_context_left"] = corpus.collapse_words(row[left_columns])
+            row["coq_context_right"] = corpus.collapse_words(row[right_columns])
             return row
 
-        def insert_sentence(row):
-            left, target, right = self.Session.Resource.get_context(
-                row["coquery_invisible_corpus_id"], 
-                row["coquery_invisible_origin_id"],
-                self._current_number_of_tokens, True, connection)
-            row["coq_context"] = corpus.collapse_words(left + [x.upper() for x in target] + right)
+        def insert_string(row):
+            row["coq_context"] = corpus.collapse_words(
+                list(row[left_columns]) + 
+                [x.upper() for x in list(row[target_columns])] + 
+                list(row[right_columns]))
             return row
         
         def insert_columns(row):
@@ -446,19 +441,38 @@ class TokenQuery(object):
                 row["coq_context_lc{}".format(len(left) - i)] = left[i]
             for i in range(len(right)):
                 row["coq_context_rc{}".format(i + 1)] = right[i]
+            if options.cfg.context_mode == CONTEXT_STRING:
+                if word_feature not in options.cfg.selected_features:
+                    for i in range(len(target)):
+                        row["coq_context_t{}".format(i + 1)] = target[i]
+
             return row
 
         if not options.cfg.token_origin_id:
             return df
         if not (options.cfg.context_left or options.cfg.context_right):
             return df
+        if not hasattr(self.Session.Resource, QUERY_ITEM_WORD):
+            return df
+        else:
+            word_feature = getattr(self.Session.Resource, QUERY_ITEM_WORD)
+        
+        df = df.apply(insert_columns, axis=1)        
         
         if options.cfg.context_mode == CONTEXT_KWIC:
+            left_columns = ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
+            right_columns = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
             df = df.apply(insert_kwic, axis=1)
+
         elif options.cfg.context_mode == CONTEXT_STRING:
-            df = df.apply(insert_sentence, axis=1)
-        elif options.cfg.context_mode == CONTEXT_COLUMNS:
-            df = df.apply(insert_columns, axis=1)
+            left_columns = ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
+            right_columns = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
+            if word_feature in options.cfg.selected_features:
+                target_columns = ["coq_{}_{}".format(word_feature, x + 1) for x in range(self._current_number_of_tokens)]
+            else:
+                target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._current_number_of_tokens)]
+            df = df.apply(insert_string, axis=1)
+
         #elif options.cfg.context_mode == CONTEXT_SENTENCE:
             #current_result["coq_context"] = collapse_word(self.get_context_sentence())
         return df
