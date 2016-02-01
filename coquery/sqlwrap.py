@@ -345,6 +345,8 @@ class SqlDB (object):
         logger.debug(S)
 
         if self.db_type == SQL_MYSQL:
+            if not self.Con.open:
+                self.Con = self.get_connection()
             if server_side:
                 cursor = self.Con.cursor(pymysql.cursors.SSDictCursor)
             else:
