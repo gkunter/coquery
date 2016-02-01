@@ -453,6 +453,8 @@ class CoqueryApp(QtGui.QMainWindow):
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         
+        # set up hooks so that the statistics columns are only available when 
+        # the frequency aggregation is active:        
         self.ui.radio_aggregate_collocations.toggled.connect(self.toggle_frequency_columns)
         self.ui.radio_aggregate_frequencies.toggled.connect(self.toggle_frequency_columns)
         self.ui.radio_aggregate_none.toggled.connect(self.toggle_frequency_columns)
@@ -574,7 +576,6 @@ class CoqueryApp(QtGui.QMainWindow):
         if not self.Session:
             return
         self.unfiltered_tokens = len(self.Session.data_table.index)
-        
         self.thread = QtProgress.ProgressThread(self.Session.aggregate_data, parent=self, recalculate=recalculate)
         self.thread.taskFinished.connect(self.finish_reaggregation)
         self.thread.taskException.connect(self.exception_during_query)
@@ -1412,10 +1413,10 @@ class CoqueryApp(QtGui.QMainWindow):
                 return
         
         self.getGuiValues()
-        self.Session = StatisticsSession()
+        self.new_session = StatisticsSession()
         self.showMessage("Gathering corpus statistics...")
         self.start_progress_indicator()
-        self.query_thread = QtProgress.ProgressThread(self.Session.run_queries, parent=self)
+        self.query_thread = QtProgress.ProgressThread(self.new_session.run_queries, parent=self)
         self.query_thread.taskFinished.connect(self.finalize_query)
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
