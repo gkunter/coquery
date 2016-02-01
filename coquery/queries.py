@@ -277,7 +277,7 @@ class TokenQuery(object):
         return len(self.tokens)
 
     @staticmethod
-    def aggregate_data(df, resource):
+    def aggregate_data(df, resource, **kwargs):
         """ Aggregate the data frame. """
         return df
     
@@ -426,7 +426,7 @@ class TokenQuery(object):
             return row
 
         def insert_string(row):
-            row["coq_context"] = corpus.collapse_words(
+            row["coq_context_string"] = corpus.collapse_words(
                 list(row[left_columns]) + 
                 [x.upper() for x in list(row[target_columns])] + 
                 list(row[right_columns]))
@@ -472,9 +472,6 @@ class TokenQuery(object):
             else:
                 target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._current_number_of_tokens)]
             df = df.apply(insert_string, axis=1)
-
-        #elif options.cfg.context_mode == CONTEXT_SENTENCE:
-            #current_result["coq_context"] = collapse_word(self.get_context_sentence())
         return df
     
     def insert_static_data(self, df):
@@ -642,8 +639,8 @@ class TokenQuery(object):
         return
  
     @classmethod
-    def aggregate_it(cls, df, resource):
-        agg = cls.aggregate_data(df, resource)
+    def aggregate_it(cls, df, resource, **kwargs):
+        agg = cls.aggregate_data(df, resource, **kwargs)
         #agg = cls.filter_data(agg, cls.filter_list)
         agg_cols = list(agg.columns.values)
         for col in list(agg_cols):
@@ -662,8 +659,9 @@ class DistinctQuery(TokenQuery):
     """
 
     @classmethod
-    def aggregate_data(cls, df, resource):
-        vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
+    def aggregate_data(cls, df, resource, **kwargs):
+        vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and x in kwargs["output_order"] and
+                    options.cfg.column_visibility.get(x, True)]
         try:
             df = df.drop_duplicates(subset=vis_cols)
         except ValueError:
@@ -702,7 +700,7 @@ class FrequencyQuery(TokenQuery):
         return gp.agg(aggr_dict).reset_index()
     
     @classmethod
-    def aggregate_data(cls, df, resource):
+    def aggregate_data(cls, df, resource, **kwargs):
         """
         Aggregate the data frame by obtaining the row frequencies for each
         group specified by the visible data columns.
@@ -722,6 +720,7 @@ class FrequencyQuery(TokenQuery):
         
         # Drop frequency column if it is already in the data frame (this is
         # needed for re-aggregation):
+        
         if "statistics_frequency" in list(df.columns.values):
             df.drop("statistics_frequency", axis=1, inplace=True)
         if "statistics_overall_entropy" in list(df.columns.values):
@@ -731,12 +730,13 @@ class FrequencyQuery(TokenQuery):
 
         columns = []
         for x in df.columns.values:
-            try:
-                n = int(x.rpartition("_")[-1])
-            except ValueError:
-                columns.append(x)
-            else:
-                columns.append(x)
+            if x in kwargs["output_order"]:
+                try:
+                    n = int(x.rpartition("_")[-1])
+                except ValueError:
+                    columns.append(x)
+                else:
+                    columns.append(x)
 
         # Group by those columns which are neither intrinsically invisible 
         # nor currently hidden:
@@ -790,7 +790,7 @@ class FrequencyQuery(TokenQuery):
 
 class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
-        super(StatisticsQuery, self).__init__("", session, None)
+        super(StatisticsQuery, self).__init__("", session)
         
     def append_results(self, df):
         """
@@ -814,24 +814,7 @@ class StatisticsQuery(TokenQuery):
             return df.append(self.results_frame)
 
 class CollocationQuery(TokenQuery):
-    def insert_context(self, df, connection):
-        return df
     
-    def __init__(self, S, Session):
-        self.left_span = options.cfg.context_left
-        self.right_span = options.cfg.context_right
-        
-        if not self.left_span and not self.right_span:
-            raise CollocationNoContextError
-
-        self._query_string = S
-        # build query string so that the neighbourhood is also queried:
-        S = "{}{}{}".format("* " * self.left_span, S, " *" * self.right_span)
-
-        # and then use this string for a normal TokenQuery:
-        super(CollocationQuery, self).__init__(S, Session)
-        self.Session.output_order = self.Session.header
-
     @staticmethod
     def mutual_information(f_1, f_2, f_coll, size, span):
         """ Calculate the Mutual Information for two words. f_1 and f_2 are
@@ -866,7 +849,7 @@ class CollocationQuery(TokenQuery):
         return float(freq_left) / float(freq_total)
 
     @classmethod
-    def aggregate_data(cls, df, resource):
+    def aggregate_data(cls, df, resource, **kwargs):
         count_left = collections.Counter()
         count_right = collections.Counter()
         count_total = collections.Counter()
@@ -887,13 +870,13 @@ class CollocationQuery(TokenQuery):
         fix_col = ["coquery_invisible_corpus_id"]
 
         # FIXME: Be more generic than always using coq_word_label!
-        left_cols = ["coq_word_label_{}".format(x + 1) for x in range(options.cfg.context_left)]
+        left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
         # FIXME: currently, the token number is set to 1, because this class 
         # method doesn't know about the maximum token number in this query.
         # Somehow, get_max_tokens() needs to be passed to this method to 
         # effect something like max_tokens = cls.get_max_tokens(cls)
         max_tokens = 1 + left_span + right_span
-        right_cols = ["coq_word_label_{}".format(x + max_tokens - options.cfg.context_right + 1) for x in range(options.cfg.context_right)]
+        right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
         left_context_span = df[fix_col + left_cols]
         right_context_span = df[fix_col + right_cols]
         if not options.cfg.case_sensitive:
@@ -930,13 +913,13 @@ class CollocationQuery(TokenQuery):
                     span=left_span + right_span),
             axis=1)
 
-        collocates = collocates.dropna()
         aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
 
         return aggregate
 
     @staticmethod
     def add_output_columns(session):
+        session._old_output_order = session.output_order
         session.output_order = []
         for label in ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability", "coq_mutual_information", "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens"]:
             if label not in session.output_order:
@@ -944,9 +927,6 @@ class CollocationQuery(TokenQuery):
 
     @staticmethod
     def remove_output_columns(session):
-        session.output_order = []
-        for label in ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability", "coq_mutual_information", "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens"]:
-            if label in session.output_order:
-                session.output_order.remove(label)
+        session.output_order = session._old_output_order
         
 logger = logging.getLogger(__init__.NAME)

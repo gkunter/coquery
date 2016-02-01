@@ -119,7 +119,6 @@ class Session(object):
         """ Process all queries. For each query, go through the entries in 
         query_list() and yield the results for that subquery. Then, write
         all results to the output file. """
-
         self.start_time = datetime.datetime.now()
         self.end_time = None
         
@@ -136,7 +135,6 @@ class Session(object):
 
         self.end_time = datetime.datetime.now()
         self.data_table.index = range(1, len(self.data_table.index) + 1)
-
         self.frequency_table = self.get_frequency_table()
         
         self.filter_data()
@@ -174,9 +172,10 @@ class Session(object):
         self.Resource.close_db()
         
     def get_frequency_table(self):
-        frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus)
+        frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, output_order=self.output_order)
         frequency_table.fillna("", inplace=True)
         frequency_table.index = range(1, len(frequency_table.index) + 1)
+
         return frequency_table
 
     def aggregate_data(self, recalculate=True):
@@ -186,6 +185,7 @@ class Session(object):
         """
         # if no explicit recalculation is requested, try to use a cached 
         # output object for the current query type:
+
         if not recalculate:
             if self.query_type == queries.FrequencyQuery and hasattr(self, "_cached_frequency_table"):
                 self.output_object = self._cached_frequency_table
@@ -197,22 +197,9 @@ class Session(object):
                 self.output_object = self._cached_collocation_table
                 return
 
-        # forget all cached output objects:
-        try:
-            del self._cached_frequency_table
-        except (NameError, AttributeError):
-            pass
-        try:
-            del self._cached_collocation_table
-        except (NameError, AttributeError):
-            pass
-        try:
-            del self._cached_unique_table
-        except (NameError, AttributeError):
-            pass
-
         # Recalculate the output object for the current query type:
-        self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
+        self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus, output_order=self.output_order)
+
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
@@ -223,6 +210,7 @@ class Session(object):
             self._cached_unique_table = self.output_object
         elif self.query_type == queries.CollocationQuery:
             self._cached_collocation_table = self.output_object
+
 
     def filter_data(self, column="statistics_frequency"):
         """
