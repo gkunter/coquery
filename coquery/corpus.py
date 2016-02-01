@@ -1180,7 +1180,6 @@ class CorpusClass(object):
         
         db = self.resource.get_db()
         cur = db.Con.cursor()
-        print(db, db.Con, cur, S)
         cur.execute(S)
         cur.close()
         return cur.fetchone()[0]
@@ -2268,6 +2267,20 @@ class CorpusClass(object):
         def expand_row(x):
             self.id_list += list(range(x.coquery_invisible_corpus_id, x.end))
 
+        html_escape_table = {
+            "&": "&amp;",
+            '"': "&quot;",
+            "'": "&apos;",
+            ">": "&gt;",
+            "<": "&lt;",
+            }
+
+        def escape_html(s):
+            """
+            Based on http://stackoverflow.com/questions/2077283/
+            """
+            return "".join(html_escape_table.get(c, c) for c in s)
+
         if not (self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
 
@@ -2314,7 +2327,7 @@ class CorpusClass(object):
                         if df_sub.COQ_TAG_TYPE[x] == "close":
                             closing_elements.append(x)
 
-            word = df_sub.COQ_WORD.iloc[0]
+            word = escape_html(df_sub.COQ_WORD.iloc[0])
             
             # process all opening elements:
             for ix in opening_elements:
