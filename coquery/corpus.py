@@ -136,7 +136,7 @@ class LexiconClass(object):
         current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
         rc_feature = getattr(self.resource, QUERY_ITEM_POS)
         _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-        if self.resource.DB.db_type == SQL_MYSQL:
+        if self.resource.db_type == SQL_MYSQL:
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
             getattr(self.resource, "{}_id".format(table)),
             getattr(self.resource, "{}_table".format(table)),
@@ -154,11 +154,9 @@ class LexiconClass(object):
 
     def is_part_of_speech(self, pos):
         if hasattr(self.resource, QUERY_ITEM_POS):
-            db = self.resource.get_db()
-            cur = db.Con.cursor()
-            cur.execute(self.sql_string_is_part_of_speech(pos))
-            cur.close()
-            return len(cur.fetchall()) > 0
+            S = self.sql_string_is_part_of_speech(pos)
+            df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+            return len(df.index) > 0
         else:
             raise UnsupportedQueryItemError("Part-of-speech")
     
@@ -182,17 +180,14 @@ class LexiconClass(object):
             where_string = self.sql_string_get_wordid_list_where(token)
         else:
             where_string = self.sql_string_get_posid_list_where(token)
-        return "SELECT {}.{} FROM {} WHERE {}".format(
+        return "SELECT DISTINCT {}.{} FROM {} WHERE {}".format(
             pos_table, pos_field, " ".join(self.table_list), where_string)
 
     def get_posid_list(self, token):
         """ Return a list of all PosIds that match the query token. """
         S = self.sql_string_get_posid_list(token)
-        db = self.resource.get_db()
-        cur = db.Con.cursor()
-        cur.execute(S)
-        cur.close()
-        return set([x[0] for x in cur])
+        df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+        return set(list(df.ix[:,0]))
 
     def get_stopword_ids(self):
         """
@@ -238,7 +233,7 @@ class LexiconClass(object):
                             S = dummy.S
                         S = S.replace('"', '""')
                         format_string = '{} {} "{}"'
-                        if self.resource.DB.db_type == SQL_SQLITE and not options.cfg.case_sensitive:
+                        if self.resource.db_type == SQL_SQLITE and not options.cfg.case_sensitive:
                             format_string = '{} {} "{}" COLLATE NOCASE'
                         sub_clauses.append(format_string.format(
                             target, self.resource.get_operator(dummy), S))
@@ -308,20 +303,16 @@ class LexiconClass(object):
         if stopwords:
             stopword_ids = self.get_stopword_ids()
         S = self.sql_string_get_matching_wordids(token)
-        
-        db = self.resource.get_db()
-        cur = db.Con.cursor()
-        cur.execute(S)
-        cur.close()
-        if not cur:
+
+        df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+        if not len(df.index):
             print("How is this caught?")
             raise WordNotInLexiconError
         else:
             if stopwords:
-                return [x[0] for x in cur if x[0] not in stopword_ids]
+                return [x for x in list(df.ix[:,0]) if not x in stopword_ids]
             else:
-                return [x[0] for x in cur]
-        
+                return list(df.ix[:,0])
 
 class BaseResource(object):
     """
@@ -763,6 +754,7 @@ class SQLResource(BaseResource):
         self.corpus = corpus
         self.DB = None
         self.connect_to_database()
+        self.db_type = self.DB.db_type        
         self._word_cache = {}
 
 
@@ -851,14 +843,12 @@ class SQLResource(BaseResource):
         stats = []
         # determine table size for all columns
         table_sizes = {}
-        for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table")]:
+        engine = self.get_engine()
+        for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table") and not x.startswith("statistics_")]:
             table = getattr(self, rc_table)
             S = "SELECT COUNT(*) FROM {}".format(table)
-            db = self.resource.get_db()
-            cur = db.Con.cursor()
-            cur.execute(S)
-            cur.close()
-            table_sizes[table] = cur.fetchone()[0]
+            df = pd.read_sql(S, engine)
+            table_sizes[table] = df.values.ravel()[0]
 
         # get distinct values for each feature:
         for rc_feature in dir(self):
@@ -879,11 +869,8 @@ class SQLResource(BaseResource):
                 pass
             else:
                 S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
-                db = self.resource.get_db()
-                cur = db.Con.cursor()
-                cur.execute(S)
-                cur.close()
-                stats.append([table, column, table_sizes[table], cur.fetchone()[0]])
+                df = pd.read_sql(S, engine)
+                stats.append([table, column, table_sizes[table], df.values.ravel()[0]])
         
         df = pd.DataFrame(stats)
         # calculate ratio:
@@ -1138,22 +1125,21 @@ class SQLResource(BaseResource):
                 else:
                     select_list.append("coq_func_{}_{}_1".format(resource, fc))
 
-        if options.cfg.MODE != QUERY_MODE_COLLOCATIONS:
-            # add contexts for each query match:
-            if (options.cfg.context_left or options.cfg.context_right) and options.cfg.token_origin_id:
-                if options.cfg.context_mode == CONTEXT_KWIC:
-                    if options.cfg.context_left:
-                        select_list.append("coq_context_left")
-                    if options.cfg.context_right:
-                        select_list.append("coq_context_right")
-                elif options.cfg.context_mode == CONTEXT_STRING:
-                    select_list.append("coq_context")
-                elif options.cfg.context_mode == CONTEXT_SENTENCE:
-                    select_list.append("coq_context")
-                elif options.cfg.context_mode == CONTEXT_COLUMNS:
-                    select_list += ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
-                    select_list += ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
-                select_list.append("coquery_invisible_origin_id")
+        # add contexts for each query match:
+        if (options.cfg.context_left or options.cfg.context_right) and options.cfg.token_origin_id:
+            if options.cfg.context_mode == CONTEXT_KWIC:
+                if options.cfg.context_left:
+                    select_list.append("coq_context_left")
+                if options.cfg.context_right:
+                    select_list.append("coq_context_right")
+            elif options.cfg.context_mode == CONTEXT_STRING:
+                select_list.append("coq_context_string")
+            elif options.cfg.context_mode == CONTEXT_SENTENCE:
+                select_list.append("coq_context_string")
+            elif options.cfg.context_mode == CONTEXT_COLUMNS:
+                select_list += ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
+                select_list += ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
+            select_list.append("coquery_invisible_origin_id")
 
         select_list.append("coquery_invisible_corpus_id")
         select_list.append("coquery_invisible_number_of_tokens")
@@ -1177,12 +1163,8 @@ class CorpusClass(object):
             self.resource.corpus_table, 
             self.resource.corpus_id, 
             token_id)
-        
-        db = self.resource.get_db()
-        cur = db.Con.cursor()
-        cur.execute(S)
-        cur.close()
-        return cur.fetchone()[0]
+        df = pd.read_sql(S, self.resource.get_engine())
+        return df.values.ravel()[0]
 
     def get_origin_data(self, token_id):
         """
@@ -1289,11 +1271,9 @@ class CorpusClass(object):
             for x in filter_strings:
                 pass
             S = "SELECT COUNT(*) FROM {}".format(self.resource.corpus_table)
-            db = self.resource.get_db()
-            cur = db.Con.cursor()
-            cur.execute(S)
-            cur.close()
-            self._corpus_size_cache = cur.fetchone()[0]
+            df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+            size = df.values.ravel()[0]
+            self._corpus_size_cache = size
         return self._corpus_size_cache
 
     def get_frequency(self, s):
@@ -1309,7 +1289,7 @@ class CorpusClass(object):
             return 0
         
         token = tokens.COCAToken(s, self, False)
-        
+
         try:
             if "pos_table" not in dir(self.resource):
                 word_pos_column = self.resource.word_pos
@@ -1324,11 +1304,9 @@ class CorpusClass(object):
         else:
             S = "SELECT COUNT(*) FROM {0} WHERE {1}".format(
                 self.resource.corpus_table, " AND ".join(where_clauses))
-            db = self.resource.get_db()
-            cur = db.Con.cursor()
-            cur.execute(S)
-            cur.close()
-            freq = cur.fetchone()[0]
+
+            df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+            freq = df.values.ravel()[0]
         self._frequency_cache[s] = freq
         return freq
 
