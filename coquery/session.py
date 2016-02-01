@@ -302,7 +302,12 @@ class Session(object):
         else:
             resource = self.Resource
             
-
+        # special treatment of context columns:
+        if header.startswith("context_lc"):
+            return "LC{}".format(header.split("context_lc")[-1])
+        if header.startswith("context_rc"):
+            return "RC{}".format(header.split("context_rc")[-1])
+        
         rc_feature, _, number = header.rpartition("_")
         
         # If there is only one query token, number is set to "" so that no
