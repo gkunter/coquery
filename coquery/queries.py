@@ -303,7 +303,6 @@ class TokenQuery(object):
             # This SQLAlchemy optimization including the string folder 
             # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
             query_string = self.Resource.get_query_string(self, self._sub_query)
-            self.Resource.DB.close()
             
             with self.Resource.get_engine().connect() as connection:
                 if not query_string:

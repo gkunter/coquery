@@ -13,13 +13,14 @@ This module defines classes that represent tokens in a query string.
 # The syntax used for the tokens is corpus-specific, and different classes
 # can be used to represent different syntaxes.
 #
-# Each QueryToken should be parseable into four pieces of information:
+# Each QueryToken should be parseable into several types of specification:
 #    
-# word_specifiers     a list of strings that specify word-forms
-# lemma_specifiers    a list of strings that specifies lemmas
-# class_specifiers    a list of strings that specifies part-of-speech
-# gloss_specifiers    a list of strings that specify glosses
-# negated             a boolean flag that indicates negation
+# word_specifiers       a list of strings that specify word-forms
+# lemma_specifiers      a list of strings that specifies lemmas
+# class_specifiers      a list of strings that specifies part-of-speech
+# transcript_specifiers a list of strings that specifies phonemic transcripts
+# gloss_specifiers      a list of strings that specify glosses
+# negated               a boolean flag that indicates negation
 #
 # The method parse() is used to translate the token string into these
 # structures.
@@ -55,7 +56,7 @@ class QueryToken(object):
         self.lemma_specifiers = []
         self.transcript_specifiers = []
         self.gloss_specifiers = []
-        self.negated = False
+        self.negated = None
         if parse:
             self.parse()
         
@@ -148,7 +149,7 @@ class COCAToken(QueryToken):
     bracket_close = "]"
     transcript_open = "/"
     transcript_close = "/"
-    NegationChar = "#"
+    negation_flag = "~"
     
     def parse (self):
         self.word_specifiers = []
@@ -163,16 +164,15 @@ class COCAToken(QueryToken):
         transcript_specification = None
         gloss_specification = None
 
-        while self.S.startswith(self.NegationChar):
-            self.negated = not self.negated
-            self.S = self.S[1:]
+        self.negated = bool(self.S.count(self.negation_flag) & 1)
+        work = self.S.strip(self.negation_flag)
         
-        if self.S == "//" or self.S == "[]":
-            word_specification = self.S
+        if work == "//" or work == "[]":
+            word_specification = work
         else:
-            match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", self.S)
+            match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", work)
             if not match:
-                match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}", self.S)
+                match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}", work)
 
             word_specification = match.groupdict()["word"]
             # word specification that begin and end with quotation marks '"'

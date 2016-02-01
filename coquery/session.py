@@ -164,6 +164,15 @@ class Session(object):
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
 
+    def close(self):
+        """
+        Close the session.
+        
+        Closing the session essentially means that the database connection 
+        for this session is closed.
+        """
+        self.Resource.close_db()
+        
     def get_frequency_table(self):
         frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus)
         frequency_table.fillna("", inplace=True)
