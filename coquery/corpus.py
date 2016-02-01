@@ -2281,7 +2281,7 @@ class CorpusClass(object):
             """
             return "".join(html_escape_table.get(c, c) for c in s)
 
-        if not (self.resource, QUERY_ITEM_WORD):
+        if not hasattr(self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
 
         if not (token_id, source_id, token_width) in self._context_cache:
