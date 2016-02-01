@@ -157,6 +157,7 @@ class LexiconClass(object):
             db = self.resource.get_db()
             cur = db.Con.cursor()
             cur.execute(self.sql_string_is_part_of_speech(pos))
+            cur.close()
             return len(cur.fetchall()) > 0
         else:
             raise UnsupportedQueryItemError("Part-of-speech")
@@ -190,6 +191,7 @@ class LexiconClass(object):
         db = self.resource.get_db()
         cur = db.Con.cursor()
         cur.execute(S)
+        cur.close()
         return set([x[0] for x in cur])
 
     def get_stopword_ids(self):
@@ -310,6 +312,7 @@ class LexiconClass(object):
         db = self.resource.get_db()
         cur = db.Con.cursor()
         cur.execute(S)
+        cur.close()
         if not cur:
             print("How is this caught?")
             raise WordNotInLexiconError
@@ -802,7 +805,7 @@ class SQLResource(BaseResource):
         if db_type == SQL_SQLITE:
             db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
         else:
-            if self.DB:
+            if self.DB is not None and self.DB.Con.open:
                 db = self.DB
             else:
                 db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
@@ -844,6 +847,7 @@ class SQLResource(BaseResource):
             db = self.resource.get_db()
             cur = db.Con.cursor()
             cur.execute(S)
+            cur.close()
             table_sizes[table] = cur.fetchone()[0]
 
         # get distinct values for each feature:
@@ -868,6 +872,7 @@ class SQLResource(BaseResource):
                 db = self.resource.get_db()
                 cur = db.Con.cursor()
                 cur.execute(S)
+                cur.close()
                 stats.append([table, column, table_sizes[table], cur.fetchone()[0]])
         
         df = pd.DataFrame(stats)
@@ -1135,6 +1140,9 @@ class SQLResource(BaseResource):
                     select_list.append("coq_context")
                 elif options.cfg.context_mode == CONTEXT_SENTENCE:
                     select_list.append("coq_context")
+                elif options.cfg.context_mode == CONTEXT_COLUMNS:
+                    select_list += ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
+                    select_list += ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
                 select_list.append("coquery_invisible_origin_id")
 
         select_list.append("coquery_invisible_corpus_id")
@@ -1162,7 +1170,9 @@ class CorpusClass(object):
         
         db = self.resource.get_db()
         cur = db.Con.cursor()
+        print(db, db.Con, cur, S)
         cur.execute(S)
+        cur.close()
         return cur.fetchone()[0]
 
     def get_origin_data(self, token_id):
@@ -1195,7 +1205,9 @@ class CorpusClass(object):
             self.resource.corpus_table,
             self.resource.corpus_id,
             token_id)
-        d = self.resource.DB.execute_cursor(S).fetchone()
+        
+        db = self.resource.get_db()
+        d = db.execute_cursor(S).fetchone()
 
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
@@ -1230,7 +1242,13 @@ class CorpusClass(object):
             # obtain the field name from the resource name:
             _, _, _, feature = self.resource.split_resource_feature(rc_feature)
             # determine whether the field name is a linking field:
-            _, _, tab, feat = self.resource.split_resource_feature(feature)
+            try:
+                _, _, tab, feat = self.resource.split_resource_feature(feature)
+            except ValueError:
+                # split_resource_features() raises a ValueError exception if 
+                # the passed string does not appear to be a resource feature.
+                # In that case, the resource is not considered for origin data.                
+                continue
             if feat == "id":
                 id_column = getattr(self.resource, "{}_id".format(tab))
                 table_name = getattr(self.resource, "{}_table".format(tab))
@@ -1264,6 +1282,7 @@ class CorpusClass(object):
             db = self.resource.get_db()
             cur = db.Con.cursor()
             cur.execute(S)
+            cur.close()
             self._corpus_size_cache = cur.fetchone()[0]
         return self._corpus_size_cache
 
@@ -1298,6 +1317,7 @@ class CorpusClass(object):
             db = self.resource.get_db()
             cur = db.Con.cursor()
             cur.execute(S)
+            cur.close()
             freq = cur.fetchone()[0]
         self._frequency_cache[s] = freq
         return freq
