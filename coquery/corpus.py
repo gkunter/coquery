@@ -836,15 +836,11 @@ class SQLResource(BaseResource):
         return engine.connect()
 
     def get_statistics(self):
-        lexicon_features = [x for x, _ in self.get_lexicon_features()]
-        corpus_features = [x for x, _ in self.get_corpus_features()]
-        resource_features = lexicon_features + corpus_features
-
         stats = []
         # determine table size for all columns
         table_sizes = {}
         engine = self.get_engine()
-        for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table") and not x.startswith("statistics_")]:
+        for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table") and not x.startswith("statistics_") and not x.startswith("tag_")]:
             table = getattr(self, rc_table)
             S = "SELECT COUNT(*) FROM {}".format(table)
             df = pd.read_sql(S, engine)
@@ -873,8 +869,16 @@ class SQLResource(BaseResource):
                 stats.append([table, column, table_sizes[table], df.values.ravel()[0]])
         
         df = pd.DataFrame(stats)
+
         # calculate ratio:
-        df[4] = df[2] / df[3]
+        df[4] = df[3] / df[2]
+        df[5] = df[2] / df[3]
+        
+        try:
+            df.sort_values(by=list(df.columns)[:2], inplace=True)
+        except AttributeError:
+            df.sort(columns=list(df.columns)[:2], inplace=True)
+        
         return df
 
     def get_query_string(self, Query, token_list, self_joined=False):

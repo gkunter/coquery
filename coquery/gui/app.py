@@ -820,7 +820,7 @@ class CoqueryApp(QtGui.QMainWindow):
         for i in range(header.count()):
             column = self.table_model.header[header.logicalIndex(i)]
 
-            if column in ("coq_conditional_probability", "statistics_overall_proportion", "statistics_query_proportion"):
+            if column in ("coq_conditional_probability", "statistics_overall_proportion", "statistics_query_proportion", "Uniqueness ratio"):
                 deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
             else:
                 deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
