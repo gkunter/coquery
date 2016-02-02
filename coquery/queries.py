@@ -499,13 +499,15 @@ class TokenQuery(object):
             columns = [x for x in df.columns if not x.startswith("coquery_invisible")]
             # get a frequency table for the current data frame:
             if options.cfg.case_sensitive:
-                self.freqs = df.groupby(columns).count().reset_index()
+                counted = df.groupby(columns).count().reset_index()
+                self.freqs = counted[counted.columns[:(len(columns)+1)]]
             else:
                 df2 = df
                 for column in df2.columns:
                     if df2[column].dtype == object:
                         df2[column] = df2[column].str.lower()
-                self.freqs = df2.groupby(columns).count().reset_index()
+                counted = df2.groupby(columns).count().reset_index()
+                self.freqs = counted[counted.columns[:(len(columns)+1)]]
             columns.append("statistics_frequency")
             self.freqs.columns = columns
             columns.remove("statistics_frequency")
