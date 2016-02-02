@@ -221,7 +221,7 @@ class BuilderClass(BaseCorpusBuilder):
     word_table = "Lexicon"
     word_id = "WordId"
     word_lemma = "Lemma"
-    word_label = "Wprd"
+    word_label = "Word"
     word_pos = "Pos"
 
     file_table = "File"

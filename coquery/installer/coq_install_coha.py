@@ -206,7 +206,7 @@ class BuilderClass(BaseCorpusBuilder):
                         temp_file = tempfile.NamedTemporaryFile("w", delete=False)
                         temp_file.write("\n".join([x.strip() for x in lines]))
                         temp_file.close()
-                        self.Con.load_infile(temp_file.name, self.corpus_table, arguments)
+                        self.DB.load_infile(temp_file.name, self.corpus_table, arguments)
                         os.remove(temp_file.name)
 
             self.store_filename(file_name)

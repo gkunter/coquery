@@ -258,7 +258,6 @@ class BuilderClass(BaseCorpusBuilder):
                 for entry in bson.decode_file_iter(input_file):
                     
                     if filename == "sources.bson":
-                        print(entry)
                         self._source_id = len(self._source_dict) + 1
                         self._source_dict[str(entry["key"])] = self._source_id
                         d = {
@@ -268,7 +267,6 @@ class BuilderClass(BaseCorpusBuilder):
                             self.source_author: entry.get("author", ""),
                             self.source_key: entry.get("key", ""),
                             self.source_note: entry.get("note", "")}
-                        print(json.dumps(d, indent=4))
                         self.table(self.source_table).add(d)
                     
                     elif filename == "roots.bson":
