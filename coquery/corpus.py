@@ -306,7 +306,7 @@ class LexiconClass(object):
 
         df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
         if not len(df.index):
-            print("How is this caught?")
+            print("Word not in lexicon")
             raise WordNotInLexiconError
         else:
             if stopwords:
