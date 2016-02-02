@@ -35,9 +35,9 @@ class corpus_code():
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "s*.words.tagged"
 
-    word_table = "Words"
+    word_table = "Lexicon"
     word_id = "WordId"
-    word_label = "Text"
+    word_label = "Wprd"
     word_pos = "POS"
     word_transcript = "Transcript"
     word_lemmatranscript = "Lemma_Transcript"
