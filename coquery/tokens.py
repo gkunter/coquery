@@ -149,7 +149,10 @@ class COCAToken(QueryToken):
     bracket_close = "]"
     transcript_open = "/"
     transcript_close = "/"
+    quantification_open = "{"
+    quantification_close = "}"
     negation_flag = "~"
+    quote_char = '"'
     
     def parse (self):
         self.word_specifiers = []
@@ -247,52 +250,147 @@ Examples:   FIC (equivalent to FIC.[*])
             self.lemma_specifiers = []
 
 def parse_query_string(S, token_type):
+    """
+    Split a string into query items, making sure that bracketing and
+    quotations are valid. Escaping is allowed.
     
-    ST_NORMAL = 0
-    ST_IN_BRACKET = 1
-    ST_IN_TRANSCRIPT = 2
+    If the string is not valid, e.g. because a bracket is opened, but not 
+    closed, a TokenParseError is raised.
+    """
+
+    def add(S, ch):
+        return "%s%s" % (S, ch)
+    
+    ST_NORMAL = "NORMAL"
+    ST_IN_BRACKET = "BRACKET"
+    ST_IN_TRANSCRIPT = "TRANS"
+    ST_IN_QUOTE = "QUOTE"
+    ST_IN_QUANTIFICATION = "QUANT"
     
     tokens = []
     state = ST_NORMAL
     current_word = ""
     negated = False
     
+    escaping = False
+    token_closed = False
+    comma_added = False
+    
     for current_char in S:
+        if escaping:
+            current_word = add(current_word, current_char)
+            escaping = False
+            continue
+        if current_char == "\\":
+            escaping = True
+            continue
+        
+        # Normal word state:
         if state == ST_NORMAL:
+            
+            # Check for whitespace:
             if current_char == " ":
                 if current_word:
                     tokens.append(current_word)
                     current_word = ""
-            else:
-                current_char = current_char.strip()
-                if current_char:
-                    current_word = "%s%s" % (current_word, current_char)
-            if current_char == token_type.transcript_open:
-                state = ST_IN_TRANSCRIPT
-            elif current_char == token_type.bracket_open:
-                state = ST_IN_BRACKET
-                    
+                token_closed = False
+                continue
+            
+            # Check for other characters
+            
+            # Raise exception if another character follows other than the 
+            # character opening a quantification:
+            if token_closed and current_char != token_type.quantification_open:
+                raise TokenParseError(S)
+
+            # check for opening characters:
+            if current_char in set([token_type.transcript_open,
+                                    token_type.bracket_open,
+                                    token_type.quantification_open,
+                                    token_type.quote_char]):
+                if current_word:
+                    # raise an exception if an opening bracket occurs within
+                    # a word, but not after a full stop (i.e. if it does not 
+                    # open a POS specification):
+                    if current_char == token_type.bracket_open:
+                        if len(current_word) < 2 or current_word[-1] != ".":
+                            raise TokenParseError(S)
+                    # any character other than an opening quantification is 
+                    # forbidden if the current word is not empty
+                    elif current_char != token_type.quantification_open:
+                        raise TokenParseError(S)
+                else:
+                    # quantifications are only allowed if they precede a 
+                    # query item:
+                    if current_char == token_type.quantification_open:
+                        raise TokenParseError(S)
+                # set new state:
+                if current_char == token_type.transcript_open:
+                    state = ST_IN_TRANSCRIPT
+                elif current_char == token_type.bracket_open:
+                    state = ST_IN_BRACKET
+                elif current_char == token_type.quote_char:
+                    state = ST_IN_QUOTE
+                elif current_char == token_type.quantification_open:
+                    state = ST_IN_QUANTIFICATION
+                    comma_added = False
+
+            current_char = current_char.strip()
+
+            # add character to word:
+            if current_char:
+                current_word = add(current_word, current_char)
+        
+        # bracket state?
         elif state == ST_IN_BRACKET:
+            current_word = add(current_word, current_char)
             if current_char == token_type.bracket_close:
-                current_word = "%s%s" % (current_word, token_type.bracket_close)
                 state = ST_NORMAL
-            elif current_char not in [token_type.bracket_open, token_type.transcript_open, token_type.transcript_close]:
-                current_word = "%s%s" % (current_word, current_char)
+                token_closed = True
+            
+        # transcript state?
+        elif state == ST_IN_TRANSCRIPT:
+            current_word = add(current_word, current_char)
+            if current_char == token_type.transcript_close:
+                state = ST_NORMAL
+                token_closed = True
+        
+        # quote state?
+        elif state == ST_IN_QUOTE:
+            current_word = add(current_word, current_char)
+            if current_char == token_type.quote_char:
+                state = ST_NORMAL
+                token_closed = True
+                
+        # quantification state?
+        elif state == ST_IN_QUANTIFICATION:
+            # only add valid quantification characters to the current word:
+            if current_char in "0123456789, " + token_type.quantification_close:
+                # ignore spaces:
+                if current_char.strip():
+
+                    if current_char == ",":
+                        # raise an exception if a comma immediately follows 
+                        # an opening bracket:
+                        if current_word[-1] == token_type.quantification_open:
+                            raise TokenParseError(S)
+                        # raise exception if a comma has already been added:
+                        if comma_added:
+                            raise TokenParseError(S)
+                        else:
+                            comma_added = True
+                    if current_char == token_type.quantification_close:
+                        # raise an exception if the closing bracket follows 
+                        # immediately after a comma or the opening bracket:
+                        if current_word[-1] in [",", token_type.quantification_open]:
+                            raise TokenParseError(S)
+                        state = ST_NORMAL
+                        token_closed = True
+
+                    current_word = add(current_word, current_char)
             else:
                 raise TokenParseError(S)
             
-        elif state == ST_IN_TRANSCRIPT:
-            if current_char == token_type.transcript_close:
-                current_word = "%s%s" % (current_word, token_type.transcript_close)
-                state = ST_NORMAL
-            elif current_char != token_type.or_character:
-                current_word = "%s%s" % (current_word, current_char)
-            # FIXME: or character may be broken
-            elif current_char == token_type.or_character:
-                current_word = "%s%s" % (current_word, current_char)
-            else:
-                raise TokenParseError(S)
-                
     if state != ST_NORMAL:
         raise TokenParseError(S)
     if current_word:
@@ -356,7 +454,8 @@ def preprocess_query(S):
     L : list
         A list of query strings
     """
-    tokens = S.split(" ")
+    
+    tokens = parse_query_string(S, COCAToken)
     token_lists = []
     token_map = []
     current_pos = 1
