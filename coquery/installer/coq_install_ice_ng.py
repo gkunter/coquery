@@ -218,10 +218,10 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_file_id = "FileId"
     corpus_source_id = "SourceId"
 
-    word_table = "Word"
+    word_table = "Lexicon"
     word_id = "WordId"
     word_lemma = "Lemma"
-    word_label = "Text"
+    word_label = "Wprd"
     word_pos = "Pos"
 
     file_table = "File"

@@ -766,6 +766,14 @@ class VisualizerDialog(QtGui.QWidget):
         toolbar. """
         try:
             key_press_handler(event, self.canvas, self.toolbar)
+        except AttributeError:
+            # Attribute errors seem to occur when a key is pressed while the 
+            # mouse is outside of the figure area:
+            #
+            # AttributeError: 'QKeyEvent' object has no attribute 'inaxes'
+            #
+            # This exception may be safely ignored.
+            pass
         except Exception as e:
             print(e)
             raise e
