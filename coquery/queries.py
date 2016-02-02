@@ -810,7 +810,7 @@ class StatisticsQuery(TokenQuery):
         df : pandas.DataFrame
         """
         self.results_frame = self.Session.Resource.get_statistics()
-        self.Session.output_order = ["Table", "Column", "Entries", "Uniques", "Ratio"]
+        self.Session.output_order = ["Table", "Column", "Entries", "Uniques", "Uniqueness ratio", "Average frequency"]
         self.results_frame.columns = self.Session.output_order
         if df.empty:
             return self.results_frame
@@ -871,6 +871,12 @@ class CollocationQuery(TokenQuery):
         query_freq = 0
         context_info = {}
 
+        # do not try to aggregate this data frame if there is no corpus id
+        # available, e.g. because the data frame shows the results from the 
+        # Corpus statistics command:
+        if not "coquery_invisible_corpus_id" in df:
+            return df
+
         fix_col = ["coquery_invisible_corpus_id"]
 
         # FIXME: Be more generic than always using coq_word_label!
@@ -894,31 +900,33 @@ class CollocationQuery(TokenQuery):
 
         all_words = set(list(left.index) + list(right.index))
         
-        left = left.reindex(all_words).fillna(0).astype(int)
-        right = right.reindex(all_words).fillna(0).astype(int)
-        
-        collocates = pd.concat([left, right], axis=1)
-        collocates = collocates.reset_index()
-        collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
-        collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
-        collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(resource.get_frequency)
-        collocates["coq_conditional_probability"] = collocates.apply(
-            lambda x: cls.conditional_propability(
-                x["coq_collocate_frequency_left"],
-                x["statistics_frequency"]) if x["statistics_frequency"] else None, 
-            axis=1)
-        
-        collocates["coq_mutual_information"] = collocates.apply(
-            lambda x: cls.mutual_information(
-                    f_1=len(df.index),
-                    f_2=x["statistics_frequency"], 
-                    f_coll=x["coq_collocate_frequency"],
-                    size=corpus_size, 
-                    span=left_span + right_span),
-            axis=1)
-
-        aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
-
+        if all_words:
+            
+            left = left.reindex(all_words).fillna(0).astype(int)
+            right = right.reindex(all_words).fillna(0).astype(int)
+            
+            collocates = pd.concat([left, right], axis=1)
+            collocates = collocates.reset_index()
+            collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
+            collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
+            collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(resource.get_frequency)
+            collocates["coq_conditional_probability"] = collocates.apply(
+                lambda x: cls.conditional_propability(
+                    x["coq_collocate_frequency_left"],
+                    x["statistics_frequency"]) if x["statistics_frequency"] else None, 
+                axis=1)
+            
+            collocates["coq_mutual_information"] = collocates.apply(
+                lambda x: cls.mutual_information(
+                        f_1=len(df.index),
+                        f_2=x["statistics_frequency"], 
+                        f_coll=x["coq_collocate_frequency"],
+                        size=corpus_size, 
+                        span=left_span + right_span),
+                axis=1)
+            aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
+        else:
+            aggregate = pd.DataFrame(columns=["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability", "coq_mutual_information"])
         return aggregate
 
     @staticmethod
