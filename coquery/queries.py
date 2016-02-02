@@ -892,7 +892,7 @@ class CollocationQuery(TokenQuery):
         left = left_context_span[left_cols].stack().value_counts()
         right = right_context_span[right_cols].stack().value_counts()
 
-        all_words = set(left.index + right.index)
+        all_words = set(list(left.index) + list(right.index))
         
         left = left.reindex(all_words).fillna(0).astype(int)
         right = right.reindex(all_words).fillna(0).astype(int)
