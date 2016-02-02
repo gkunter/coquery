@@ -450,6 +450,8 @@ class TokenQuery(object):
 
         if not options.cfg.token_origin_id:
             return df
+        if options.cfg.context_mode == CONTEXT_NONE:
+            return df
         if not (options.cfg.context_left or options.cfg.context_right):
             return df
         if not hasattr(self.Session.Resource, QUERY_ITEM_WORD):

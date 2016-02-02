@@ -453,6 +453,11 @@ class CoqueryApp(QtGui.QMainWindow):
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         
+        self.ui.radio_context_none.toggled.connect(self.update_context_widgets)
+        self.ui.radio_context_mode_kwic.toggled.connect(self.update_context_widgets)
+        self.ui.radio_context_mode_string.toggled.connect(self.update_context_widgets)
+        self.ui.radio_context_mode_columns.toggled.connect(self.update_context_widgets)
+        
         # set up hooks so that the statistics columns are only available when 
         # the frequency aggregation is active:        
         self.ui.radio_aggregate_collocations.toggled.connect(self.toggle_frequency_columns)
@@ -1766,6 +1771,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 pass
                 
             # determine context mode:
+            if self.ui.radio_context_none.isChecked():
+                options.cfg.context_mode = CONTEXT_NONE
             if self.ui.radio_context_mode_kwic.isChecked():
                 options.cfg.context_mode = CONTEXT_KWIC
             if self.ui.radio_context_mode_string.isChecked():
@@ -1930,12 +1937,15 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.context_left_span.setValue(options.cfg.context_left)
         self.ui.context_right_span.setValue(options.cfg.context_right)
         
-        if options.cfg.context_mode == CONTEXT_STRING:
+        if options.cfg.context_mode == CONTEXT_NONE:
+            self.ui.radio_context_none.setChecked(True)
+        elif options.cfg.context_mode == CONTEXT_STRING:
             self.ui.radio_context_mode_string.setChecked(True)
         elif options.cfg.context_mode == CONTEXT_COLUMNS:
             self.ui.radio_context_mode_columns.setChecked(True)
         else:
             self.ui.radio_context_mode_kwic.setChecked(True)
+        self.update_context_widgets()
             
         for filt in list(options.cfg.filter_list):
             self.ui.filter_box.addTag(filt)
@@ -1977,6 +1987,14 @@ class CoqueryApp(QtGui.QMainWindow):
         #feature_name = "word_label"
         
         #return (corpus, table, feature_name)
+
+    def update_context_widgets(self):
+        if self.ui.radio_context_none.isChecked():
+            self.ui.context_left_span.setDisabled(True)
+            self.ui.context_right_span.setDisabled(True)
+        else:
+            self.ui.context_left_span.setDisabled(False)
+            self.ui.context_right_span.setDisabled(False)
 
     def add_link(self, item):
         """
