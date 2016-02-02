@@ -358,6 +358,10 @@ class SqlDB (object):
         cursor.execute(S)
         return cursor
 
+    def load_infile(self, file_name, table_name, arguments):
+        cur = self.Con.cursor()
+        cur.execute("LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
+
     def get_field_type(self, table_name, column_name):
         """
         Obtain the current SQL field type for the specified column.
