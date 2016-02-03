@@ -70,6 +70,7 @@ import QtProgress
 import options
 from defines import *
 from errors import *
+import queries
 
 # import required matplotlib classes
 from matplotlib.figure import Figure
@@ -329,7 +330,11 @@ class BaseVisualizer(QtCore.QObject):
         try:
             self._table = self._df[column_order]
         except TypeError:
-            self._table = options.cfg.main_window.Session.data_table[column_order]
+            self._table = options.cfg.main_window.Session.data_table.iloc[
+                    ~options.cfg.main_window.Session.data_table.index.isin(
+                        pd.Series(options.cfg.row_visibility[queries.TokenQuery].keys()))]
+
+            self._table = self._table[column_order]
 
         self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
         
