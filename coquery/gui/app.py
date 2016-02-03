@@ -333,7 +333,8 @@ class CoqueryApp(QtGui.QMainWindow):
             lambda: self.visualize_data("heatmap"))
         self.ui.action_bubble_chart.triggered.connect(
             lambda: self.visualize_data("bubbleplot"))
-            
+    
+        self.ui.menuDensity_plots.setEnabled(False)
         self.ui.action_kde_plot.triggered.connect(
             lambda: self.visualize_data("densityplot"))
         self.ui.action_ecd_plot.triggered.connect(
