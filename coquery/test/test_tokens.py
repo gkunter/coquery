@@ -182,6 +182,15 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
+
+    def test_transcripts_multiple_slashes(self):
+        token = self.token_type("/S K*/", self.lexicon)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, ["S K%"])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+
         
     def test_transcripts_single_slash1(self):
         token = self.token_type("/trans", self.lexicon)
