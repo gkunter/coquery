@@ -185,7 +185,6 @@ class Session(object):
         """
         # if no explicit recalculation is requested, try to use a cached 
         # output object for the current query type:
-
         if not recalculate:
             if self.query_type == queries.FrequencyQuery and hasattr(self, "_cached_frequency_table"):
                 self.output_object = self._cached_frequency_table
@@ -197,8 +196,18 @@ class Session(object):
                 self.output_object = self._cached_collocation_table
                 return
 
-        # Recalculate the output object for the current query type:
-        self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus, output_order=self.output_order)
+        # Recalculate the output object for the current query type, excluding
+        # invisible rows:
+        if self.query_type == queries.TokenQuery:
+            tab = self.data_table
+        else:
+            tab = self.data_table.iloc[
+                    ~self.data_table.index.isin(
+                        pd.Series(options.cfg.row_visibility[queries.TokenQuery].keys()))]
+
+        self.output_object = self.query_type.aggregate_it(
+            tab,
+            self.Corpus, output_order=self.output_order)
 
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
@@ -211,6 +220,19 @@ class Session(object):
         elif self.query_type == queries.CollocationQuery:
             self._cached_collocation_table = self.output_object
 
+    def drop_cached_aggregates(self):
+        try:
+            del self._cached_collocation_table
+        except AttributeError:
+            pass
+        try:
+            del self._cached_frequency_table
+        except AttributeError:
+            pass
+        try:
+            del self._cached_unique_table
+        except AttributeError:
+            pass
 
     def filter_data(self, column="statistics_frequency"):
         """

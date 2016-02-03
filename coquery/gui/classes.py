@@ -577,6 +577,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     can be shown in the results view. """
 
     columnVisibilityChanged = QtCore.Signal()
+    rowVisibilityChanged = QtCore.Signal()
     
     def __init__(self, parent, *args):
         super(CoqTableModel, self).__init__(parent, *args)
@@ -627,7 +628,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
     def is_visible(self, index):
         return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
-                options.cfg.row_visibility.get(self.content.index[index.row()], True))
+                options.cfg.row_visibility[options.cfg.main_window.Session.query_type].get(self.content.index[index.row()], True))
     
     def data(self, index, role):
         """ 

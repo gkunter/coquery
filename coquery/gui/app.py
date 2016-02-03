@@ -232,6 +232,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.table_model = classes.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
         self.table_model.columnVisibilityChanged.connect(self.reaggregate)
+        self.table_model.rowVisibilityChanged.connect(self.update_row_visibility)
 
         header = self.ui.data_preview.horizontalHeader()
         header.sectionResized.connect(self.result_column_resize)
@@ -570,7 +571,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.stop_progress_indicator()
         self.table_model.set_data(self.Session.output_object)
         self.table_model.set_header()
-        self.display_results()
+        self.display_results(drop=False)
         self.show_query_status()
             
     def reaggregate(self, query_type=None, recalculate=True):
@@ -794,7 +795,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_statistics.setEnabled(False)
         self.ui.action_remove_corpus.setEnabled(False)
 
-    def display_results(self):
+    def display_results(self, drop=True):
         self.ui.box_aggregation_mode.show()
         self.ui.data_preview.setEnabled(True)
         self.ui.menu_Results.setEnabled(True)
@@ -806,9 +807,10 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.data_preview.setModel(self.table_model)
 
-        # drop row colors and row visibility:
-        options.cfg.row_visibility = {}
-        options.cfg.row_color = {}
+        if drop:
+            # drop row colors and row visibility:
+            options.cfg.row_visibility = collections.defaultdict(dict)
+            options.cfg.row_color = {}
 
         # set column widths:
         for i, column in enumerate(self.table_model.header):
@@ -900,7 +902,8 @@ class CoqueryApp(QtGui.QMainWindow):
             ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
             tab = self.table_model.content[ordered_headers]
             # exclude invisble rows:
-            tab = tab.iloc[~tab.index.isin(pd.Series(options.cfg.row_visibility.keys()))]
+            tab = tab.iloc[~tab.index.isin(pd.Series(
+                options.cfg.row_visibility[self.Session.query_type].keys()))]
             if to_clipboard:
                 cb = QtGui.QApplication.clipboard()
                 cb.clear(mode=cb.Clipboard)
@@ -1131,9 +1134,9 @@ class CoqueryApp(QtGui.QMainWindow):
         if length:
             menu.addSeparator()
             # Check if any row is hidden
-            if any([not options.cfg.row_visibility.get(x, True) for x in selection]):
+            if any([not options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
                 if length > 1:
-                    if all([not options.cfg.row_visibility.get(x, True) for x in selection]):
+                    if all([not options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
                         action = QtGui.QAction("&Show rows", self)
                     else:
                         action = QtGui.QAction("&Show hidden rows", self)
@@ -1143,9 +1146,9 @@ class CoqueryApp(QtGui.QMainWindow):
                 action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
                 menu.addAction(action)
             # Check if any row is visible
-            if any([options.cfg.row_visibility.get(x, True) for x in selection]):
+            if any([options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
                 if length > 1:
-                    if all([options.cfg.row_visibility.get(x, True) for x in selection]):
+                    if all([options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
                         action = QtGui.QAction("&Hide rows", self)
                     else:
                         action = QtGui.QAction("&Hide visible rows", self)
@@ -1250,6 +1253,13 @@ class CoqueryApp(QtGui.QMainWindow):
         self.table_model.columnVisibilityChanged.emit()
         self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
 
+    def update_row_visibility(self):
+        """
+        Update the aggregations if row visibility has changed.
+        """
+        self.Session.drop_cached_aggregates()
+        self.reaggregate()
+
     def toggle_visibility(self, column):
         """ 
         Show again a hidden column, or hide a visible column.
@@ -1276,13 +1286,14 @@ class CoqueryApp(QtGui.QMainWindow):
         if state:
             for x in selection:
                 try:
-                    options.cfg.row_visibility.pop(np.int64(x))
+                    options.cfg.row_visibility[self.Session.query_type].pop(np.int64(x))
                 except KeyError:
                     pass
         else:
             for x in selection:
-                options.cfg.row_visibility[np.int64(x)] = False 
+                options.cfg.row_visibility[self.Session.query_type][np.int64(x)] = False 
         self.ui.data_preview.verticalHeader().geometriesChanged.emit()
+        self.table_model.rowVisibilityChanged.emit()
         self.table_model.layoutChanged.emit()
 
     def reset_colors(self, selection):

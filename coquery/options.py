@@ -31,6 +31,7 @@ import platform
 import warnings
 import codecs
 import ast
+import collections
 
 # make ast work in all Python versions:
 if not hasattr(ast, "TryExcept"):
@@ -99,7 +100,7 @@ class Options(object):
         self.args.column_color = {}
         self.args.column_names = {}
         self.args.column_visibility = {}
-        self.args.row_visibility = {}
+        self.args.row_visibility = collections.defaultdict(dict)
         self.args.row_color = {}
         # Set defaults for CSV files:
         self.args.query_column_number = 1
