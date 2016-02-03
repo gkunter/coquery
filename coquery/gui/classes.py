@@ -589,6 +589,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         
         self.header = []
         self.set_data(pd.DataFrame())
+        self._parent = parent
         
     def set_header(self, header = None): 
         self.header = [x for x in self.content.columns.values if not x.startswith("coquery_invisible") and not x in options.cfg.disabled_columns]
@@ -782,11 +783,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 
             # remove all temporary columns:
         self.content.drop(labels=del_columns, axis="columns", inplace=True)
+
             
     def sort(self, *args):
         if not self.sort_columns:
             return
         self.layoutAboutToBeChanged.emit()
+
         options.cfg.main_window.start_progress_indicator()
         self_sort_thread = QtProgress.ProgressThread(self.do_sort, self)
         self_sort_thread.taskFinished.connect(self.sort_finished)
@@ -796,6 +799,12 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def sort_finished(self):
         # Stop the progress indicator:
         options.cfg.main_window.stop_progress_indicator()
+
+        for x in self._parent.ui.data_preview.selectionModel().selectedRows():
+            self._parent.ui.data_preview.selectionModel().select(x, 
+                QtGui.QItemSelectionModel.Deselect|   
+                QtGui.QItemSelectionModel.Rows)
+
         self.layoutChanged.emit()
 
     def exception_during_sort(self):
