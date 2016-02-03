@@ -1112,9 +1112,8 @@ class CoqueryApp(QtGui.QMainWindow):
         if not selection:
             if point:
                 header = self.ui.data_preview.verticalHeader()
-                index = header.logicalIndexAt(point.y())
-                row = self.table_model.content.index[index]
-                selection = [self.table_model.content.index[row - 1]]
+                row = header.logicalIndexAt(point.y())
+                selection = [self.table_model.content.index[row]]
 
         length = len(selection)
         if length > 1:
@@ -1341,7 +1340,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # left anymore:
         if not self.table_model.sort_columns:
             self.table_model.layoutChanged.emit()
-        
+
     def set_query_button(self):
         """ Set the action button to start queries. """
         self.ui.button_run_query.clicked.disconnect()
