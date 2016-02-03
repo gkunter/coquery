@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 from corpusbuilder import *
+import transpose
 import codecs
 
 class BuilderClass(BaseCorpusBuilder):
@@ -59,11 +60,13 @@ class BuilderClass(BaseCorpusBuilder):
         self.corpus_id = "ID"
         self.corpus_word = "Word"
         self.corpus_transcript = "Transcript"
+        self.corpus_ipa = "IPA"
         
         self.create_table_description(self.corpus_table,
             [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.corpus_word, "VARCHAR(50) NOT NULL"),
-             Column(self.corpus_transcript, "VARCHAR(100) NOT NULL")])
+             Column(self.corpus_transcript, "VARCHAR(100) NOT NULL"),
+             Column(self.corpus_ipa, "VARCHAR(100) NOT NULL")])
 
     @staticmethod
     def validate_files(l):
@@ -84,10 +87,12 @@ class BuilderClass(BaseCorpusBuilder):
             current_line = current_line.strip()
             if current_line and not current_line.startswith (";;;"):
                 word, transcript = current_line.split ("  ")
+                ipa = transpose.arpa_to_ipa(transcript.strip())
                 self.add_token_to_corpus(
                     {self.corpus_id: i+1, 
                     self.corpus_word: word,
-                    self.corpus_transcript: transcript})
+                    self.corpus_transcript: transcript,
+                    self.corpus_ipa: ipa})
             if self._widget and not i % 100:
                 self._widget.progressUpdate.emit(i // 100)
         self.commit_data()

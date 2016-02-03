@@ -581,7 +581,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     name = None
     additional_arguments = None
     parser = None
-    Con = None
+    DB = None
     additional_stages = []
     start_time = None
     file_filter = None
@@ -1835,6 +1835,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             Type=self.arguments.db_type,
             User=self.arguments.db_user,
             Password=self.arguments.db_password,
+            db_name=self.arguments.db_name,
             local_infile=1)
         
         if self.DB.has_database(self.arguments.db_name) and self.arguments.c:

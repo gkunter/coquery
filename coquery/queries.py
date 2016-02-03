@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 """
 queries.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
@@ -494,30 +493,36 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-        
+
         if "statistics_query_entropy" in self.Session.output_order or "statistics_query_proportion" in self.Session.output_order:
             columns = [x for x in df.columns if not x.startswith("coquery_invisible")]
-            # get a frequency table for the current data frame:
-            if options.cfg.case_sensitive:
-                counted = df.groupby(columns).count().reset_index()
-                self.freqs = counted[counted.columns[:(len(columns)+1)]]
-            else:
-                df2 = df
-                for column in df2.columns:
-                    if df2[column].dtype == object:
-                        df2[column] = df2[column].str.lower()
-                counted = df2.groupby(columns).count().reset_index()
-                self.freqs = counted[counted.columns[:(len(columns)+1)]]
-            columns.append("statistics_frequency")
-            self.freqs.columns = columns
-            columns.remove("statistics_frequency")
-            # calculate the propabilities of the different results:
-            self.freqs["statistics_query_proportion"] = self.freqs.statistics_frequency.divide(len(df.index))
-            if len(self.freqs.index) == 1:
+            if not columns:
+                self.freqs = pd.DataFrame(
+                    {"statistics_frequency": [len(df.index)],
+                     "statistics_query_proportion": [1]})
                 self.entropy = 0
             else:
-                self.entropy = -self.freqs.statistics_query_proportion.apply(lambda x: x * math.log(x, 2)).sum()
+                # get a frequency table for the current data frame:
+                if options.cfg.case_sensitive:
+                    self.freqs = df.groupby(columns).count().reset_index()
+                else:
+                    df2 = df
+                    for column in df2.columns:
+                        if df2[column].dtype == object:
+                            df2[column] = df2[column].str.lower()
+                    self.freqs = df2.groupby(columns).count().reset_index()
+                columns.append("statistics_frequency")
+                self.freqs.columns = columns
+                columns.remove("statistics_frequency")
+                # calculate the propabilities of the different results:
+                self.freqs["statistics_query_proportion"] = self.freqs.statistics_frequency.divide(len(df.index))
+                if len(self.freqs.index) == 1:
+                    self.entropy = 0
+                else:
+                    self.entropy = -self.freqs.statistics_query_proportion.apply(lambda x: x * math.log(x, 2)).sum()
 
+
+        
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
                 df[column] = self._current_number_of_tokens

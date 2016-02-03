@@ -14,6 +14,122 @@ class TestLexicon(LexiconClass):
     def is_part_of_speech(self, pos):
         return pos in ["N", "V"]
 
+class TestModuleMethods(unittest.TestCase):
+    def test_parse_query_string1(self):
+        S1 = "this is a query"
+        S2 = "this    is a query    "
+        L = ["this", "is", "a", "query"]
+        self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L)
+        self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L)
+
+    def test_parse_query_string2(self):
+        S = "/this/ /is/ /a/ /query/"
+        L = ["/this/", "/is/", "/a/", "/query/"]
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_parse_query_string3(self):
+        S = "/this is a query/"
+        L = ["/this is a query/"]
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_parse_query_string4(self):
+        S = "[this] [is] [a] [query]"
+        L = ["[this]", "[is]", "[a]", "[query]"]
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_parse_query_string5(self):
+        S = "[this is a query]"
+        L = ["[this is a query]"]
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_parse_query_string6(self):
+        S = '"this" "is" "a" "query"'
+        L = ['"this"', '"is"', '"a"', '"query"']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_parse_query_string7(self):
+        S = '"this is a query"'
+        L = ['"this is a query"']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_parse_query_string8(self):
+        S = '/this|that/ is a query'
+        L = ['/this|that/', 'is', 'a', 'query']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        
+    def test_parse_query_string9(self):
+        S = '[this|that] is a query'
+        L = ['[this|that]', 'is', 'a', 'query']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        
+    def test_parse_query_string10(self):
+        S = '"this|that" is a query'
+        L = ['"this|that"', 'is', 'a', 'query']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        
+    def test_parse_query_string_escape1(self):
+        S = '\\"this is a query\\"'
+        L = ['"this', 'is', 'a', 'query"']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_parse_query_string_escape2(self):
+        S1 = 'this \\[is] a query'
+        L1 = ['this', '[is]', 'a', 'query']
+        S2 = 'this \\[is a query'
+        L2 = ['this', '[is', 'a', 'query']
+        self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
+        self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
+
+    def test_parse_query_string_escape2(self):
+        S1 = 'this \\/is] a query'
+        L1 = ['this', '/is]', 'a', 'query']
+        S2 = 'this is a que\\/ry'
+        L2 = ['this', 'is', 'a', 'que/ry']
+        self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
+        self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
+        
+    def test_parse_query_string_escape3(self):
+        S = 'this\\ is a query'
+        L = ['this is', 'a', 'query']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        
+    def test_parse_query_string_bad1(self):
+        L = ['"this is a query',
+             '/this is a query',
+             '[this is a query',
+             'th/is/ is a query',
+             '/th/is is a query',
+             't/hi/s is a query',
+             'th"is" is a query',
+             '"th"is is a query',
+             't"hi"s is a query',
+             'th[is] is a query',
+             '[th]is is a query',
+             't[hi]s is a query',
+             '[[this]] is a query',
+             '//this// is a query',
+             '""this"" is a query',
+             'this{1}} is a query',
+             'this{{1} is a query',
+             'this{} is a query',
+             'this{,} is a query',
+             'this{,1} is a query',
+             'this{a,a} is a query',
+             'this{1,,2} is a query',
+            ]
+        
+        for x in L:
+            try:
+                self.assertRaises(tokens.TokenParseError, tokens.parse_query_string, x, tokens.COCAToken)
+            except AssertionError as e:
+                print(x)
+                raise e
+
+    def test_parse_query_string_quantifiers(self):
+        S = '[this]{1,3} *.[v*]{2} a query'
+        L = ['[this]{1,3}', '*.[v*]{2}', 'a', 'query']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
 class TestQueryTokenCOCA(unittest.TestCase):
     token_type = tokens.COCAToken
     
@@ -348,8 +464,12 @@ class TestQuantification(unittest.TestCase):
         self.assertEqual(tokens.get_quantifiers("xxx{1}"), ("xxx", 1, 1))
         
     def test_broken_quantifiers(self):
-        self.assertEqual(tokens.get_quantifiers("xxx{0,1"), ("xxx{0,1", 1, 1))
         self.assertEqual(tokens.get_quantifiers("xxx0,1}"), ("xxx0,1}", 1, 1))
+
+        # Actually, none of the remaining quantifiers will occur if the query 
+        # string is first processed by parse_query_string(), which will raise 
+        # an exception for them:
+        self.assertEqual(tokens.get_quantifiers("xxx{0,1"), ("xxx{0,1", 1, 1))
         self.assertEqual(tokens.get_quantifiers("xxx{a,1}"), ("xxx{a,1}", 1, 1))
         self.assertEqual(tokens.get_quantifiers("xxx{0,b}"), ("xxx{0,b}", 1, 1))
         self.assertEqual(tokens.get_quantifiers("xxx{a,b}"), ("xxx{a,b}", 1, 1))
@@ -555,6 +675,7 @@ if __name__ == '__main__':
     import timeit
     
     suite = unittest.TestSuite([
+        unittest.TestLoader().loadTestsFromTestCase(TestModuleMethods),
         unittest.TestLoader().loadTestsFromTestCase(TestQueryTokenCOCA),
         unittest.TestLoader().loadTestsFromTestCase(TestQuantification)])
     

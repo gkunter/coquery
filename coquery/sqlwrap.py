@@ -60,8 +60,10 @@ class SqlDB (object):
             cur = self.Con.cursor()
             cur.execute("CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name.split()[0]))
         elif self.db_type == SQL_SQLITE:
-            # SQLite databases are created when making a connection to them
-            pass
+            if not self.db_path:
+                self.db_path = self.sqlite_path(self.db_name)
+            self.Con = sqlite3.connect(self.db_path)
+        self.db_name = db_name
 
     def use_database(self, db_name):
         if self.db_type == SQL_MYSQL:
@@ -69,6 +71,7 @@ class SqlDB (object):
             cur.execute("USE {}".format(db_name.split()[0]))
         elif self.db_type == SQL_SQLITE:
             self.db_path = SqlDB.sqlite_path(db_name)
+        self.db_name = db_name
 
     def get_connection(self):
         if self.db_type not in SQL_ENGINES:
