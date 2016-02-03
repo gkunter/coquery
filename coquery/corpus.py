@@ -782,7 +782,7 @@ class SQLResource(BaseResource):
                 db_name=self.db_name)
         elif db_type == SQL_SQLITE:
             engine_string = "sqlite+pysqlite:///{}".format(
-                self.DB.sqlite_path(self.db_name))
+                sqlwrap.SqlDB.sqlite_path(self.db_name))
         else:
             raise RuntimeError("Database type '{}' not supported.".format(db_type))
         return create_engine(engine_string)
@@ -829,7 +829,7 @@ class SQLResource(BaseResource):
                 db_name=self.db_name)
         elif db_type == SQL_SQLITE:
             engine_string = "sqlite+pysqlite:///{}".format(
-                SqlDB.sqlite_path(self.db_name))
+                sqlwrap.SqlDB.sqlite_path(self.db_name))
         else:
             raise RuntimeError("Database type '{}' not supported.".format(db_type))
         engine = create_engine(engine_string)
