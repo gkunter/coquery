@@ -161,9 +161,10 @@ def sql_url(configuration, db_name=""):
     d = _conf_dict(configuration)
 
     if d["type"] == SQL_MYSQL:
-        return "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
+        S = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
             host=d["host"], port=d["port"], user=d["user"], password=d["password"],
             db_name=db_name)
+        return S
     elif d["type"] == SQL_SQLITE:
         return "sqlite+pysqlite:///{}".format(sqlite_path(configuration, db_name))
 
@@ -202,7 +203,8 @@ def drop_database(configuration, db_name):
     db_name : str 
         The name of a database.
     """
-    engine = sqlalchemy.create_engine(sql_url(configuration, db_name))
+    s = sql_url(configuration, db_name)
+    engine = sqlalchemy.create_engine(s)
     
     if engine.dialect.name == SQL_MYSQL:
         with engine.connect() as connection:
@@ -210,6 +212,14 @@ def drop_database(configuration, db_name):
             connection.execute(text)
     elif engine.dialect.name == SQL_SQLITE:
         os.remove(sqlite_path(configuration, db_name))
+
+def create_database(configuration, db_name):
+    s = sql_url(configuration)
+    engine = sqlalchemy.create_engine(s)
+    
+    if engine.dialect.name == SQL_MYSQL:
+        with engine.connect() as connection:
+            connection.execute("CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name.split()[0]))
 
 def has_database(configuration, db_name):
     """
@@ -229,8 +239,151 @@ def has_database(configuration, db_name):
     """
     engine = sqlalchemy.create_engine(sql_url(configuration, db_name))
     if engine.dialect.name == SQL_MYSQL:
-        results = engine.execute("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{}'".format(db_name))
-        return len(results) > 0
+        S = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{}'".format(db_name)
+        try:
+            results = engine.execute(S)
+        except sqlalchemy.exc.InternalError:
+            return False
+        except Exception as e:
+            print(e)
+            raise e
+        else:
+            return True
     elif engine.dialect.name == SQL_MYSQL:
         return os.path.exists(sqlite_path(configuration, db_name))
+
+def has_index(engine, table, column):
+    """
+    Check if the specified column has an index.
     
+    Parameters
+    ----------
+    engine : an SQLAlchemy engine
+    
+    table, column : str 
+        The name of the table and the column, respectively
+        
+    Returns
+    -------
+    b : bool 
+        True if the column has an index, or False otherwise.
+    """
+    connection = engine.connect()
+    if engine.Dialect.name == SQL_MYSQL:
+        return bool(connection.execute('SHOW INDEX FROM %s WHERE Key = "%s"' % (table, index)))
+    elif engine.Dialect.name == SQL_SQLITE:
+        return bool(len(connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
+
+def create_index(engine, table, index, variables, length=None):
+    """
+    Create an index for the specified column table.
+    
+    Parameters
+    ----------
+    engine : an SQLAlchemy engine
+        
+    table : str 
+        The name of the table
+        
+    index : str 
+        The name of the new index
+        
+    variables : list 
+        A list of strings representing the column names that are to be 
+        indexed.
+        
+    length : int or None
+        The length of the index (applies to TEXT or BLOB fields)
+    """
+
+    connection = engine.connect()
+    # Do not create an index if the table is empty:
+    if not connection.execute("SELECT * FROM {} LIMIT 1".format(table)).fetchone():
+        return
+    
+    if length:
+        variables = ["%s(%s)" % (variables[0], length)]
+    S = 'CREATE INDEX {} ON {}({})'.format(
+        index, table, ",".join(variables))
+    connection.execute(S)
+
+def has_table(engine, table):
+    """
+    Check if the table 'table' exists in the current database.
+    
+    Parameters
+    ----------
+    engine : an SQLAlchemy engine
+    
+    table : str 
+        The name of the table
+        
+    Returns
+    -------
+    b : bool 
+        True if the table exists, or False otherwise.
+    """
+    connection = engine.connect()
+    if engine.Dialect.name == SQL_MYSQL:
+        return bool(connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table = '{}'".format(self.db_name, table)))
+    elif engine.Dialect.name == SQL_SQLITE:
+        S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table)
+        return bool(connection.execute(S).fetchall())
+
+def get_index_length(engine, table, column, coverage=0.95):
+    """
+    Return the index length that is required for the given coverage.
+    
+    If the current SQL engine is SQL_SQLITE, this method always returns
+    None.
+    
+    Parameters
+    ----------
+    table, column : str 
+        The name of the table and the column, respectively
+        
+    coverage : float
+        The coverage percentage that the index should cover. Default: 0.95
+    
+    Returns
+    -------
+    number : int 
+        The first character length that reaches the given coverage, or 
+        None if the coverage cannot be reached.
+    """
+    
+    if engine.Dialect.name == SQL_SQLITE:
+        return None
+    
+    S = """
+    SELECT len,
+        COUNT(DISTINCT SUBSTR({column}, 1, len)) AS number,
+        total,
+        ROUND(COUNT(DISTINCT SUBSTR({column}, 1, len)) / total, 2) AS coverage 
+    FROM   {table}
+    INNER JOIN (
+        SELECT COUNT(DISTINCT {column}) total 
+        FROM   {table}
+        WHERE  {column} != "") count_total
+    INNER JOIN (
+        SELECT @x := @x + 1 AS len
+        FROM   {table}, (SELECT @x := 0) count_init
+        LIMIT  32) count_inc
+    GROUP BY len""".format(
+        table=table, column=column)
+    connection = engine.connect()
+    results = connection.execute(S)
+
+    max_c = None
+    for x in results:
+        if not max_c or x[3] > max_c[3]:
+            max_c = x
+        if x[3] >= coverage:
+            print("{}.{}: index length {}".format(table, column, x[0]))
+            logger.info("{}.{}: index length {}".format(table, column, x[0]))
+            return int(x[0])
+    if max_c:
+        print("{}.{}: index length {}".format(table, column, max_c[0]))
+        logger.info("{}.{}: index length {}".format(table, column, max_c[0]))
+        return int(max_c[0])
+    return None
