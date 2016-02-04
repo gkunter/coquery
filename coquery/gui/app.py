@@ -641,8 +641,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.enable_corpus_widgets()
 
         if self.ui.combo_corpus.count():
-            options.cfg.corpus = str(self.ui.combo_corpus.currentText())
-            self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[options.cfg.corpus]
+            corpus_name = str(self.ui.combo_corpus.currentText())
+            self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[corpus_name]
             self.ui.filter_box.resource = self.resource
             
             corpus_variables = [x for _, x in self.resource.get_corpus_features()]
@@ -653,6 +653,7 @@ class CoqueryApp(QtGui.QMainWindow):
             except AttributeError:
                 pass
         self.change_corpus_features()
+        options.cfg.corpus = str(self.ui.combo_corpus.currentText())
 
     def change_corpus_features(self):
         """ 
