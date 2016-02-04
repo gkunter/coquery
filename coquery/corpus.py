@@ -1156,12 +1156,11 @@ class CorpusClass(object):
             self.resource.corpus_id,
             token_id)
 
-        db = self.resource.get_db()
-        d = db.execute_cursor(S).fetchone()
+        df = pd.read_sql(S, self.resource.get_engine())
         
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
-        for column in d.keys():
+        for column in df.columns:
             # exclude the Token ID:
             if column == self.resource.corpus_id:
                 continue
@@ -1203,22 +1202,14 @@ class CorpusClass(object):
                 id_column = getattr(self.resource, "{}_id".format(tab))
                 table_name = getattr(self.resource, "{}_table".format(tab))
                 S = "SELECT * FROM {} WHERE {} = {}".format(
-                table_name,
-                    id_column,
-                    d[column])
+                    table_name, id_column, df[column].values[0])
                 # Fetch all fields from the linked table for the current 
                 # token:
-                row = db.execute_cursor(S).fetchone()
-                if row:
-                    # This somewhat complicated code is required because 
-                    # the SQLite connections only indirectly support named 
-                    # cursors:
-                    keys = list(row.keys())
-                    keys.remove(id_column)
-                    D = dict(zip(keys, [row[x] for x in keys]))
-                    ## append the row data to the list:
+                row = pd.read_sql(S, self.resource.get_engine())
+                if len(row.index) > 0:
+                    D = dict([(x, row.at[0,x]) for x in row.columns if x != id_column])
+                    # append the row data to the list:
                     l.append((table_name, D))
-        db.close()
         return l
 
     def get_corpus_size(self):
