@@ -543,12 +543,12 @@ class Options(object):
                             default_corpus = config_file.get("main", "default_corpus")
                         except (NoOptionError, ValueError):
                             default_corpus = self.corpora_dict.keys()[0]
-                        vars(self.args) ["corpus"] = default_corpus
+                        self.args.corpus = default_corpus
                         try:
                             mode = config_file.get("main", "query_mode")
-                            vars(self.args)["MODE"] = mode
+                            self.args.MODE = mode
                         except (NoOptionError, ValueError):
-                            default_corpus = QUERY_MODE_DISTINCT
+                            self.args.MODE = QUERY_MODE_DISTINCT
                         try:
                             last_query = config_file.get("main", "query_string")
                             self.args.query_list = decode_query_string(last_query)
@@ -573,7 +573,7 @@ class Options(object):
                             pass
                         
                         try:
-                            vars(self.args)["input_path"] = config_file.get("main", "csv_file")
+                            self.args.input_path = config_file.get("main", "csv_file")
                         except (NoOptionError, ValueError):
                             pass
                         else:
@@ -605,22 +605,22 @@ class Options(object):
                     elif section == "output":
                         for variable, value in config_file.items("output"):
                             if value:
-                                vars(self.args)["selected_features"].append(variable)
+                                self.args.selected_features.append(variable)
                     elif section == "filter":
                         for _, filt_text in config_file.items("filter"):
-                            vars(self.args)["filter_list"].append(filt_text.strip('"'))
+                            self.args.filter_list.append(filt_text.strip('"'))
 
                     elif section == "context":
                         try:
-                            vars(self.args)["context_left"] = int(config_file.get("context", "words_left"))
+                            self.args.context_left = int(config_file.get("context", "words_left"))
                         except (NoOptionError, ValueError):
                             pass
                         try:
-                            vars(self.args)["context_right"] = int(config_file.get("context", "words_right"))
+                            self.args.context_right = int(config_file.get("context", "words_right"))
                         except (NoOptionError, ValueError):
                             pass
                         try:
-                            vars(self.args)["context_mode"] = config_file.get("context", "mode")
+                            self.args.context_mode = config_file.get("context", "mode")
                         except (NoOptionError, ValueError):
                             pass
 
@@ -676,13 +676,13 @@ class Options(object):
                         except NoOptionError:
                             self.args.reaggregate_data = True
                         try:
-                            vars(self.args)["width"] = int(config_file.get("gui", "width"))
+                            self.args.width = int(config_file.get("gui", "width"))
                         except (NoOptionError, ValueError):
-                            vars(self.args)["width"] = None
+                            self.args.width = None
                         try:
-                            vars(self.args)["height"] = int(config_file.get("gui", "height"))
+                            self.args.height = int(config_file.get("gui", "height"))
                         except (NoOptionError, ValueError):
-                            vars(self.args)["height"] = None
+                            self.args.height = None
 
                         context_dict = {}
                         # get column defaults:
