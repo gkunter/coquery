@@ -78,17 +78,17 @@ class SqlDB (object):
             raise RuntimeError("Database type '{}' not supported.".format(self.db_type))
         elif self.db_type == SQL_MYSQL:
             try:
-                if self.db_name:
-                    connection = pymysql.connect(
-                        host=self.db_host, 
-                        port=self.db_port, 
-                        user=self.db_user, 
-                        passwd=self.db_pass, 
-                        db=self.db_name,
-                        connect_timeout=self.timeout,
-                        local_infile=self.local_infile,
-                        charset=self.encoding)
-                else:
+                #if self.db_name:
+                    #connection = pymysql.connect(
+                        #host=self.db_host, 
+                        #port=self.db_port, 
+                        #user=self.db_user, 
+                        #passwd=self.db_pass, 
+                        #db=self.db_name,
+                        #connect_timeout=self.timeout,
+                        #local_infile=self.local_infile,
+                        #charset=self.encoding)
+                #else:
                     connection = pymysql.connect(
                         host=self.db_host, 
                         port=self.db_port, 
@@ -475,7 +475,8 @@ class SqlDB (object):
         b : bool 
             True if the column has an index, or False otherwise.
         """
-        cur = self.Con.cursor()
+        con = self.get_connection()
+        cur = con.cursor()
         if self.db_type == SQL_MYSQL:
             return bool(cur.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table_name, index_name)))
         elif self.db_type == SQL_SQLITE:
