@@ -17,12 +17,13 @@ import socket
 import re
 import string
 import sys
+import sqlalchemy
 
 from pyqt_compat import QtCore, QtGui
 import QtProgress
 from ui.connectionConfigurationUi import Ui_ConnectionConfig
 
-import sqlwrap
+import sqlhelper
 import options
 from errors import *
 from defines import *
@@ -177,7 +178,11 @@ class ConnectionConfiguration(QtGui.QDialog):
 
     def update_connection(self, state, exc=None):
         if state == "noConnection":
-            self.ui.label_connection.setText("Could not connect to a MySQL server.<br/>{}".format(exc))
+            match = re.search(r'\"(.*)\"', str(exc))
+            if match:
+                self.ui.label_connection.setText(match.group(1))
+            else:
+                self.ui.label_connection.setText(str(exc))
             self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
         elif state == "accessDenied":
             self.ui.label_connection.setText("A MySQL server was found, but access was denied. Check the user name and password, or create a new MySQL user.")
@@ -408,12 +413,13 @@ class ConnectionConfiguration(QtGui.QDialog):
         if create_data:
             root_name, root_password, name, password = create_data
             try:
-                DB = sqlwrap.SqlDB(
-                    hostname,
+                engine = sqlalchemy.create_engine(sqlhelper.sql_url(
+                    hostname, 
                     self.ui.port.value(),
+                    SQL_MYSQL,
                     root_name,
-                    root_password)
-            except SQLInitializationError:
+                    root_password))
+            except sqlalchemy.exc.SQLAlchemyError as e:
                 QtGui.QMessageBox.critical(self, "Access as root failed", "<p>A root access to the MySQL server could not be established.</p><p>Please check the MySQL root name and the MySQL root password, and try again to create a user.") 
                 return
             S = """
@@ -421,15 +427,16 @@ class ConnectionConfiguration(QtGui.QDialog):
             GRANT ALL PRIVILEGES ON * . * TO '{user}'@'{hostname}';
             FLUSH PRIVILEGES;""".format(
                 user=name, password=password, hostname=hostname)
-            try:
-                DB.Cur.execute(S)
-            except:
-                QtGui.QMessageBox.critical(self, "Error creating user", "Apologies – the user named '{}' could not be created on the MySQL server.".format(name))
-                return
-            else:
-                QtGui.QMessageBox.information(self, "User created", "The user named '{}' has successfully been created on the MySQL server.".format(name))
-            finally:
-                DB.close()
+
+            with engine.connect() as connection:
+                try:
+                    connection.execute(S)
+                except sqlalchemy.exc.SQLAlchemyError:
+                    QtGui.QMessageBox.critical(self, "Error creating user", "Apologies – the user named '{}' could not be created on the MySQL server.".format(name))
+                    return
+                else:
+                    QtGui.QMessageBox.information(self, "User created", "The user named '{}' has successfully been created on the MySQL server.".format(name))
+
             self.ui.user.setText(name)
             self.ui.password.setText(password)
             self.check_connection()
@@ -509,29 +516,22 @@ class ConnectionConfiguration(QtGui.QDialog):
         
     def probe_host(self, hostname):
         if self.ui.radio_mysql.isChecked():
-            try:
-                DB = sqlwrap.SqlDB(
-                    Host=hostname,
-                    Port=self.ui.port.value(),
-                    Type=SQL_MYSQL,
-                    User=str(self.ui.user.text()),
-                    connect_timeout=60,
-                    Password=str(self.ui.password.text()))
-                cur = DB.Con.cursor()
-                cur.execute("SELECT VERSION()")
-                x = cur.fetchone()
-                DB.close()
-            except SQLInitializationError as e:
-                if "access denied" in str(e).lower():
-                    self.accessDenied.emit(e)
-                else:
-                    self.noConnection.emit(e)
-            except Exception as e:
-                print(e)
+            db_type = SQL_MYSQL
+        else:
+            db_type = SQL_SQLITE
+
+        ok, exc = sqlhelper.test_configuration(
+                    (hostname, 
+                    self.ui.port.value(),
+                    db_type,
+                    str(self.ui.user.text()),
+                    str(self.ui.password.text())))
+        if not ok:
+            if "access denied" in str(exc.orig).lower():
+                self.accessDenied.emit(exc.orig)
             else:
-                self.connected.emit()
-        elif self.ui.radio_sqlite.isChecked():
-            # FIXME: Check that database path can be read 
+                self.noConnection.emit(exc.orig)
+        else:
             self.connected.emit()
     
     def keyPressEvent(self, e):

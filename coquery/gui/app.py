@@ -1695,7 +1695,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if not options.cfg.current_server:
             return False
         else:
-            state = sqlhelper.test_configuration(options.cfg.current_server)
+            state, _ = sqlhelper.test_configuration(options.cfg.current_server)
 
         # Only do something if the current connection status has changed:
         if state != self.last_connection_state or options.cfg.current_server != self.last_connection:

@@ -109,8 +109,16 @@ def test_configuration(name):
 
     Returns
     -------
-    test : bool
-        Returns True if the configuration is working, or False otherwise.
+    test : tuple
+        A tuple, with a boolean value as first element and an Exception as 
+        the second element. 
+        
+        If the configuration is valid, the boolean value is True, and the 
+        second element is None.
+        
+        If the configuration is not valid, the boolean value is False, and 
+        the second element is the exception that was raised when testing 
+        the connection.
     """
     d = _conf_dict(name)
     if d["type"] == SQL_MYSQL:
@@ -119,14 +127,17 @@ def test_configuration(name):
             with engine.connect() as connection:
                 connection.execute("SELECT VERSION()")
         except sqlalchemy.exc.SQLAlchemyError as e:
-            return False
+            return (False, e)
         except Exception as e:
             raise e
         else:
-            return True
+            return (True, None)
 
     elif d["type"] == SQL_SQLITE:
-        return os.access(sqlite_path(name), os.X_OK | os.R_OK)
+        if os.access(sqlite_path(name), os.X_OK | os.R_OK):
+            return (True, None)
+        else:
+            return (False, IOError)
 
 def sql_url(configuration, db_name=""):
     """
