@@ -61,7 +61,6 @@ def _conf_dict(configuration):
     conf : dict 
         A dictionary containing configuration values
     """
-    print(configuration, type(configuration))
     if isinstance(configuration, str):
         try:
             return options.cfg.server_configuration[configuration]
