@@ -72,7 +72,8 @@ import importlib
 import warnings
 import time
 
-import sqlwrap
+#import sqlwrap
+import sqlhelper
 import argparse
 import re
 import time
@@ -707,19 +708,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         if self._corpus_buffer:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["%s"] * (len(self._corpus_keys))))
-            data = [list(row.values()) for row in self._corpus_buffer]
-            if data: 
-                try:
-                    self.DB.executemany(sql_string, tuple(data))
-                except TypeError as e:
-                    print(e)
-                    warnings.warn(sql_string)
-                    warnings.warn(data[0])
-                    raise(e)
+                self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["?"] * (len(self._corpus_keys))))
+            self.connection.execute(sql_string, self._corpus_buffer)
             self._corpus_buffer = []        
-            
-        self.DB.commit()
 
     def create_table_description(self, table_name, column_list):
         """
@@ -793,7 +784,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         :func:``create_table_description``).
         """
         
-        self.DB.start_transaction()
         self.add_tag_table()
 
         # initialize progress bars:
@@ -802,16 +792,16 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
 
         for i, current_table in enumerate(self._new_tables):
-            self._new_tables[current_table].setDB(self.DB)
-            if not self.DB.has_table(current_table):
-                self.DB.create_table(
-                    current_table, 
-                    self._new_tables[current_table].get_create_string(self.arguments.db_type))
+            self._new_tables[current_table].setDB(self.engine)
+
+            self.connection.execute('CREATE TABLE {} ({})'.format(
+                current_table, 
+                self._new_tables[current_table].get_create_string(self.arguments.db_type)))
+
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
             if self.interrupted:
                 return
-        self.DB.commit()
 
     @classmethod
     def get_file_list(cls, path, file_filter):
@@ -1827,29 +1817,23 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.logger.info("Library %s written." % path)
             
     def setup_db(self):
-        """ Create a connection to the server, and creates the database if
-        necessary."""
-        self.DB = sqlwrap.SqlDB(
-            Host=self.arguments.db_host,
-            Port=self.arguments.db_port,
-            Type=self.arguments.db_type,
-            User=self.arguments.db_user,
-            Password=self.arguments.db_password,
-            db_name=self.arguments.db_name,
-            local_infile=1)
-        
-        if self.DB.has_database(self.arguments.db_name) and self.arguments.c:
-            self.DB.drop_database(self.arguments.db_name)
-        if self.arguments.c:
-            self.DB.create_database(self.arguments.db_name)
-        self.DB.use_database(self.arguments.db_name)
+        """
+        Creates a database engine, and sets up the required server variables.
+        """
+        configuration = options.cfg.get_mysql_configuration()
 
-        if self.arguments.db_type == SQL_MYSQL:
-            self.DB.set_variable("NAMES", "utf8")
-            self.DB.set_variable("CHARACTER SET", "utf8mb4")
-            self.DB.set_variable("autocommit", 0)
-            self.DB.set_variable("unique_checks", 0)
-            self.DB.set_variable("foreign_key_checks", 0)
+        if self.arguments.c:
+            if sqlhelper.has_database(configuration, self.arguments.db_name):         
+                sqlhelper.drop_database(configuration, self.arguments.db_name)
+            sqlhelper.create_database(configuration, self.arguments.db_name)
+
+        self.engine = sqlalchemy.create_engine(sqlhelper.sql_url(configuration, db_name))
+        self.con = self.engine.connect()
+        if self.engine.dialect.name == SQL_MYSQL:
+            self.con.execute("SET NAMES 'utf8'")
+            self.con.execute("SET CHARACTER SET 'utf8mb4'")
+            self.con.execute("SET unique_checks=0")
+            self.con.execute("SET foreign_key_checks=0")
 
     def add_building_stage(self, stage):
         """ The parameter stage is a function that will be executed
@@ -1951,7 +1935,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         if self.arguments.c:
             try:
-                self.DB.drop_database(self.arguments.db_name)
+                sqlhelper.drop_database(options.get_mysql_configuration(), self.arguments.db_name)
+                #self.DB.drop_database(self.arguments.db_name)
             except:
                 pass
 
