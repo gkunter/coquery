@@ -159,8 +159,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if options.cfg.current_resources:
             # add available resources to corpus dropdown box:
-            corpora = [x for x in sorted(options.cfg.current_resources.keys())]
+            corpora = sorted(list(options.cfg.current_resources.keys()))
             self.ui.combo_corpus.addItems(corpora)
+        
+        index = self.ui.combo_corpus.findText(options.cfg.corpus)
+        if index > -1:
+            self.ui.combo_corpus.setCurrentIndex(index)
+        
         
         # chamge the default query string edit to the sublassed edit class:
         self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
@@ -769,7 +774,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems(list(options.cfg.current_resources.keys()))
+        self.ui.combo_corpus.addItems(sorted(list(options.cfg.current_resources.keys())))
 
         # try to return to last corpus name:
         new_index = self.ui.combo_corpus.findText(last_corpus)
@@ -1907,10 +1912,9 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Set up the gui values based on the values in options.cfg.* """
 
         # set corpus combo box to current corpus:
-        if options.cfg.corpus:
-            index = self.ui.combo_corpus.findText(options.cfg.corpus)
-            if index > -1:
-                self.ui.combo_corpus.setCurrentIndex(index)
+        index = self.ui.combo_corpus.findText(options.cfg.corpus)
+        if index > -1:
+            self.ui.combo_corpus.setCurrentIndex(index)
 
         # set query mode:
         if options.cfg.MODE == QUERY_MODE_DISTINCT:
