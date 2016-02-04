@@ -19,24 +19,10 @@ from pyqt_compat import QtCore, QtGui
 from ui.contextViewerUi import Ui_ContextView
 
 import options
-import sqlwrap
 import classes
 
 class ContextView(QtGui.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, parent=None):
-        
-        def get_additional_labels(table, features, item_id):
-            S = "SELECT {features} FROM {table} WHERE {table}_id = {id}".format(
-                features=", ".join(features), table=table, id=item_id)
-            DB = sqlwrap.SqlDB(
-                options.cfg.db_host,
-                options.cfg.db_port,
-                options.cfg.db_user,
-                options.cfg.db_password,
-                self.resource.db_name)
-            DB.execute(S)
-            values = DB.Cur[0]
-            return dict(zip(features, values))
         
         super(ContextView, self).__init__(parent)
         
