@@ -24,7 +24,7 @@ except ImportError:
 from errors import *
 import tokens
 import options
-import sqlwrap
+import sqlhelper
 from defines import *
 
 def collapse_words(word_list):
@@ -752,11 +752,8 @@ class SQLResource(BaseResource):
         super(SQLResource, self).__init__()
         self.lexicon = lexicon
         self.corpus = corpus
-        self.DB = None
-        self.connect_to_database()
-        self.db_type = self.DB.db_type        
+        _, _, self.db_type, _, _ = options.get_mysql_configuration()
         self._word_cache = {}
-
 
         # FIXME: in order to make this not depend on a fixed database layout 
         # (here: 'source' and 'file' tables), we should check # for any table 
@@ -771,52 +768,10 @@ class SQLResource(BaseResource):
         else:
             options.cfg.token_origin_id = None
 
-    def get_engine(self):
-        host, port, db_type, user, password = options.get_mysql_configuration()
-        if db_type == SQL_MYSQL:
-            engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
-                host=host,
-                port=port,
-                user=user, 
-                password=password,
-                db_name=self.db_name)
-        elif db_type == SQL_SQLITE:
-            engine_string = "sqlite+pysqlite:///{}".format(
-                sqlwrap.SqlDB.sqlite_path(self.db_name))
-        else:
-            raise RuntimeError("Database type '{}' not supported.".format(db_type))
-        return create_engine(engine_string)
-    
-    def close_db(self):
-        if self.DB:
-            try:
-                self.DB.close()
-            except Exception as e:
-                print(str(e))
-                logger.warning("Could not correctly close the database connection: {}".format(e))
-                pass
-        self.DB = None
-    
-    def get_db(self):
-        try:
-            host, port, db_type, user, password = options.get_mysql_configuration()
-        except ValueError:
-            raise SQLNoConfigurationError
-        if db_type not in SQL_ENGINES:
-            raise RuntimeError("Database type '{}' not supported.".format(db_type))
-        if db_type == SQL_SQLITE:
-            db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
-        else:
-            if self.DB is not None and self.DB.Con.open:
-                db = self.DB
-            else:
-                db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=self.db_name)
-                logger.debug("Connected to database %s@%s:%s."  % (self.db_name, host, port))
-        return db
-    
-    def connect_to_database(self):
-        self.DB = self.get_db()
-    
+    @classmethod
+    def get_engine(cls):
+        return create_engine(sqlhelper.sql_url(options.cfg.current_server, cls.db_name))
+
     @staticmethod
     def SQLAlchemyConnect():
         host, port, db_type, user, password = options.get_mysql_configuration()
@@ -829,7 +784,7 @@ class SQLResource(BaseResource):
                 db_name=self.db_name)
         elif db_type == SQL_SQLITE:
             engine_string = "sqlite+pysqlite:///{}".format(
-                sqlwrap.SqlDB.sqlite_path(self.db_name))
+                sqlhelper.sqlite_path(self.db_name))
         else:
             raise RuntimeError("Database type '{}' not supported.".format(db_type))
         engine = create_engine(engine_string)
@@ -1203,7 +1158,7 @@ class CorpusClass(object):
 
         db = self.resource.get_db()
         d = db.execute_cursor(S).fetchone()
-
+        
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
         for column in d.keys():

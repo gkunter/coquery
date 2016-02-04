@@ -22,6 +22,8 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
+import sqlhelper
+
 import __init__
 from session import *
 from defines import *
@@ -30,9 +32,9 @@ from pyqt_compat import QtCore, QtGui, QtHelp
 import QtProgress
 import ui.coqueryUi, ui.coqueryCompactUi
 
+import sqlhelper 
 import classes
 import errorbox
-import sqlwrap
 import queries
 import contextviewer
 
@@ -639,8 +641,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.enable_corpus_widgets()
 
         if self.ui.combo_corpus.count():
-            corpus_name = str(self.ui.combo_corpus.currentText())
-            self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[corpus_name]
+            options.cfg.corpus = str(self.ui.combo_corpus.currentText())
+            self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[options.cfg.corpus]
             self.ui.filter_box.resource = self.resource
             
             corpus_variables = [x for _, x in self.resource.get_corpus_features()]
@@ -1374,13 +1376,17 @@ class CoqueryApp(QtGui.QMainWindow):
     def stop_query(self):
         response = QtGui.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
         if response == QtGui.QMessageBox.Yes:
+            # FIXME: This isn't working well at all. A possible solution
+            # using SQLAlchemy may be found here:
+            # http://stackoverflow.com/questions/9437498
+            
             logger.warning("Last query is incomplete.")
             self.ui.button_run_query.setEnabled(False)
             self.ui.button_run_query.setText("Wait...")
             self.showMessage("Terminating query...")
             try:
                 self.Session.Corpus.resource.DB.kill_connection()
-            except (AttributeError, sqlwrap.mysql.err):
+            except Exception as e:
                 pass
             if self.query_thread:
                 self.query_thread.terminate()
@@ -1515,17 +1521,11 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             database = resource.db_name
 
-        if database:
-            host, port, db_type, user, password = options.get_mysql_configuration()
-            try:
-                db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=database)
-            except:
-                db = None
-
         response = removecorpus.RemoveCorpusDialog.select(
             corpus_name, 
             options.cfg.current_server,
             adhoc_corpus)
+
         if response and QtGui.QMessageBox.question(
             self,
             "Remove corpus – Coquery",
@@ -1534,9 +1534,9 @@ class CoqueryApp(QtGui.QMainWindow):
             rm_module, rm_database, rm_installer = response
             success = True
 
-            if rm_database and db:
+            if rm_database and database:
                 try:
-                    db.drop_database(database)
+                    sqlhelper.drop_database(sqlhelper.sql_url(options.get_mysql_configuration, database))
                 except Exception as e:
                     QtGui.QMessageBox.critical(
                         self, 
@@ -1544,10 +1544,6 @@ class CoqueryApp(QtGui.QMainWindow):
                         msg_remove_corpus_error.format(corpus=resource.name, code=e), 
                         QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     success = False
-                try:
-                    db.close()
-                except AttributeError as e:
-                    pass
 
             # Remove the corpus module:
             if rm_module and success and module:
@@ -1691,18 +1687,9 @@ class CoqueryApp(QtGui.QMainWindow):
             True if a connection is available, or False otherwise.
         """
         if not options.cfg.current_server:
-            state = False
             return False
         else:
-            db_con = options.cfg.server_configuration[options.cfg.current_server]
-            if db_con["type"] == SQL_MYSQL:
-                state = bool(sqlwrap.SqlDB.test_connection(
-                    db_con["host"], db_con["port"], 
-                    db_con["user"], db_con["password"]))
-            elif db_con["type"] == SQL_SQLITE:
-                state = True
-            else:
-                state = False
+            state = sqlhelper.test_configuration(options.cfg.current_server)
 
         # Only do something if the current connection status has changed:
         if state != self.last_connection_state or options.cfg.current_server != self.last_connection:
