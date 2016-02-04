@@ -709,7 +709,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self._corpus_buffer:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
                 self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["?"] * (len(self._corpus_keys))))
-            self.connection.execute(sql_string, self._corpus_buffer)
+            self.con.execute(sql_string, self._corpus_buffer)
             self._corpus_buffer = []        
 
     def create_table_description(self, table_name, column_list):
@@ -794,7 +794,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         for i, current_table in enumerate(self._new_tables):
             self._new_tables[current_table].setDB(self.engine)
 
-            self.connection.execute('CREATE TABLE {} ({})'.format(
+            self.con.execute('CREATE TABLE {} ({})'.format(
                 current_table, 
                 self._new_tables[current_table].get_create_string(self.arguments.db_type)))
 
@@ -1453,13 +1453,80 @@ class BaseCorpusBuilder(corpus.BaseResource):
         for i, file_name in enumerate(self._file_list):
             if self.interrupted:
                 return
-            if not self.DB.find(self.file_table, {self.file_path: file_name}):
+            if not self.db_has(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
                 self.process_file(file_name)
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
             self.commit_data()
+
+    #def get_optimal_field_type(self, table_name, column_name):
+        #"""
+        #Obtain the optimal field type for the specified column.
+        
+        #This method is not supported for SQLite databases. Here, the return 
+        #value is always the current field type of the column.
+        
+        #Parameters
+        #----------
+        #table_name, column_name : str 
+            #The name of the table and the column, respectively
+            
+        #Returns
+        #-------
+        #s : str 
+            #A string containing the optimal SQL field type for the specified 
+            #column.
+        #"""
+        #if self.db_type == SQL_SQLITE:
+            #return self.get_field_type(table_name, column_name)
+        #cur = self.Con.cursor()
+        #cur.execute("SELECT %s FROM %s PROCEDURE ANALYSE()" % (column_name, table_name), override=True)
+        #x = cur.fetchone()[-1]
+        #try:
+            #if isinstance(x, bytes):
+                #x = x.decode("utf-8")
+        #except NameError:
+            #x = str(x)
+        #return x
+
+
+    def db_has(self, table, values, case=False):
+        return len(self.db_find(table, values, case).index) > 0
+
+    def db_find(self, table, values, case=False):        
+        """ 
+        Obtain all records from table_name that match the column-value
+        pairs given in the dict values.
+        
+        Parameters
+        ----------
+        table_name : str 
+            The name of the table 
+        values : dict 
+            A dictionary with column names as keys and cell contents as values
+        case : bool
+            Set to True if the find should be case-sensitive, or False 
+            otherwise.
+            
+        Returns
+        -------
+        df : pandas data frame
+            a data frame containing the matching entries
+        """
+        
+        variables = list(values.keys())
+        where = []
+        for column, value in values.items():
+            where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
+        if case:
+            S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table_name, " AND BINARY ".join(where))
+        else:
+            S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table_name, " AND ".join(where))
+        S = S.replace("\\", "\\\\")
+        return pd.read_sql(S, self.engine)
+
 
     def build_create_frequency_table(self):
         """ 
@@ -1516,7 +1583,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
             
         column_count = 0
-        self.DB.start_transaction()
+
         for table_name in self._new_tables:
             table = self._new_tables[table_name]
             if self.interrupted:
@@ -1549,7 +1616,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         if self.interrupted:
             return
-        self.DB.commit()
+
         
     def add_index_to_blocklist(self, index):
         self._blocklist.add(index)
@@ -1586,7 +1653,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
 
         index_count = 0
-        self.DB.start_transaction()
+
         i = 0
         for table, column in index_list:
             if self.interrupted:
@@ -1618,8 +1685,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         if self.interrupted:
             return
-
-        self.DB.commit()
 
     @staticmethod
     def get_class_variables():
