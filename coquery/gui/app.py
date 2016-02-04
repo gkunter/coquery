@@ -1541,9 +1541,11 @@ class CoqueryApp(QtGui.QMainWindow):
             success = True
 
             if rm_database and database:
+                
                 try:
-                    sqlhelper.drop_database(sqlhelper.sql_url(options.get_mysql_configuration, database))
+                    sqlhelper.drop_database(options.cfg.current_server, database)
                 except Exception as e:
+                    raise e
                     QtGui.QMessageBox.critical(
                         self, 
                         "Database error – Coquery", 
