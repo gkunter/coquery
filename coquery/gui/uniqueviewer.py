@@ -84,15 +84,12 @@ class UniqueViewer(QtGui.QWidget):
     def get_unique(self):
         if not self.db_name:
             return
-        import sqlwrap
-        S = "SELECT DISTINCT {0} FROM {1} ORDER BY {0}".format(self.column, self.table)
 
-        db = sqlwrap.SqlDB(
-            *options.get_mysql_configuration(),
-            db_name=self.db_name)
-        cur = db.Con.cursor() 
-        cur.execute(S)
-        self.data = [QtGui.QTreeWidgetItem(self.ui.treeWidget, [x[0]]) for x in cur]
+        S = "SELECT DISTINCT {0} FROM {1} ORDER BY {0}".format(self.column, self.table)
+        resource, _, _, _ = options.cfg.current_resources[options.cfg.corpus]
+        df = pd.read_sql(S, resource.get_engine())
+        self.data = [QtGui.QTreeWidgetItem(self.ui.treeWidget, [x]) for x in df[self.column]]
+
         for x in self.data:
             x.setToolTip(0, x.text(0))
 
