@@ -26,6 +26,9 @@ from errors import *
 from defines import *
 import options
 
+import sqlhelper
+import sqlalchemy
+
 import sqlite3
 if options._use_mysql:
     import pymysql
@@ -33,7 +36,7 @@ if options._use_mysql:
 
 class SqlDB (object):
     """ A wrapper for MySQL. """
-    def __init__(self, Host, Port, Type, User, Password, db_name=None, db_path="", encoding="utf8", connect_timeout=60, local_infile=0):
+    def __init__(self, Host, Port, Type, User, Password, db_name="", db_path="", encoding="utf8", connect_timeout=60, local_infile=0):
         
         if Type == SQL_MYSQL and not options._use_mysql:
             raise DependencyError("pymysql", "https://github.com/PyMySQL/PyMySQL")
@@ -50,73 +53,27 @@ class SqlDB (object):
         self.encoding = encoding
         self.local_infile = local_infile
 
-        self.Con = self.get_connection()
-
-        if self.db_type == SQL_MYSQL:
-            self.set_variable("NAMES", self.encoding)
-
+        self.sql_url = sqlhelper.sql_url(options.get_mysql_configuration(), self.db_name)
+        self.engine = sqlalchemy.create_engine(self.sql_url)
+        self.connection = None
+            
     def create_database(self, db_name):
+        self.sql_url = sqlhelper.sql_url(options.get_mysql_configuration())
+        self.engine = sqlalchemy.create_engine(self.sql_url)
+        self.connection = self.engine.connect()
+
         if self.db_type == SQL_MYSQL:
-            cur = self.Con.cursor()
-            cur.execute("CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name.split()[0]))
-        elif self.db_type == SQL_SQLITE:
-            if not self.db_path:
-                self.db_path = self.sqlite_path(self.db_name)
-            self.Con = sqlite3.connect(self.db_path)
-        self.db_name = db_name
+            S = "CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name)
+            self.connection.execute(S)
+        self.use_database(db_name)
 
     def use_database(self, db_name):
-        if self.db_type == SQL_MYSQL:
-            cur = self.Con.cursor()
-            cur.execute("USE {}".format(db_name.split()[0]))
-        elif self.db_type == SQL_SQLITE:
-            self.db_path = SqlDB.sqlite_path(db_name)
         self.db_name = db_name
-
-    def get_connection(self):
-        if self.db_type not in SQL_ENGINES:
-            raise RuntimeError("Database type '{}' not supported.".format(self.db_type))
-        elif self.db_type == SQL_MYSQL:
-            try:
-                if self.db_name:
-                    connection = pymysql.connect(
-                        host=self.db_host, 
-                        port=self.db_port, 
-                        user=self.db_user, 
-                        passwd=self.db_pass, 
-                        db=self.db_name,
-                        connect_timeout=self.timeout,
-                        local_infile=self.local_infile,
-                        charset=self.encoding)
-                else:
-                    connection = pymysql.connect(
-                        host=self.db_host, 
-                        port=self.db_port, 
-                        user=self.db_user, 
-                        passwd=self.db_pass, 
-                        connect_timeout=self.timeout,
-                        local_infile=self.local_infile,
-                        charset=self.encoding)
-            except (pymysql.Error) as e:
-                raise SQLInitializationError(e)
-        elif self.db_type == SQL_SQLITE:
-            if self.db_name:
-                if not self.db_path:
-                    self.db_path = self.sqlite_path(self.db_name)
-                connection = sqlite3.connect(self.db_path)
-            else:
-                raise SQLInitializationError("SQLite requires a database name")
-        else:
-            raise RuntimeError("Database type '{}' not supported.".format(self.db_type))
-        return connection
-
-    @staticmethod
-    def sqlite_path(db_name):
-        return os.path.join(
-            options.get_home_dir(), 
-            "databases", 
-            options.cfg.current_server,
-            "{}.db".format(db_name))
+        self.sql_url = sqlhelper.sql_url(options.get_mysql_configuration(), self.db_name)
+        self.engine = sqlalchemy.create_engine(self.sql_url)
+        self.connection = self.engine.connect()
+        if self.db_type == SQL_MYSQL:
+            self.set_variable("NAMES", self.encoding)
 
     def has_database(self, db_name):
         """
@@ -133,10 +90,9 @@ class SqlDB (object):
             True if the database exists, or False otherwise.
         """
         if self.db_type == SQL_MYSQL:
-            cur = self.Con.cursor()
-            cur.execute("SHOW DATABASES")
+            results = self.connection.execute("SHOW DATABASES")
             try:
-                for x in cur:
+                for x in results:
                     if x[0] == db_name.split()[0]:
                         return db_name
             except pymysql.ProgrammingError as ex:
@@ -163,12 +119,11 @@ class SqlDB (object):
         b : bool 
             True if the table exists, or False otherwise.
         """
-        cur = self.Con.cursor()
         if self.db_type == SQL_MYSQL:
-            return bool(cur.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name)))
+            return bool(self.connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name)))
         elif self.db_type == SQL_SQLITE:
             S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table_name)
-            return bool(cur.execute(S).fetchall())
+            return bool(self.connection.execute(S).fetchall())
 
     def create_table(self, table_name, description):
         """
@@ -182,55 +137,44 @@ class SqlDB (object):
         description : str 
             The SQL string used to create the new table
         """
-        cur = self.Con.cursor()
-        return cur.execute('CREATE TABLE {} ({})'.format(table_name, description))
+        S = 'CREATE TABLE {} ({})'.format(table_name, description)
+        return self.connection.execute(S)
+            
+        #cur = self.Con.cursor()
+        #return cur.execute('CREATE TABLE {} ({})'.format(table_name, description))
 
-    def find(self, table_name, values, additional_variables=[], case=False):
+    def find(self, table, values, case=False):        
         """ 
         Obtain all records from table_name that match the column-value
         pairs given in the dict values.
         
         Parameters
         ----------
-        table_name : str 
+        table : str 
             The name of the table 
         values : dict 
             A dictionary with column names as keys and cell contents as values
-        additional_variables : list
-            Not supported anymore
         case : bool
             Set to True if the find should be case-sensitive, or False 
             otherwise.
             
         Returns
         -------
-        l : list of tuples 
-            A list of tuples, each representing a row from the data table 
-            that match the provided values
+        l : list
+            A list of tuples representing the results from the find.
         """
-        assert additional_variables == [], "Parameter 'additional_variables' is no longer supported by DB.find()"
         
-        if self.db_type == SQL_MYSQL:
-            cur = self.Con.cursor(pymysql.cursors.DictCursor)
-        elif self.db_type == SQL_SQLITE:
-            con = self.Con
-            con.row_factory = sqlite3.Row
-            cur = con.cursor()
-        variables = list(values.keys()) + additional_variables
+        variables = list(values.keys())
         where = []
         for column, value in values.items():
             where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
         if case:
-            S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table_name, " AND BINARY ".join(where))
+            S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table, " AND BINARY ".join(where))
         else:
-            S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table_name, " AND ".join(where))
+            S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table, " AND ".join(where))
         S = S.replace("\\", "\\\\")
-        try:
-            cur.execute(S)
-        except Exception as e:
-            print(e)
-            raise e
-        return cur.fetchall()
+        l = self.connection.execute(S).fetchall()
+        return l
         
     @staticmethod
     def test_connection(host, port, user, password, connect_timeout=60):
@@ -276,17 +220,17 @@ class SqlDB (object):
             pass
 
     def set_variable(self, variable, value):
-        cur = self.Con.cursor()
         try:
             string_classes = (str, unicode)
         except NameError:
             string_classes = (str)
         if isinstance(value, string_classes):
-            cur.execute("SET {} '{}'".format(variable, value))
+            self.connection.execute("SET {} '{}'".format(variable, value))
         else:
-            cur.execute("SET {}={}".format(variable, value))
+            self.connection.execute("SET {}={}".format(variable, value))
 
     def close(self):
+        return
         try:
             self.Con.close()
         except (pymysql.ProgrammingError, pymysql.Error):
@@ -308,12 +252,10 @@ class SqlDB (object):
         if command in ["SHOW", "DESCRIBE", "SET", "RESET"]:
             return
         try:
-            cur = self.Con.cursor()
-            cur.execute("EXPLAIN %s" % S)
+            explain_table = self.connection.execute("EXPLAIN %s" % S)
         except pymysql.ProgrammingError as e:
             raise SQLProgrammingError(S + "\n"+ "%s" % e)
         else:
-            explain_table = cur
             explain_table_rows = [[x[0] for x in explain_table.description]]
             for x in explain_table:
                 explain_table_rows.append([str(y) for y in x])
@@ -362,8 +304,7 @@ class SqlDB (object):
         return cursor
 
     def load_infile(self, file_name, table_name, arguments):
-        cur = self.Con.cursor()
-        cur.execute("LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
+        self.connection.execute("LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
 
     def get_field_type(self, table_name, column_name):
         """
@@ -380,19 +321,17 @@ class SqlDB (object):
             A string containing the current SQL field type for the specified 
             column.
         """
-        cur = self.Con.cursor()
         if self.db_type == SQL_MYSQL:
             S = "SHOW FIELDS FROM %s WHERE Field = '%s'" % (table_name, column_name)
-            cur.execute(S)
-            Results = cur.fetchone()
+            results = self.connection.execute(S).fetchone()
             try:
-                if isinstance(Results, bytes):
-                    Results = Results.decode("utf-8")
+                if isinstance(results, bytes):
+                    results = results.decode("utf-8")
             except NameError:
-                Results = str(Results)
-            if Results:
-                field_type = Results[1]
-                if Results[2] == "NO":
+                results = str(results)
+            if results:
+                field_type = results[1]
+                if results[2] == "NO":
                     field_type += " NOT NULL"
                 return str(field_type)
             else:
@@ -400,8 +339,8 @@ class SqlDB (object):
             
         elif self.db_type == SQL_SQLITE:
             S = "PRAGMA table_info({})".format(table_name)
-            cur.execute(S)
-            for row in cur:
+            results = self.connection.execute(S)
+            for row in results:
                 result = dict(zip("cid", "name", "type", "notnull", "dflt_value", "pk"),
                               row)
                 column = result["name"]
@@ -433,9 +372,9 @@ class SqlDB (object):
         """
         if self.db_type == SQL_SQLITE:
             return self.get_field_type(table_name, column_name)
-        cur = self.Con.cursor()
-        cur.execute("SELECT %s FROM %s PROCEDURE ANALYSE()" % (column_name, table_name), override=True)
-        x = cur.fetchone()[-1]
+        S = "SELECT {} FROM {} PROCEDURE ANALYSE()".format(column_name, table_name)
+        x = list(self.connection.execute(S).fetchone())
+        x = x[-1]
         try:
             if isinstance(x, bytes):
                 x = x.decode("utf-8")
@@ -456,18 +395,17 @@ class SqlDB (object):
             column.
         """
         old_field = self.get_field_type(table_name, column_name)
-        cur = self.Con.cursor()
-        cur.execute("ALTER TABLE %s MODIFY %s %s" % (table_name, column_name, new_type))
+        self.connection.execute("ALTER TABLE %s MODIFY %s %s" % (table_name, column_name, new_type))
         if options.cfg.verbose:
             logger.info("ALTER TABLE %s MODIFY %s %s" % (table_name, column_name, new_type))
 
-    def has_index(self, table_name, index_name):
+    def has_index(self, table, index):
         """
         Check if the specified column has an index.
         
         Parameters
         ----------
-        table_name, column_name : str 
+        table, column: str 
             The name of the table and the column, respectively
             
         Returns
@@ -475,12 +413,11 @@ class SqlDB (object):
         b : bool 
             True if the column has an index, or False otherwise.
         """
-        cur = self.Con.cursor()
         if self.db_type == SQL_MYSQL:
-            return bool(cur.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table_name, index_name)))
+            S = "SHOW INDEX FROM {} WHERE Key_name = '{}'".format(table, index)
+            return bool(self.connection.execute(S))
         elif self.db_type == SQL_SQLITE:
-            cur.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl_name = '{}'".format(index_name, table_name))
-            return bool(len(cur.fetchall()))
+            return bool(len(self.connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
     
     def get_index_length(self, table_name, column_name, coverage=0.95):
         """
@@ -523,10 +460,10 @@ class SqlDB (object):
             LIMIT  32) count_inc
         GROUP BY len""".format(
             table=table_name, column=column_name)
-        cur = self.Con.cursor()
-        cur.execute(S)
+
+        results = self.connection.execute(S)
         max_c = None
-        for x in cur:
+        for x in results:
             if not max_c or x[3] > max_c[3]:
                 max_c = x
             if x[3] >= coverage:
@@ -561,61 +498,35 @@ class SqlDB (object):
         cur = self.Con.cursor()
 
         # Do not create an index if the table is empty:
-        cur.execute("SELECT * FROM {} LIMIT 1".format(table_name))
-        if not cur.fetchone():
+        if not self.connection.execute("SELECT * FROM {} LIMIT 1".format(table_name)).fetchone():
             return
         
         if index_length:
             variables = ["%s(%s)" % (variables[0], index_length)]
         S = 'CREATE INDEX {} ON {}({})'.format(
             index_name, table_name, ",".join(variables))
-        cur.execute(S)
-
-    def start_transaction(self):
-        if self.db_type == SQL_MYSQL:
-            cur = self.Con.cursor()
-            cur.execute("START TRANSACTION")
+        self.connection.execute(S)
 
     def executemany(self, s, d):
-        cur = self.Con.cursor()
-        if self.db_type == SQL_SQLITE:
-            s = s.replace("%s", "?")
-        cur.executemany(s, d)
+        s = s.replace("%s", "?")
+        self.connection.execute(s, d)
 
     def execute(self, S):
         S = S.strip()
         if options.cfg.explain_queries:
             self.explain(S)
         logger.debug(S)
-        try:
-            cur = self.Con.cursor()
-            cur.execute(S)
-        except pymysql.Error as e:
-            warnings.warn(str(e))
-            raise e
+        self.connection.execute(S)
 
-    def commit(self):
-        self.Con.commit()
-        
-    def rollback(self):
-        self.Con.rollback()
-
-    def start_read_only(self):
-        cur = self.Con.cursor()
-        cur.execute("START TRANSACTION READ ONLY")
-        
     def get_database_size(self, database_name):
         """ Returns the size of the database in bytes."""
         if self.db_type == SQL_MYSQL:
-            cur = self.Con.cursor()
-            cur.execute("SELECT data_length+index_length FROM information_schema.tables WHERE table_schema = '{}'".format(database_name))
-            return cur.fetchone()[0]
+            return self.connection.execute("SELECT data_length+index_length FROM information_schema.tables WHERE table_schema = '{}'".format(database_name)).fetchone()[0]
         elif self.db_type == SQL_SQLITE:
             return os.path.getsize(self.sqlite_path(database_name))
 
     def drop_database(self, database_name):
         if self.db_type == SQL_MYSQL:
-            cur = self.Con.cursor()
-            cur.execute("DROP DATABASE {}".format(database_name.split()[0]))
+            self.connection.execute("DROP DATABASE {}".format(database_name.split()[0]))
         elif self.db_type == SQL_SQLITE:
             os.remove(self.sqlite_path(database_name))

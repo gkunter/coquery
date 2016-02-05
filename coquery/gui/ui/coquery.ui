@@ -1072,7 +1072,6 @@ The number of occurrences of each token matching the query string is counted. Th
     <property name="title">
      <string>&amp;Corpus</string>
     </property>
-    <addaction name="action_build_corpus"/>
     <addaction name="action_manage_corpus"/>
     <addaction name="separator"/>
     <addaction name="action_statistics"/>
@@ -1276,7 +1275,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>&amp;Manage corpora...</string>
+    <string>Corpus &amp;manager...</string>
    </property>
    <property name="toolTip">
     <string>Install a corpus into a MySQL database</string>

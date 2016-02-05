@@ -1156,7 +1156,8 @@ class CorpusClass(object):
             self.resource.corpus_id,
             token_id)
 
-        df = pd.read_sql(S, self.resource.get_engine())
+        db = self.resource.get_db()
+        d = db.execute_cursor(S).fetchone()
         
         # as each of the columns could potentially link to origin information,
         # we go through all of them:

@@ -248,7 +248,6 @@ class BuilderClass(BaseCorpusBuilder):
             if filename == "wordforms.bson":
                 max_cache = 10000
                 self.table(self.corpus_table)._max_cache = max_cache
-                self.table(self.corpus_table)._connection = self.Con
                 self._widget.progressSet.emit(4520596 // max_cache, "Loading {}".format(filename))
                 self._widget.progressUpdate.emit(0)
             else:

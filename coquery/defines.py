@@ -49,6 +49,11 @@ CONTEXT_STRING = "String"
 CONTEXT_COLUMNS = "Columns"
 CONTEXT_SENTENCE = "Sentence"
 
+# These labels are used in the corpus manager:
+INSTALLER_DEFAULT = "Default corpus installers"
+INSTALLER_CUSTOM = "Downloaded corpus installers"
+INSTALLER_ADHOC = "User corpora"
+
 COLUMN_NAMES = {
     "coq_context_left": "Left context",
     "coq_context_right": "Right context",

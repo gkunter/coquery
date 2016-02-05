@@ -28,6 +28,12 @@
      <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1">
       <item>
        <widget class="QLabel" name="label_inform">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>Retrieving values...</string>
         </property>
