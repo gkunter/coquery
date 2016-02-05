@@ -33,7 +33,7 @@ import corpusbuilder
 
 class CoqAccordionEntry(QtGui.QWidget):
     """ Define a QWidget that can be used as an entry in a accordion list."""
-    def __init__(self, stack=None, *args, **kwargs):
+    def __init__(self, path=None, stack=None, *args, **kwargs):
         super(CoqAccordionEntry, self).__init__(*args, **kwargs)
         self._title = ""
         self._text = ""
@@ -46,9 +46,11 @@ class CoqAccordionEntry(QtGui.QWidget):
         self._validation = ""
         self._modules = []
         self._stack = stack
+        self._is_builder = False
         self._adhoc = False
         self._language = ""
         self._code = ""
+        self._path = path
         
         self.verticalLayout_2 = QtGui.QVBoxLayout(self)
         self.corpus_description_frame = QtGui.QFrame(self)
@@ -81,30 +83,48 @@ class CoqAccordionEntry(QtGui.QWidget):
         self.verticalLayout_2.addWidget(self.corpus_description_frame)
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
 
+    @property
+    def name(self):
+        return self._name
+    
+    @property
+    def adhoc(self):
+        return self._adhoc
+    
+    @property
+    def builtin(self):
+        return self._builtin
+
     def setup_buttons(self, installed, entry_widget):
-        if not self._adhoc:
-            self.button_install = QtGui.QPushButton(entry_widget)
-            self.button_layout.insertWidget(0, self.button_install)
-            if not installed:
-                self.button_install.setText("Install")
+        if self._is_builder:
+            self.button_build = QtGui.QPushButton(entry_widget)
+            self.button_build.setIcon(self._stack.parent().get_icon("sign-add"))
+            entry_widget.header_layout.addWidget(self.button_build)
+            self.button_build.clicked.connect(lambda x: self._stack.buildCorpus.emit(self))
+        else:
+            if not self._adhoc:
+                self.button_install = QtGui.QPushButton(entry_widget)
+                self.button_layout.insertWidget(0, self.button_install)
+                if not installed:
+                    self.button_install.setText("Install")
 
-                self.validation_label.setText(
-                    "<b>MD5 checksum:</b> {} ({})".format(
-                    self._checksum, self._validation))
-            else:
-                self.button_install.setText("Reinstall")
+                    self.validation_label.setText(
+                        "<b>MD5 checksum:</b> {} ({})".format(
+                        self._checksum, self._validation))
+                else:
+                    self.button_install.setText("Reinstall")
 
-        if installed or self._adhoc:
-            self.button_remove = QtGui.QPushButton(entry_widget)
-            self.button_remove.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogDiscardButton))
-            entry_widget.header_layout.addWidget(self.button_remove)
+            if installed or not self._builtin:
+                self.button_remove = QtGui.QPushButton(entry_widget)
+                self.button_remove.setIcon(self._stack.parent().get_icon("sign-delete"))
+                entry_widget.header_layout.addWidget(self.button_remove)
 
-            if self._stack:
-                self.button_remove.clicked.connect(lambda x: 
-                self._stack.removeCorpus.emit(self._name, self._adhoc))
+                if self._stack:
+                    self.button_remove.clicked.connect(lambda x: 
+                    self._stack.removeCorpus.emit(self))
 
-        if self._stack and not self._adhoc:
-            self.button_install.clicked.connect(self.safe_install)
+            if self._stack and not self._adhoc:
+                self.button_install.clicked.connect(self.safe_install)
     
     def safe_install(self):
         if self._validation == "validated":
@@ -214,8 +234,9 @@ class CoqAccordionEntry(QtGui.QWidget):
             "".join(string_list))
 
 class CorpusManager(QtGui.QDialog):
-    removeCorpus = QtCore.Signal(object, object)
+    removeCorpus = QtCore.Signal(object)
     installCorpus = QtCore.Signal(object)
+    buildCorpus = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super(CorpusManager, self).__init__(parent)
@@ -238,11 +259,30 @@ class CorpusManager(QtGui.QDialog):
         except AttributeError:
             pass
 
-        self.paths.append((os.path.join(sys.path[0], "installer"), "Default installers"))
+        self.paths.append((os.path.join(options.get_home_dir(), "adhoc"), INSTALLER_ADHOC))
+        self.paths.append((os.path.join(sys.path[0], "installer"), INSTALLER_DEFAULT))
         if options.cfg.custom_installer_path:
-            self.paths.append((options.cfg.custom_installer_path, "Custom installers"))
-        self.paths.append((os.path.join(options.get_home_dir(), "adhoc"), "User-generated corpora"))
+            self.paths.append((options.cfg.custom_installer_path, INSTALLER_CUSTOM))
         self.update()
+
+    def built_in(self, path):
+        """
+        Check if the path points to a built-in installer, i.e. one that is 
+        included in the default Coquery package.
+        
+        Parameters
+        ----------
+        path : str 
+            A string containing the path to a corpus installer
+            
+        Returns
+        -------
+        b : bool 
+            True if the path is in the default Coquery directory tree, or 
+            False otherwise (i.e. with custom installers or ad-hoc corpora)
+        """
+        return os.path.abspath(path).startswith(
+            os.path.abspath(os.path.join(sys.path[0], "installer")))
 
     def update(self):
         """
@@ -312,6 +352,7 @@ class CorpusManager(QtGui.QDialog):
 
                     if basename != "coq_install_generic":
                         entry._adhoc = hasattr(builder_class, "_is_adhoc")
+                        entry._builtin = self.built_in(module_path)
                         entry.setName(name)
                         
                         #entry.setChecksum(hashsum)
@@ -348,6 +389,17 @@ class CorpusManager(QtGui.QDialog):
                         # add entry to installer list:
                         self.ui.list_layout.addWidget(self.detail_box)
                         count += 1
+            
+            if label == INSTALLER_ADHOC:
+                entry = CoqAccordionEntry(stack=self)
+                entry._is_builder = True
+                entry.setTitle("Build a new corpus")
+                entry.setDescription("<p>You can build a new corpus by storing the words from a selection of text files in a database that can be queried by Coquery. If the Natural Language Toolkit NLTK (<a href='http://www.nltk.org'>http://www.nltk.org</a>) is installed on your computer, you can choose the new corpus to be automatically lemmatized and tagged  for their part of speech.</p>")
+
+                self.detail_box = classes.CoqDetailBox("Build new corpus...", entry)
+                entry.setup_buttons(False, self.detail_box)
+                self.ui.list_layout.addWidget(self.detail_box)
+                count += 1
             
             # if a label was provided and at least one installer added, insert 
             # the header at the remembered position:

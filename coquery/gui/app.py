@@ -1489,26 +1489,24 @@ class CoqueryApp(QtGui.QMainWindow):
                 import webbrowser
                 webbrowser.open(url)
         
-    def remove_corpus(self, corpus_name, adhoc_corpus):
+    def remove_corpus(self, entry):
         """
         Remove the database and corpus module for 'corpus_name'. If the 
         corpus was created from a text directory, also remove the installer.
         
         Parameters
         ----------
-        corpus_name : str 
-            The name of the corpus.
-        adhoc_corpus : bool 
-            True if the corpus was created using the "Build new corpus"
-            function, or False otherwise.
+        entry : CoqAccordionEntry
+            The entry from the corpus manager that has been selected for 
+            removal
         """
         import removecorpus
 
         try:
-            resource, _, _, module = options.cfg.current_resources[corpus_name]
+            resource, _, _, module = options.cfg.current_resources[entry.name]
         except KeyError:
-            if adhoc_corpus:
-                database = "coq_{}".format(corpus_name.lower())
+            if entry.adhoc:
+                database = "coq_{}".format(entry.name.lower())
             else:
                 database = ""
             module = ""
@@ -1523,9 +1521,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 db = None
 
         response = removecorpus.RemoveCorpusDialog.select(
-            corpus_name, 
-            options.cfg.current_server,
-            adhoc_corpus)
+            entry, options.cfg.current_server)
         if response and QtGui.QMessageBox.question(
             self,
             "Remove corpus – Coquery",
@@ -1562,11 +1558,11 @@ class CoqueryApp(QtGui.QMainWindow):
             
             # remove the corpus installer if the corpus was created from 
             # text files:
-            if rm_installer and success and adhoc_corpus:
+            if rm_installer and success:
                 try:
                     installer_path = os.path.join(
                         options.get_home_dir(), "adhoc",
-                        "coq_install_{}.py".format(corpus_name))
+                        "coq_install_{}.py".format(entry.name))
                     os.remove(installer_path)
                 except Exception as e:
                     print(e)
@@ -1577,8 +1573,8 @@ class CoqueryApp(QtGui.QMainWindow):
             options.set_current_server(options.cfg.current_server)
             self.fill_combo_corpus()
             if success and (rm_installer or rm_database or rm_module):
-                logger.warning("Removed corpus {}.".format(corpus_name))
-                self.showMessage("Removed corpus {}.".format(corpus_name))
+                logger.warning("Removed corpus {}.".format(entry.name))
+                self.showMessage("Removed corpus {}.".format(entry.name))
                 self.corpusListUpdated.emit()
                 
             self.change_corpus()
@@ -1621,6 +1617,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.corpus_manager.show()
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
+            self.corpus_manager.buildCorpus.connect(self.build_corpus)
             self.corpusListUpdated.connect(self.corpus_manager.update)
             
             result = self.corpus_manager.exec_()
