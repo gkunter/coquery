@@ -165,11 +165,8 @@ class Session(object):
     def close(self):
         """
         Close the session.
-        
-        Closing the session essentially means that the database connection 
-        for this session is closed.
         """
-        self.Resource.close_db()
+        pass
         
     def get_frequency_table(self):
         frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, output_order=self.output_order)
