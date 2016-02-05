@@ -71,6 +71,8 @@ import imp
 import importlib
 import warnings
 import time
+import sqlalchemy
+import pandas as pd
 
 import sqlhelper
 import sqlwrap
@@ -275,11 +277,8 @@ class Table(object):
         self._add_cache = dict()
         self._commited = {}
         self._col_names = None
-        self._connection = None
+        self._engine = None
         self._max_cache = 0
-
-    def setDB(self, DB):
-        self._DB = DB
 
     @property
     def name(self):
@@ -307,12 +306,11 @@ class Table(object):
                 fields = [self.primary.name] + self._col_names
             else:
                 fields = self._col_names
-            if self._DB.db_type == SQL_MYSQL:
-                placeholder = "%s"
-            else:
-                placeholder = "?"
+
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self._name, ", ".join(fields), ", ".join([placeholder] * len(fields)))
+                self._name, 
+                ", ".join(fields), 
+                ", ".join(["?"] * len(fields)))
             data = []
             new_keys = []
             # build a list of all new entries, i.e. those for which the value
@@ -332,18 +330,9 @@ class Table(object):
 
             if data: 
                 df = pd.DataFrame(data)
-                if self.primary.name in self._col_names:
-                    l = self._col_names
-                else:
-                    l = [self.primary.name] + self._col_names
-                df.columns = l
-
-                sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                    self.name,  
-                    ", ".join(df.columns),
-                    ", ".join(["?"] * len(df.columns)))
+                df.columns = fields
                 df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
-                
+
                 # Reset all new keys:
                 for row in new_keys:
                     self._add_cache[row] = (self._add_cache[row][0], None)
@@ -353,7 +342,7 @@ class Table(object):
         Commit the table content to the data base.
         
         This table commits the unsaved content of the table to the data base.
-        After commiting, the values of all table entries are set to None, and
+        After committing, the values of all table entries are set to None, and
         only those data that have a value different from None will be 
         commited the next time this method is called.
         
@@ -380,22 +369,7 @@ class Table(object):
 
             if data: 
                 df = pd.DataFrame(data)
-                if self.primary.name in self._col_names:
-                    l = self._col_names
-                else:
-                    l = [self.primary.name] + self._col_names
-                df.columns = l
-                #with self._DB.connection.begin() as trans:
-                    #sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                        #self.name,  
-                        #", ".join(df.columns),
-                        #", ".join(["?"] * len(df.columns)))
-                    #df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
-
-                sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                    self.name,  
-                    ", ".join(df.columns),
-                    ", ".join(["?"] * len(df.columns)))
+                df.columns = fields
                 df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
 
             self._add_cache = {}
@@ -612,7 +586,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._blocklist = set()
         self._new_tables = {}
         
-        self._corpus_buffer = []
+        self._corpus_buffer = None
         self._corpus_id = 0
         self._widget = gui
         self._file_list = []
@@ -718,8 +692,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._new_tables[table].commit(strange_check=True)
 
         if self._corpus_buffer:
-            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["?"] * (len(self._corpus_keys))))
             df = pd.DataFrame(self._corpus_buffer)
             df.to_sql(self.corpus_table, self.DB.engine, if_exists="append", index=False)
             self._corpus_buffer = []             
@@ -1191,7 +1163,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def add_next_token_to_corpus(self, values):
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
-        self._corpus_buffer.append(values)
+        self._corpus_buffer = self._corpus_buffer.append(pd.Series(values.values()), ignore_index=True)
         
     def add_token_to_corpus(self, values):
         if len(values) < len(self._new_tables[self.corpus_table].columns) - 2:
@@ -1199,7 +1171,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
         self._corpus_keys = values.keys()
-        self._corpus_buffer.append(values)
+        print(values.keys())
+        self._corpus_buffer = pd.DataFrame(columns=values.keys())
+        self._corpus_buffer = self._corpus_buffer.append(pd.Series(values.values()), ignore_index=True)
         self.add_token_to_corpus = self.add_next_token_to_corpus
     
     def add_token(self, token_string, token_pos):
@@ -1531,9 +1505,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
         for column, value in values.items():
             where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
         if case:
-            S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table_name, " AND BINARY ".join(where))
+            S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table, " AND BINARY ".join(where))
         else:
-            S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table_name, " AND ".join(where))
+            S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table, " AND ".join(where))
         S = S.replace("\\", "\\\\")
         return pd.read_sql(S, self.engine)
 
@@ -1582,6 +1556,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         totals = 0
         #for current_table in self.table_description:
             #totals += len(self.table_description[current_table]["CREATE"])
+
+        return
 
         for table in self._new_tables:
             totals += len(self._new_tables[table].columns)
@@ -1668,7 +1644,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if self.interrupted:
                 return
 
-            if not self.DB.has_index(table, column):
                 self.logger.info("Creating index {} on table '{}'".format(
                     column, table))
                 try:
@@ -1679,11 +1654,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         if this_column.index_length:
                             length = this_column.index_length
                         else:
-                            length = self.DB.get_index_length(table, column)
+                            length = sqlhelper.get_index_length(self.engine, table, column)
                     else:
                         length = None
 
-                    self.DB.create_index(table, column, [column], index_length=length)
+                    sqlhelper.create_index(self.con, table, column, [column], index_length=length)
                 except Exception as e:
                     print(e)
                     self.logger.warning(e)
@@ -1786,7 +1761,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             no_fail = False
             self.logger.warning("Database {} not found.".format(self.arguments.db_name))
         for x in self.table_description:
-            if not self.DB.has_table(x):
+            if not sqlhelper.has_table(self.engine, x):
                 self.logger.warning("Table {} not found.".format(x))
                 no_fail = False
         return no_fail
@@ -1915,7 +1890,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 sqlhelper.drop_database(configuration, self.arguments.db_name)
             sqlhelper.create_database(configuration, self.arguments.db_name)
 
-        self.engine = sqlalchemy.create_engine(sqlhelper.sql_url(configuration, db_name))
+        self.engine = sqlalchemy.create_engine(sqlhelper.sql_url(configuration, self.arguments.db_name))
         self.con = self.engine.connect()
         if self.engine.dialect.name == SQL_MYSQL:
             self.con.execute("SET NAMES 'utf8'")
@@ -2024,7 +1999,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self.arguments.c:
             try:
                 sqlhelper.drop_database(options.get_mysql_configuration(), self.arguments.db_name)
-                #self.DB.drop_database(self.arguments.db_name)
             except:
                 pass
 
@@ -2048,7 +2022,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.logger.info("--- Interrupted (after %.3f seconds) ---" % (time.time() - self.start_time))
         else:
             self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
-        self.DB.close()
 
     def build(self):
         """ 
@@ -2667,6 +2640,7 @@ if options._use_qt:
                     raise SQLNoConfigurationError
                 DB = sqlwrap.SqlDB(
                     Host=db_host, Port=db_port, Type=db_type, User=db_user, Password=db_password)
+
                 db_exists = sqlhelper.has_database(
                     options.get_mysql_configuration(),
                     "coq_{}".format(str(self.ui.corpus_name.text()).lower()))
