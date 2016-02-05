@@ -72,6 +72,7 @@ import importlib
 import warnings
 import time
 
+import sqlhelper
 import sqlwrap
 import argparse
 import re
@@ -80,6 +81,8 @@ import sys
 import textwrap
 import fnmatch
 import inspect
+import pandas as pd
+
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -328,17 +331,19 @@ class Table(object):
                     new_keys.append(row)
 
             if data: 
-                try:
-                    self._DB.executemany(sql_string, data)
-                except TypeError as e:
-                    warnings.warn(sql_string)
-                    warnings.warn(str(e))
-                except Exception as e:
-                    print(e)
-                    print(sql_string)
-                    warnings.warn(sql_string)
-                    warnings.warn(str(e))
-                    raise e
+                df = pd.DataFrame(data)
+                if self.primary.name in self._col_names:
+                    l = self._col_names
+                else:
+                    l = [self.primary.name] + self._col_names
+                df.columns = l
+
+                sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
+                    self.name,  
+                    ", ".join(df.columns),
+                    ", ".join(["?"] * len(df.columns)))
+                df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
+                
                 # Reset all new keys:
                 for row in new_keys:
                     self._add_cache[row] = (self._add_cache[row][0], None)
@@ -374,19 +379,26 @@ class Table(object):
                     data.append([row_id] + list(row_data.values()))
 
             if data: 
-                try:
-                    self._DB.executemany(sql_string, data)
-                except TypeError as e:
-                    warnings.warn(sql_string)
-                    warnings.warn(str(e))
-                except Exception as e:
-                    print(e)
-                    print(sql_string)
-                    warnings.warn(sql_string)
-                    warnings.warn(str(e))
-                    raise e
+                df = pd.DataFrame(data)
+                if self.primary.name in self._col_names:
+                    l = self._col_names
+                else:
+                    l = [self.primary.name] + self._col_names
+                df.columns = l
+                #with self._DB.connection.begin() as trans:
+                    #sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
+                        #self.name,  
+                        #", ".join(df.columns),
+                        #", ".join(["?"] * len(df.columns)))
+                    #df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
+
+                sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
+                    self.name,  
+                    ", ".join(df.columns),
+                    ", ".join(["?"] * len(df.columns)))
+                df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
+
             self._add_cache = {}
-            self._DB.commit()
     
     def _add_next_with_primary(self, row):
         """ 
@@ -707,19 +719,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         if self._corpus_buffer:
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["%s"] * (len(self._corpus_keys))))
-            data = [list(row.values()) for row in self._corpus_buffer]
-            if data: 
-                try:
-                    self.DB.executemany(sql_string, tuple(data))
-                except TypeError as e:
-                    print(e)
-                    warnings.warn(sql_string)
-                    warnings.warn(data[0])
-                    raise(e)
-            self._corpus_buffer = []        
-            
-        self.DB.commit()
+                self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["?"] * (len(self._corpus_keys))))
+            df = pd.DataFrame(self._corpus_buffer)
+            df.to_sql(self.corpus_table, self.DB.engine, if_exists="append", index=False)
+            self._corpus_buffer = []             
 
     def create_table_description(self, table_name, column_list):
         """
@@ -793,7 +796,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         :func:``create_table_description``).
         """
         
-        self.DB.start_transaction()
         self.add_tag_table()
 
         # initialize progress bars:
@@ -803,15 +805,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         for i, current_table in enumerate(self._new_tables):
             self._new_tables[current_table].setDB(self.DB)
-            if not self.DB.has_table(current_table):
-                self.DB.create_table(
-                    current_table, 
-                    self._new_tables[current_table].get_create_string(self.arguments.db_type))
+            self.DB.create_table(
+                current_table, 
+                self._new_tables[current_table].get_create_string(self.arguments.db_type))
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
             if self.interrupted:
                 return
-        self.DB.commit()
 
     @classmethod
     def get_file_list(cls, path, file_filter):
@@ -1526,7 +1526,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
             
         column_count = 0
-        self.DB.start_transaction()
+
         for table_name in self._new_tables:
             table = self._new_tables[table_name]
             if self.interrupted:
@@ -1559,7 +1559,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         if self.interrupted:
             return
-        self.DB.commit()
         
     def add_index_to_blocklist(self, index):
         self._blocklist.add(index)
@@ -1596,7 +1595,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
 
         index_count = 0
-        self.DB.start_transaction()
+
         i = 0
         for table, column in index_list:
             if self.interrupted:
@@ -1625,11 +1624,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 i += 1
                 if self._widget:
                     self._widget.progressUpdate.emit(i + 1)
-
-        if self.interrupted:
-            return
-
-        self.DB.commit()
 
     @staticmethod
     def get_class_variables():
@@ -1721,7 +1715,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             descriptions exist, or False otherwise.
         """
         no_fail = True
-        if not self.DB.has_database(self.arguments.db_name):
+        if not sqlhelper.has_database(options.get_mysql_configuration(), self.arguments.db_name):
             no_fail = False
             self.logger.warning("Database {} not found.".format(self.arguments.db_name))
         for x in self.table_description:
@@ -1827,8 +1821,17 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.logger.info("Library %s written." % path)
             
     def setup_db(self):
-        """ Create a connection to the server, and creates the database if
-        necessary."""
+        """ 
+        Create a connection to the server, and creates the database if
+        necessary.
+        """
+        configuration = options.get_mysql_configuration()
+
+        if self.arguments.c:
+            if sqlhelper.has_database(configuration, self.arguments.db_name):         
+                sqlhelper.drop_database(configuration, self.arguments.db_name)
+            sqlhelper.create_database(configuration, self.arguments.db_name)
+
         self.DB = sqlwrap.SqlDB(
             Host=self.arguments.db_host,
             Port=self.arguments.db_port,
@@ -1837,11 +1840,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             Password=self.arguments.db_password,
             db_name=self.arguments.db_name,
             local_infile=1)
-        
-        if self.DB.has_database(self.arguments.db_name) and self.arguments.c:
-            self.DB.drop_database(self.arguments.db_name)
-        if self.arguments.c:
-            self.DB.create_database(self.arguments.db_name)
+
         self.DB.use_database(self.arguments.db_name)
 
         if self.arguments.db_type == SQL_MYSQL:
@@ -2594,7 +2593,9 @@ if options._use_qt:
                     raise SQLNoConfigurationError
                 DB = sqlwrap.SqlDB(
                     Host=db_host, Port=db_port, Type=db_type, User=db_user, Password=db_password)
-                db_exists = DB.has_database("coq_{}".format(str(self.ui.corpus_name.text()).lower()))
+                db_exists = sqlhelper.has_database(
+                    options.get_mysql_configuration(),
+                    "coq_{}".format(str(self.ui.corpus_name.text()).lower()))
                 # regardless of whether only the module or the whole corpus
                 # is requested, the corpus needs a name:
                 if not str(self.ui.corpus_name.text()):
