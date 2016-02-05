@@ -777,7 +777,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.combo_corpus.setEnabled(True)
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
 
-        if options.cfg.current_resources:
+        if self.ui.combo_corpus.count():
             self.enable_corpus_widgets()
         else:
             self.disable_corpus_widgets()
@@ -1513,13 +1513,6 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             database = resource.db_name
 
-        if database:
-            host, port, db_type, user, password = options.get_mysql_configuration()
-            try:
-                db = sqlwrap.SqlDB(Host=host, Port=port, Type=db_type, User=user, Password=password, db_name=database)
-            except:
-                db = None
-
         response = removecorpus.RemoveCorpusDialog.select(
             entry, options.cfg.current_server)
         if response and QtGui.QMessageBox.question(
@@ -1530,9 +1523,9 @@ class CoqueryApp(QtGui.QMainWindow):
             rm_module, rm_database, rm_installer = response
             success = True
 
-            if rm_database and db:
+            if rm_database and database and sqlhelper.has_database(options.get_mysql_configuration(), database):
                 try:
-                    db.drop_database(database)
+                    sqlhelper.drop_database(options.get_mysql_configuration(), database)
                 except Exception as e:
                     QtGui.QMessageBox.critical(
                         self, 
@@ -1540,11 +1533,7 @@ class CoqueryApp(QtGui.QMainWindow):
                         msg_remove_corpus_error.format(corpus=resource.name, code=e), 
                         QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     success = False
-                try:
-                    db.close()
-                except AttributeError as e:
-                    pass
-
+                    
             # Remove the corpus module:
             if rm_module and success and module:
                 try:
