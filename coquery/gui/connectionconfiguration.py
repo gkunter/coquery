@@ -413,12 +413,12 @@ class ConnectionConfiguration(QtGui.QDialog):
         if create_data:
             root_name, root_password, name, password = create_data
             try:
-                engine = sqlalchemy.create_engine(sqlhelper.sql_url(
+                engine = sqlalchemy.create_engine(sqlhelper.sql_url((
                     hostname, 
                     self.ui.port.value(),
                     SQL_MYSQL,
                     root_name,
-                    root_password))
+                    root_password)))
             except sqlalchemy.exc.SQLAlchemyError as e:
                 QtGui.QMessageBox.critical(self, "Access as root failed", "<p>A root access to the MySQL server could not be established.</p><p>Please check the MySQL root name and the MySQL root password, and try again to create a user.") 
                 return
@@ -434,6 +434,9 @@ class ConnectionConfiguration(QtGui.QDialog):
                 except sqlalchemy.exc.SQLAlchemyError:
                     QtGui.QMessageBox.critical(self, "Error creating user", "Apologies – the user named '{}' could not be created on the MySQL server.".format(name))
                     return
+                except Exception as e:
+                    print(e)
+                    raise e
                 else:
                     QtGui.QMessageBox.information(self, "User created", "The user named '{}' has successfully been created on the MySQL server.".format(name))
 
