@@ -270,7 +270,7 @@ def has_index(engine, table, column):
     """
     connection = engine.connect()
     if engine.Dialect.name == SQL_MYSQL:
-        return bool(connection.execute('SHOW INDEX FROM %s WHERE Key = "%s"' % (table, index)))
+        return bool(connection.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table, index)))
     elif engine.Dialect.name == SQL_SQLITE:
         return bool(len(connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
 
