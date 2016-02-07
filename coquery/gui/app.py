@@ -1535,9 +1535,9 @@ class CoqueryApp(QtGui.QMainWindow):
             rm_module, rm_database, rm_installer = response
             success = True
 
-            if rm_database and database and sqlhelper.has_database(options.get_mysql_configuration(), database):
+            if rm_database and database and sqlhelper.has_database(options.cfg.current_server, database):
                 try:
-                    sqlhelper.drop_database(options.get_mysql_configuration(), database)
+                    sqlhelper.drop_database(options.cfg.current_server, database)
                 except Exception as e:
                     raise e
                     QtGui.QMessageBox.critical(
@@ -1557,6 +1557,11 @@ class CoqueryApp(QtGui.QMainWindow):
                     success = False
                 else:
                     success = True
+                    # also try to remove the compiled python module:
+                    try:
+                        os.remove("{}c".format(module))
+                    except IOError:
+                        pass
             
             # remove the corpus installer if the corpus was created from 
             # text files:
