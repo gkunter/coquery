@@ -19,16 +19,16 @@ has to contain at least one query item. The number of query items is not
 limited, but the time required to execute a query increases with the 
 number of query items.
 
-Query items are not case-sensitive: <code>Walk</code>, <code>walk</code>,
-and <code>WALK</code> all specify the same query item. There are three 
-different types of query items. Word items, Transcription items, and 
-Lemma items.
+Query items are not case-sensitive: :Walk:, :walk:,
+and :WALK: all specify the same query item. There are four 
+different types of query items. Word items, Transcription items, Lemma 
+items, and Gloss items.
 
 Word items
 ++++++++++
 
 Word items are used to match tokens in the corpus based on how they are
-spelled. For example, the Word item <code>walk</code> matches all
+spelled. For example, the Word item :walk: matches all
 tokens that are spelled <i>walk</i>. Word items are supported by all 
 corpora.
 
@@ -43,17 +43,22 @@ differ between corpora, and not all corpora provide phonetic or
 phonological transcriptions.
 
 In order to match the token <i>walk</i> in the CMUdict Pronunciation 
-Dictionary, the Transcription item <code>/W AO1 K/</code> is used. In the 
-CELEX Lexical Database, the token <i>walk</i> is matched by <code>/'w$k/</code>.
+Dictionary, the Transcription item :/W AO1 K/: is used. In the 
+CELEX Lexical Database, the token <i>walk</i> is matched by :/'w$k/:.
 
 Lemma items
 +++++++++++
 
 Lemma items are used to match tokens in the corpus that are assigned to 
 the same lemma. Square brackets are used to distinguish Lemma items from
-Word items. For example, <code>[walk]</code> in CELEX matches the tokens 
+Word items. For example, :[walk]: in CELEX matches the tokens 
 <i>walk</i>, <i>walking</i>, <i>walks</i>, and <i>walked</i>.
 
+Gloss items
++++++++++++
+Gloss items are used to match tokens for which a gloss or a translation is 
+available, for example in a dictionary corpus. Double quotation marks are 
+used to mark gloss items.
 
 Part-of-speech specifiers
 -------------------------
@@ -61,8 +66,8 @@ Part-of-speech specifiers
 If you want to restrict the matches of a query item to a particular 
 word-class, you can add a part-of-speech (POS) specifier to the query 
 item. POS specifiers are separated from the query item by a dot
-<code>.</code>, and consist of a POS tag enclosed in square brackets. 
-For example, <code>walk.[nn1]</code> matches all <i>walk</i> tokens in 
+:.:, and consist of a POS tag enclosed in square brackets. 
+For example, :walk.[nn1]: matches all <i>walk</i> tokens in 
 the BNC that are tagged as singular nouns.
 
 The set of available POS tags may differ between different corpora. For 
@@ -74,7 +79,7 @@ menu.
 
 For convenience, and in order to retain syntactic compatibility with the
 BYU syntax (see below), POS specifiers can also be used without providing
-also a query item. Thus, <code>[nn1]</code> matches all tokens 
+also a query item. Thus, :[nn1]: matches all tokens 
 tagged as singular nouns (NN1) in the BNC. Note that this syntax is 
 potentially ambiguous: For example, the tag POS is used in the BNC to 
 tag the possessive marker <i>'s</i>. At the same time, there are a few 
@@ -91,27 +96,27 @@ Wildcard characters
 
 In order to allow for partial matching, query items and POS specifiers 
 can contain any number of wildcard characters. There are two types of 
-wildcards characters: question marks <code>?</code> and asterisks 
-<code>*</code>. They can be used within Word items, Transcription items, 
-and Lemma items, as well as within the tags of POS specifiers.
+wildcards characters: question marks :?: and asterisks 
+:*:. They can be used within any query item type (i.e. Word, 
+Lemma, Transcription, Gloss), as well as within the tags of POS specifiers.
 
 Question mark wildcard
 ++++++++++++++++++++++
 
 A question mark matches exactly one character. This wildcard character 
 can be used to match tokens with a specific length. For example, the 
-query item <code>?</code> matches all words in the corpus that are 
+query item :?: matches all words in the corpus that are 
 spelled using only a single character, for example <i>I</i>, the 
 numericals <i>1</i>, <i>2</i>, and so on, but also tokens that consist of 
 a single punctuation mark or a special character such as <i>.</i>, 
-<i>_</i>, or <i>@</i>. Similarly, the query item <code>???</code> matches 
+<i>_</i>, or <i>@</i>. Similarly, the query item :???: matches 
 all tokens that consist of three characters, for example <i>the</i>, 
 <i>web</i>, <i>911</i>, or <i>:-)</i>.
 
 If the query item contains other characters in addition to question mark 
 wildcards, the token has to match exactly the other characters, but can 
 have any character in the position of the wildcard. For example, 
-<code>?alk</code> matches in CELEX the tokens <i>balk</i>, <i>calk</i>, 
+:?alk: matches in CELEX the tokens <i>balk</i>, <i>calk</i>, 
 <i>talk</i>, and <i>walk</i>, but not <i>chalk</i> or <i>stalk</i>. It 
 would also not match <i>alk</i> if that token existed in
 CELEX. 
@@ -120,23 +125,23 @@ Asterisk wildcard
 +++++++++++++++++
 
 The asterisk matches any number of characters, including zero and one.
-A query item <code>*</code> consisting only of the asterisk wildcard will
+A query item :*: consisting only of the asterisk wildcard will
 match all tokens in the corpus. This can be useful in longer query 
 strings, or if the query item is restricted to a particular part of 
 speech (see below).
 
-For example, <code>w*</code> matches any token that begins with the 
-character <i>w</i>. <code>w*lk</code> matches any token that begins with 
+For example, :w*: matches any token that begins with the 
+character <i>w</i>. :w*lk: matches any token that begins with 
 the character <i>w</i> and ends with the character sequence <i>lk</i>, 
-e.g. <i>walk</i>, <i>whelk</i>, and <i>waterfolk</i>. <code>w*l*k</code>
+e.g. <i>walk</i>, <i>whelk</i>, and <i>waterfolk</i>. :w*l*k:
 matches any token that begins with the character <i>w</i> and ends in the 
 character <i>k</i>, and which also contains the character <i>l</i> in any
-position. This item matches the same tokens as <code>w*lk</code>, but 
+position. This item matches the same tokens as :w*lk:, but 
 also tokens such as <i>warlock</i> and <i>woolsack</i>.
 
 In combination with POS specifiers, asterisk wildcards are particularly 
 useful to match only tokens that belong to a particular word-class. For 
-example, <code>*.[n*]</code> matches any token with a POS tag that starts 
+example, :*.[n*]: matches any token with a POS tag that starts 
 with <i>n</i>. In the BNC, this matches the singular noun <i>walk</i>
 (tagged as NN1) as well as the plural noun <i>walks</i> (tagged as NN2).
 
@@ -144,9 +149,10 @@ Escaping characters
 -------------------
 
 If you want to query any character that has a special meaning in query 
-items (for example the wildcard characters, the square brackets or the 
-slashes), you must precede it by the 'escape' character <code>\</code>
-(the backslash). For example, if you want to match all 
+items (for example the wildcard characters, the square brackets, the 
+quotation mark, or the slashes), you must precede it by the 'escape' 
+character :\: (the backslash). For example, if you want to match 
+all 
 
 Quantified query items
 ----------------------
@@ -157,7 +163,7 @@ Union query items
 Additional examples
 -------------------
 
-<code>/?/</code> matches all tokens with a transcription that consists of 
+:/?/: matches all tokens with a transcription that consists of 
 only a single character.
 
 COCA/BYU syntax compatibility
@@ -170,9 +176,9 @@ COCA or BYU-BNC. A description of the BYU syntax can be found here:
 
 Most query strings that are valid in the BYU web interfaces are also
 valid query strings in Coquery. However, where BYU-COCA uses 
-<code>-</code> to negate query items, Coquery uses the hash mark 
-<code>#</code>. Also, Coquery currently does not support synonym matching: 
-<code>[=beat].[v*]</code> matches verbs like <i>hit</i>, <i>strike</i>,
+:-: to negate query items, Coquery uses the hash mark 
+:#:. Also, Coquery currently does not support synonym matching: 
+:[=beat].[v*]: matches verbs like <i>hit</i>, <i>strike</i>,
 or <i>defeat</i> in BYU-COCA. In contrast, Coquery matches this query 
 string to all tokens that are tagged as verbs, and which are written as
 <i>=beat</i>. Most likely, no token will be matched.
