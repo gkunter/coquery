@@ -47,6 +47,14 @@ else:
     if "setMargin" not in dir(QtGui.QGridLayout):
         QtGui.QGridLayout.setMargin = lambda x, y: True
 
+
+def QWebView(*args, **kwargs):
+    if pyside:
+        import PySide.QtWebKit as QtWebKit
+    elif pyqt:
+        import PyQt4.QtWebKit as QtWebKit
+    return QtWebKit.QWebView(*args, **kwargs)
+        
 import sys
 if sys.platform == 'win32':
     frameShadow = QtGui.QFrame.Sunken

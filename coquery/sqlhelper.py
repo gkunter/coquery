@@ -164,9 +164,9 @@ def sql_url(configuration, db_name=""):
         S = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
             host=d["host"], port=d["port"], user=d["user"], password=d["password"],
             db_name=db_name)
-        return S
     elif d["type"] == SQL_SQLITE:
-        return "sqlite+pysqlite:///{}".format(sqlite_path(configuration, db_name))
+        S = "sqlite+pysqlite:///{}".format(sqlite_path(configuration, db_name))
+    return S
 
 def sqlite_path(configuration, db_name=None):
     """
@@ -188,9 +188,10 @@ def sqlite_path(configuration, db_name=None):
         directory in which databases are stored.
     """
     if db_name:
-        return os.path.join(options.get_home_dir(), "databases", configuration, "{}.db".format(db_name))
+        S = os.path.join(options.get_home_dir(), "databases", configuration, "{}.db".format(db_name))
     else:
-        return os.path.join(options.get_home_dir(), "databases", configuration)
+        S = os.path.join(options.get_home_dir(), "databases", configuration)
+    return S
 
 def drop_database(configuration, db_name):
     """
@@ -249,7 +250,7 @@ def has_database(configuration, db_name):
             raise e
         else:
             return True
-    elif engine.dialect.name == SQL_MYSQL:
+    elif engine.dialect.name == SQL_SQLITE:
         return os.path.exists(sqlite_path(configuration, db_name))
 
 def has_index(engine, table, column):

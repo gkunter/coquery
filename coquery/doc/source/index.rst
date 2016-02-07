@@ -9,13 +9,17 @@ Coquery documentation
 Installation
 ############
 
-First steps
+Users manual
 #####################
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
     :numbered:
     
+    firststeps.rst
     syntax.rst
+    connections.rst
+    aggregations.rst
+    visualizations.rst
 ..     
 .. Getting involved
 .. ################
@@ -25,10 +29,20 @@ First steps
 ..     
 ..     :ref:`development`
 
-Indices and tables
-==================
+Reference manual
+################
+.. toctree::
+    :maxdepth: 2
+    :numbered:
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+    interface.rst
+    menu.rst
+    
+    
+.. Indices and tables
+.. ==================
+.. 
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`
 

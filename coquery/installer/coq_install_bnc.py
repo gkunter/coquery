@@ -947,7 +947,7 @@ class BuilderClass(BaseCorpusBuilder):
                 self._speaker_id = lookup
             else:
                 self._speaker_id = self.table(self.speaker_table).find(
-                    {self.speaker_label: who}, self.Con)
+                    {self.speaker_label: who})
                 if not self._speaker_id:
                     self._speaker_id = self.table(
                         self.speaker_table).get_or_insert(

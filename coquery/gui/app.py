@@ -22,6 +22,8 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
+import sqlhelper
+
 import __init__
 from session import *
 from defines import *
@@ -30,9 +32,9 @@ from pyqt_compat import QtCore, QtGui, QtHelp
 import QtProgress
 import ui.coqueryUi, ui.coqueryCompactUi
 
+import sqlhelper 
 import classes
 import errorbox
-import sqlwrap
 import queries
 import contextviewer
 
@@ -157,8 +159,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if options.cfg.current_resources:
             # add available resources to corpus dropdown box:
-            corpora = [x for x in sorted(options.cfg.current_resources.keys())]
+            corpora = sorted(list(options.cfg.current_resources.keys()))
             self.ui.combo_corpus.addItems(corpora)
+        
+        index = self.ui.combo_corpus.findText(options.cfg.corpus)
+        if index > -1:
+            self.ui.combo_corpus.setCurrentIndex(index)
+        
         
         # chamge the default query string edit to the sublassed edit class:
         self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
@@ -651,6 +658,7 @@ class CoqueryApp(QtGui.QMainWindow):
             except AttributeError:
                 pass
         self.change_corpus_features()
+        options.cfg.corpus = str(self.ui.combo_corpus.currentText())
 
     def change_corpus_features(self):
         """ 
@@ -766,7 +774,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems(list(options.cfg.current_resources.keys()))
+        self.ui.combo_corpus.addItems(sorted(list(options.cfg.current_resources.keys())))
 
         # try to return to last corpus name:
         new_index = self.ui.combo_corpus.findText(last_corpus)
@@ -1374,13 +1382,17 @@ class CoqueryApp(QtGui.QMainWindow):
     def stop_query(self):
         response = QtGui.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
         if response == QtGui.QMessageBox.Yes:
+            # FIXME: This isn't working well at all. A possible solution
+            # using SQLAlchemy may be found here:
+            # http://stackoverflow.com/questions/9437498
+            
             logger.warning("Last query is incomplete.")
             self.ui.button_run_query.setEnabled(False)
             self.ui.button_run_query.setText("Wait...")
             self.showMessage("Terminating query...")
             try:
                 self.Session.Corpus.resource.DB.kill_connection()
-            except (AttributeError, sqlwrap.mysql.err):
+            except Exception as e:
                 pass
             if self.query_thread:
                 self.query_thread.terminate()
@@ -1523,17 +1535,18 @@ class CoqueryApp(QtGui.QMainWindow):
             rm_module, rm_database, rm_installer = response
             success = True
 
-            if rm_database and database and sqlhelper.has_database(options.get_mysql_configuration(), database):
+            if rm_database and database and sqlhelper.has_database(options.cfg.current_server, database):
                 try:
-                    sqlhelper.drop_database(options.get_mysql_configuration(), database)
+                    sqlhelper.drop_database(options.cfg.current_server, database)
                 except Exception as e:
+                    raise e
                     QtGui.QMessageBox.critical(
                         self, 
                         "Database error – Coquery", 
                         msg_remove_corpus_error.format(corpus=resource.name, code=e), 
                         QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     success = False
-                    
+
             # Remove the corpus module:
             if rm_module and success and module:
                 try:
@@ -1544,6 +1557,11 @@ class CoqueryApp(QtGui.QMainWindow):
                     success = False
                 else:
                     success = True
+                    # also try to remove the compiled python module:
+                    try:
+                        os.remove("{}c".format(module))
+                    except IOError:
+                        pass
             
             # remove the corpus installer if the corpus was created from 
             # text files:
@@ -1677,18 +1695,9 @@ class CoqueryApp(QtGui.QMainWindow):
             True if a connection is available, or False otherwise.
         """
         if not options.cfg.current_server:
-            state = False
             return False
         else:
-            db_con = options.cfg.server_configuration[options.cfg.current_server]
-            if db_con["type"] == SQL_MYSQL:
-                state = bool(sqlwrap.SqlDB.test_connection(
-                    db_con["host"], db_con["port"], 
-                    db_con["user"], db_con["password"]))
-            elif db_con["type"] == SQL_SQLITE:
-                state = True
-            else:
-                state = False
+            state, _ = sqlhelper.test_configuration(options.cfg.current_server)
 
         # Only do something if the current connection status has changed:
         if state != self.last_connection_state or options.cfg.current_server != self.last_connection:
@@ -1905,10 +1914,9 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Set up the gui values based on the values in options.cfg.* """
 
         # set corpus combo box to current corpus:
-        if options.cfg.corpus:
-            index = self.ui.combo_corpus.findText(options.cfg.corpus)
-            if index > -1:
-                self.ui.combo_corpus.setCurrentIndex(index)
+        index = self.ui.combo_corpus.findText(options.cfg.corpus)
+        if index > -1:
+            self.ui.combo_corpus.setCurrentIndex(index)
 
         # set query mode:
         if options.cfg.MODE == QUERY_MODE_DISTINCT:

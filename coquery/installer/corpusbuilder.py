@@ -71,6 +71,8 @@ import imp
 import importlib
 import warnings
 import time
+import sqlalchemy
+import pandas as pd
 
 import sqlhelper
 import sqlwrap
@@ -275,11 +277,8 @@ class Table(object):
         self._add_cache = dict()
         self._commited = {}
         self._col_names = None
-        self._connection = None
+        self._engine = None
         self._max_cache = 0
-
-    def setDB(self, DB):
-        self._DB = DB
 
     @property
     def name(self):
@@ -288,6 +287,9 @@ class Table(object):
     @name.setter
     def name(self, s):
         self._name = s
+        
+    def setDB(self, db):
+        self._DB = db
 
     def commit(self, strange_check=False):
         """
@@ -307,12 +309,11 @@ class Table(object):
                 fields = [self.primary.name] + self._col_names
             else:
                 fields = self._col_names
-            if self._DB.db_type == SQL_MYSQL:
-                placeholder = "%s"
-            else:
-                placeholder = "?"
+
             sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self._name, ", ".join(fields), ", ".join([placeholder] * len(fields)))
+                self._name, 
+                ", ".join(fields), 
+                ", ".join(["?"] * len(fields)))
             data = []
             new_keys = []
             # build a list of all new entries, i.e. those for which the value
@@ -332,18 +333,9 @@ class Table(object):
 
             if data: 
                 df = pd.DataFrame(data)
-                if self.primary.name in self._col_names:
-                    l = self._col_names
-                else:
-                    l = [self.primary.name] + self._col_names
-                df.columns = l
-
-                sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                    self.name,  
-                    ", ".join(df.columns),
-                    ", ".join(["?"] * len(df.columns)))
+                df.columns = fields
                 df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
-                
+
                 # Reset all new keys:
                 for row in new_keys:
                     self._add_cache[row] = (self._add_cache[row][0], None)
@@ -353,7 +345,7 @@ class Table(object):
         Commit the table content to the data base.
         
         This table commits the unsaved content of the table to the data base.
-        After commiting, the values of all table entries are set to None, and
+        After committing, the values of all table entries are set to None, and
         only those data that have a value different from None will be 
         commited the next time this method is called.
         
@@ -380,22 +372,7 @@ class Table(object):
 
             if data: 
                 df = pd.DataFrame(data)
-                if self.primary.name in self._col_names:
-                    l = self._col_names
-                else:
-                    l = [self.primary.name] + self._col_names
-                df.columns = l
-                #with self._DB.connection.begin() as trans:
-                    #sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                        #self.name,  
-                        #", ".join(df.columns),
-                        #", ".join(["?"] * len(df.columns)))
-                    #df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
-
-                sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                    self.name,  
-                    ", ".join(df.columns),
-                    ", ".join(["?"] * len(df.columns)))
+                df.columns = fields
                 df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
 
             self._add_cache = {}
@@ -474,22 +451,16 @@ class Table(object):
         else:
             return row_id
 
-    def find(self, values, db_connector):
+    def find(self, values):
         """ 
         Return the first row that matches the values, or None
         otherwise.
         """
-        x = db_connector.find(self.name, values, [self.primary.name])
+        x = self._DB.find(self.name, values, [self.primary.name])
         if x:
             return x[0]
         else:
             return None
-        
-        #self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
-        #try:
-            #return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
-        #except IndexError:
-            #return None
         
     def add_column(self, column):
         self.columns.append(column)
@@ -612,7 +583,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._blocklist = set()
         self._new_tables = {}
         
-        self._corpus_buffer = []
+        self._corpus_buffer = None
         self._corpus_id = 0
         self._widget = gui
         self._file_list = []
@@ -718,8 +689,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._new_tables[table].commit(strange_check=True)
 
         if self._corpus_buffer:
-            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self.corpus_table, ", ".join(self._corpus_keys), ", ".join(["?"] * (len(self._corpus_keys))))
             df = pd.DataFrame(self._corpus_buffer)
             df.to_sql(self.corpus_table, self.DB.engine, if_exists="append", index=False)
             self._corpus_buffer = []             
@@ -1199,6 +1168,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
         self._corpus_keys = values.keys()
+        self._corpus_buffer = []
         self._corpus_buffer.append(values)
         self.add_token_to_corpus = self.add_next_token_to_corpus
     
@@ -1458,18 +1428,83 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressSet.emit(len(self._file_list), "Reading text files... (%v of %m)")
             self._widget.progressUpdate.emit(0)
             
-        #for x in self.table_description:
-            #self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         for i, file_name in enumerate(self._file_list):
             if self.interrupted:
                 return
-            if not self.DB.find(self.file_table, {self.file_path: file_name}):
+            if not self.db_has(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
                 self.process_file(file_name)
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
             self.commit_data()
+
+    #def get_optimal_field_type(self, table_name, column_name):
+        #"""
+        #Obtain the optimal field type for the specified column.
+        
+        #This method is not supported for SQLite databases. Here, the return 
+        #value is always the current field type of the column.
+        
+        #Parameters
+        #----------
+        #table_name, column_name : str 
+            #The name of the table and the column, respectively
+            
+        #Returns
+        #-------
+        #s : str 
+            #A string containing the optimal SQL field type for the specified 
+            #column.
+        #"""
+        #if self.db_type == SQL_SQLITE:
+            #return self.get_field_type(table_name, column_name)
+        #cur = self.Con.cursor()
+        #cur.execute("SELECT %s FROM %s PROCEDURE ANALYSE()" % (column_name, table_name), override=True)
+        #x = cur.fetchone()[-1]
+        #try:
+            #if isinstance(x, bytes):
+                #x = x.decode("utf-8")
+        #except NameError:
+            #x = str(x)
+        #return x
+
+
+    def db_has(self, table, values, case=False):
+        return len(self.db_find(table, values, case).index) > 0
+
+    def db_find(self, table, values, case=False):        
+        """ 
+        Obtain all records from table_name that match the column-value
+        pairs given in the dict values.
+        
+        Parameters
+        ----------
+        table_name : str 
+            The name of the table 
+        values : dict 
+            A dictionary with column names as keys and cell contents as values
+        case : bool
+            Set to True if the find should be case-sensitive, or False 
+            otherwise.
+            
+        Returns
+        -------
+        df : pandas data frame
+            a data frame containing the matching entries
+        """
+        
+        variables = list(values.keys())
+        where = []
+        for column, value in values.items():
+            where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
+        if case:
+            S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table, " AND BINARY ".join(where))
+        else:
+            S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table, " AND ".join(where))
+        S = S.replace("\\", "\\\\")
+        return pd.read_sql(S, self.DB.engine)
+
 
     def build_create_frequency_table(self):
         """ 
@@ -1601,29 +1636,28 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if self.interrupted:
                 return
 
-            if not self.DB.has_index(table, column):
-                self.logger.info("Creating index {} on table '{}'".format(
-                    column, table))
-                try:
-                    this_column = self._new_tables[table].get_column(column)
-                    
-                    # indices for TEXT/BLOB columns require a key length:
-                    if this_column.base_type.endswith("TEXT") or this_column.base_type.endswith("BLOB"):
-                        if this_column.index_length:
-                            length = this_column.index_length
-                        else:
-                            length = self.DB.get_index_length(table, column)
-                    else:
-                        length = None
-
-                    self.DB.create_index(table, column, [column], index_length=length)
-                except Exception as e:
-                    print(e)
-                    self.logger.warning(e)
+            self.logger.info("Creating index {} on table '{}'".format(
+                column, table))
+            try:
+                this_column = self._new_tables[table].get_column(column)
                 
-                i += 1
-                if self._widget:
-                    self._widget.progressUpdate.emit(i + 1)
+                # indices for TEXT/BLOB columns require a key length:
+                if this_column.base_type.endswith("TEXT") or this_column.base_type.endswith("BLOB"):
+                    if this_column.index_length:
+                        length = this_column.index_length
+                    else:
+                        length = self.DB.get_index_length(self.DB.engine, table, column)
+                else:
+                    length = None
+                
+                self.DB.create_index(table, column, [column], index_length=length)
+            except Exception as e:
+                print(e)
+                self.logger.warning(e)
+            
+            i += 1
+            if self._widget:
+                self._widget.progressUpdate.emit(i + 1)
 
     @staticmethod
     def get_class_variables():
@@ -1719,7 +1753,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             no_fail = False
             self.logger.warning("Database {} not found.".format(self.arguments.db_name))
         for x in self.table_description:
-            if not self.DB.has_table(x):
+            if not sqlhelper.has_table(self.DB.engine, x):
                 self.logger.warning("Table {} not found.".format(x))
                 no_fail = False
         return no_fail
@@ -1844,13 +1878,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
             local_infile=1)
 
         self.DB.use_database(self.arguments.db_name)
-
-        if self.arguments.db_type == SQL_MYSQL:
-            self.DB.set_variable("NAMES", "utf8")
-            self.DB.set_variable("CHARACTER SET", "utf8mb4")
-            self.DB.set_variable("autocommit", 0)
-            self.DB.set_variable("unique_checks", 0)
-            self.DB.set_variable("foreign_key_checks", 0)
+        if self.DB.db_type == SQL_MYSQL:
+            self.DB.connection.execute("SET NAMES 'utf8'")
+            self.DB.connection.execute("SET CHARACTER SET 'utf8mb4'")
+            self.DB.connection.execute("SET unique_checks=0")
+            self.DB.connection.execute("SET foreign_key_checks=0")
 
     def add_building_stage(self, stage):
         """ The parameter stage is a function that will be executed
@@ -1952,7 +1984,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         if self.arguments.c:
             try:
-                self.DB.drop_database(self.arguments.db_name)
+                sqlhelper.drop_database(options.cfg.current_server, self.arguments.db_name)
             except:
                 pass
 
@@ -1976,7 +2008,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.logger.info("--- Interrupted (after %.3f seconds) ---" % (time.time() - self.start_time))
         else:
             self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
-        self.DB.close()
 
     def build(self):
         """ 
@@ -2595,6 +2626,7 @@ if options._use_qt:
                     raise SQLNoConfigurationError
                 DB = sqlwrap.SqlDB(
                     Host=db_host, Port=db_port, Type=db_type, User=db_user, Password=db_password)
+
                 db_exists = sqlhelper.has_database(
                     options.cfg.current_server,
                     "coq_{}".format(str(self.ui.corpus_name.text()).lower()))

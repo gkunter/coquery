@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 
 import sys
 import os
+import pandas as pd
 
 from pyqt_compat import QtCore, QtGui
 from ui.contextViewerUi import Ui_ContextView
@@ -96,7 +97,7 @@ class ContextView(QtGui.QWidget):
         self.ui.form_information.setWidget(layout_row, QtGui.QFormLayout.FieldRole, self.ui.source_content)
         
         if name:
-            if not content:
+            if content == None:
                 name = "<b>{}</b>".format(name)
             else:
                 name = str(name).strip()
