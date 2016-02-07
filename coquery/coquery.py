@@ -33,6 +33,7 @@ import logging
 import logging.handlers
 
 import __init__
+sys.path.append(os.path.join(sys.path[0], "gui"))
 from errors import *
 import options
 from defines import *
