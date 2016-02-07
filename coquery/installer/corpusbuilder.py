@@ -287,6 +287,9 @@ class Table(object):
     @name.setter
     def name(self, s):
         self._name = s
+        
+    def setDB(self, db):
+        self._DB = db
 
     def commit(self, strange_check=False):
         """
@@ -448,22 +451,16 @@ class Table(object):
         else:
             return row_id
 
-    def find(self, values, db_connector):
+    def find(self, values):
         """ 
         Return the first row that matches the values, or None
         otherwise.
         """
-        x = db_connector.find(self.name, values, [self.primary.name])
+        x = self._DB.find(self.name, values, [self.primary.name])
         if x:
             return x[0]
         else:
             return None
-        
-        #self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
-        #try:
-            #return self.Con.find(table_name, values, [self._primary_keys[table_name]])[0]
-        #except IndexError:
-            #return None
         
     def add_column(self, column):
         self.columns.append(column)
@@ -1163,7 +1160,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def add_next_token_to_corpus(self, values):
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
-        self._corpus_buffer = self._corpus_buffer.append(pd.Series(values.values()), ignore_index=True)
+        self._corpus_buffer.append(values)
         
     def add_token_to_corpus(self, values):
         if len(values) < len(self._new_tables[self.corpus_table].columns) - 2:
@@ -1171,9 +1168,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
         self._corpus_keys = values.keys()
-        print(values.keys())
-        self._corpus_buffer = pd.DataFrame(columns=values.keys())
-        self._corpus_buffer = self._corpus_buffer.append(pd.Series(values.values()), ignore_index=True)
+        self._corpus_buffer = []
+        self._corpus_buffer.append(values)
         self.add_token_to_corpus = self.add_next_token_to_corpus
     
     def add_token(self, token_string, token_pos):
@@ -1432,8 +1428,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressSet.emit(len(self._file_list), "Reading text files... (%v of %m)")
             self._widget.progressUpdate.emit(0)
             
-        #for x in self.table_description:
-            #self._id_count[x] = self.Con.get_max(x, self._primary_keys[x])
         for i, file_name in enumerate(self._file_list):
             if self.interrupted:
                 return
@@ -1509,7 +1503,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         else:
             S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table, " AND ".join(where))
         S = S.replace("\\", "\\\\")
-        return pd.read_sql(S, self.engine)
+        return pd.read_sql(S, self.DB.engine)
 
 
     def build_create_frequency_table(self):
@@ -1556,8 +1550,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         totals = 0
         #for current_table in self.table_description:
             #totals += len(self.table_description[current_table]["CREATE"])
-
-        return
 
         for table in self._new_tables:
             totals += len(self._new_tables[table].columns)
@@ -1644,28 +1636,28 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if self.interrupted:
                 return
 
-                self.logger.info("Creating index {} on table '{}'".format(
-                    column, table))
-                try:
-                    this_column = self._new_tables[table].get_column(column)
-                    
-                    # indices for TEXT/BLOB columns require a key length:
-                    if this_column.base_type.endswith("TEXT") or this_column.base_type.endswith("BLOB"):
-                        if this_column.index_length:
-                            length = this_column.index_length
-                        else:
-                            length = sqlhelper.get_index_length(self.engine, table, column)
-                    else:
-                        length = None
-
-                    sqlhelper.create_index(self.con, table, column, [column], index_length=length)
-                except Exception as e:
-                    print(e)
-                    self.logger.warning(e)
+            self.logger.info("Creating index {} on table '{}'".format(
+                column, table))
+            try:
+                this_column = self._new_tables[table].get_column(column)
                 
-                i += 1
-                if self._widget:
-                    self._widget.progressUpdate.emit(i + 1)
+                # indices for TEXT/BLOB columns require a key length:
+                if this_column.base_type.endswith("TEXT") or this_column.base_type.endswith("BLOB"):
+                    if this_column.index_length:
+                        length = this_column.index_length
+                    else:
+                        length = self.DB.get_index_length(self.DB.engine, table, column)
+                else:
+                    length = None
+                
+                self.DB.create_index(table, column, [column], index_length=length)
+            except Exception as e:
+                print(e)
+                self.logger.warning(e)
+            
+            i += 1
+            if self._widget:
+                self._widget.progressUpdate.emit(i + 1)
 
     @staticmethod
     def get_class_variables():
@@ -1757,11 +1749,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
             descriptions exist, or False otherwise.
         """
         no_fail = True
-        if not sqlhelper.has_database(options.get_mysql_configuration(), self.arguments.db_name):
+        if not sqlhelper.has_database(options.cfg.current_server, self.arguments.db_name):
             no_fail = False
             self.logger.warning("Database {} not found.".format(self.arguments.db_name))
         for x in self.table_description:
-            if not sqlhelper.has_table(self.engine, x):
+            if not sqlhelper.has_table(self.DB.engine, x):
                 self.logger.warning("Table {} not found.".format(x))
                 no_fail = False
         return no_fail
@@ -1867,7 +1859,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         Create a connection to the server, and creates the database if
         necessary.
         """
-        configuration = options.get_mysql_configuration()
+        configuration = options.cfg.current_server
 
         if self.arguments.c:
             if sqlhelper.has_database(configuration, self.arguments.db_name):         
@@ -1884,19 +1876,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
             local_infile=1)
 
         self.DB.use_database(self.arguments.db_name)
-
-        if self.arguments.c:
-            if sqlhelper.has_database(configuration, self.arguments.db_name):         
-                sqlhelper.drop_database(configuration, self.arguments.db_name)
-            sqlhelper.create_database(configuration, self.arguments.db_name)
-
-        self.engine = sqlalchemy.create_engine(sqlhelper.sql_url(configuration, self.arguments.db_name))
-        self.con = self.engine.connect()
-        if self.engine.dialect.name == SQL_MYSQL:
-            self.con.execute("SET NAMES 'utf8'")
-            self.con.execute("SET CHARACTER SET 'utf8mb4'")
-            self.con.execute("SET unique_checks=0")
-            self.con.execute("SET foreign_key_checks=0")
+        if self.DB.db_type == SQL_MYSQL:
+            self.DB.connection.execute("SET NAMES 'utf8'")
+            self.DB.connection.execute("SET CHARACTER SET 'utf8mb4'")
+            self.DB.connection.execute("SET unique_checks=0")
+            self.DB.connection.execute("SET foreign_key_checks=0")
 
     def add_building_stage(self, stage):
         """ The parameter stage is a function that will be executed
@@ -1998,7 +1982,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         if self.arguments.c:
             try:
-                sqlhelper.drop_database(options.get_mysql_configuration(), self.arguments.db_name)
+                sqlhelper.drop_database(options.cfg.current_server, self.arguments.db_name)
             except:
                 pass
 
@@ -2642,7 +2626,7 @@ if options._use_qt:
                     Host=db_host, Port=db_port, Type=db_type, User=db_user, Password=db_password)
 
                 db_exists = sqlhelper.has_database(
-                    options.get_mysql_configuration(),
+                    options.cfg.current_server,
                     "coq_{}".format(str(self.ui.corpus_name.text()).lower()))
                 # regardless of whether only the module or the whole corpus
                 # is requested, the corpus needs a name:
