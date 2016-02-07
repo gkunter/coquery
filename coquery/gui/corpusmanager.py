@@ -100,7 +100,7 @@ class CoqAccordionEntry(QtGui.QWidget):
             self.button_build = QtGui.QPushButton(entry_widget)
             self.button_build.setIcon(self._stack.parent().get_icon("sign-add"))
             entry_widget.header_layout.addWidget(self.button_build)
-            self.button_build.clicked.connect(lambda x: self._stack.buildCorpus.emit(self))
+            self.button_build.clicked.connect(lambda: self._stack.buildCorpus.emit(self))
         else:
             if not self._adhoc:
                 self.button_install = QtGui.QPushButton(entry_widget)
@@ -120,7 +120,7 @@ class CoqAccordionEntry(QtGui.QWidget):
                 entry_widget.header_layout.addWidget(self.button_remove)
 
                 if self._stack:
-                    self.button_remove.clicked.connect(lambda x: 
+                    self.button_remove.clicked.connect(lambda: 
                     self._stack.removeCorpus.emit(self))
 
             if self._stack and not self._adhoc:
