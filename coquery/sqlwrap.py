@@ -41,7 +41,6 @@ class SqlDB (object):
         if Type == SQL_MYSQL and not options._use_mysql:
             raise DependencyError("pymysql", "https://github.com/PyMySQL/PyMySQL")
         
-        self.Con = None
         self.db_type = Type
         self.db_name = db_name
         self.db_host = Host
@@ -53,12 +52,12 @@ class SqlDB (object):
         self.encoding = encoding
         self.local_infile = local_infile
 
-        self.sql_url = sqlhelper.sql_url(options.get_mysql_configuration(), self.db_name)
+        self.sql_url = sqlhelper.sql_url(options.cfg.current_server, self.db_name)
         self.engine = sqlalchemy.create_engine(self.sql_url)
         self.connection = None
             
     def create_database(self, db_name):
-        self.sql_url = sqlhelper.sql_url(options.get_mysql_configuration())
+        self.sql_url = sqlhelper.sql_url(options.cfg.current_server)
         self.engine = sqlalchemy.create_engine(self.sql_url)
         self.connection = self.engine.connect()
 
@@ -69,7 +68,7 @@ class SqlDB (object):
 
     def use_database(self, db_name):
         self.db_name = db_name
-        self.sql_url = sqlhelper.sql_url(options.get_mysql_configuration(), self.db_name)
+        self.sql_url = sqlhelper.sql_url(options.cfg.current_server, self.db_name)
         self.engine = sqlalchemy.create_engine(self.sql_url)
         self.connection = self.engine.connect()
         if self.db_type == SQL_MYSQL:
@@ -97,10 +96,7 @@ class SqlDB (object):
                         return db_name
             except pymysql.ProgrammingError as ex:
                 warning.warn(ex)
-                if cur:
-                    warning.warn(cur.messages)
-                else:
-                    warning.warn(self.Con.messages)
+                raise ex
             return False
         elif self.db_type == SQL_SQLITE:
             return os.path.exists(SqlDB.sqlite_path(db_name))
@@ -140,9 +136,6 @@ class SqlDB (object):
         S = 'CREATE TABLE {} ({})'.format(table_name, description)
         return self.connection.execute(S)
             
-        #cur = self.Con.cursor()
-        #return cur.execute('CREATE TABLE {} ({})'.format(table_name, description))
-
     def find(self, table, values, case=False):        
         """ 
         Obtain all records from table_name that match the column-value
@@ -168,10 +161,21 @@ class SqlDB (object):
         where = []
         for column, value in values.items():
             where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
-        if case:
-            S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table, " AND BINARY ".join(where))
-        else:
-            S = "SELECT {} FROM {} WHERE {}".format(", ".join(variables), table, " AND ".join(where))
+            
+        S = "SELECT {} FROM {}".format(", ".join(variables), table)
+
+        # case sensitivity works differently for SQLite and MySQL:
+        if self.db_type == SQL_MYSQL:
+            if case:
+                S = "{} WHERE BINARY {}".format(S, " AND BINARY ".join(where))
+            else:
+                S = "{} WHERE {}".format(S, " AND ".join(where))
+
+        elif self.db_type == SQL_SQLITE:
+            S = "{} WHERE {}".format(S, " AND ".join(where))
+            if case:
+                S = "{} COLLATE NOCASE".format(S)
+
         S = S.replace("\\", "\\\\")
         l = self.connection.execute(S).fetchall()
         return l
@@ -231,10 +235,6 @@ class SqlDB (object):
 
     def close(self):
         return
-        try:
-            self.Con.close()
-        except (pymysql.ProgrammingError, pymysql.Error):
-            pass
         
     def explain(self, S):
         """
@@ -495,8 +495,6 @@ class SqlDB (object):
         index_length : int or None
             The length of the index (applies to TEXT or BLOB fields)
         """
-        cur = self.Con.cursor()
-
         # Do not create an index if the table is empty:
         if not self.connection.execute("SELECT * FROM {} LIMIT 1".format(table_name)).fetchone():
             return
