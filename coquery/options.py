@@ -1049,7 +1049,7 @@ def get_available_resources(configuration):
         # add corpus_path to sys.path so that modules can be imported from
         # that location:
         old_sys_path = list(sys.path)
-        sys.path.append(os.path.join(corpus_path))
+        sys.path.append(corpus_path)
 
         # create the directory if it doesn't exist yet: 
         # cycle through the modules in the corpus path:
