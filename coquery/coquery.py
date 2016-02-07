@@ -4,12 +4,13 @@
 """
 This is the main module of Coquery.
 
-Copyright (c) 2015 Gero Kunter
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-any later version.
+any later version. A Coquery exception applies as an Additional 
+permission under GNU GPL version 3 section 7.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,7 +18,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>
+version 3 along with this program.  If not, see 
+<http://www.gnu.org/licenses/>. For the Coquery exception, see
+<http://www.coquery.org/license/>
 """
 
 from __future__ import unicode_literals
@@ -29,45 +32,61 @@ import time
 import logging
 import logging.handlers
 
+import __init__
 from errors import *
 import options
+from defines import *
 
-try:
-    from session import *
-except DependencyError as e:
-    (str(e))
-    sys.exit(1)
-    
-import __init__
-
-def set_logger():
+def set_logger(log_file_path):
     logger = logging.getLogger(__init__.NAME)
     logger.setLevel(logging.INFO)
-    file_handler = logging.handlers.RotatingFileHandler(os.path.join(os.path.expanduser("~"), "coquery.log"), maxBytes=1024*1024, backupCount=10)
+    file_handler = logging.handlers.RotatingFileHandler(log_file_path, maxBytes=1024*1024, backupCount=10)
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
     logger.addHandler(file_handler)
     logging.captureWarnings(True)
     return logger
 
+def check_system():
+    if options.missing_modules:
+        if options._use_qt:
+            from pyqt_compat import QtGui
+            app = QtGui.QApplication(sys.argv)
+            QtGui.QMessageBox.critical(None, 
+                "Missing dependencies – Coquery",
+                msg_missing_modules.format("<br/>".join([str(x) for x in options.missing_modules])))
+        else:
+            print(msg_missing_modules.format(options.missing_modules))
+        sys.exit(1)
+
 def main():
-    logger = set_logger()
+    options.process_options()
+    coquery_home = options.get_home_dir()
+    logger = set_logger(os.path.join(coquery_home, "coquery.log"))
+
+    if options._use_qt:
+        sys.path.append(os.path.join(sys.path[0], "gui"))
+
+    check_system()
+
+    import session
+
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (__init__.NAME, __init__.__version__))
     logger.info("{}".format(sys.version))
     try:
-        options.process_options()
-        options.cfg.log_file_path = os.path.join(os.path.expanduser("~"), "coquery.log")
+        options.cfg.coquery_home = coquery_home
+        options.cfg.log_file_path = os.path.join(coquery_home, "coquery.log")
 
         # Check if a valid corpus was specified, but only if no GUI is
         # requested (the GUI will handle corpus selection later):
         if not (options.cfg.gui):
-            if not options.get_available_resources(options.cfg.current_server):
+            if not options.cfg.current_resources:
                 raise NoCorpusError
 
             if not options.cfg.corpus:
                 raise NoCorpusSpecifiedError
 
-            if options.cfg.corpus not in options.get_available_resources(options.cfg.current_server):
+            if options.cfg.corpus not in options.cfg.current_resources:
                 raise CorpusUnavailableError(options.cfg.corpus)
             
     except Exception as e:
@@ -88,8 +107,7 @@ def main():
     
     # Run the Application GUI?
     if options.cfg.gui:
-        sys.path.append(os.path.join(sys.path[0], "gui"))
-        from pyqt_compat import QtGui, QtCore
+        from pyqt_compat import QtGui
         from app import CoqueryApp
         from app import GuiHandler
 
@@ -119,14 +137,14 @@ def main():
     else:
         # Choose the appropriate Session type instance:
         if options.cfg.MODE == QUERY_MODE_STATISTICS:
-            Session = StatisticsSession()
+            Session = session.StatisticsSession()
         else:
             if options.cfg.input_path:
-                Session = SessionInputFile()
+                Session = session.SessionInputFile()
             elif options.cfg.query_list:
-                Session = SessionCommandLine()
+                Session = session.SessionCommandLine()
             else:
-                Session = SessionStdIn()
+                Session = session.SessionStdIn()
         
         # Catch keyboard interruptions:
         try:

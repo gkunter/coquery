@@ -1,4 +1,13 @@
-""" Bar chart visualization """
+# -*- coding: utf-8 -*-
+""" 
+barplot.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from __future__ import division
 from __future__ import print_function
@@ -37,13 +46,21 @@ class Visualizer(vis.BaseVisualizer):
             else:
                 self.options["color_palette"] = "RdPu"
         super(Visualizer, self).set_defaults()
+
         if self.percentage:
             self.options["label_x_axis"] = "Percentage"
         else:
             self.options["label_x_axis"] = "Frequency"
-        self.options["label_y_axis"] = self._groupby[0]
+            
         if len(self._groupby) == 2:
+            self.options["label_y_axis"] = self._groupby[0]
             self.options["label_legend"] = self._groupby[1]
+        else:
+            self.options["label_legend"] = self._groupby[0]
+            if self.percentage:
+                self.options["label_y_axis"] = ""
+            else:
+                self.options["label_y_axis"] = self._groupby[0]
 
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
@@ -138,22 +155,42 @@ class Visualizer(vis.BaseVisualizer):
             return ""
 
         def plot_facet(data, color):
-            if len(self._groupby) == 2:
-                if self.percentage:
-                    ct = pd.crosstab(
-                        data[self._groupby[0]], data[self._groupby[1]])
-                    df = pd.DataFrame(ct)
+            if self.percentage:
+                ax=plt.gca()
+                if len(self._groupby) == 2:
+                    # seperate stacked percentage bars for each grouping
+                    # variable
+                    self.ct = pd.crosstab(
+                        data[self._groupby[0]], data[self._groupby[-1]])
+                    df = pd.DataFrame(self.ct)
                     df = df.reindex_axis(self._levels[1], axis=1).fillna(0)
                     df = df[self._levels[1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
                     df = df.reindex_axis(self._levels[0], axis=0).fillna(0)
+                    order = df.columns
                     df = df.reset_index()
-                    #pal = sns.color_palette(palette_name, n_colors=len(self._levels[1]))[::-1]
-                    for i, stack in enumerate(self._levels[1][::-1]):
+                    ax=plt.gca()
+                    for i, stack in enumerate(order[::-1]):
                         sns.barplot(
                             x=stack,
                             y=self._groupby[0],
-                            data = df, color=self.options["color_palette_values"][i], ax=plt.gca())
+                            data = df, 
+                            color=self.options["color_palette_values"][::-1][i], 
+                            ax=plt.gca())
                 else:
+                    # one stacked percentage bar (so, this is basically a 
+                    # spine chart)
+                    self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
+                    df = pd.DataFrame(self.ct)
+                    df = df.apply(lambda x: 100 * x / x.sum(), axis=0).cumsum(axis=0)
+                    df = df.transpose()
+                    for i, stack in enumerate(df.columns[::-1]):
+                        sns.barplot(
+                            x=stack,
+                            data = df, 
+                            color=self.options["color_palette_values"][::-1][i], 
+                            ax=plt.gca())
+            else:
+                if len(self._groupby) == 2:
                     ax = sns.countplot(
                         y=data[self._groupby[0]],
                         order=self._levels[0],
@@ -161,22 +198,6 @@ class Visualizer(vis.BaseVisualizer):
                         hue_order=sorted(self._levels[1]),
                         palette=self.options["color_palette_values"],
                         data=data)
-
-            else:
-                if self.percentage:
-                    ct = data[self._groupby[0]].value_counts()
-                    df = pd.DataFrame(ct)
-                    df = df.apply(lambda x: 100 * x / x.sum(), axis=0).cumsum(axis=0)
-                    #df = df.reset_index()
-                    df.columns = [self._groupby[0], "Percent"]
-                    df = df.transpose()
-                    df["YCat"] = self._groupby[0]
-                    #pal = sns.color_palette(palette_name, n_colors=len(self._levels[0]))[::-1]
-                    for i, stack in enumerate(self._levels[0][::-1]):
-                        sns.barplot(
-                            x=stack,
-                            y="YCat",
-                            data = df, color=self.options["color_palette_values"][i], ax=plt.gca())
                 else:
                     # Don't use the 'hue' argument if there is only a single 
                     # grouping factor:
@@ -185,6 +206,7 @@ class Visualizer(vis.BaseVisualizer):
                         order=self._levels[0],
                         palette=self.options["color_palette_values"],
                         data=data)
+            #ax.format_coord = lambda x, y: my_format_coord(x, y, ax.get_title())
             return
                 
             #if len(self._groupby) == 1:
@@ -205,7 +227,6 @@ class Visualizer(vis.BaseVisualizer):
                     #palette=palette_name,
                     #data=data)
             ## add a custom annotator for this axes:
-            #ax.format_coord = lambda x, y: my_format_coord(x, y, ax.get_title())
             #return ax
 
         #if self._row_factor:
@@ -237,29 +258,30 @@ class Visualizer(vis.BaseVisualizer):
 
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         
-        # Add a legend if there are two grouping factors:
-        if len(self._groupby) == 2:
-            if self.percentage:
-                #pal = sns.color_palette(palette_name, n_colors=len(self._levels[1]))
-                legend_bar = [
-                    plt.Rectangle(
-                        (0, 0), 1, 1,
-                        fc=self.options["color_palette_values"][i], 
-                        edgecolor="none") for i, _ in enumerate(self._levels[1])
-                    ]
-                self.g.fig.get_axes()[-1].legend(
-                    legend_bar, self._levels[1],
-                    ncol=self.options["label_legend_columns"],
-                    title=self.options["label_legend"], 
-                    frameon=True, 
-                    framealpha=0.7, 
-                    loc="lower left").draggable()
+        if self.percentage:
+            # Percentage bars: always add a legend
+            if len(self._groupby) == 2:
+                category_levels = self._levels[1]
             else:
-                self.g.fig.get_axes()[-1].legend(
-                    title=self.options["label_legend"], 
-                    ncol=self.options["label_legend_columns"],
-                    frameon=True, 
-                    framealpha=0.7, 
-                    loc="lower left").draggable()
-        # Try to make the figure fit into the area nicely:
-        #self.g.fig.tight_layout()
+                category_levels = self._levels[0]
+            legend_bar = [
+                plt.Rectangle(
+                    (0, 0), 1, 1,
+                    fc=self.options["color_palette_values"][i], 
+                    edgecolor="none") for i, _ in enumerate(category_levels)
+                ]
+            self.g.fig.get_axes()[-1].legend(
+                legend_bar, category_levels,
+                ncol=self.options["label_legend_columns"],
+                title=self.options["label_legend"], 
+                frameon=True, 
+                framealpha=0.7, 
+                loc="lower left").draggable()
+        elif len(self._groupby) == 2:
+            # Normal bars: add a legend only if there are two grouping factors
+            self.g.fig.get_axes()[-1].legend(
+                title=self.options["label_legend"], 
+                ncol=self.options["label_legend_columns"],
+                frameon=True, 
+                framealpha=0.7, 
+                loc="lower left").draggable()

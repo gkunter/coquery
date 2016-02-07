@@ -27,7 +27,14 @@ class GenericException(Exception):
             S = "%s: '%s'" % (self.error_message, self.par)
         else:
             S = self.error_message
-        logger.error(S)
+        if hasattr(self, "additional"):
+            S = "<p>{}</p><p>{}</p>".format(
+                S, self.additional)
+        try:
+            logger.error(S)
+        except Exception as e:
+            print(S)
+            print(e)
         return S
 
 class NoTraceException(GenericException):
@@ -95,6 +102,36 @@ class ContextUnvailableError(NoTraceException):
     context of the token.</p>
     """
 
+class IllegalCodeInModuleError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' contains illegal code  (line {})."
+    def __init__(self, module, configuration, lineno):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, lineno)
+
+class IllegalFunctionInModuleError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' contains illegal class definition: {} (line {})"
+    def __init__(self, module, configuration, class_name, lineno):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, class_name, lineno)
+
+class IllegalImportInModuleError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' attempts to import a blocked module: {}  (line {})"
+    def __init__(self, module, configuration, module_name, lineno):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, module_name, lineno)
+
+class ModuleIncompleteError(NoTraceException):
+    error_message = "The corpus module '{}' for configuration '{}' does not contain all required definitions. Missing: {}"
+    def __init__(self, module, configuration, element_list):
+        self.par = ""
+        self.error_message = self.error_message.format(module, configuration, ", ".join(element_list))
+
+class UnsupportedQueryItemError(NoTraceException):
+    error_message = "The current corpus does not support query items of the type '{}'. Please change your query string."
+    def __init__(self, query_item_type):
+        self.par = ""
+        self.error_message = self.error_message.format(query_item_type)
+
 class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
 
@@ -111,13 +148,15 @@ class CorpusUnavailableError(NoTraceException):
     error_message = "No corpus available with given name"
 
 class DependencyError(NoTraceException):
-    def __init__(self, module):
+    def __init__(self, module, url=None):
         if type(module) == list:
             self.error_message = "Missing one of the following Python modules"
             self.par = "{} or {}".format(", ".join(module[:-1]), module[-1])
         else:
             self.error_message = "Missing the following Python module"
             self.par = "{}".format(module)
+        if url:
+            self.additional = "Go to <a href='{url}'>{url}</a> for details on how to obtain the module.".format(url=url)
 
 class QueryModeError(NoTraceException):
     error_message = "Query mode {mode} not supported by corpus {corpus}."
@@ -165,6 +204,9 @@ class LexiconUnsupportedFunctionError(GenericException):
 
 class WordNotInLexiconError(NoTraceException):
     error_message = "Word is not in the lexicon"
+
+class NoLemmaInformationError(NoTraceException):
+    error_message = "The current resource does not provide lemma information."
 
 class LexiconUnknownPartOfSpeechTag(GenericException):
     error_message = "Part-of-speech tag not in current lexicon"

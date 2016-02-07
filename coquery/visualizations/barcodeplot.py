@@ -1,4 +1,13 @@
-""" Barcode plot visualization """
+# -*- coding: utf-8 -*-
+""" 
+barcodeplot.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from __future__ import division
 from __future__ import print_function
@@ -52,9 +61,6 @@ def lineplot(a, level=0, start=0, end=1, axis="x", color="black", ax=None, **kwa
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
     
-    def __init__(self, *args):
-        super(Visualizer, self).__init__(*args)
-        
     def set_defaults(self):
         self.options["color_palette"] = "Paired"
         self.options["color_number"] = len(self._levels[0])
@@ -106,4 +112,3 @@ class Visualizer(vis.BaseVisualizer):
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
         self.g.set_titles(fontweight="bold", size=options.cfg.app.font().pointSize() * self.get_font_scale())
-        self.g.fig.tight_layout()

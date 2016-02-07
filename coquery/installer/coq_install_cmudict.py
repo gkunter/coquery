@@ -1,16 +1,29 @@
+# -*- coding: utf-8 -*-
+
+"""
+coq_install_cmudict.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
 from __future__ import print_function
 
 from corpusbuilder import *
+import transpose
 import codecs
 
-class CMUdictBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     encoding = "latin-1"
     file_filter = "cmudict*"
     
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
-        super(CMUdictBuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
         
         # Add table descriptions for the table used in this database.
         #
@@ -33,7 +46,7 @@ class CMUdictBuilder(BaseCorpusBuilder):
         # and the lexicon table (which is required for word look-up). It
         # has the following columns:
         # 
-        # WordId
+        # ID
         # An int value containing the unique identifier of the lexicon
         # entry associated with this token.
         #
@@ -42,20 +55,18 @@ class CMUdictBuilder(BaseCorpusBuilder):
         # Transcript
         # A string value containing the phonological transcription using
         # ARPAbet.
-
         
-        self.corpus_table = "dict"
-        self.corpus_id = "WordId"
-        self.corpus_word_id = "WordId"
-        self.word_table = "dict"
-        self.word_id = "WordId"
-        self.word_label = "Text"
-        self.word_transcript = "Transcript"
+        self.corpus_table = "Dictionary"
+        self.corpus_id = "ID"
+        self.corpus_word = "Word"
+        self.corpus_transcript = "Transcript"
+        self.corpus_ipa = "IPA"
         
-        self.create_table_description(self.word_table,
+        self.create_table_description(self.corpus_table,
             [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.word_label, "VARCHAR(50) NOT NULL"),
-             Column(self.word_transcript, "VARCHAR(100) NOT NULL")])
+             Column(self.corpus_word, "VARCHAR(50) NOT NULL"),
+             Column(self.corpus_transcript, "VARCHAR(100) NOT NULL"),
+             Column(self.corpus_ipa, "VARCHAR(100) NOT NULL")])
 
     @staticmethod
     def validate_files(l):
@@ -65,7 +76,7 @@ class CMUdictBuilder(BaseCorpusBuilder):
             raise RuntimeError("<p>No dictionary file could be found in the selected directory. The file name of the dictionary file has to start with the sequence <code>cmudict</code>.</p> ")
 
     def build_load_files(self):
-        files = CMUdictBuilder.get_file_list(self.arguments.path, self.file_filter)
+        files = BuilderClass.get_file_list(self.arguments.path, self.file_filter)
         with codecs.open(files[0], "r", encoding = self.arguments.encoding) as input_file:
             content = input_file.readlines()
         if self._widget:
@@ -76,9 +87,12 @@ class CMUdictBuilder(BaseCorpusBuilder):
             current_line = current_line.strip()
             if current_line and not current_line.startswith (";;;"):
                 word, transcript = current_line.split ("  ")
-                self.table(self.word_table).add(
-                    {self.word_label: word, 
-                    self.word_transcript: transcript})
+                ipa = transpose.arpa_to_ipa(transcript.strip())
+                self.add_token_to_corpus(
+                    {self.corpus_id: i+1, 
+                    self.corpus_word: word,
+                    self.corpus_transcript: transcript,
+                    self.corpus_ipa: ipa})
             if self._widget and not i % 100:
                 self._widget.progressUpdate.emit(i // 100)
         self.commit_data()
@@ -100,14 +114,20 @@ class CMUdictBuilder(BaseCorpusBuilder):
         return "cmudict"
     
     @staticmethod
+    def get_language():
+        return "English"
+    
+    @staticmethod
+    def get_language_code():
+        return "en-US"
+        
+    @staticmethod
     def get_license():
-        return "CMUdict is licensed under a modified FreeBSD license."
+        return "CMUdict is available under the terms of a modified FreeBSD license."
     
     @staticmethod
     def get_description():
         return ["The Carnegie Mellon Pronouncing Dictionary (CMUdict) is a dictionary containing approximately 135.000 English word-forms and their phonemic transcriptions, using a variant of the ARPAbet transcription system."]
-
-BuilderClass = CMUdictBuilder
 
 if __name__ == "__main__":
     BuilderClass().build()

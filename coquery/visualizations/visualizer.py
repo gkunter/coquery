@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
+""" 
+visualizer.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-""" 
-visualizer.py is part of Coquery.
-
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
-
-Coquery is released under the terms of the GNU General Public License.
-For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
-"""
 
 """
 This module provides the base classes required for data visualization:
@@ -41,7 +41,6 @@ folder of the Coquery installation. For instance,
 the current results table in the form of one or more barcharts, and  :mod:`visualizations/barcodeplot.py` contains the subclass :class:`BarcodeVisualizer` which draws a barcode plot where vertical lines 
 indicate the position within the corpus for each token in the result table.
 """
-
 import sys
 import os
 import collections
@@ -52,31 +51,33 @@ import __init__
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
+import matplotlib as mpl
+
+try:
+    import seaborn as sns
+except ImportError:
+    raise RuntimeError
 
 from pyqt_compat import QtGui, QtCore, pyside
-
-import options
-sys.path.append(os.path.join(sys.path[0], "../gui/"))
-from QtProgress import ProgressIndicator
-import visualizerUi
-from defines import *
-from errors import *
-
-import matplotlib as mpl
 # Tell matplotlib if PySide is being used:
 if pyside:
     mpl.use("Qt4Agg")
     mpl.rcParams["backend.qt4"] = "PySide"
 
+from ui.visualizerUi import Ui_Visualizer
+import QtProgress
+
+import options
+from defines import *
+from errors import *
+import queries
+
 # import required matplotlib classes
 from matplotlib.figure import Figure
+from matplotlib.backend_bases import key_press_handler
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.backend_bases import key_press_handler
 import matplotlib.pyplot as plt
-
-
 
 #def table_to_tree(table, label="count"):
     #""" Return a tree that contains a tree representation of the table. It
@@ -122,7 +123,7 @@ class CoqNavigationToolbar(NavigationToolbar):
             self.parent.visualizer.options.update(new_values)
             self.parent.update_plot()
 
-class BaseVisualizer(object):
+class BaseVisualizer(QtCore.QObject):
     """ 
     Define a class that contains the code to visualize data in several
     ways. 
@@ -135,38 +136,65 @@ class BaseVisualizer(object):
     are specified in :func:`draw`. This method is usually called externally 
     by :func:`VisualizerDialog.Plot`. 
     """
-    
-    def __init__(self, data_model, data_view):
+    _plot_frequency = False
+
+    def __init__(self, data_model, data_view, parent = None):
+        super(BaseVisualizer, self).__init__(parent=parent)
         self._model = None
         self._view = None
+        self._df = None
         self.options = {}
         self.set_data_source(data_model, data_view)
         self.set_defaults()
         self.setup_figure()
-    
+
+        self.function = self.draw
+
     def set_defaults(self):
-        if not self.options.get("color_number", ""):
-            self.options["color_number"] = len(self._levels[-1])
-        if not self.options.get("label_legend_columns", 0):
-            self.options["label_legend_columns"] = 1
-        if not self.options.get("color_palette", ""):
-            if len(self._levels) == 0:
+        if self._plot_frequency:
+            if not self.options.get("color_number"):
+                self.options["color_number"] = 1
+            if not self.options.get("label_legend_columns"):
+                self.options["label_legend_columns"] = 1
+            if not self.options.get("color_palette"):
                 self.options["color_palette"] = "Paired"
                 self.options["color_number"] = 1
-            elif len(self._levels[-1]) in (2, 4, 6):
-                self.options["color_palette"] = "Paired"
-            elif len(self._groupby) == 2:
-                self.options["color_palette"] = "Paired"
-            else:
-                self.options["color_palette"] = "RdPu"
+        else:
+            if not self.options.get("color_number"):
+                self.options["color_number"] = len(self._levels[-1])
+            if not self.options.get("label_legend_columns"):
+                self.options["label_legend_columns"] = 1
+            if not self.options.get("color_palette"):
+                if len(self._levels) == 0:
+                    self.options["color_palette"] = "Paired"
+                    self.options["color_number"] = 1
+                elif len(self._levels[-1]) in (2, 4, 6):
+                    self.options["color_palette"] = "Paired"
+                elif len(self._groupby) == 2:
+                    self.options["color_palette"] = "Paired"
+                else:
+                    self.options["color_palette"] = "RdPu"
             
-        if not self.options.get("color_palette_values", ""):
+        if not self.options.get("color_palette_values"):
+            self.set_palette_values(self.options["color_number"])
+
+    def set_palette_values(self, n=None):
+        """
+        Set the color palette values to the specified number.
+        """
+        if not n:
+            n = self.options["color_number"]
+        else:
+            self.options["color_number"] = n
+
+        if self.options["color_palette"] != "custom":
             self.options["color_palette_values"] = sns.color_palette(
-                self.options["color_palette"],
-                self.options["color_number"])
-                                                                                                                            
+                self.options["color_palette"], n)
+                                                                                                                         
     def _validate_layout(func):
         def func_wrapper(self):
+            if self._plot_frequency:
+                return func(self)
             if self._col_wrap:
                 if self._col_wrap > 16:
                     raise VisualizationInvalidLayout
@@ -178,6 +206,12 @@ class BaseVisualizer(object):
                 raise VisualizationInvalidLayout
             return func(self)
         return func_wrapper
+    
+    def set_data_table(self, df):
+        self._df = df
+        
+    def get_data_table(self):
+        return self._df
     
     @_validate_layout
     def setup_figure(self):
@@ -274,36 +308,54 @@ class BaseVisualizer(object):
         Update the internal representation of the model content so that
         it is usable by the visualizer.
         """
+
+        if not options.cfg.main_window.Session:
+            raise VisualizationNoDataError
         
         # get the column order from the visual QTableView:
         header = self._view.horizontalHeader()
         column_order = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
-        column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and x != "coq_frequency"]
+        if self._plot_frequency:
+            column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True)]
+        else:
+            column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and not x.startswith("statistics")]
 
         column_order.append("coquery_invisible_corpus_id")
 
         try:
             self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
-        except AttributeError:
+        except NameError:
             self._time_columns = []
-            
-        self._table = options.cfg.main_window.Session.data_table[column_order]
-        
-        self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
-        # get list of visible rows:
-        self._row_order = ~self._table.index.isin(pd.Series(options.cfg.row_visibility.keys())-1)
+       
+        try:
+            self._table = self._df[column_order]
+        except TypeError:
+            self._table = options.cfg.main_window.Session.data_table.iloc[
+                    ~options.cfg.main_window.Session.data_table.index.isin(
+                        pd.Series(options.cfg.row_visibility[queries.TokenQuery].keys()))]
 
+            self._table = self._table[column_order]
+
+        self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
+        
+        # get list of visible rows:
+        #visible_rows = list(options.cfg.row_visibility.keys())
+        #self._row_order = ~self._table.index.isin(pd.Series(visible_rows) - 1)
+        #self._table = self._table[self._row_order]
+        
+        
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
 
-        self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object]]
-
+        self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object] if not x in self._time_columns]
+        self._number_columns = [x for x in self._table.select_dtypes(include=["int", "float"]).columns if not x.startswith("coquery_invisible")]
+        
         if self.dimensionality:
             self._groupby = self._factor_columns[-self.dimensionality:]
         else:
             self._groupby = []
 
-        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby if not x in self._time_columns]
+        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby]
 
         
         if options.cfg.verbose:
@@ -336,8 +388,8 @@ class BaseVisualizer(object):
             print("col_wrap:     ", self._col_wrap)
             print("row_factor:   ", self._row_factor)
             print("time_columns: ", self._time_columns)
-        if not self._groupby:
-            raise VisualizationNoDataError
+        #if not self._groupby:
+            #raise VisualizationNoDataError
 
     def adjust_fonts(self, size):
         """
@@ -498,8 +550,6 @@ class BaseVisualizer(object):
             #if label:
                 #self.subplot.xaxis.set_label(label)
 
-
-
     def get_font_scale(self, default=12):
         """ 
         Return the scaling factor of the current font, relative to a default
@@ -595,8 +645,12 @@ class VisualizerDialog(QtGui.QWidget):
     def __init__(self, parent=None):
         super(VisualizerDialog, self).__init__(parent)
         
-        self.ui = visualizerUi.Ui_Visualizer()
+        self.ui = Ui_Visualizer()
         self.ui.setupUi(self)
+        self.ui.progress_bar.setRange(0, 0)
+        self.ui.box_visualize.hide()
+        self.ui.progress_bar.hide()
+        self.ui.label.hide()
         self.ui.button_close.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
         
         self.setWindowIcon(options.cfg.icon)
@@ -617,6 +671,15 @@ class VisualizerDialog(QtGui.QWidget):
         
         self.toolbar = None
         self.canvas = None
+        
+        try:
+            self.resize(options.settings.value("visualizer_size"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("visualizer_size", self.size())
+        self.close()
 
     def add_visualizer(self, visualizer):
         """ Add a Visualizer instance to the visualization dialog. Also, 
@@ -647,6 +710,8 @@ class VisualizerDialog(QtGui.QWidget):
         self.add_matplot()
             
         self.visualizer.draw()
+        self.visualizer.g.fig.tight_layout()
+
         if self.smooth:
             self.spinner.setEnabled(True)
 
@@ -658,7 +723,6 @@ class VisualizerDialog(QtGui.QWidget):
             self.canvas.setParent(self.ui.box_visualize)
             self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
             self.canvas.setFocus()
-            self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
 
         if not self.toolbar:
             self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
@@ -670,6 +734,7 @@ class VisualizerDialog(QtGui.QWidget):
             self.ui.navigation_layout.addWidget(self.toolbar)
         else:
             self.toolbar.canvas = self.canvas
+        self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
 
     def remove_matplot(self):
         """ 
@@ -680,9 +745,6 @@ class VisualizerDialog(QtGui.QWidget):
             self.canvas.close()
         self.ui.verticalLayout.removeWidget(self.canvas)
         self.canvas = None
-        
-    def closeEvent(self, event):
-        self.close()
         
     def close(self, *args):
         """ Close the visualizer widget, disconnect the signals, and remove 
@@ -709,8 +771,17 @@ class VisualizerDialog(QtGui.QWidget):
         toolbar. """
         try:
             key_press_handler(event, self.canvas, self.toolbar)
-        except (ValueError, AttributeError) as e:
-            logger.warn("The keypress '{}' could not be handled correctly by the graph library.".format(event.key))
+        except AttributeError:
+            # Attribute errors seem to occur when a key is pressed while the 
+            # mouse is outside of the figure area:
+            #
+            # AttributeError: 'QKeyEvent' object has no attribute 'inaxes'
+            #
+            # This exception may be safely ignored.
+            pass
+        except Exception as e:
+            print(e)
+            raise e
             
     def connect_signals(self):
         """ Connect the dataChanged signal of the abstract data table and the 
@@ -753,25 +824,50 @@ class VisualizerDialog(QtGui.QWidget):
         else:
             self.connect_signals()
 
-    def plot_it(self):
-        print("starting")
-        self.visualizer.setup_figure()
-        self.visualizer.start_draw_thread()
-        print("done")
-
     def Plot(self, model, view, visualizer_class, parent=None, **kwargs):
         """ Use the visualization type given as 'visualizer_class' to display
         the data given in the abstract data table 'model', using the table 
         view given in 'view'. """
         dialog = self
         self.smooth = kwargs.get("smooth", False)
-        visualizer = visualizer_class(model, view, **kwargs)
-        if not visualizer._table.empty:
-            dialog.setVisible(True)
-            dialog.add_visualizer(visualizer)
-            dialog.add_matplot()
-            self.visualizer.draw()
+        self.visualizer = visualizer_class(model, view, parent=None, **kwargs)
+        if not self.visualizer._table.empty:
+            self.setVisible(True)
+            self.connect_signals()
+            options.cfg.main_window.widget_list.append(self)
+            self.add_matplot()
             
+            self.thread = QtProgress.ProgressThread(self.visualizer.draw, parent=self)
+            self.thread.taskStarted.connect(self.startplot)
+            self.thread.taskFinished.connect(self.finishplot)
+
+            self.visualizer.moveToThread(self.thread)
+            self.thread.start()
+
+    def startplot(self):
+        self.ui.box_visualize.hide()
+        self.ui.frame.setDisabled(True)        
+        self.ui.frame_placeholder.show()
+        self.ui.progress_bar.show()
+        self.ui.label.show()
+        self.repaint()
+
+    def finishplot(self):
+        self.ui.frame_placeholder.hide()
+        self.ui.progress_bar.hide()
+        self.ui.label.hide()        
+        self.ui.box_visualize.show()
+        self.ui.frame.setDisabled(False)        
+        self.repaint()
+        
+        self.visualizer.g.fig.canvas.draw()
+        self.visualizer.g.fig.tight_layout()
+
+        # Create an alert in the system taskbar to indicate that the
+        # visualization has completed:
+        options.cfg.app.alert(self, 0)
+
+  
 if __name__ == "__main__":
     unittest.main()
             

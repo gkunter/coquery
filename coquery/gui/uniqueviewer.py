@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-
 """
 uniqueviewer.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
@@ -13,29 +14,53 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
+import sys
 import pandas as pd
+import sqlalchemy
 
 from pyqt_compat import QtCore, QtGui
-import uniqueViewerUi
-import sys
+from ui.uniqueViewerUi import Ui_UniqueViewer
 
+import sqlhelper
 import options
-import error_box
+import errorbox
 import QtProgress
+import classes
 
 class UniqueViewer(QtGui.QWidget):
-    def __init__(self, rc_feature=None, resource=None, parent=None):
+    def __init__(self, rc_feature=None, db_name=None, parent=None):
         super(UniqueViewer, self).__init__(parent)
         
-        self.ui = uniqueViewerUi.Ui_UniqueViewer()
+        self.ui = Ui_UniqueViewer()
         self.ui.setupUi(self)
-        self.rc_feature = rc_feature
-        self.resource = resource
 
-        if self.resource:
+        self.ui.button_details = classes.CoqDetailBox(str("Corpus: {}   Column: {}"))
+        self.ui.verticalLayout.insertWidget(0, self.ui.button_details)
+
+        self.ui.label = QtGui.QLabel("Number of values: {}")
+        self.ui.detail_layout = QtGui.QHBoxLayout()
+        self.ui.detail_layout.addWidget(self.ui.label)
+        self.ui.button_details.box.setLayout(self.ui.detail_layout)
+
+        try:
+            self.ui.button_details.setExpanded(options.settings.value("uniqueviewer_details"))
+        except TypeError:
+            pass
+
+        self.ui.buttonBox.setDisabled(True)
+        self.ui.button_details.setDisabled(True)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(self.save_list)
+
+        self.rc_feature = rc_feature
+        self.db_name = db_name
+        self.resource = options.get_resource_of_database(db_name)
+        
+        if self.db_name:
             rc_table = "{}_table".format(rc_feature.partition("_")[0])
             self.table = getattr(self.resource, rc_table)
             self.column = getattr(self.resource, rc_feature)
+
             self.ui.button_details.setText(
                 str(self.ui.button_details.text()).format(
                     self.resource.name, 
@@ -43,43 +68,31 @@ class UniqueViewer(QtGui.QWidget):
         else:
             self.table = None
             self.column = None
-            self.resource = None
+
         self.ui.treeWidget.itemClicked.connect(self.entry_clicked)
-        self.ui.button_details.clicked.connect(self.toggle_details)
-        self.set_details()
+        try:
+            self.resize(options.settings.value("uniqueviewer_size"))
+        except TypeError:
+            pass
+        try:
+            self.ui.button_details.setExpanded(options.settings.value("uniqueviewer_details"))
+        except AttributeError:
+            pass
 
-        self.ui.buttonBox.setDisabled(True)
-        self.ui.button_details.setDisabled(True)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(self.save_list)
+    def closeEvent(self, event):
+        options.settings.setValue("uniqueviewer_size", self.size())
+        options.settings.setValue("uniqueviewer_details", self.ui.button_details.isExpanded())
 
-    def set_details(self):
-        if options.cfg.unique_view_details:
-            self.ui.frame_details.show()
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
-        else:
-            self.ui.frame_details.hide()
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
-        self.ui.button_details.setIcon(icon)
-
-    def toggle_details(self):
-        options.cfg.unique_view_details = not options.cfg.unique_view_details
-        self.set_details()
-        
     def get_unique(self):
-        if not self.resource:
+        if not self.db_name:
             return
-        import sqlwrap
-        S = "SELECT DISTINCT {0} FROM {1} ORDER BY {0}".format(self.column, self.table)
 
-        self.DB = sqlwrap.SqlDB(
-            *options.get_mysql_configuration(),
-            db_name=self.resource.db_name)
-        self.DB.execute(S)
-        self.data = [QtGui.QTreeWidgetItem(self.ui.treeWidget, [x[0]]) for x in self.DB.Cur]
+        S = "SELECT DISTINCT {0} FROM {1} ORDER BY {0}".format(self.column, self.table)
+        df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.get_mysql_configuration(), self.db_name)))
+        self.data = [QtGui.QTreeWidgetItem(self.ui.treeWidget, [x]) for x in df[self.column]]
+
         for x in self.data:
             x.setToolTip(0, x.text(0))
-        self.DB.close()
 
     def finalize(self):
         self.ui.progress_bar.setRange(1,0)
@@ -111,11 +124,8 @@ class UniqueViewer(QtGui.QWidget):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
 
-    def closeEvent(self, e):
-        self.close()
-
     def onException(self):
-        error_box.ErrorBox.show(self.exc_info, self.exception)
+        errorbox.ErrorBox.show(self.exc_info, self.exception)
 
     def save_list(self):
         name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.uniques_file_path)

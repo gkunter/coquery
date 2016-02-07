@@ -2,9 +2,9 @@
 """
 functionapply.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
@@ -12,16 +12,13 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyqt_compat import QtCore, QtGui
-
 import sys
 import re
-import functionApplyUi
 
-try:
-    import options
-except ImportError:
-    pass
+from pyqt_compat import QtCore, QtGui
+from ui.functionApplyUi import Ui_FunctionDialog
+
+import options
 
 def func_regexp(x, s):
     match = re.search("({})".format(s), x)
@@ -41,8 +38,7 @@ class FunctionDialog(QtGui.QDialog):
     def __init__(self, table, feature, parent=None):
         
         super(FunctionDialog, self).__init__(parent)
-        self.omit_tables = ["coquery", "corpus"]
-        self.ui = functionApplyUi.Ui_FunctionDialog()
+        self.ui = Ui_FunctionDialog()
         self.ui.setupUi(self)
         try:
             table = str(table)
@@ -55,16 +51,17 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.label_func3.setText(str(self.ui.label_func3.text()).format("{}.{}".format(table, feature)))
         self.ui.label_func4.setText(str(self.ui.label_func4.text()).format("{}.{}".format(table, feature)))
         
+        try:
+            self.resize(options.settings.value("functionapply_size"))
+        except TypeError:
+            pass
+
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
-            
+
     def closeEvent(self, *args):
-        try:
-            options.cfg.function_apply_height = self.height()
-            options.cfg.function_apply_width = self.width()        
-        except NameError:
-            pass
+        options.settings.setValue("functionapply_size", self.size())
         
     @staticmethod
     def display(table, feature, parent=None):

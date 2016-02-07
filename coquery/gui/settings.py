@@ -2,27 +2,59 @@
 """
 settings.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+
 import sys
+
 from pyqt_compat import QtGui, QtCore
-import settingsUi
+from ui.settingsUi import Ui_SettingsDialog
+
+import options
 
 class Settings(QtGui.QDialog):
-    def __init__(self, options, parent=None):
+    def __init__(self, _options, parent=None):
         super(Settings, self).__init__(parent)
-        self.options = options
-        self.ui = settingsUi.Ui_SettingsDialog()
+        self._options = _options
+        self.ui = Ui_SettingsDialog()
         self.ui.setupUi(self)
         self.ui.check_ignore_punctuation.setEnabled(False)
         self.ui.check_experimental.setEnabled(False)
-        self.ui.frame_addon_paths.setEnabled(False)
-        self.set_ui_options()
+        self.ui.edit_visualizer_path.setEnabled(False)
+        self.ui.button_visualizer_path.setEnabled(False)
         
+        self.ui.button_installer_path.clicked.connect(self.select_installer_path)                                        
+        self.ui.button_visualizer_path.clicked.connect(self.select_visualizer_path)                                        
+        
+        self.set_ui_options()
+        try:
+            self.resize(options.settings.value("settings_size"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("settings_size", self.size())
+        
+    def select_installer_path(self):
+        name = QtGui.QFileDialog.getExistingDirectory(options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            self.options.custom_installer_path = name
+            self.ui.edit_installer_path.setText(name)
+        
+    def select_visualizer_path(self):
+        name = QtGui.QFileDialog.getExistingDirectory(options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            self.options.visualizer_path = name
+            self.ui.edit_visualizer_path.setText(name)
+
     def set_ui_options(self):
         try:
             self.ui.check_ignore_case.setChecked(not bool(self.options.case_sensitive))
@@ -53,7 +85,7 @@ class Settings(QtGui.QDialog):
         except AttributeError:
             pass
         try:
-            self.ui.edit_installer_path.setText(self.options.installer_path)
+            self.ui.edit_installer_path.setText(self.options.custom_installer_path)
         except AttributeError:
             pass
         try:
@@ -84,7 +116,7 @@ class Settings(QtGui.QDialog):
         self.options.save_query_file = bool(self.ui.check_save_query_file.isChecked())
         self.options.save_query_string = bool(self.ui.check_save_query_string.isChecked())
         self.options.digits = int(self.ui.spin_digits.value())
-        
+        self.options.custom_installer_path = str(self.ui.edit_installer_path.text())        
 
     @staticmethod
     def manage(options, parent=None):

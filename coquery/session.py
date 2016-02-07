@@ -39,7 +39,7 @@ class Session(object):
             
         # load current corpus module depending on the value of options.cfg.corpus,
         # i.e. the corpus specified as an argumment:        
-        ResourceClass, CorpusClass, LexiconClass, Path = options.get_available_resources(options.cfg.current_server)[options.cfg.corpus]
+        ResourceClass, CorpusClass, LexiconClass, Path = options.cfg.current_resources[options.cfg.corpus]
         
         current_lexicon = LexiconClass()
         current_corpus = CorpusClass()
@@ -119,11 +119,8 @@ class Session(object):
         """ Process all queries. For each query, go through the entries in 
         query_list() and yield the results for that subquery. Then, write
         all results to the output file. """
-
         self.start_time = datetime.datetime.now()
         self.end_time = None
-        if options.cfg.gui:
-            self.storage_created = False
         
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
@@ -138,10 +135,12 @@ class Session(object):
 
         self.end_time = datetime.datetime.now()
         self.data_table.index = range(1, len(self.data_table.index) + 1)
+        self.frequency_table = self.get_frequency_table()
         
-        self.aggregate_data()
+        self.filter_data()
 
         if not options.cfg.gui:
+            self.aggregate_data()
             if not options.cfg.output_path:
                 output_file = sys.stdout
             else:
@@ -163,15 +162,92 @@ class Session(object):
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
 
-    def aggregate_data(self):
+    def close(self):
+        """
+        Close the session.
+        """
+        pass
+        
+    def get_frequency_table(self):
+        frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, output_order=self.output_order)
+        frequency_table.fillna("", inplace=True)
+        frequency_table.index = range(1, len(frequency_table.index) + 1)
+
+        return frequency_table
+
+    def aggregate_data(self, recalculate=True):
         """
         Apply the aggegate function from the current query type to the 
         data table produced in this session.
         """
-        self.output_object = self.query_type.aggregate_it(self.data_table, self.Corpus)
+        # if no explicit recalculation is requested, try to use a cached 
+        # output object for the current query type:
+        if not recalculate:
+            if self.query_type == queries.FrequencyQuery and hasattr(self, "_cached_frequency_table"):
+                self.output_object = self._cached_frequency_table
+                return
+            elif self.query_type == queries.DistinctQuery and hasattr(self, "_cached_unique_table"):
+                self.output_object = self._cached_unique_table
+                return
+            elif self.query_type == queries.CollocationQuery and hasattr(self, "_cached_collocation_table"):
+                self.output_object = self._cached_collocation_table
+                return
+
+        # Recalculate the output object for the current query type, excluding
+        # invisible rows:
+        if self.query_type == queries.TokenQuery:
+            tab = self.data_table
+        else:
+            tab = self.data_table.iloc[
+                    ~self.data_table.index.isin(
+                        pd.Series(options.cfg.row_visibility[queries.TokenQuery].keys()))]
+
+        self.output_object = self.query_type.aggregate_it(
+            tab,
+            self.Corpus, output_order=self.output_order)
+
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
+        # cache the output object for the current query type:
+        if self.query_type == queries.FrequencyQuery:
+            self._cached_frequency_table = self.output_object
+        elif self.query_type == queries.DistinctQuery:
+            self._cached_unique_table = self.output_object
+        elif self.query_type == queries.CollocationQuery:
+            self._cached_collocation_table = self.output_object
+
+    def drop_cached_aggregates(self):
+        try:
+            del self._cached_collocation_table
+        except AttributeError:
+            pass
+        try:
+            del self._cached_frequency_table
+        except AttributeError:
+            pass
+        try:
+            del self._cached_unique_table
+        except AttributeError:
+            pass
+
+    def filter_data(self, column="statistics_frequency"):
+        """
+        Apply the frequency filters to the output object.
+        """
+        if not options.cfg.filter_list:
+            return 
+        for filt in options.cfg.filter_list:
+            if filt.var == options.cfg.freq_label:
+                try:
+                    self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]
+                except AttributeError:
+                    pass
+        columns = [x for x in self.data_table.columns if not x.startswith("coquery_invisible") and x != column]
+
+        for col in columns:
+            self.data_table = self.data_table[self.data_table[col].apply(lambda x: x in list(self.frequency_table[col]))]
+        
     def translate_header(self, header, ignore_alias=False):
         """ 
         Return a string that contains the display name for the header 
@@ -206,7 +282,7 @@ class Session(object):
             return options.cfg.query_label
 
         # treat frequency columns:
-        if header == "coq_frequency":
+        if header == "statistics_frequency":
             if options.cfg.query_label:
                 return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
             else:
@@ -220,6 +296,25 @@ class Session(object):
         if header.startswith("coq_"):
             header = header.partition("coq_")[2]
 
+        res_prefix = ""
+        
+        # handle external columns:
+        if "$" in header:
+            db_name, header = header.split("$")
+            for x in options.cfg.current_resources:
+                resource, _, _, _ = options.cfg.current_resources[x]
+                if resource.db_name == db_name:
+                    res_prefix = "{}.".format(resource.name)
+                    break
+        else:
+            resource = self.Resource
+            
+        # special treatment of context columns:
+        if header.startswith("context_lc"):
+            return "LC{}".format(header.split("context_lc")[-1])
+        if header.startswith("context_rc"):
+            return "RC{}".format(header.split("context_rc")[-1])
+        
         rc_feature, _, number = header.rpartition("_")
         
         # If there is only one query token, number is set to "" so that no
@@ -233,19 +328,19 @@ class Session(object):
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
                 pass
-            return "{}{}".format(COLUMN_NAMES[rc_feature], number)
+            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
         
         # special treatment of lexicon freatures:
-        if rc_feature in [x for x, _ in self.Resource.get_lexicon_features()]:
+        if rc_feature in [x for x, _ in resource.get_lexicon_features()]:
             try:
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
                 pass
-            return "{}{}".format(self.Resource.__getattribute__(str(rc_feature)), number)
+            return "{}{}{}".format(res_prefix, getattr(resource, str(rc_feature)), number)
 
         # treat any other feature that is provided by the corpus:
         try:
-            return "{}".format(self.Resource.__getattribute__(str(rc_feature)))
+            return "{}{}".format(res_prefix, getattr(resource, str(rc_feature)))
         except AttributeError:
             pass
 
@@ -257,23 +352,27 @@ class Session(object):
         if rc_feature.startswith("func_"):
             func_counter = collections.Counter()
             for res, _, label in options.cfg.selected_functions:
-                resource = res.rpartition(".")[-1]
-                func_counter[resource] += 1
-                fc = func_counter[resource]
+                res = res.rpartition(".")[-1]
+                func_counter[res] += 1
+                fc = func_counter[res]
                 
-                new_name = "func_{}_{}".format(resource, fc)
+                new_name = "func_{}_{}".format(res, fc)
                 if new_name == rc_feature:
-                    column_name = self.Resource.__getattribute__(str(resource))
+                    column_name = getattr(resource, res)
                     function_label = label
                     break
             else:
-                column_name = resource
+                if options.cfg.selected_functions:
+                    column_name = res
+                else:
+                    column_name = "UNKNOWN"
                 function_label = rc_feature
             try:
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
                 pass
-            return str(function_label).replace(column_name, "{}{}".format(column_name, number))
+            return str(function_label).replace(column_name, "{}{}{}".format(
+                res_prefix, column_name, number))
 
         # other features:
         if rc_feature in COLUMN_NAMES:
@@ -281,7 +380,7 @@ class Session(object):
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
                 pass
-            return "{}{}".format(COLUMN_NAMES[rc_feature], number)
+            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
 
         return header
 
@@ -299,7 +398,7 @@ class SessionCommandLine(Session):
             logger.info("{} queries".format(len(options.cfg.query_list)))
         for query_string in options.cfg.query_list:
             if self.query_type:
-                new_query = self.query_type(query_string, self, tokens.COCAToken)
+                new_query = self.query_type(query_string, self)
             else: 
                 raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
             self.query_list.append(new_query)
@@ -338,7 +437,7 @@ class SessionInputFile(Session):
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
                     except AttributeError:
                         continue
-                    new_query = self.query_type(query_string, self, tokens.COCAToken)
+                    new_query = self.query_type(query_string, self)
                     new_query.input_frame = pd.DataFrame(
                         [current_line], columns=self.header)
                     self.query_list.append(new_query)
@@ -365,7 +464,7 @@ class SessionStdIn(Session):
                 else:
                     if read_lines >= options.cfg.skip_lines:
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
-                        new_query = self.query_type(query_string, self, tokens.COCAToken)
+                        new_query = self.query_type(query_string, self)
                         self.query_list.append(new_query)
                 self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
             read_lines += 1

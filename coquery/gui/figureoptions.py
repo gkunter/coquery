@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
-
-from __future__ import division
-
 """
 figureoptions.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+
+from __future__ import division
 
 import sys
 import seaborn as sns
 import matplotlib as mpl
 
 from pyqt_compat import QtGui, QtCore
-import figureOptionsUi
+from ui.figureOptionsUi import Ui_FigureOptions
+
+import options
 
 class CoqColorItem(QtGui.QListWidgetItem):
     def __init__(self, color):
@@ -47,7 +48,7 @@ class FigureOptions(QtGui.QDialog):
         
         self.options = default
         self.parent = parent
-        self.ui = figureOptionsUi.Ui_FigureOptions()
+        self.ui = Ui_FigureOptions()
         self.ui.setupUi(self)
         
         # set up labels tab:
@@ -111,6 +112,14 @@ class FigureOptions(QtGui.QDialog):
                 
         self.ui.label_main.setFocus(True)
 
+        try:
+            self.resize(options.settings.value("figureoptions_size"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("figureoptions_size", self.size())
+        
     def _change_to_custom(self):
         self.ui.radio_custom.setEnabled(True)
         self.ui.radio_custom.setChecked(True)
@@ -143,6 +152,9 @@ class FigureOptions(QtGui.QDialog):
             self._change_to_custom()
     
     def change_palette_length(self):
+        self.ui.radio_custom.setEnabled(True)
+        self.ui.radio_custom.setChecked(True)
+        self.custom_palette = self.get_current_palette()
         self.test_palette()
     
     def set_current_palette(self, palette):

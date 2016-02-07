@@ -1,7 +1,23 @@
 # -*- coding: utf-8 -*-
+"""
+settings.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
+import codecs
+import pandas as pd
 
 from pyqt_compat import QtCore, QtGui
-import stopwordsUi
+from ui.stopwordsUi import Ui_Stopwords
+
+import queryfilter
+import options
+from defines import *
 
 class CoqStopWord(QtGui.QListWidgetItem):
     def __init__(self, *args):
@@ -32,10 +48,8 @@ class CoqStopwordDelegate(QtGui.QStyledItemDelegate):
         painter.setPen(QtGui.QPen(QtCore.Qt.black))
         value = index.data(QtCore.Qt.DisplayRole)
         painter.drawText(option.rect, QtCore.Qt.AlignLeft, value)
-        
 
         painter.restore()
-
         
 class CoqAddWord(CoqStopWord):
     def __init__(self, *args):
@@ -69,7 +83,7 @@ class CoqStopwordList(QtGui.QListWidget):
         self.add_item = None
  
         self.setItemDelegate(CoqStopwordDelegate(parent=self))
- 
+
     def onClick(self, item):
         if item == self.add_item:
             #self.add_item.setText("")
@@ -95,18 +109,90 @@ class Stopwords(QtGui.QDialog):
     def __init__(self, filename, default=None, parent=None, icon=None):
         super(Stopwords, self).__init__(parent)
         
-        self.ui = stopwordsUi.Ui_Stopwords()
+        self.ui = Ui_Stopwords()
         self.ui.setupUi(self)
         self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
         self.ui.stopword_list.close()
-        self.ui.stopword_list = CoqStopwordList()
+        #self.ui.stopword_list = CoqStopwordList()
+        self.ui.stopword_list = queryfilter.CoqTagBox(label="Add stop word:")
         self.ui.horizontalLayout.insertWidget(0, self.ui.stopword_list)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setAutoDefault(False)
-        print(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).autoDefault())
-        print(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).isDefault())
+
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Reset).clicked.connect(self.reset_list)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(self.save_list)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Open).clicked.connect(self.open_list)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
+
+        try:
+            self.resize(options.settings.value("stopwords_size"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("stopwords_size", self.size())
+        self.close()
+ 
+    def reset_list(self):
+        response = QtGui.QMessageBox.question(self, "Clear stop word list", msg_clear_stopwords, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+        if response == QtGui.QMessageBox.Yes:
+            self.ui.stopword_list.cloud_area.clear()
+    
+    def save_list(self):
+        name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.stopwords_file_path)
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            options.cfg.stopwords_file_path = os.path.dirname(name)
+            df = pd.DataFrame(options.cfg.stopword_list)
+            try:
+                df.to_csv(name,
+                        index=False, header=False,
+                        encoding=options.cfg.output_encoding)
+            except IOError as e:
+                QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+    
+    def open_list(self):
+        name = QtGui.QFileDialog.getOpenFileName(directory=options.cfg.stopwords_file_path)
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            options.cfg.stopwords_file_path = os.path.dirname(name)
+            self.ui.buttonBox.setEnabled(False)
+            try:
+                with codecs.open(name, "r", encoding=options.cfg.output_encoding) as input_file:
+                    for word in sorted(set(" ".join(input_file.readlines()).split())):
+                        if word and not self.ui.stopword_list.hasTag(word):
+                            self.ui.stopword_list.addTag(str(word))
+            except IOError as e:
+                QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+            finally:
+                self.ui.buttonBox.setEnabled(True)
+    
+    def close(self):
+        super(Stopwords, self).close()
+        options.cfg.stopword_list = [
+            str(self.ui.stopword_list.cloud_area.itemAt(x).widget().text()) for x in range(self.ui.stopword_list.cloud_area.count())]
+        super(Stopwords, self).accept()
+    
+    def accept(self):
+        pass
+
+    def keyPressEvent(self, event):
+        print("key")
+        if event.key() in [QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return]:
+            return
+        else:
+            super(Stopwords, self).keyPressEvent(event)
+        
+    def set_list(self, l):
+        for x in l:
+            self.ui.stopword_list.addTag(str(x))
         
     @staticmethod
     def manage(parent=None, icon=None):
         dialog = Stopwords(parent, icon)
+        dialog.set_list(options.cfg.stopword_list)
         result = dialog.exec_()
-        

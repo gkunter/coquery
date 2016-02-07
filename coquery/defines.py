@@ -20,26 +20,16 @@ import math
 import itertools
 import gc
 
-# The following flags are used to indicate which fields are provided by the 
-# lexicon of a corpus, and also to access the fields of the value of 
-# BaseLexicon.get_entry(WordId):
+DEFAULT_MISSING_VALUE = "<NA>"
 
-LEX_WORDID = "word_id"  # Lexicon entries provide a WordId (obligatory)
-LEX_ORTH = "orth"       # Lexicon entries provide an orthographic 
-                        # representation of word-forms (obligatory)
-LEX_LEMMA = "lemma"     # Lexicon entries provide a lemma identifier
-LEX_POS = "pos"         # Lexicon entries provide a part-of-speech identifier
-LEX_PHON = "phon"       # Lexicon entries provide a phonological 
-                        # representation
-LEX_FREQ = "freq"       # Lexicon entries provide a frequency measure
-
-CORP_SOURCE = "source"
-CORP_SPEAKER = "speaker"
-CORP_CONTEXT = "context"
-CORP_FILENAME = "filename"
-CORP_TIMING = "time"
-CORP_STATISTICS = "statistics"
-CORP_SENTENCE = "sentence"
+# The following labels are used to refer to the different types of query 
+# tokens, e.g. in corpusbuilder.py when mapping the different query item
+# types to different fields in the data base:
+QUERY_ITEM_WORD = "query_item_word"
+QUERY_ITEM_LEMMA = "query_item_lemma"
+QUERY_ITEM_TRANSCRIPT = "query_item_transcript"
+QUERY_ITEM_POS = "query_item_pos"
+QUERY_ITEM_GLOSS = "query_item_gloss"
 
 QUERY_MODE_TOKENS = "TOKEN"
 QUERY_MODE_FREQUENCIES = "FREQ"
@@ -53,21 +43,23 @@ SORT_DEC = 2
 SORT_REV_INC = 3
 SORT_REV_DEC = 4
 
+CONTEXT_NONE = "None"
 CONTEXT_KWIC = "KWIC"
 CONTEXT_STRING = "String"
 CONTEXT_COLUMNS = "Columns"
 CONTEXT_SENTENCE = "Sentence"
 
+# These labels are used in the corpus manager:
+INSTALLER_DEFAULT = "Default corpus installers"
+INSTALLER_CUSTOM = "Downloaded corpus installers"
+INSTALLER_ADHOC = "User corpora"
+
 COLUMN_NAMES = {
-    "coq_frequency": "Frequency", 
-    "coq_freq_per_milion": "Frequency (pmw)",
     "coq_context_left": "Left context",
     "coq_context_right": "Right context",
     "coq_context_string": "Context",
-    "coq_collocate_word_label": "Collocate word",
-    "coq_collocate_lemma_label": "Collocate lemma",
-    "coq_collocate_pos_label": "Collocate POS",
-    "coq_collocate_transcript_label": "Collocate transcript",
+    "coq_collocate_label": "Collocate",
+    #"coq_collocate_lemma_label": "Collocate lemma",
     "coq_collocate_frequency": "Collocate frequency",
     "coq_collocate_frequency_left": "Left context frequency",
     "coq_collocate_frequency_right": "Right context frequency",
@@ -78,11 +70,20 @@ COLUMN_NAMES = {
     "coquery_expanded_query_string": "Expanded query string",
     "coquery_query_string": "Query string",
     
-    "frequency_relative_frequency": "Proportion",
-    "frequency_per_million_words": "pmw"
+    "statistics_frequency": "Frequency", 
+    "statistics_overall_proportion": "Overall proportion",
+    "statistics_overall_entropy": "Overall entropy",
+    "statistics_query_proportion": "Query proportion",
+    "statistics_per_million_words": "Frequency (pmw)",
+    "statistics_query_entropy": "Query entropy",
         }
 
 DEFAULT_CONFIGURATION = "Default"
+
+SQL_MYSQL = "mysql"
+SQL_SQLITE = "sqlite"
+
+SQL_ENGINES = [SQL_MYSQL, SQL_SQLITE]
 
 # for Python 3 compatibility:
 try:
@@ -91,8 +92,36 @@ except NameError:
     # Python 3 does not have unicode and long, so define them here:
     unicode = str
     long = int
-    
-# Error messages used by the GUI:
+
+msg_clear_stopwords = """
+<p><b>You have requested to reset the list of stop words.</b></p>
+<p>Click <b>Yes</b> if you really want to delete all stop words in the list,
+or <b>No</b> if you want to leave the stop word list unchanged.</p>
+"""
+msg_missing_modules = """
+<p><b>Not all required Python modules could be found.</b><p>
+<p>Some of the Python modules that are required to run and use Coquery could 
+not be located on your system. The missing modules are:</p>
+<p><code>{}</code></p>
+<p>Please refer to <a href="http://coquery.org/documentation/">http://coquery.org/documentation</a>
+for instructions how to install the required modules.</p>
+"""
+msg_missing_seaborn_module = """
+<p><b>One of the required Python module could not be loaded.</b></p>
+<p>The Python module called 'seaborn' does not appear to be installed on this 
+computer. Without this module, the visualization functions are not available.</p>
+<p>Please visit the Seaborn website for installation instructions:
+<a href="http://stanford.edu/~mwaskom/software/seaborn/index.html">http://stanford.edu/~mwaskom/software/seaborn/index.html</a>.
+</p>
+"""
+msg_no_lemma_information = """
+<p><b>The current resource does not provide lemma information.</b></p>
+<p>Your last query makes use of the lemma search syntax by enclosing query 
+tokens in square brackets <code>[...]</code>, but the current resource does 
+not provide lemmatized word entries.</p>
+<p>Please change your query, for example by removing the square brackets 
+around the query token.</p>
+"""
 msg_corpus_path_not_valid = """
 <p><b>The corpus data path does not seem to be valid.</b></p>
 <p>{}</p>
@@ -135,6 +164,86 @@ msg_install_abort = """
 <p>The installation has not been completed yet. If you abort now, the data 
 installed so far will be discarded, and the corpus will still not be 
 available for queries.</p>"""
+msg_invalid_installer = """
+<p><b>The corpus installer '{name}' contains invalid code.</b></p>
+<p>{code}</p>
+<p>Please note that running an invalid corpus installer can potentially be 
+a security risk. For this reason, the corpus installer was disabled.</p>
+"""
+
+msg_validated_install = """
+<p><b>You have requested the installation of the corpus '{corpus}'.</b></p>
+<p>The Coquery website stores validation codes for all corpus installers that 
+have passed a security screening. During this screening, the installer code is 
+manually scanned for instructions that may be harmful to your computer, 
+software, or privacy.</p>
+<p>The installer '{corpus}' has been validated. This means that the Coquery 
+maintainers do not consider it to be a security risk, but please note that 
+the Coquery maintainers cannot be held liable for damages arising out of the
+use of this installer. See Section 16 of the 
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+</a> for details.</p>
+<p>Click <b>Yes</b> to proceed with the installation, or <b>No</b> to abort it.
+</p>
+"""
+
+msg_failed_validation_install = """
+<p><b>The validation of the corpus installer '{corpus}' failed.</b></p>
+<p>The Coquery website stores validation codes for all corpus installers that 
+have passed a security screening. During this screening, the installer code is 
+manually scanned for instructions that may be harmful to your computer, 
+software, or privacy.</p>
+<p>The validation of the installer '{corpus}' failed. This means that your 
+copy of the installer does not match any copy of the installer that has been 
+validated by the Coquery maintainers. Please note that 
+the Coquery maintainers cannot be held liable for damages arising out of the
+use of this installer. See Section 16 of the 
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+</a> for details.</p>
+<p><b>You are advised to proceed with the installation only if you are certain 
+that the installer is from a trustworthy source.</b></p>
+<p>Click <b>Yes</b> to proceed with the installation, or <b>No</b> to abort it.
+</p>
+"""
+msg_unvalidated_install = """
+<p><b>The corpus installer '{corpus}' could not be validated.</b></p>
+<p>The Coquery website stores validation codes for all corpus installers that 
+have passed a security screening. During this screening, the installer code is 
+manually scanned for instructions that may be harmful to your computer, 
+software, or privacy.</p>
+<p>For the installer '{corpus}', no validation code is available. This means 
+either that the installer has not yet been submitted to the screening process, 
+or that no validation code could be fetched from the Coquery website. Please 
+note that the Coquery maintainers cannot be held liable for damages arising 
+out of the use of this installer. See Section 16 of the 
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+</a> for details.</p>
+<p><b>You are advised to proceed with the installation only if you are certain 
+that the installer is from a trustworthy source.</b></p>
+<p>Click <b>Yes</b> to proceed with the installation, or <b>No</b> to abort it.
+</p>
+"""
+
+msg_rejected_install = """
+<p><b>The corpus installer '{corpus}' may be a security risk.</b></p>
+<p>The Coquery website stores validation codes for all corpus installers that 
+have passed a security screening. During this screening, the installer code is 
+manually scanned for instructions that may be harmful to your computer, 
+software, or privacy.</p>
+<p>The corpus installer '{corpus}' has been <b>rejected</b> during this 
+screening process. This means that the Coquery maintainers considered the 
+installer to be potentially harmful. Please note that 
+the Coquery maintainers cannot be held liable for damages arising out of the
+use of this installer. See Section 16 of the 
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+</a> for details.</p>
+<p><b>You are strongly advised not to continue with the installation of this 
+corpus.</b></p>
+<p>If you with to ignore this warning, click <b>Yes</b> to continue with the 
+istallation. Click <b>No</b> if you wish to abort the installation of this
+corpus.</p>
+"""
+
 msg_corpus_broken = """
 <p><b>An error occurred while reading the installer '{name}'</b></p>
 <p>The corpus installer stored in the file {name} could not be read. Most 
@@ -188,8 +297,13 @@ available for further queries before you install it again.</p>
 <p>Removing '{corpus}' will free approximately {size:.1S} of disk space.</p>
 <p>Do you really want to remove the corpus?</p>"""
 msg_remove_corpus_error = """
-"<p><b>An error occurred while deleting the corpus database:</b></p>
-<p>{code}</p>"""
+<p><b>A database error occurred while deleting the corpus '{corpus}'.</b></p>
+<p>The corpus was <b>not</b> removed.</p>
+<p>The database connection returned the following error message:</p>
+<p><code>{code}</code></p>
+<p>Please verify that the MySQL privileges for the current user allow you to
+delete databases.</p>
+"""
 msg_remove_corpus_disk_error = """
 <p><b>A disk error occurred while deleting the corpus database.</b></p>
 <p>Please try removing the corpus another time. If the problem persists, 
@@ -200,8 +314,8 @@ msg_unsaved_data = """
 <p>If you quit now, they will be lost.</p>
 <p>Do you really want to quit?</p>"""
 msg_no_corpus = """
-Coquery could not find a corpus module. Without a corpus module, you cannot 
-run any query."""
+<p>Coquery could not find a corpus module. Without a corpus module, you cannot 
+run any query.</p>"""
 msg_details = """
 <p>To build a new corpus module from a selection of text files, select 
 <b>Build new corpus...</b> from the Corpus menu.</p>
@@ -231,6 +345,7 @@ class FileSize(long):
         if val < 1:
             # Can't take log(0) in any base.
             i, v = 0, 0
+            exp = 0
         else:
             exp = int(math.log(val,1024))+1
             v = val / math.pow(1024, exp)

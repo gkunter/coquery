@@ -2,9 +2,9 @@
 """
 renamecolumn.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
@@ -12,16 +12,13 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyqt_compat import QtCore, QtGui
-
 import sys
 import re
-import renameColumnUi
 
-try:
-    import options
-except ImportError:
-    pass
+from pyqt_compat import QtCore, QtGui
+from renameColumnUi import Ui_Dialog
+
+import options
 
 def func_regexp(x, s):
     match = re.search("({})".format(s), x)
@@ -42,7 +39,7 @@ class RenameColumnDialog(QtGui.QDialog):
         
         super(RenameColumnDialog, self).__init__(parent)
 
-        self.ui = renameColumnUi.Ui_Dialog()
+        self.ui = Ui_Dialog()
         self.ui.setupUi(self)
 
 
@@ -53,18 +50,18 @@ class RenameColumnDialog(QtGui.QDialog):
         self.ui.edit_column_name.setText(current_name)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Reset).clicked.connect(
             lambda x: self.ui.edit_column_name.setText(header_name))
+        try:
+            self.resize(options.settings.value("renamecolumn_size"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("renamecolumn_size", self.size())
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
             
-    def closeEvent(self, *args):
-        try:
-            options.cfg.rename_column_height = self.height()
-            options.cfg.rename_column_width = self.width()        
-        except NameError:
-            pass
-        
     @staticmethod
     def get_name(header, name, parent=None):
         

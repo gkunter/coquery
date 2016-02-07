@@ -1,74 +1,47 @@
 # -*- coding: utf-8 -*-
+
+"""
+coq_install_generic.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
+
+#try:
+    #import chardet
+#except ImportError:
+    #warnings.warn("The Python library 'chardet' is not available. The encoding of the input text files cannot be determined automatically.")
+    #warnings.warn("Using default Unicode encoding 'utf-8'.")
+
 from corpusbuilder import *
 
-class GenericCorpusBuilder(BaseCorpusBuilder):
-    def __init__(self, gui=False):
-        # all corpus builders have to call the inherited __init__ function:
-        super(GenericCorpusBuilder, self).__init__(gui)
-        
-        # specify which features are provided by this corpus and lexicon:
-        self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
-        self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS"]
-        
-        self.documentation_url = "(no URL availabe)"
+class BuilderClass(BaseCorpusBuilder):
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word_id = "WordId"
+    corpus_file_id = "FileId"
+    word_table = "Lexicon"
+    word_id = "WordId"
+    word_lemma = "Lemma"
+    word_label = "Word"
+    file_table = "Files"
+    file_id = "FileId"
+    file_name = "Filename"
+    file_path = "Path"
 
-        # add table descriptions for the tables used in this database.
-        #
-        # Every table has a primary key that uniquely identifies each entry
-        # in the table. This primary key is used to link an entry from one
-        # table to an entry from another table. The name of the primary key
-        # stored in a string is given as the second argument to the function
-        # add_table_description().
-        #
-        # A table description is a dictionary with at least a 'CREATE' key
-        # which takes a list of strings as its value. Each of these strings
-        # represents a MySQL instruction that is used to create the table.
-        # Typically, this instruction is a column specification, but you can
-        # also add other table options for this table. Note that the primary
-        # key cannot be set manually.
-        # 
-        # Additionaly, the table description can have an 'INDEX' key which
-        # takes a list of tuples as its value. Each tuple has three 
-        # elements. The first element is a list of strings containing the
-        # column names that are to be indexed. The second element is an
-        # integer value specifying the index length for columns of Text
-        # types. The third element specifies the index type (e.g. 'HASH' or
-        # 'BTREE'). Note that not all MySQL storage engines support all 
-        # index types.
-        
-        # Add the main corpus table. Each row in this table represents a 
-        # token in the corpus. It has the following columns:
-        # 
-        # TokenId
-        # An int value containing the unique identifier of the token
-        #
-        # WordId
-        # An int value containing the unique identifier of the lexicon
-        # entry associated with this token.
-        #
-        # FileId
-        # An int value containing the unique identifier of the data file 
-        # that contains this token.
-        
-        self.corpus_table = "corpus"
-        self.corpus_id = "TokenId"
-        self.corpus_word_id = "WordId"
-        self.corpus_file_id = "FileId"
-        
-        self.add_table_description(self.corpus_table, self.corpus_id,
-            {"CREATE": [
-                "`{}` BIGINT(20) UNSIGNED NOT NULL".format(self.corpus_id),
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_word_id),
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.corpus_file_id)],
-            "INDEX": [
-                ([self.corpus_word_id], 0, "HASH"),
-                ([self.corpus_file_id], 0, "HASH")]})
-        
+    def __init__(self, gui=False, pos=True):
+        # all corpus builders have to call the inherited __init__ function:
+        super(BuilderClass, self).__init__(gui)
+
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
         #
-        # WordId
+        # WordId (Primary)
         # An int value containing the unique identifier of this word-form.
         #
         # LemmaId
@@ -85,29 +58,18 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
         # A text value containing the part-of-speech label of this 
         # word-form.
         
-        self.word_table = "word"
-        self.word_id = "WordId"
-        self.word_lemma = "Lemma"
-        self.word_label = "Text"
-        self.word_pos = "Pos"
-        
-        create_columns = ["`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.word_id),
-                "`{}` VARCHAR(40) NOT NULL".format(self.word_lemma),
-                "`{}` VARCHAR(12) NOT NULL".format(self.word_pos),
-                "`{}` VARCHAR(40) NOT NULL".format(self.word_label)]
-        index_columns = [([self.word_lemma], 0, "HASH"),
-                ([self.word_pos], 0, "BTREE"),
-                ([self.word_label], 0, "BTREE")]
-
-        self.add_table_description(self.word_table, self.word_id,
-            {"CREATE": create_columns,
-            "INDEX": index_columns})
-            
-        self.create_table_description(self.word_table,
-            [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-            Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
-            Column(self.word_pos, "VARCHAR(12) NOT NULL"),
-            Column(self.word_label, "VARCHAR(40) NOT NULL")])
+        if pos:
+            self.word_pos = "POS"
+            self.create_table_description(self.word_table,
+                [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+                Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
+                Column(self.word_pos, "VARCHAR(12) NOT NULL"),
+                Column(self.word_label, "VARCHAR(40) NOT NULL")])
+        else:
+            self.create_table_description(self.word_table,
+                [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+                Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
+                Column(self.word_label, "VARCHAR(40) NOT NULL")])
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
@@ -115,7 +77,7 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
         # more than one token may be linked to each file in this table.
         # The table contains the following columns:
         #
-        # FileId
+        # FileId (Primary)
         # An int value containing the unique identifier of this file.
         # 
         # File 
@@ -123,33 +85,38 @@ class GenericCorpusBuilder(BaseCorpusBuilder):
         # 
         # Path
         # A text value containing the path that points to this data file.
-        
-        self.file_table = "file"
-        self.file_id = "FileId"
-        self.file_name = "File"
-        self.file_path = "Path"
-        
-        self.add_table_description(self.file_table, self.file_id,
-            {"CREATE": [
-                "`{}` MEDIUMINT(7) UNSIGNED NOT NULL".format(self.file_id),
-                "`{}` TINYTEXT NOT NULL".format(self.file_name),
-                "`{}` TINYTEXT NOT NULL".format(self.file_path)]})
 
         self.create_table_description(self.file_table,
             [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
             Column(self.file_name, "TINYTEXT NOT NULL"),
             Column(self.file_path, "TINYTEXT NOT NULL")])
 
+        # Add the main corpus table. Each row in this table represents a 
+        # token in the corpus. It has the following columns:
+        # 
+        # TokenId (Primary)
+        # An int value containing the unique identifier of the token
+        #
+        # WordId
+        # An int value containing the unique identifier of the lexicon
+        # entry associated with this token.
+        #
+        # FileId
+        # An int value containing the unique identifier of the data file 
+        # that contains this token.
+        
         self.create_table_description(self.corpus_table,
             [Primary(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table)])
 
-    def get_description(self):
-        return "This script creates the corpus '{}' by reading data from the files in {} to populate the MySQL database '{}' so that the database can be queried by Coquery.".format(self.name, self.arguments.path, self.arguments.db_name)
+    @staticmethod
+    def validate_files(l):
+        if len(l) == 0:
+            raise RuntimeError("<p>No file could be found in the selected directory.</p> ")
 
 def main():
-    GenericCorpusBuilder().build()
+    BuilderClass().build()
     
 if __name__ == "__main__":
     main()

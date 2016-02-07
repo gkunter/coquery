@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
-
 """
 csvOptions.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from pyqt_compat import QtGui, QtCore
-import csvOptionsUi
 import sys
 import pandas as pd
 import numpy as np
 
+from pyqt_compat import QtGui, QtCore
+from ui.csvOptionsUi import Ui_FileOptions
+
 from errors import *
+import options
 
 class MyTableModel(QtCore.QAbstractTableModel):
 
@@ -68,7 +69,7 @@ class CSVOptions(QtGui.QDialog):
         
         self.file_content = None
         
-        self.ui = csvOptionsUi.Ui_FileOptions()
+        self.ui = Ui_FileOptions()
         self.ui.setupUi(self)
         
         for x in quote_chars:
@@ -101,6 +102,14 @@ class CSVOptions(QtGui.QDialog):
         self.ui.FilePreviewArea.clicked.connect(self.click_column)
 
         self.set_new_separator()
+
+        try:
+            self.resize(options.settings.value("csvoptions_size"))
+        except TypeError:
+            pass
+
+    def closeEvent(self, event):
+        options.settings.setValue("csvoptions_size", self.size())
         
     @staticmethod
     def getOptions(path, default=None, parent=None, icon=None):

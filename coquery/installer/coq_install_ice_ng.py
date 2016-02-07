@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-
 """
 coq_install_ice_ng.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
@@ -23,26 +22,26 @@ from corpusbuilder import *
 from bibliography import *
 
 class corpus_code():
-    def get_tag_translate(self, tag):
-        translate_dict = {
-            "p": "p",
-            "punctuation": "",
-            "heading": "h1",
-            "boldface": "b",
-            "italics": "i",
-            "underline": "u",
-            "superscript": "sup",
-            "subscript": "sup",
-            "text": "html", 
-            "deleted": "s",
-            "other-language": "span style='font-style: italic;'",
-            "quote": "span style='font-style: italic; color: darkgrey; '",
-            "error": "s"}
-        if tag in translate_dict:
-            return translate_dict[tag]
-        else:
-            print("unsupported tag: ", tag)
-            return tag
+    #def get_tag_translate(self, tag):
+        #translate_dict = {
+            #"p": "p",
+            #"punctuation": "",
+            #"heading": "h1",
+            #"boldface": "b",
+            #"italics": "i",
+            #"underline": "u",
+            #"superscript": "sup",
+            #"subscript": "sup",
+            #"text": "html", 
+            #"deleted": "s",
+            #"other-language": "span style='font-style: italic;'",
+            #"quote": "span style='font-style: italic; color: darkgrey; '",
+            #"error": "s"}
+        #if tag in translate_dict:
+            #return translate_dict[tag]
+        #else:
+            #print("unsupported tag: ", tag)
+            #return tag
 
     def renderer_open_element(self, tag, attributes):
         context = super(Corpus, self).renderer_open_element(tag, attributes)
@@ -62,7 +61,6 @@ class corpus_code():
             except KeyError:
                 pass
             context.append(' <span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span> '.format(anon_type))
-
 
         return context
 
@@ -210,20 +208,20 @@ class corpus_code():
 
         #widget.ui.context_area.setText(collapse_words(context))
 
-class ICENigeriaBuilder(BaseCorpusBuilder):
+class BuilderClass(BaseCorpusBuilder):
     encoding = "latin-1"
     file_filter = "*.xml.pos"
 
     corpus_table = "Corpus"
-    corpus_id = "TokenId"
+    corpus_id = "ID"
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
     corpus_source_id = "SourceId"
 
-    word_table = "Word"
+    word_table = "Lexicon"
     word_id = "WordId"
     word_lemma = "Lemma"
-    word_label = "Text"
+    word_label = "Word"
     word_pos = "Pos"
 
     file_table = "File"
@@ -242,6 +240,178 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
     source_icetextcode = "ICE_text_code"
     source_place = "Place"
 
+    expected_files = [
+        'Pr_58.xml.pos', 'Pr_20.xml.pos', 'Pr_25.xml.pos', 
+        'Pr_39.xml.pos', 'Pr_69.xml.pos', 'Pr_59.xml.pos', 
+        'Pr_52.xml.pos', 'Pr_21.xml.pos', 'Pr_42.xml.pos', 
+        'Pr_30.xml.pos', 'Pr_19.xml.pos', 'Pr_53.xml.pos', 
+        'Pr_17.xml.pos', 'Pr_14.xml.pos', 'Pr_43.xml.pos', 
+        'Pr_33.xml.pos', 'Pr_08.xml.pos', 'Pr_22.xml.pos', 
+        'Pr_05.xml.pos', 'Pr_57.xml.pos', 'Pr_26.xml.pos', 
+        'Pr_50.xml.pos', 'Pr_10.xml.pos', 'Pr_67.xml.pos', 
+        'Pr_01.xml.pos', 'Pr_44.xml.pos', 'Pr_27.xml.pos', 
+        'Pr_56.xml.pos', 'Pr_51.xml.pos', 'Pr_62.xml.pos', 
+        'Pr_48.xml.pos', 'Pr_13.xml.pos', 'Pr_49.xml.pos', 
+        'Pr_16.xml.pos', 'Pr_06.xml.pos', 'Pr_35.xml.pos', 
+        'Pr_32.xml.pos', 'Pr_63.xml.pos', 'Pr_36.xml.pos', 
+        'Pr_47.xml.pos', 'Pr_66.xml.pos', 'Pr_31.xml.pos', 
+        'Pr_64.xml.pos', 'Pr_68.xml.pos', 'Pr_12.xml.pos', 
+        'Pr_07.xml.pos', 'Pr_24.xml.pos', 'Pr_38.xml.pos', 
+        'Pr_37.xml.pos', 'Pr_29.xml.pos', 'Pr_02.xml.pos', 
+        'Pr_11.xml.pos', 'Pr_46.xml.pos', 'Pr_28.xml.pos', 
+        'Pr_65.xml.pos', 'Pr_18.xml.pos', 'Pr_61.xml.pos', 
+        'Pr_04.xml.pos', 'Pr_09.xml.pos', 'Pr_60.xml.pos', 
+        'Pr_34.xml.pos', 'Pr_45.xml.pos', 'Pr_23.xml.pos', 
+        'Pr_41.xml.pos', 'Pr_40.xml.pos', 'Pr_03.xml.pos', 
+        'Pr_54.xml.pos', 'Pr_15.xml.pos', 'Pr_55.xml.pos', 
+        'PNsc_13.xml.pos', 'PNsc_04.xml.pos', 'PNsc_09.xml.pos', 
+        'PNsc_01.xml.pos', 'PNsc_05.xml.pos', 'PNsc_02.xml.pos', 
+        'PNsc_14.xml.pos', 'PNsc_11.xml.pos', 'PNsc_06.xml.pos', 
+        'PNsc_18.xml.pos', 'PNsc_15.xml.pos', 'PNsc_16.xml.pos', 
+        'PNsc_19.xml.pos', 'PNsc_10.xml.pos', 'PNsc_12.xml.pos', 
+        'PNsc_07.xml.pos', 'PNsc_03.xml.pos', 'PNsc_17.xml.pos', 
+        'PNsc_08.xml.pos', 'PHum_09.xml.pos', 'PHum_12.xml.pos', 
+        'PHum_08.xml.pos', 'PHum_01.xml.pos', 'PHum_20.xml.pos', 
+        'PHum_02.xml.pos', 'PHum_06.xml.pos', 'PHum_14.xml.pos', 
+        'PHum_11.xml.pos', 'PHum_15.xml.pos', 'PHum_16.xml.pos', 
+        'PHum_10.xml.pos', 'PHum_05.xml.pos', 'PHum_18.xml.pos', 
+        'PHum_13.xml.pos', 'PHum_04.xml.pos', 'PHum_03.xml.pos', 
+        'PHum_07.xml.pos', 'PHum_17.xml.pos', 'PHum_19.xml.pos', 
+        'ASsc_05.xml.pos', 'ASsc_11.xml.pos', 'ASsc_06.xml.pos', 
+        'ASsc_07.xml.pos', 'ASsc_10.xml.pos', 'ASsc_08.xml.pos', 
+        'ASsc_04.xml.pos', 'ASsc_02.xml.pos', 'ASsc_03.xml.pos', 
+        'ASsc_01.xml.pos', 'ASsc_09.xml.pos', 'ess_10.xml.pos', 
+        'ess_09.xml.pos', 'ess_06.xml.pos', 'ess_01.xml.pos', 
+        'ess_07.xml.pos', 'ess_05.xml.pos', 'ess_11.xml.pos', 
+        'ess_03.xml.pos', 'ess_12.xml.pos', 'ess_02.xml.pos', 
+        'ess_04.xml.pos', 'ess_08.xml.pos', 'nov_14.xml.pos', 
+        'nov_03.xml.pos', 'nov_07.xml.pos', 'nov_04.xml.pos', 
+        'nov_15.xml.pos', 'nov_13.xml.pos', 'nov_05.xml.pos', 
+        'nov_16.xml.pos', 'nov_11.xml.pos', 'nov_20.xml.pos', 
+        'nov_06.xml.pos', 'nov_02.xml.pos', 'nov_01.xml.pos', 
+        'nov_08.xml.pos', 'nov_09.xml.pos', 'nov_19.xml.pos', 
+        'nov_12.xml.pos', 'nov_10.xml.pos', 'nov_18.xml.pos', 
+        'nov_17.xml.pos', 'bl_28.xml.pos', 'bl_60.xml.pos', 
+        'bl_15.xml.pos', 'bl_30.xml.pos', 'bl_20.xml.pos', 
+        'bl_43.xml.pos', 'bl_70.xml.pos', 'bl_83.xml.pos', 
+        'bl_33.xml.pos', 'bl_38.xml.pos', 'bl_54.xml.pos', 
+        'bl_23.xml.pos', 'bl_88.xml.pos', 'bl_74.xml.pos', 
+        'bl_82.xml.pos', 'bl_48.xml.pos', 'bl_14.xml.pos', 
+        'bl_85.xml.pos', 'bl_59.xml.pos', 'bl_80.xml.pos', 
+        'bl_36.xml.pos', 'bl_05.xml.pos', 'bl_03.xml.pos', 
+        'bl_22.xml.pos', 'bl_61.xml.pos', 'bl_90.xml.pos', 
+        'bl_73.xml.pos', 'bl_67.xml.pos', 'bl_53.xml.pos', 
+        'bl_69.xml.pos', 'bl_01.xml.pos', 'bl_64.xml.pos', 
+        'bl_91.xml.pos', 'bl_24.xml.pos', 'bl_52.xml.pos', 
+        'bl_93.xml.pos', 'bl_81.xml.pos', 'bl_26.xml.pos', 
+        'bl_18.xml.pos', 'bl_39.xml.pos', 'bl_77.xml.pos', 
+        'bl_86.xml.pos', 'bl_46.xml.pos', 'bl_27.xml.pos', 
+        'bl_42.xml.pos', 'bl_11.xml.pos', 'bl_09.xml.pos', 
+        'bl_50.xml.pos', 'bl_35.xml.pos', 'bl_21.xml.pos', 
+        'bl_16.xml.pos', 'bl_56.xml.pos', 'bl_87.xml.pos', 
+        'bl_45.xml.pos', 'bl_34.xml.pos', 'bl_92.xml.pos', 
+        'bl_68.xml.pos', 'bl_62.xml.pos', 'bl_25.xml.pos', 
+        'bl_58.xml.pos', 'bl_79.xml.pos', 'bl_41.xml.pos', 
+        'bl_72.xml.pos', 'bl_19.xml.pos', 'bl_12.xml.pos', 
+        'bl_75.xml.pos', 'bl_65.xml.pos', 'bl_08.xml.pos', 
+        'bl_89.xml.pos', 'bl_07.xml.pos', 'bl_78.xml.pos', 
+        'bl_32.xml.pos', 'bl_47.xml.pos', 'bl_55.xml.pos', 
+        'bl_10.xml.pos', 'bl_51.xml.pos', 'bl_76.xml.pos', 
+        'bl_06.xml.pos', 'bl_66.xml.pos', 'bl_13.xml.pos', 
+        'bl_49.xml.pos', 'bl_71.xml.pos', 'bl_44.xml.pos', 
+        'bl_63.xml.pos', 'bl_84.xml.pos', 'bl_02.xml.pos', 
+        'bl_37.xml.pos', 'bl_17.xml.pos', 'bl_40.xml.pos', 
+        'bl_57.xml.pos', 'bl_04.xml.pos', 'bl_31.xml.pos', 
+        'bl_29.xml.pos', 'ATec_05.xml.pos', 'ATec_06.xml.pos', 
+        'ATec_02.xml.pos', 'ATec_07.xml.pos', 'ATec_10.xml.pos', 
+        'ATec_04.xml.pos', 'ATec_01.xml.pos', 'ATec_11.xml.pos', 
+        'ATec_08.xml.pos', 'ATec_03.xml.pos', 'ATec_09.xml.pos', 
+        'PSsc_06.xml.pos', 'PSsc_09.xml.pos', 'PSsc_03.xml.pos', 
+        'PSsc_05.xml.pos', 'PSsc_01.xml.pos', 'PSsc_12.xml.pos', 
+        'PSsc_14.xml.pos', 'PSsc_04.xml.pos', 'PSsc_15.xml.pos', 
+        'PSsc_13.xml.pos', 'PSsc_11.xml.pos', 'PSsc_08.xml.pos', 
+        'PSsc_07.xml.pos', 'PSsc_02.xml.pos', 'PSsc_10.xml.pos', 
+        'SkHo_14.xml.pos', 'SkHo_12.xml.pos', 'SkHo_24.xml.pos', 
+        'SkHo_18.xml.pos', 'SkHo_02.xml.pos', 'SkHo_10.xml.pos', 
+        'SkHo_01.xml.pos', 'SkHo_04.xml.pos', 'SkHo_09.xml.pos', 
+        'SkHo_17.xml.pos', 'SkHo_15.xml.pos', 'SkHo_22.xml.pos', 
+        'SkHo_03.xml.pos', 'SkHo_06.xml.pos', 'SkHo_16.xml.pos', 
+        'SkHo_11.xml.pos', 'SkHo_20.xml.pos', 'SkHo_07.xml.pos', 
+        'SkHo_25.xml.pos', 'SkHo_13.xml.pos', 'SkHo_23.xml.pos', 
+        'SkHo_05.xml.pos', 'SkHo_08.xml.pos', 'SkHo_19.xml.pos', 
+        'SkHo_21.xml.pos', 'sl_38.xml.pos', 'sl_09.xml.pos', 
+        'sl_46.xml.pos', 'sl_17.xml.pos', 'sl_15.xml.pos', 
+        'sl_27.xml.pos', 'sl_41.doc.xml.pos', 'sl_23.xml.pos', 
+        'sl_26.xml.pos', 'sl_39.doc.xml.pos', 'sl_32.xml.pos', 
+        'sl_04.xml.pos', 'sl_47.xml.pos', 'sl_18.xml.pos', 
+        'sl_01.xml.pos', 'sl_19.xml.pos', 'sl_30.xml.pos', 
+        'sl_43.xml.pos', 'sl_33.xml.pos', 'sl_06.xml.pos', 
+        'sl_08.xml.pos', 'sl_29.xml.pos', 'sl_03.xml.pos', 
+        'sl_36.xml.pos', 'sl_28.xml.pos', 'sl_35.xml.pos', 
+        'sl_13.xml.pos', 'sl_34.xml.pos', 'sl_24.xml.pos', 
+        'sl_16.xml.pos', 'sl_44.xml.pos', 'sl_10.xml.pos', 
+        'sl_45.xml.pos', 'sl_05.xml.pos', 'sl_14.xml.pos', 
+        'sl_07.xml.pos', 'sl_22.xml.pos', 'sl_25.xml.pos', 
+        'sl_11.xml.pos', 'sl_40.doc.xml.pos', 'sl_12.xml.pos', 
+        'sl_42.xml.pos', 'sl_02.xml.pos', 'sl_20.xml.pos', 
+        'sl_21.xml.pos', 'sl_48.xml.pos', 'sl_37.xml.pos', 
+        'sl_31.xml.pos', 'ANsc_11.xml.pos', 'ANsc_06.xml.pos', 
+        'ANsc_03.xml.pos', 'ANsc_08.xml.pos', 'ANsc_02.xml.pos', 
+        'ANsc_01.xml.pos', 'ANsc_10.xml.pos', 'ANsc_09.xml.pos', 
+        'ANsc_07.xml.pos', 'ANsc_05.xml.pos', 'ANsc_04.xml.pos', 
+        'AHum_10.xml.pos', 'AHum_02.xml.pos', 'AHum_09.xml.pos', 
+        'AHum_07.xml.pos', 'AHum_04.xml.pos', 'AHum_05.xml.pos', 
+        'AHum_11.xml.pos', 'AHum_08.xml.pos', 'AHum_06.xml.pos', 
+        'AHum_01.xml.pos', 'AHum_03.xml.pos', 'ex_30.xml.pos', 
+        'ex_26.xml.pos', 'ex_29.xml.pos', 'ex_33.xml.pos', 
+        'ex_13.xml.pos', 'ex_08.xml.pos', 'ex_02.xml.pos', 
+        'ex_54.xml.pos', 'ex_10.xml.pos', 'ex_35.xml.pos', 
+        'ex_40.xml.pos', 'ex_50.xml.pos', 'ex_42.xml.pos', 
+        'ex_46.xml.pos', 'ex_28.xml.pos', 'ex_16.xml.pos', 
+        'ex_34.xml.pos', 'ex_31.xml.pos', 'ex_21.xml.pos', 
+        'ex_14.xml.pos', 'ex_19.xml.pos', 'ex_23.xml.pos', 
+        'ex_47.xml.pos', 'ex_20.xml.pos', 'ex_25.xml.pos', 
+        'ex_43.xml.pos', 'ex_11.xml.pos', 'ex_39.xml.pos', 
+        'ex_17.xml.pos', 'ex_01.xml.pos', 'ex_15.xml.pos', 
+        'ex_37.xml.pos', 'ex_38.xml.pos', 'ex_41.xml.pos', 
+        'ex_05.xml.pos', 'ex_24.xml.pos', 'ex_44.xml.pos', 
+        'ex_49.xml.pos', 'ex_27.xml.pos', 'ex_06.xml.pos', 
+        'ex_51.xml.pos', 'ex_48.xml.pos', 'ex_09.xml.pos', 
+        'ex_53.xml.pos', 'ex_04.xml.pos', 'ex_07.xml.pos', 
+        'ex_22.xml.pos', 'ex_18.xml.pos', 'ex_52.xml.pos', 
+        'ex_36.xml.pos', 'ex_32.xml.pos', 'ex_03.xml.pos', 
+        'ex_12.xml.pos', 'ex_45.xml.pos', 'PTec_22.xml.pos', 
+        'PTec_19.xml.pos', 'PTec_31.xml.pos', 'PTec_16.xml.pos', 
+        'PTec_01.xml.pos', 'PTec_33.xml.pos', 'PTec_06.xml.pos', 
+        'PTec_13.xml.pos', 'PTec_02.xml.pos', 'PTec_15.xml.pos', 
+        'PTec_12.xml.pos', 'PTec_26.xml.pos', 'PTec_29.xml.pos', 
+        'PTec_27.xml.pos', 'PTec_10.xml.pos', 'PTec_32.xml.pos', 
+        'PTec_14.xml.pos', 'PTec_24.xml.pos', 'PTec_08.xml.pos', 
+        'PTec_07.xml.pos', 'PTec_21.xml.pos', 'PTec_11.xml.pos', 
+        'PTec_17.xml.pos', 'PTec_04.xml.pos', 'PTec_03.xml.pos', 
+        'PTec_09.xml.pos', 'PTec_30.xml.pos', 'PTec_23.xml.pos', 
+        'PTec_20.xml.pos', 'PTec_25.xml.pos', 'PTec_28.xml.pos', 
+        'PTec_18.xml.pos', 'PTec_05.xml.pos', 'adm_30.png.xml.pos', 
+        'adm_26.xml.pos', 'adm_18.xml.pos', 'adm_04.xml.pos', 
+        'adm_09.xml.pos', 'adm_15.xml.pos', 'adm_17.xml.pos', 
+        'adm_28.png.xml.pos', 'adm_13.xml.pos', 'adm_07.xml.pos', 
+        'adm_20.xml.pos', 'adm_21.xml.pos', 'adm_02.xml.pos', 
+        'adm_23.xml.pos', 'adm_06.xml.pos', 'adm_01.xml.pos', 
+        'adm_12.xml.pos', 'adm_25.xml.pos', 'adm_24.xml.pos', 
+        'adm_19.xml.pos', 'adm_16.xml.pos', 'adm_08.xml.pos', 
+        'adm_03.xml.pos', 'adm_14.xml.pos', 'adm_22.xml.pos', 
+        'adm_27.xml.pos', 'adm_05.xml.pos', 'adm_29.png.xml.pos', 
+        'adm_11.xml.pos', 'adm_10.xml.pos', 'ed_16.xml.pos', 
+        'ed_14.xml.pos', 'ed_06.xml.pos', 'ed_25.xml.pos', 
+        'ed_11.xml.pos', 'ed_02.xml.pos', 'ed_20.xml.pos', 
+        'ed_17.xml.pos', 'ed_09.xml.pos', 'ed_26.xml.pos', 
+        'ed_15.xml.pos', 'ed_18.xml.pos', 'ed_22.xml.pos', 
+        'ed_01.xml.pos', 'ed_23.xml.pos', 'ed_10.xml.pos', 
+        'ed_19.xml.pos', 'ed_28.xml.pos', 'ed_27.xml.pos', 
+        'ed_04.xml.pos', 'ed_12.xml.pos', 'ed_13.xml.pos', 
+        'ed_05.xml.pos', 'ed_24.xml.pos', 'ed_21.xml.pos', 
+        'ed_07.xml.pos', 'ed_08.xml.pos', 'ed_03.xml.pos'] 
+
     def __init__(self, gui=False, *args):
         """
         Initialize the corpus builder.
@@ -257,7 +427,7 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             True if the graphical installer is used, and False if the 
             installer runs on the console.
         """
-        super(ICENigeriaBuilder, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui, *args)
 
         # specify which features are provided by this corpus and lexicon:
         #self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
@@ -406,24 +576,29 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
         self._corpus_code = corpus_code
         
 
-    def xml_preprocess_tag(self, element):
-        self.tag_next_token(element.tag, element.attrib)
-        #if element.text or list(element):
-            #self.tag_next_token(element.tag, element.attrib)
-        #else:
-            #self.add_empty_tag(element.tag, element.attrib)
-            #if element.tag == "x-anonym-x":
-                ## ICE-NG contains anonymized labels for names, placenames,
-                ## and other nouns. Insert a special label in that case:
-                #self._word_id = self.table_get(self.word_table, 
-                        #{self.word_label: "ANONYMIZED", 
-                        #self.word_lemma: "ANONYMIZED", 
-                        #self.word_pos: "np"}, case=True)
+    #def xml_preprocess_tag(self, element):
+        #self.tag_token(self._corpus_id, element.tag, element.attrib, op=True)
+        ##self.tag_next_token(element.tag, element.attrib)
+        ##if element.text or list(element):
+            ##self.tag_next_token(element.tag, element.attrib)
+        ##else:
+            ##self.add_empty_tag(element.tag, element.attrib)
+            ##if element.tag == "x-anonym-x":
+                ### ICE-NG contains anonymized labels for names, placenames,
+                ### and other nouns. Insert a special label in that case:
+                ##self._word_id = self.table_get(self.word_table, 
+                        ##{self.word_label: "ANONYMIZED", 
+                        ##self.word_lemma: "ANONYMIZED", 
+                        ##self.word_pos: "np"}, case=True)
 
-    def xml_postprocess_tag(self, element):
-        # mon-empty tag
-        #if element.text or list(element):
-            self.tag_last_token(element.tag, element.attrib)
+    #def xml_postprocess_tag(self, element, this_id):
+        #if element.tag == "x-anonym-x":
+            #print(this_id, "closing")
+            #assert this_id == self._last_opened, self._current_file
+        #self.tag_token(this_id, element.tag, element.attrib, cl=True)
+        ## mon-empty tag
+        ##if element.text or list(element):
+            ##self.tag_last_token(element.tag, element.attrib)
 
     def process_text(self, text):
         for row in text.splitlines():
@@ -432,8 +607,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             except ValueError:
                 pass
             else:
-                self._value_word_label = ICENigeriaBuilder._replace_encoding_errors(self._value_word_label)
-                self._value_word_lemma = ICENigeriaBuilder._replace_encoding_errors(self._value_word_lemma)
+                self._value_word_label = self._replace_encoding_errors(self._value_word_label)
+                self._value_word_lemma = self._replace_encoding_errors(self._value_word_lemma)
                 new_sentence = False
                 
                 if self._value_word_pos == "CD":
@@ -738,8 +913,8 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             The input string with known encoding errors fixed.
         """
         
-        # apparently, tje character sequence â marks any faulty encoding,
-        # and the next character is the actual encoding error. The probelm
+        # apparently, the character sequence â marks any faulty encoding,
+        # and the next character is the actual encoding error. The problem
         # is that in ICE_NG, this three-character sequence can be split up
         # into two 'words', e.g. for the dash in Pr_13.txt, line 36 
         # ('hereas others – notably top officials'). In Pr_13.xml.pos, this
@@ -781,6 +956,9 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
             ("Ã±", "ñ"),
 
             ("Ê€", "ʤ"),
+            
+            ("Î¼", "μ"),
+            ("â", "∆"),
             ]
         corrupt_replace_list = [
             ("", "’"),
@@ -802,6 +980,14 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
     def get_db_name():
         return "ice_ng"
 
+    @staticmethod
+    def get_language():
+        return "English"
+    
+    @staticmethod
+    def get_language_code():
+        return "en-NG"
+        
     @staticmethod
     def get_title():
         return "International Corpus of English – Nigeria"
@@ -830,191 +1016,5 @@ class ICENigeriaBuilder(BaseCorpusBuilder):
     def get_url():
         return "http://ice-corpora.net/ice/index.htm"
     
-    @staticmethod
-    def validate_files(l):
-        expected_files = [
-            'Pr_58.xml.pos', 'Pr_20.xml.pos', 'Pr_25.xml.pos', 
-            'Pr_39.xml.pos', 'Pr_69.xml.pos', 'Pr_59.xml.pos', 
-            'Pr_52.xml.pos', 'Pr_21.xml.pos', 'Pr_42.xml.pos', 
-            'Pr_30.xml.pos', 'Pr_19.xml.pos', 'Pr_53.xml.pos', 
-            'Pr_17.xml.pos', 'Pr_14.xml.pos', 'Pr_43.xml.pos', 
-            'Pr_33.xml.pos', 'Pr_08.xml.pos', 'Pr_22.xml.pos', 
-            'Pr_05.xml.pos', 'Pr_57.xml.pos', 'Pr_26.xml.pos', 
-            'Pr_50.xml.pos', 'Pr_10.xml.pos', 'Pr_67.xml.pos', 
-            'Pr_01.xml.pos', 'Pr_44.xml.pos', 'Pr_27.xml.pos', 
-            'Pr_56.xml.pos', 'Pr_51.xml.pos', 'Pr_62.xml.pos', 
-            'Pr_48.xml.pos', 'Pr_13.xml.pos', 'Pr_49.xml.pos', 
-            'Pr_16.xml.pos', 'Pr_06.xml.pos', 'Pr_35.xml.pos', 
-            'Pr_32.xml.pos', 'Pr_63.xml.pos', 'Pr_36.xml.pos', 
-            'Pr_47.xml.pos', 'Pr_66.xml.pos', 'Pr_31.xml.pos', 
-            'Pr_64.xml.pos', 'Pr_68.xml.pos', 'Pr_12.xml.pos', 
-            'Pr_07.xml.pos', 'Pr_24.xml.pos', 'Pr_38.xml.pos', 
-            'Pr_37.xml.pos', 'Pr_29.xml.pos', 'Pr_02.xml.pos', 
-            'Pr_11.xml.pos', 'Pr_46.xml.pos', 'Pr_28.xml.pos', 
-            'Pr_65.xml.pos', 'Pr_18.xml.pos', 'Pr_61.xml.pos', 
-            'Pr_04.xml.pos', 'Pr_09.xml.pos', 'Pr_60.xml.pos', 
-            'Pr_34.xml.pos', 'Pr_45.xml.pos', 'Pr_23.xml.pos', 
-            'Pr_41.xml.pos', 'Pr_40.xml.pos', 'Pr_03.xml.pos', 
-            'Pr_54.xml.pos', 'Pr_15.xml.pos', 'Pr_55.xml.pos', 
-            'PNsc_13.xml.pos', 'PNsc_04.xml.pos', 'PNsc_09.xml.pos', 
-            'PNsc_01.xml.pos', 'PNsc_05.xml.pos', 'PNsc_02.xml.pos', 
-            'PNsc_14.xml.pos', 'PNsc_11.xml.pos', 'PNsc_06.xml.pos', 
-            'PNsc_18.xml.pos', 'PNsc_15.xml.pos', 'PNsc_16.xml.pos', 
-            'PNsc_19.xml.pos', 'PNsc_10.xml.pos', 'PNsc_12.xml.pos', 
-            'PNsc_07.xml.pos', 'PNsc_03.xml.pos', 'PNsc_17.xml.pos', 
-            'PNsc_08.xml.pos', 'PHum_09.xml.pos', 'PHum_12.xml.pos', 
-            'PHum_08.xml.pos', 'PHum_01.xml.pos', 'PHum_20.xml.pos', 
-            'PHum_02.xml.pos', 'PHum_06.xml.pos', 'PHum_14.xml.pos', 
-            'PHum_11.xml.pos', 'PHum_15.xml.pos', 'PHum_16.xml.pos', 
-            'PHum_10.xml.pos', 'PHum_05.xml.pos', 'PHum_18.xml.pos', 
-            'PHum_13.xml.pos', 'PHum_04.xml.pos', 'PHum_03.xml.pos', 
-            'PHum_07.xml.pos', 'PHum_17.xml.pos', 'PHum_19.xml.pos', 
-            'ASsc_05.xml.pos', 'ASsc_11.xml.pos', 'ASsc_06.xml.pos', 
-            'ASsc_07.xml.pos', 'ASsc_10.xml.pos', 'ASsc_08.xml.pos', 
-            'ASsc_04.xml.pos', 'ASsc_02.xml.pos', 'ASsc_03.xml.pos', 
-            'ASsc_01.xml.pos', 'ASsc_09.xml.pos', 'ess_10.xml.pos', 
-            'ess_09.xml.pos', 'ess_06.xml.pos', 'ess_01.xml.pos', 
-            'ess_07.xml.pos', 'ess_05.xml.pos', 'ess_11.xml.pos', 
-            'ess_03.xml.pos', 'ess_12.xml.pos', 'ess_02.xml.pos', 
-            'ess_04.xml.pos', 'ess_08.xml.pos', 'nov_14.xml.pos', 
-            'nov_03.xml.pos', 'nov_07.xml.pos', 'nov_04.xml.pos', 
-            'nov_15.xml.pos', 'nov_13.xml.pos', 'Nov_05.xml.pos', 
-            'nov_16.xml.pos', 'nov_11.xml.pos', 'nov_20.xml.pos', 
-            'Nov_06.xml.pos', 'nov_02.xml.pos', 'nov_01.xml.pos', 
-            'nov_08.xml.pos', 'nov_09.xml.pos', 'nov_19.xml.pos', 
-            'nov_12.xml.pos', 'nov_10.xml.pos', 'nov_18.xml.pos', 
-            'nov_17.xml.pos', 'bl_28.xml.pos', 'bl_60.xml.pos', 
-            'bl_15.xml.pos', 'bl_30.xml.pos', 'bl_20.xml.pos', 
-            'bl_43.xml.pos', 'bl_70.xml.pos', 'bl_83.xml.pos', 
-            'bl_33.xml.pos', 'bl_38.xml.pos', 'bl_54.xml.pos', 
-            'bl_23.xml.pos', 'bl_88.xml.pos', 'bl_74.xml.pos', 
-            'bl_82.xml.pos', 'bl_48.xml.pos', 'bl_14.xml.pos', 
-            'bl_85.xml.pos', 'bl_59.xml.pos', 'bl_80.xml.pos', 
-            'bl_36.xml.pos', 'bl_05.xml.pos', 'bl_03.xml.pos', 
-            'bl_22.xml.pos', 'bl_61.xml.pos', 'bl_90.xml.pos', 
-            'bl_73.xml.pos', 'bl_67.xml.pos', 'bl_53.xml.pos', 
-            'bl_69.xml.pos', 'bl_01.xml.pos', 'bl_64.xml.pos', 
-            'bl_91.xml.pos', 'bl_24.xml.pos', 'bl_52.xml.pos', 
-            'bl_93.xml.pos', 'bl_81.xml.pos', 'bl_26.xml.pos', 
-            'bl_18.xml.pos', 'bl_39.xml.pos', 'bl_77.xml.pos', 
-            'bl_86.xml.pos', 'bl_46.xml.pos', 'bl_27.xml.pos', 
-            'bl_42.xml.pos', 'bl_11.xml.pos', 'bl_09.xml.pos', 
-            'bl_50.xml.pos', 'bl_35.xml.pos', 'bl_21.xml.pos', 
-            'bl_16.xml.pos', 'bl_56.xml.pos', 'bl_87.xml.pos', 
-            'bl_45.xml.pos', 'bl_34.xml.pos', 'bl_92.xml.pos', 
-            'bl_68.xml.pos', 'bl_62.xml.pos', 'bl_25.xml.pos', 
-            'bl_58.xml.pos', 'bl_79.xml.pos', 'bl_41.xml.pos', 
-            'bl_72.xml.pos', 'bl_19.xml.pos', 'bl_12.xml.pos', 
-            'bl_75.xml.pos', 'bl_65.xml.pos', 'bl_08.xml.pos', 
-            'bl_89.xml.pos', 'bl_07.xml.pos', 'bl_78.xml.pos', 
-            'bl_32.xml.pos', 'bl_47.xml.pos', 'bl_55.xml.pos', 
-            'bl_10.xml.pos', 'bl_51.xml.pos', 'bl_76.xml.pos', 
-            'bl_06.xml.pos', 'bl_66.xml.pos', 'bl_13.xml.pos', 
-            'bl_49.xml.pos', 'bl_71.xml.pos', 'bl_44.xml.pos', 
-            'bl_63.xml.pos', 'bl_84.xml.pos', 'bl_02.xml.pos', 
-            'bl_37.xml.pos', 'bl_17.xml.pos', 'bl_40.xml.pos', 
-            'bl_57.xml.pos', 'bl_04.xml.pos', 'bl_31.xml.pos', 
-            'bl_29.xml.pos', 'ATec_05.xml.pos', 'ATec_06.xml.pos', 
-            'ATec_02.xml.pos', 'ATec_07.xml.pos', 'ATec_10.xml.pos', 
-            'ATec_04.xml.pos', 'ATec_01.xml.pos', 'ATec_11.xml.pos', 
-            'ATec_08.xml.pos', 'ATec_03.xml.pos', 'ATec_09.xml.pos', 
-            'PSsc_06.xml.pos', 'PSsc_09.xml.pos', 'PSsc_03.xml.pos', 
-            'PSsc_05.xml.pos', 'PSsc_01.xml.pos', 'PSsc_12.xml.pos', 
-            'PSsc_14.xml.pos', 'PSsc_04.xml.pos', 'PSsc_15.xml.pos', 
-            'PSsc_13.xml.pos', 'PSsc_11.xml.pos', 'PSsc_08.xml.pos', 
-            'PSsc_07.xml.pos', 'PSsc_02.xml.pos', 'PSsc_10.xml.pos', 
-            'SkHo_14.xml.pos', 'SkHo_12.xml.pos', 'SkHo_24.xml.pos', 
-            'SkHo_18.xml.pos', 'SkHo_02.xml.pos', 'SkHo_10.xml.pos', 
-            'SkHo_01.xml.pos', 'SkHo_04.xml.pos', 'SkHo_09.xml.pos', 
-            'SkHo_17.xml.pos', 'SkHo_15.xml.pos', 'SkHo_22.xml.pos', 
-            'SkHo_03.xml.pos', 'SkHo_06.xml.pos', 'SkHo_16.xml.pos', 
-            'SkHo_11.xml.pos', 'SkHo_20.xml.pos', 'SkHo_07.xml.pos', 
-            'SkHo_25.xml.pos', 'SkHo_13.xml.pos', 'SkHo_23.xml.pos', 
-            'SkHo_05.xml.pos', 'SkHo_08.xml.pos', 'SkHo_19.xml.pos', 
-            'SkHo_21.xml.pos', 'sl_38.xml.pos', 'sl_09.xml.pos', 
-            'sl_46.xml.pos', 'sl_17.xml.pos', 'sl_15.xml.pos', 
-            'sl_27.xml.pos', 'sl_41.doc.xml.pos', 'sl_23.xml.pos', 
-            'sl_26.xml.pos', 'sl_39.doc.xml.pos', 'sl_32.xml.pos', 
-            'sl_04.xml.pos', 'sl_47.xml.pos', 'sl_18.xml.pos', 
-            'sl_01.xml.pos', 'sl_19.xml.pos', 'sl_30.xml.pos', 
-            'sl_43.xml.pos', 'sl_33.xml.pos', 'sl_06.xml.pos', 
-            'sl_08.xml.pos', 'sl_29.xml.pos', 'sl_03.xml.pos', 
-            'sl_36.xml.pos', 'sl_28.xml.pos', 'sl_35.xml.pos', 
-            'sl_13.xml.pos', 'sl_34.xml.pos', 'sl_24.xml.pos', 
-            'sl_16.xml.pos', 'sl_44.xml.pos', 'sl_10.xml.pos', 
-            'sl_45.xml.pos', 'sl_05.xml.pos', 'sl_14.xml.pos', 
-            'sl_07.xml.pos', 'sl_22.xml.pos', 'sl_25.xml.pos', 
-            'sl_11.xml.pos', 'sl_40.doc.xml.pos', 'sl_12.xml.pos', 
-            'sl_42.xml.pos', 'sl_02.xml.pos', 'sl_20.xml.pos', 
-            'sl_21.xml.pos', 'sl_48.xml.pos', 'sl_37.xml.pos', 
-            'sl_31.xml.pos', 'ANsc_11.xml.pos', 'ANsc_06.xml.pos', 
-            'ANsc_03.xml.pos', 'ANsc_08.xml.pos', 'ANsc_02.xml.pos', 
-            'ANsc_01.xml.pos', 'ANsc_10.xml.pos', 'ANsc_09.xml.pos', 
-            'ANsc_07.xml.pos', 'ANsc_05.xml.pos', 'ANsc_04.xml.pos', 
-            'AHum_10.xml.pos', 'AHum_02.xml.pos', 'AHum_09.xml.pos', 
-            'AHum_07.xml.pos', 'AHum_04.xml.pos', 'AHum_05.xml.pos', 
-            'AHum_11.xml.pos', 'AHum_08.xml.pos', 'AHum_06.xml.pos', 
-            'AHum_01.xml.pos', 'AHum_03.xml.pos', 'ex_30.xml.pos', 
-            'ex_26.xml.pos', 'ex_29.xml.pos', 'ex_33.xml.pos', 
-            'ex_13.xml.pos', 'ex_08.xml.pos', 'ex_02.xml.pos', 
-            'ex_54.xml.pos', 'ex_10.xml.pos', 'ex_35.xml.pos', 
-            'ex_40.xml.pos', 'ex_50.xml.pos', 'ex_42.xml.pos', 
-            'ex_46.xml.pos', 'ex_28.xml.pos', 'ex_16.xml.pos', 
-            'ex_34.xml.pos', 'ex_31.xml.pos', 'ex_21.xml.pos', 
-            'ex_14.xml.pos', 'ex_19.xml.pos', 'ex_23.xml.pos', 
-            'ex_47.xml.pos', 'ex_20.xml.pos', 'ex_25.xml.pos', 
-            'ex_43.xml.pos', 'ex_11.xml.pos', 'ex_39.xml.pos', 
-            'ex_17.xml.pos', 'ex_01.xml.pos', 'ex_15.xml.pos', 
-            'ex_37.xml.pos', 'ex_38.xml.pos', 'ex_41.xml.pos', 
-            'ex_05.xml.pos', 'ex_24.xml.pos', 'ex_44.xml.pos', 
-            'ex_49.xml.pos', 'ex_27.xml.pos', 'ex_06.xml.pos', 
-            'ex_51.xml.pos', 'ex_48.xml.pos', 'ex_09.xml.pos', 
-            'ex_53.xml.pos', 'ex_04.xml.pos', 'ex_07.xml.pos', 
-            'ex_22.xml.pos', 'ex_18.xml.pos', 'ex_52.xml.pos', 
-            'ex_36.xml.pos', 'ex_32.xml.pos', 'ex_03.xml.pos', 
-            'ex_12.xml.pos', 'ex_45.xml.pos', 'PTec_22.xml.pos', 
-            'PTec_19.xml.pos', 'PTec_31.xml.pos', 'PTec_16.xml.pos', 
-            'PTec_01.xml.pos', 'PTec_33.xml.pos', 'PTec_06.xml.pos', 
-            'PTec_13.xml.pos', 'PTec_02.xml.pos', 'PTec_15.xml.pos', 
-            'PTec_12.xml.pos', 'PTec_26.xml.pos', 'PTec_29.xml.pos', 
-            'PTec_27.xml.pos', 'PTec_10.xml.pos', 'PTec_32.xml.pos', 
-            'PTec_14.xml.pos', 'PTec_24.xml.pos', 'PTec_08.xml.pos', 
-            'PTec_07.xml.pos', 'PTec_21.xml.pos', 'PTec_11.xml.pos', 
-            'PTec_17.xml.pos', 'PTec_04.xml.pos', 'PTec_03.xml.pos', 
-            'PTec_09.xml.pos', 'PTec_30.xml.pos', 'PTec_23.xml.pos', 
-            'PTec_20.xml.pos', 'PTec_25.xml.pos', 'PTec_28.xml.pos', 
-            'PTec_18.xml.pos', 'PTec_05.xml.pos', 'adm_30.png.xml.pos', 
-            'adm_26.xml.pos', 'adm_18.xml.pos', 'adm_04.xml.pos', 
-            'adm_09.xml.pos', 'adm_15.xml.pos', 'adm_17.xml.pos', 
-            'adm_28.png.xml.pos', 'adm_13.xml.pos', 'adm_07.xml.pos', 
-            'adm_20.xml.pos', 'adm_21.xml.pos', 'adm_02.xml.pos', 
-            'adm_23.xml.pos', 'adm_06.xml.pos', 'adm_01.xml.pos', 
-            'adm_12.xml.pos', 'adm_25.xml.pos', 'adm_24.xml.pos', 
-            'adm_19.xml.pos', 'adm_16.xml.pos', 'adm_08.xml.pos', 
-            'Adm_03.xml.pos', 'adm_14.xml.pos', 'adm_22.xml.pos', 
-            'adm_27.xml.pos', 'adm_05.xml.pos', 'adm_29.png.xml.pos', 
-            'adm_11.xml.pos', 'adm_10.xml.pos', 'ed_16.xml.pos', 
-            'ed_14.xml.pos', 'ed_06.xml.pos', 'ed_25.xml.pos', 
-            'ed_11.xml.pos', 'ed_02.xml.pos', 'ed_20.xml.pos', 
-            'ed_17.xml.pos', 'ed_09.xml.pos', 'ed_26.xml.pos', 
-            'ed_15.xml.pos', 'ed_18.xml.pos', 'ed_22.xml.pos', 
-            'ed_01.xml.pos', 'ed_23.xml.pos', 'ed_10.xml.pos', 
-            'ed_19.xml.pos', 'ed_28.xml.pos', 'ed_27.xml.pos', 
-            'ed_04.xml.pos', 'ed_12.xml.pos', 'ed_13.xml.pos', 
-            'ed_05.xml.pos', 'ed_24.xml.pos', 'ed_21.xml.pos', 
-            'ed_07.xml.pos', 'ed_08.xml.pos', 'ed_03.xml.pos'] 
-        found_list = [x for x in [os.path.basename(y) for y in l] if x.lower() in [y.lower() for y in 
-expected_files]]
-        if len(found_list) < len(expected_files):
-            missing_list = [x for x in expected_files if x.lower() not in [y.lower() for y in found_list]]
-            sample = "<br/>".join(missing_list[:5])
-            if len(missing_list) > 6:
-                sample = "{}</code>, and {} other files".format(sample, len(missing_list) - 3)
-            elif len(missing_list) == 6:
-                sample = "<br/>".join(missing_list[:6])
-            raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
-
-BuilderClass = ICENigeriaBuilder
-
 if __name__ == "__main__":
     BuilderClass().build()
