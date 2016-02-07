@@ -110,7 +110,7 @@ class FigureOptions(QtGui.QDialog):
                 default_font = self.options.get("font_{}".format(element_name), self.font())
                 self.set_element_font(element_name, default_font)
                 
-        self.ui.label_main.setFocus(True)
+        self.ui.label_main.setFocus()
 
         try:
             self.resize(options.settings.value("figureoptions_size"))
@@ -196,23 +196,23 @@ class FigureOptions(QtGui.QDialog):
             self.ui.combo_qualitative.setEnabled(True)
             self.change_to_palette(self.ui.combo_qualitative.currentText())
             if select_combo:
-                self.ui.combo_qualitative.setFocus(True)
+                self.ui.combo_qualitative.setFocus()
         elif self.ui.radio_sequential.isChecked():
             self.ui.combo_sequential.setEnabled(True)
             self.change_to_palette(self.ui.combo_sequential.currentText())
             if select_combo:
-                self.ui.combo_sequential.setFocus(True)
+                self.ui.combo_sequential.setFocus()
         elif self.ui.radio_diverging.isChecked():
             self.ui.combo_diverging.setEnabled(True)
             self.change_to_palette(self.ui.combo_diverging.currentText())
             if select_combo:
-                self.ui.combo_diverging.setFocus(True)
+                self.ui.combo_diverging.setFocus()
         elif self.ui.radio_custom.isChecked():
             #self.ui.combo_custom.setEnabled(True)
             #self.ui.button_remove_custom.setEnabled(True)
             self.palette_name = "custom"
             if select_combo:
-                self.ui.combo_custom.setFocus(True)
+                self.ui.combo_custom.setFocus()
         else:
             self.ui.radio_qualitative.setChecked(True)
             self.change_palette()

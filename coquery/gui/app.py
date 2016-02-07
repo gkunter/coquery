@@ -475,19 +475,19 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_aggregate_uniques.toggled.connect(self.toggle_frequency_columns)
 
         self.ui.radio_aggregate_collocations.clicked.connect(
-            lambda x: self.reaggregate(
+            lambda: self.reaggregate(
                 query_type=queries.CollocationQuery,
                 recalculate=False))
         self.ui.radio_aggregate_frequencies.clicked.connect(
-            lambda x: self.reaggregate(
+            lambda: self.reaggregate(
                 query_type=queries.FrequencyQuery,
                 recalculate=False))
         self.ui.radio_aggregate_uniques.clicked.connect(
-            lambda x: self.reaggregate(
+            lambda: self.reaggregate(
                 query_type=queries.DistinctQuery,
                 recalculate=False))
         self.ui.radio_aggregate_none.clicked.connect(
-            lambda x: self.reaggregate(
+            lambda: self.reaggregate(
                 query_type=queries.TokenQuery,
                 recalculate=False))
 
