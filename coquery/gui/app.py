@@ -1059,13 +1059,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if not all([options.cfg.column_visibility.get(x, True) for x in selection]):
             action = QtGui.QAction("&Show column{}".format(suffix), self)
-            action.triggered.connect(lambda a: self.show_columns(selection))
+            action.triggered.connect(lambda: self.show_columns(selection))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
             menu.addAction(action)
 
         if not all([not options.cfg.column_visibility.get(x, True) for x in selection]):
             action = QtGui.QAction("&Hide column{}".format(suffix), self)
-            action.triggered.connect(lambda a: self.hide_columns(selection))
+            action.triggered.connect(lambda: self.hide_columns(selection))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
             menu.addAction(action)
 
