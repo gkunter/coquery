@@ -86,7 +86,7 @@ class UniqueViewer(QtGui.QWidget):
             return
 
         S = "SELECT DISTINCT {0} FROM {1} ORDER BY {0}".format(self.column, self.table)
-        df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.get_mysql_configuration(), self.db_name)))
+        df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.db_name)))
         self.data = [QtGui.QTreeWidgetItem(self.ui.treeWidget, [x]) for x in df[self.column]]
 
         for x in self.data:
