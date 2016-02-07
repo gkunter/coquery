@@ -1715,7 +1715,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             descriptions exist, or False otherwise.
         """
         no_fail = True
-        if not sqlhelper.has_database(options.get_mysql_configuration(), self.arguments.db_name):
+        if not sqlhelper.has_database(options.cfg.current_server, self.arguments.db_name):
             no_fail = False
             self.logger.warning("Database {} not found.".format(self.arguments.db_name))
         for x in self.table_description:
@@ -1814,6 +1814,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 lexicon_code=self.get_lexicon_code(),
                 resource_code=self.get_resource_code())
 
+        self.module_content = self.module_content.replace("\\", "\\\\")
+
         path = self.get_module_path(self.name)
         # write module code:
         with codecs.open(path, "w") as output_file:
@@ -1825,7 +1827,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         Create a connection to the server, and creates the database if
         necessary.
         """
-        configuration = options.get_mysql_configuration()
+        configuration = options.cfg.current_server
 
         if self.arguments.c:
             if sqlhelper.has_database(configuration, self.arguments.db_name):         
@@ -2594,7 +2596,7 @@ if options._use_qt:
                 DB = sqlwrap.SqlDB(
                     Host=db_host, Port=db_port, Type=db_type, User=db_user, Password=db_password)
                 db_exists = sqlhelper.has_database(
-                    options.get_mysql_configuration(),
+                    options.cfg.current_server,
                     "coq_{}".format(str(self.ui.corpus_name.text()).lower()))
                 # regardless of whether only the module or the whole corpus
                 # is requested, the corpus needs a name:
