@@ -850,7 +850,7 @@ class CoqueryApp(QtGui.QMainWindow):
             name = name[0]
         
         if name:
-            options.cfg.query_file_path = os.path.dirname(name)
+            options.cfg.query_file_path = os.path.dirname(str(name))
             self.ui.edit_file_name.setText(name)
             self.switch_to_file()
             
