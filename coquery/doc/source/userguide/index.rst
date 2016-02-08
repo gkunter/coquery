@@ -3,10 +3,12 @@
 Users manual
 ############
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
     
-    contexts.rst
     syntax.rst
+    columns.rst
+    contexts.rst
+    filters.rst
     visualizations.rst
     aggregations.rst
     connections.rst
