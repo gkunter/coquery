@@ -783,7 +783,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 return
 
     @classmethod
-    def get_file_list(cls, path, file_filter):
+    def get_file_list(cls, path, file_filter, sort=True):
         """ 
         Return a list of valid file names from the given path.
         
@@ -795,6 +795,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
         ----------
         path : string
             The path in which to look for files
+        file_filter : string
+            A filter that is applied to all file names in the path
+        sort : bool 
+            True if the file list should be returned in alphabetical order,
+            or False otherwise.
             
         Returns
         -------
@@ -813,7 +818,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         expect.remove(current_file)
                 elif not file_filter or fnmatch.fnmatch(current_file, file_filter):
                     L.append(full_name)
-        return L
+        if sort:
+            return sorted(L)
+        else:
+            return L
     
     def validate_path(self, path):
         """
@@ -2375,10 +2383,9 @@ if options._use_qt:
             the invalid path.
             """
             if self.ui.radio_complete.isChecked():
+                l = self.builder_class.get_file_list(
+                        str(self.ui.input_path.text()), self.builder_class.file_filter)                   
                 try:
-                    l = self.builder_class.get_file_list(
-                            str(self.ui.input_path.text()),
-                            self.builder_class.file_filter)
                     self.builder_class.validate_files(l)
                 except RuntimeError as e:
                     reply = QtGui.QMessageBox.question(
