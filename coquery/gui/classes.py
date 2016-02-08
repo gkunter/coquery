@@ -116,6 +116,9 @@ class CoqDetailBox(QtGui.QWidget):
     def setText(self, text):
         self._text = text
         
+    def setAlternativeText(self, text):
+        self._alternative = text
+        
     def text(self):
         return self._text
 
@@ -398,7 +401,7 @@ class CoqTreeWidget(QtGui.QTreeWidget):
             db_name = resource.db_name
         uniqueviewer.UniqueViewer.show(
             "{}_{}".format(table, feature),
-            db_name)
+            db_name, parent=options.cfg.main_window)
 
 class LogTableModel(QtCore.QAbstractTableModel):
     """
