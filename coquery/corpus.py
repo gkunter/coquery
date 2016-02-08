@@ -155,8 +155,6 @@ class LexiconClass(object):
     def is_part_of_speech(self, pos):
         if hasattr(self.resource, QUERY_ITEM_POS):
             S = self.sql_string_is_part_of_speech(pos)
-            print(S)
-            print(S.replace("%", "%%"))
             df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
             return len(df.index) > 0
         else:
