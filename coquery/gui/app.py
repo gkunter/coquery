@@ -32,7 +32,6 @@ from pyqt_compat import QtCore, QtGui, QtHelp
 import QtProgress
 import ui.coqueryUi, ui.coqueryCompactUi
 
-import sqlhelper 
 import classes
 import errorbox
 import queries
@@ -365,9 +364,8 @@ class CoqueryApp(QtGui.QMainWindow):
     def help(self):
         import helpviewer
         
-        self.helpviewer = helpviewer.HelpViewer()
+        self.helpviewer = helpviewer.HelpViewer(parent=self)
         self.helpviewer.show()
-        self.helpviewer.exec_()
 
     def show_corpus_menu(self):
         if self.ui.combo_corpus.count():
