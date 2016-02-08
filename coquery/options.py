@@ -118,7 +118,7 @@ class Options(object):
         self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS, QUERY_MODE_COLLOCATIONS), type=str, nargs="?")
         self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
         
-        group.add_argument("--gui", help="Use a graphical user interface (requires Qt)", action="store_true")
+        group.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
         # General options:
         self.parser.add_argument("-o", "--outputfile", help="write results to OUTPUTFILE (default: write to console)", type=str, dest="output_path")
         group = self.parser.add_mutually_exclusive_group()
