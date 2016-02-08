@@ -417,7 +417,7 @@ class SqlDB (object):
             S = "SHOW INDEX FROM {} WHERE Key_name = '{}'".format(table, index)
             return bool(self.connection.execute(S))
         elif self.db_type == SQL_SQLITE:
-            return bool(len(self.connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
+            return bool(len(self.connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl_name = '{}'".format(index, table)).fetchall()))
     
     def get_index_length(self, table_name, column_name, coverage=0.95):
         """

@@ -255,7 +255,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.horizontalHeader().setMovable(True)
         self.ui.data_preview.setSortingEnabled(False)
 
-        self.ui.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows|QtGui.QAbstractItemView.SelectColumns)
+        self.ui.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectionBehavior(QtGui.QAbstractItemView.SelectRows|QtGui.QAbstractItemView.SelectColumns))
 
 
         self.ui.context_query_syntax.setPixmap(QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_TitleBarContextHelpButton))
@@ -473,19 +473,19 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_aggregate_uniques.toggled.connect(self.toggle_frequency_columns)
 
         self.ui.radio_aggregate_collocations.clicked.connect(
-            lambda x: self.reaggregate(
+            lambda: self.reaggregate(
                 query_type=queries.CollocationQuery,
                 recalculate=False))
         self.ui.radio_aggregate_frequencies.clicked.connect(
-            lambda x: self.reaggregate(
+            lambda: self.reaggregate(
                 query_type=queries.FrequencyQuery,
                 recalculate=False))
         self.ui.radio_aggregate_uniques.clicked.connect(
-            lambda x: self.reaggregate(
+            lambda: self.reaggregate(
                 query_type=queries.DistinctQuery,
                 recalculate=False))
         self.ui.radio_aggregate_none.clicked.connect(
-            lambda x: self.reaggregate(
+            lambda: self.reaggregate(
                 query_type=queries.TokenQuery,
                 recalculate=False))
 
@@ -1057,13 +1057,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if not all([options.cfg.column_visibility.get(x, True) for x in selection]):
             action = QtGui.QAction("&Show column{}".format(suffix), self)
-            action.triggered.connect(lambda a: self.show_columns(selection))
+            action.triggered.connect(lambda: self.show_columns(selection))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
             menu.addAction(action)
 
         if not all([not options.cfg.column_visibility.get(x, True) for x in selection]):
             action = QtGui.QAction("&Hide column{}".format(suffix), self)
-            action.triggered.connect(lambda a: self.hide_columns(selection))
+            action.triggered.connect(lambda: self.hide_columns(selection))
             action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
             menu.addAction(action)
 
@@ -1713,7 +1713,7 @@ class CoqueryApp(QtGui.QMainWindow):
             # recursive loop:
             try:
                 self.ui.combo_config.currentIndexChanged.disconnect()
-            except TypeError:
+            except (TypeError, RuntimeError):
                 pass
             # add new entry with suitable icon, remove old icon and reset index:
             index = self.ui.combo_config.findText(options.cfg.current_server)

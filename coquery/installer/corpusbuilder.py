@@ -1805,10 +1805,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def build_write_module(self):
         """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
-        
         if not self.arguments.w:
             return
-        
         base_variables = type(self).get_class_variables()
 
         # set_query_items() initializes those class variables that map the 
@@ -1847,6 +1845,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 corpus_code=self.get_corpus_code(),
                 lexicon_code=self.get_lexicon_code(),
                 resource_code=self.get_resource_code())
+        self.module_content = self.module_content.replace("\\", "\\\\")
 
         path = self.get_module_path(self.name)
         # write module code:
@@ -2144,7 +2143,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             db_name=self.arguments.db_name,
             is_tagged_corpus=is_tagged_label,
             description=" ".join(description))
-
+        new_code = new_code.replace("\\", "\\\\")
         in_class = False
         in_docstring = False
         in_get_description = False

@@ -74,7 +74,10 @@ class ProgressThread(QtCore.QThread):
     
     def __del__(self):
         self.exiting = True
-        self.wait()
+        try:
+            self.wait()
+        except RuntimeError:
+            pass
     
     def setInterrupt(self, fun):
         self.INTERRUPT_FUN = fun
