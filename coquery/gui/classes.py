@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 import __init__
-from pyqt_compat import QtCore, QtGui
+from pyqt_compat import QtCore, QtGui, frameShadow
 import QtProgress
 import errorbox as errorbox
 
@@ -55,7 +55,7 @@ class CoqDetailBox(QtGui.QWidget):
 
         if not box:
             self.box = QtGui.QFrame(self)
-            self.box.setFrameShape(QtGui.QFrame.StyledPanel)
+            self.box.setFrameShape(frameShape)
             self.box.setFrameShadow(QtGui.QFrame.Sunken)
         else:
             self.box = box
@@ -67,8 +67,8 @@ class CoqDetailBox(QtGui.QWidget):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
         self.frame.setSizePolicy(sizePolicy)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.frame.setFrameShadow(QtGui.QFrame.Raised)
+        self.frame.setFrameShape(frameShape)
+        self.frame.setFrameShadow(frameShadow)
 
         self.header_layout = QtGui.QHBoxLayout()
 

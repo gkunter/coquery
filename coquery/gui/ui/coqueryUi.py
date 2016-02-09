@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -60,7 +60,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.box_corpus_select.sizePolicy().hasHeightForWidth())
         self.box_corpus_select.setSizePolicy(sizePolicy)
-        self.box_corpus_select.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.box_corpus_select.setFrameShape(frameShape)
         self.box_corpus_select.setFrameShadow(frameShadow)
         self.box_corpus_select.setObjectName(_fromUtf8("box_corpus_select"))
         self.horizontalLayout_5 = QtGui.QHBoxLayout(self.box_corpus_select)
@@ -96,7 +96,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.box_context_mode.sizePolicy().hasHeightForWidth())
         self.box_context_mode.setSizePolicy(sizePolicy)
-        self.box_context_mode.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.box_context_mode.setFrameShape(frameShape)
         self.box_context_mode.setFrameShadow(frameShadow)
         self.box_context_mode.setObjectName(_fromUtf8("box_context_mode"))
         self.gridLayout_6 = QtGui.QGridLayout(self.box_context_mode)
@@ -235,7 +235,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.box_input_settings.sizePolicy().hasHeightForWidth())
         self.box_input_settings.setSizePolicy(sizePolicy)
-        self.box_input_settings.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.box_input_settings.setFrameShape(frameShape)
         self.box_input_settings.setFrameShadow(frameShadow)
         self.box_input_settings.setObjectName(_fromUtf8("box_input_settings"))
         self.verticalLayout = QtGui.QVBoxLayout(self.box_input_settings)
@@ -351,7 +351,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.box_output_options.sizePolicy().hasHeightForWidth())
         self.box_output_options.setSizePolicy(sizePolicy)
-        self.box_output_options.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.box_output_options.setFrameShape(frameShape)
         self.box_output_options.setFrameShadow(frameShadow)
         self.box_output_options.setObjectName(_fromUtf8("box_output_options"))
         self.output_columns = QtGui.QVBoxLayout(self.box_output_options)
@@ -389,7 +389,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.box_source_filter.sizePolicy().hasHeightForWidth())
         self.box_source_filter.setSizePolicy(sizePolicy)
-        self.box_source_filter.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.box_source_filter.setFrameShape(frameShape)
         self.box_source_filter.setFrameShadow(frameShadow)
         self.box_source_filter.setObjectName(_fromUtf8("box_source_filter"))
         self.verticalLayout_5 = QtGui.QVBoxLayout(self.box_source_filter)
@@ -460,7 +460,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.box_aggregation_mode.sizePolicy().hasHeightForWidth())
         self.box_aggregation_mode.setSizePolicy(sizePolicy)
-        self.box_aggregation_mode.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.box_aggregation_mode.setFrameShape(frameShape)
         self.box_aggregation_mode.setFrameShadow(frameShadow)
         self.box_aggregation_mode.setObjectName(_fromUtf8("box_aggregation_mode"))
         self.verticalLayout_6 = QtGui.QVBoxLayout(self.box_aggregation_mode)
@@ -476,7 +476,7 @@ class Ui_MainWindow(object):
         self.label_10.setWordWrap(True)
         self.label_10.setObjectName(_fromUtf8("label_10"))
         self.verticalLayout_6.addWidget(self.label_10)
-        self.group_aggregation = QtGui.QGroupBox(self.box_aggregation_mode)
+        self.group_aggregation = QtGui.QWidget(self.box_aggregation_mode)
         self.group_aggregation.setObjectName(_fromUtf8("group_aggregation"))
         self.verticalLayout_14 = QtGui.QVBoxLayout(self.group_aggregation)
         self.verticalLayout_14.setSpacing(0)

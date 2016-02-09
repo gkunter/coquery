@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -30,7 +30,7 @@ class Ui_ContextView(object):
         self.verticalLayout_3.setSpacing(16)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.box_context = QtGui.QFrame(ContextView)
-        self.box_context.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.box_context.setFrameShape(frameShape)
         self.box_context.setFrameShadow(frameShadow)
         self.box_context.setObjectName(_fromUtf8("box_context"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.box_context)
@@ -38,14 +38,14 @@ class Ui_ContextView(object):
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.context_area = QtGui.QTextBrowser(self.box_context)
         self.context_area.setAutoFillBackground(False)
-        self.context_area.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.context_area.setFrameShape(frameShape)
         self.context_area.setFrameShadow(QtGui.QFrame.Sunken)
         self.context_area.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByKeyboard|QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextBrowserInteraction|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
         self.context_area.setObjectName(_fromUtf8("context_area"))
         self.verticalLayout_2.addWidget(self.context_area)
         self.verticalLayout_3.addWidget(self.box_context)
         self.box_context_width = QtGui.QFrame(ContextView)
-        self.box_context_width.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.box_context_width.setFrameShape(frameShape)
         self.box_context_width.setFrameShadow(frameShadow)
         self.box_context_width.setObjectName(_fromUtf8("box_context_width"))
         self.horizontalLayout_2 = QtGui.QHBoxLayout(self.box_context_width)

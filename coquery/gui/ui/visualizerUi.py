@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -35,7 +35,7 @@ class Ui_Visualizer(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame_placeholder.sizePolicy().hasHeightForWidth())
         self.frame_placeholder.setSizePolicy(sizePolicy)
-        self.frame_placeholder.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_placeholder.setFrameShape(frameShape)
         self.frame_placeholder.setFrameShadow(frameShadow)
         self.frame_placeholder.setObjectName(_fromUtf8("frame_placeholder"))
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.frame_placeholder)
@@ -66,7 +66,7 @@ class Ui_Visualizer(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.box_visualize.sizePolicy().hasHeightForWidth())
         self.box_visualize.setSizePolicy(sizePolicy)
-        self.box_visualize.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.box_visualize.setFrameShape(frameShape)
         self.box_visualize.setFrameShadow(frameShadow)
         self.box_visualize.setObjectName(_fromUtf8("box_visualize"))
         self.verticalLayout = QtGui.QVBoxLayout(self.box_visualize)
@@ -75,7 +75,7 @@ class Ui_Visualizer(object):
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.verticalLayout_2.addWidget(self.box_visualize)
         self.frame = QtGui.QFrame(Visualizer)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.horizontalLayout_3 = QtGui.QHBoxLayout(self.frame)

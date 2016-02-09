@@ -2,12 +2,11 @@
 
 # Form implementation generated from reading ui file 'corpusManager.ui'
 #
-# Created: Sun Jan 10 16:56:03 2016
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -26,11 +25,11 @@ except AttributeError:
 class Ui_corpusManager(object):
     def setupUi(self, corpusManager):
         corpusManager.setObjectName(_fromUtf8("corpusManager"))
-        corpusManager.resize(890, 600)
+        corpusManager.resize(800, 600)
         self.verticalLayout = QtGui.QVBoxLayout(corpusManager)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.frame_2 = QtGui.QFrame(corpusManager)
-        self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_2.setFrameShape(frameShape)
         self.frame_2.setFrameShadow(frameShadow)
         self.frame_2.setObjectName(_fromUtf8("frame_2"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.frame_2)
@@ -45,17 +44,17 @@ class Ui_corpusManager(object):
         self.list_corpora.setWidgetResizable(True)
         self.list_corpora.setObjectName(_fromUtf8("list_corpora"))
         self.list_content = QtGui.QWidget()
-        self.list_content.setGeometry(QtCore.QRect(0, 0, 868, 470))
+        self.list_content.setGeometry(QtCore.QRect(0, 0, 778, 492))
         self.list_content.setObjectName(_fromUtf8("list_content"))
         self.list_layout = QtGui.QVBoxLayout(self.list_content)
-        self.list_layout.setSpacing(0)
         self.list_layout.setMargin(0)
+        self.list_layout.setSpacing(0)
         self.list_layout.setObjectName(_fromUtf8("list_layout"))
         self.list_corpora.setWidget(self.list_content)
         self.verticalLayout_2.addWidget(self.list_corpora)
         self.verticalLayout.addWidget(self.frame_2)
         self.frame = QtGui.QFrame(corpusManager)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.horizontalLayout = QtGui.QHBoxLayout(self.frame)

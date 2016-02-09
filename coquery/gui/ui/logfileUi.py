@@ -2,12 +2,11 @@
 
 # Form implementation generated from reading ui file 'logfile.ui'
 #
-# Created: Fri Oct 16 12:23:17 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -28,8 +27,8 @@ class Ui_logfileDialog(object):
         logfileDialog.setObjectName(_fromUtf8("logfileDialog"))
         logfileDialog.resize(640, 480)
         self.verticalLayout = QtGui.QVBoxLayout(logfileDialog)
-        self.verticalLayout.setSpacing(10)
         self.verticalLayout.setContentsMargins(10, 4, 10, 4)
+        self.verticalLayout.setSpacing(10)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.frame = QtGui.QFrame(logfileDialog)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
@@ -37,7 +36,7 @@ class Ui_logfileDialog(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
         self.frame.setSizePolicy(sizePolicy)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.frame)
