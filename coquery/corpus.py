@@ -711,7 +711,7 @@ class BaseResource(object):
                 column_name = ""
             if column_name:
                 table = str("{}_table".format(column_name.partition("_")[0]))
-                table_name = getattribute(cls, table)
+                table_name = getattr(cls, table)
                 filter_list.append((variable, column_name, table_name, filt._op, filt._value_list, filt._value_range))
         return filter_list
     
@@ -1834,7 +1834,7 @@ class CorpusClass(object):
             #else:
                 #final_select.append("NULL AS {}".format(select_feature))
 
-        final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.__getattribute__("corpus_denorm_id")))
+        final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.corpus_denorm_id))
 
         # Add filters:
         # FIXME: What happens if the filter does not apply to something
