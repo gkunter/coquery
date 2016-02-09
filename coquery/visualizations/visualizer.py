@@ -52,7 +52,6 @@ import __init__
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
-import seaborn as sns
     
 from pyqt_compat import QtGui, QtCore, pyside
 # Tell matplotlib if PySide is being used:
@@ -74,6 +73,9 @@ from matplotlib.backend_bases import key_press_handler
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
+
+import seaborn as sns
+
 
 #def table_to_tree(table, label="count"):
     #""" Return a tree that contains a tree representation of the table. It
