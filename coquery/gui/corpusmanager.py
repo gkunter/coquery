@@ -260,7 +260,7 @@ class CorpusManager(QtGui.QDialog):
             pass
 
         self.paths.append((os.path.join(options.get_home_dir(), "adhoc"), INSTALLER_ADHOC))
-        self.paths.append((os.path.join(sys.path[0], "installer"), INSTALLER_DEFAULT))
+        self.paths.append((os.path.join(options.cfg.base_path, "installer"), INSTALLER_DEFAULT))
         if options.cfg.custom_installer_path:
             self.paths.append((options.cfg.custom_installer_path, INSTALLER_CUSTOM))
         self.update()
@@ -281,8 +281,7 @@ class CorpusManager(QtGui.QDialog):
             True if the path is in the default Coquery directory tree, or 
             False otherwise (i.e. with custom installers or ad-hoc corpora)
         """
-        return os.path.abspath(path).startswith(
-            os.path.abspath(os.path.join(sys.path[0], "installer")))
+        return os.path.abspath(os.path.join(options.cfg.base_path, "coquery", "installer")) in os.path.abspath(path)
 
     def update(self):
         """
