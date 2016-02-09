@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -32,7 +32,7 @@ class Ui_RemoveCorpus(object):
         self.verticalLayout_3.setSpacing(16)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.frame = QtGui.QFrame(RemoveCorpus)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.frame)
@@ -70,7 +70,7 @@ class Ui_RemoveCorpus(object):
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_3.addItem(spacerItem)
         self.frame_2 = QtGui.QFrame(RemoveCorpus)
-        self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_2.setFrameShape(frameShape)
         self.frame_2.setFrameShadow(frameShadow)
         self.frame_2.setObjectName(_fromUtf8("frame_2"))
         self.verticalLayout_4 = QtGui.QVBoxLayout(self.frame_2)

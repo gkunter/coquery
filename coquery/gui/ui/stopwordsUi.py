@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -31,7 +31,7 @@ class Ui_Stopwords(object):
         self.verticalLayout_4.setSpacing(16)
         self.verticalLayout_4.setObjectName(_fromUtf8("verticalLayout_4"))
         self.frame = QtGui.QFrame(Stopwords)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.frame)
@@ -66,7 +66,7 @@ class Ui_Stopwords(object):
         self.verticalLayout_4.addWidget(self.frame)
         self.buttonBox = QtGui.QDialogButtonBox(Stopwords)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Open|QtGui.QDialogButtonBox.Reset|QtGui.QDialogButtonBox.Save)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Open|QtGui.QDialogButtonBox.Reset|QtGui.QDialogButtonBox.Save)
         self.buttonBox.setCenterButtons(False)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.verticalLayout_4.addWidget(self.buttonBox)

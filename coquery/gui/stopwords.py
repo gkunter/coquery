@@ -106,9 +106,10 @@ class CoqStopwordList(QtGui.QListWidget):
         self.add_item = item
 
 class Stopwords(QtGui.QDialog):
-    def __init__(self, filename, default=None, parent=None, icon=None):
+    def __init__(self, word_list, default=None, parent=None, icon=None):
         super(Stopwords, self).__init__(parent)
         
+        self._word_list= word_list
         self.ui = Ui_Stopwords()
         self.ui.setupUi(self)
         self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
@@ -142,7 +143,7 @@ class Stopwords(QtGui.QDialog):
             name = name[0]
         if name:
             options.cfg.stopwords_file_path = os.path.dirname(name)
-            df = pd.DataFrame(options.cfg.stopword_list)
+            df = pd.DataFrame(self._word_list)
             try:
                 df.to_csv(name,
                         index=False, header=False,
@@ -171,17 +172,14 @@ class Stopwords(QtGui.QDialog):
             finally:
                 self.ui.buttonBox.setEnabled(True)
     
-    def close(self):
-        super(Stopwords, self).close()
-        options.cfg.stopword_list = [
-            str(self.ui.stopword_list.cloud_area.itemAt(x).widget().text()) for x in range(self.ui.stopword_list.cloud_area.count())]
-        super(Stopwords, self).accept()
+    def exec_(self):
+        result = super(Stopwords, self).exec_()
+        if result: 
+            return [str(self.ui.stopword_list.cloud_area.itemAt(x).widget().text()) for x in range(self.ui.stopword_list.cloud_area.count())]
+        else:
+            return None
     
-    def accept(self):
-        pass
-
     def keyPressEvent(self, event):
-        print("key")
         if event.key() in [QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return]:
             return
         else:
@@ -192,7 +190,7 @@ class Stopwords(QtGui.QDialog):
             self.ui.stopword_list.addTag(str(x))
         
     @staticmethod
-    def manage(parent=None, icon=None):
+    def manage(this_list, parent=None, icon=None):
         dialog = Stopwords(parent, icon)
-        dialog.set_list(options.cfg.stopword_list)
-        result = dialog.exec_()
+        dialog.set_list(this_list)
+        return dialog.exec_()

@@ -25,7 +25,7 @@ import errorbox
 import QtProgress
 import classes
 
-class UniqueViewer(QtGui.QWidget):
+class UniqueViewer(QtGui.QDialog):
     def __init__(self, rc_feature=None, db_name=None, parent=None):
         super(UniqueViewer, self).__init__(parent)
         
@@ -63,6 +63,7 @@ class UniqueViewer(QtGui.QWidget):
                 str(self.ui.button_details.text()).format(
                     self.resource.name, 
                     "{}.{}".format(self.table, self.column)))
+            self.ui.button_details.setAlternativeText(self.ui.button_details.text())
         else:
             self.table = None
             self.column = None
@@ -147,8 +148,8 @@ class UniqueViewer(QtGui.QWidget):
                 self.last_results_saved = True
 
     @staticmethod
-    def show(rc_feature, resource):
-        dialog = UniqueViewer(rc_feature, resource)
+    def show(rc_feature, resource, parent=None):
+        dialog = UniqueViewer(rc_feature, resource, parent=parent)
         dialog.ui.progress_bar.setRange(0,0)
         dialog.ui.treeWidget.hide()
         dialog.ui.label.hide()

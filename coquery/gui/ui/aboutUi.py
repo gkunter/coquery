@@ -2,12 +2,11 @@
 
 # Form implementation generated from reading ui file 'about.ui'
 #
-# Created: Fri Oct 16 15:41:47 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -41,7 +40,7 @@ class Ui_AboutDialog(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
         self.frame.setSizePolicy(sizePolicy)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout = QtGui.QVBoxLayout(self.frame)
@@ -51,8 +50,8 @@ class Ui_AboutDialog(object):
         self.frame_pixmap.setStyleSheet(_fromUtf8("background-color: #fffdfd"))
         self.frame_pixmap.setObjectName(_fromUtf8("frame_pixmap"))
         self.layout_pixmap = QtGui.QVBoxLayout(self.frame_pixmap)
-        self.layout_pixmap.setSpacing(0)
         self.layout_pixmap.setContentsMargins(4, 3, 4, 3)
+        self.layout_pixmap.setSpacing(0)
         self.layout_pixmap.setObjectName(_fromUtf8("layout_pixmap"))
         self.label_pixmap = QtGui.QLabel(self.frame_pixmap)
         self.label_pixmap.setText(_fromUtf8(""))

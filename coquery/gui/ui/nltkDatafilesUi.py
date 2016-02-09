@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -30,7 +30,7 @@ class Ui_NLTKDatafiles(object):
         self.verticalLayout_2.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.frame = QtGui.QFrame(NLTKDatafiles)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout = QtGui.QVBoxLayout(self.frame)

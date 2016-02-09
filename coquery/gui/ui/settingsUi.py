@@ -2,12 +2,11 @@
 
 # Form implementation generated from reading ui file 'settings.ui'
 #
-# Created: Fri Oct 16 19:05:12 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -33,8 +32,8 @@ class Ui_SettingsDialog(object):
         sizePolicy.setHeightForWidth(SettingsDialog.sizePolicy().hasHeightForWidth())
         SettingsDialog.setSizePolicy(sizePolicy)
         self.verticalLayout_3 = QtGui.QVBoxLayout(SettingsDialog)
-        self.verticalLayout_3.setSpacing(16)
         self.verticalLayout_3.setContentsMargins(4, -1, 4, -1)
+        self.verticalLayout_3.setSpacing(16)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.frame = QtGui.QFrame(SettingsDialog)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
@@ -42,18 +41,18 @@ class Ui_SettingsDialog(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
         self.frame.setSizePolicy(sizePolicy)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout_5 = QtGui.QVBoxLayout(self.frame)
-        self.verticalLayout_5.setSpacing(16)
         self.verticalLayout_5.setContentsMargins(8, 6, 8, 6)
+        self.verticalLayout_5.setSpacing(16)
         self.verticalLayout_5.setObjectName(_fromUtf8("verticalLayout_5"))
         self.groupBox = QtGui.QGroupBox(self.frame)
         self.groupBox.setObjectName(_fromUtf8("groupBox"))
         self.horizontalLayout_5 = QtGui.QHBoxLayout(self.groupBox)
-        self.horizontalLayout_5.setSpacing(0)
         self.horizontalLayout_5.setContentsMargins(8, 6, 8, 6)
+        self.horizontalLayout_5.setSpacing(0)
         self.horizontalLayout_5.setObjectName(_fromUtf8("horizontalLayout_5"))
         self.verticalLayout = QtGui.QVBoxLayout()
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
@@ -74,8 +73,8 @@ class Ui_SettingsDialog(object):
         self.groupBox1 = QtGui.QGroupBox(self.frame)
         self.groupBox1.setObjectName(_fromUtf8("groupBox1"))
         self.horizontalLayout_4 = QtGui.QHBoxLayout(self.groupBox1)
-        self.horizontalLayout_4.setSpacing(0)
         self.horizontalLayout_4.setContentsMargins(8, 6, 8, 6)
+        self.horizontalLayout_4.setSpacing(0)
         self.horizontalLayout_4.setObjectName(_fromUtf8("horizontalLayout_4"))
         self.verticalLayout_4 = QtGui.QVBoxLayout()
         self.verticalLayout_4.setObjectName(_fromUtf8("verticalLayout_4"))
@@ -121,8 +120,8 @@ class Ui_SettingsDialog(object):
         self.groupBox2 = QtGui.QGroupBox(self.frame)
         self.groupBox2.setObjectName(_fromUtf8("groupBox2"))
         self.horizontalLayout_3 = QtGui.QHBoxLayout(self.groupBox2)
-        self.horizontalLayout_3.setSpacing(0)
         self.horizontalLayout_3.setContentsMargins(8, 6, 8, 6)
+        self.horizontalLayout_3.setSpacing(0)
         self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
         self.frame_addon_paths = QtGui.QFrame(self.groupBox2)
         self.frame_addon_paths.setObjectName(_fromUtf8("frame_addon_paths"))
@@ -175,8 +174,8 @@ class Ui_SettingsDialog(object):
         self.groupBox3 = QtGui.QGroupBox(self.frame)
         self.groupBox3.setObjectName(_fromUtf8("groupBox3"))
         self.horizontalLayout_2 = QtGui.QHBoxLayout(self.groupBox3)
-        self.horizontalLayout_2.setSpacing(0)
         self.horizontalLayout_2.setContentsMargins(8, 6, 8, 6)
+        self.horizontalLayout_2.setSpacing(0)
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
         self.verticalLayout_2 = QtGui.QVBoxLayout()
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))

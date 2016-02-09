@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>489</width>
+    <width>520</width>
     <height>480</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Apply a function – Coquery</string>
+   <string>Add a function – Coquery</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <property name="spacing">
@@ -44,7 +44,7 @@
       <item>
        <widget class="QLabel" name="label_description">
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Apply a function to the column &lt;span style=&quot; font-weight:600;&quot;&gt;{}.{}:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add a function for the column &lt;span style=&quot; font-weight:600;&quot;&gt;{}.{}:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>

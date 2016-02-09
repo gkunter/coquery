@@ -32,13 +32,10 @@ from pyqt_compat import QtCore, QtGui, QtHelp
 import QtProgress
 import ui.coqueryUi, ui.coqueryCompactUi
 
-import sqlhelper 
 import classes
 import errorbox
 import queries
 import contextviewer
-
-from queryfilter import *
 
 # add required paths:
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
@@ -154,8 +151,8 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.create_output_options_tree()
         
-        QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
-        self.ui.cloud_flow = classes.CoqFlowLayout(self.ui.tag_cloud, spacing = 1)
+        #QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
+        #self.ui.cloud_flow = classes.CoqFlowLayout(self.ui.tag_cloud, spacing = 1)
 
         if options.cfg.current_resources:
             # add available resources to corpus dropdown box:
@@ -175,31 +172,41 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.gridLayout_2.addWidget(edit_query_string, 2, 1, 1, 1)
         self.ui.edit_query_string = edit_query_string
         
-        self.ui.filter_box = classes.QueryFilterBox(self)
-        filter_examples = ["Year > 1999", "Gender is m", "Genre in MAG, NEWS", 
-                       "Year in 2005-2010", "Year = 2012", "File is b0*"]
-        self.ui.filter_box.edit_tag.setPlaceholderText("{} {}".format(
-            _translate("MainWindow", "e.g.", None), random.sample(filter_examples, 1)[0]))
+        #self.ui.filter_box = classes.QueryFilterBox(self)
+        #filter_examples = ["Year > 1999", "Gender is m", "Genre in MAG, NEWS", 
+                       #"Year in 2005-2010", "Year = 2012", "File is b0*"]
+        #self.ui.filter_box.edit_tag.setPlaceholderText("{} {}".format(
+            #_translate("MainWindow", "e.g.", None), random.sample(filter_examples, 1)[0]))
 
-        self.stopwords_label = str(self.ui.button_stopwords.text())
+        self.ui.stopword_switch = classes.CoqSwitch(on=self.get_icon("switch-on"), 
+                                                    off=self.get_icon("switch-off"))
+        self.ui.stopword_layout.addWidget(self.ui.stopword_switch)
+        self.ui.stopword_switch.toggled.connect(self.toggle_stopword_switch)
         self.set_stopword_button()
+                
+        self.ui.filter_switch = classes.CoqSwitch(on=self.get_icon("switch-on"), 
+                                                    off=self.get_icon("switch-off"))
+        self.ui.filter_switch.toggled.connect(self.toggle_filter_switch)
+        self.ui.filter_layout.addWidget(self.ui.filter_switch)
+        self.set_filter_button()
         
-        self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
-        self.ui.tag_cloud.close()
-        self.ui.horizontalLayout.removeWidget(self.ui.edit_query_filter)
-        self.ui.horizontalLayout.removeWidget(self.ui.label_4)
-        self.ui.edit_query_filter.close()
-        self.ui.label_4.close()
+        
+        #self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
+        #self.ui.tag_cloud.close()
+        #self.ui.horizontalLayout.removeWidget(self.ui.edit_query_filter)
+        #self.ui.horizontalLayout.removeWidget(self.ui.label_4)
+        #self.ui.edit_query_filter.close()
+        #self.ui.label_4.close()
 
-        self.ui.verticalLayout_5.addWidget(self.ui.filter_box)
+        #self.ui.verticalLayout_5.addWidget(self.ui.filter_box)
 
-        # set auto-completer for the filter edit:
-        self.filter_variable_model = QtGui.QStringListModel()
-        self.completer = QtGui.QCompleter()
-        self.completer.setModel(self.filter_variable_model)
-        self.completer.setCompletionMode(QtGui.QCompleter.InlineCompletion)
-        self.completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
-        self.ui.filter_box.edit_tag.setCompleter(self.completer)
+        ## set auto-completer for the filter edit:
+        #self.filter_variable_model = QtGui.QStringListModel()
+        #self.completer = QtGui.QCompleter()
+        #self.completer.setModel(self.filter_variable_model)
+        #self.completer.setCompletionMode(QtGui.QCompleter.InlineCompletion)
+        #self.completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        #self.ui.filter_box.edit_tag.setCompleter(self.completer)
 
         # use a file system model for the file name auto-completer::
         self.dirModel = QtGui.QFileSystemModel()
@@ -227,8 +234,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setEnabled(False)
         self.ui.menu_Results.setEnabled(False)
         self.ui.menuAnalyse.setEnabled(False)
-        self.ui.action_save_results.setEnabled(False)
-        self.ui.action_copy_to_clipboard.setEnabled(False)
 
         # set splitter stretches:
         self.ui.splitter.setStretchFactor(0,0)
@@ -306,16 +311,20 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_manage_corpus.setIcon(self.get_icon("database_2"))
         self.ui.action_corpus_documentation.setIcon(self.get_icon("sign-info"))
         self.ui.action_statistics.setIcon(self.get_icon("monitor"))
-        #self.ui.action_quit.setIcon(self.get_icon("sign-error"))
+        self.ui.action_quit.setIcon(self.get_icon("sign-error"))
         self.ui.action_view_log.setIcon(self.get_icon("calendar-clock"))
-        #self.ui.action_save_results.setIcon(self.get_icon("floppy"))
-        #self.ui.button_browse_file.setIcon(self.get_icon("folder"))
+        self.ui.action_save_results.setIcon(self.get_icon("floppy"))
+        self.ui.action_save_selection.setIcon(self.get_icon("floppy"))
+        self.ui.button_browse_file.setIcon(self.get_icon("folder"))
         self.ui.button_file_options.setIcon(self.get_icon("file-excel"))
+        #self.ui.stopword_button.setIcon(self.get_icon("switch-on"))
+        #self.ui.filter_button.setIcon(self.get_icon("switch-on"))
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
         self.ui.action_save_results.triggered.connect(self.save_results)
-        self.ui.action_copy_to_clipboard.triggered.connect(self.copy_to_clipboard)
+        self.ui.action_save_selection.triggered.connect(lambda: self.save_results(selection=True))
+        self.ui.action_copy_to_clipboard.triggered.connect(lambda: self.save_results(selection=True, clipboard=True))
         self.ui.action_quit.triggered.connect(self.close)
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
         self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
@@ -361,14 +370,32 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
+        self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
 
     def help(self):
         import helpviewer
         
-        self.helpviewer = helpviewer.HelpViewer()
+        self.helpviewer = helpviewer.HelpViewer(parent=self)
         self.helpviewer.show()
-        self.helpviewer.exec_()
 
+    def show_file_menu(self):
+        # leave if the results table is empty:
+        if len(self.table_model.content.index) == 0:
+            # disable the result-related menu entries:
+            self.ui.action_save_selection.setDisabled(True)
+            self.ui.action_save_results.setDisabled(True)
+            self.ui.action_copy_to_clipboard.setDisabled(True)
+            return
+
+        # enable "Save results"
+        self.ui.action_save_results.setEnabled(True)
+
+        # enable "Save selection" and "Copy selection to clipboard" if there 
+        # is a selection:
+        if self.ui.data_preview.selectionModel() and self.ui.data_preview.selectionModel().selection():
+            self.ui.action_save_selection.setEnabled(True)
+            self.ui.action_copy_to_clipboard.setEnabled(True)
+            
     def show_corpus_menu(self):
         if self.ui.combo_corpus.count():
             self.ui.action_corpus_documentation.setEnabled(True)
@@ -376,7 +403,6 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.action_corpus_documentation.setEnabled(False)
             self.ui.action_statistics.setEnabled(False)
-            
 
     def show_results_menu(self):
         self.ui.menu_Results.clear()
@@ -458,9 +484,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
         # hook run query button:
-        self.ui.button_run_query.clicked.connect(self.run_query)#self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
+        self.ui.button_run_query.clicked.connect(self.run_query)
+        #self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
         #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
+        self.ui.button_filters.clicked.connect(self.manage_filters)
         
         self.ui.radio_context_none.toggled.connect(self.update_context_widgets)
         self.ui.radio_context_mode_kwic.toggled.connect(self.update_context_widgets)
@@ -549,9 +577,9 @@ class CoqueryApp(QtGui.QMainWindow):
         tree.addFunction.connect(self.add_function)
         tree.removeItem.connect(self.remove_item)
         
-        self.ui.options_list.removeWidget(tree)
-        self.ui.options_tree.close()
-        self.ui.options_list.addWidget(tree)
+        #self.ui.options_list.removeWidget(tree)
+        #self.ui.options_tree.close()
+        #self.ui.options_list.addWidget(tree)
         self.ui.options_tree = tree
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -601,7 +629,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.start_progress_indicator()
         self.thread.start()
 
-    def get_icon(self, s):
+    @staticmethod
+    def get_icon(s):
         """
         Return an icon that matches the given string.
         """
@@ -648,7 +677,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if self.ui.combo_corpus.count():
             corpus_name = str(self.ui.combo_corpus.currentText())
             self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[corpus_name]
-            self.ui.filter_box.resource = self.resource
+            #self.ui.filter_box.resource = self.resource
             
             corpus_variables = [x for _, x in self.resource.get_corpus_features()]
             corpus_variables.append("Freq")
@@ -672,7 +701,9 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         
         if not options.cfg.current_resources:
+            self.ui.output_columns.takeAt(1)
             tree = self.create_output_options_tree()
+            self.ui.output_columns.insertWidget(1, tree)
             return
         
         table_dict = self.resource.get_table_dict()
@@ -699,7 +730,9 @@ class CoqueryApp(QtGui.QMainWindow):
         
         last_checked = self.ui.options_tree.get_checked()
 
+        self.ui.output_columns.takeAt(1)
         tree = self.create_output_options_tree()
+        self.ui.output_columns.insertWidget(1, tree)
 
         # populate the tree with a root for each table:
         for table in tables:
@@ -852,7 +885,7 @@ class CoqueryApp(QtGui.QMainWindow):
             name = name[0]
         
         if name:
-            options.cfg.query_file_path = os.path.dirname(name)
+            options.cfg.query_file_path = os.path.dirname(str(name))
             self.ui.edit_file_name.setText(name)
             self.switch_to_file()
             
@@ -883,21 +916,60 @@ class CoqueryApp(QtGui.QMainWindow):
 
 
     def set_stopword_button(self):
-        if options.cfg.stopword_list:
-            s = "(active stopwords: {})".format(len(options.cfg.stopword_list))
+        n = len(options.cfg.stopword_list) 
+        if n:
+            self.ui.stopword_switch.setText("{} stopword{}".format(
+                n, "s" if n > 1 else ""))
+            self.ui.stopword_switch.show()
         else:
-            s = ""
-        self.ui.stopword_label.setText(s)
+            self.ui.stopword_switch.hide()
+            self.ui.stopword_switch.setOff()
+            options.cfg.use_stopwords = False
+
+    def toggle_stopword_switch(self):
+        options.cfg.use_stopwords = self.ui.stopword_switch.isOn()
 
     def manage_stopwords(self):
         import stopwords 
-        result = stopwords.Stopwords.manage(self, options.cfg.icon)
+        old_list = options.cfg.stopword_list
+        result = stopwords.Stopwords.manage(options.cfg.stopword_list, options.cfg.icon)
+        if result != None:
+            options.cfg.stopword_list = result
         self.set_stopword_button()
+        # activate the filter switch if the filter list was empty before, but 
+        # is filled now:
+        if not old_list and options.cfg.stopword_list:
+            self.ui.stopword_switch.setOn()
     
-    def copy_to_clipboard(self):
-        self.save_results(to_clipboard=True)
+    def set_filter_button(self):
+        n = len(options.cfg.filter_list) 
+        if n:
+            self.ui.filter_switch.setText("{} filter{}".format(
+                n, "s" if n > 1 else ""))
+            self.ui.filter_switch.show()
+        else:
+            self.ui.filter_switch.hide()
+            self.ui.filter_switch.setOff()
+            options.cfg.use_corpus_filters = False
+
+    def toggle_filter_switch(self):
+        print(self.ui.filter_switch.isOn())
+        options.cfg.use_corpus_filters = self.ui.filter_switch.isOn()
+
+    def manage_filters(self):
+        import stopwords
+        old_list = options.cfg.filter_list
+        result = stopwords.Stopwords.manage(options.cfg.filter_list, options.cfg.icon)
+        if result != None:
+            options.cfg.filter_list = result
+        self.set_filter_button()
+        
+        # activate the filter switch if the filter list was empty before, but 
+        # is filled now:
+        if not old_list and options.cfg.filter_list:
+            self.ui.filter_switch.setOn()
     
-    def save_results(self, to_clipboard=False):
+    def save_results(self, selection=False, clipboard=False):
         if not to_clipboard:
             name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.results_file_path)
             if type(name) == tuple:
@@ -910,10 +982,18 @@ class CoqueryApp(QtGui.QMainWindow):
             ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
             ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
             tab = self.table_model.content[ordered_headers]
+
             # exclude invisble rows:
             tab = tab.iloc[~tab.index.isin(pd.Series(
                 options.cfg.row_visibility[self.Session.query_type].keys()))]
-            if to_clipboard:
+            
+            # restrict to selection?
+            if selection:
+                selection = [x.row() for x in self.ui.data_preview.selectionModel().selectedRows()]
+                if selection:
+                    tab = tab.iloc[selection]
+            
+            if clipboard:
                 cb = QtGui.QApplication.clipboard()
                 cb.clear(mode=cb.Clipboard)
                 cb.setText(tab.to_csv(
@@ -1952,9 +2032,14 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.radio_context_mode_kwic.setChecked(True)
         self.update_context_widgets()
             
-        for filt in list(options.cfg.filter_list):
-            self.ui.filter_box.addTag(filt)
-            options.cfg.filter_list.remove(filt)
+        #for filt in list(options.cfg.filter_list):
+            #self.ui.filter_box.addTag(filt)
+            #options.cfg.filter_list.remove(filt)
+        
+        if options.cfg.use_stopwords:
+            self.ui.stopword_switch.setOn()
+        if options.cfg.use_corpus_filters:
+            self.ui.filter_switch.setOn()
         
         # get table from last session, if possible:
         try:

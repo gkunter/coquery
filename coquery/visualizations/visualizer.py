@@ -647,14 +647,10 @@ class VisualizerDialog(QtGui.QWidget):
         self.ui.box_visualize.hide()
         self.ui.progress_bar.hide()
         self.ui.label.hide()
-        self.ui.button_close.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
         
         self.setWindowIcon(options.cfg.icon)
         self.dialog_stack = []
 
-        # Connect the required signals so the plot is updated on changes to
-        # the results table:
-        self.ui.button_close.clicked.connect(self.close)
         self.frozen = False
         self.spinner = QtGui.QSpinBox()
         self.spinner.setFrame(True)

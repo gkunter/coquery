@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -98,7 +98,7 @@ class Ui_ConnectionConfig(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame_2.sizePolicy().hasHeightForWidth())
         self.frame_2.setSizePolicy(sizePolicy)
-        self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_2.setFrameShape(frameShape)
         self.frame_2.setFrameShadow(frameShadow)
         self.frame_2.setObjectName(_fromUtf8("frame_2"))
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.frame_2)
@@ -143,7 +143,7 @@ class Ui_ConnectionConfig(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame_sqlite.sizePolicy().hasHeightForWidth())
         self.frame_sqlite.setSizePolicy(sizePolicy)
-        self.frame_sqlite.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_sqlite.setFrameShape(frameShape)
         self.frame_sqlite.setFrameShadow(frameShadow)
         self.frame_sqlite.setObjectName(_fromUtf8("frame_sqlite"))
         self.verticalLayout_10 = QtGui.QVBoxLayout(self.frame_sqlite)
@@ -182,7 +182,7 @@ class Ui_ConnectionConfig(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame_mysql.sizePolicy().hasHeightForWidth())
         self.frame_mysql.setSizePolicy(sizePolicy)
-        self.frame_mysql.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_mysql.setFrameShape(frameShape)
         self.frame_mysql.setFrameShadow(frameShadow)
         self.frame_mysql.setObjectName(_fromUtf8("frame_mysql"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.frame_mysql)
@@ -294,7 +294,7 @@ class Ui_ConnectionConfig(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.connection_indicator.sizePolicy().hasHeightForWidth())
         self.connection_indicator.setSizePolicy(sizePolicy)
-        self.connection_indicator.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.connection_indicator.setFrameShape(frameShape)
         self.connection_indicator.setFrameShadow(QtGui.QFrame.Sunken)
         self.connection_indicator.setObjectName(_fromUtf8("connection_indicator"))
         self.verticalLayout_9 = QtGui.QVBoxLayout(self.connection_indicator)

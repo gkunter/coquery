@@ -2,12 +2,11 @@
 
 # Form implementation generated from reading ui file 'csvOptions.ui'
 #
-# Created: Sun Sep 27 01:54:02 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -45,7 +44,7 @@ class Ui_FileOptions(object):
         self.FilePreviewArea.setObjectName(_fromUtf8("FilePreviewArea"))
         self.verticalLayout_2.addWidget(self.FilePreviewArea)
         self.OptionsBox = QtGui.QFrame(FileOptions)
-        self.OptionsBox.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.OptionsBox.setFrameShape(frameShape)
         self.OptionsBox.setFrameShadow(frameShadow)
         self.OptionsBox.setObjectName(_fromUtf8("OptionsBox"))
         self.verticalLayout = QtGui.QVBoxLayout(self.OptionsBox)

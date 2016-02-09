@@ -57,6 +57,10 @@ def QWebView(*args, **kwargs):
         
 import sys
 if sys.platform == 'win32':
-    frameShadow = QtGui.QFrame.Sunken
+    frameShadow = QtGui.QFrame.Raised
+    frameShape = QtGui.QFrame.Panel
 else:
     frameShadow = QtGui.QFrame.Raised
+    frameShape = QtGui.QFrame.StyledPanel
+    
+    

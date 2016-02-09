@@ -2,12 +2,11 @@
 
 # Form implementation generated from reading ui file 'createUser.ui'
 #
-# Created: Mon Sep 21 19:42:48 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -28,11 +27,11 @@ class Ui_CreateUser(object):
         CreateUser.setObjectName(_fromUtf8("CreateUser"))
         CreateUser.resize(586, 569)
         self.verticalLayout_2 = QtGui.QVBoxLayout(CreateUser)
-        self.verticalLayout_2.setSpacing(16)
         self.verticalLayout_2.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
+        self.verticalLayout_2.setSpacing(16)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.frame = QtGui.QFrame(CreateUser)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout = QtGui.QVBoxLayout(self.frame)

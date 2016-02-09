@@ -2,12 +2,11 @@
 
 # Form implementation generated from reading ui file 'figureOptions.ui'
 #
-# Created: Thu Oct 15 21:17:06 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -85,11 +84,11 @@ class Ui_FigureOptions(object):
         self.tab_colors = QtGui.QWidget()
         self.tab_colors.setObjectName(_fromUtf8("tab_colors"))
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.tab_colors)
-        self.verticalLayout_3.setSpacing(16)
         self.verticalLayout_3.setContentsMargins(8, 6, 8, 6)
+        self.verticalLayout_3.setSpacing(16)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.frame_2 = QtGui.QFrame(self.tab_colors)
-        self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_2.setFrameShape(frameShape)
         self.frame_2.setFrameShadow(frameShadow)
         self.frame_2.setObjectName(_fromUtf8("frame_2"))
         self.verticalLayout_7 = QtGui.QVBoxLayout(self.frame_2)
@@ -173,7 +172,7 @@ class Ui_FigureOptions(object):
         self.verticalLayout_7.addLayout(self.gridLayout_6)
         self.verticalLayout_3.addWidget(self.frame_2)
         self.frame = QtGui.QFrame(self.tab_colors)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout_6 = QtGui.QVBoxLayout(self.frame)
@@ -194,7 +193,7 @@ class Ui_FigureOptions(object):
         self.verticalLayout_6.addLayout(self.horizontalLayout_6)
         self.verticalLayout_3.addWidget(self.frame)
         self.frame1 = QtGui.QFrame(self.tab_colors)
-        self.frame1.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame1.setFrameShape(frameShape)
         self.frame1.setFrameShadow(frameShadow)
         self.frame1.setObjectName(_fromUtf8("frame1"))
         self.verticalLayout_5 = QtGui.QVBoxLayout(self.frame1)
@@ -220,6 +219,11 @@ class Ui_FigureOptions(object):
         self.horizontalLayout_8.addItem(spacerItem3)
         self.verticalLayout_5.addLayout(self.horizontalLayout_8)
         self.verticalLayout_3.addWidget(self.frame1)
+        self.radio_qualitative.raise_()
+        self.combo_qualitative.raise_()
+        self.frame.raise_()
+        self.frame.raise_()
+        self.frame_2.raise_()
         self.tabWidget.addTab(self.tab_colors, _fromUtf8(""))
         self.tab_fonts = QtGui.QWidget()
         self.tab_fonts.setObjectName(_fromUtf8("tab_fonts"))
@@ -249,7 +253,7 @@ class Ui_FigureOptions(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_sample_main.sizePolicy().hasHeightForWidth())
         self.label_sample_main.setSizePolicy(sizePolicy)
-        self.label_sample_main.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.label_sample_main.setFrameShape(frameShape)
         self.label_sample_main.setFrameShadow(QtGui.QFrame.Sunken)
         self.label_sample_main.setObjectName(_fromUtf8("label_sample_main"))
         self.horizontalLayout.addWidget(self.label_sample_main)
@@ -273,7 +277,7 @@ class Ui_FigureOptions(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_sample_x.sizePolicy().hasHeightForWidth())
         self.label_sample_x.setSizePolicy(sizePolicy)
-        self.label_sample_x.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.label_sample_x.setFrameShape(frameShape)
         self.label_sample_x.setFrameShadow(QtGui.QFrame.Sunken)
         self.label_sample_x.setObjectName(_fromUtf8("label_sample_x"))
         self.horizontalLayout_2.addWidget(self.label_sample_x)
@@ -292,7 +296,7 @@ class Ui_FigureOptions(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_sample_x_ticks.sizePolicy().hasHeightForWidth())
         self.label_sample_x_ticks.setSizePolicy(sizePolicy)
-        self.label_sample_x_ticks.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.label_sample_x_ticks.setFrameShape(frameShape)
         self.label_sample_x_ticks.setFrameShadow(QtGui.QFrame.Sunken)
         self.label_sample_x_ticks.setObjectName(_fromUtf8("label_sample_x_ticks"))
         self.horizontalLayout_4.addWidget(self.label_sample_x_ticks)
@@ -316,7 +320,7 @@ class Ui_FigureOptions(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_sample_y.sizePolicy().hasHeightForWidth())
         self.label_sample_y.setSizePolicy(sizePolicy)
-        self.label_sample_y.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.label_sample_y.setFrameShape(frameShape)
         self.label_sample_y.setFrameShadow(QtGui.QFrame.Sunken)
         self.label_sample_y.setObjectName(_fromUtf8("label_sample_y"))
         self.horizontalLayout_3.addWidget(self.label_sample_y)
@@ -335,7 +339,7 @@ class Ui_FigureOptions(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_sample_y_ticks.sizePolicy().hasHeightForWidth())
         self.label_sample_y_ticks.setSizePolicy(sizePolicy)
-        self.label_sample_y_ticks.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.label_sample_y_ticks.setFrameShape(frameShape)
         self.label_sample_y_ticks.setFrameShadow(QtGui.QFrame.Sunken)
         self.label_sample_y_ticks.setObjectName(_fromUtf8("label_sample_y_ticks"))
         self.horizontalLayout_5.addWidget(self.label_sample_y_ticks)
@@ -359,7 +363,7 @@ class Ui_FigureOptions(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_sample_legend.sizePolicy().hasHeightForWidth())
         self.label_sample_legend.setSizePolicy(sizePolicy)
-        self.label_sample_legend.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.label_sample_legend.setFrameShape(frameShape)
         self.label_sample_legend.setFrameShadow(QtGui.QFrame.Sunken)
         self.label_sample_legend.setObjectName(_fromUtf8("label_sample_legend"))
         self.horizontalLayout_12.addWidget(self.label_sample_legend)
@@ -378,7 +382,7 @@ class Ui_FigureOptions(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_sample_legend_entries.sizePolicy().hasHeightForWidth())
         self.label_sample_legend_entries.setSizePolicy(sizePolicy)
-        self.label_sample_legend_entries.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.label_sample_legend_entries.setFrameShape(frameShape)
         self.label_sample_legend_entries.setFrameShadow(QtGui.QFrame.Sunken)
         self.label_sample_legend_entries.setObjectName(_fromUtf8("label_sample_legend_entries"))
         self.horizontalLayout_13.addWidget(self.label_sample_legend_entries)

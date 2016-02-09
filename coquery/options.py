@@ -72,12 +72,18 @@ class Options(object):
         self.args.server_configuration = dict()
         self.args.current_server = None
         self.args.current_resources = None
+
+        # FIXME: This may not always work. For example, an executable compiled
+        # by PyInstaller may be executed in a temporary folder.
+        self.args.base_path = sys.path[0]
+
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
-        self.args.corpus_source_path = os.path.expanduser("~")
+        self.args.corpus_source_path = os.path.join(self.args.base_path, "texts")
         self.args.text_source_path = os.path.expanduser("~")
         self.args.stopwords_file_path = os.path.expanduser("~")
+
         self.args.connection_path = os.path.join(self.args.coquery_home, "connections")
         
         self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
@@ -670,6 +676,14 @@ class Options(object):
                             self.args.text_source_path = config_file.get("gui", "text_source_path")
                         except (NoOptionError, ValueError):
                             self.args.text_source_path = os.path.expanduser("~")
+                        try:
+                            self.args.use_corpus_filters = config_file.get("gui", "use_corpus_filters")
+                        except (NoOptionError, ValueError):
+                            self.args.use_corpus_filters = False
+                        try:
+                            self.args.use_stopwords = config_file.get("gui", "use_stopwords")
+                        except (NoOptionError, ValueError):
+                            self.args.use_stopwords = False                        
                             
                         try:
                             self.args.reaggregate_data = config_file.get("gui", "reaggregate_data")
@@ -800,6 +814,8 @@ def save_configuration():
         if cfg.stopword_list:
             config.set("gui", "stopword_list", 
                        encode_query_string("\n".join(cfg.stopword_list)))
+        config.set("gui", "use_stopwords", cfg.use_stopwords)
+        config.set("gui", "use_corpus_filters", cfg.use_corpus_filters)        
 
         for x in cfg.column_width:
             if not x.startswith("coquery_invisible") and cfg.column_width[x]:

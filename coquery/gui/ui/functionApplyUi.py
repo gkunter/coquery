@@ -2,12 +2,11 @@
 
 # Form implementation generated from reading ui file 'functionApply.ui'
 #
-# Created: Thu Oct 15 21:21:16 2015
-#      by: PyQt4 UI code generator 4.11.3
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -26,17 +25,17 @@ except AttributeError:
 class Ui_FunctionDialog(object):
     def setupUi(self, FunctionDialog):
         FunctionDialog.setObjectName(_fromUtf8("FunctionDialog"))
-        FunctionDialog.resize(489, 480)
+        FunctionDialog.resize(520, 480)
         self.verticalLayout_2 = QtGui.QVBoxLayout(FunctionDialog)
         self.verticalLayout_2.setSpacing(16)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.frame = QtGui.QFrame(FunctionDialog)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
         self.frame.setObjectName(_fromUtf8("frame"))
         self.verticalLayout = QtGui.QVBoxLayout(self.frame)
-        self.verticalLayout.setSpacing(4)
         self.verticalLayout.setContentsMargins(8, 6, 8, 6)
+        self.verticalLayout.setSpacing(4)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.label_description = QtGui.QLabel(self.frame)
         self.label_description.setObjectName(_fromUtf8("label_description"))
@@ -125,8 +124,8 @@ class Ui_FunctionDialog(object):
         QtCore.QMetaObject.connectSlotsByName(FunctionDialog)
 
     def retranslateUi(self, FunctionDialog):
-        FunctionDialog.setWindowTitle(_translate("FunctionDialog", "Apply a function – Coquery", None))
-        self.label_description.setText(_translate("FunctionDialog", "<html><head/><body><p>Apply a function to the column <span style=\" font-weight:600;\">{}.{}:</span></p></body></html>", None))
+        FunctionDialog.setWindowTitle(_translate("FunctionDialog", "Add a function – Coquery", None))
+        self.label_description.setText(_translate("FunctionDialog", "<html><head/><body><p>Add a function for the column <span style=\" font-weight:600;\">{}.{}:</span></p></body></html>", None))
         self.label_func2.setText(_translate("FunctionDialog", "Count the number of characters of \'{}\'", None))
         self.label_func1.setText(_translate("FunctionDialog", "Count the occurrences of the parameter within \'{}\'", None))
         self.radio_length.setText(_translate("FunctionDialog", "&LENGTH", None))

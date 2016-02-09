@@ -19,102 +19,53 @@ from pyqt_compat import QtCore, QtGui, QtHelp
 import classes
 import options
 
-class HelpViewer(QtGui.QDialog):
+from ui.helpViewerUi import Ui_HelpViewer
+
+class HelpViewer(QtGui.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(HelpViewer, self).__init__(*args, **kwargs)
 
-        self.content = QtGui.QTextBrowser(self)
-        self.content.setSource(QtCore.QUrl(
-            os.path.join(sys.path[0], "doc", "build", "qthelp", "firststeps.html")))
+        self.ui = Ui_HelpViewer()
+        self.ui.setupUi(self)
         
-        self.index = QtGui.QTextBrowser(self)
-        self.index.setSource(QtCore.QUrl(
-            os.path.join(sys.path[0], "doc", "build", "qthelp", "index.html")))
-       
-        self.splitter = QtGui.QSplitter(QtCore.Qt.Horizontal)
-        self.splitter.insertWidget(0, self.index)
-        self.splitter.insertWidget(1, self.content)
+        self.ui.index.anchorClicked.connect(self.show_index)
+        self.ui.content.anchorClicked.connect(self.show_content)
         
-        #self.splitter.hide()
-
-        self.HorizontalLayout = QtGui.QHBoxLayout(self)
-        self.HorizontalLayout.addWidget(self.splitter)
-
-
-        self.show()
-
-
-
-
-
-
-
-
-        #path = os.path.join(sys.path[0], "doc", "build", "qthelp", "coquery.qhc")
+        self.ui.action_prev.triggered.connect(self.ui.content.backward)
+        self.ui.action_next.triggered.connect(self.ui.content.forward)
+        self.ui.action_home.triggered.connect(lambda:
+            self.ui.content.setSource(QtCore.QUrl(
+                os.path.join(options.cfg.base_path, "doc", "build", "qthelp", "welcome.html"))))
+        self.ui.action_zoom_in.triggered.connect(self.ui.content.zoomIn)
+        self.ui.action_zoom_in.triggered.connect(self.ui.index.zoomIn)
+        self.ui.action_zoom_out.triggered.connect(self.ui.content.zoomOut)
+        self.ui.action_zoom_out.triggered.connect(self.ui.index.zoomOut)
         
-        #help_engine = QtHelp.QHelpEngine(path, self)
-        #help_engine.setupData()
-        #content_model = help_engine.contentModel()
-        #content_widget = help_engine.contentWidget()
-        #index_model = help_engine.indexModel()
-        #index_widget = help_engine.indexWidget()
         
-        #splitter = QtGui.QSplitter(QtCore.Qt.Horizontal)
+        self.ui.content.setSource(QtCore.QUrl(
+            os.path.join(options.cfg.base_path, "doc", "build", "qthelp", "welcome.html")))
+        self.ui.index.setSource(QtCore.QUrl(
+            os.path.join(options.cfg.base_path, "doc", "build", "qthelp", "index.html")))
 
-        #splitter.addWidget(content_widget)
-        #splitter.addWidget(index_widget)
-        #content_widget.setModel(content_model)
-        #index_widget.setModel(index_model)
-        
-        #splitter.show()
-        
-        self.setWindowTitle("Help – Coquery")
-        
-        #self.engine = QtHelp.QHelpEngine(path, self)
-        #self.engine.setupData()
-
-        #print(self.engine.contentModel().rowCount())
-
-        #self.browser = classes.CoqHelpBrowser()
-        #self.browser.webkit.setUrl(QtCore.QUrl(
-            #os.path.join(sys.path[0], "doc", "build", "qthelp", "index.html")))
-
-            
-        #self.HorizontalLayout = QtGui.QHBoxLayout(self)
-        #self.HorizontalLayout.addWidget(self.browser)
-
-        #self.engine.contentWidget().linkActivated.connect(self.show_content)
-        #self.engine.indexWidget().linkActivated.connect(self.show_index)
-
-        #self.tabs = QtGui.QTabWidget()
-        #self.tabs.addTab(self.engine.contentWidget(), "Contents")
-        #self.tabs.addTab(self.engine.indexWidget(), "Index")
-        
-        #self.engine.contentWidget().setModel(self.engine.contentModel())
-        #self.engine.indexWidget().setModel(self.engine.indexModel())
-       
-        #self.splitter = QtGui.QSplitter(QtCore.Qt.Horizontal)
-        #self.splitter.insertWidget(0, self.tabs)
-        #self.splitter.insertWidget(1, self.browser)
-        
-        #self.tabs.setMaximumWidth(self.tabs.minimumSizeHint().width() * 2)
-
-        ##self.splitter.hide()
-
-        #self.HorizontalLayout = QtGui.QHBoxLayout(self)
-        #self.HorizontalLayout.addWidget(self.splitter)
+        self.ui.splitter.setSizes([
+            self.sizeHint().width() * 0.38,
+            self.sizeHint().width() * 0.62])
 
         try:
             self.resize(options.settings.value("help_size"))
         except TypeError:
             pass
-
+        try:
+            self.ui.splitter.restoreState(options.settings.value("help_splitter"))
+        except TypeError:
+            pass
+        
     def show_content(self):
         print("show_content")
         
-    def show_index(self):
-        print("show_index")
+    def show_index(self, *args, **kwargs):
+        self.ui.content.setSource(args[0])
 
     def closeEvent(self, event):
         options.settings.setValue("help_size", self.size())
-        
+        options.settings.setValue("help_splitter", self.ui.splitter.saveState())

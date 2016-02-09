@@ -25,7 +25,7 @@ import options
 from errors import *
 from defines import *
 
-from pyqt_compat import QtCore, QtGui
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 from ui.corpusManagerUi import Ui_corpusManager
 
 import classes
@@ -58,8 +58,8 @@ class CoqAccordionEntry(QtGui.QWidget):
         button_col = options.cfg.app.palette().color(QtGui.QPalette().Button)
         style = "QFrame {{ background-color: rgb({}, {}, {}); }}".format(button_col.red(), button_col.green(), button_col.blue())
         self.corpus_description_frame.setStyleSheet(style)
-        self.corpus_description_frame.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.corpus_description_frame.setFrameShadow(QtGui.QFrame.Sunken)
+        self.corpus_description_frame.setFrameShape(frameShape)
+        self.corpus_description_frame.setFrameShadow(frameShadow)
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.corpus_description_frame)
         self.verticalLayout_3.setSpacing(20)
         self.verticalLayout_3.setMargin(20)
