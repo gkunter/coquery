@@ -42,6 +42,82 @@ class CoqHelpBrowser(QtGui.QTextBrowser):
         else:
             return super(CoqHelpBrowser, self).loadResource(resource_type, name)
 
+class CoqClickableLabel(QtGui.QLabel):
+    clicked = QtCore.Signal()
+
+    def mousePressEvent(self, ev):
+        self.clicked.emit()
+        
+class CoqSwitch(QtGui.QLabel):
+    toggled = QtCore.Signal()
+    
+    def __init__(self, on, off, text="", *args, **kwargs):
+        super(CoqSwitch, self).__init__(*args, **kwargs)
+        self._label = CoqClickableLabel(text)
+        self._icon = CoqClickableLabel()
+        self._text = text
+        self._on_icon = on
+        self._off_icon = off
+        self._height = QtGui.QPushButton(self._text).sizeHint().height()
+        
+        self._layout = QtGui.QHBoxLayout(self)
+        self._layout.addWidget(self._icon)
+        self._layout.addWidget(self._label)
+        self._layout.setSpacing(2)
+        self._layout.setMargin(0)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+
+        self._on = None
+        self._icon.clicked.connect(self.toggle)
+        self._label.clicked.connect(self.toggle)
+
+        self.setOff()
+        
+    def setText(self, text):
+        self._text = text
+        self._label.setText(text)
+
+    def text(self, text):
+        return self._text
+
+    def _set_pixmap(self, icon):
+        size = QtCore.QSize(self._height * 1.66, self._height)
+        self._icon.setPixmap(icon.pixmap(size))            
+        
+    def sizeHint(self):
+        return QtCore.QSize(
+            self._icon.sizeHint().width() + self._label.sizeHint().width() + 2,
+            self._icon.sizeHint().height())            
+        
+    def toggle(self):
+        self._on = not self._on
+        if self._on:
+            self._set_pixmap(self._on_icon)
+            self._label.setEnabled(True)
+        else:
+            self._set_pixmap(self._off_icon)
+            #self._label.setDisabled(True)
+        self.toggled.emit()
+        
+    def isOn(self):
+        return self._on
+    
+    def isOff(self):
+        return not self._on
+    
+    def setOn(self):
+        if self._on == True:
+            return
+        self._on = False
+        self.toggle()
+        
+    def setOff(self):
+        if self._on == False:
+            return
+        self._on = True
+        self.toggle()
+        
+
 class CoqDetailBox(QtGui.QWidget):
     """
     Define a QLayout class that has the QPushButton 'header' as a clickable 
