@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 import __init__
-from pyqt_compat import QtCore, QtGui, frameShadow
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 import QtProgress
 import errorbox as errorbox
 
