@@ -136,8 +136,8 @@ class CoqDetailBox(QtGui.QWidget):
             self.header.setText(self._alternative)
             icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
         else:
-            self.header.setText(self._text)
             try:
+                self.header.setText(self._text)
                 self.box.hide()
             except RuntimeError:
                 # The box may have been deleted already, which raises a 
