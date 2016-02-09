@@ -226,8 +226,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setEnabled(False)
         self.ui.menu_Results.setEnabled(False)
         self.ui.menuAnalyse.setEnabled(False)
-        self.ui.action_save_results.setEnabled(False)
-        self.ui.action_copy_to_clipboard.setEnabled(False)
 
         # set splitter stretches:
         self.ui.splitter.setStretchFactor(0,0)
@@ -305,16 +303,18 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_manage_corpus.setIcon(self.get_icon("database_2"))
         self.ui.action_corpus_documentation.setIcon(self.get_icon("sign-info"))
         self.ui.action_statistics.setIcon(self.get_icon("monitor"))
-        #self.ui.action_quit.setIcon(self.get_icon("sign-error"))
+        self.ui.action_quit.setIcon(self.get_icon("sign-error"))
         self.ui.action_view_log.setIcon(self.get_icon("calendar-clock"))
-        #self.ui.action_save_results.setIcon(self.get_icon("floppy"))
-        #self.ui.button_browse_file.setIcon(self.get_icon("folder"))
+        self.ui.action_save_results.setIcon(self.get_icon("floppy"))
+        self.ui.action_save_selection.setIcon(self.get_icon("floppy"))
+        self.ui.button_browse_file.setIcon(self.get_icon("folder"))
         self.ui.button_file_options.setIcon(self.get_icon("file-excel"))
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
         self.ui.action_save_results.triggered.connect(self.save_results)
-        self.ui.action_copy_to_clipboard.triggered.connect(self.copy_to_clipboard)
+        self.ui.action_save_selection.triggered.connect(lambda: self.save_results(selection=True))
+        self.ui.action_copy_to_clipboard.triggered.connect(lambda: self.save_results(selection=True, clipboard=True))
         self.ui.action_quit.triggered.connect(self.close)
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
         self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
@@ -360,6 +360,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
+        self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
 
     def help(self):
         import helpviewer
@@ -367,6 +368,24 @@ class CoqueryApp(QtGui.QMainWindow):
         self.helpviewer = helpviewer.HelpViewer(parent=self)
         self.helpviewer.show()
 
+    def show_file_menu(self):
+        # leave if the results table is empty:
+        if len(self.table_model.content.index) == 0:
+            # disable the result-related menu entries:
+            self.ui.action_save_selection.setDisabled(True)
+            self.ui.action_save_results.setDisabled(True)
+            self.ui.action_copy_to_clipboard.setDisabled(True)
+            return
+
+        # enable "Save results"
+        self.ui.action_save_results.setEnabled(True)
+
+        # enable "Save selection" and "Copy selection to clipboard" if there 
+        # is a selection:
+        if self.ui.data_preview.selectionModel() and self.ui.data_preview.selectionModel().selection():
+            self.ui.action_save_selection.setEnabled(True)
+            self.ui.action_copy_to_clipboard.setEnabled(True)
+            
     def show_corpus_menu(self):
         if self.ui.combo_corpus.count():
             self.ui.action_corpus_documentation.setEnabled(True)
@@ -374,7 +393,6 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.action_corpus_documentation.setEnabled(False)
             self.ui.action_statistics.setEnabled(False)
-            
 
     def show_results_menu(self):
         self.ui.menu_Results.clear()
@@ -892,10 +910,7 @@ class CoqueryApp(QtGui.QMainWindow):
         result = stopwords.Stopwords.manage(self, options.cfg.icon)
         self.set_stopword_button()
     
-    def copy_to_clipboard(self):
-        self.save_results(to_clipboard=True)
-    
-    def save_results(self, to_clipboard=False):
+    def save_results(self, selection=False, clipboard=False):
         if not to_clipboard:
             name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.results_file_path)
             if type(name) == tuple:
@@ -908,10 +923,18 @@ class CoqueryApp(QtGui.QMainWindow):
             ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
             ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
             tab = self.table_model.content[ordered_headers]
+
             # exclude invisble rows:
             tab = tab.iloc[~tab.index.isin(pd.Series(
                 options.cfg.row_visibility[self.Session.query_type].keys()))]
-            if to_clipboard:
+            
+            # restrict to selection?
+            if selection:
+                selection = [x.row() for x in self.ui.data_preview.selectionModel().selectedRows()]
+                if selection:
+                    tab = tab.iloc[selection]
+            
+            if clipboard:
                 cb = QtGui.QApplication.clipboard()
                 cb.clear(mode=cb.Clipboard)
                 cb.setText(tab.to_csv(
