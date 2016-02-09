@@ -52,12 +52,8 @@ import __init__
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
-
-try:
-    import seaborn as sns
-except ImportError:
-    raise RuntimeError
-
+import seaborn as sns
+    
 from pyqt_compat import QtGui, QtCore, pyside
 # Tell matplotlib if PySide is being used:
 if pyside:
