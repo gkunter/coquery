@@ -32,6 +32,7 @@ import warnings
 import codecs
 import ast
 import collections
+import inspect
 
 # make ast work in all Python versions:
 if not hasattr(ast, "TryExcept"):
@@ -73,10 +74,8 @@ class Options(object):
         self.args.current_server = None
         self.args.current_resources = None
 
-        # FIXME: This may not always work. For example, an executable compiled
-        # by PyInstaller may be executed in a temporary folder.
-        self.args.base_path = sys.path[0]
-
+        self.args.base_path, _ = os.path.split(os.path.realpath(__file__))
+        
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
