@@ -62,7 +62,7 @@ def dia_to_unicode(s):
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "e??.cd"
 
-    corpus_table = "eow"
+    corpus_table = "Ortho_Words"
     corpus_id = "IdNum"
     corpus_phonoword_id = "IdNum"
     corpus_morphword_id = "IdNum"
@@ -78,7 +78,7 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_cobspelldev = "Word_CobSpellDev"
     corpus_wordsyldia = "Word_WordSylDia"
     
-    lemma_table = "eol"
+    lemma_table = "Ortho_Lemmas"
     lemma_id = "IdNum"
     lemma_label = "Head"
     lemma_headdia = "HeadDia"
@@ -88,7 +88,7 @@ class BuilderClass(BaseCorpusBuilder):
     lemma_cobspelldev = "Lemma_CobSpellDev"
     lemma_headsyldia = "Lemma_HeadSylDia"
     
-    phonoword_table = "epw"
+    phonoword_table = "Phono_Words"
     phonoword_id = "IdNum"
     phonoword_word = "Word"
     phonoword_phonstrsdisc = "Word_PhonStrsDISC"
@@ -96,7 +96,7 @@ class BuilderClass(BaseCorpusBuilder):
     phonoword_phoncvbr = "Word_PhonCVBr"
     phonoword_phonsylbclx = "Word_PhonSylBCLX"
 
-    phonolemma_table = "epl"
+    phonolemma_table = "Phono_Lemmas"
     phonolemma_id = "IdNum"
     phonolemma_head = "Head"
     phonolemma_proncnt = "Lemma_PronCnt"
@@ -104,13 +104,13 @@ class BuilderClass(BaseCorpusBuilder):
     phonolemma_phoncvbr = "Lemma_PhonCVBr"
     phonolemma_phonsylbclx = "Lemma_PhonSylBCLX"
 
-    morphword_table = "emw"
+    morphword_table = "Morpho_Words"
     morphword_id = "IdNum"
     morphword_word = "Word"
     morphword_flecttype = "Word_FlectType"
     morphword_transinfl = "Word_TransInfl"
 
-    morphlemma_table = "eml"
+    morphlemma_table = "Morpho_Lemmas"
     morphlemma_id = "IdNum"
     morphlemma_head = "Head"
     morphlemma_morphstatus = "Lemma_MorphStatus"
@@ -136,7 +136,7 @@ class BuilderClass(BaseCorpusBuilder):
     morphlemma_strucsubst = "Lemma_StrucSubst"
     morphlemma_strucopac = "Lemma_StrucOpac"
 
-    syntaxlemma_table = "esl"
+    syntaxlemma_table = "Syntax_Lemmas"
     syntaxlemma_id = "Lemma_IdNum"
     syntaxlemma_head = "Head"
     syntaxlemma_classnum = "Lemma_ClassNum"
