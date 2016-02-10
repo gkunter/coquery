@@ -224,12 +224,12 @@ class BuilderClass(BaseCorpusBuilder):
     word_label = "Word"
     word_pos = "Pos"
 
-    file_table = "File"
+    file_table = "Files"
     file_id = "FileId"
     file_name = "Filename"
     file_path = "Path"
     
-    source_table = "Source"
+    source_table = "Sources"
     source_id = "SourceId"
     source_mode = "Mode"
     source_age = "Age"
@@ -925,6 +925,8 @@ class BuilderClass(BaseCorpusBuilder):
         # lookup table.
         # The installer has to check, then, if the string is empty after
         # replacement. If so, it should discard the current line.
+        
+        # CHECK CHARACTERS after 'i' in ATec_01.xml.pos, ATec_06.xml.pos
         
         replace_list = [
             ("â", "‘"),

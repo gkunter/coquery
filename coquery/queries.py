@@ -669,7 +669,7 @@ class DistinctQuery(TokenQuery):
 
     @classmethod
     def aggregate_data(cls, df, resource, **kwargs):
-        vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and x in kwargs["output_order"] and
+        vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and x in kwargs["session"].output_order and
                     options.cfg.column_visibility.get(x, True)]
         try:
             df = df.drop_duplicates(subset=vis_cols)
@@ -739,7 +739,7 @@ class FrequencyQuery(TokenQuery):
 
         columns = []
         for x in df.columns.values:
-            if x in kwargs["output_order"]:
+            if x in kwargs["session"].output_order:
                 try:
                     n = int(x.rpartition("_")[-1])
                 except ValueError:
@@ -796,6 +796,93 @@ class FrequencyQuery(TokenQuery):
             pass
 
         return result
+
+class ContingencyQuery(TokenQuery):
+    """ 
+    ContingencyQuery is a subclass of TokenQuery.
+    
+    In this subclass, :func:`aggregate_data` creates an aggregrate table of
+    the data frame containing the query results. The results are grouped so
+    that a contingency table is produced.
+    """
+
+    @staticmethod
+    def add_output_columns(session):
+        if not hasattr(session, "_old_output_order"):
+            session._old_output_order = list(session.output_order)
+        if hasattr(session, "_contingency_order"):
+            session.output_order = list(session._contingency_order)
+
+    @staticmethod
+    def remove_output_columns(session):
+        session._contingency_order = list(session.output_order)
+        session.output_order = list(session._old_output_order)
+    
+    @classmethod
+    def aggregate_data(cls, df, resource, **kwargs):
+        """
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame to be aggregated
+            
+        Returns
+        -------
+        result : DataFrame
+        """
+        
+        if hasattr(kwargs["session"], "_old_output_order"):
+            kwargs["session"].output_order = list(kwargs["session"]._old_output_order)
+
+        if options.cfg.main_window:
+            output_order = kwargs["session"].output_order
+            tab = getattr(options.cfg.main_window, "table_model", None)
+            if tab:
+                header = options.cfg.main_window.ui.data_preview.horizontalHeader()
+                logical_header = [tab.header[header.logicalIndex(i)] for i in range(header.count())]
+                logical_header = [x for x in logical_header if x.startswith("coq")]
+                for x in output_order:
+                    if x not in logical_header:
+                        logical_header.append(x)
+                if logical_header:
+                    output_order = logical_header
+            kwargs["session"].output_order = output_order
+
+        columns = []
+        for x in kwargs["session"].output_order:
+            if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True):
+                columns.append(x)
+
+        row_columns = columns[:-1]
+        row_list = [df[x] for x in row_columns]
+
+        if len(columns) == 0:
+            result = pd.DataFrame({"statistics_column_total": [len(df.index)]})
+        elif len(columns) > 1:
+            col_column = columns[-1]
+            result = pd.crosstab(row_list, df[col_column], margins=True).reset_index()
+            kwargs["session"].output_order.remove(col_column)
+            new_columns = list(result.columns)
+            for i in range(len(row_columns), len(new_columns) - 1):
+                col_label = "{}: {}".format(
+                    kwargs["session"].translate_header(col_column), new_columns[i])
+                new_columns[i] = col_label
+                kwargs["session"].output_order.append(col_label)
+            new_columns[-1] = "statistics_column_total"
+            result.columns = new_columns  
+            result
+        else:
+            col_column = ""
+            result = pd.crosstab(df[columns[0]], columns=[], margins=True).reset_index()
+            result.columns = [columns[0], "statistics_column_total"]
+
+        if len(columns):
+            #for x in columns[:-1]:
+                #result[x][len(result.index)-1] = "---"
+            result[result.columns[0]][len(result.index)-1] = COLUMN_NAMES["statistics_column_total"]
+
+        kwargs["session"].output_order.append("statistics_column_total")
+        return result.fillna("")
 
 class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):

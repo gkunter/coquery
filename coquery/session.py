@@ -67,6 +67,8 @@ class Session(object):
             self.query_type = queries.DistinctQuery
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.query_type = queries.CollocationQuery
+        elif options.cfg.MODE == QUERY_MODE_CONTINGENCY:
+            self.query_type = queries.ContingencyQuery
         elif options.cfg.MODE == QUERY_MODE_STATISTICS:
             self.query_type = queries.StatisticsQuery
 
@@ -169,7 +171,7 @@ class Session(object):
         pass
         
     def get_frequency_table(self):
-        frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, output_order=self.output_order)
+        frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, session=self)
         frequency_table.fillna("", inplace=True)
         frequency_table.index = range(1, len(frequency_table.index) + 1)
 
@@ -192,6 +194,9 @@ class Session(object):
             elif self.query_type == queries.CollocationQuery and hasattr(self, "_cached_collocation_table"):
                 self.output_object = self._cached_collocation_table
                 return
+            elif self.query_type == queries.ContingencyQuery and hasattr(self, "_cached_contingency_table"):
+                self.output_object = self._cached_contingency_table
+                return
 
         # Recalculate the output object for the current query type, excluding
         # invisible rows:
@@ -204,7 +209,7 @@ class Session(object):
 
         self.output_object = self.query_type.aggregate_it(
             tab,
-            self.Corpus, output_order=self.output_order)
+            self.Corpus, session=self)
 
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
@@ -216,6 +221,8 @@ class Session(object):
             self._cached_unique_table = self.output_object
         elif self.query_type == queries.CollocationQuery:
             self._cached_collocation_table = self.output_object
+        elif self.query_type == queries.ContingencyQuery:
+            self._cached_contingency_table = self.output_object
 
     def drop_cached_aggregates(self):
         try:

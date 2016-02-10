@@ -36,6 +36,7 @@ QUERY_MODE_FREQUENCIES = "FREQ"
 QUERY_MODE_DISTINCT = "DISTINCT"
 QUERY_MODE_STATISTICS = "STATS"
 QUERY_MODE_COLLOCATIONS = "COLLOCATE"
+QUERY_MODE_CONTINGENCY = "CONTINGENCY"
 
 SORT_NONE = 0
 SORT_INC = 1
@@ -76,6 +77,7 @@ COLUMN_NAMES = {
     "statistics_query_proportion": "Query proportion",
     "statistics_per_million_words": "Frequency (pmw)",
     "statistics_query_entropy": "Query entropy",
+    "statistics_column_total": "ALL",
         }
 
 DEFAULT_CONFIGURATION = "Default"
