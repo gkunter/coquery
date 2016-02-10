@@ -310,13 +310,32 @@ class BaseVisualizer(QtCore.QObject):
         if not options.cfg.main_window.Session:
             raise VisualizationNoDataError
         
-        # get the column order from the visual QTableView:
+        ## get the column order from the visual QTableView:
+        #header = self._view.horizontalHeader()
+        #column_order = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
+        #if self._plot_frequency:
+            #column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True)]
+        #else:
+            #column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and not x.startswith("statistics")]
+
+        #print(options.cfg.main_window.Session.data_table.columns)
+        #print(column_order)
+
         header = self._view.horizontalHeader()
-        column_order = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
+        view_columns = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
+        
+        view_columns = [x for x in view_columns if x in options.cfg.main_window.Session.data_table.columns]
+        
         if self._plot_frequency:
-            column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True)]
+            view_columns = [x for x in view_columns if options.cfg.column_visibility.get(x, True)]
         else:
-            column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and not x.startswith("statistics")]
+            view_columns = [x for x in view_columns if options.cfg.column_visibility.get(x, True) and not x.startswith("statistics")]
+        
+        print(view_columns)
+        
+        column_order = view_columns
+
+
 
         column_order.append("coquery_invisible_corpus_id")
 

@@ -854,7 +854,7 @@ class ContingencyQuery(TokenQuery):
                 columns.append(x)
 
         row_columns = columns[:-1]
-        row_list = [df[x] for x in row_columns]
+        row_list = [df[x] for x in row_columns if x in df.columns]
 
         if len(columns) == 0:
             result = pd.DataFrame({"statistics_column_total": [len(df.index)]})
