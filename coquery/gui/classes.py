@@ -116,7 +116,6 @@ class CoqSwitch(QtGui.QLabel):
             return
         self._on = True
         self.toggle()
-        
 
 class CoqDetailBox(QtGui.QWidget):
     """
@@ -532,15 +531,16 @@ class LogProxyModel(QtGui.QSortFilterProxyModel):
     messages.
     """
     def headerData(self, index, orientation, role):
-        # column names:
         if orientation == QtCore.Qt.Vertical:
-            return None
-        header = self.sourceModel().header
-        if not header or index > len(header):
-            return None
-        
-        if role == QtCore.Qt.DisplayRole:
-            return header[index]
+            return
+        else:
+            # column names:
+            header = self.sourceModel().header
+            if not header or index > len(header):
+                return None
+            
+            if role == QtCore.Qt.DisplayRole:
+                return header[index]
 
 class CoqTextEdit(QtGui.QTextEdit):
     """
@@ -737,6 +737,15 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                     if isinstance(value, (float, np.float64)):
                         return ("{:.%if}" % options.cfg.digits).format(value)
                     else:
+                        if options.cfg.main_window.Session.query_type == queries.ContingencyQuery:
+                            if isinstance(value, str):
+                                if index.row() > 0:
+                                    if value == self.content.iloc[index.row() -1][self.header[index.column()]]:
+                                        if index.column() > 0:
+                                            if self.content.iloc[index.row()][index.column() - 1] == self.content.iloc[index.row() - 1][index.column() - 1]: 
+                                                return ""
+                                        else:
+                                            return ""
                         try:
                             return str(value)
                         except UnicodeEncodeError:
@@ -763,7 +772,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # Return row names?
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
-                return str(self.rownames[index])
+                if options.cfg.main_window.Session.query_type == queries.ContingencyQuery and index == len(self.rownames) - 1:
+                    return None
+                else:
+                    return str(self.rownames[index])
             else:
                 return None
 
@@ -846,6 +858,12 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             # add the sorting direction
             directions.append(self.sort_columns[col] in set([SORT_INC, SORT_REV_INC]))
             sort_order.append(name)
+         
+        # remember and remove the row containing column totals if the current
+        # aggregation is a contingency table:
+        if options.cfg.main_window.Session.query_type == queries.ContingencyQuery:
+            column_totals = self.content.iloc[len(self.content.index)-1]
+            self.content = self.content.iloc[0:len(self.content.index)-1]
             
         if sort_order:
             # sort the data frame. Note that pandas 0.17.0 changed the 
@@ -860,7 +878,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 self.content.sort_values(
                     by=sort_order, ascending=directions,
                     axis="index", inplace=True)
-                
+        # Reinsert the row containing the column totals:
+        if options.cfg.main_window.Session.query_type == queries.ContingencyQuery:
+            self.content = self.content.append(column_totals).reset_index(drop=True)
+        
             # remove all temporary columns:
         self.content.drop(labels=del_columns, axis="columns", inplace=True)
 
@@ -893,10 +914,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         errorbox.ErrorBox.show(self.exc_info, self.exception)
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
+    fill = False
+    
     def __init__(self, *args, **kwargs):
         super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
         self._app = options.cfg.app
         self._table = options.cfg.main_window.table_model
+        if not hasattr(self, "fg_color"):
+            self.fg_color = None
+        if not hasattr(self, "fb_color"):
+            self.bg_color = None
     
     def get_foreground(self, option, index):
         if option.state & QtGui.QStyle.State_MouseOver:
@@ -916,7 +943,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
                     return QtGui.QColor(col)
                 except KeyError:
                     # return default color
-                    return None
+                    return self.fg_color
             else:
                 # return light grey for hidden cells:
                 return self._app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Text)
@@ -929,10 +956,13 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
                 color_group = QtGui.QPalette.Normal
             else:
                 color_group = QtGui.QPalette.Disabled
-            if index.row() & 1:
-                return self._app.palette().color(color_group, QtGui.QPalette.AlternateBase)
+            if not self.bg_color:
+                if index.row() & 1:
+                    return self._app.palette().color(color_group, QtGui.QPalette.AlternateBase)
+                else:
+                    return self._app.palette().color(color_group, QtGui.QPalette.Base)
             else:
-                return self._app.palette().color(color_group, QtGui.QPalette.Base)
+                return self.bg_color
 
     def sizeHint(self, option, index):
         rect = options.cfg.metrics.boundingRect(unicode(index.data(QtCore.Qt.DisplayRole)))
@@ -947,7 +977,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         On mouse-over, the cell is rendered like a clickable link.
         """
         content = unicode(index.data(QtCore.Qt.DisplayRole))
-        if not content:
+        if not content and not self.fill:
             return
         painter.save()
 
@@ -963,7 +993,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         if bg:
             painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
-            if option.state & QtGui.QStyle.State_Selected:
+            if option.state & QtGui.QStyle.State_Selected or self.fill:
                 painter.fillRect(option.rect, bg)
             
         if fg:
@@ -975,6 +1005,14 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
                 painter.drawText(option.rect.adjusted(-2, 0, -2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
         finally:
             painter.restore()
+
+class CoqTotalDelegate(CoqResultCellDelegate):
+    fill = True
+    
+    def __init__(self, *args, **kwargs):
+        super(CoqTotalDelegate, self).__init__(*args, **kwargs)
+        self.fg_color = self._app.palette().color(QtGui.QPalette.ButtonText)
+        self.bg_color = self._app.palette().color(QtGui.QPalette.Button)
 
 class CoqProbabilityDelegate(CoqResultCellDelegate):
     def paint(self, painter, option, index):

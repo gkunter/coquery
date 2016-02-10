@@ -236,10 +236,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menuAnalyse.setEnabled(False)
 
         # set splitter stretches:
-        self.ui.splitter.setStretchFactor(0,0)
-        self.ui.splitter.setStretchFactor(1,1)
-        self.ui.splitter_2.setStretchFactor(0,1)
-        self.ui.splitter_2.setStretchFactor(1,0)
+        self.ui.splitter.setStretchFactor(0, 1)
+        self.ui.splitter.setStretchFactor(1, 0)
+        self.ui.splitter_2.setStretchFactor(0, 0)
+        self.ui.splitter_2.setStretchFactor(1, 1)
 
         self.table_model = classes.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
@@ -250,6 +250,7 @@ class CoqueryApp(QtGui.QMainWindow):
         header.sectionResized.connect(self.result_column_resize)
         header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_header_menu)
+        header.sectionMoved.connect(self.column_moved)
 
         header = self.ui.data_preview.verticalHeader()
         header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -264,8 +265,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectionBehavior(QtGui.QAbstractItemView.SelectRows|QtGui.QAbstractItemView.SelectColumns))
 
 
-        self.ui.context_query_syntax.setPixmap(QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_TitleBarContextHelpButton))
-        
         # This is only a template. Alledgedly, OS X does not favour 
         # status bars, so we might use a toolbar instead.
         #if __OS__ == "MAC OS X":
@@ -464,8 +463,10 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.menu_Results.addAction(self.ui.menuRows)
         
     def setup_hooks(self):
-        """ Hook up signals so that the GUI can adequately react to user 
-        input. """
+        """ 
+        Hook up signals so that the GUI can adequately react to user 
+        input.
+        """
         # hook file browser button:
         self.ui.button_browse_file.clicked.connect(self.select_file)
         # hook file options button:
@@ -475,7 +476,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # between either query from file or query from string:
         self.focus_to_file = focusFilter()
         self.ui.edit_file_name.installEventFilter(self.focus_to_file)
-        #self.focus_to_file.clicked.connect(self.select_file)
+
         self.ui.edit_file_name.textChanged.connect(self.switch_to_file)
         self.ui.edit_file_name.textChanged.connect(self.verify_file_name)
         self.focus_to_query = focusFilter()
@@ -485,8 +486,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)
-        #self.ui.edit_query_filter.returnPressed.connect(self.add_query_filter)
-        #self.ui.edit_query_filter.textEdited.connect(self.edit_query_filter)
+
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         self.ui.button_filters.clicked.connect(self.manage_filters)
         
@@ -510,6 +510,10 @@ class CoqueryApp(QtGui.QMainWindow):
             lambda: self.reaggregate(
                 query_type=queries.FrequencyQuery,
                 recalculate=False))
+        self.ui.radio_aggregate_contingency.clicked.connect(
+            lambda: self.reaggregate(
+                query_type=queries.ContingencyQuery,
+                recalculate=False))
         self.ui.radio_aggregate_uniques.clicked.connect(
             lambda: self.reaggregate(
                 query_type=queries.DistinctQuery,
@@ -519,6 +523,9 @@ class CoqueryApp(QtGui.QMainWindow):
                 query_type=queries.TokenQuery,
                 recalculate=False))
 
+    def column_moved(self):
+        if self.Session.query_type == queries.ContingencyQuery:
+            self.reaggregate(query_type=queries.ContingencyQuery, recalculate=True)
         
     def result_column_resize(self, index, old, new):
         header = self.table_model.header[index].lower()
@@ -606,9 +613,9 @@ class CoqueryApp(QtGui.QMainWindow):
     def finish_reaggregation(self):
         self.stop_progress_indicator()
         self.table_model.set_data(self.Session.output_object)
-        self.table_model.set_header()
         self.display_results(drop=False)
         self.show_query_status()
+        header = self.ui.data_preview.horizontalHeader()
             
     def reaggregate(self, query_type=None, recalculate=True):
         """
@@ -838,7 +845,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_remove_corpus.setEnabled(False)
 
     def display_results(self, drop=True):
-        self.ui.box_aggregation_mode.show()
         self.ui.data_preview.setEnabled(True)
         self.ui.menu_Results.setEnabled(True)
         self.ui.menuAnalyse.setEnabled(True)
@@ -866,9 +872,15 @@ class CoqueryApp(QtGui.QMainWindow):
 
             if column in ("coq_conditional_probability", "statistics_overall_proportion", "statistics_query_proportion", "Uniqueness ratio"):
                 deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
+            elif column in ("statistics_column_total"):
+                deleg = classes.CoqTotalDelegate(self.ui.data_preview)                
             else:
                 deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
             self.ui.data_preview.setItemDelegateForColumn(i, deleg)
+
+        if self.Session.query_type == queries.ContingencyQuery:
+            self.ui.data_preview.setItemDelegateForRow(len(self.table_model.content.index) - 1,
+                classes.CoqTotalDelegate(self.ui.data_preview))
 
         if self.table_model.rowCount():
             self.last_results_saved = False
@@ -953,7 +965,6 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.use_corpus_filters = False
 
     def toggle_filter_switch(self):
-        print(self.ui.filter_switch.isOn())
         options.cfg.use_corpus_filters = self.ui.filter_switch.isOn()
 
     def manage_filters(self):
@@ -970,7 +981,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.filter_switch.setOn()
     
     def save_results(self, selection=False, clipboard=False):
-        if not to_clipboard:
+        if not clipboard:
             name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.results_file_path)
             if type(name) == tuple:
                 name = name[0]
@@ -1012,7 +1023,7 @@ class CoqueryApp(QtGui.QMainWindow):
         except (UnicodeEncodeError, UnicodeDecodeError):
             QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
         else:
-            if not to_clipboard:
+            if not selection and not clipboard:
                 self.last_results_saved = True
     
     def showMessage(self, S):
@@ -1530,12 +1541,23 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.start()
 
     def visualize_data(self, module, **kwargs):
+        """
+        Visualize the current results table using the specified visualization 
+        module.
+        """
+        
+        # check if seaborn can be loaded:
         try:
-            import visualizer
-        except RuntimeError:
+            import seaborn
+        except ImportError:
             QtGui.QMessageBox.critical(
                 self, "Missing Python module – Coquery",
                 msg_missing_seaborn_module)
+            return
+        
+        import visualizer
+        
+        # try to import the specified visualization module:
         try:
             module = importlib.import_module(module)
         except Exception as e:
@@ -1545,25 +1567,24 @@ class CoqueryApp(QtGui.QMainWindow):
             QtGui.QMessageBox.critical(
                 self, "Visualization error – Coquery",
                 VisualizationModuleError(module, msg).error_message)
-        else:
-            try:
-                if "Session" not in dir(self):
-                    raise VisualizationNoDataError
-                else:
-                    dialog = visualizer.VisualizerDialog()
-                    dialog.Plot(
-                        self.table_model,
-                        self.ui.data_preview,
-                        module.Visualizer,
-                        parent=self,
-                        **kwargs)
+            return 
+        
+        # try to do the visualization:
+        try:
+            dialog = visualizer.VisualizerDialog()
+            dialog.Plot(
+                self.table_model,
+                self.ui.data_preview,
+                module.Visualizer,
+                parent=self,
+                **kwargs)
 
-            except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
-                QtGui.QMessageBox.critical(
-                    self, "Visualization error – Coquery",
-                    str(e))
-            except Exception as e:
-                errorbox.ErrorBox.show(sys.exc_info())
+        except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
+            QtGui.QMessageBox.critical(
+                self, "Visualization error – Coquery",
+                str(e))
+        except Exception as e:
+            errorbox.ErrorBox.show(sys.exc_info())
         
     def save_configuration(self):
         self.getGuiValues()
@@ -1848,6 +1869,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.MODE = QUERY_MODE_TOKENS
             if self.ui.radio_aggregate_frequencies.isChecked():
                 options.cfg.MODE = QUERY_MODE_FREQUENCIES
+            if self.ui.radio_aggregate_contingency.isChecked():
+                options.cfg.MODE = QUERY_MODE_CONTINGENCY                
             if self.ui.radio_aggregate_collocations.isChecked():
                 options.cfg.MODE = QUERY_MODE_COLLOCATIONS
             try:
@@ -2007,6 +2030,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.radio_aggregate_none.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
             self.ui.radio_aggregate_collocations.setChecked(True)
+        elif options.cfg.MODE == QUERY_MODE_CONTINGENCY:
+            self.ui.radio_aggregate_contingency.setChecked(True)
 
         self.ui.edit_file_name.setText(options.cfg.input_path)
         # either fill query string or query file input:
