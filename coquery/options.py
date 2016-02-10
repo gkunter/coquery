@@ -73,7 +73,8 @@ class Options(object):
         self.args.server_configuration = dict()
         self.args.current_server = None
         self.args.current_resources = None
-
+        self.args.main_window = None
+        
         self.args.base_path, _ = os.path.split(os.path.realpath(__file__))
         
         self.args.query_file_path = os.path.expanduser("~")
@@ -120,7 +121,7 @@ class Options(object):
         
     def setup_parser(self):
         group = self.parser.add_mutually_exclusive_group()
-        self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS, QUERY_MODE_COLLOCATIONS), type=str, nargs="?")
+        self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS, QUERY_MODE_CONTINGENCY, QUERY_MODE_COLLOCATIONS), type=str, nargs="?")
         self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
         
         group.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
