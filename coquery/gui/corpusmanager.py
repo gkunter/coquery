@@ -113,7 +113,6 @@ class CoqAccordionEntry(QtGui.QWidget):
                         self._checksum, self._validation))
                 else:
                     self.button_install.setText("Reinstall")
-
             if installed or not self._builtin:
                 self.button_remove = QtGui.QPushButton(entry_widget)
                 self.button_remove.setIcon(self._stack.parent().get_icon("sign-delete"))
@@ -281,7 +280,7 @@ class CorpusManager(QtGui.QDialog):
             True if the path is in the default Coquery directory tree, or 
             False otherwise (i.e. with custom installers or ad-hoc corpora)
         """
-        return os.path.abspath(os.path.join(options.cfg.base_path, "coquery", "installer")) in os.path.abspath(path)
+        return os.path.abspath(os.path.join(options.cfg.base_path, "installer")) in os.path.abspath(path)
 
     def update(self):
         """
