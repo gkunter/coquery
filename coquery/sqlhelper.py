@@ -125,14 +125,17 @@ def test_configuration(name):
         try:
             engine = sqlalchemy.create_engine(sql_url(name))
             with engine.connect() as connection:
-                connection.execute("SELECT VERSION()")
+                result = connection.execute("SELECT VERSION()")
+            result.close()
         except sqlalchemy.exc.SQLAlchemyError as e:
-            return (False, e)
+            res = (False, e)
         except Exception as e:
             raise e
         else:
-            return (True, None)
-
+            res = (True, None)
+        finally:
+            engine.dispose()
+        return res
     elif d["type"] == SQL_SQLITE:
         if os.access(sqlite_path(name), os.X_OK | os.R_OK):
             return (True, None)
@@ -213,15 +216,16 @@ def drop_database(configuration, db_name):
             connection.execute(text)
     elif engine.dialect.name == SQL_SQLITE:
         os.remove(sqlite_path(configuration, db_name))
+    engine.dispose()
 
 def create_database(configuration, db_name):
     s = sql_url(configuration)
     engine = sqlalchemy.create_engine(s)
-    
     if engine.dialect.name == SQL_MYSQL:
         with engine.connect() as connection:
             connection.execute("CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name.split()[0]))
-
+    engine.dispose()
+    
 def has_database(configuration, db_name):
     """
     Test if the database 'db_name' exists in the given configuration.
@@ -243,10 +247,9 @@ def has_database(configuration, db_name):
         S = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{}'".format(db_name)
         try:
             results = engine.execute(S)
-        except sqlalchemy.exc.InternalError:
+        except sqlalchemy.exc.InternalError as e:
             return False
         except Exception as e:
-            print(e)
             raise e
         else:
             return True
