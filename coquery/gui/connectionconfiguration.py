@@ -439,7 +439,7 @@ class ConnectionConfiguration(QtGui.QDialog):
                     raise e
                 else:
                     QtGui.QMessageBox.information(self, "User created", "The user named '{}' has successfully been created on the MySQL server.".format(name))
-
+            engine.dispose()
             self.ui.user.setText(name)
             self.ui.password.setText(password)
             self.check_connection()
