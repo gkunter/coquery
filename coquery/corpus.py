@@ -1156,11 +1156,7 @@ class CorpusClass(object):
             self.resource.corpus_id,
             token_id)
 
-        engine = sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.resource.db_name))
-
-        df = pd.read_sql(S, engine)
-        #db = self.resource.get_db()
-        #d = db.execute_cursor(S).fetchone()
+        df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.resource.db_name)))
         
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
@@ -1645,6 +1641,8 @@ class CorpusClass(object):
             # character wildcards are penalized also, but take escaping 
             # into account:
             w = w - (s.count("_") - s.count("\\_"))
+            if s.strip().startswith("~"):
+                w = -w
             return w
         
         sort_list = list(enumerate(token_list))
