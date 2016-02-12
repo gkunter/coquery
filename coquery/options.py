@@ -59,8 +59,6 @@ class Options(object):
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False)
 
         self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
-        self.args.filter_list = []
-        self.args.stopword_list = []
         self.args.disabled_columns = set([])
         self.args.version = self.version
         self.args.query_label = ""
@@ -74,6 +72,11 @@ class Options(object):
         self.args.current_server = None
         self.args.current_resources = None
         self.args.main_window = None
+
+        self.args.filter_list = []
+        self.args.stopword_list = []
+        self.args.use_stopwords = False
+        self.args.use_corpus_filters = False
         
         self.args.base_path, _ = os.path.split(os.path.realpath(__file__))
         
@@ -619,11 +622,11 @@ class Options(object):
 
                     elif section == "context":
                         try:
-                            self.args.context_left = int(config_file.get("context", "words_left"))
+                            self.args.context_left = config_file.getint("context", "words_left")
                         except (NoOptionError, ValueError):
                             pass
                         try:
-                            self.args.context_right = int(config_file.get("context", "words_right"))
+                            self.args.context_right = config_file.getint("context", "words_right")
                         except (NoOptionError, ValueError):
                             pass
                         try:
@@ -638,15 +641,15 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.stopword_list = []                            
                         try:
-                            self.args.ask_on_quit = bool(config_file.get("gui", "ask_on_quit"))
+                            self.args.ask_on_quit = bool(config_file.getboolean("gui", "ask_on_quit"))
                         except (NoOptionError, ValueError):
                             self.args.ask_on_quit = True
                         try:
-                            self.args.save_query_string = config_file.get("gui", "save_query_string")
+                            self.args.save_query_string = config_file.getboolean("gui", "save_query_string")
                         except (NoOptionError, ValueError):
                             self.args.save_query_string = True
                         try:
-                            self.args.save_query_file = config_file.get("gui", "save_query_file")
+                            self.args.save_query_file = config_file.getboolean("gui", "save_query_file")
                         except (NoOptionError, ValueError):
                             self.args.save_query_file = True
                         try:
@@ -682,24 +685,23 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.text_source_path = os.path.expanduser("~")
                         try:
-                            self.args.use_corpus_filters = config_file.get("gui", "use_corpus_filters")
+                            self.args.use_corpus_filters = config_file.getboolean("gui", "use_corpus_filters")
                         except (NoOptionError, ValueError):
                             self.args.use_corpus_filters = False
                         try:
-                            self.args.use_stopwords = config_file.get("gui", "use_stopwords")
+                            self.args.use_stopwords = config_file.getboolean("gui", "use_stopwords")
                         except (NoOptionError, ValueError):
                             self.args.use_stopwords = False                        
-                            
                         try:
-                            self.args.reaggregate_data = config_file.get("gui", "reaggregate_data")
+                            self.args.reaggregate_data = config_file.getboolean("gui", "reaggregate_data")
                         except NoOptionError:
                             self.args.reaggregate_data = True
                         try:
-                            self.args.width = int(config_file.get("gui", "width"))
+                            self.args.width = config_file.getint("gui", "width")
                         except (NoOptionError, ValueError):
                             self.args.width = None
                         try:
-                            self.args.height = int(config_file.get("gui", "height"))
+                            self.args.height = config_file.getint("gui", "height")
                         except (NoOptionError, ValueError):
                             self.args.height = None
 
