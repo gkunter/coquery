@@ -544,7 +544,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if ("coquery_invisible_corpus_id" not in self.Session.output_order or
             "coquery_invisible_number_of_tokens" not in self.Session.output_order or
             pd.isnull(data["coquery_invisible_corpus_id"]) or
-            pd.isnull(data["coquery_invisible_number_of_tokens"]):
+            pd.isnull(data["coquery_invisible_number_of_tokens"])):
             QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
             return
                 
