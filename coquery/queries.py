@@ -946,53 +946,50 @@ class CollocationQuery(TokenQuery):
 
     @classmethod
     def aggregate_data(cls, df, resource, **kwargs):
-        count_left = collections.Counter()
-        count_right = collections.Counter()
-        count_total = collections.Counter()
-        
-        left_span = options.cfg.context_left
-        right_span = options.cfg.context_right
-
-        features = []
-        lexicon_features = resource.resource.get_lexicon_features()
-        for rc_feature in options.cfg.selected_features:
-            if rc_feature in [x for x, _ in lexicon_features]:
-                features.append("coq_{}".format(rc_feature))
+        if options.cfg.context_mode != CONTEXT_NONE:
+            count_left = collections.Counter()
+            count_right = collections.Counter()
+            count_total = collections.Counter()
             
-        corpus_size = resource.get_corpus_size()
-        query_freq = 0
-        context_info = {}
+            left_span = options.cfg.context_left
+            right_span = options.cfg.context_right
 
-        # do not try to aggregate this data frame if there is no corpus id
-        # available, e.g. because the data frame shows the results from the 
-        # Corpus statistics command:
-        if not "coquery_invisible_corpus_id" in df:
-            return df
+            features = []
+            lexicon_features = resource.resource.get_lexicon_features()
+            for rc_feature in options.cfg.selected_features:
+                if rc_feature in [x for x, _ in lexicon_features]:
+                    features.append("coq_{}".format(rc_feature))
+                
+            corpus_size = resource.get_corpus_size()
+            query_freq = 0
+            context_info = {}
 
-        fix_col = ["coquery_invisible_corpus_id"]
+            fix_col = ["coquery_invisible_corpus_id"]
 
-        # FIXME: Be more generic than always using coq_word_label!
-        left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
-        # FIXME: currently, the token number is set to 1, because this class 
-        # method doesn't know about the maximum token number in this query.
-        # Somehow, get_max_tokens() needs to be passed to this method to 
-        # effect something like max_tokens = cls.get_max_tokens(cls)
-        max_tokens = 1 + left_span + right_span
-        right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
-        left_context_span = df[fix_col + left_cols]
-        right_context_span = df[fix_col + right_cols]
-        if not options.cfg.case_sensitive:
-            for column in left_cols:
-                left_context_span[column] = left_context_span[column].apply(lambda x: x.lower())
-            for column in right_cols:
-                right_context_span[column] = right_context_span[column].apply(lambda x: x.lower())
+            # FIXME: Be more generic than always using coq_word_label!
+            left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
+            # FIXME: currently, the token number is set to 1, because this class 
+            # method doesn't know about the maximum token number in this query.
+            # Somehow, get_max_tokens() needs to be passed to this method to 
+            # effect something like max_tokens = cls.get_max_tokens(cls)
+            max_tokens = 1 + left_span + right_span
+            right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
+            left_context_span = df[fix_col + left_cols]
+            right_context_span = df[fix_col + right_cols]
+            if not options.cfg.case_sensitive:
+                for column in left_cols:
+                    left_context_span[column] = left_context_span[column].apply(lambda x: x.lower())
+                for column in right_cols:
+                    right_context_span[column] = right_context_span[column].apply(lambda x: x.lower())
 
-        left = left_context_span[left_cols].stack().value_counts()
-        right = right_context_span[right_cols].stack().value_counts()
+            left = left_context_span[left_cols].stack().value_counts()
+            right = right_context_span[right_cols].stack().value_counts()
 
-        all_words = set(list(left.index) + list(right.index))
-        
-        if all_words:
+            all_words = set(list(left.index) + list(right.index))
+        else:
+            all_words = []
+            
+        if all_words and options.cfg.context_mode != CONTEXT_NONE:
             
             left = left.reindex(all_words).fillna(0).astype(int)
             right = right.reindex(all_words).fillna(0).astype(int)
