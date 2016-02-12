@@ -4,7 +4,7 @@ import glob
 import os.path
 import sys
 
-base_path = "C:\\Users\\dadasd\\coquery\\build"
+base_path = "C:\\Users\\dadasd\\coquery\\make"
 coq_path = "C:\\Users\\dadasd\\coquery\\coquery"
 
 block_cipher = None
@@ -20,8 +20,8 @@ for file in glob.glob("C:\\Users\\dadasd\\WinPython-32bit-3.4.3.7Slim\\python-3.
 for file in glob.glob(os.path.join(coq_path, "installer", "coq_install_*.py")):
 	data.append((file, "installer"))
 
-for file in glob.glob(os.path.join(coq_path, "icons", "small-n-flat")):
-	data.append((file, os.path.join("icons", "small-n-flat")))
+for file in glob.glob(os.path.join(coq_path, "icons", "small-n-flat", "PNG")):
+	data.append((file, os.path.join("icons", "small-n-flat", "PNG")))
     
 for file in glob.glob(os.path.join(coq_path, 'visualizations', '*.py')):
 	l.append((file, "visualizations"))
