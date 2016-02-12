@@ -108,7 +108,7 @@ def main():
     
     # Run the Application GUI?
     if options.cfg.gui:
-        from pyqt_compat import QtGui
+        from pyqt_compat import QtGui, QtCore
         from app import CoqueryApp
         from app import GuiHandler
 
@@ -117,6 +117,7 @@ def main():
         logger.addHandler(options.cfg.gui_logger)
 
         options.cfg.app = QtGui.QApplication(sys.argv)
+ 
         Coq = CoqueryApp()
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
