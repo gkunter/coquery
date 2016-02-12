@@ -306,8 +306,10 @@ class LexiconClass(object):
 
         df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
         if not len(df.index):
-            print("Word not in lexicon")
-            raise WordNotInLexiconError
+            if token.negated:
+                return []
+            else:
+                raise WordNotInLexiconError
         else:
             if stopwords:
                 return [x for x in list(df.ix[:,0]) if not x in stopword_ids]
@@ -1305,9 +1307,16 @@ class CorpusClass(object):
                 where_clauses.append("{} IN ({})".format(
                     WordTarget, ", ".join(L)))
             else:
-                # is the empty word id list due to the stopword list?
+                # no word ids were available for this token. this can happen 
+                # if (a) there is no word in the lexicon that matches the 
+                # specification, or (b) the word is blocked by the stopword 
+                # list.
+               
                 if token.S not in ("%", ""):
-                    raise WordNotInLexiconError
+                    if token.negated:
+                        return []
+                    else:
+                        raise WordNotInLexiconError
         return where_clauses
     
     def sql_string_run_query_filter_list(self, self_joined):
