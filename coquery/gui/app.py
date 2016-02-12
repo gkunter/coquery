@@ -233,7 +233,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.label_5.setFixedHeight(self.ui.label_5.height())
         
         self.ui.data_preview.setEnabled(False)
-        self.ui.menu_Results.setEnabled(False)
         self.ui.menuAnalyse.setEnabled(False)
 
         # set splitter stretches:
@@ -408,13 +407,14 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menu_Results.clear()
 
         # Add Output column entry:
-        self.ui.action_output_options = QtGui.QAction(self.ui.menu_Results)
-        self.ui.menu_Results.addAction(self.ui.action_output_options)
         if self.ui.options_tree.selectedItems():
-            self.ui.action_output_options.setDisabled(False)
-            self.ui.action_output_options.setText(_translate("MainWindow", "Output column", None))
+            #self.ui.action_output_options.setDisabled(False)
+            #self.ui.action_output_options.setText(_translate("MainWindow", "Output column", None))
             self.ui.menuOutputOptions = self.get_output_column_menu(selection=self.ui.options_tree.selectedItems())
+            self.ui.menu_Results.addMenu(self.ui.menuOutputOptions)
         else:
+            self.ui.action_output_options = QtGui.QAction(self.ui.menu_Results)
+            self.ui.menu_Results.addAction(self.ui.action_output_options)
             self.ui.action_output_options.setDisabled(True)
             self.ui.action_output_options.setText(_translate("MainWindow", "No output column selected.", None))
             
@@ -585,6 +585,9 @@ class CoqueryApp(QtGui.QMainWindow):
         tree.setColumnCount(1)
         tree.setHeaderHidden(True)
         tree.setRootIsDecorated(True)
+
+        tree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        tree.customContextMenuRequested.connect(self.get_output_column_menu)        
         
         tree.addLink.connect(self.add_link)
         tree.addFunction.connect(self.add_function)
@@ -854,7 +857,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setEnabled(True)
 
         # enable menu entries:
-        self.ui.menu_Results.setEnabled(True)
         self.ui.action_save_results.setEnabled(True)
         self.ui.action_copy_to_clipboard.setEnabled(True)
 
@@ -1092,27 +1094,32 @@ class CoqueryApp(QtGui.QMainWindow):
         # completed:
         options.cfg.app.alert(self, 0)
         
-    def get_output_column_menu(self, selection=[], point=None):
+    def get_output_column_menu(self, point=None, selection=[]):
         if point:
             item = self.ui.options_tree.itemAt(point)
         else:
             item = selection[0]
+
         if not item:
             return
 
-        # no context menu for etnries from the special tables
-        if str(item.objectName()).startswith("coquery") or str(item.objectName()).startswith("statistics"):
-            return
-
-        # show self.menu about the column
+        # create a context menu:
         menu = QtGui.QMenu("Output column options", self)
         action = QtGui.QWidgetAction(self)
-        label = QtGui.QLabel("<b>{}</b>".format(item.text(0)), self)
-        label.setAlignment(QtCore.Qt.AlignCenter)
-        action.setDefaultWidget(label)
-        menu.addAction(action)
+
+        # if point is set, the menu was called as a context menu: 
+        if point:
+            # Use column name as header
+            label = QtGui.QLabel("<b>{}</b>".format(item.text(0)), self)
+            label.setAlignment(QtCore.Qt.AlignCenter)
+            action.setDefaultWidget(label)
+            menu.addAction(action)
         
-        if not str(item.objectName()).endswith("_table"):
+        # no options are shown for entries from the special tables and for 
+        # linked tables (but for columns from linked tables)
+        if not (str(item.objectName()).startswith("coquery") or 
+                str(item.objectName()).startswith("statistics") or
+                str(item.objectName()).endswith("_table")):
             add_link = QtGui.QAction("&Link to external table", self)
             add_function = QtGui.QAction("&Add a function", self)
             remove_link = QtGui.QAction("&Remove link", self)
@@ -1126,27 +1133,41 @@ class CoqueryApp(QtGui.QMainWindow):
                 menu.addAction(view_unique)
                 view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
                 menu.addSeparator()
-            
-            if item._func:
-                menu.addAction(remove_function)
-            else:
+
                 if item._link_by or (parent and parent._link_by):
                     menu.addAction(remove_link)
+                    remove_link.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
                 else:
                     menu.addAction(add_link)
+                    add_link.triggered.connect(lambda: self.ui.options_tree.addLink.emit(item))
                 menu.addAction(add_function)
+                add_function.triggered.connect(lambda: self.ui.options_tree.addFunction.emit(item))
 
-            return menu
+            if item._func:
+                menu.addAction(remove_function)
+                remove_function.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
+        else:
+            unavailable = QtGui.QAction("No option available for this column.", self)
+            unavailable.setDisabled(True)
+            menu.addAction(unavailable)      
             
-            #menu.popup(self.mapToGlobal(point))
-            #action = self.menu.exec_()
+        # if point is set, the menu was called as a context menu: 
+        if point:
+            menu.popup(self.ui.options_tree.mapToGlobal(point))
+            menu.exec_()            
+        else:
+            return menu
 
-            #if action == add_link:
-                #self.addLink.emit(item)
-            #elif action == add_function:
-                #self.addFunction.emit(item)
-            #elif action in (remove_link, remove_function):
-                #self.removeItem.emit(item)
+    def show_unique_values(self, item):
+        import uniqueviewer
+        resource = self.resource
+        rc_feature = item.objectName()
+        _, db_name, table, feature = resource.split_resource_feature(rc_feature)
+        if not db_name:
+            db_name = resource.db_name
+        uniqueviewer.UniqueViewer.show(
+            "{}_{}".format(table, feature),
+            db_name, parent=self)
 
 
         

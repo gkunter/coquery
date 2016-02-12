@@ -366,8 +366,6 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         self.itemChanged.connect(self.update)
         self.setDragEnabled(True)
         self.setAnimated(True)
-        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.show_menu)
 
     def update(self, item, column):
         """ Update the checkboxes of parent and child items whenever an
@@ -415,68 +413,6 @@ class CoqTreeWidget(QtGui.QTreeWidget):
                 if child.checkState(column) == QtCore.Qt.Checked:
                     check_list.append(str(child._objectName))
         return check_list
-
-    def show_menu(self, point):
-        item = self.itemAt(point)
-        if not item:
-            return
-
-        # no context menu for etnries from the special tables
-        if str(item.objectName()).startswith("coquery") or str(item.objectName()).startswith("statistics"):
-            return
-
-        # show self.menu about the column
-        self.menu = QtGui.QMenu("Output column options", self)
-        action = QtGui.QWidgetAction(self)
-        label = QtGui.QLabel("<b>{}</b>".format(item.text(0)), self)
-        label.setAlignment(QtCore.Qt.AlignCenter)
-        action.setDefaultWidget(label)
-        self.menu.addAction(action)
-        
-        if not str(item.objectName()).endswith("_table"):
-            add_link = QtGui.QAction("&Link to external table", self)
-            add_function = QtGui.QAction("&Add a function", self)
-            remove_link = QtGui.QAction("&Remove link", self)
-            remove_function = QtGui.QAction("&Remove function", self)
-            
-            parent = item.parent()
-
-            if not item._func:
-                view_unique = QtGui.QAction("View &unique values", self)
-                view_unique.triggered.connect(lambda: self.show_unique_values(item))
-                self.menu.addAction(view_unique)
-                view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
-                self.menu.addSeparator()
-            
-            if item._func:
-                self.menu.addAction(remove_function)
-            else:
-                if item._link_by or (parent and parent._link_by):
-                    self.menu.addAction(remove_link)
-                else:
-                    self.menu.addAction(add_link)
-                self.menu.addAction(add_function)
-            
-            self.menu.popup(self.mapToGlobal(point))
-            action = self.menu.exec_()
-
-            if action == add_link:
-                self.addLink.emit(item)
-            elif action == add_function:
-                self.addFunction.emit(item)
-            elif action in (remove_link, remove_function):
-                self.removeItem.emit(item)
-
-    def show_unique_values(self, item):
-        import uniqueviewer
-        resource = options.cfg.main_window.resource
-        rc_feature = item.objectName()
-        _, db_name, table, feature = resource.split_resource_feature(rc_feature)
-        if not db_name:
-            db_name = resource.db_name
-        uniqueviewer.UniqueViewer.show(
-            "{}_{}".format(table, feature),
-            db_name, parent=options.cfg.main_window)
 
 class LogTableModel(QtCore.QAbstractTableModel):
     """
