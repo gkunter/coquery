@@ -540,17 +540,22 @@ class CoqueryApp(QtGui.QMainWindow):
         model_index = index
         row = model_index.row()
         data = self.table_model.content.iloc[row]
-        try:
-            token_id = data["coquery_invisible_corpus_id"]
-            origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
-            token_width = data["coquery_invisible_number_of_tokens"]
-        except KeyError:
+        
+        if ("coquery_invisible_corpus_id" not in self.Session.output_order or
+            "coquery_invisible_number_of_tokens" not in self.Session.output_order or
+            pd.isnull(data["coquery_invisible_corpus_id"]) or
+            pd.isnull(data["coquery_invisible_number_of_tokens"]):
             QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
-        if token_id and origin_id and token_width:
-            viewer = contextviewer.ContextView(
-                self.Session.Corpus, int(token_id), int(origin_id), int(token_width))
-            viewer.show()
-            self.widget_list.append(viewer)
+            return
+                
+        token_id = data["coquery_invisible_corpus_id"]
+        origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
+        token_width = data["coquery_invisible_number_of_tokens"]
+        
+        viewer = contextviewer.ContextView(
+            self.Session.Corpus, int(token_id), int(origin_id), int(token_width))
+        viewer.show()
+        self.widget_list.append(viewer)
 
     def verify_file_name(self):
         file_name = str(self.ui.edit_file_name.text())
