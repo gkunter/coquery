@@ -43,11 +43,11 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:zoom="6.9532165"
-     inkscape:cx="36.679552"
-     inkscape:cy="2.4095097"
-     inkscape:window-x="462"
-     inkscape:window-y="18"
+     inkscape:zoom="13.906433"
+     inkscape:cx="3.3656708"
+     inkscape:cy="8.2220139"
+     inkscape:window-x="2098"
+     inkscape:window-y="344"
      inkscape:window-maximized="0"
      inkscape:current-layer="svg2"
      showguides="true"
@@ -90,19 +90,19 @@
        y="14.715375"
        style="font-size:11.48493481px;font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;fill:#ecf0f1;fill-opacity:1;font-family:Bauhaus;-inkscape-font-specification:Bauhaus Semi-Bold">on</tspan></text>
   <path
-     d="m 3.8021562,8.1807758 -0.04161,2.2838392 c -0.07236,3.616107 2.834906,6.661339 6.3319528,6.661339 h 2.713694 c 3.996367,0 7.236517,-3.425929 7.236517,-7.61291 0,-0.7613935 -0.133875,-1.3322682 -0.282224,-1.9033133 z"
+     d="m 3.9459745,8.0774064 -0.04161,2.2838386 c -0.07236,3.616107 2.834906,6.661339 6.3319525,6.661339 h 2.713694 c 3.996367,0 7.236517,-3.425929 7.236517,-7.6129094 0,-0.7613935 -0.133875,-1.3322682 -0.282224,-1.9033133 z"
      id="path20"
      inkscape:connector-curvature="0"
      style="fill:#7f8c8d" />
   <path
-     d="m 10.092499,2.8880352 c -3.4970468,0 -6.3319528,2.6430438 -6.3319528,6.1672174 0,3.3481524 2.834906,6.1673884 6.3319528,6.1673884 h 3.618258 c 3.497048,0 6.331953,-2.819236 6.331953,-6.1673884 0,-3.5241736 -2.834905,-6.1672174 -6.331953,-6.1672174 h -3.618258 z"
+     d="m 10.236317,2.7846658 c -3.4970465,0 -6.3319525,2.6430438 -6.3319525,6.1672174 0,3.3481518 2.834906,6.1673878 6.3319525,6.1673878 h 3.618258 c 3.497048,0 6.331953,-2.819236 6.331953,-6.1673878 0,-3.5241736 -2.834905,-6.1672174 -6.331953,-6.1672174 h -3.618258 z"
      id="path22"
      inkscape:connector-curvature="0"
      style="fill:#ecf0f1" />
   <g
      id="g24"
      style="fill:#bdc3c7"
-     transform="matrix(1.8091293,0,0,2.3643167,-19.758134,-2448.4777)">
+     transform="matrix(1.8091293,0,0,2.3643167,-19.614316,-2448.5811)">
     <path
        d="m 15.5,1037.4 c -0.276,0 -0.5,0.1 -0.5,0.4 v 3.2 c 0,0.2 0.224,0.4 0.5,0.4 0.276,0 0.5,-0.2 0.5,-0.4 v -3.2 c 0,-0.3 -0.224,-0.4 -0.5,-0.4 z"
        id="path26"
