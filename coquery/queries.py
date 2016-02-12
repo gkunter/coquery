@@ -831,6 +831,10 @@ class ContingencyQuery(TokenQuery):
         result : DataFrame
         """
         
+        if not len(df.index):
+            kwargs["session"].output_order += ["statistics_column_total"]
+            return pd.DataFrame(columns=kwargs["session"].output_order)
+        
         if hasattr(kwargs["session"], "_old_output_order"):
             kwargs["session"].output_order = list(kwargs["session"]._old_output_order)
 
