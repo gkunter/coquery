@@ -163,7 +163,6 @@ class CoqueryApp(QtGui.QMainWindow):
         if index > -1:
             self.ui.combo_corpus.setCurrentIndex(index)
         
-        
         # chamge the default query string edit to the sublassed edit class:
         self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
         self.ui.edit_query_string.close()        
@@ -226,6 +225,8 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.change_corpus()
 
+        self.set_query_button()
+        
         # Align screen elements:
         self.ui.label_2.setFixedHeight(self.ui.label_5.height())
         self.ui.label.setFixedHeight(self.ui.label_5.height())
@@ -529,7 +530,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
     def result_column_resize(self, index, old, new):
         header = self.table_model.header[index].lower()
-        options.cfg.column_width[header] = new
+        options.cfg.column_width[header.replace(" ", "_").replace(":", "_")] = new
 
     def result_cell_clicked(self, index):
         """
@@ -642,10 +643,10 @@ class CoqueryApp(QtGui.QMainWindow):
         Return an icon that matches the given string.
         """
         icon = QtGui.QIcon()
-        if "picol" in s:
-            icon.addFile(os.path.join(sys.path[0], "icons", "picol", "{}.svg".format(s)))
+        if sys.platform == 'win32' or True:
+            icon.addFile(os.path.join(sys.path[0], "icons", "small-n-flat", "PNG", "{}.png".format(s)))
         else:
-            icon.addFile(os.path.join(sys.path[0], "icons", "small-n-flat", "{}.svg".format(s)))
+            icon.addFile(os.path.join(sys.path[0], "icons", "small-n-flat", "SVG", "{}.svg".format(s)))
         return icon
 
     def show_query_status(self):
@@ -863,7 +864,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # set column widths:
         for i, column in enumerate(self.table_model.header):
             if column.lower() in options.cfg.column_width:
-                self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower()])
+                self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower().replace(" ", "_").replace(":", "_")])
         
         #set delegates:
         header = self.ui.data_preview.horizontalHeader()
@@ -1151,13 +1152,13 @@ class CoqueryApp(QtGui.QMainWindow):
         if not all([options.cfg.column_visibility.get(x, True) for x in selection]):
             action = QtGui.QAction("&Show column{}".format(suffix), self)
             action.triggered.connect(lambda: self.show_columns(selection))
-            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
+            action.setIcon(self.get_icon("sign-maximize"))
             menu.addAction(action)
 
         if not all([not options.cfg.column_visibility.get(x, True) for x in selection]):
             action = QtGui.QAction("&Hide column{}".format(suffix), self)
             action.triggered.connect(lambda: self.hide_columns(selection))
-            action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
+            action.setIcon(self.get_icon("sign-minimize"))
             menu.addAction(action)
 
         if len(selection) == 1:
@@ -1243,7 +1244,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     action = QtGui.QAction("&Show row", self)
                 action.triggered.connect(lambda: self.set_row_visibility(selection, True))
-                action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton))
+                action.setIcon(self.get_icon("sign-maximize"))
                 menu.addAction(action)
             # Check if any row is visible
             if any([options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
@@ -1255,7 +1256,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     action = QtGui.QAction("&Hide row", self)
                 action.triggered.connect(lambda: self.set_row_visibility(selection, False))
-                action.setIcon(QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton))
+                action.setIcon(self.get_icon("sign-minimize"))
                 menu.addAction(action)
             menu.addSeparator()
             
@@ -1459,7 +1460,7 @@ class CoqueryApp(QtGui.QMainWindow):
         old_width = self.ui.button_run_query.width()
         self.ui.button_run_query.setText(gui_label_query_button)
         self.ui.button_run_query.setFixedWidth(max(old_width, self.ui.button_run_query.width()))
-        self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-start")))
+        self.ui.button_run_query.setIcon(self.get_icon("go"))
         
     def set_stop_button(self):
         """ Set the action button to stop queries. """
@@ -1468,7 +1469,7 @@ class CoqueryApp(QtGui.QMainWindow):
         old_width = self.ui.button_run_query.width()
         self.ui.button_run_query.setText(gui_label_stop_button)
         self.ui.button_run_query.setFixedWidth(max(old_width, self.ui.button_run_query.width()))
-        self.ui.button_run_query.setIcon(QtGui.QIcon.fromTheme(_fromUtf8("media-playback-stop")))
+        self.ui.button_run_query.setIcon(self.get_icon("stop"))
     
     def stop_query(self):
         response = QtGui.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
@@ -1807,9 +1808,9 @@ class CoqueryApp(QtGui.QMainWindow):
             
             # Choose a suitable icon for the connection combo box:
             if state:
-                icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogYesButton)
+                icon = self.get_icon("sign-check")
             else:
-                icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DialogNoButton)
+                icon = self.get_icon("sign-error")
 
                 
             # Disconnect the currentIndexChanged signal to avoid infinite
