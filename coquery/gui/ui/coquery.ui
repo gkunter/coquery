@@ -766,7 +766,7 @@
          <bool>true</bool>
         </property>
        </widget>
-       <widget class="QWidget" name="">
+       <widget class="QWidget" name="layoutWidget">
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
           <widget class="QFrame" name="frame">
@@ -985,6 +985,8 @@ The number of occurrences of each token matching the query string is counted. Th
     <addaction name="action_connection_settings"/>
     <addaction name="action_settings"/>
     <addaction name="separator"/>
+    <addaction name="action_toggle_filters"/>
+    <addaction name="action_toggle_stopwords"/>
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
@@ -1361,6 +1363,16 @@ The number of occurrences of each token matching the query string is counted. Th
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="action_toggle_filters">
+   <property name="text">
+    <string>Toggle &amp;filters</string>
+   </property>
+  </action>
+  <action name="action_toggle_stopwords">
+   <property name="text">
+    <string>Toggle stop&amp;words</string>
    </property>
   </action>
  </widget>

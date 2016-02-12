@@ -194,6 +194,8 @@ class LexiconClass(object):
         Return a list of all word ids that match the entries in the stopword 
         list.
         """
+        if not options.cfg.use_stopwords:
+            return set([])
         if not hasattr(self, "_cached_stopword_list") or self._cached_stopword_list != options.cfg.stopword_list:
             id_list = set([])
             for stopword in options.cfg.stopword_list:

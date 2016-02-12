@@ -145,7 +145,6 @@ class CoqueryApp(QtGui.QMainWindow):
         #except AttributeError:
             #pass
         
-        
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
@@ -367,9 +366,15 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_line_plot.triggered.connect(
             lambda: self.visualize_data("timeseries", area=False, percentage=False))
         
+        self.ui.action_toggle_filters.triggered.connect(
+            lambda: self.ui.filter_switch.toggle())
+        self.ui.action_toggle_stopwords.triggered.connect(
+            lambda: self.ui.stopword_switch.toggle())
+        
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
         self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
+        self.ui.menuSettings.aboutToShow.connect(self.show_settings_menu)
 
     def help(self):
         import helpviewer
@@ -462,6 +467,10 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.menuRows.setText("No rows selected.")
             self.ui.menuRows.setDisabled(True)
             self.ui.menu_Results.addAction(self.ui.menuRows)
+
+    def show_settings_menu(self):
+        self.ui.action_toggle_stopwords.setEnabled(bool(options.cfg.stopword_list))
+        self.ui.action_toggle_filters.setEnabled(bool(options.cfg.filter_list))
         
     def setup_hooks(self):
         """ 
@@ -952,10 +961,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
 
     def set_stopword_button(self):
-        n = len(options.cfg.stopword_list) 
-        if n:
-            self.ui.stopword_switch.setText("{} stopword{}".format(
-                n, "s" if n > 1 else ""))
+        if len(options.cfg.stopword_list):
             self.ui.stopword_switch.show()
         else:
             self.ui.stopword_switch.hide()
@@ -978,10 +984,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.stopword_switch.setOn()
     
     def set_filter_button(self):
-        n = len(options.cfg.filter_list) 
-        if n:
-            self.ui.filter_switch.setText("{} filter{}".format(
-                n, "s" if n > 1 else ""))
+        if len(options.cfg.filter_list):
             self.ui.filter_switch.show()
         else:
             self.ui.filter_switch.hide()
@@ -1080,6 +1083,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread = None
         self.showMessage("Preparing results table...")
         self.Session = self.new_session
+        del self.new_session
         self.reaggregate()
         self.set_query_button()
         self.stop_progress_indicator()
