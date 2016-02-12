@@ -852,10 +852,18 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def display_results(self, drop=True):
         self.ui.data_preview.setEnabled(True)
+
+        # enable menu entries:
         self.ui.menu_Results.setEnabled(True)
-        self.ui.menuAnalyse.setEnabled(True)
         self.ui.action_save_results.setEnabled(True)
         self.ui.action_copy_to_clipboard.setEnabled(True)
+
+        # Visualizations menu is disabled for corpus statistics:
+        if isinstance(self.Session, StatisticsSession):
+            self.ui.menuAnalyse.setEnabled(False)
+        else:
+            self.ui.menuAnalyse.setEnabled(True)
+
         
         self.table_model.set_header()
 
@@ -1074,6 +1082,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_query_button()
         self.stop_progress_indicator()
         self.Session.close()
+        
+        if isinstance(self.Session, StatisticsSession):
+            self.ui.frame_aggregation.setEnabled(False)
+        else:
+            self.ui.frame_aggregation.setEnabled(True)
         
         # Create an alert in the system taskbar to indicate that the query has 
         # completed:

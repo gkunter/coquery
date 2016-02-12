@@ -398,6 +398,9 @@ class StatisticsSession(Session):
         self.header = ["Variable", "Value"]
         self.output_order = self.header
 
+    def aggregate_data(self, recalculate=True):
+        self.output_object = self.data_table
+
 class SessionCommandLine(Session):
     def __init__(self):
         super(SessionCommandLine, self).__init__()
