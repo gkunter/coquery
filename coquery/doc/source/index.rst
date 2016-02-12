@@ -3,22 +3,31 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Contents
-********
+*********************
+Coquery documentation
+*********************
+
+:ref:`installation`
+===================
+
+:ref:`tutorial`
+===============
+
+:ref:`users`
+============
+
+:ref:`reference`
+================
+
+:ref:`development`
+==================
 
 .. toctree::
-    :maxdepth: 2
-    
-    quickstart/installation.rst
-    tutorial/tutorial.rst
-    userguide/index
-    reference/index
-    development/index
 
-.. Indices and tables
-.. ==================
-.. 
-.. * :ref:`genindex`
-.. * :ref:`modindex`
-.. * :ref:`search`
 
+....
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the :ref:`license`.   
+   

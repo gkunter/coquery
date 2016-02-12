@@ -1,3 +1,5 @@
+.. _reference:
+
 Reference guide
 ################
 .. toctree::
