@@ -51,12 +51,14 @@ class CoqClickableLabel(QtGui.QLabel):
 class CoqSwitch(QtGui.QPushButton):
     toggled = QtCore.Signal()
     
-    def __init__(self, on, off, text="", *args, **kwargs):
+    def __init__(self, state=None, on=None, off=None, text="", *args, **kwargs):
         super(CoqSwitch, self).__init__(*args, **kwargs)
+        self.setFlat(True)
         self._icon = CoqClickableLabel()
         self._text = text
         self._on_icon = on
         self._off_icon = off
+        self._on = None
         self._height = QtGui.QPushButton(self._text).sizeHint().height()
         
         self._layout = QtGui.QHBoxLayout(self)
@@ -74,12 +76,13 @@ class CoqSwitch(QtGui.QPushButton):
         self._layout.setMargin(0)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
-        self._on = None
         self._icon.clicked.connect(self.toggle)
 
-        self.setOff()
-        self.hide()
-        self.setFlat(True)
+        if not state:
+            self.setOff()
+        else:
+            self.setOn()
+            
         
     def setText(self, text):
         if not self._text:
@@ -115,13 +118,16 @@ class CoqSwitch(QtGui.QPushButton):
             return QtCore.QSize(
                 self._icon.sizeHint().width() + self._spacing + 2,
                 self._icon.sizeHint().height())          
-        
-    def toggle(self):
-        self._on = not self._on
+
+    def _update(self):
         if self._on:
             self._set_pixmap(self._on_icon)
         else:
             self._set_pixmap(self._off_icon)
+        
+    def toggle(self):
+        self._on = not self._on
+        self._update()
         self.toggled.emit()
         
     def isOn(self):
@@ -131,16 +137,12 @@ class CoqSwitch(QtGui.QPushButton):
         return not self._on
     
     def setOn(self):
-        if self._on == True:
-            return
-        self._on = False
-        self.toggle()
+        self._on = True
+        self._update()
         
     def setOff(self):
-        if self._on == False:
-            return
-        self._on = True
-        self.toggle()
+        self._on = False
+        self._update()
 
 class CoqDetailBox(QtGui.QWidget):
     """
