@@ -95,6 +95,11 @@ except NameError:
     unicode = str
     long = int
 
+msg_clear_filters = """
+<p><b>You have requested to reset the list of corpus filters.</b></p>
+<p>Click <b>Yes</b> if you really want to delete all filters in the list,
+or <b>No</b> if you want to leave the stop word list unchanged.</p>
+"""
 msg_clear_stopwords = """
 <p><b>You have requested to reset the list of stop words.</b></p>
 <p>Click <b>Yes</b> if you really want to delete all stop words in the list,

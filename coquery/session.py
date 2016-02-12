@@ -80,16 +80,18 @@ class Session(object):
         self.header_shown = False
         self.input_columns = []
 
+
         # verify filter list:
         new_list = []
-        for filt in options.cfg.filter_list:
-            if isinstance(filt, queries.QueryFilter):
-                new_list.append(filt)
-            else:
-                new_filt = queries.QueryFilter()
-                new_filt.resource = self.Resource
-                new_filt.text = filt
-                new_list.append(new_filt)
+        if options.cfg.use_corpus_filters:
+            for filt in options.cfg.filter_list :
+                if isinstance(filt, queries.QueryFilter):
+                    new_list.append(filt)
+                else:
+                    new_filt = queries.QueryFilter()
+                    new_filt.resource = self.Resource
+                    new_filt.text = filt
+                    new_list.append(new_filt)
         self.filter_list = new_list
         self.Resource.filter_list = new_list
         
@@ -242,9 +244,9 @@ class Session(object):
         """
         Apply the frequency filters to the output object.
         """
-        if not options.cfg.filter_list:
+        if not self.filter_list or not options.cfg.use_corpus_filters:
             return 
-        for filt in options.cfg.filter_list:
+        for filt in self.filter_list:
             if filt.var == options.cfg.freq_label:
                 try:
                     self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]

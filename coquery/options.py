@@ -83,6 +83,7 @@ class Options(object):
         self.args.corpus_source_path = os.path.join(self.args.base_path, "texts")
         self.args.text_source_path = os.path.expanduser("~")
         self.args.stopwords_file_path = os.path.expanduser("~")
+        self.args.filter_file_path = os.path.expanduser("~")
 
         self.args.connection_path = os.path.join(self.args.coquery_home, "connections")
         
@@ -665,6 +666,10 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.stopwords_file_path = os.path.expanduser("~")
                         try:
+                            self.args.filter_file_path = config_file.get("gui", "filter_file_path")
+                        except (NoOptionError, ValueError):
+                            self.args.filter_file_path = os.path.expanduser("~")
+                        try:
                             self.args.uniques_file_path = config_file.get("gui", "uniques_file_path")
                         except (NoOptionError, ValueError):
                             self.args.uniques_file_path = os.path.expanduser("~")
@@ -849,6 +854,10 @@ def save_configuration():
             config.set("gui", "stopwords_file_path", cfg.stopwords_file_path)
         except AttributeError:
             config.set("gui", "stopwords_file_path", os.path.expanduser("~"))
+        try:
+            config.set("gui", "filter_file_path", cfg.filter_file_path)
+        except AttributeError:
+            config.set("gui", "filter_file_path", os.path.expanduser("~"))
         try:
             config.set("gui", "uniques_file_path", cfg.uniques_file_path)
         except AttributeError:

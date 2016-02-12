@@ -1325,6 +1325,8 @@ class CorpusClass(object):
     
     def sql_string_run_query_filter_list(self, self_joined):
         """ Return an SQL string that contains the result filters."""
+        if not options.cfg.use_corpus_filters:
+            return []
         filter_list = self.resource.translate_filters(self.resource.filter_list)
         L = []
         for column, corpus_feature, table, operator, value_list, val_range in filter_list:

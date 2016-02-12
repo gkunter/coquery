@@ -170,33 +170,19 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.gridLayout_2.addWidget(edit_query_string, 2, 1, 1, 1)
         self.ui.edit_query_string = edit_query_string
         
-        #self.ui.filter_box = classes.QueryFilterBox(self)
-        #filter_examples = ["Year > 1999", "Gender is m", "Genre in MAG, NEWS", 
-                       #"Year in 2005-2010", "Year = 2012", "File is b0*"]
-        #self.ui.filter_box.edit_tag.setPlaceholderText("{} {}".format(
-            #_translate("MainWindow", "e.g.", None), random.sample(filter_examples, 1)[0]))
-
-        self.ui.stopword_switch = classes.CoqSwitch(on=self.get_icon("switch-on"), 
+        self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords, 
+                                                    on=self.get_icon("switch-on"), 
                                                     off=self.get_icon("switch-off"))
         self.ui.stopword_layout.addWidget(self.ui.stopword_switch)
         self.ui.stopword_switch.toggled.connect(self.toggle_stopword_switch)
         self.set_stopword_button()
                 
-        self.ui.filter_switch = classes.CoqSwitch(on=self.get_icon("switch-on"), 
-                                                    off=self.get_icon("switch-off"))
+        self.ui.filter_switch = classes.CoqSwitch(state=options.cfg.use_corpus_filters,
+                                                  on=self.get_icon("switch-on"), 
+                                                  off=self.get_icon("switch-off"))
         self.ui.filter_switch.toggled.connect(self.toggle_filter_switch)
         self.ui.filter_layout.addWidget(self.ui.filter_switch)
-        self.set_filter_button()
-        
-        
-        #self.ui.verticalLayout_5.removeWidget(self.ui.tag_cloud)
-        #self.ui.tag_cloud.close()
-        #self.ui.horizontalLayout.removeWidget(self.ui.edit_query_filter)
-        #self.ui.horizontalLayout.removeWidget(self.ui.label_4)
-        #self.ui.edit_query_filter.close()
-        #self.ui.label_4.close()
-
-        #self.ui.verticalLayout_5.addWidget(self.ui.filter_box)
+        self.set_filter_button()        
 
         ## set auto-completer for the filter edit:
         #self.filter_variable_model = QtGui.QStringListModel()
@@ -315,8 +301,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_save_selection.setIcon(self.get_icon("floppy"))
         self.ui.button_browse_file.setIcon(self.get_icon("folder"))
         self.ui.button_file_options.setIcon(self.get_icon("file-excel"))
-        #self.ui.stopword_button.setIcon(self.get_icon("switch-on"))
-        #self.ui.filter_button.setIcon(self.get_icon("switch-on"))
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
@@ -995,9 +979,9 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.use_corpus_filters = self.ui.filter_switch.isOn()
 
     def manage_filters(self):
-        import stopwords
+        import filterviewer
         old_list = options.cfg.filter_list
-        result = stopwords.Stopwords.manage(options.cfg.filter_list, options.cfg.icon)
+        result = filterviewer.Filters.manage(options.cfg.filter_list, options.cfg.icon)
         if result != None:
             options.cfg.filter_list = result
         self.set_filter_button()
