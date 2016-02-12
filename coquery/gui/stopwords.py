@@ -22,7 +22,7 @@ from defines import *
 class CoqStopWord(QtGui.QListWidgetItem):
     def __init__(self, *args):
         super(CoqStopWord, self).__init__(*args)
-        icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DockWidgetCloseButton)
+        icon = options.cfg.main_window.get_icon("sign-ban")
         self.setIcon(icon)
         brush = QtGui.QBrush(QtGui.QColor("lightcyan"))
         self.setBackground(brush)

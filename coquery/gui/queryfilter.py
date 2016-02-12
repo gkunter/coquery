@@ -67,7 +67,7 @@ class CoqTextTag(QtGui.QFrame):
         self.close_button.setObjectName(_fromUtf8("close_button"))
         self.horizontalLayout.addWidget(self.close_button)
 
-        icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_DockWidgetCloseButton)
+        icon = options.cfg.main_window.get_icon("sign-ban")
         
         height = self.fontMetrics().height()
         new_height = int(height * 0.75)
@@ -182,7 +182,7 @@ class CoqTagBox(QtGui.QWidget):
         self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)                                                     
         self.scroll_area.setWidgetResizable(True)                                                                                    
 
-        self.scroll_content = QtGui.QWidget()                                                                                        
+        self.scroll_content = QtGui.QWidget()
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)                                         
         sizePolicy.setHorizontalStretch(0)                                                                                           
         sizePolicy.setVerticalStretch(0)                                                                                             
@@ -212,6 +212,12 @@ class CoqTagBox(QtGui.QWidget):
         self.layout.setStretch(1,0)
 
         self.setAcceptDrops(True)
+
+        col =options.cfg.app.palette().color(QtGui.QPalette.Light)
+        color = "{ background-color: rgb(%s, %s, %s) ; }" % (col.red(), col.green(), col.blue())
+        S = 'QScrollArea {}'.format(color)
+        print(S)
+        self.scroll_content.setStyleSheet(S)
 
     def dragEnterEvent(self, e):
         e.acceptProposedAction()

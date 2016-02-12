@@ -209,7 +209,7 @@ class CoqDetailBox(QtGui.QWidget):
             self.box.show()
             self.header.setFlat(False)
             self.header.setText(self._alternative)
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarUnshadeButton)
+            icon = options.cfg.main_window.get_icon("sign-minimize")
         else:
             try:
                 self.header.setText(self._text)
@@ -219,7 +219,7 @@ class CoqDetailBox(QtGui.QWidget):
                 # harmless RuntimeError
                 pass
             self.header.setFlat(True)
-            icon = QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_TitleBarShadeButton)
+            icon = options.cfg.main_window.get_icon("sign-maximize")
         self.header.setIcon(icon)
 
     def setExpanded(self, b):
@@ -816,9 +816,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 return
             # add arrows as sorting direction indicators if necessary:
             if self.sort_columns[column] in [SORT_DEC, SORT_REV_DEC]:
-                return QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_ArrowUp)
+                return options.cfg.main_window.get_icon("sign-up")
             elif self.sort_columns[column] in [SORT_INC, SORT_REV_INC]:
-                return QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_ArrowDown)
+                return options.cfg.main_window.get_icon("sign-down")
             else:
                 return None
         return None
