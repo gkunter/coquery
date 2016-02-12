@@ -48,12 +48,11 @@ class CoqClickableLabel(QtGui.QLabel):
     def mousePressEvent(self, ev):
         self.clicked.emit()
         
-class CoqSwitch(QtGui.QLabel):
+class CoqSwitch(QtGui.QPushButton):
     toggled = QtCore.Signal()
     
     def __init__(self, on, off, text="", *args, **kwargs):
         super(CoqSwitch, self).__init__(*args, **kwargs)
-        self._label = CoqClickableLabel(text)
         self._icon = CoqClickableLabel()
         self._text = text
         self._on_icon = on
@@ -62,20 +61,43 @@ class CoqSwitch(QtGui.QLabel):
         
         self._layout = QtGui.QHBoxLayout(self)
         self._layout.addWidget(self._icon)
-        self._layout.addWidget(self._label)
-        self._layout.setSpacing(2)
+
+        if self._text:
+            self._label = CoqClickableLabel(text)
+            self._label.clicked.connect(self.toggle)
+            self._layout.addWidget(self._label)
+            self._spacing = 2
+        else:
+            self._spacing = 0
+
+        self._layout.setSpacing(self._spacing)
         self._layout.setMargin(0)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
         self._on = None
         self._icon.clicked.connect(self.toggle)
-        self._label.clicked.connect(self.toggle)
 
         self.setOff()
+        self.hide()
+        self.setFlat(True)
         
     def setText(self, text):
+        if not self._text:
+            self._label = CoqClickableLabel(text)
+            self._label.clicked.connect(self.toggle)
+            self._layout.addWidget(self._label)
+
         self._text = text
-        self._label.setText(text)
+
+        if not text:
+            self._spacing = 0
+            self._layout.removeWidget(self._label)
+            del self._label
+        else:
+            self._label.setText(text)
+            self._spacing = 2
+
+        self._layout.setSpacing(self._spacing)
 
     def text(self, text):
         return self._text
@@ -85,18 +107,21 @@ class CoqSwitch(QtGui.QLabel):
         self._icon.setPixmap(icon.pixmap(size))            
         
     def sizeHint(self):
-        return QtCore.QSize(
-            self._icon.sizeHint().width() + self._label.sizeHint().width() + 2,
-            self._icon.sizeHint().height())            
+        if self._text:
+            return QtCore.QSize(
+                self._icon.sizeHint().width() + self._label.sizeHint().width() + self._spacing,
+                self._icon.sizeHint().height())            
+        else:
+            return QtCore.QSize(
+                self._icon.sizeHint().width() + self._spacing + 2,
+                self._icon.sizeHint().height())          
         
     def toggle(self):
         self._on = not self._on
         if self._on:
             self._set_pixmap(self._on_icon)
-            self._label.setEnabled(True)
         else:
             self._set_pixmap(self._off_icon)
-            #self._label.setDisabled(True)
         self.toggled.emit()
         
     def isOn(self):
