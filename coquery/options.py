@@ -820,7 +820,7 @@ def save_configuration():
         for x in cfg.column_width:
             if not x.startswith("coquery_invisible") and cfg.column_width[x]:
                 config.set("gui", 
-                        "column_{}_width".format(x), 
+                        "column_{}_width".format(x.replace(" ", "_").replace(":", "_")), 
                         cfg.column_width[x])
         for x in cfg.column_color:
             config.set("gui", 
