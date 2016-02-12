@@ -884,9 +884,17 @@ class CoqueryApp(QtGui.QMainWindow):
                 deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
             self.ui.data_preview.setItemDelegateForColumn(i, deleg)
 
+        # set row delegate for ALL row of Contingency aggregates:
         if self.Session.query_type == queries.ContingencyQuery:
-            self.ui.data_preview.setItemDelegateForRow(len(self.table_model.content.index) - 1,
-                classes.CoqTotalDelegate(self.ui.data_preview))
+            row = len(self.table_model.content.index) - 1
+            self._old_row_delegate = (row, self.ui.data_preview.itemDelegateForRow(row))
+            self.ui.data_preview.setItemDelegateForRow(row, classes.CoqTotalDelegate(self.ui.data_preview))
+        else:
+            # reset row delegates if an ALL row has been set:
+            if hasattr(self, "_old_row_delegate"):
+                row, delegate = self._old_row_delegate
+                self.ui.data_preview.setItemDelegateForRow(row, delegate)
+                del self._old_row_delegate
 
         if self.table_model.rowCount():
             self.last_results_saved = False
