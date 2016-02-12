@@ -821,9 +821,11 @@ class SQLResource(BaseResource):
             except AttributeError:
                 pass
             else:
-                S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
+                #S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
+                #df = pd.read_sql(S, engine)
+                S = "SELECT {} FROM {}".format(column, table)
                 df = pd.read_sql(S, engine)
-                stats.append([table, column, table_sizes[table], df.values.ravel()[0]])
+                stats.append([table, column, table_sizes[table], len(df[column].unique())])
         
         df = pd.DataFrame(stats)
 
