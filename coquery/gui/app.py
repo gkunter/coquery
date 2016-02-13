@@ -645,10 +645,11 @@ class CoqueryApp(QtGui.QMainWindow):
         Return an icon that matches the given string.
         """
         icon = QtGui.QIcon()
-        if sys.platform == 'win32' or True:
-            icon.addFile(os.path.join(sys.path[0], "icons", "small-n-flat", "PNG", "{}.png".format(s)))
+        if sys.platform == 'win32':
+            icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s)))
         else:
-            icon.addFile(os.path.join(sys.path[0], "icons", "small-n-flat", "SVG", "{}.svg".format(s)))
+            icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "SVG", "{}.svg".format(s)))
+
         return icon
 
     def show_query_status(self):
