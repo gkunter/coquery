@@ -429,9 +429,34 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.ui.menu_Results.removeAction(self.ui.menuNoRows)
 
     def show_settings_menu(self):
-        self.ui.action_toggle_stopwords.setEnabled(bool(options.cfg.stopword_list))
-        self.ui.action_toggle_filters.setEnabled(bool(options.cfg.filter_list))
-        
+        if options.cfg.stopword_list:
+            self.ui.action_toggle_stopwords.setEnabled(True)
+            if options.cfg.use_stopwords:
+                icon = self.get_icon("switch-on")
+                self.ui.action_toggle_stopwords.setText(_translate("MainWindow", "Turn stopwords off", None))
+            else:
+                icon = self.get_icon("switch-off")
+                self.ui.action_toggle_stopwords.setText(_translate("MainWindow", "Turn stopwords on", None))
+            self.ui.action_toggle_stopwords.setIcon(icon)
+        else:
+            self.ui.action_toggle_stopwords.setEnabled(False)
+            self.ui.action_toggle_stopwords.setText(_translate("MainWindow", "No stopwords", None))
+            self.ui.action_toggle_stopwords.setIcon(QtGui.QIcon())
+            
+        if options.cfg.filter_list:
+            self.ui.action_toggle_filters.setEnabled(True)
+            if options.cfg.use_filters:
+                icon = self.get_icon("switch-on")
+                self.ui.action_toggle_filters.setText(_translate("MainWindow", "Turn corpus filters off", None))
+            else:
+                icon = self.get_icon("switch-off")
+                self.ui.action_toggle_filters.setText(_translate("MainWindow", "Turn corpus filters on", None))
+            self.ui.action_toggle_filters.setIcon(icon)
+        else:
+            self.ui.action_toggle_filters.setEnabled(False)
+            self.ui.action_toggle_filters.setText(_translate("MainWindow", "No corpus filters", None))
+            self.ui.action_toggle_filters.setIcon(QtGui.QIcon())
+
     def setup_hooks(self):
         """ 
         Hook up signals so that the GUI can adequately react to user 
@@ -863,17 +888,17 @@ class CoqueryApp(QtGui.QMainWindow):
                 deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
             self.ui.data_preview.setItemDelegateForColumn(i, deleg)
 
+        # reset row delegates if an ALL row has previously been set:
+        if hasattr(self, "_old_row_delegate"):
+            row, delegate = self._old_row_delegate
+            self.ui.data_preview.setItemDelegateForRow(row, delegate)
+            del self._old_row_delegate
+
         # set row delegate for ALL row of Contingency aggregates:
         if self.Session.query_type == queries.ContingencyQuery:
             row = len(self.table_model.content.index) - 1
             self._old_row_delegate = (row, self.ui.data_preview.itemDelegateForRow(row))
             self.ui.data_preview.setItemDelegateForRow(row, classes.CoqTotalDelegate(self.ui.data_preview))
-        else:
-            # reset row delegates if an ALL row has been set:
-            if hasattr(self, "_old_row_delegate"):
-                row, delegate = self._old_row_delegate
-                self.ui.data_preview.setItemDelegateForRow(row, delegate)
-                del self._old_row_delegate
 
         if self.table_model.rowCount():
             self.last_results_saved = False
