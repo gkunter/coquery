@@ -1111,7 +1111,10 @@ class CoqueryApp(QtGui.QMainWindow):
                 menu.addAction(remove_function)
                 remove_function.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
         else:
-            unavailable = QtGui.QAction("No option available for this column.", self)
+            if str(item.objectName()).endswith("_table"):
+                unavailable = QtGui.QAction(_translate("MainWindow", "No option available for tables.", None), self)
+            else:
+                 unavailable = QtGui.QAction(_translate("MainWindow", "No option available for special columns.", None), self)
             unavailable.setDisabled(True)
             menu.addAction(unavailable)      
             
