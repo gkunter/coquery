@@ -138,12 +138,12 @@ class CoqueryApp(QtGui.QMainWindow):
         except TypeError:
             pass
 
-        ## Resize the window if a previous size is available
-        #try:
-            #if options.cfg.height and options.cfg.width:
-                #self.resize(options.cfg.width, options.cfg.height)
-        #except AttributeError:
-            #pass
+        # Taskbar icons in Windows require a workaround as described here:
+        # https://stackoverflow.com/questions/1551605#1552105
+        if sys.platform == "win32":
+            import ctypes
+            CoqId = 'Coquery.Coquery.{}'.format(__init__.__version__)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)
         
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -171,15 +171,15 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.edit_query_string = edit_query_string
         
         self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords, 
-                                                    on=self.get_icon("switch-on"), 
-                                                    off=self.get_icon("switch-off"))
+                                                    on=self.get_icon("switch-on-wide"), 
+                                                    off=self.get_icon("switch-off-wide"))
         self.ui.stopword_layout.addWidget(self.ui.stopword_switch)
         self.ui.stopword_switch.toggled.connect(self.toggle_stopword_switch)
         self.set_stopword_button()
                 
         self.ui.filter_switch = classes.CoqSwitch(state=options.cfg.use_corpus_filters,
-                                                  on=self.get_icon("switch-on"), 
-                                                  off=self.get_icon("switch-off"))
+                                                  on=self.get_icon("switch-on-wide"), 
+                                                  off=self.get_icon("switch-off-wide"))
         self.ui.filter_switch.toggled.connect(self.toggle_filter_switch)
         self.ui.filter_layout.addWidget(self.ui.filter_switch)
         self.set_filter_button()        
@@ -253,11 +253,13 @@ class CoqueryApp(QtGui.QMainWindow):
         # This is only a template. Alledgedly, OS X does not favour 
         # status bars, so we might use a toolbar instead.
         #if __OS__ == "MAC OS X":
-            #self.ui.toolbar = self.addToolBar("Status")
-            #self.ui.statusbar = QtGui.QStatusBar()
-            #self.ui.toolbar.addWidget(self.ui.statusbar)
-            #self.ui.toolbar.setIconSize(QtCore.QSize(16, 16))
-            #self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+        self.statusBar().hide()
+        self.ui.toolbar = self.addToolBar("Status")
+        self.ui.statusbar = QtGui.QStatusBar()
+        self.ui.toolbar.setObjectName("_coquery_statusbar")
+        self.ui.toolbar.addWidget(self.ui.statusbar)
+        self.ui.toolbar.setIconSize(QtCore.QSize(16, 16))
+        self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
 
         self.ui.status_message = QtGui.QLabel("{} {}".format(__init__.NAME, __init__.__version__))
 
@@ -286,6 +288,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer = QtCore.QTimer()
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
+
+    def statusBar(self):
+        if hasattr(self.ui, "statusbar"):
+            return self.ui.statusbar
+        else:
+            return super(CoqueryApp, self).statusbar()
 
     def setup_icons(self):
         self.ui.action_help.setIcon(self.get_icon("life-buoy"))
@@ -431,31 +439,31 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_settings_menu(self):
         if options.cfg.stopword_list:
             self.ui.action_toggle_stopwords.setEnabled(True)
+            self.ui.action_toggle_stopwords.setCheckable(True)
+
             if options.cfg.use_stopwords:
-                icon = self.get_icon("switch-on")
-                self.ui.action_toggle_stopwords.setText(_translate("MainWindow", "Turn stopwords off", None))
+                self.ui.action_toggle_stopwords.setText(_translate("MainWindow", "Disable stopwords", None))
+                self.ui.action_toggle_stopwords.setChecked(True)
             else:
-                icon = self.get_icon("switch-off")
-                self.ui.action_toggle_stopwords.setText(_translate("MainWindow", "Turn stopwords on", None))
-            self.ui.action_toggle_stopwords.setIcon(icon)
+                self.ui.action_toggle_stopwords.setText(_translate("MainWindow", "Use stopwords", None))
+                self.ui.action_toggle_stopwords.setChecked(False)
         else:
             self.ui.action_toggle_stopwords.setEnabled(False)
             self.ui.action_toggle_stopwords.setText(_translate("MainWindow", "No stopwords", None))
-            self.ui.action_toggle_stopwords.setIcon(QtGui.QIcon())
             
         if options.cfg.filter_list:
             self.ui.action_toggle_filters.setEnabled(True)
+            self.ui.action_toggle_filters.setCheckable(True)
             if options.cfg.use_filters:
-                icon = self.get_icon("switch-on")
+                self.ui.action_toggle_filters.setChecked(True)
                 self.ui.action_toggle_filters.setText(_translate("MainWindow", "Turn corpus filters off", None))
             else:
-                icon = self.get_icon("switch-off")
+                self.ui.action_toggle_filters.setChecked(False)
                 self.ui.action_toggle_filters.setText(_translate("MainWindow", "Turn corpus filters on", None))
             self.ui.action_toggle_filters.setIcon(icon)
         else:
             self.ui.action_toggle_filters.setEnabled(False)
             self.ui.action_toggle_filters.setText(_translate("MainWindow", "No corpus filters", None))
-            self.ui.action_toggle_filters.setIcon(QtGui.QIcon())
 
     def setup_hooks(self):
         """ 
@@ -645,11 +653,11 @@ class CoqueryApp(QtGui.QMainWindow):
         Return an icon that matches the given string.
         """
         icon = QtGui.QIcon()
-        if sys.platform == 'win32':
-            icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s)))
-        else:
-            icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "SVG", "{}.svg".format(s)))
-
+        #if sys.platform == 'win32':
+            #icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s)))
+        #else:
+            #icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "SVG", "{}.svg".format(s)))
+        icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s)))
         return icon
 
     def show_query_status(self):
