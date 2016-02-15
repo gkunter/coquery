@@ -97,6 +97,7 @@ import options
 if options._use_qt:
     sys.path.append(os.path.join(sys.path[0], "gui"))
     from pyqt_compat import QtCore, QtGui
+    import classes
 
 import corpus
 from errors import *
@@ -1581,7 +1582,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 except TypeError:
                     continue
                 dt = self.DB.get_field_type(table.name, column.name).strip()
-                if dt.lower() != ot.lower():
+                if dt.lower() != ot.lower() and not ot.lower().split()[0].endswith("text"):
                     try:
                         ot = ot.decode("utf-8")
                     except AttributeError:
@@ -1951,13 +1952,25 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def get_db_name():
         return "unnamed"
 
-    def initialize_build(self):
+    @staticmethod
+    def get_installation_note():
+        return ""
+
+    def build_initialize(self):
         """ 
         Initialize the corpus build.
         
-        This method starts the logger and the timer. It also loads any Python 
-        module that is required by this CorpusBuilder class.
+        Initialization involves the following:
+        
+        - start the logger and timer
+        - load any Python module required by this CorpusBuilder class
+        - create a database connection; drop any existing database that has 
+          the same name as the new database, and create a new database
+
+        Subclass of BaseCorpusBuilder which overload this method must call 
+        the parent's method first. Otherwise, builds will fail.
         """
+
         self.start_time = time.time()
         self.logger.info("--- Starting ---")
         self.logger.info("Building corpus %s" % self.name)
@@ -1972,6 +1985,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 raise DependencyError(package, url)
         if self.arguments.use_nltk:
             import nltk
+            
+        self.setup_db()
         
     def remove_build(self):
         """
@@ -2022,6 +2037,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         available to Coquery. Most importantly, it calls these functions (in
         order):
         
+        * :func:`build_initialize` to set up the building process, which includes loading the required modules`
         * :func:`build_create_tables` to create all MySQL tables that were specified by previous calls to :func:`create_table_description`
         * :func:`build_load_files` to read all datafiles, process their content, and insert the content into the MySQL tables
         * :func:`build_self_joined` to create a self-joined corpus table that increases query performance of multi-token queries, but which requires a lot of disk space
@@ -2050,19 +2066,20 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.check_arguments()
         if not self._widget:
             self.setup_logger()
-        self.setup_db()
+
         if self._widget:
             steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.self_join) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
             self._widget.ui.progress_bar.setMaximum(steps)
 
-        current = 0
-        current = progress_next(current)
-        self.initialize_build()
-        progress_done()
-
         if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
             raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
         
+        current = 0
+
+        current = progress_next(current)
+        self.build_initialize()
+        progress_done()
+
         try:
             if self.arguments.c and not self.interrupted:
                 current = progress_next(current)
@@ -2245,6 +2262,45 @@ if options._use_qt:
                 str(self.ui.corpus_description.text()).format(
                     builder_class.get_title(), options.cfg.current_server))
 
+            notes = builder_class.get_installation_note()
+            if notes:
+                self.ui.notes_box = classes.CoqDetailBox("Installation notes")
+                self.ui.verticalLayout.addWidget(self.ui.notes_box)
+
+                self.ui.notes_scroll = QtGui.QScrollArea(Form)                                                                                    
+                self.ui.notes_scroll.setWidgetResizable(True)                                                                                     
+                self.ui.notes_scroll.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)                                  
+
+                self.scrollAreaWidgetContents = QtGui.QWidget()                                                                              
+                #self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 530, 356))                                                      
+
+                self.ui.notes_layout = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)                                                     
+                self.ui.notes_layout.setMargin(0)                                                                                           
+                self.ui.notes_layout.setSpacing(0)                                                                                          
+
+                self.ui.notes_label = QtGui.QTextEdit(self.scrollAreaWidgetContents)                                                               
+                self.ui.notes_label.setReadOnly(True)                                                                                              
+
+                self.ui.notes_label.setHtml(notes)
+                self.ui.notes_layout.addWidget(self.ui.notes_label)                                                                               
+                self.ui.notes_scroll.setWidget(self.scrollAreaWidgetContents)                                                                     
+                                                                                                                                            
+
+                #self.ui.notes_label = QtGui.QLabel(notes)
+                #self.ui.notes_label.setWordWrap(True)
+                ##self.ui.notes_label.setMinimumSize(self.ui.notes_label.size())
+
+                #sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+                #sizePolicy.setHorizontalStretch(0)
+                #sizePolicy.setVerticalStretch(0)
+                ##sizePolicy.setHeightForWidth(self.ui.notes_label.sizePolicy().hasHeightForWidth())
+                #self.ui.notes_label.setSizePolicy(sizePolicy)
+                
+                #self.ui.notes_scroll = QtGui.QScrollArea()
+                #self.ui.notes_scroll.setWidgetResizable(True)
+                #self.ui.notes_scroll.setWidget(self.ui.notes_label)
+    
+                self.ui.notes_box.replaceBox(self.ui.notes_scroll)
             try:
                 self.resize(options.settings.value("corpusinstaller_size"))
             except TypeError:
@@ -2382,6 +2438,12 @@ if options._use_qt:
             started if the path is valid, or if the user decides to ignore
             the invalid path.
             """
+            
+            if self.builder_class.get_installation_note():
+                QtGui.QMessageBox.information(
+                    self, "Installation note – Coquery",
+                    self.builder_class.get_installation_note())
+            
             if self.ui.radio_complete.isChecked():
                 l = self.builder_class.get_file_list(
                         str(self.ui.input_path.text()), self.builder_class.file_filter)                   
