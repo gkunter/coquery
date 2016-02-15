@@ -1061,7 +1061,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.showMessage("Query failed.")
         self.set_query_button()
         self.stop_progress_indicator()
-        self.new_session.close()
         
     def start_progress_indicator(self):
         """ Show the progress indicator, and make it move. """
@@ -1081,7 +1080,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.reaggregate()
         self.set_query_button()
         self.stop_progress_indicator()
-        self.Session.close()
         
         if isinstance(self.Session, StatisticsSession):
             self.ui.frame_aggregation.setEnabled(False)

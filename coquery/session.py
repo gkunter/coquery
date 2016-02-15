@@ -166,12 +166,6 @@ class Session(object):
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
 
-    def close(self):
-        """
-        Close the session.
-        """
-        pass
-        
     def get_frequency_table(self):
         frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, session=self)
         frequency_table.fillna("", inplace=True)
