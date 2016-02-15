@@ -17,6 +17,8 @@ import itertools
 import tempfile
 
 from corpusbuilder import *
+from defines import *
+import options
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.txt"
@@ -165,6 +167,30 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_license():
         return "COCA is available under the terms of a commercial license."
+
+    @staticmethod
+    def get_installation_note():
+        _, _, db_type, _, _ = options.get_mysql_configuration()
+        
+        if db_type == SQL_MYSQL:
+            return """
+            <p><b>MySQL installation note</b><p>
+            <p>The COCA installer uses a feature of MySQL servers which
+            allows programs to load large chunks of data into the 
+            database in a single step.</p>
+            <p>This feature speeds up the installation of the COCA corpus.
+            However, it is not enabled by default on many MySQL servers.
+            In this is the case with your MySQL server as well, the 
+            installation may fail with an eror message like the following:</p>
+            <p><code>The used command is not allowed with this MySQL version</code></p>
+            <p>If you receive this or a similar error message, please 
+            ask your MySQL server administrator to enable loading of local
+            in-files by setting the option <code>local-infile</code> in 
+            the MySQL configuration file.</p>                
+            """
+        else:
+            return None
+
 
     def build_load_files(self):
         chunk_size = 250000
