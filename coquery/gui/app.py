@@ -308,7 +308,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_save_results.setIcon(self.get_icon("floppy"))
         self.ui.action_save_selection.setIcon(self.get_icon("floppy"))
         self.ui.button_browse_file.setIcon(self.get_icon("folder"))
-        self.ui.button_file_options.setIcon(self.get_icon("file-excel"))
+        self.ui.button_file_options.setIcon(self.get_icon("table"))
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
