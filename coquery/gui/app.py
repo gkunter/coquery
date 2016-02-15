@@ -1774,9 +1774,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def build_corpus(self):
         import coq_install_generic
-        import corpusbuilder
+        from corpusbuilder_interface import BuilderGui
 
-        builder = corpusbuilder.BuilderGui(coq_install_generic.BuilderClass, self)
+        builder = BuilderGui(coq_install_generic.BuilderClass, self)
         try:
             result = builder.display()
         except Exception as e:
@@ -1788,13 +1788,15 @@ class CoqueryApp(QtGui.QMainWindow):
         self.corpusListUpdated.emit()
             
     def install_corpus(self, builder_class):
-        import corpusbuilder
+        from corpusbuilder_interface import InstallerGui
 
-        builder = corpusbuilder.InstallerGui(builder_class, self)
+        builder = InstallerGui(builder_class, self)
         try:
             result = builder.display()
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info())
+        if result:
+            options.set_current_server(options.cfg.current_server)
         self.fill_combo_corpus()
         self.change_corpus()
         self.corpusListUpdated.emit()
