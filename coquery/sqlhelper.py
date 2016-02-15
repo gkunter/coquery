@@ -164,7 +164,7 @@ def sql_url(configuration, db_name=""):
     d = _conf_dict(configuration)
 
     if d["type"] == SQL_MYSQL:
-        S = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
+        S = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4&local_infile=1".format(
             host=d["host"], port=d["port"], user=d["user"], password=d["password"],
             db_name=db_name)
     elif d["type"] == SQL_SQLITE:
