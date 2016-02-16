@@ -30,7 +30,7 @@ from defines import *
 from pyqt_compat import QtCore, QtGui, QtHelp
 
 import QtProgress
-import ui.coqueryUi, ui.coqueryCompactUi
+import ui.coqueryUi
 
 import classes
 import errorbox
@@ -109,11 +109,10 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.font = options.cfg.app.font()
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
 
-        if size.height() < 1024 or size.width() < 1024:
-            self.ui = ui.coqueryCompactUi.Ui_MainWindow()
-        else:
-            self.ui = ui.coqueryUi.Ui_MainWindow()
+        self.ui = ui.coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
+        
+        self.setMenuBar(self.ui.menubar)
         
         self.setup_app()
         
@@ -250,17 +249,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectionBehavior(QtGui.QAbstractItemView.SelectRows|QtGui.QAbstractItemView.SelectColumns))
 
 
-        # This is only a template. Alledgedly, OS X does not favour 
-        # status bars, so we might use a toolbar instead.
-        #if __OS__ == "MAC OS X":
-        self.statusBar().hide()
-        self.ui.toolbar = self.addToolBar("Status")
-        self.ui.statusbar = QtGui.QStatusBar()
-        self.ui.toolbar.setObjectName("_coquery_statusbar")
-        self.ui.toolbar.addWidget(self.ui.statusbar)
-        self.ui.toolbar.setIconSize(QtCore.QSize(16, 16))
-        self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
-
         self.ui.status_message = QtGui.QLabel("{} {}".format(__init__.NAME, __init__.__version__))
 
         self.ui.combo_config = QtGui.QComboBox()
@@ -288,6 +276,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer = QtCore.QTimer()
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
+
+        if __OS__ == "MAC OS X":
+            self.menuBar().setNativeMenuBar(False)
 
     def statusBar(self):
         if hasattr(self.ui, "statusbar"):
