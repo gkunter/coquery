@@ -14,7 +14,7 @@ from __future__ import print_function
 
 import argparse
 import codecs
-
+import re
 
 from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
@@ -28,17 +28,16 @@ import options
 import sqlhelper
 import sqlwrap
 
-
 class InstallerGui(QtGui.QDialog):
     button_label = "&Install"
     window_title = "Corpus installer – Coquery"
     
     installStarted = QtCore.Signal()
+    showNLTKDownloader = QtCore.Signal(str)
     
     progressSet = QtCore.Signal(int, str)
     labelSet = QtCore.Signal(str)
-    progressUpdate = QtCore.Signal(int)
-    
+    progressUpdate = QtCore.Signal(int)    
     generalUpdate = QtCore.Signal(int)
     
     def __init__(self, builder_class, parent=None):
@@ -355,16 +354,17 @@ class BuilderGui(InstallerGui):
     button_label = "&Build"
     window_title = "Corpus builder – Coquery"
 
-    _nltk_lemmatize = False
-    _nltk_tokenize = False
-    _nltk_tagging = False
-
     def __init__(self, builder_class, parent=None):
         super(BuilderGui, self).__init__(builder_class, parent)
         self.ui.input_path.textChanged.disconnect()
 
         import __init__
         self.logger = logging.getLogger(__init__.NAME)        
+
+        self._nltk_lemmatize = False
+        self._nltk_tokenize = False
+        self._nltk_tagging = False
+        self._testing = False
 
         self.ui.corpus_description.setText("<html><head/><body><p><span style='font-weight:600;'>Corpus builder</span></p><p>You have requested to create a new corpus from a selection of text files using the database connection '{}'. The corpus will afterwards be available for queries.</p></body></html>".format(options.cfg.current_server))
         self.ui.label_5.setText("Build corpus from local text files and install corpus module (if you have a local database server)")
@@ -403,7 +403,7 @@ class BuilderGui(InstallerGui):
         label_text = ["Use NLTK for part-of-speech tagging and lemmatization"]
 
         try:
-            val = options.settings.value("corpusbuilder_nltk") != "False"
+            val = options.settings.value("corpusbuilder_nltk") == "True"
             self.ui.use_pos_tagging.setChecked(val)
         except TypeError:
             pass
@@ -433,82 +433,81 @@ class BuilderGui(InstallerGui):
 
     def pos_check(self):
         """
-        This is called when the NLTK box is checked or unchecked.
+        This is called when the NLTK box is checked.
         """
-        def check():
-            return self._nltk_lemmatize and self._nltk_tokenize and self._nltk_tagging
-        
-        if hasattr(self, "_testing"):
+        if self._testing:
             return
-        self._testing = True
-        self.test_nltk()
-        if self.ui.use_pos_tagging.isChecked() and not check():
-            self.ui.use_pos_tagging.setChecked(False)
-            import nltkdatafiles
-            response = nltkdatafiles.NLTKDatafiles.ask(self.nltk_exception, parent=self)
-            if response:
-                self.test_nltk()
-                if check():
-                    self.ui.use_pos_tagging.setChecked(True)
-        self._testing = False
+        if not self.ui.use_pos_tagging.isChecked():
+            return
 
-    def test_nltk(self):
-        """
-        Test NLTK.
-        
-        This function raises a RuntimeError with the error condition as the 
-        parameter if there is a problem with NLTK.
-        """
-        label_text = str(self.ui.label_pos_tagging.text())
-        self.ui.label_pos_tagging.setText("{} <b>(testing...)</b>".format(label_text))
-        self.ui.buttonBox.setEnabled(False)
+        self._nltk_lemmatize = False
+        self._nltk_tokenize = False
+        self._nltk_tagging = False
+        self.nltk_exceptions = []
 
         if options._use_nltk:
-            import nltk
-            # test lemmatizer:
-            nltk_exceptions = []
-            try:
-                nltk.stem.wordnet.WordNetLemmatizer().lemmatize("Test")
-            except LookupError as e:
-                s = str(e).replace("\n", "").strip("*")
-                match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
-                if match:
-                    nltk_exceptions.append(match.group(1))
-                self._nltk_lemmatize = False
-            else:
-                self._nltk_lemmatize = True
+            self._testing = True
+            self.test_thread = QtProgress.ProgressThread(self.test_nltk_core, parent=self)
+            self.test_thread.taskFinished.connect(self.test_nltk_results)
+            self._label_text = str(self.ui.label_pos_tagging.text())
+            self.ui.label_pos_tagging.setText("Testing NLTK components...")
+            self.ui.label_pos_tagging.setDisabled(True)
+            self.ui.use_pos_tagging.setDisabled(True)
+            self._old_button_state = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).isEnabled()
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            self.test_thread.start()
 
-            # test tokenzie:
-            try:
-                nltk.sent_tokenize("test")
-            except LookupError as e:
-                s = str(e).replace("\n", "")
-                match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
-                if match:
-                    nltk_exceptions.append(match.group(1))
-                self._nltk_tokenize = False
-            else:
-                self._nltk_tokenize = True
-            
-            # test tagging:
-            try:
-                nltk.pos_tag("test")
-            except LookupError as e:
-                s = str(e).replace("\n", "")
-                match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
-                if match:
-                    nltk_exceptions.append(match.group(1))
-                self._nltk_tagging = False
-            else:
-                self._nltk_tagging = True
-            self.nltk_exception = "<br/>".join(nltk_exceptions)
-        else:
+    def test_nltk_core(self):
+        import nltk
+        # test lemmatizer:
+        try:
+            nltk.stem.wordnet.WordNetLemmatizer().lemmatize("Test")
+        except LookupError as e:
+            s = str(e).replace("\n", "").strip("*")
+            match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
+            if match:
+                self.nltk_exceptions.append(match.group(1))
             self._nltk_lemmatize = False
+        else:
+            self._nltk_lemmatize = True
+        # test tokenzie:
+        try:
+            nltk.sent_tokenize("test")
+        except LookupError as e:
+            s = str(e).replace("\n", "")
+            match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
+            if match:
+                self.nltk_exceptions.append(match.group(1))
             self._nltk_tokenize = False
+        else:
+            self._nltk_tokenize = True
+        # test tagging:
+        try:
+            nltk.pos_tag("test")
+        except LookupError as e:
+            s = str(e).replace("\n", "")
+            match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
+            if match:
+                self.nltk_exceptions.append(match.group(1))
             self._nltk_tagging = False
-            self.nltk_exception = ""
-        self.ui.label_pos_tagging.setText(label_text)
-        self.ui.buttonBox.setEnabled(True)
+        else:
+            self._nltk_tagging = True
+    
+    def test_nltk_results(self):
+        def pass_check():
+            return self._nltk_lemmatize and self._nltk_tokenize and self._nltk_tagging
+
+        self.ui.label_pos_tagging.setText(self._label_text)
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(self._old_button_state)
+        if self.ui.use_pos_tagging.isChecked() and not pass_check():
+            self.ui.use_pos_tagging.setChecked(False)
+            
+            import nltkdatafiles
+            nltkdatafiles.NLTKDatafiles.ask(self.nltk_exceptions, parent=self)
+
+        self._testing = False
+        self.ui.label_pos_tagging.setDisabled(False)
+        self.ui.use_pos_tagging.setDisabled(False)
 
     def closeEvent(self, event):
         options.settings.setValue("corpusbuilder_size", self.size())
