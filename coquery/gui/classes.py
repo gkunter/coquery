@@ -878,15 +878,21 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     fill = False
-    
+
     def __init__(self, *args, **kwargs):
         super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
-        self._app = options.cfg.app
-        self._table = options.cfg.main_window.table_model
-        if not hasattr(self, "fg_color"):
-            self.fg_color = None
-        if not hasattr(self, "fb_color"):
-            self.bg_color = None
+        CoqResultCellDelegate._app = options.cfg.app
+        CoqResultCellDelegate._table = options.cfg.main_window.table_model
+        CoqResultCellDelegate.standard_bg = {
+            True: [CoqResultCellDelegate._app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.AlternateBase),
+                CoqResultCellDelegate._app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Base)],
+            False:[CoqResultCellDelegate._app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.AlternateBase),
+                CoqResultCellDelegate._app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Base)]}        
+
+        if not hasattr(CoqResultCellDelegate, "fg_color"):
+            CoqResultCellDelegate.fg_color = None
+        if not hasattr(CoqResultCellDelegate, "bg_color"):
+            CoqResultCellDelegate.bg_color = None
     
     def get_foreground(self, option, index):
         if option.state & QtGui.QStyle.State_MouseOver:
@@ -915,15 +921,9 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         if option.state & QtGui.QStyle.State_Selected:
             return self._app.palette().color(QtGui.QPalette().Highlight)
         else:
-            if self._table.is_visible(index):
-                color_group = QtGui.QPalette.Normal
-            else:
-                color_group = QtGui.QPalette.Disabled
             if not self.bg_color:
-                if index.row() & 1:
-                    return self._app.palette().color(color_group, QtGui.QPalette.AlternateBase)
-                else:
-                    return self._app.palette().color(color_group, QtGui.QPalette.Base)
+                col = self.standard_bg[self._table.is_visible(index)][index.row() & 1]
+                return col
             else:
                 return self.bg_color
 
@@ -954,7 +954,6 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         fg = self.get_foreground(option, index)
         bg = self.get_background(option, index)
         if bg:
-            painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
             if option.state & QtGui.QStyle.State_Selected or self.fill:
                 painter.fillRect(option.rect, bg)

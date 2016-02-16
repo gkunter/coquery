@@ -55,7 +55,7 @@ class CoqAccordionEntry(QtGui.QWidget):
         self.verticalLayout_2 = QtGui.QVBoxLayout(self)
         self.corpus_description_frame = QtGui.QFrame(self)
         
-        button_col = options.cfg.app.palette().color(QtGui.QPalette().Button)
+        button_col = options.cfg.app.palette().color(QtGui.QPalette().Light)
         style = "QFrame {{ background-color: rgb({}, {}, {}); }}".format(button_col.red(), button_col.green(), button_col.blue())
         self.corpus_description_frame.setStyleSheet(style)
         self.corpus_description_frame.setFrameShape(frameShape)

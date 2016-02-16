@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>710</width>
-    <height>547</height>
+    <width>931</width>
+    <height>709</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -288,22 +288,6 @@
                    </property>
                   </widget>
                  </item>
-                 <item>
-                  <spacer name="horizontalSpacer_4">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeType">
-                    <enum>QSizePolicy::Preferred</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>13</width>
-                     <height>1</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
                 </layout>
                </item>
                <item row="2" column="0">
@@ -345,22 +329,6 @@
                     <string> words</string>
                    </property>
                   </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeType">
-                    <enum>QSizePolicy::Preferred</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>13</width>
-                     <height>1</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                 </layout>
                </item>
@@ -429,17 +397,13 @@
              <item row="2" column="0">
               <widget class="QPushButton" name="button_run_query">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
                <property name="text">
                 <string>&amp;Query</string>
-               </property>
-               <property name="icon">
-                <iconset theme="media-playback-start">
-                 <normaloff>../../../../../../../../.designer/backup</normaloff>../../../../../../../../.designer/backup</iconset>
                </property>
                <property name="autoDefault">
                 <bool>false</bool>
@@ -624,7 +588,7 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string>O&amp;ptions...</string>
+                <string>O&amp;ptions</string>
                </property>
                <property name="icon">
                 <iconset theme="document-properties">
@@ -770,6 +734,12 @@
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
           <widget class="QFrame" name="frame">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="frameShape">
             <enum>QFrame::StyledPanel</enum>
            </property>
@@ -944,8 +914,8 @@ The number of occurrences of each token matching the query string is counted. Th
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>710</width>
-     <height>23</height>
+     <width>931</width>
+     <height>34</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -965,7 +935,6 @@ The number of occurrences of each token matching the query string is counted. Th
      <string>&amp;Help</string>
     </property>
     <addaction name="action_help"/>
-    <addaction name="action_mysql_server_help"/>
     <addaction name="separator"/>
     <addaction name="action_about_coquery"/>
    </widget>
@@ -1366,13 +1335,19 @@ The number of occurrences of each token matching the query string is counted. Th
    </property>
   </action>
   <action name="action_toggle_filters">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Toggle &amp;filters</string>
+    <string>Use &amp;filters</string>
    </property>
   </action>
   <action name="action_toggle_stopwords">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Toggle stop&amp;words</string>
+    <string>Use stop&amp;words</string>
    </property>
   </action>
  </widget>
