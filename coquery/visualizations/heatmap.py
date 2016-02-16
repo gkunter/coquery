@@ -106,9 +106,9 @@ class Visualizer(vis.BaseVisualizer):
                 xtl = ax.get_xticklabels()
                 ytl = ax.get_yticklabels()
                 if _axis_ticklabels_overlap(xtl, self.g.fig):
-                    self.g.fig.setp(xtl, rotation="vertical")
+                    self.g.setp(xtl, rotation="vertical")
                 if _axis_ticklabels_overlap(ytl, self.g.fig):
-                    self.g.fig.setp(ytl, rotation="horizontal")
+                    self.g.setp(ytl, rotation="horizontal")
             except Exception as e:
                 print(str(e))
                 raise e
