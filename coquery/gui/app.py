@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 
+import sys
 import importlib
 import os
 import codecs
@@ -277,7 +278,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
 
-        if __OS__ == "MAC OS X":
+        if sys.platform == "darwin":
             self.menuBar().setNativeMenuBar(False)
 
     def statusBar(self):
