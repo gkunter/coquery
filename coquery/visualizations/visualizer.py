@@ -408,7 +408,7 @@ class BaseVisualizer(QtCore.QObject):
         #if not self._groupby:
             #raise VisualizationNoDataError
 
-    def adjust_fonts(self, size):
+    def adjust_fonts(self, size=16):
         """
         Adjust the fonts of the figure.
         
@@ -421,13 +421,19 @@ class BaseVisualizer(QtCore.QObject):
         size : numeric
             The base font size.
         """
-        return
+        size = 40
         figure = self.g.fig
         ax = plt.gca()
         ax.xaxis.label.set_fontsize(size)
         ax.yaxis.label.set_fontsize(size)
-        figure.get_xticklabels().set_fontsize(size * 0.8)
-        figure.get_yticklabels().set_fontsize(size * 0.8)
+        try:
+            ax.get_xticklabels().set_fontsize(size * 0.8)
+        except AttributeError:
+            pass
+        try:
+            ax.get_yticklabels().set_fontsize(size * 0.8)
+        except AttributeError:
+            pass
 
     def get_content_tree(self, table, label="count"):
         """ 
@@ -723,6 +729,7 @@ class VisualizerDialog(QtGui.QWidget):
         self.add_matplot()
             
         self.visualizer.draw()
+        self.visualizer.adjust_fonts()
         self.visualizer.g.fig.tight_layout()
 
         if self.smooth:
