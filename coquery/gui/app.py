@@ -1011,10 +1011,14 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.row_visibility[self.Session.query_type].keys()))]
             
             # restrict to selection?
-            if selection:
-                selection = [x.row() for x in self.ui.data_preview.selectionModel().selectedRows()]
-                if selection:
-                    tab = tab.iloc[selection]
+            if selection or clipboard:
+                sel = self.ui.data_preview.selectionModel().selection()
+                selected_rows = set([])
+                selected_columns = set([])
+                for x in sel.indexes():
+                    selected_rows.add(x.row())
+                    selected_columns.add(x.column())
+                tab = tab.iloc[list(selected_rows)][list(selected_columns)]
             
             if clipboard:
                 cb = QtGui.QApplication.clipboard()
