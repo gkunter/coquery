@@ -24,6 +24,7 @@ import classes
 import errorbox
 import QtProgress
 from defines import * 
+from errors import *
 import options
 import sqlhelper
 import sqlwrap
@@ -86,7 +87,7 @@ class InstallerGui(QtGui.QDialog):
         
         self.ui.corpus_description.setText(
             str(self.ui.corpus_description.text()).format(
-                builder_class.get_title(), options.cfg.current_server))
+                str(builder_class.get_title()), str(options.cfg.current_server)))
 
         notes = builder_class.get_installation_note()
         if notes:
