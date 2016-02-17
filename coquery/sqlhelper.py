@@ -272,11 +272,11 @@ def has_index(engine, table, column):
     b : bool 
         True if the column has an index, or False otherwise.
     """
-    connection = engine.connect()
-    if engine.Dialect.name == SQL_MYSQL:
-        return bool(connection.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table, index)))
-    elif engine.Dialect.name == SQL_SQLITE:
-        return bool(len(connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
+    with engine.connect() as connection:
+        if engine.Dialect.name == SQL_MYSQL:
+            return bool(connection.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table, index)))
+        elif engine.Dialect.name == SQL_SQLITE:
+            return bool(len(connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
 
 def create_index(engine, table, index, variables, length=None):
     """
@@ -300,16 +300,16 @@ def create_index(engine, table, index, variables, length=None):
         The length of the index (applies to TEXT or BLOB fields)
     """
 
-    connection = engine.connect()
-    # Do not create an index if the table is empty:
-    if not connection.execute("SELECT * FROM {} LIMIT 1".format(table)).fetchone():
-        return
-    
-    if length:
-        variables = ["%s(%s)" % (variables[0], length)]
-    S = 'CREATE INDEX {} ON {}({})'.format(
-        index, table, ",".join(variables))
-    connection.execute(S)
+    with engine.connect() as connection:
+        # Do not create an index if the table is empty:
+        if not connection.execute("SELECT * FROM {} LIMIT 1".format(table)).fetchone():
+            return
+        
+        if length:
+            variables = ["%s(%s)" % (variables[0], length)]
+        S = 'CREATE INDEX {} ON {}({})'.format(
+            index, table, ",".join(variables))
+        connection.execute(S)
 
 def has_table(engine, table):
     """
@@ -327,12 +327,12 @@ def has_table(engine, table):
     b : bool 
         True if the table exists, or False otherwise.
     """
-    connection = engine.connect()
-    if engine.Dialect.name == SQL_MYSQL:
-        return bool(connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table = '{}'".format(self.db_name, table)))
-    elif engine.Dialect.name == SQL_SQLITE:
-        S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table)
-        return bool(connection.execute(S).fetchall())
+    with engine.connect() as connection:
+        if engine.Dialect.name == SQL_MYSQL:
+            return bool(connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table = '{}'".format(self.db_name, table)))
+        elif engine.Dialect.name == SQL_SQLITE:
+            S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table)
+            return bool(connection.execute(S).fetchall())
 
 def get_index_length(engine, table, column, coverage=0.95):
     """
@@ -375,8 +375,9 @@ def get_index_length(engine, table, column, coverage=0.95):
         LIMIT  32) count_inc
     GROUP BY len""".format(
         table=table, column=column)
-    connection = engine.connect()
-    results = connection.execute(S)
+    
+    with engine.connect() as connection:
+        results = connection.execute(S)
 
     max_c = None
     for x in results:

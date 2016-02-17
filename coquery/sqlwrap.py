@@ -59,12 +59,11 @@ class SqlDB (object):
     def create_database(self, db_name):
         self.sql_url = sqlhelper.sql_url(options.cfg.current_server)
         self.engine = sqlalchemy.create_engine(self.sql_url)
-        self.connection = self.engine.connect()
-
-        if self.db_type == SQL_MYSQL:
-            S = "CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name)
-            self.connection.execute(S)
-        self.use_database(db_name)
+        with self.engine.connect() as connection:
+            if self.db_type == SQL_MYSQL:
+                S = "CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name)
+                connection.execute(S)
+            self.use_database(db_name)
 
     def use_database(self, db_name):
         self.db_name = db_name
@@ -89,7 +88,8 @@ class SqlDB (object):
             True if the database exists, or False otherwise.
         """
         if self.db_type == SQL_MYSQL:
-            results = self.connection.execute("SHOW DATABASES")
+            with self.engine.connect() as connection:
+                results = connection.execute("SHOW DATABASES")
             try:
                 for x in results:
                     if x[0] == db_name.split()[0]:
@@ -115,11 +115,12 @@ class SqlDB (object):
         b : bool 
             True if the table exists, or False otherwise.
         """
-        if self.db_type == SQL_MYSQL:
-            return bool(self.connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name)))
-        elif self.db_type == SQL_SQLITE:
-            S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table_name)
-            return bool(self.connection.execute(S).fetchall())
+        with self.engine.connect() as connection:
+            if self.db_type == SQL_MYSQL:
+                return bool(connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name)))
+            elif self.db_type == SQL_SQLITE:
+                S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table_name)
+                return bool(connection.execute(S).fetchall())
 
     def create_table(self, table_name, description):
         """
@@ -134,7 +135,8 @@ class SqlDB (object):
             The SQL string used to create the new table
         """
         S = 'CREATE TABLE {} ({})'.format(table_name, description)
-        return self.connection.execute(S)
+        with self.engine.connect() as connection:
+            return connection.execute(S)
             
     def find(self, table, values, case=False):        
         """ 
