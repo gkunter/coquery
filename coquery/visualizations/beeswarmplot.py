@@ -55,7 +55,6 @@ class Visualizer(vis.BaseVisualizer):
         
         self.g.map_dataframe(plot_facet)
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
-        self.g.set_titles(fontweight="bold", size=options.cfg.app.font().pointSize() * self.get_font_scale())
         self.g.set(xticklabels=self._levels[-1])
         self.g.fig.tight_layout()
 

@@ -59,6 +59,9 @@ if pyside:
     mpl.use("Qt4Agg")
     mpl.rcParams["backend.qt4"] = "PySide"
 
+mpl.rcParams["font.family"] = str(QtGui.QFont().family())
+
+
 from ui.visualizerUi import Ui_Visualizer
 import QtProgress
 
@@ -214,17 +217,13 @@ class BaseVisualizer(QtCore.QObject):
     @_validate_layout
     def setup_figure(self):
         """ Prepare the matplotlib figure for plotting. """ 
-        with mpl.rc_context({"legend.fontsize": 16}):
-            with sns.plotting_context(
-                context=self.get_plot_context(), 
-                font_scale=self.get_font_scale()):
-
-                self.g = sns.FacetGrid(self._table, 
-                                    col=self._col_factor,
-                                    col_wrap=self._col_wrap,
-                                    row=self._row_factor,
-                                    sharex=True,
-                                    sharey=True)
+        with sns.plotting_context("paper"):
+            self.g = sns.FacetGrid(self._table, 
+                            col=self._col_factor,
+                            col_wrap=self._col_wrap,
+                            row=self._row_factor,
+                            sharex=True,
+                            sharey=True)
 
     def map_data(self, func):
         """
@@ -331,11 +330,7 @@ class BaseVisualizer(QtCore.QObject):
         else:
             view_columns = [x for x in view_columns if options.cfg.column_visibility.get(x, True) and not x.startswith("statistics")]
         
-        print(view_columns)
-        
         column_order = view_columns
-
-
 
         column_order.append("coquery_invisible_corpus_id")
 
@@ -408,33 +403,62 @@ class BaseVisualizer(QtCore.QObject):
         #if not self._groupby:
             #raise VisualizationNoDataError
 
-    def adjust_fonts(self, size=16):
+    def adjust_fonts(self):
         """
         Adjust the fonts of the figure.
         
-        This method adjusts all fonts in the figure. The axis labels are 
-        set to exactly the given size, and the axis tick labels are adjusted
-        to size * 0.8.
-        
-        Parameters
-        ----------
-        size : numeric
-            The base font size.
+        The font sizes are either retrieved from the 'options' dictionary of 
+        this instance, or from the system default. If the default is used,
+        the font size of axis tick labels and legend entries is scaled by 
+        the factor 0.833.
         """
-        size = 40
-        figure = self.g.fig
-        ax = plt.gca()
-        ax.xaxis.label.set_fontsize(size)
-        ax.yaxis.label.set_fontsize(size)
-        try:
-            ax.get_xticklabels().set_fontsize(size * 0.8)
-        except AttributeError:
-            pass
-        try:
-            ax.get_yticklabels().set_fontsize(size * 0.8)
-        except AttributeError:
-            pass
 
+        # Set font sizes of axis labels and ticks, separately for each axis:
+        for ax in self.g.fig.axes:
+            for element, font in [(ax.xaxis.label, "font_x_axis"),
+                                  (ax.yaxis.label, "font_y_axis")]:
+                self.options[font] = self.options.get(font, QtGui.QFont())
+                element.set_fontsize(self.options[font].pointSize())
+
+            if not self.options.get("font_x_ticks"):
+                self.options["font_x_ticks"] = QtGui.QFont()
+                self.options["font_x_ticks"].setPointSize(round(self.options["font_x_axis"].pointSize() / 1.2))
+            for element in ax.get_xticklabels():
+                element.set_fontsize(self.options["font_x_ticks"].pointSize())
+                
+            if not self.options.get("font_y_ticks"):
+                self.options["font_y_ticks"] = QtGui.QFont()
+                self.options["font_y_ticks"].setPointSize(round(self.options["font_y_axis"].pointSize() / 1.2))
+            for element in ax.get_yticklabels():
+                element.set_fontsize(self.options["font_y_ticks"].pointSize())
+
+        # This should be one way to get fonts for the different elements:
+        #x_font = mpl.font_manager.FontProperties(
+            #family=self.options["font_x_axis"].family(), 
+            #style='normal', 
+            #size=self.options["font_x_axis"].pointSize(), 
+            #weight='normal', 
+            #stretch='normal')
+
+        # Set font size of main title:
+        if not self.options.get("font_main"):
+            self.options["font_main"] = QtGui.QFont()
+            self.options["font_main"].setPointSize(round(QtGui.QFont().pointSize() * 1.2))
+        if "label_main" in self.options:
+            plt.title(self.options["label_main"], size=self.options["font_main"].pointSize())
+        
+        # set font size of legend:
+        legend = plt.gca().get_legend()
+        if legend:
+            if not self.options.get("font_legend"):
+                self.options["font_legend"] = QtGui.QFont()
+            legend.get_title().set_fontsize(self.options["font_legend"].pointSize())
+            
+            if not self.options.get("font_legend_entries"):
+                self.options["font_legend_entries"] = QtGui.QFont()
+                self.options["font_legend_entries"].setPointSize(round(self.options["font_legend"].pointSize() / 1.2))
+            plt.setp(legend.get_texts(), fontsize=self.options["font_legend_entries"].pointSize())
+        
     def get_content_tree(self, table, label="count"):
         """ 
         Return a tree that contains a tree representation of the table.
@@ -573,24 +597,38 @@ class BaseVisualizer(QtCore.QObject):
             #if label:
                 #self.subplot.xaxis.set_label(label)
 
-    def get_font_scale(self, default=12):
+    def get_plot_context(self):
         """ 
-        Return the scaling factor of the current font, relative to a default
-        font size.
+        Return one of the Seaborn contexts. 
         
-        Parameters
-        ----------
-        default : int (default=12)
-            The default font size for which the relative scaling factor of 
-            the current font is calculated.
-            
+        The :mod:`Seaborn` library, which handles the overall layout of the
+        :mod:`matplotlib` canvas that is used for drawing, provides different
+        plotting contexts that manage font sizes, margins, and so on. The 
+        available contexts are: `paper`, `notebook`, `talk`, and `poster`,
+        in increasing context size order.
+        
+        This method selects a suitable context based on the current font 
+        scaling that is determined by calling :func:`get_font_scale`. For 
+        larger font sizes, larger context sizes are chosen. This should 
+        adjust spacing for displays with different resolutions.
+        
         Returns
         -------
-        scale : float
-            The scaling factor of the current font.
+        context : string
+            A Seaborn context, either `paper`, `notebook`, `talk`, or `poster`
         """
-        return options.cfg.app.font().pointSize()/default
-
+        default = 12
+        
+        font_scale = options.cfg.app.font().pointSize() / default
+        
+        if font_scale <= 0.7:
+            return "paper"
+        if font_scale <= 1.2:
+            return "notebook"
+        if font_scale <= 1.5:
+            return "talk"
+        return "poster"
+    
     def get_colors_for_factor(self, column, palette, rgb_string=False):
         """ 
         Create a dictionary with colors for each factor level. 
@@ -625,36 +663,6 @@ class BaseVisualizer(QtCore.QObject):
         fact = self._table[column].unique()
         return dict(zip(fact, (col * (1 + (len(fact) // len(col))))[0:len(fact)]))
 
-    def get_plot_context(self):
-        """ 
-        Return one of the Seaborn contexts. 
-        
-        The :mod:`Seaborn` library, which handles the overall layout of the
-        :mod:`matplotlib` canvas that is used for drawing, provides different
-        plotting contexts that manage font sizes, margins, and so on. The 
-        available contexts are: `paper`, `notebook`, `talk`, and `poster`,
-        in increasing context size order.
-        
-        This method selects a suitable context based on the current font 
-        scaling that is determined by calling :func:`get_font_scale`. For 
-        larger font sizes, larger context sizes are chosen. This should 
-        adjust spacing for displays with different resolutions.
-        
-        Returns
-        -------
-        context : string
-            A Seaborn context, either `paper`, `notebook`, `talk`, or `poster`
-        """
-        font_scale = self.get_font_scale()
-        
-        if font_scale <= 0.7:
-            return "paper"
-        if font_scale <= 1.2:
-            return "notebook"
-        if font_scale <= 1.5:
-            return "talk"
-        return "poster"
-    
 class VisualizerDialog(QtGui.QWidget):
     """ Defines a QDialog that is used to visualize the data in the main 
     data preview area. It connects the dataChanged signal of the abstract 
@@ -881,6 +889,7 @@ class VisualizerDialog(QtGui.QWidget):
         self.repaint()
         
         self.visualizer.g.fig.canvas.draw()
+        self.visualizer.adjust_fonts()
         self.visualizer.g.fig.tight_layout()
 
         # Create an alert in the system taskbar to indicate that the

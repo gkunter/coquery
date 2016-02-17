@@ -111,4 +111,3 @@ class Visualizer(vis.BaseVisualizer):
             self.g.set(yticklabels=self._levels[0])
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
-        self.g.set_titles(fontweight="bold", size=options.cfg.app.font().pointSize() * self.get_font_scale())

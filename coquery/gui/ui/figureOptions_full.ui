@@ -20,7 +20,7 @@
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>
@@ -531,15 +531,9 @@
       <attribute name="title">
        <string>Fonts</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout" stretch="0">
+      <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,1">
        <item>
         <widget class="QScrollArea" name="scrollArea">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
          <property name="frameShape">
           <enum>QFrame::NoFrame</enum>
          </property>
@@ -552,7 +546,7 @@
             <x>0</x>
             <y>0</y>
             <width>452</width>
-            <height>578</height>
+            <height>505</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -591,15 +585,9 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="spin_size_main">
-                  <property name="suffix">
-                   <string> pt</string>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>96</number>
+                 <widget class="QPushButton" name="button_select_main">
+                  <property name="text">
+                   <string>Select...</string>
                   </property>
                  </widget>
                 </item>
@@ -643,15 +631,9 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="spin_size_x_axis">
-                  <property name="suffix">
-                   <string> pt</string>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>96</number>
+                 <widget class="QPushButton" name="button_select_x_axis">
+                  <property name="text">
+                   <string>Select...</string>
                   </property>
                  </widget>
                 </item>
@@ -686,15 +668,9 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="spin_size_x_ticks">
-                  <property name="suffix">
-                   <string> pt</string>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>96</number>
+                 <widget class="QPushButton" name="button_select_x_ticks">
+                  <property name="text">
+                   <string>Select...</string>
                   </property>
                  </widget>
                 </item>
@@ -738,15 +714,9 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="spin_size_y_axis">
-                  <property name="suffix">
-                   <string> pt</string>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>96</number>
+                 <widget class="QPushButton" name="button_select_y_axis">
+                  <property name="text">
+                   <string>Select...</string>
                   </property>
                  </widget>
                 </item>
@@ -781,15 +751,9 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="spin_size_y_ticks">
-                  <property name="suffix">
-                   <string> pt</string>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>96</number>
+                 <widget class="QPushButton" name="button_select_y_ticks">
+                  <property name="text">
+                   <string>Select...</string>
                   </property>
                  </widget>
                 </item>
@@ -833,15 +797,9 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="spin_size_legend">
-                  <property name="suffix">
-                   <string> pt</string>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>96</number>
+                 <widget class="QPushButton" name="button_select_legend">
+                  <property name="text">
+                   <string>Select...</string>
                   </property>
                  </widget>
                 </item>
@@ -876,15 +834,9 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QSpinBox" name="spin_size_legend_entries">
-                  <property name="suffix">
-                   <string> pt</string>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>96</number>
+                 <widget class="QPushButton" name="button_select_legend_entries">
+                  <property name="text">
+                   <string>Select...</string>
                   </property>
                  </widget>
                 </item>
@@ -893,46 +845,46 @@
              </layout>
             </widget>
            </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_11">
-             <item>
-              <spacer name="horizontalSpacer">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton">
-               <property name="text">
-                <string>Select font for all...</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <spacer name="verticalSpacer">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>220</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
           </layout>
          </widget>
         </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_11">
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton">
+           <property name="text">
+            <string>Select font for all...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>220</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>
