@@ -1742,7 +1742,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     # also try to remove the compiled python module:
                     try:
                         os.remove("{}c".format(module))
-                    except IOError:
+                    except (IOError, OSError):
                         pass
             
             # remove the corpus installer if the corpus was created from 
