@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 import visualizer as vis
 import seaborn as sns
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def _annotate_heatmap(self, ax, mesh):
     import numpy as np
@@ -31,41 +32,6 @@ def _annotate_heatmap(self, ax, mesh):
     except Exception as e:
         print(e)
         raise e
-    
-def _axis_ticklabels_overlap(labels, fig):
-    """Return a boolean for whether the list of ticklabels have overlaps.
-
-    Parameters
-    ----------
-    labels : list of ticklabels
-
-    Returns
-    -------
-    overlap : boolean
-        True if any of the labels overlap.
-
-    """
-    if not labels:
-        return False
-
-    # Use the method from http://stackoverflow.com/questions/22667224/ to
-    # get a renderer even on backends where they are normally unavailable:
-    if hasattr(fig.canvas, "get_renderer"):
-        renderer = fig.canvas.get_renderer()
-    else:
-        import io
-        fig.canvas.print_pdf(io.BytesIO())
-        renderer = fig._cachedRenderer
-
-    try:
-        bboxes = [l.get_window_extent(renderer) for l in labels]
-        overlaps = [b.count_overlaps(bboxes) for b in bboxes]
-        return max(overlaps) > 1
-    except RuntimeError as e:
-        print("RT", e)
-        # Issue on macosx backend rasies an error in the above code
-        return False
-
     
 sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
 
@@ -101,17 +67,6 @@ class Visualizer(vis.BaseVisualizer):
                 vmax=vmax,
                 #ax=plt.gca(),
                 linewidths=1)
-            try:
-                ax = self.g.fig.gca()
-                xtl = ax.get_xticklabels()
-                ytl = ax.get_yticklabels()
-                if _axis_ticklabels_overlap(xtl, self.g.fig):
-                    self.g.setp(xtl, rotation="vertical")
-                if _axis_ticklabels_overlap(ytl, self.g.fig):
-                    self.g.setp(ytl, rotation="horizontal")
-            except Exception as e:
-                print(str(e))
-                raise e
             
         if len(self._groupby) < 2:
             # create a dummy cross tab with one dimension containing empty
@@ -135,14 +90,3 @@ class Visualizer(vis.BaseVisualizer):
                 [self._table[x] for x in [self._col_factor, self._groupby[1]] if x != None]).values.max()
 
         self.map_data(plot_facet)
-
-        self.setup_axis("Y")
-        self.setup_axis("X")
-
-        self.adjust_fonts(16)
-
-        try:
-            self.g.fig.tight_layout()
-        except ValueError:
-            # A ValueError sometimes occurs with long labels. We ignore it:
-            pass

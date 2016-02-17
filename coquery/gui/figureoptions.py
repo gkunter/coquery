@@ -162,8 +162,6 @@ class FigureOptions(QtGui.QDialog):
         self.ui.spin_size_y_ticks.valueChanged.connect(lambda: self.font_resize("y_ticks"))
         self.ui.spin_size_legend.valueChanged.connect(lambda: self.font_resize("legend"))
         self.ui.spin_size_legend_entries.valueChanged.connect(lambda: self.font_resize("legend_entries"))
-
-
                 
         self.ui.label_main.setFocus()
 
@@ -299,26 +297,20 @@ class FigureOptions(QtGui.QDialog):
         self.fonts[element_name] = font
         name = "label_sample_{}".format(element_name)
         current_field = getattr(self.ui, name)
-        current_field.setFont(font)
+        current_field.setStyleSheet('font: {}pt "{}";'.format(font.pointSize(), name))
         #current_field.setText("{} {}".format(font.family(), font.pointSize()))
 
     def font_resize(self, element_name):
         name = "label_sample_{}".format(element_name)
         current_field = getattr(self.ui, name)
-        try:
-            font = self.fonts[element_name]
-        except KeyError:
-            font = current_field.font()
+        font = self.options.get(element_name, current_field.font())
         font.setPointSize(int(getattr(self.ui, "spin_size_{}".format(element_name)).value()))
         self.set_element_font(element_name, font)
 
     def font_select(self, element_name):
         name = "label_sample_{}".format(element_name)
         current_field = getattr(self.ui, name)
-        try:
-            font = self.fonts[element_name]
-        except KeyError:
-            font = current_field.font()
+        font = self.options.get(element_name, current_field.font())
         new_font, accepted = QtGui.QFontDialog.getFont(font, self.parent)
         if accepted:
             self.set_element_font(element_name, new_font)

@@ -271,11 +271,4 @@ class Visualizer(vis.BaseVisualizer):
                     left=True, right=True, top=True, bottom=True)
 
         self.map_data(plot_facet)
-
-        self.adjust_fonts(16)
-
-        try:
-            self.g.fig.tight_layout()
-        except ValueError:
-            # A ValueError sometimes occurs with long labels. We ignore it:
             pass

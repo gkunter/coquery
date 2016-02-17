@@ -412,7 +412,6 @@ class BaseVisualizer(QtCore.QObject):
         the font size of axis tick labels and legend entries is scaled by 
         the factor 0.833.
         """
-
         # Set font sizes of axis labels and ticks, separately for each axis:
         for ax in self.g.fig.axes:
             for element, font in [(ax.xaxis.label, "font_x_axis"),
@@ -545,6 +544,72 @@ class BaseVisualizer(QtCore.QObject):
         """
         return self._table.iloc[index]
 
+    def adjust_axes(self):
+        """
+        Try to make the axis labels as readable as possible.
+        
+        This method tries to make both axis labels horizontal. If overlaps 
+        are created, the axis labels are rotated by 45 degrees. If there are 
+        still overlaps after this rotation, the labels are set to be vertical.
+        """
+        
+        def _axis_ticklabels_overlap(labels, fig):
+            """Return a boolean for whether the list of ticklabels have overlaps.
+
+            Parameters
+            ----------
+            labels : list of ticklabels
+
+            Returns
+            -------
+            overlap : boolean
+                True if any of the labels overlap.
+
+            """
+            if not labels:
+                return False
+
+            # Use the method from http://stackoverflow.com/questions/22667224/ to
+            # get a renderer even on backends where they are normally unavailable:
+            if hasattr(fig.canvas, "get_renderer"):
+                renderer = fig.canvas.get_renderer()
+            else:
+                import io
+                fig.canvas.print_pdf(io.BytesIO())
+                renderer = fig._cachedRenderer
+
+            try:
+                bboxes = [l.get_window_extent(renderer) for l in labels]
+                overlaps = [b.count_overlaps(bboxes) for b in bboxes]
+                return max(overlaps) > 1
+            except RuntimeError as e:
+                print("RT", e)
+                # Issue on macosx backend rasies an error in the above code
+                return False
+
+        x_overlap = False
+
+        for ax in self.g.fig.axes:
+            xtl = ax.get_xticklabels()
+            ytl = ax.get_yticklabels()
+            plt.setp(xtl, rotation="horizontal")
+            plt.setp(ytl, rotation="horizontal")
+
+            sns_overlap = sns.utils.axis_ticklabels_overlap(xtl)
+            coq_overlap = _axis_ticklabels_overlap(xtl, self.g.fig)
+            
+            if sns_overlap != coq_overlap:
+                print("Incongruent overlap detection: sns: {}, coq: {}".format(sns_overlap, coq_overlap))
+                
+            if sns_overlap or coq_overlap:
+                x_overlap = True
+
+        if x_overlap:
+            self.g.fig.autofmt_xdate()
+            
+            #for ax in self.g.fig.axes:
+                #plt.setp(xtl, rotation="vertical")
+
     def setup_axis(self, axis, label=None):
         """ 
         Setup the selected axis
@@ -565,23 +630,24 @@ class BaseVisualizer(QtCore.QObject):
             
         
         """
-        if axis.upper() == "Y":
-            return 90
-            # get adjusted width:
-        return 0
+        print("setup_axis")
+        #if axis.upper() == "Y":
+            #return 90
+            ## get adjusted width:
+        #return 0
+        return
 
-
-        if axis.upper() == "Y":
-            self.g.set_yticklabels(rotation=0)
-            #for tick in self.subplot.get_yticklabels():
-                #tick.set_rotation(0)
-            #if label:
-                #self.subplot.yaxis.set_label(label)
-        if axis.upper() == "X":
-            for ax in self.g.fig.axes:
-                if sns.utils.axis_ticklabels_overlap(ax.get_xticklabels()):
-                    self.g.fig.autofmt_xdate()
-                    break
+        #if axis.upper() == "Y":
+            #self.g.set_yticklabels(rotation=0)
+            ##for tick in self.subplot.get_yticklabels():
+                ##tick.set_rotation(0)
+            ##if label:
+                ##self.subplot.yaxis.set_label(label)
+        #if axis.upper() == "X":
+            #for ax in self.g.fig.axes:
+                #if sns.utils.axis_ticklabels_overlap(ax.get_xticklabels()):
+                    #self.g.fig.autofmt_xdate()
+                    #break
 
             #fact = self._table[self._groupby[0]].unique()
             #max_length=0
@@ -737,8 +803,9 @@ class VisualizerDialog(QtGui.QWidget):
         self.add_matplot()
             
         self.visualizer.draw()
-        self.visualizer.adjust_fonts()
         self.visualizer.g.fig.tight_layout()
+        self.visualizer.adjust_axes()
+        self.visualizer.adjust_fonts()
 
         if self.smooth:
             self.spinner.setEnabled(True)
@@ -889,8 +956,9 @@ class VisualizerDialog(QtGui.QWidget):
         self.repaint()
         
         self.visualizer.g.fig.canvas.draw()
-        self.visualizer.adjust_fonts()
         self.visualizer.g.fig.tight_layout()
+        self.visualizer.adjust_axes()
+        self.visualizer.adjust_fonts()
 
         # Create an alert in the system taskbar to indicate that the
         # visualization has completed:
