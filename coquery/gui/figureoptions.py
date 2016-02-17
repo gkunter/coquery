@@ -153,8 +153,6 @@ class FigureOptions(QtGui.QDialog):
                     s = "Sample text"
                 label.setText(s)
                 S = 'font: {}pt "{}";'.format(font.pointSize(), name)
-                print(S)
-                S = 'font: 24pt "Times";'
                 label.setStyleSheet(S)
                 
         self.ui.spin_size_main.valueChanged.connect(lambda: self.font_resize("main"))
