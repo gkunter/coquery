@@ -83,7 +83,6 @@ class CoqSwitch(QtGui.QPushButton):
         else:
             self.setOn()
             
-        
     def setText(self, text):
         if not self._text:
             self._label = CoqClickableLabel(text)
@@ -255,6 +254,53 @@ class CoqDetailBox(QtGui.QWidget):
 
     def isExpanded(self):
         return self._expanded
+
+class CoqSpinner(QtGui.QWidget):
+    """
+    A QWidget subclass that contains an animated spinner.
+    """
+    
+    @staticmethod
+    def get_spinner(size=None):
+        """
+        Return a movie that shows the spinner animation.
+        
+        Parameters
+        ----------
+        size : QSize or int
+            The size of the spinner
+        """
+        sizes = [24, 32, 64, 96, 128]
+        distances = [abs(x - size) for x in sizes]
+        opt_size = sizes[distances.index(min(distances))]
+        anim = QtGui.QMovie(os.path.join(options.cfg.base_path, "icons", "progress_{0}x{0}.gif".format(opt_size)))
+        anim.setScaledSize(QtCore.QSize(size, size))
+        return anim
+
+    def __init__(self, size=None, *args, **kwargs):
+        print(size)
+        super(CoqSpinner, self).__init__(*args, **kwargs)
+        self._layout = QtGui.QHBoxLayout(self)
+        self._label = QtGui.QLabel()
+        self._layout.setSpacing(0)
+        self._layout.setMargin(0)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.addWidget(self._label)
+        self._label.hide()
+        self._size = size
+
+    def sizeHint(self):
+        return self._label.sizeHint()
+        
+    def start(self):
+        self._anim = self.get_spinner(self._label.sizeHint().height())
+        self._label.setMovie(self._anim)
+        self._label.show()
+        self._anim.start()
+        
+    def stop(self):
+        self._label.hide()
+        self._anim.stop()
 
 class CoqTreeItem(QtGui.QTreeWidgetItem):
     """ 
