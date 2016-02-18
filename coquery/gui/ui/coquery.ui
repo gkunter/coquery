@@ -358,7 +358,7 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <layout class="QGridLayout" name="box_qer_buttons" rowstretch="0,0,0" columnstretch="0,0">
+            <layout class="QGridLayout" name="box_qer_buttons" rowstretch="0,0,0,0" columnstretch="0,0">
              <property name="sizeConstraint">
               <enum>QLayout::SetFixedSize</enum>
              </property>
@@ -369,6 +369,13 @@
               <number>0</number>
              </property>
              <item row="1" column="0">
+              <widget class="QPushButton" name="button_filters">
+               <property name="text">
+                <string>Fil&amp;ters</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
               <widget class="QPushButton" name="button_stopwords">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -381,20 +388,10 @@
                </property>
               </widget>
              </item>
-             <item row="0" column="1">
-              <layout class="QHBoxLayout" name="filter_layout"/>
-             </item>
-             <item row="0" column="0">
-              <widget class="QPushButton" name="button_filters">
-               <property name="text">
-                <string>Fil&amp;ters</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
+             <item row="2" column="1">
               <layout class="QHBoxLayout" name="stopword_layout"/>
              </item>
-             <item row="2" column="0">
+             <item row="3" column="0">
               <widget class="QPushButton" name="button_run_query">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -413,15 +410,21 @@
                </property>
               </widget>
              </item>
-             <item row="2" column="1">
+             <item row="1" column="1">
+              <layout class="QHBoxLayout" name="filter_layout"/>
+             </item>
+             <item row="3" column="1">
+              <layout class="QHBoxLayout" name="query_layout"/>
+             </item>
+             <item row="0" column="1">
               <spacer name="horizontalSpacer_6">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
                <property name="sizeHint" stdset="0">
                 <size>
-                 <width>40</width>
-                 <height>20</height>
+                 <width>101</width>
+                 <height>0</height>
                 </size>
                </property>
               </spacer>
@@ -915,7 +918,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <x>0</x>
      <y>0</y>
      <width>931</width>
-     <height>34</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
