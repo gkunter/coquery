@@ -31,7 +31,7 @@ class Visualizer(vis.BaseVisualizer):
         self.options["color_number"] = len(self._levels[-1])
         super(Visualizer, self).set_defaults()
         self.options["label_y_axis"] = ""
-        self.options["label_x_axis"] = ""
+        self.options["label_x_axis"] = "[bubble labels]"
 
     def setup_figure(self):
         with sns.axes_style("white"):
