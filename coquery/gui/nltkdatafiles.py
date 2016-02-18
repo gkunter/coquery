@@ -14,11 +14,10 @@ from __future__ import unicode_literals
 import sys
 import os
 
-sys.path.append(os.path.join(sys.path[0], "gui"))
-
 from pyqt_compat import QtCore, QtGui
 from ui.nltkDatafilesUi import Ui_NLTKDatafiles
 import QtProgress
+import errorbox
 
 import options
 import classes
@@ -54,10 +53,12 @@ class NLTKDatafiles(QtGui.QDialog):
 
     def download_packages(self):
         s = "python -c 'import nltk; nltk.download({})'"
+        s = "nltk.download({}, raise_on_error=True)"
+        import nltk
         for x in self._missing:
             package = x.split("/")[1]
             self.updateLabel.emit(package)
-            os.system(s.format('"{}"'.format(package)))
+            exec(s.format('"{}"'.format(package)))
             self.progressTheBar.emit()
     
     def download_finish(self):
