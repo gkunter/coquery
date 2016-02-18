@@ -18,6 +18,8 @@ import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import options
+
 class Visualizer(vis.BaseVisualizer):
     dimensionality=2
 
@@ -191,8 +193,18 @@ class Visualizer(vis.BaseVisualizer):
                 ax.add_artist(circ)
                 circ.set_edgecolor("black")
                 
-                ax.text(x, y, "{}: {}".format(label.replace(" | ", "\n"), freq), ha="center", va="center")
-                
+                try:
+                    font = self.options.get(
+                                "font_x_axis", 
+                                options.cfg.main_window.font())
+                    ax.text(x, y, 
+                            "{}: {}".format(label.replace(" | ", "\n"), freq), 
+                            ha="center", 
+                            va="center",
+                            fontsize=font.pointSize())
+                except Exception as e:
+                    print(e)
+                    raise 
                 self.max_x = max(self.max_x, x + rad)
                 self.max_y = max(self.max_y, y + rad)
                 self.min_x = min(self.min_x, x - rad)
@@ -246,6 +258,9 @@ class Visualizer(vis.BaseVisualizer):
                         # not have to be considered for collision detections, so
                         # keeping track of the completed bubbles speeds up the 
                         # algorithm:
+                        # (at least, that's the idea, but it doesn't seem to
+                        # work like this -- therefore, this speed-up is 
+                        # currently disabled)
                         #completed = a
                         # If there is no position at which the next bubble can be 
                         # placed so that it is tangent to both the neighbor and 
@@ -270,5 +285,8 @@ class Visualizer(vis.BaseVisualizer):
         sns.despine(self.g.fig, 
                     left=True, right=True, top=True, bottom=True)
 
-        self.map_data(plot_facet)
-            pass
+        try:
+            self.map_data(plot_facet)
+        except Exception as e:
+            print(e)
+            raise e
