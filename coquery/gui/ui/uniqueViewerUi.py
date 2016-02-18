@@ -41,6 +41,7 @@ class Ui_UniqueViewer(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_inform.sizePolicy().hasHeightForWidth())
         self.label_inform.setSizePolicy(sizePolicy)
+        self.label_inform.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.label_inform.setObjectName(_fromUtf8("label_inform"))
         self.verticalLayout.addWidget(self.label_inform)
         self.treeWidget = QtGui.QTreeWidget(self.frame)

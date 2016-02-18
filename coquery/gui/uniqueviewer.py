@@ -45,6 +45,15 @@ class UniqueViewer(QtGui.QDialog):
         except TypeError:
             pass
 
+        #self.ui.progress_spinner = classes.CoqSpinner(128)
+        #sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.MinimumExpanding)
+        #sizePolicy.setHorizontalStretch(0)
+        #sizePolicy.setVerticalStretch(0)
+        #sizePolicy.setHeightForWidth(self.ui.progress_spinner.sizePolicy().hasHeightForWidth())
+        #self.ui.progress_spinner.setSizePolicy(sizePolicy)
+        
+        #self.ui.verticalLayout.insertWidget(2, self.ui.progress_spinner)
+
         self.ui.buttonBox.setDisabled(True)
         self.ui.button_details.setDisabled(True)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
@@ -94,6 +103,7 @@ class UniqueViewer(QtGui.QDialog):
             x.setToolTip(0, x.text(0))
 
     def finalize(self):
+        #self.ui.progress_spinner.stop()
         self.ui.progress_bar.setRange(1,0)
         self.ui.progress_bar.hide()
         self.ui.treeWidget.show()
@@ -147,20 +157,27 @@ class UniqueViewer(QtGui.QDialog):
             else:
                 self.last_results_saved = True
 
+    def get_uniques(self):
+        self.ui.progress_bar.setRange(0,0)
+        
+        #self.ui.progress_spinner.start()
+
+        self.ui.treeWidget.hide()
+        self.ui.label.hide()
+
+        self.thread = QtProgress.ProgressThread(self.get_unique, self)
+        self.thread.taskFinished.connect(self.finalize)
+        self.thread.taskException.connect(self.onException)
+        self.thread.start()
+
     @staticmethod
     def show(rc_feature, resource, parent=None):
         dialog = UniqueViewer(rc_feature, resource, parent=parent)
-        dialog.ui.progress_bar.setRange(0,0)
-        dialog.ui.treeWidget.hide()
-        dialog.ui.label.hide()
 
         dialog.setVisible(True)
+        dialog.get_uniques()
         options.cfg.main_window.widget_list.append(dialog)
         
-        dialog.thread = QtProgress.ProgressThread(dialog.get_unique, dialog)
-        dialog.thread.taskFinished.connect(dialog.finalize)
-        dialog.thread.taskException.connect(dialog.onException)
-        dialog.thread.start()
         
 def main():
     app = QtGui.QApplication(sys.argv)
