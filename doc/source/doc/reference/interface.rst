@@ -1,19 +1,17 @@
 .. _interface:
 
 Main interface
---------------
+##############
 
-.. figure:: ../images/interface/interface.png
+.. figure:: ../../_static/interface/interface.png
     :align: left
     
     The main Coquery interface.
 
-
-
 Corpus selector
 +++++++++++++++
 
-.. figure:: ../images/interface/corpus_select.png
+.. figure:: ../../_static/interface/corpus_select.png
     :align: left
     
     The corpus selector.
@@ -34,7 +32,7 @@ Functions and linked tables will be discarded if the corpus is changed.
 Context options
 +++++++++++++++
 
-.. figure:: ../images/interface/contexts.png
+.. figure:: ../../_static/interface/contexts.png
     :align: left
     
     The context options.
@@ -62,14 +60,14 @@ from zero (no context) to 99.
 Stop words
 ++++++++++
 
-.. figure:: ../images/interface/stopwords_button.png
+.. figure:: ../../_static/interface/stopwords_button.png
     :align: left
     
     The Stop words button.
 
 Clicking on the 'Stop-words' button opens the Stop words dialog.
 
-.. figure:: ../images/interface/stopwords.png
+.. figure:: ../../_static/interface/stopwords.png
     :align: left
     
     The Stop words dialog.
@@ -99,7 +97,7 @@ Query strings
 
 The syntax of query strings in Coquery is described in detail in :ref:`syntax`.
 
-.. figure:: ../images/interface/queries.png
+.. figure:: ../../_static/interface/queries.png
     :align: left
     
     The query string entry field and the query file selector.
@@ -122,7 +120,7 @@ If the the text file contains tabular data, you can click on the 'Options'
 button to specify the format of the text file. The Input file dialog will 
 appear:
     
-.. figure:: ../images/interface/csvoptions.png
+.. figure:: ../../_static/interface/csvoptions.png
     :align: left
     
     The Input file options dialog.
@@ -152,7 +150,7 @@ characters, these marks can be selected from the drop-down menu.
 Output columns
 ++++++++++++++
 
-.. figure:: ../images/interface/output_options.png
+.. figure:: ../../_static/interface/output_options.png
     :align: left
     
     The Output columns tree for the corpus *ALICE*.
@@ -163,7 +161,7 @@ with a checked box. You can check and uncheck the boxes by clicking on them.
 In the example, the columns *Word* from the table *Lexicon*, *ID* from the 
 table *Corpus*, and *Filename* from the table *Files* are selected.
 
-.. |tag| image:: ../../../icons/small-n-flat/tag.svg
+.. |tag| image:: ../../../../coquery/icons/small-n-flat/PNG/tag.png
 
 Columns marked by the tag icon |tag| are colums that are mapped on the query 
 item type given in brackets after the name. In the example, the column *Word* 

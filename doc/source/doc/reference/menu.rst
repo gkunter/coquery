@@ -1,7 +1,7 @@
 .. _menu:
 
 Menu entries
-============
+############
 .. toctree::
     :glob:
         

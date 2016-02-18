@@ -11,7 +11,7 @@ Output column submenu
 View unique values
 ''''''''''''''''''
 
-.. figure:: ../images/uniquevalues.png
+.. figure:: ../../_static/interface/uniquevalues.png
     :align: left
     
     The `Unique values` viewer for the column *Word* in the table *Lexicon* 
@@ -31,7 +31,7 @@ comma-separated text file (CSV) containing all unique values.
 Link to external table
 ''''''''''''''''''''''
 
-.. figure:: ../images/externallink.png
+.. figure:: ../../_static/interface/externallink.png
     :align: left
     
     The `Link to an external table` dialog for the column *Word* in the table *Lexicon* 
@@ -66,7 +66,7 @@ and select 'Remove link'.
 Add a function
 ''''''''''''''
 
-.. figure:: ../images/functionadd.png
+.. figure:: ../../_static/interface/functionadd.png
     :align: left
     :width: 400px
     
