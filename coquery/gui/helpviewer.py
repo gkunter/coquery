@@ -28,24 +28,42 @@ class HelpViewer(QtGui.QMainWindow):
         self.ui = Ui_HelpViewer()
         self.ui.setupUi(self)
         
+        self.ui.index.hide()
+        
         self.ui.index.anchorClicked.connect(self.show_index)
         self.ui.content.anchorClicked.connect(self.show_content)
         
         self.ui.action_prev.triggered.connect(self.ui.content.backward)
         self.ui.action_next.triggered.connect(self.ui.content.forward)
         self.ui.action_home.triggered.connect(lambda:
-            self.ui.content.setSource(QtCore.QUrl(
-                os.path.join(options.cfg.base_path, "doc", "build", "qthelp", "welcome.html"))))
+            self.ui.content.setSource(QtCore.QUrl(os.path.join(options.cfg.base_path, "doc", "html", "index.html"))))
         self.ui.action_zoom_in.triggered.connect(self.ui.content.zoomIn)
         self.ui.action_zoom_in.triggered.connect(self.ui.index.zoomIn)
         self.ui.action_zoom_out.triggered.connect(self.ui.content.zoomOut)
         self.ui.action_zoom_out.triggered.connect(self.ui.index.zoomOut)
         
+        self.ui.action_prev.setIcon(options.cfg.main_window.get_icon("sign-left"))
+        self.ui.action_next.setIcon(options.cfg.main_window.get_icon("sign-right"))
+        self.ui.action_home.setIcon(options.cfg.main_window.get_icon("sign-up"))
+        self.ui.action_zoom_in.setIcon(options.cfg.main_window.get_icon("magnify"))
+        self.ui.action_zoom_out.setIcon(options.cfg.main_window.get_icon("magnify-less"))
+        self.ui.action_zoom_out.setIcon(options.cfg.main_window.get_icon("magnify-less"))
+
+        self.ui.action_reset_zoom.setDisabled(True)
+        self.ui.action_reset_zoom.setIcon(QtGui.QIcon())
+        self.ui.action_reset_zoom.setText("")
+        self.ui.action_print.setDisabled(True)
+        self.ui.action_print.setIcon(QtGui.QIcon())
+        self.ui.action_print.setText("")
+        
+        
+        
+        
         
         self.ui.content.setSource(QtCore.QUrl(
-            os.path.join(options.cfg.base_path, "doc", "build", "qthelp", "welcome.html")))
+            os.path.join(options.cfg.base_path, "doc", "html", "index.html")))
         self.ui.index.setSource(QtCore.QUrl(
-            os.path.join(options.cfg.base_path, "doc", "build", "qthelp", "index.html")))
+            os.path.join(options.cfg.base_path, "doc", "html", "index.html")))
 
         self.ui.splitter.setSizes([
             self.sizeHint().width() * 0.38,
