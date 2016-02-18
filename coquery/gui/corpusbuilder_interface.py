@@ -51,6 +51,8 @@ class InstallerGui(QtGui.QDialog):
         
         self.ui = Ui_CorpusInstaller()
         self.ui.setupUi(self)
+        self.ui.label_pos_tagging.hide()
+        self.ui.use_pos_tagging.hide()
         self.ui.progress_box.hide()
         self.ui.button_input_path.clicked.connect(self.select_path)
         self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=True))
@@ -386,21 +388,9 @@ class BuilderGui(InstallerGui):
         self.ui.name_layout.addWidget(self.ui.issue_label)
         self.ui.name_layout.addItem(spacerItem)
         self.ui.verticalLayout.insertLayout(1, self.ui.name_layout)
-        
-        check_layout = QtGui.QHBoxLayout()
-        self.ui.use_pos_tagging = QtGui.QCheckBox()
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
-        self.ui.use_pos_tagging.setSizePolicy(sizePolicy)
-        self.ui.use_pos_tagging.setChecked(False)
 
-        self.ui.label_pos_tagging = QtGui.QLabel()
-        self.ui.label_pos_tagging.setBuddy(self.ui.use_pos_tagging)
-        self.ui.label_pos_tagging.setWordWrap(True)
-        
-        check_layout.addWidget(self.ui.use_pos_tagging)
-        check_layout.addWidget(self.ui.label_pos_tagging)
-        check_layout.setAlignment(QtCore.Qt.AlignTop)
-        
+        self.ui.label_pos_tagging.show()
+        self.ui.use_pos_tagging.show()
         label_text = ["Use NLTK for part-of-speech tagging and lemmatization"]
 
         try:
@@ -415,9 +405,12 @@ class BuilderGui(InstallerGui):
             self.ui.use_pos_tagging.setEnabled(False)
         else:
             self.ui.use_pos_tagging.clicked.connect(self.pos_check)
+            size = QtGui.QCheckBox().sizeHint()
+            self.ui.icon_nltk_check = classes.CoqSpinner(size)
+            self.ui.layout_nltk.addWidget(self.ui.icon_nltk_check)
+            
         self.ui.label_pos_tagging.setText(" ".join(label_text))
 
-        self.ui.gridLayout.addLayout(check_layout, 2, 0)
         if options.cfg.text_source_path != os.path.expanduser("~"):
             self.ui.input_path.setText(options.cfg.text_source_path)
         else:
@@ -451,7 +444,9 @@ class BuilderGui(InstallerGui):
             self.test_thread = QtProgress.ProgressThread(self.test_nltk_core, parent=self)
             self.test_thread.taskFinished.connect(self.test_nltk_results)
             self._label_text = str(self.ui.label_pos_tagging.text())
-            self.ui.label_pos_tagging.setText("Testing NLTK components...")
+            
+            self.ui.icon_nltk_check.start()
+            self.ui.label_pos_tagging.setText("Testing NLTK components, please wait...")
             self.ui.label_pos_tagging.setDisabled(True)
             self.ui.use_pos_tagging.setDisabled(True)
             self._old_button_state = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).isEnabled()
@@ -498,11 +493,12 @@ class BuilderGui(InstallerGui):
         def pass_check():
             return self._nltk_lemmatize and self._nltk_tokenize and self._nltk_tagging
 
+        self.ui.icon_nltk_check.stop()
         self.ui.label_pos_tagging.setText(self._label_text)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(self._old_button_state)
         if self.ui.use_pos_tagging.isChecked() and not pass_check():
+            print(self._nltk_lemmatize, self._nltk_tokenize, self._nltk_tagging)
             self.ui.use_pos_tagging.setChecked(False)
-            
             import nltkdatafiles
             nltkdatafiles.NLTKDatafiles.ask(self.nltk_exceptions, parent=self)
 
