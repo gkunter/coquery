@@ -158,7 +158,7 @@ class LexiconClass(object):
             df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
             return len(df.index) > 0
         else:
-            raise UnsupportedQueryItemError("Part-of-speech")
+            return False
     
     def sql_string_get_posid_list(self, token):
         word_feature = getattr(self.resource, QUERY_ITEM_WORD)
