@@ -6,16 +6,22 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>640</width>
+    <height>480</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Data visualization – Coquery</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
-   <property name="spacing">
-    <number>20</number>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
    </property>
    <item>
     <widget class="QFrame" name="frame_placeholder">
@@ -88,33 +94,9 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="box_visualize">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="sizeConstraint">
-       <enum>QLayout::SetNoConstraint</enum>
-      </property>
-      <property name="margin">
-       <number>10</number>
-      </property>
-     </layout>
-    </widget>
-   </item>
-   <item>
     <widget class="QFrame" name="frame">
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
@@ -122,6 +104,9 @@
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <property name="spacing">
        <number>10</number>
+      </property>
+      <property name="margin">
+       <number>0</number>
       </property>
       <item>
        <widget class="QFrame" name="frame_2">
@@ -138,8 +123,17 @@
          <enum>QFrame::Plain</enum>
         </property>
         <layout class="QHBoxLayout" name="navigation_layout">
-         <property name="margin">
-          <number>0</number>
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>4</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>4</number>
          </property>
         </layout>
        </widget>
@@ -147,7 +141,35 @@
      </layout>
     </widget>
    </item>
+   <item>
+    <widget class="QFrame" name="box_visualize">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetNoConstraint</enum>
+      </property>
+      <property name="margin">
+       <number>0</number>
+      </property>
+     </layout>
+    </widget>
+   </item>
   </layout>
+  <zorder>frame_placeholder</zorder>
+  <zorder>box_visualize</zorder>
+  <zorder>frame</zorder>
+  <zorder>frame_2</zorder>
  </widget>
  <resources/>
  <connections/>

@@ -960,10 +960,11 @@ class VisualizerDialog(QtGui.QWidget):
         self.visualizer.adjust_axes()
         self.visualizer.adjust_fonts()
 
+        self.show()
+
         # Create an alert in the system taskbar to indicate that the
         # visualization has completed:
         options.cfg.app.alert(self, 0)
-
   
 if __name__ == "__main__":
     unittest.main()
