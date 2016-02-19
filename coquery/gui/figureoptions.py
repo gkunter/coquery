@@ -331,6 +331,8 @@ class FigureOptions(QtGui.QDialog):
             self.options["font_{}".format(x)] = getattr(self.ui, "label_sample_{}".format(x)).font()
 
         super(FigureOptions, self).accept()
+        options.settings.setValue("figureoptions_size", self.size())
+        
 
     @staticmethod
     def get_default():
