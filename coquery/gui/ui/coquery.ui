@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>694</width>
-    <height>609</height>
+    <width>642</width>
+    <height>675</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,6 +15,12 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_6">
+    <property name="topMargin">
+     <number>2</number>
+    </property>
+    <property name="bottomMargin">
+     <number>2</number>
+    </property>
     <item>
      <widget class="QSplitter" name="splitter_2">
       <property name="orientation">
@@ -44,109 +50,104 @@
          <number>16</number>
         </property>
         <property name="leftMargin">
-         <number>4</number>
+         <number>0</number>
         </property>
         <property name="topMargin">
-         <number>4</number>
+         <number>0</number>
         </property>
         <property name="rightMargin">
-         <number>4</number>
+         <number>0</number>
         </property>
         <property name="bottomMargin">
          <number>8</number>
         </property>
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0">
+         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,0,0">
           <property name="spacing">
            <number>0</number>
           </property>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_5">
-            <property name="spacing">
-             <number>10</number>
+           <widget class="QGroupBox" name="box_corpus_select">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
-            <item>
-             <widget class="QGroupBox" name="box_corpus_select">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="title">
-               <string>Co&amp;rpus</string>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_5">
-               <property name="leftMargin">
-                <number>8</number>
+            <property name="title">
+             <string>Co&amp;rpus</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_5">
+             <property name="leftMargin">
+              <number>8</number>
+             </property>
+             <property name="rightMargin">
+              <number>8</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="combo_corpus">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
                </property>
-               <property name="topMargin">
-                <number>0</number>
+               <property name="focusPolicy">
+                <enum>Qt::WheelFocus</enum>
                </property>
-               <property name="rightMargin">
-                <number>8</number>
+               <property name="editable">
+                <bool>false</bool>
                </property>
-               <property name="bottomMargin">
-                <number>0</number>
+               <property name="insertPolicy">
+                <enum>QComboBox::InsertAlphabetically</enum>
                </property>
-               <item>
-                <widget class="QComboBox" name="combo_corpus">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="focusPolicy">
-                  <enum>Qt::WheelFocus</enum>
-                 </property>
-                 <property name="editable">
-                  <bool>false</bool>
-                 </property>
-                 <property name="insertPolicy">
-                  <enum>QComboBox::InsertAlphabetically</enum>
-                 </property>
-                 <property name="sizeAdjustPolicy">
-                  <enum>QComboBox::AdjustToContents</enum>
-                 </property>
-                 <property name="frame">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="box_context_mode">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="title">
-               <string>Conte&amp;xt</string>
-              </property>
-              <layout class="QGridLayout" name="gridLayout">
-               <property name="leftMargin">
-                <number>8</number>
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::AdjustToContents</enum>
                </property>
-               <property name="topMargin">
-                <number>6</number>
+               <property name="frame">
+                <bool>true</bool>
                </property>
-               <property name="rightMargin">
-                <number>8</number>
-               </property>
-               <property name="bottomMargin">
-                <number>6</number>
-               </property>
-               <property name="horizontalSpacing">
-                <number>16</number>
-               </property>
-               <property name="verticalSpacing">
-                <number>0</number>
-               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Fixed</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>10</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="box_context_mode">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="title">
+             <string>Conte&amp;xt</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_8">
+             <property name="leftMargin">
+              <number>8</number>
+             </property>
+             <property name="rightMargin">
+              <number>8</number>
+             </property>
+             <item>
+              <layout class="QFormLayout" name="formLayout_3">
                <item row="0" column="0">
                 <widget class="QLabel" name="context_mode">
                  <property name="sizePolicy">
@@ -164,15 +165,18 @@
                 </widget>
                </item>
                <item row="0" column="1">
-                <layout class="QVBoxLayout" name="verticalLayout_11">
-                 <item>
+                <layout class="QFormLayout" name="formLayout">
+                 <property name="labelAlignment">
+                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                 </property>
+                 <item row="0" column="0">
                   <widget class="QRadioButton" name="radio_context_none">
                    <property name="text">
                     <string>None</string>
                    </property>
                   </widget>
                  </item>
-                 <item>
+                 <item row="1" column="0">
                   <widget class="QRadioButton" name="radio_context_mode_kwic">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -185,7 +189,7 @@
                    </property>
                   </widget>
                  </item>
-                 <item>
+                 <item row="2" column="0">
                   <widget class="QRadioButton" name="radio_context_mode_string">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -198,7 +202,7 @@
                    </property>
                   </widget>
                  </item>
-                 <item>
+                 <item row="3" column="0">
                   <widget class="QRadioButton" name="radio_context_mode_columns">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -213,10 +217,14 @@
                  </item>
                 </layout>
                </item>
-               <item row="1" column="0">
+              </layout>
+             </item>
+             <item>
+              <layout class="QFormLayout" name="formLayout_2">
+               <item row="0" column="0">
                 <widget class="QLabel" name="context_left_span_label">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -226,36 +234,29 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="1">
-                <layout class="QHBoxLayout" name="context_left_span_layout">
-                 <property name="spacing">
-                  <number>0</number>
-                 </property>
-                 <item>
-                  <widget class="QSpinBox" name="context_left_span">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="buttonSymbols">
-                    <enum>QAbstractSpinBox::UpDownArrows</enum>
-                   </property>
-                   <property name="specialValueText">
-                    <string>none</string>
-                   </property>
-                   <property name="suffix">
-                    <string> words</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="2" column="0">
-                <widget class="QLabel" name="context_right_span_label">
+               <item row="0" column="1">
+                <widget class="QSpinBox" name="context_left_span">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::UpDownArrows</enum>
+                 </property>
+                 <property name="specialValueText">
+                  <string>none</string>
+                 </property>
+                 <property name="suffix">
+                  <string> words</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="context_right_span_label">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -265,39 +266,32 @@
                  </property>
                 </widget>
                </item>
-               <item row="2" column="1">
-                <layout class="QHBoxLayout" name="context_right_span_layout">
-                 <property name="spacing">
-                  <number>0</number>
+               <item row="1" column="1">
+                <widget class="QSpinBox" name="context_right_span">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
                  </property>
-                 <item>
-                  <widget class="QSpinBox" name="context_right_span">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="buttonSymbols">
-                    <enum>QAbstractSpinBox::UpDownArrows</enum>
-                   </property>
-                   <property name="specialValueText">
-                    <string>none</string>
-                   </property>
-                   <property name="suffix">
-                    <string> words</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::UpDownArrows</enum>
+                 </property>
+                 <property name="specialValueText">
+                  <string>none</string>
+                 </property>
+                 <property name="suffix">
+                  <string> words</string>
+                 </property>
+                </widget>
                </item>
               </layout>
-             </widget>
-            </item>
-           </layout>
+             </item>
+            </layout>
+           </widget>
           </item>
           <item>
            <spacer name="verticalSpacer">
@@ -320,7 +314,7 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <layout class="QGridLayout" name="box_qer_buttons" rowstretch="0,0,0,0" columnstretch="0,0">
+            <layout class="QGridLayout" name="box_buttons">
              <property name="sizeConstraint">
               <enum>QLayout::SetFixedSize</enum>
              </property>
@@ -420,9 +414,6 @@
            <property name="leftMargin">
             <number>8</number>
            </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
            <property name="rightMargin">
             <number>8</number>
            </property>
@@ -450,7 +441,7 @@
              <item row="0" column="1">
               <widget class="QTextEdit" name="edit_query_string">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
@@ -567,9 +558,6 @@
            <property name="leftMargin">
             <number>8</number>
            </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
            <property name="rightMargin">
             <number>8</number>
            </property>
@@ -628,10 +616,13 @@
        </widget>
        <widget class="QWidget" name="layoutWidget">
         <layout class="QVBoxLayout" name="verticalLayout_4">
+         <property name="spacing">
+          <number>0</number>
+         </property>
          <item>
-          <widget class="QGroupBox" name="groupBox">
+          <widget class="QGroupBox" name="group_aggregate">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -640,17 +631,8 @@
             <string>&amp;Aggregation</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_2">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <property name="sizeConstraint">
-             <enum>QLayout::SetMinimumSize</enum>
-            </property>
             <property name="leftMargin">
              <number>8</number>
-            </property>
-            <property name="topMargin">
-             <number>6</number>
             </property>
             <property name="rightMargin">
              <number>8</number>
@@ -659,116 +641,82 @@
              <number>6</number>
             </property>
             <item>
-             <widget class="QFrame" name="frame_aggregation">
+             <widget class="QRadioButton" name="radio_aggregate_none">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_7">
-               <property name="margin">
-                <number>0</number>
-               </property>
-               <item>
-                <widget class="QRadioButton" name="radio_aggregate_none">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Do not aggregate the query results.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Every token that matches the query string is listed in the 'Query results' table. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string>None</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QRadioButton" name="radio_aggregate_uniques">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show only types.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The tokens matching the query string are aggregated so that duplicate matches are dropped. The 'Query results' table shows only distinct types, and no duplicate tokens. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string>Types</string>
-                 </property>
-                 <property name="checked">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QRadioButton" name="radio_aggregate_frequencies">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show the frequency of each token.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Do not aggregate the query results.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Every token that matches the query string is listed in the 'Query results' table. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>None</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radio_aggregate_uniques">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show only types.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The tokens matching the query string are aggregated so that duplicate matches are dropped. The 'Query results' table shows only distinct types, and no duplicate tokens. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Types</string>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radio_aggregate_frequencies">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show the frequency of each token.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;
 The number of occurrences of each token matching the query string is counted. The 'Query results' table shows one row for each token, with the number of occurrences in the column 'Frequency' . &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string>Frequency</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QRadioButton" name="radio_aggregate_contingency">
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show a contingency table of the last query.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The number of occurrences of the tokens matching the query string are counted and arranged in a contingency table. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string>Contingency</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QRadioButton" name="radio_aggregate_collocations">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show collocations.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;For the tokens matching the query string, the left and right context as defined by the user is also queried for collocate words. The 'Query results' table shows one row for each collocate word, together with several collocation statistics. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string>Collocations</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+              </property>
+              <property name="text">
+               <string>Frequency</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radio_aggregate_contingency">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show a contingency table of the last query.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The number of occurrences of the tokens matching the query string are counted and arranged in a contingency table. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Contingency</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radio_aggregate_collocations">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show collocations.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;For the tokens matching the query string, the left and right context as defined by the user is also queried for collocate words. The 'Query results' table shows one row for each collocate word, together with several collocation statistics. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Collocations</string>
+              </property>
              </widget>
             </item>
            </layout>
           </widget>
-         </item>
-         <item>
-          <spacer name="verticalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
        </widget>
@@ -782,7 +730,7 @@ The number of occurrences of each token matching the query string is counted. Th
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>694</width>
+     <width>642</width>
      <height>23</height>
     </rect>
    </property>
@@ -1219,27 +1167,15 @@ The number of occurrences of each token matching the query string is counted. Th
   </action>
  </widget>
  <tabstops>
-  <tabstop>combo_corpus</tabstop>
   <tabstop>radio_query_string</tabstop>
   <tabstop>edit_query_string</tabstop>
   <tabstop>radio_query_file</tabstop>
   <tabstop>edit_file_name</tabstop>
   <tabstop>button_browse_file</tabstop>
   <tabstop>button_file_options</tabstop>
-  <tabstop>radio_context_none</tabstop>
-  <tabstop>radio_context_mode_kwic</tabstop>
-  <tabstop>radio_context_mode_string</tabstop>
-  <tabstop>radio_context_mode_columns</tabstop>
-  <tabstop>context_left_span</tabstop>
-  <tabstop>context_right_span</tabstop>
   <tabstop>button_filters</tabstop>
   <tabstop>button_stopwords</tabstop>
   <tabstop>button_run_query</tabstop>
-  <tabstop>radio_aggregate_none</tabstop>
-  <tabstop>radio_aggregate_uniques</tabstop>
-  <tabstop>radio_aggregate_frequencies</tabstop>
-  <tabstop>radio_aggregate_contingency</tabstop>
-  <tabstop>radio_aggregate_collocations</tabstop>
   <tabstop>data_preview</tabstop>
  </tabstops>
  <resources/>
