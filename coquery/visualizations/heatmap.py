@@ -42,6 +42,18 @@ class Visualizer(vis.BaseVisualizer):
         with sns.axes_style("white"):
             super(Visualizer, self).setup_figure()
 
+    def set_defaults(self):
+        self.options["color_palette"] = "RdPu"
+        super(Visualizer, self).set_defaults()
+
+        if len(self._groupby) == 2:
+            self.options["label_y_axis"] = self._groupby[0]
+            self.options["label_legend"] = self._groupby[1]
+        else:
+            self.options["label_legend"] = self._groupby[0]
+
+
+
     def draw(self):
         """ Draw a heat map. """
         
@@ -63,6 +75,7 @@ class Visualizer(vis.BaseVisualizer):
                 robust=True,
                 annot=True,
                 cbar=False,
+                cmap=self.options["color_palette"],
                 fmt="g",
                 vmax=vmax,
                 #ax=plt.gca(),
@@ -80,6 +93,7 @@ class Visualizer(vis.BaseVisualizer):
                 robust=True,
                 annot=True,
                 cbar=False,
+                cmap=self.options["color_palette"],
                 fmt="g",
                 linewidths=1)
         else:
