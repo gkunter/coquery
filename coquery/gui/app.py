@@ -176,6 +176,10 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.ui.verticalLayout_4.setAlignment(self.ui.group_aggregate, QtCore.Qt.AlignTop)
         
+        self.ui.verticalLayout_3.setAlignment(self.ui.box_corpus_select, QtCore.Qt.AlignTop)
+        self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
+        self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
+        
         self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords, 
                                                     on=self.get_icon("switch-on-wide"), 
                                                     off=self.get_icon("switch-off-wide"))
