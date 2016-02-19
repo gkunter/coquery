@@ -180,7 +180,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.layout_query.setAlignment(self.ui.radio_query_string, QtCore.Qt.AlignTop)
         self.ui.layout_query.setAlignment(self.ui.radio_query_file, QtCore.Qt.AlignTop)
         
-        self.ui.verticalLayout_4.setAlignment(self.ui.group_aggregate, QtCore.Qt.AlignTop)
+        self.ui.verticalLayout_4.setAlignment(self.ui.group_aggregation, QtCore.Qt.AlignTop)
         
         self.ui.verticalLayout_3.setAlignment(self.ui.box_corpus_select, QtCore.Qt.AlignTop)
         self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
@@ -1091,9 +1091,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.stop_progress_indicator()
         
         if isinstance(self.Session, StatisticsSession):
-            self.ui.frame_aggregation.setEnabled(False)
+            self.ui.group_aggregation.setEnabled(False)
         else:
-            self.ui.frame_aggregation.setEnabled(True)
+            self.ui.group_aggregation.setEnabled(True)
         
         # Create an alert in the system taskbar to indicate that the query has 
         # completed:
