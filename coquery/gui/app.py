@@ -148,6 +148,9 @@ class CoqueryApp(QtGui.QMainWindow):
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
+        self.ui.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.ui.verticalLayout_5.setSpacing(0)
+
         self.ui.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.ui.verticalLayout_4.setSpacing(0)
 
