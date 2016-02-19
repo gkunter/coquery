@@ -74,7 +74,7 @@ class Ui_MainWindow(object):
         self.combo_corpus.setObjectName(_fromUtf8("combo_corpus"))
         self.verticalLayout_5.addWidget(self.combo_corpus)
         self.verticalLayout_3.addWidget(self.box_corpus_select)
-        spacerItem = QtGui.QSpacerItem(20, 10, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        spacerItem = QtGui.QSpacerItem(0, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_3.addItem(spacerItem)
         self.horizontalLayout_7.addLayout(self.verticalLayout_3)
         self.box_input_settings = QtGui.QGroupBox(self.options_area)
