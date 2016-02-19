@@ -22,8 +22,8 @@ class Settings(QtGui.QDialog):
         self._options = _options
         self.ui = Ui_SettingsDialog()
         self.ui.setupUi(self)
-        self.ui.check_ignore_punctuation.setEnabled(False)
-        self.ui.check_experimental.setEnabled(False)
+        #self.ui.check_ignore_punctuation.setEnabled(False)
+        #self.ui.check_experimental.setEnabled(False)
         self.ui.edit_visualizer_path.setEnabled(False)
         self.ui.button_visualizer_path.setEnabled(False)
         
@@ -60,22 +60,22 @@ class Settings(QtGui.QDialog):
             self.ui.check_ignore_case.setChecked(not bool(self.options.case_sensitive))
         except AttributeError:
             pass
-        try:
-            self.ui.check_reaggregate_data.setChecked(bool(self.options.reaggregate_data))
-        except AttributeError:
-            pass
-        try:
-            self.ui.check_server_side.setChecked(bool(self.options.server_side))
-        except AttributeError:
-            pass
-        try:
-            self.ui.check_ignore_punctuation.setChecked(bool(self.options.ignore_punctuation))
-        except AttributeError:
-            pass
-        try:
-            self.ui.check_experimental.setChecked(bool(self.options.experimental))
-        except AttributeError:
-            pass
+        #try:
+            #self.ui.check_reaggregate_data.setChecked(bool(self.options.reaggregate_data))
+        #except AttributeError:
+            #pass
+        #try:
+            #self.ui.check_server_side.setChecked(bool(self.options.server_side))
+        #except AttributeError:
+            #pass
+        #try:
+            #self.ui.check_ignore_punctuation.setChecked(bool(self.options.ignore_punctuation))
+        #except AttributeError:
+            #pass
+        #try:
+            #self.ui.check_experimental.setChecked(bool(self.options.experimental))
+        #except AttributeError:
+            #pass
         try:
             self.ui.check_align_quantified.setChecked(bool(self.options.align_quantified))
         except AttributeError:
@@ -107,10 +107,10 @@ class Settings(QtGui.QDialog):
 
     def change_options(self):
         self.options.case_sensitive = not bool(self.ui.check_ignore_case.isChecked())
-        self.options.reaggregate_data = bool(self.ui.check_reaggregate_data.isChecked())
-        self.options.server_side= bool(self.ui.check_server_side.isChecked())
-        self.options.ignore_punctuation = bool(self.ui.check_ignore_punctuation.isChecked())
-        self.options.experimental = bool(self.ui.check_experimental.isChecked())
+        #self.options.reaggregate_data = bool(self.ui.check_reaggregate_data.isChecked())
+        #self.options.server_side= bool(self.ui.check_server_side.isChecked())
+        #self.options.ignore_punctuation = bool(self.ui.check_ignore_punctuation.isChecked())
+        #self.options.experimental = bool(self.ui.check_experimental.isChecked())
         self.options.align_quantified = bool(self.ui.check_align_quantified.isChecked())
         self.options.ask_on_quit = bool(self.ui.check_ask_on_quit.isChecked())
         self.options.save_query_file = bool(self.ui.check_save_query_file.isChecked())
