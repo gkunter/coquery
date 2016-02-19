@@ -163,12 +163,16 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.combo_corpus.setCurrentIndex(index)
         
         # chamge the default query string edit to the sublassed edit class:
-        self.ui.gridLayout_2.removeWidget(self.ui.edit_query_string)
+        self.ui.gridLayout_3.removeWidget(self.ui.edit_query_string)
         self.ui.edit_query_string.close()        
         edit_query_string = classes.CoqTextEdit(self)
         edit_query_string.setObjectName("edit_query_string")
-        self.ui.gridLayout_2.addWidget(edit_query_string, 2, 1, 1, 1)
+        self.ui.gridLayout_3.addWidget(edit_query_string, 0, 1)
         self.ui.edit_query_string = edit_query_string
+        
+        # fix alignment of radio buttons:
+        self.ui.gridLayout_3.setAlignment(self.ui.radio_query_string, QtCore.Qt.AlignTop)
+        self.ui.gridLayout_3.setAlignment(self.ui.radio_query_file, QtCore.Qt.AlignTop)
         
         self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords, 
                                                     on=self.get_icon("switch-on-wide"), 
@@ -211,11 +215,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.change_corpus()
 
         self.set_query_button()
-        
-        # Align screen elements:
-        self.ui.label_2.setFixedHeight(self.ui.label_5.height())
-        self.ui.label.setFixedHeight(self.ui.label_5.height())
-        self.ui.label_5.setFixedHeight(self.ui.label_5.height())
         
         self.ui.data_preview.setEnabled(False)
         self.ui.menuAnalyse.setEnabled(False)
@@ -261,7 +260,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         widget = QtGui.QWidget()
         layout = QtGui.QHBoxLayout(widget)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(4, 0, 0, 0)
         layout.addWidget(self.ui.status_message)
         layout.addWidget(self.ui.status_progress)
         layout.addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum))        
@@ -712,9 +711,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         
         if not options.cfg.current_resources:
-            self.ui.output_columns.takeAt(1)
-            tree = self.create_output_options_tree()
-            self.ui.output_columns.insertWidget(1, tree)
+            self.update_output_options_tree()
             return
         
         table_dict = self.resource.get_table_dict()
@@ -741,10 +738,8 @@ class CoqueryApp(QtGui.QMainWindow):
         
         last_checked = self.ui.options_tree.get_checked()
 
-        self.ui.output_columns.takeAt(1)
-        tree = self.create_output_options_tree()
-        self.ui.output_columns.insertWidget(1, tree)
-
+        tree = self.update_output_options_tree()
+        
         # populate the tree with a root for each table:
         for table in tables:
             root = classes.CoqTreeItem()
@@ -802,6 +797,12 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     leaf.setCheckState(0, QtCore.Qt.Unchecked)
                 leaf.update_checkboxes(0, expand=True)
+
+    def update_output_options_tree(self):
+        self.ui.output_columns.takeAt(0)
+        tree = self.create_output_options_tree()
+        self.ui.output_columns.insertWidget(0, tree)
+        return tree
                 
     def fill_combo_corpus(self):
         """ 

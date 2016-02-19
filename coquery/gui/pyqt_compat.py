@@ -59,6 +59,9 @@ import sys
 if sys.platform == 'win32':
     frameShadow = QtGui.QFrame.Raised
     frameShape = QtGui.QFrame.Panel
+elif sys.platform == 'darwin':
+    frameShadow = QtGui.QFrame.Raised
+    frameShape = QtGui.QFrame.NoFrame
 else:
     frameShadow = QtGui.QFrame.Raised
     frameShape = QtGui.QFrame.StyledPanel
