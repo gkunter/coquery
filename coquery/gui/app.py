@@ -169,16 +169,16 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.combo_corpus.setCurrentIndex(index)
         
         # chamge the default query string edit to the sublassed edit class:
-        self.ui.gridLayout_3.removeWidget(self.ui.edit_query_string)
+        self.ui.layout_query.removeWidget(self.ui.edit_query_string)
         self.ui.edit_query_string.close()        
         edit_query_string = classes.CoqTextEdit(self)
         edit_query_string.setObjectName("edit_query_string")
-        self.ui.gridLayout_3.addWidget(edit_query_string, 0, 1)
+        self.ui.layout_query.addWidget(edit_query_string, 0, 1, 1, 2)
         self.ui.edit_query_string = edit_query_string
         
         # fix alignment of radio buttons:
-        self.ui.gridLayout_3.setAlignment(self.ui.radio_query_string, QtCore.Qt.AlignTop)
-        self.ui.gridLayout_3.setAlignment(self.ui.radio_query_file, QtCore.Qt.AlignTop)
+        self.ui.layout_query.setAlignment(self.ui.radio_query_string, QtCore.Qt.AlignTop)
+        self.ui.layout_query.setAlignment(self.ui.radio_query_file, QtCore.Qt.AlignTop)
         
         self.ui.verticalLayout_4.setAlignment(self.ui.group_aggregate, QtCore.Qt.AlignTop)
         
