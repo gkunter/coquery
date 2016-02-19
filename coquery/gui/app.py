@@ -148,6 +148,13 @@ class CoqueryApp(QtGui.QMainWindow):
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
+        self.ui.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.ui.verticalLayout_4.setSpacing(0)
+
+        self.ui.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.ui.verticalLayout_3.setSpacing(0)
+
+
         self.create_output_options_tree()
         
         #QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
@@ -179,7 +186,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.verticalLayout_3.setAlignment(self.ui.box_corpus_select, QtCore.Qt.AlignTop)
         self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
         self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
-        
+
         self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords, 
                                                     on=self.get_icon("switch-on-wide"), 
                                                     off=self.get_icon("switch-off-wide"))
@@ -2195,9 +2202,17 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def update_context_widgets(self):
         if self.ui.radio_context_none.isChecked():
+            #self.ui.context_frame.hide()
+
+            self.ui.context_left_span_label.setDisabled(True)
+            self.ui.context_right_span_label.setDisabled(True)
             self.ui.context_left_span.setDisabled(True)
             self.ui.context_right_span.setDisabled(True)
         else:
+            #self.ui.context_frame.show()
+            
+            self.ui.context_left_span_label.setDisabled(False)
+            self.ui.context_right_span_label.setDisabled(False)
             self.ui.context_left_span.setDisabled(False)
             self.ui.context_right_span.setDisabled(False)
 
