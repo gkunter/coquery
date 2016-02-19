@@ -15,6 +15,12 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>-1</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item>
      <widget class="QSplitter" name="splitter">
       <property name="orientation">
@@ -25,7 +31,14 @@
         <bool>false</bool>
        </property>
       </widget>
-      <widget class="QTextBrowser" name="content"/>
+      <widget class="QTextBrowser" name="content">
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Plain</enum>
+       </property>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -53,7 +66,9 @@
   </widget>
   <action name="action_next">
    <property name="icon">
-    <iconset theme="go-next"/>
+    <iconset theme="go-next">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Forward</string>
@@ -61,7 +76,9 @@
   </action>
   <action name="action_prev">
    <property name="icon">
-    <iconset theme="go-previous"/>
+    <iconset theme="go-previous">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Previous</string>
@@ -72,7 +89,9 @@
   </action>
   <action name="action_home">
    <property name="icon">
-    <iconset theme="go-home"/>
+    <iconset theme="go-home">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Home</string>
@@ -80,7 +99,9 @@
   </action>
   <action name="action_zoom_in">
    <property name="icon">
-    <iconset theme="zoom-in"/>
+    <iconset theme="zoom-in">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Zoom in</string>
@@ -91,7 +112,9 @@
   </action>
   <action name="action_zoom_out">
    <property name="icon">
-    <iconset theme="zoom-out"/>
+    <iconset theme="zoom-out">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Zoom out</string>
@@ -99,7 +122,9 @@
   </action>
   <action name="action_reset_zoom">
    <property name="icon">
-    <iconset theme="zoom-original"/>
+    <iconset theme="zoom-original">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Reset zoom</string>
@@ -107,7 +132,9 @@
   </action>
   <action name="action_print">
    <property name="icon">
-    <iconset theme="document-print"/>
+    <iconset theme="document-print">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Print</string>
