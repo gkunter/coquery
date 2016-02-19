@@ -61,6 +61,9 @@ def lineplot(a, level=0, start=0, end=1, axis="x", color="black", ax=None, **kwa
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
     
+    def format_coord(self, x, y, title):
+        return "Corpus position: {}".format(int(x))
+    
     def set_defaults(self):
         self.options["color_palette"] = "Paired"
         self.options["color_number"] = len(self._levels[0])

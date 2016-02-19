@@ -179,6 +179,19 @@ class BaseVisualizer(QtCore.QObject):
         if not self.options.get("color_palette_values"):
             self.set_palette_values(self.options["color_number"])
 
+    def format_coord(self, x, y, title):
+        pass
+
+    def set_hover(self, fun=None):
+        if fun == None:
+            fun = self.format_coord
+
+        if not fun:
+            return
+        
+        for ax in self.g.fig.axes:
+            ax.format_coord = lambda x, y: fun(x, y, ax.get_title())
+
     def set_palette_values(self, n=None):
         """
         Set the color palette values to the specified number.
@@ -959,6 +972,8 @@ class VisualizerDialog(QtGui.QWidget):
         self.visualizer.g.fig.tight_layout()
         self.visualizer.adjust_axes()
         self.visualizer.adjust_fonts()
+
+        self.visualizer.set_hover()
 
         self.show()
 

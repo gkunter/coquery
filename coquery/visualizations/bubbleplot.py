@@ -37,6 +37,18 @@ class Visualizer(vis.BaseVisualizer):
         with sns.axes_style("white"):
             super(Visualizer, self).setup_figure()
 
+    def format_coord(self, x, y, title):
+        """
+        
+        """
+        for (cx, cy), r, label in self.circles:
+            if math.sqrt((cx - x) ** 2 + (cy - y) ** 2) <= r:
+                if title:
+                    return "{} – {}".format(title, label)
+                else:
+                    return label
+        return ""
+
     def draw(self):
         """ 
         Draw a bubble chart. 
@@ -50,18 +62,6 @@ class Visualizer(vis.BaseVisualizer):
             proportional to the frequency.
             """
             return math.sqrt(freq / math.pi)
-        
-        def my_format_coord(x, y, title):
-            """
-            
-            """
-            for (cx, cy), r, label in self.circles:
-                if math.sqrt((cx - x) ** 2 + (cy - y) ** 2) <= r:
-                    if title:
-                        return "{} – {}".format(title, label)
-                    else:
-                        return label
-            return ""
         
         def plot_facet(data, color):
             def r(freq):
@@ -280,8 +280,6 @@ class Visualizer(vis.BaseVisualizer):
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
             
-            ax.format_coord = lambda x, y: my_format_coord(x, y, ax.get_title())
-
         sns.despine(self.g.fig, 
                     left=True, right=True, top=True, bottom=True)
 

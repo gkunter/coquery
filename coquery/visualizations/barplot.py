@@ -66,94 +66,94 @@ class Visualizer(vis.BaseVisualizer):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
 
-    def draw(self):
-        """ Plot bar charts. """
-        def my_format_coord(x, y, title):
-            y = y + 0.5
-            offset = y - int(y)
-            # Check if mouse is outside the bar area:
-            if not 0.1 < offset < 0.91:
+    def format_coord(self, x, y, title):
+        y = y + 0.5
+        offset = y - int(y)
+        # Check if mouse is outside the bar area:
+        if not 0.1 < offset < 0.91:
+            return ""
+        else:
+            y_cat = self._levels[0][int(y)]
+            if len(self._groupby) == 2:
+                try:
+                    # calculate the factor level number from the y
+                    # coordinate. The vaules used here seem to work, but
+                    # are only derived empirically:
+                    sub_cat = sorted(self._levels[1])[int(((offset - 0.1) / 0.8) * len(self._levels[1]))]                    
+                except IndexError:
+                    sub_cat = sorted(self._levels[1])[-1]
+            else:
+                sub_cat = None
+                
+            if title:
+                # obtain the grid row and column from the axes title:
+                if self._row_factor:
+                    row_spec, col_spec = title.split(" | ")
+                    _, row_value = row_spec.split(" = ")
+                    assert _ == self._row_factor
+                else:
+                    col_spec = title
+                    row_value = None
+                _, col_value = col_spec.split(" = ")
+                assert _ == self._col_factor
+            else:
+                row_value = None
+                col_value = None
+        
+        # this is a rather klunky way of getting the frequency from the
+        # cross table:
+        if self._row_factor:
+            try:
+                freq = self.ct[col_value]
+                freq = freq[sub_cat]
+                freq = freq[row_value]
+                freq = freq[y_cat]
+            except KeyError:
                 return ""
             else:
-                y_cat = self._levels[0][int(y)]
-                if len(self._groupby) == 2:
-                    try:
-                        # calculate the factor level number from the y
-                        # coordinate. The vaules used here seem to work, but
-                        # are only derived empirically:
-                        sub_cat = sorted(self._levels[1])[int(((offset - 0.1) / 0.8) * len(self._levels[1]))]                    
-                    except IndexError:
-                        sub_cat = sorted(self._levels[1])[-1]
-                else:
-                    sub_cat = None
-                    
-                if title:
-                    # obtain the grid row and column from the axes title:
-                    if self._row_factor:
-                        row_spec, col_spec = title.split(" | ")
-                        _, row_value = row_spec.split(" = ")
-                        assert _ == self._row_factor
-                    else:
-                        col_spec = title
-                        row_value = None
-                    _, col_value = col_spec.split(" = ")
-                    assert _ == self._col_factor
-                else:
-                    row_value = None
-                    col_value = None
-            
-            # this is a rather klunky way of getting the frequency from the
-            # cross table:
-            if self._row_factor:
-                try:
-                    freq = self.ct[col_value]
-                    freq = freq[sub_cat]
-                    freq = freq[row_value]
-                    freq = freq[y_cat]
-                except KeyError:
-                    return ""
-                else:
-                    return "{} = {} | {} = {} | {} = {} | {} = {}, Freq: {}".format(
-                        self._row_factor, row_value,
-                        self._col_factor, col_value,
-                        self._groupby[0], y_cat,
-                        self._groupby[1], sub_cat,
-                        freq)
-            elif self._col_factor:
-                try:
-                    freq = self.ct[col_value]
-                    freq = freq[sub_cat]
-                    freq = freq[y_cat]
-                except KeyError:
-                    return ""
-                else:
-                    return "{} = {} | {} = {} | {} = {}, Freq: {}".format(
-                        self._col_factor, col_value,
-                        self._groupby[0], y_cat,
-                        self._groupby[1], sub_cat,
-                        freq)
-            elif len(self._groupby) == 2:
-                try:
-                    freq = self.ct[sub_cat]
-                    freq = freq[y_cat]
-                except KeyError:
-                    return ""
-                else:
-                    return "{} = {} | {} = {}, Freq: {}".format(
-                        self._groupby[0], y_cat,
-                        self._groupby[1], sub_cat,
-                        freq)
+                return "{} = {} | {} = {} | {} = {} | {} = {}, Freq: {}".format(
+                    self._row_factor, row_value,
+                    self._col_factor, col_value,
+                    self._groupby[0], y_cat,
+                    self._groupby[1], sub_cat,
+                    freq)
+        elif self._col_factor:
+            try:
+                freq = self.ct[col_value]
+                freq = freq[sub_cat]
+                freq = freq[y_cat]
+            except KeyError:
+                return ""
             else:
-                try:
-                    freq = self.ct[y_cat]
-                except KeyError:
-                    return ""
-                else:
-                    return "{} = {}, Freq: {}".format(
-                        self._groupby[0], y_cat,
-                        freq)
-            return ""
+                return "{} = {} | {} = {} | {} = {}, Freq: {}".format(
+                    self._col_factor, col_value,
+                    self._groupby[0], y_cat,
+                    self._groupby[1], sub_cat,
+                    freq)
+        elif len(self._groupby) == 2:
+            try:
+                freq = self.ct[sub_cat]
+                freq = freq[y_cat]
+            except KeyError:
+                return ""
+            else:
+                return "{} = {} | {} = {}, Freq: {}".format(
+                    self._groupby[0], y_cat,
+                    self._groupby[1], sub_cat,
+                    freq)
+        else:
+            try:
+                freq = self.ct[y_cat]
+            except KeyError:
+                return ""
+            else:
+                return "{} = {}, Freq: {}".format(
+                    self._groupby[0], y_cat,
+                    freq)
+        return ""
 
+    def draw(self):
+        """ Plot bar charts. """
         def plot_facet(data, color):
             if self.percentage:
                 ax=plt.gca()

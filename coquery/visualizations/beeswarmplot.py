@@ -24,6 +24,9 @@ from beeswarm import *
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
 
+    def format_coord(self, x, y, title):
+        return "Corpus position: {}".format(int(y))
+    
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
