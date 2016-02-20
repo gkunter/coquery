@@ -998,6 +998,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # is filled now:
         if not old_list and options.cfg.filter_list:
             self.ui.filter_switch.setOn()
+            options.cfg.use_corpus_filters = True
     
     def save_results(self, selection=False, clipboard=False):
         if not clipboard:
