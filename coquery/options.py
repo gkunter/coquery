@@ -33,6 +33,8 @@ import codecs
 import ast
 import collections
 import inspect
+import glob
+import importlib
 
 # make ast work in all Python versions:
 if not hasattr(ast, "TryExcept"):
