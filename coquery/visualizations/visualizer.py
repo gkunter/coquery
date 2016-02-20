@@ -117,6 +117,39 @@ class CoqNavigationToolbar(NavigationToolbar):
             self.check_freeze.setObjectName("check_freeze")
             self.addWidget(self.check_freeze)
 
+        self._buttons = {}
+
+        for x in self.children():
+            if isinstance(x, QtGui.QToolButton):
+                self._buttons[str(x.text())] = x
+
+        self._buttons["Forward"].setIcon(options.cfg.main_window.get_icon("sign-left"))
+        self._buttons["Back"].setIcon(options.cfg.main_window.get_icon("sign-right"))
+        self._buttons["Home"].setIcon(options.cfg.main_window.get_icon("sign-up"))
+        self._buttons["Zoom"].setIcon(options.cfg.main_window.get_icon("search"))
+        self._buttons["Save"].setIcon(options.cfg.main_window.get_icon("floppy"))
+        self._buttons["Customize"].setIcon(options.cfg.main_window.get_icon("pencil"))
+        self._buttons["Pan"].setIcon(options.cfg.main_window.get_icon("pan"))
+        self._buttons["Subplots"].setIcon(options.cfg.main_window.get_icon("scale"))
+
+        self._buttons["Zoom"].toggled.connect(self.toggle_zoom)
+        self._buttons["Pan"].toggled.connect(self.toggle_pan)
+
+        self._zoom = False
+        self._pan = False
+
+    def toggle_zoom(self):
+        self._zoom = not self._zoom
+
+    def toggle_pan(self):
+        self._pan = not self._pan
+
+    def isPanning(self):
+        return self._pan
+    
+    def isZooming(self):
+        return self._zoom
+
     def edit_parameters(self, *args):
         import figureoptions
         new_values = figureoptions.FigureOptions.manage(self.parent.visualizer.options)
@@ -191,6 +224,9 @@ class BaseVisualizer(QtCore.QObject):
         
         for ax in self.g.fig.axes:
             ax.format_coord = lambda x, y: fun(x, y, ax.get_title())
+
+    def onclick(self, event):
+        pass
 
     def set_palette_values(self, n=None):
         """
@@ -843,6 +879,11 @@ class VisualizerDialog(QtGui.QWidget):
         else:
             self.toolbar.canvas = self.canvas
         self.canvas.mpl_connect('key_press_event', self.keyPressEvent)
+        self.canvas.mpl_connect('button_press_event', self.onclick)
+
+    def onclick(self, event):
+        if not self.toolbar.isPanning() and not self.toolbar.isZooming():
+            self.visualizer.onclick(event)
 
     def remove_matplot(self):
         """ 
