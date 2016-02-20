@@ -234,9 +234,9 @@ class LexiconClass(object):
                         else:
                             S = dummy.S
                         S = S.replace('"', '""')
-                        format_string = '{} {} "{}"'
+                        format_string = "{} {} '{}'"
                         if self.resource.db_type == SQL_SQLITE and not options.cfg.case_sensitive:
-                            format_string = '{} {} "{}" COLLATE NOCASE'
+                            format_string = "{} {} '{}' COLLATE NOCASE"
                         sub_clauses.append(format_string.format(
                             target, self.resource.get_operator(dummy), S))
             if sub_clauses:
