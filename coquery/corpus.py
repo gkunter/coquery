@@ -1237,7 +1237,9 @@ class CorpusClass(object):
         self.lexicon.joined_tables = []
 
         filter_list = self.resource.translate_filters(self.resource.filter_list)
-        filter_strings = self.sql_string_run_query_filter_list(self_joined=False)
+        filter_strings = ["{}.{} {} '{}'".format(
+            tab, col, op, val[0]) for col, _, tab, op, val, _ in filter_list]
+            
         if filter_list and not ignore_filters:
             for column, corpus_feature, table, operator, value_list, val_range in filter_list:
                 self.lexicon.add_table_path("corpus_id", corpus_feature)
@@ -1252,7 +1254,7 @@ class CorpusClass(object):
             self._corpus_size_cache[S] = df.values.ravel()[0]
         return self._corpus_size_cache[S]
 
-    def get_frequency(self, s):
+    def get_frequency(self, s, ignore_filters=False):
         """ Return a longint that gives the corpus frequency of the token,
         taking the filter list from self.resource.filter_list into account."""
         if s in self._frequency_cache:
@@ -1278,8 +1280,23 @@ class CorpusClass(object):
         except WordNotInLexiconError:
             freq = 0
         else:
-            S = "SELECT COUNT(*) FROM {0} WHERE {1}".format(
-                self.resource.corpus_table, " AND ".join(where_clauses))
+
+            self.lexicon.table_list = []
+            self.lexicon.joined_tables = []
+
+            filter_list = self.resource.translate_filters(self.resource.filter_list)
+            filter_strings = ["{}.{} {} '{}'".format(
+                tab, col, op, val[0]) for col, _, tab, op, val, _ in filter_list]
+                
+            if filter_list and not ignore_filters:
+                for column, corpus_feature, table, operator, value_list, val_range in filter_list:
+                    self.lexicon.add_table_path("corpus_id", corpus_feature)
+                from_str = "{}".format(" ".join([self.resource.corpus_table] + self.lexicon.table_list))
+            else:
+                from_str = self.resource.corpus_table
+
+            S = "SELECT COUNT(*) FROM {} WHERE {}".format(
+                from_str, " AND ".join(where_clauses + filter_strings))
 
             df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
             freq = df.values.ravel()[0]
@@ -1343,29 +1360,6 @@ class CorpusClass(object):
                         raise WordNotInLexiconError
         return where_clauses
     
-    def sql_string_run_query_filter_list(self, self_joined):
-        """ Return an SQL string that contains the result filters."""
-        if not options.cfg.use_corpus_filters:
-            return []
-        filter_list = self.resource.translate_filters(self.resource.filter_list)
-        L = []
-        for column, corpus_feature, table, operator, value_list, val_range in filter_list:
-            s = ""
-            if val_range:
-                s = "{}.{} BETWEEN {} AND {}".format(table, column, min(val_range), max(val_range))
-            else:
-                if len(value_list) > 1:
-                    raise TypeError
-                    if any([x in self.wildcards for x in value_list]):
-                        s = " OR ".join(["{}.{} LIKE {}".format(table, column, x) for x in value_list])
-                        
-                    else:
-                        s = "{}.{} IN ({})".format(table, column, ", ".join(["'{}'".format(x) for x in value_list]))
-                else:
-                    s = "{}.{} = '{}'".format(table, column, value_list[0]) 
-            L.append(s)
-        return L
-
     def get_token_query_string(self, current_token, number, self_joined=False):
         """ 
         Return a MySQL SELECT string that selects a table matching the 
