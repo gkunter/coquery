@@ -64,6 +64,9 @@ class Visualizer(vis.BaseVisualizer):
     def format_coord(self, x, y, title):
         return "Corpus position: {}".format(int(x))
     
+    def onclick(self, event):
+         options.cfg.main_window.result_cell_clicked(token_id=int(event.xdata))
+    
     def set_defaults(self):
         self.options["color_palette"] = "Paired"
         self.options["color_number"] = len(self._levels[0])

@@ -41,6 +41,8 @@ class Visualizer(vis.BaseVisualizer):
         else:
             self.options["label_x_axis"] = self._groupby[0]
 
+    def onclick(self, event):
+         options.cfg.main_window.result_cell_clicked(token_id=int(event.ydata))
  
     def draw(self):
         def plot_facet(data, color):
