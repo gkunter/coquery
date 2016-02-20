@@ -1117,7 +1117,7 @@ class CorpusClass(object):
         self.lexicon = None
         self.resource = None
         self._frequency_cache = {}
-        self._corpus_size_cache = None
+        self._corpus_size_cache = {}
         self._context_cache = {}
 
     def get_source_id(self, token_id):
@@ -1218,19 +1218,39 @@ class CorpusClass(object):
                     l.append((table_name, D))
         return l
 
-    def get_corpus_size(self):
-        """ Return the number of tokens in the corpus, taking the current 
-        filter restrictions into account."""
+    def get_corpus_size(self, ignore_filters=False):
+        """ 
+        Return the number of tokens in the corpus.
+        
+        Parameters
+        ----------
+        ignore_filters : bool
+            If True, the corpus filters are ignored when counting the number
+            of tokens. Otherwise, the corpus filters are applied.
 
-        if not self._corpus_size_cache:
-            filter_strings = self.sql_string_run_query_filter_list(self_joined=False)
-            for x in filter_strings:
-                pass
-            S = "SELECT COUNT(*) FROM {}".format(self.resource.corpus_table)
+        Returns
+        -------
+        size : int 
+            The number of tokens in the corpus, or in the filtered corpus.
+        """
+        self.lexicon.table_list = []
+        self.lexicon.joined_tables = []
+
+        filter_list = self.resource.translate_filters(self.resource.filter_list)
+        filter_strings = self.sql_string_run_query_filter_list(self_joined=False)
+        if filter_list and not ignore_filters:
+            for column, corpus_feature, table, operator, value_list, val_range in filter_list:
+                self.lexicon.add_table_path("corpus_id", corpus_feature)
+            from_str = "{} WHERE {}".format(" ".join([self.resource.corpus_table] + self.lexicon.table_list), " AND ".join(filter_strings))
+        else:
+            from_str = self.resource.corpus_table
+
+        S = "SELECT COUNT(*) FROM {}".format(from_str)
+
+        if not S in self._corpus_size_cache:
             df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
-            size = df.values.ravel()[0]
-            self._corpus_size_cache = size
-        return self._corpus_size_cache
+            self._corpus_size_cache[S] = df.values.ravel()[0]
+        return self._corpus_size_cache[S]
 
     def get_frequency(self, s):
         """ Return a longint that gives the corpus frequency of the token,
@@ -2010,7 +2030,9 @@ class CorpusClass(object):
                 final_select.append("coq_{}_1".format(rc_feature))
 
         # add coquery_invisible_origin_id if a context is requested:
-        if options.cfg.context_left or options.cfg.context_right:
+        if (options.cfg.context_mode != CONTEXT_NONE and 
+            options.cfg.token_origin_id != None and
+            (options.cfg.context_left or options.cfg.context_right)):
             final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
 
         # construct the query string from the token query parts:
@@ -2018,6 +2040,7 @@ class CorpusClass(object):
 
         # Always add the corpus id to the output fields:
         final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
+
 
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(set(final_select)))
         
