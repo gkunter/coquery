@@ -84,7 +84,7 @@ class Session(object):
         # verify filter list:
         new_list = []
         if options.cfg.use_corpus_filters:
-            for filt in options.cfg.filter_list :
+            for filt in options.cfg.filter_list:
                 if isinstance(filt, queries.QueryFilter):
                     new_list.append(filt)
                 else:
@@ -246,10 +246,10 @@ class Session(object):
                     self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]
                 except AttributeError:
                     pass
+
         columns = [x for x in self.data_table.columns if not x.startswith("coquery_invisible") and x != column]
 
-        for col in columns:
-            self.data_table = self.data_table[self.data_table[col].apply(lambda x: x in list(self.frequency_table[col]))]
+        self.data_table = pd.merge(self.data_table, self.frequency_table[columns], how="inner", copy=False, on=columns)
         
     def translate_header(self, header, ignore_alias=False):
         """ 
