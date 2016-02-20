@@ -11,14 +11,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import glob
-import os
-import importlib
 import sys
-import warnings
 import math
 import itertools
-import gc
+import re
 
 DEFAULT_MISSING_VALUE = "<NA>"
 
@@ -332,6 +328,12 @@ Coquery, select <b>Manage corpora...</b> from the Corpus menu.</p>"""
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
 
+def printex(exc, *args, **kwargs):
+    """
+    Prints the exception string. XML tags are stripped.
+    """
+    print(re.sub('<[^>]*>', '', str(exc)), *args, **kwargs)
+
 class FileSize(long):
     """ Define a long class that can store file sizes, and which allows
     custom formatting by using the format specifier S, which displays a 
@@ -375,6 +377,7 @@ def dict_product(d):
 #resource_list = ResourceList()
 
 def memory_dump():
+    import gc
     x = 0
     for obj in gc.get_objects():
         i = id(obj)

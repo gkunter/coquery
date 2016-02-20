@@ -18,6 +18,8 @@ import os
 import logging
 import __init__
 
+from defines import *
+
 class GenericException(Exception):
     def __init__(self, *par):
         self.par = ", ".join([str(x) for x in par])
@@ -34,7 +36,7 @@ class GenericException(Exception):
             logger.error(S)
         except Exception as e:
             print(S)
-            print(e)
+            printex(e)
         return S
 
 class NoTraceException(GenericException):
@@ -274,7 +276,7 @@ def print_exception(e):
         _, _, error_string = get_error_repr(sys.exc_info())
         error_string = "TRACE:\n" + error_string
     error_string += "ERROR %s: %s\n" % (type(e).__name__, e)
-    print(error_string, file=sys.stderr)
+    printex(error_string, file=sys.stderr)
 
 try:
     logger = logging.getLogger(__init__.NAME)
