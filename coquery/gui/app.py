@@ -112,11 +112,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui = ui.coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
-        
+
         self.setMenuBar(self.ui.menubar)
         
         self.setup_app()
-        
+
         # the dictionaries column_width and column_color store default
         # attributes of the columns by display name. This means that problems
         # may arise if several columns have the same name!
@@ -148,17 +148,8 @@ class CoqueryApp(QtGui.QMainWindow):
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
-        self.ui.verticalLayout_4.setContentsMargins(0, -1, 0, 0)
-        self.ui.verticalLayout_4.setSpacing(0)
-
-        self.ui.verticalLayout_3.setContentsMargins(0, -1, 0, 0)
-        self.ui.verticalLayout_3.setSpacing(0)
-
         self.create_output_options_tree()
         
-        #QtGui.QWidget().setLayout(self.ui.tag_cloud.layout())
-        #self.ui.cloud_flow = classes.CoqFlowLayout(self.ui.tag_cloud, spacing = 1)
-
         if options.cfg.current_resources:
             # add available resources to corpus dropdown box:
             corpora = sorted(list(options.cfg.current_resources.keys()))
@@ -179,8 +170,6 @@ class CoqueryApp(QtGui.QMainWindow):
         # fix alignment of radio buttons:
         self.ui.layout_query.setAlignment(self.ui.radio_query_string, QtCore.Qt.AlignTop)
         self.ui.layout_query.setAlignment(self.ui.radio_query_file, QtCore.Qt.AlignTop)
-        
-        self.ui.verticalLayout_4.setAlignment(self.ui.group_aggregation, QtCore.Qt.AlignTop)
         
         self.ui.verticalLayout_3.setAlignment(self.ui.box_corpus_select, QtCore.Qt.AlignTop)
         self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
@@ -537,25 +526,29 @@ class CoqueryApp(QtGui.QMainWindow):
         header = self.table_model.header[index].lower()
         options.cfg.column_width[header.replace(" ", "_").replace(":", "_")] = new
 
-    def result_cell_clicked(self, index):
+    def result_cell_clicked(self, index=None, token_id=None):
         """
         Launch the context viewer.
         """
         
-        model_index = index
-        row = model_index.row()
-        data = self.table_model.content.iloc[row]
-        
-        if ("coquery_invisible_corpus_id" not in self.Session.output_order or
-            "coquery_invisible_number_of_tokens" not in self.Session.output_order or
-            pd.isnull(data["coquery_invisible_corpus_id"]) or
-            pd.isnull(data["coquery_invisible_number_of_tokens"])):
-            QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
-            return
-                
-        token_id = data["coquery_invisible_corpus_id"]
+        if index != None:
+            model_index = index
+            row = model_index.row()
+            data = self.table_model.content.iloc[row]
+            
+            if ("coquery_invisible_corpus_id" not in self.Session.output_order or
+                "coquery_invisible_number_of_tokens" not in self.Session.output_order or
+                pd.isnull(data["coquery_invisible_corpus_id"]) or
+                pd.isnull(data["coquery_invisible_number_of_tokens"])):
+                QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
+                return
+                    
+            token_id = data["coquery_invisible_corpus_id"]
+            token_width = data["coquery_invisible_number_of_tokens"]
+        if token_id != None:
+            token_width = 1
+            
         origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
-        token_width = data["coquery_invisible_number_of_tokens"]
         
         viewer = contextviewer.ContextView(
             self.Session.Corpus, int(token_id), int(origin_id), int(token_width))
