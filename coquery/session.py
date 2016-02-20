@@ -240,12 +240,18 @@ class Session(object):
         """
         if not self.filter_list or not options.cfg.use_corpus_filters:
             return 
+        no_freq = True
         for filt in self.filter_list:
             if filt.var == options.cfg.freq_label:
                 try:
                     self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]
+                    no_freq = False
                 except AttributeError:
                     pass
+        
+        # did at least one of the filters contain a frequency filter?
+        if no_freq:
+            return
 
         columns = [x for x in self.data_table.columns if not x.startswith("coquery_invisible") and x != column]
 
