@@ -191,9 +191,9 @@ def sqlite_path(configuration, db_name=None):
         directory in which databases are stored.
     """
     if db_name:
-        S = os.path.join(options.get_home_dir(), "databases", configuration, "{}.db".format(db_name))
+        S = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
     else:
-        S = os.path.join(options.get_home_dir(), "databases", configuration)
+        S = options.cfg.database_path
     return S
 
 def drop_database(configuration, db_name):

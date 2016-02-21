@@ -19,7 +19,6 @@ import imp
 import logging
 
 import __init__
-sys.path.append(os.path.join(sys.path[0], "installer"))
 
 import options
 from errors import *
@@ -258,8 +257,8 @@ class CorpusManager(QtGui.QDialog):
         except AttributeError:
             pass
 
-        self.paths.append((os.path.join(options.get_home_dir(), "adhoc"), INSTALLER_ADHOC))
-        self.paths.append((os.path.join(options.cfg.base_path, "installer"), INSTALLER_DEFAULT))
+        self.paths.append((options.cfg.adhoc_path, INSTALLER_ADHOC))
+        self.paths.append((options.cfg.installer_path, INSTALLER_DEFAULT))
         if options.cfg.custom_installer_path:
             self.paths.append((options.cfg.custom_installer_path, INSTALLER_CUSTOM))
         self.update()
@@ -280,7 +279,7 @@ class CorpusManager(QtGui.QDialog):
             True if the path is in the default Coquery directory tree, or 
             False otherwise (i.e. with custom installers or ad-hoc corpora)
         """
-        return os.path.abspath(os.path.join(options.cfg.base_path, "installer")) in os.path.abspath(path)
+        return os.path.abspath(options.cfg.installer_path) in os.path.abspath(path)
 
     def update(self):
         """

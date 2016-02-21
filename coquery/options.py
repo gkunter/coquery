@@ -90,7 +90,8 @@ class Options(object):
         self.args.stopwords_file_path = os.path.expanduser("~")
         self.args.filter_file_path = os.path.expanduser("~")
 
-        self.args.connection_path = os.path.join(self.args.coquery_home, "connections")
+        self.args.connections_path = os.path.join(self.args.coquery_home, "connections")
+        self.args.installer_path = os.path.join(self.args.base_path, "installer")
         
         self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
         self.args._use_mysql = True
@@ -541,10 +542,13 @@ class Options(object):
 
                 try:
                     self.args.current_server = config_file.get("sql", "active_configuration")
-                    self.args.current_resources = get_available_resources(self.args.current_server)
+                    if self.args.current_server in self.args.server_configuration:
+                        self.args.current_resources = get_available_resources(self.args.current_server)
+                    else:
+                        raise ValueError
                 except (NoOptionError, ValueError):
-                    self.args.current_server = None
-                    self.args.current_resources = None
+                    self.args.current_server = "Default"
+                    self.args.current_resources = get_available_resources(self.args.current_server)
                 
             # only use the other settings from the configuration file if a 
             # GUI is used:
@@ -574,11 +578,7 @@ class Options(object):
                             self.args.context_mode = config_file.get("main", "context_mode")
                         except NoOptionError:
                             self.args.context_mode = CONTEXT_KWIC
-                        try:
-                            self.args.connection_path = config_file.get("main", "connection_path")
-                        except NoOptionError:
-                            pass
-
+                            
                         try:
                             self.args.custom_installer_path = config_file.get("main", "custom_installer_path")
                         except NoOptionError:
@@ -776,7 +776,6 @@ def save_configuration():
         config.set("main", "csv_quote_char", cfg.quote_char)
     config.set("main", "one_by_one", cfg.server_side)
     config.set("main", "context_mode", cfg.context_mode)
-    config.set("main", "connection_path", cfg.connection_path)
     
     if cfg.custom_installer_path:
         config.set("main", "custom_installer_path", cfg.custom_installer_path)
@@ -1012,18 +1011,30 @@ def set_current_server(name):
     """
     global cfg
     cfg.current_server = name
+    
     if name:
         cfg.current_resources = get_available_resources(name)
     else:
         cfg.current_resources = None
 
-    path = os.path.join(get_home_dir(), "connections", name)
+    # make sure that a subdirectory exists in "connections" for the current
+    # connection:
+    path = os.path.join(cfg.connections_path, name)
     if not os.path.exists(path):
         os.makedirs(path)
+
+    cfg.corpora_path = os.path.join(path, "corpora")
+    if not os.path.exists(cfg.corpora_path):
+        os.makedirs(cfg.corpora_path)
+
+    cfg.adhoc_path = os.path.join(path, "adhoc")
+    if not os.path.exists(cfg.adhoc_path):
+        os.makedirs(cfg.adhoc_path)
+    
     if cfg.server_configuration[name]["type"] == SQL_SQLITE:
-        path = os.path.join(get_home_dir(), "databases", name)
-        if not os.path.exists(path):
-            os.makedirs(path)
+        cfg.database_path = os.path.join(path, "databases")
+        if not os.path.exists(cfg.database_path):
+            os.makedirs(cfg.database_path)
 
 def get_resource_of_database(db_name):
     """
@@ -1073,47 +1084,46 @@ def get_available_resources(configuration):
     if configuration == None:
         return d
     
-    corpus_path = os.path.join(cfg.connection_path, configuration)
-    if os.path.exists(corpus_path):
-        # add corpus_path to sys.path so that modules can be imported from
-        # that location:
-        old_sys_path = list(sys.path)
-        sys.path.append(corpus_path)
+    # add corpus_path to sys.path so that modules can be imported from
+    # that location:
+    old_sys_path = list(sys.path)
+    corpora_path = os.path.join(get_home_dir(), "connections", configuration, "corpora")
+    sys.path.append(corpora_path)
 
-        # create the directory if it doesn't exist yet: 
-        # cycle through the modules in the corpus path:
-        for module_name in glob.glob(os.path.join(corpus_path, "*.py")):
-            corpus_name, ext = os.path.splitext(os.path.basename(module_name))
-            try:
-                validate_module(
-                    module_name, 
-                    expected_classes = ["Resource", "Corpus", "Lexicon"],
-                    whitelisted_modules = ["corpus", "__future__"],
-                    allow_if = False,
-                    hash = False)
-            except (ModuleIncompleteError, 
-                    IllegalImportInModuleError, IllegalFunctionInModuleError,
-                    IllegalCodeInModuleError) as e:
-                warnings.warn(str(e))
-            except SyntaxError as e:
-                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-                continue
-            except IndentationError as e:
-                warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-                continue
-            try:
-                module = importlib.import_module(corpus_name)
-            except SyntaxError as e:
-                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-                raise e
-            except Exception as e:
-                print(corpus_name, e)
-                raise e
-            try:
-                d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
-            except (AttributeError, ImportError) as e:
-                warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
-        sys.path = old_sys_path
+    # create the directory if it doesn't exist yet: 
+    # cycle through the modules in the corpus path:
+    for module_name in glob.glob(os.path.join(corpora_path, "*.py")):
+        corpus_name, ext = os.path.splitext(os.path.basename(module_name))
+        try:
+            validate_module(
+                module_name, 
+                expected_classes = ["Resource", "Corpus", "Lexicon"],
+                whitelisted_modules = ["corpus", "__future__"],
+                allow_if = False,
+                hash = False)
+        except (ModuleIncompleteError, 
+                IllegalImportInModuleError, IllegalFunctionInModuleError,
+                IllegalCodeInModuleError) as e:
+            warnings.warn(str(e))
+        except SyntaxError as e:
+            warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+            continue
+        except IndentationError as e:
+            warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+            continue
+        try:
+            module = importlib.import_module(corpus_name)
+        except SyntaxError as e:
+            warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+            raise e
+        except Exception as e:
+            print(corpus_name, e)
+            raise e
+        try:
+            d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
+        except (AttributeError, ImportError) as e:
+            warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+    sys.path = old_sys_path
     return d
 
 def get_resource(name, configuration):
@@ -1148,8 +1158,12 @@ def get_home_dir(create=True):
     $COQ_HOME/coquery.cfg               configuration file
     $COQ_HOME/coquery.log               log files
     $COQ_HOME/installer/                additional corpus installers
-    $COQ_HOME/adhoc/                    corpus installer for custom text corpora
-    $COQ_HOME/connections/$MYSQL_CONFIG/ corpus modules installed by the user
+    $COQ_HOME/connections/$MYSQL_CONFIG/corpora
+                                        installed corpus modules
+    $COQ_HOME/connections/$MYSQL_CONFIG/adhoc
+                                        adhoc installer modules
+    $COQ_HOME/connections/$MYSQL_CONFIG/databases
+                                        SQLite databases
     
     The location of $COQ_HOME depends on the operating system:
     
@@ -1172,28 +1186,22 @@ def get_home_dir(create=True):
         basepath = os.path.expanduser("~/Library/Application Support")
         
     coquery_home = os.path.join(basepath, "Coquery")
-
+    connections_path = os.path.join(coquery_home, "connections")
+    custom_installer_path = os.path.join(coquery_home, "installer")
+    
     if create:
         # create Coquery home if it doesn't exist yet:
         if not os.path.exists(coquery_home):
             os.makedirs(coquery_home)
             
-        # create installer directory if it doesn't exist yet:
-        if not os.path.exists(os.path.join(coquery_home, "installer")):
-            os.makedirs(os.path.join(coquery_home, "installer"))
+        # create custom installer directory if it doesn't exist yet:
+        if not os.path.exists(custom_installer_path):
+            os.makedirs(custom_installer_path)
             
         # create connection directory if it doesn't exist yet:
-        if not os.path.exists(os.path.join(coquery_home, "connections")):
-            os.makedirs(os.path.join(coquery_home, "connections"))
-    
-        # create adhoc directory if it doesn't exist yet:
-        if not os.path.exists(os.path.join(coquery_home, "adhoc")):
-            os.makedirs(os.path.join(coquery_home, "adhoc"))
+        if not os.path.exists(connections_path):
+            os.makedirs(connections_path)
 
-        # create SQLite databases directory if it doesn't exist yet:
-        if not os.path.exists(os.path.join(coquery_home, "databases")):
-            os.makedirs(os.path.join(coquery_home, "databases"))
-        
     return coquery_home
 
 def decode_query_string(s):
