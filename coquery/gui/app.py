@@ -40,7 +40,6 @@ import contextviewer
 
 # add required paths:
 sys.path.append(os.path.join(sys.path[0], "visualizations"))
-sys.path.append(os.path.join(sys.path[0], "installer"))
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -266,9 +265,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.statusBar().setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
         self.statusBar().addWidget(widget, 1)
 
-        self.ui.combo_config.currentIndexChanged.connect(self.change_mysql_configuration)
         self.change_mysql_configuration(options.cfg.current_server)
-        self.ui.combo_config.currentIndexChanged.connect(self.change_mysql_configuration)
+        self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
         
         self.connection_timer = QtCore.QTimer()
         self.connection_timer.timeout.connect(self.test_mysql_connection)
@@ -444,10 +442,10 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_toggle_filters.setCheckable(True)
             if options.cfg.use_corpus_filters:
                 self.ui.action_toggle_filters.setChecked(True)
-                self.ui.action_toggle_filters.setText(_translate("MainWindow", "Turn corpus filters off", None))
+                self.ui.action_toggle_filters.setText(_translate("MainWindow", "Switch corpus filters off", None))
             else:
                 self.ui.action_toggle_filters.setChecked(False)
-                self.ui.action_toggle_filters.setText(_translate("MainWindow", "Turn corpus filters on", None))
+                self.ui.action_toggle_filters.setText(_translate("MainWindow", "Switch corpus filters on", None))
         else:
             self.ui.action_toggle_filters.setEnabled(False)
             self.ui.action_toggle_filters.setText(_translate("MainWindow", "No corpus filters", None))
@@ -1751,10 +1749,8 @@ class CoqueryApp(QtGui.QMainWindow):
             # text files:
             if rm_installer and success:
                 try:
-                    installer_path = os.path.join(
-                        options.get_home_dir(), "adhoc",
-                        "coq_install_{}.py".format(entry.name))
-                    os.remove(installer_path)
+                    path = os.path.join(options.cfg.adhoc_path, "coq_install_{}.py".format(entry.name))
+                    os.remove(path)
                 except Exception as e:
                     print(e)
                     raise e
@@ -1851,6 +1847,10 @@ class CoqueryApp(QtGui.QMainWindow):
             name = str(name)
             self.change_mysql_configuration(name)
 
+    def switch_configuration(self, x):
+        name = str(self.ui.combo_config.itemText(int(x)))
+        self.change_mysql_configuration()
+
     def change_mysql_configuration(self, name=None):
         """
         Change the current connection to the configuration 'name'. If 'name' 
@@ -1859,7 +1859,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         if not name:
             name = str(self.ui.combo_config.currentText())
-
+            
         self.ui.combo_config.currentIndexChanged.disconnect()
         
         self.ui.combo_config.clear()
@@ -1870,7 +1870,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.combo_config.setCurrentIndex(index)
             self.test_mysql_connection()
 
-        self.ui.combo_config.currentIndexChanged.connect(self.change_mysql_configuration)
+        self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
         
     def test_mysql_connection(self):
         """
@@ -1922,7 +1922,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.last_connection = options.cfg.current_server
             self.last_index = index
             # reconnect currentIndexChanged signal:
-            self.ui.combo_config.currentIndexChanged.connect(self.change_mysql_configuration)
+            self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
 
             self.ui.options_area.setDisabled(True)
             if state:
