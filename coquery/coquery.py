@@ -56,7 +56,7 @@ def check_system():
                 "Missing dependencies – Coquery",
                 msg_missing_modules.format("<br/>".join([str(x) for x in options.missing_modules])))
         else:
-            printex(msg_missing_modules.format(options.missing_modules))
+            printex(msg_missing_modules.format(", ".join(options.missing_modules)))
         sys.exit(1)
 
 def main():

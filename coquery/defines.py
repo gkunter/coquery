@@ -113,9 +113,9 @@ msg_missing_modules = """
 <p><b>Not all required Python modules could be found.</b></p>
 <p>Some of the Python modules that are required to run and use Coquery could 
 not be located on your system. The missing modules are:</p>
-<p><code>{}</code></p>
+<p><code>\t{}</code></p>
 <p>Please refer to <a href="http://coquery.org/documentation/">http://coquery.org/documentation</a>
-for instructions how to install the required modules.</p>
+for instructions on how to install the required modules.</p>
 """
 msg_missing_seaborn_module = """
 <p><b>One of the required Python module could not be loaded.</b></p>
@@ -341,8 +341,9 @@ def printex(exc, *args, **kwargs):
     """
     l = [x.strip() for x in str(exc).split("</p>")]
     
-    for par in [x.strip() for x in str(exc).split("</p>") if x.strip()]:
-        par = par.replace("\n", " ")
+    for par in [x.strip(" ") for x in str(exc).split("</p>") if x.strip(" ")]:
+        par = par.replace("\n", " ").strip(" ")
+        par = par.replace("  ", " ")
         print("\n".join(
             textwrap.wrap(re.sub('<[^>]*>', '', par), width=70, replace_whitespace=False)), 
             *args, **kwargs)
