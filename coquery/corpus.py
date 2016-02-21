@@ -756,7 +756,7 @@ class SQLResource(BaseResource):
         super(SQLResource, self).__init__()
         self.lexicon = lexicon
         self.corpus = corpus
-        _, _, self.db_type, _, _ = options.get_mysql_configuration()
+        _, _, self.db_type, _, _ = options.get_con_configuration()
         self._word_cache = {}
 
         # FIXME: in order to make this not depend on a fixed database layout 
@@ -778,7 +778,7 @@ class SQLResource(BaseResource):
 
     @staticmethod
     def SQLAlchemyConnect():
-        host, port, db_type, user, password = options.get_mysql_configuration()
+        host, port, db_type, user, password = options.get_con_configuration()
         if db_type == SQL_MYSQL:
             engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
                 host=host,

@@ -888,9 +888,9 @@ def save_configuration():
     with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)
 
-def get_mysql_configuration():
+def get_con_configuration():
     """
-    Returns a tuple containing the currently active MySQL configuration.
+    Returns a tuple containing the currently active connection configuration.
     
     The method uses the configuration name stored in the attribute 
     'current_server' to retrieve the configuration values from the

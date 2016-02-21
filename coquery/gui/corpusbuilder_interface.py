@@ -345,7 +345,7 @@ class InstallerGui(QtGui.QDialog):
 
         namespace.db_name = self.builder_class.get_db_name()
         try:
-            namespace.db_host, namespace.db_port, namespace.db_type, namespace.db_user, namespace.db_password = options.get_mysql_configuration()
+            namespace.db_host, namespace.db_port, namespace.db_type, namespace.db_user, namespace.db_password = options.get_con_configuration()
         except ValueError:
             raise SQLNoConfigurationError
         namespace.current_server = options.cfg.current_server
@@ -517,7 +517,7 @@ class BuilderGui(InstallerGui):
         if hasattr(self.ui, "corpus_name"):
             self.ui.issue_label.setText("")
             try:
-                db_host, db_port, db_type, db_user, db_password = options.get_mysql_configuration()
+                db_host, db_port, db_type, db_user, db_password = options.get_con_configuration()
             except ValueError:
                 raise SQLNoConfigurationError
 

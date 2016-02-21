@@ -170,7 +170,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_installation_note():
-        _, _, db_type, _, _ = options.get_mysql_configuration()
+        _, _, db_type, _, _ = options.get_con_configuration()
         
         if db_type == SQL_MYSQL:
             return """
