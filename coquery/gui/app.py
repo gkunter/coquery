@@ -275,7 +275,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.change_connection(options.cfg.current_server)
         
         self.connection_timer = QtCore.QTimer()
-        self.connection_timer.timeout.connect(self.test_mysql_connection)
+        self.connection_timer.timeout.connect(self.test_connection)
         self.connection_timer.start(10000)
 
         if sys.platform == "darwin":
@@ -1130,7 +1130,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 view_unique = QtGui.QAction("View &unique values", self)
                 view_unique.triggered.connect(lambda: self.show_unique_values(item))
                 menu.addAction(view_unique)
-                view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
+                view_unique.setEnabled(options.cfg.gui.test_connection())
                 menu.addSeparator()
 
                 if item._link_by or (parent and parent._link_by):
@@ -1866,9 +1866,9 @@ class CoqueryApp(QtGui.QMainWindow):
             index = self.ui.combo_config.findText(name)
             self.ui.combo_config.setCurrentIndex(index)
             db_con = options.cfg.server_configuration[name]
-            self.test_mysql_connection()
+            self.test_connection()
         
-    def test_mysql_connection(self):
+    def test_connection(self):
         """
         Tests whether a connection to the MySQL host is available, also update 
         the GUI to reflect the status.
