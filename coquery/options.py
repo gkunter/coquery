@@ -1281,7 +1281,7 @@ _use_seaborn = has_module("seaborn")
 _use_qt = has_module("PyQt4") or has_module("PySide")
 
 missing_modules = []
-for mod in ["sqlalchemy", "pandas", "numpy"]:
+for mod in ["sqlalchemy", "pandas"]:
     if not has_module(mod):
         missing_modules.append(mod)
 
