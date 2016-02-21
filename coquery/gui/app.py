@@ -272,7 +272,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.statusBar().setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
         self.statusBar().addWidget(widget, 1)
 
-        self.change_mysql_configuration(options.cfg.current_server)
+        self.change_connection(options.cfg.current_server)
         
         self.connection_timer = QtCore.QTimer()
         self.connection_timer.timeout.connect(self.test_mysql_connection)
@@ -1855,10 +1855,10 @@ class CoqueryApp(QtGui.QMainWindow):
         if name:
             name = str(name)
             self.ui.combo_config.currentIndexChanged.disconnect()
-            self.change_mysql_configuration(name)
+            self.change_connection(name)
             self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
 
-    def change_mysql_configuration(self, name):
+    def change_connection(self, name):
         self.ui.combo_config.clear()
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
         if name:
@@ -1939,7 +1939,7 @@ class CoqueryApp(QtGui.QMainWindow):
             return
         else:
             options.cfg.server_configuration = config_dict
-            self.change_mysql_configuration(name)
+            self.change_connection(name)
 
     def show_mysql_guide(self):
         import mysql_guide
