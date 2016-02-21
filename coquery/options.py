@@ -35,6 +35,7 @@ import collections
 import inspect
 import glob
 import importlib
+import imp
 
 # make ast work in all Python versions:
 if not hasattr(ast, "TryExcept"):
@@ -1074,7 +1075,6 @@ def get_available_resources(configuration):
         """
         Creates an empty file __init__.py in the given path if necessary.
         """
-        return
         if not os.path.exists(path):
             os.makedirs(path)
         if not os.path.exists(os.path.join(path, "__init__.py")):
@@ -1086,33 +1086,32 @@ def get_available_resources(configuration):
     
     # add corpus_path to sys.path so that modules can be imported from
     # that location:
-    old_sys_path = list(sys.path)
     corpora_path = os.path.join(get_home_dir(), "connections", configuration, "corpora")
-    sys.path.append(corpora_path)
 
     # create the directory if it doesn't exist yet: 
     # cycle through the modules in the corpus path:
     for module_name in glob.glob(os.path.join(corpora_path, "*.py")):
         corpus_name, ext = os.path.splitext(os.path.basename(module_name))
+        #try:
+            #validate_module(
+                #module_name, 
+                #expected_classes = ["Resource", "Corpus", "Lexicon"],
+                #whitelisted_modules = ["corpus", "__future__"],
+                #allow_if = False,
+                #hash = False)
+        #except (ModuleIncompleteError, 
+                #IllegalImportInModuleError, IllegalFunctionInModuleError,
+                #IllegalCodeInModuleError) as e:
+            #warnings.warn(str(e))
+        #except SyntaxError as e:
+            #warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+            #continue
+        #except IndentationError as e:
+            #warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+            #continue
         try:
-            validate_module(
-                module_name, 
-                expected_classes = ["Resource", "Corpus", "Lexicon"],
-                whitelisted_modules = ["corpus", "__future__"],
-                allow_if = False,
-                hash = False)
-        except (ModuleIncompleteError, 
-                IllegalImportInModuleError, IllegalFunctionInModuleError,
-                IllegalCodeInModuleError) as e:
-            warnings.warn(str(e))
-        except SyntaxError as e:
-            warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-            continue
-        except IndentationError as e:
-            warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-            continue
-        try:
-            module = importlib.import_module(corpus_name)
+            find = imp.find_module(corpus_name, [corpora_path])
+            module = imp.load_module(corpus_name, *find)
         except SyntaxError as e:
             warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
             raise e
@@ -1123,7 +1122,6 @@ def get_available_resources(configuration):
             d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
         except (AttributeError, ImportError) as e:
             warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
-    sys.path = old_sys_path
     return d
 
 def get_resource(name, configuration):

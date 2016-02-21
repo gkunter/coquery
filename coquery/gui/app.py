@@ -685,17 +685,17 @@ class CoqueryApp(QtGui.QMainWindow):
         if self.ui.combo_corpus.count():
             corpus_name = str(self.ui.combo_corpus.currentText())
             self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[corpus_name]
+
             #self.ui.filter_box.resource = self.resource
-            
-            corpus_variables = [x for _, x in self.resource.get_corpus_features()]
-            corpus_variables.append("Freq")
-            corpus_variables.append("Freq.pmw")
-            try:
-                self.filter_variable_model.setStringList(corpus_variables)
-            except AttributeError:
-                pass
-        self.change_corpus_features()
+            #corpus_variables = [x for _, x in self.resource.get_corpus_features()]
+            #corpus_variables.append("Freq")
+            #corpus_variables.append("Freq.pmw")
+            #try:
+                #self.filter_variable_model.setStringList(corpus_variables)
+            #except AttributeError:
+                #pass
         options.cfg.corpus = str(self.ui.combo_corpus.currentText())
+        self.change_corpus_features()
 
     def change_corpus_features(self):
         """ 
@@ -734,8 +734,8 @@ class CoqueryApp(QtGui.QMainWindow):
         tables.append("statistics")
         tables.append("coquery")
         
-        last_checked = self.ui.options_tree.get_checked()
-
+        last_checked = list(self.ui.options_tree.get_checked())
+        self.ui.options_tree.hide()
         tree = self.update_output_options_tree()
         
         # populate the tree with a root for each table:
@@ -795,11 +795,13 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     leaf.setCheckState(0, QtCore.Qt.Unchecked)
                 leaf.update_checkboxes(0, expand=True)
-
+        self.ui.options_tree = tree
+        
     def update_output_options_tree(self):
-        self.ui.output_columns.takeAt(0)
+        while self.ui.output_columns.count():
+            self.ui.output_columns.takeAt(0)
         tree = self.create_output_options_tree()
-        self.ui.output_columns.insertWidget(0, tree)
+        self.ui.output_columns.addWidget(tree)
         return tree
                 
     def fill_combo_corpus(self):
@@ -1871,7 +1873,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.test_mysql_connection()
 
         self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
-        
+
+        self.change_corpus()
+
     def test_mysql_connection(self):
         """
         Tests whether a connection to the MySQL host is available, also update 
