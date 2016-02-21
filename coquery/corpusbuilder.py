@@ -1102,7 +1102,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 raw_text = input_file.read()
             
         tokens = []
-        pos_map = []
 
         # if possible, use NLTK for lemmatization, tokenization, and tagging:
         if self.arguments.use_nltk:
@@ -1133,33 +1132,30 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     # store each token:
                     self.add_token(current_token.strip(), current_pos)
         else:
-        # The default lemmatizer is pretty dumb and simply turns the 
-        # word-form to lower case so that at least 'Dogs' and 'dogs' are 
-        # assigned the same lemma -- which is a different lemma from the
-        # one assigned to 'dog' and 'Dog'.
-        #
-        # If NLTK is used, the lemmatizer will use the data from WordNet,
-        # which will result in much better results.
+            # The default lemmatizer is pretty dumb and simply turns the 
+            # word-form to lower case so that at least 'Dogs' and 'dogs' are 
+            # assigned the same lemma -- which is a different lemma from the
+            # one assigned to 'dog' and 'Dog'.
+            #
+            # If NLTK is used, the lemmatizer will use the data from WordNet,
+            # which will result in much better results.
             self._lemmatize = lambda x: x.lower()
             self._pos_translate = lambda x: x
             
             # use a dumb tokenizer that simply splits the file content by 
             # spaces:            
             tokens = raw_text.replace("\n", " ").split(" ")
-            tokens = [x.strip() for x in tokens if x.strip()]
-            if not pos_map:
-                pos_map = zip(tokens, [""] * len(tokens))
             
-            for current_token, current_pos in pos_map:
+            for token in [x.strip() for x in tokens if x.strip()]:
                 # any punctuation at the beginning of the token is added to the
                 # corpus as a punctuation token, and is also stripped from the
                 # token:
-                while current_token and current_token[0] in string.punctuation:
-                    self.add_token(current_token[0], "PUNCT")
-                    current_token = current_token[1:]
-                if current_token:
+                while token and token[0] in string.punctuation:
+                    self.add_token(token[0], "PUNCT")
+                    token = token[1:]
+                if token:
                     # add the token to the corpus:
-                    self.add_token(current_token, current_pos)
+                    self.add_token(token)
     
     def add_next_token_to_corpus(self, values):
         self._corpus_id += 1
@@ -1176,7 +1172,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._corpus_buffer.append(values)
         self.add_token_to_corpus = self.add_next_token_to_corpus
     
-    def add_token(self, token_string, token_pos):
+    def add_token(self, token_string, token_pos=None):
         # get lemma string:
         if token_string in string.punctuation:
             token_pos = "PUNCT"
@@ -1187,11 +1183,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 lemma = self._lemmatize(token_string, self._pos_translate(token_pos)).lower()
             except Exception as e:
                 lemma = token_string.lower()
-
+        
         # get word id, and create new word if necessary:
         word_dict = {self.word_lemma: lemma, 
                     self.word_label: token_string}
-        if token_pos and hasattr(self, "word_pos"):
+        if token_pos and self.arguments.use_nltk:
             word_dict[self.word_pos] = token_pos 
         word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
         
@@ -1801,10 +1797,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         path : str 
             The path to the corpus module.
         """
-        return os.path.join(
-            options.cfg.connection_path, 
-            options.cfg.current_server, 
-            "{}.py".format(self.name))
+        return os.path.join(options.cfg.corpora_path, "{}.py".format(self.name))
 
     def build_write_module(self):
         """ Write a Python module with the necessary specifications to the
@@ -1993,7 +1986,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         
         It attempts to remove the following:
         
-        - the database
+        - the database (if the database was constructed during the build)
         - the corpus module
         - the corpus installer in case of adhoc corpora
         """
@@ -2009,8 +2002,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         except:
             pass
         
-        filename = "coq_install_{}.py".format(self.arguments.name)
-        path = os.path.join(options.get_home_dir(), "adhoc", filename)
+        path = os.path.join(options.cfg.adhoc_path, "coq_install_{}.py".format(self.arguments.name))
         try:
             os.remove(path)
         except:
@@ -2131,12 +2123,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
         Read the Python source of coq_install_generic.py, and modify it so that it 
         can be stored as an adhoc installer module.
         """
-        with codecs.open(os.path.join(sys.path[0], "installer", "coq_install_generic.py"), "r") as input_file:
+        with codecs.open(os.path.join(
+                            options.cfg.installer_path,
+                            "coq_install_generic.py"), 
+                        "r") as input_file:
             source = input_file.readlines()
             
-        for current_line in source:
-            pass
-        
         if self.arguments.use_nltk:
             is_tagged_label = "POS-tagged text corpus"
             try:
@@ -2169,6 +2161,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
         in_get_description = False
 
         for x in source:
+            if self.arguments.use_nltk:
+                if x.strip().startswith("def __init__") and "pos=False" in x:
+                    x = x.replace("pos=False", "pos=True")
+
             if x.startswith('"""'):
                 if not in_docstring:
                     in_docstring = True
@@ -2189,5 +2185,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     in_class = False
                     yield new_code
 
+            if self.arguments.use_nltk:
+                if x.strip().startswith("word_lemma ="):
+                    yield "    word_pos = 'POS'\n"
             yield x
 

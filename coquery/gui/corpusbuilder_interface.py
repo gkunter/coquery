@@ -289,7 +289,7 @@ class InstallerGui(QtGui.QDialog):
         self.installStarted.emit()
         self.accepted = True
         if hasattr(self, "_nltk_tagging"):
-            pos = self._nltk_tagging
+            pos = self.ui.use_pos_tagging.isChecked()
             self.builder = self.builder_class(pos=pos, gui=self)
         else:
             self.builder = self.builder_class(gui=self)
@@ -497,7 +497,6 @@ class BuilderGui(InstallerGui):
         self.ui.label_pos_tagging.setText(self._label_text)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(self._old_button_state)
         if self.ui.use_pos_tagging.isChecked() and not pass_check():
-            print(self._nltk_lemmatize, self._nltk_tokenize, self._nltk_tagging)
             self.ui.use_pos_tagging.setChecked(False)
             import nltkdatafiles
             nltkdatafiles.NLTKDatafiles.ask(self.nltk_exceptions, parent=self)
@@ -572,9 +571,9 @@ class BuilderGui(InstallerGui):
         options.settings.setValue("corpusbuilder_nltk", str(self.ui.use_pos_tagging.isChecked()))
 
         if self.state == "finished":
-            # Create an installer in the custom installer directory:
-            filename = "coq_install_{}.py".format(str(self.ui.corpus_name.text()))
-            with codecs.open(os.path.join(options.get_home_dir(), "adhoc", filename), "w") as output_file:
+            # Create an installer in the adhoc directory:
+            with codecs.open(os.path.join(
+                options.cfg.adhoc_path, "coq_install_{}.py".format(str(self.ui.corpus_name.text()))), "w") as output_file:
                 for line in self.builder.create_installer_module():
                     output_file.write(line)
     
