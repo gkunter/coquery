@@ -254,7 +254,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.combo_config = QtGui.QComboBox()
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
-        self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
+        self.ui.combo_config.currentIndexChanged.connect(self.change_connection)
 
         self.ui.status_progress = QtGui.QProgressBar()
         self.ui.status_progress.hide()
@@ -1850,13 +1850,13 @@ class CoqueryApp(QtGui.QMainWindow):
         import settings
         settings.Settings.manage(options.cfg, self)
 
-    def change_current_server(self):
+    def change_connection(self):
         name = self.ui.combo_config.currentText()
         if name:
             name = str(name)
             self.ui.combo_config.currentIndexChanged.disconnect()
             self.change_connection(name)
-            self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
+            self.ui.combo_config.currentIndexChanged.connect(self.change_connection)
 
     def change_connection(self, name):
         self.ui.combo_config.clear()
@@ -1918,7 +1918,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.last_connection = options.cfg.current_server
             self.last_index = index
             # reconnect currentIndexChanged signal:
-            self.ui.combo_config.currentIndexChanged.connect(self.change_current_server)
+            self.ui.combo_config.currentIndexChanged.connect(self.change_connection)
 
             self.ui.options_area.setDisabled(True)
             if state:
