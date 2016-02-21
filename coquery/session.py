@@ -105,24 +105,13 @@ class Session(object):
             maximum = max(maximum, query.get_max_tokens())
         return maximum
 
-    def open_output_file(self):
-        if options.cfg.gui:
-            self.output_object = pd.DataFrame()
-        else:
-            if not options.cfg.output_path:
-                self.output_object = sys.stdout
-            else:
-                if options.cfg.append:
-                    file_mode = "a"
-                else:
-                    file_mode = "w"
-                
-                self.output_object = codecs.open(options.cfg.output_path, file_mode, encoding=options.cfg.output_encoding)
-    
     def run_queries(self):
-        """ Process all queries. For each query, go through the entries in 
-        query_list() and yield the results for that subquery. Then, write
-        all results to the output file. """
+        """ 
+        Run each query in the query list, and append the results to the 
+        output object. Afterwards, apply all filters, and aggregate the data.
+        If Coquery is run as a console program, write the aggregated data to 
+        a file (or the standard output).
+        """
         self.start_time = datetime.datetime.now()
         self.end_time = None
         
@@ -158,9 +147,11 @@ class Session(object):
                     file_mode, 
                     encoding=options.cfg.output_encoding)
 
-            self.output_object.to_csv(
+            columns = [x for x in self.output_object.columns.values if not x.startswith("coquery_invisible")]
+
+            self.output_object[columns].to_csv(
                 output_file,
-                header = [self.translate_header(x) for x in self.output_object.columns.values], 
+                header = [self.translate_header(x) for x in columns], 
                 sep=options.cfg.output_separator,
                 encoding="utf-8",
                 float_format = "%.{}f".format(options.cfg.digits),
