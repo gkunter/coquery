@@ -16,6 +16,7 @@ import sys
 import math
 import itertools
 import re
+import textwrap
 
 DEFAULT_MISSING_VALUE = "<NA>"
 
@@ -109,7 +110,7 @@ msg_clear_stopwords = """
 or <b>No</b> if you want to leave the stop word list unchanged.</p>
 """
 msg_missing_modules = """
-<p><b>Not all required Python modules could be found.</b><p>
+<p><b>Not all required Python modules could be found.</b></p>
 <p>Some of the Python modules that are required to run and use Coquery could 
 not be located on your system. The missing modules are:</p>
 <p><code>{}</code></p>
@@ -145,7 +146,7 @@ installation altogether.</p>
 <p>Do you wish to ignore or to discard the invalid corpus data path?</p>
 """
 msg_mysql_no_configuration = """
-<p><b>No database server configuration is available.</b><p>
+<p><b>No database server configuration is available.</b></p>
 <p>You haven't specified the configuration for your database server yet.
 Please call 'Database servers...' from the Preferences menu, and set up a 
 configuration for your MySQL database server.</p>
@@ -153,7 +154,7 @@ configuration for your MySQL database server.</p>
 server help' from the Help menu.</p>
 """
 msg_warning_statistics = """
-<p><b>You have unsaved data in the results table.</b><p>
+<p><b>You have unsaved data in the results table.</b></p>
 <p>The corpus statistics will discard the results table from your last 
 query.</p>
 <p>If you want to retrieve that results table later, you will have to 
@@ -161,7 +162,7 @@ run the query again.</p>
 <p>Do you wish to continue?</p>
 """
 msg_no_context_available = """
-<p><b>Context information is not available.</b><p>
+<p><b>Context information is not available.</b></p>
 <p>There is no context information available for the item that you have 
 selected.</p>"""
 msg_corpus_no_documentation = """
@@ -264,9 +265,9 @@ When doing so, include the following information in your message:</p>
 {type}
 {code}"""
 msg_disk_error = """
-<p><b>An error occurred while accessing the disk storage.</b></p><p>The 
-results have not been saved. Please try again. If the error persists, try 
-saving to a different location</p>"""
+<p><b>An error occurred while accessing the disk storage.</b></p>
+<p>The results have not been saved. Please try again. If the error persists, 
+try saving to a different location</p>"""
 msg_encoding_error = """
 <p><b>An encoding error occurred while trying to save the results.</b></p>
 <p><span color="darkred">The save file is probably incomplete.</span></p>
@@ -287,8 +288,7 @@ msg_filename_error = """
 name that you have entered is not valid. Please enter a valid query file 
 name, or select a file by pressing the Open button.</p>"""
 msg_initialization_error = """
-<p><b>An error occurred while initializing the database</p>
-<p>{code}</p>
+<p><b>An error occurred while initializing the database {code}.</b></p>
 <p>Possible reasons include:
 <ul><li>The database server is not running.</li>
 <li>The host name or the server port are incorrect.</li>
@@ -297,8 +297,8 @@ privileges.</li>
 <li>You are trying to access a local database on a remote server, or vice
 versa.</li>
 </ul></p>
-<p>Open <b>Database servers</b> in the Preferences menu to check whether the
-connection to the database server is working, and if the settings are 
+<p>Open <b>Database connections </b> in the Preferences menu to check whether 
+the connection to the database server is working, and if the settings are 
 correct.</p>"""
 msg_corpus_remove = """
 <p><b>You have requested to remove the corpus '{corpus}'.</b></p>
@@ -339,7 +339,14 @@ def printex(exc, *args, **kwargs):
     """
     Prints the exception string. XML tags are stripped.
     """
-    print(re.sub('<[^>]*>', '', str(exc)), *args, **kwargs)
+    l = [x.strip() for x in str(exc).split("</p>")]
+    
+    for par in [x.strip() for x in str(exc).split("</p>") if x.strip()]:
+        par = par.replace("\n", " ")
+        print("\n".join(
+            textwrap.wrap(re.sub('<[^>]*>', '', par), width=70, replace_whitespace=False)), 
+            *args, **kwargs)
+        print("")
 
 class FileSize(long):
     """ Define a long class that can store file sizes, and which allows
