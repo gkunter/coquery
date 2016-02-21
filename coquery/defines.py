@@ -92,6 +92,12 @@ except NameError:
     unicode = str
     long = int
 
+msg_invalid_filter = """
+<p><b>The corpus filter '{}' is not valid.</b></p>
+<p>One of your filters is not not valid for the currently selected corpus.
+Please either disable using corpus filter from the Preferences menu, or 
+delete the invalid filter from the filter list.</p>
+"""
 msg_clear_filters = """
 <p><b>You have requested to reset the list of corpus filters.</b></p>
 <p>Click <b>Yes</b> if you really want to delete all filters in the list,

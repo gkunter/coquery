@@ -86,7 +86,7 @@ class QueryFilter(object):
             self._text = s
             self._variable, self._op, self._value_list, self._value_range = self.parse_filter(s)
         else:
-            raise InvalidFilterError
+            raise RuntimeError(msg_invalid_filter.format(s))
     def __repr__(self):
         return "QueryFilter('{}', {})".format(self.text, self.resource)
     
