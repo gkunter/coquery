@@ -175,16 +175,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
         self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
 
-        self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords, 
-                                                    on=self.get_icon("switch-on-wide"), 
-                                                    off=self.get_icon("switch-off-wide"))
+        self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords)
         self.ui.stopword_layout.addWidget(self.ui.stopword_switch)
         self.ui.stopword_switch.toggled.connect(self.toggle_stopword_switch)
         self.set_stopword_button()
                 
-        self.ui.filter_switch = classes.CoqSwitch(state=options.cfg.use_corpus_filters,
-                                                  on=self.get_icon("switch-on-wide"), 
-                                                  off=self.get_icon("switch-off-wide"))
+        self.ui.filter_switch = classes.CoqSwitch(state=options.cfg.use_corpus_filters)
         self.ui.filter_switch.toggled.connect(self.toggle_filter_switch)
         self.ui.filter_layout.addWidget(self.ui.filter_switch)
         self.set_filter_button()        
@@ -253,8 +249,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.status_message = QtGui.QLabel("{} {}".format(__init__.NAME, __init__.__version__))
 
         self.ui.combo_config = QtGui.QComboBox()
-        self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
-        self.ui.combo_config.currentIndexChanged.connect(self.change_connection)
 
         self.ui.status_progress = QtGui.QProgressBar()
         self.ui.status_progress.hide()
@@ -272,10 +266,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.statusBar().setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
         self.statusBar().addWidget(widget, 1)
 
-        self.change_connection(options.cfg.current_server)
+        self.ui.combo_config.currentIndexChanged.connect(self.change_mysql_configuration)
+        self.change_mysql_configuration(options.cfg.current_server)
+        self.ui.combo_config.currentIndexChanged.connect(self.change_mysql_configuration)
         
         self.connection_timer = QtCore.QTimer()
-        self.connection_timer.timeout.connect(self.test_connection)
+        self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
 
         if sys.platform == "darwin":
@@ -446,13 +442,12 @@ class CoqueryApp(QtGui.QMainWindow):
         if options.cfg.filter_list:
             self.ui.action_toggle_filters.setEnabled(True)
             self.ui.action_toggle_filters.setCheckable(True)
-            if options.cfg.use_filters:
+            if options.cfg.use_corpus_filters:
                 self.ui.action_toggle_filters.setChecked(True)
                 self.ui.action_toggle_filters.setText(_translate("MainWindow", "Turn corpus filters off", None))
             else:
                 self.ui.action_toggle_filters.setChecked(False)
                 self.ui.action_toggle_filters.setText(_translate("MainWindow", "Turn corpus filters on", None))
-            self.ui.action_toggle_filters.setIcon(icon)
         else:
             self.ui.action_toggle_filters.setEnabled(False)
             self.ui.action_toggle_filters.setText(_translate("MainWindow", "No corpus filters", None))
@@ -1130,7 +1125,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 view_unique = QtGui.QAction("View &unique values", self)
                 view_unique.triggered.connect(lambda: self.show_unique_values(item))
                 menu.addAction(view_unique)
-                view_unique.setEnabled(options.cfg.gui.test_connection())
+                view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
                 menu.addSeparator()
 
                 if item._link_by or (parent and parent._link_by):
@@ -1600,7 +1595,7 @@ class CoqueryApp(QtGui.QMainWindow):
         except CollocationNoContextError as e:
             QtGui.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except RuntimeError as e:
-            errorbox.ErrorBox.show(sys.exc_info(), no_trace=True)
+            QtGui.QMessageBox.critical(self, "Runtime error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info(), e)
         else:
@@ -1850,25 +1845,34 @@ class CoqueryApp(QtGui.QMainWindow):
         import settings
         settings.Settings.manage(options.cfg, self)
 
-    def change_connection(self):
+    def change_current_server(self):
         name = self.ui.combo_config.currentText()
         if name:
             name = str(name)
-            self.ui.combo_config.currentIndexChanged.disconnect()
-            self.change_connection(name)
-            self.ui.combo_config.currentIndexChanged.connect(self.change_connection)
+            self.change_mysql_configuration(name)
 
-    def change_connection(self, name):
+    def change_mysql_configuration(self, name=None):
+        """
+        Change the current connection to the configuration 'name'. If 'name' 
+        is empty, take the configuration name from the connection combo box.
+        """
+        
+        if not name:
+            name = str(self.ui.combo_config.currentText())
+
+        self.ui.combo_config.currentIndexChanged.disconnect()
+        
         self.ui.combo_config.clear()
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
         if name:
             options.set_current_server(str(name))
             index = self.ui.combo_config.findText(name)
             self.ui.combo_config.setCurrentIndex(index)
-            db_con = options.cfg.server_configuration[name]
-            self.test_connection()
+            self.test_mysql_connection()
+
+        self.ui.combo_config.currentIndexChanged.connect(self.change_mysql_configuration)
         
-    def test_connection(self):
+    def test_mysql_connection(self):
         """
         Tests whether a connection to the MySQL host is available, also update 
         the GUI to reflect the status.
@@ -1918,7 +1922,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.last_connection = options.cfg.current_server
             self.last_index = index
             # reconnect currentIndexChanged signal:
-            self.ui.combo_config.currentIndexChanged.connect(self.change_connection)
+            self.ui.combo_config.currentIndexChanged.connect(self.change_mysql_configuration)
 
             self.ui.options_area.setDisabled(True)
             if state:
@@ -1939,7 +1943,7 @@ class CoqueryApp(QtGui.QMainWindow):
             return
         else:
             options.cfg.server_configuration = config_dict
-            self.change_connection(name)
+            self.change_mysql_configuration(name)
 
     def show_mysql_guide(self):
         import mysql_guide
