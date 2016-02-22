@@ -59,7 +59,7 @@ class Settings(QtGui.QDialog):
         if label == self.ui.label_sample_figure:
             self._figure_font = font
         else:
-            self.table_font = font
+            self._table_font = font
         
     def select_font(self, label):
         if label == self.ui.label_sample_figure:

@@ -845,6 +845,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
     def display_results(self, drop=True):
         self.ui.data_preview.setEnabled(True)
+        self.ui.data_preview.setFont(options.cfg.table_font)
 
         # enable menu entries:
         self.ui.action_save_results.setEnabled(True)
@@ -1842,6 +1843,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def settings(self):
         import settings
         settings.Settings.manage(options.cfg, self)
+        self.ui.data_preview.setFont(options.cfg.table_font)
 
     def change_current_server(self):
         name = self.ui.combo_config.currentText()
