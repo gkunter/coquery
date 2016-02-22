@@ -776,24 +776,6 @@ class SQLResource(BaseResource):
     def get_engine(cls):
         return sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, cls.db_name))
 
-    @staticmethod
-    def SQLAlchemyConnect():
-        host, port, db_type, user, password = options.get_con_configuration()
-        if db_type == SQL_MYSQL:
-            engine_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
-                host=host,
-                port=port,
-                user=user, 
-                password=password,
-                db_name=self.db_name)
-        elif db_type == SQL_SQLITE:
-            engine_string = "sqlite+pysqlite:///{}".format(
-                sqlhelper.sqlite_path(self.db_name))
-        else:
-            raise RuntimeError("Database type '{}' not supported.".format(db_type))
-        engine = sqlalchemy.create_engine(engine_string)
-        return engine.connect()
-
     def get_statistics(self):
         stats = []
         # determine table size for all columns
