@@ -69,9 +69,6 @@ class SqlDB (object):
         self.db_name = db_name
         self.sql_url = sqlhelper.sql_url(options.cfg.current_server, self.db_name)
         self.engine = sqlalchemy.create_engine(self.sql_url)
-        self.connection = self.engine.connect()
-        if self.db_type == SQL_MYSQL:
-            self.set_variable("NAMES", self.encoding)
 
     def has_database(self, db_name):
         """

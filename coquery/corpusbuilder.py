@@ -1872,11 +1872,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             local_infile=1)
 
         self.DB.use_database(self.arguments.db_name)
-        if self.DB.db_type == SQL_MYSQL:
-            self.DB.connection.execute("SET NAMES 'utf8'")
-            self.DB.connection.execute("SET CHARACTER SET 'utf8mb4'")
-            self.DB.connection.execute("SET unique_checks=0")
-            self.DB.connection.execute("SET foreign_key_checks=0")
 
     def add_building_stage(self, stage):
         """ The parameter stage is a function that will be executed
@@ -1947,16 +1942,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
     def build_initialize(self):
         """ 
         Initialize the corpus build.
-        
-        Initialization involves the following:
-        
-        - start the logger and timer
-        - load any Python module required by this CorpusBuilder class
-        - create a database connection; drop any existing database that has 
-          the same name as the new database, and create a new database
-
-        Subclass of BaseCorpusBuilder which overload this method must call 
-        the parent's method first. Otherwise, builds will fail.
         """
 
         self.start_time = time.time()
@@ -1974,8 +1959,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self.arguments.use_nltk:
             import nltk
             
-        self.setup_db()
-        
+        if self.DB.db_type == SQL_MYSQL:
+            self.DB.connection.execute("SET NAMES 'utf8'")
+            self.DB.connection.execute("SET CHARACTER SET 'utf8mb4'")
+            self.DB.connection.execute("SET unique_checks=0")
+            self.DB.connection.execute("SET foreign_key_checks=0")
+
     def remove_build(self):
         """
         Remove everything that has been built so far.
@@ -2015,7 +2004,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.logger.info("--- Interrupted (after %.3f seconds) ---" % (time.time() - self.start_time))
         else:
             self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
-
+        
     def build(self):
         """ 
         Build the corpus database, and install the corpus module.
@@ -2064,60 +2053,63 @@ class BaseCorpusBuilder(corpus.BaseResource):
         current = 0
 
         current = progress_next(current)
-        self.build_initialize()
-        progress_done()
+        self.setup_db()
+        with self.DB.engine.connect() as self.DB.connection:
+            self.build_initialize()
+            progress_done()
 
-        try:
-            if self.arguments.c and not self.interrupted:
-                current = progress_next(current)
-                self.build_create_tables()
-                progress_done()
+            try:
+                if self.arguments.c and not self.interrupted:
+                    current = progress_next(current)
+                    self.build_create_tables()
+                    progress_done()
+            
+                if self.arguments.l and not self.interrupted:
+                    current = progress_next(current)
+                    self.build_load_files()
+                    progress_done()
+
+                if self.arguments.self_join and not self.interrupted:
+                    current = progress_next(current)
+                    self.build_self_joined()
+                    current = progress_done()
+
+                if not self.interrupted:
+                    current = progress_next(current)
+                    for stage in self.additional_stages and not self.interrupted:
+                        stage()
+                    progress_done()
+
+                if self.arguments.o and not self.interrupted:
+                    current = progress_next(current)
+                    self.build_optimize()
+                    progress_done()
+
+                if self.arguments.i and not self.interrupted:
+                    current = progress_next(current)
+                    self.build_create_indices()
+                    progress_done()
+
+                if self.verify_corpus() and not self.interrupted:
+                    current = progress_next(current)
+                    self.build_write_module()
+                    current = progress_next(current)
+
+                if not self.interrupted:
+                    current = progress_next(current)
+                    self.build_create_frequency_table()
+                    progress_done()
+
+                self.build_finalize()
+            except Exception as e:
+                self.remove_build()
+                for x in get_error_repr(sys.exc_info()):
+                    print(x)
+                warnings.warn(str(e))
+                print(str(e))
+                raise e
+        self.DB.engine.dispose()
         
-            if self.arguments.l and not self.interrupted:
-                current = progress_next(current)
-                self.build_load_files()
-                progress_done()
-
-            if self.arguments.self_join and not self.interrupted:
-                current = progress_next(current)
-                self.build_self_joined()
-                current = progress_done()
-
-            if not self.interrupted:
-                current = progress_next(current)
-                for stage in self.additional_stages and not self.interrupted:
-                    stage()
-                progress_done()
-
-            if self.arguments.o and not self.interrupted:
-                current = progress_next(current)
-                self.build_optimize()
-                progress_done()
-
-            if self.arguments.i and not self.interrupted:
-                current = progress_next(current)
-                self.build_create_indices()
-                progress_done()
-
-            if self.verify_corpus() and not self.interrupted:
-                current = progress_next(current)
-                self.build_write_module()
-                current = progress_next(current)
-
-            if not self.interrupted:
-                current = progress_next(current)
-                self.build_create_frequency_table()
-                progress_done()
-
-            self.build_finalize()
-        except Exception as e:
-            self.remove_build()
-            for x in get_error_repr(sys.exc_info()):
-                print(x)
-            warnings.warn(str(e))
-            print(str(e))
-            raise e
-
     def create_installer_module(self):
         """
         Read the Python source of coq_install_generic.py, and modify it so that it 
