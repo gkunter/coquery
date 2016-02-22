@@ -151,6 +151,7 @@ class COCAToken(QueryToken):
     transcript_close = "/"
     quantification_open = "{"
     quantification_close = "}"
+    pos_separator = "."
     negation_flag = "~"
     quote_char = '"'
     
@@ -266,6 +267,7 @@ def parse_query_string(S, token_type):
     ST_IN_TRANSCRIPT = "TRANS"
     ST_IN_QUOTE = "QUOTE"
     ST_IN_QUANTIFICATION = "QUANT"
+    ST_POS_SEPARATOR = "POS"
     
     tokens = []
     state = ST_NORMAL
@@ -287,7 +289,6 @@ def parse_query_string(S, token_type):
         
         # Normal word state:
         if state == ST_NORMAL:
-            
             # Check for whitespace:
             if current_char == " ":
                 if current_word:
@@ -298,16 +299,18 @@ def parse_query_string(S, token_type):
             
             # Check for other characters
             
-            # Raise exception if another character follows other than the 
-            # character opening a quantification:
-            if token_closed and current_char != token_type.quantification_open:
-                raise TokenParseError(S)
+            if token_closed:
+                if current_char not in [token_type.quantification_open, 
+                                        token_type.pos_separator]:
+                    # Raise exception if another character follows other than 
+                    # the character opening a quantification:
+                    raise TokenParseError(S)
+                elif current_char == token_type.pos_separator:
+                    state = ST_POS_SEPARATOR
+                    token_closed = False
 
             # check for opening characters:
-            if current_char in set([token_type.transcript_open,
-                                    token_type.bracket_open,
-                                    token_type.quantification_open,
-                                    token_type.quote_char]):
+            if current_char in set([token_type.transcript_open, token_type.bracket_open, token_type.quantification_open, token_type.quote_char]):
                 if current_word:
                     # raise an exception if an opening bracket occurs within
                     # a word, but not after a full stop (i.e. if it does not 
@@ -324,6 +327,7 @@ def parse_query_string(S, token_type):
                     # query item:
                     if current_char == token_type.quantification_open:
                         raise TokenParseError(S)
+                
                 # set new state:
                 if current_char == token_type.transcript_open:
                     state = ST_IN_TRANSCRIPT
@@ -340,6 +344,14 @@ def parse_query_string(S, token_type):
             # add character to word:
             if current_char:
                 current_word = add(current_word, current_char)
+        
+        elif state == ST_POS_SEPARATOR:
+            current_word = add(current_word, current_char)
+            if current_char == token_type.bracket_open:
+                state = ST_IN_BRACKET
+                token_closed = False
+            else:
+                raise TokenParseError(S)
         
         # bracket state?
         elif state == ST_IN_BRACKET:
