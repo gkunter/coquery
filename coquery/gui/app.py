@@ -1850,7 +1850,10 @@ class CoqueryApp(QtGui.QMainWindow):
         if not name:
             name = str(self.ui.combo_config.currentText())
             
-        self.ui.combo_config.currentIndexChanged.disconnect()
+        try:
+            self.ui.combo_config.currentIndexChanged.disconnect()
+        except TypeError:
+            pass
         
         self.ui.combo_config.clear()
         self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
