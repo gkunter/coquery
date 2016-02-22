@@ -511,6 +511,24 @@ class CoqueryApp(QtGui.QMainWindow):
             lambda: self.reaggregate(
                 query_type=queries.TokenQuery,
                 recalculate=False))
+            
+        self.corpusListUpdated.connect(self.check_corpus_widgets)
+
+    def enable_corpus_widgets(self):
+        self.ui.options_area.setEnabled(True)
+        self.ui.action_statistics.setEnabled(True)
+        self.ui.action_remove_corpus.setEnabled(True)
+
+    def disable_corpus_widgets(self):
+        self.ui.options_area.setEnabled(False)
+        self.ui.action_statistics.setEnabled(False)
+        self.ui.action_remove_corpus.setEnabled(False)
+
+    def check_corpus_widgets(self):
+        if options.cfg.current_resources:
+            self.enable_corpus_widgets()
+        else:
+            self.disable_corpus_widgets()
 
     def column_moved(self):
         if self.Session.query_type == queries.ContingencyQuery:
@@ -676,8 +694,10 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         if not options.cfg.current_resources:
             self.disable_corpus_widgets()
+            self.ui.centralwidget.setEnabled(False)
         else:
             self.enable_corpus_widgets()
+            self.ui.centralwidget.setEnabled(True)
 
         if self.ui.combo_corpus.count():
             corpus_name = str(self.ui.combo_corpus.currentText())
@@ -818,25 +838,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.combo_corpus.setEnabled(True)
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
 
-        if self.ui.combo_corpus.count():
-            self.enable_corpus_widgets()
-        else:
-            self.disable_corpus_widgets()
+        self.check_corpus_widgets()
             
-    def enable_corpus_widgets(self):
-        """ 
-        Enable all widgets that assume that a corpus is available.
-        """
-        self.ui.centralwidget.setEnabled(True)
-        self.ui.action_statistics.setEnabled(True)
-        self.ui.action_remove_corpus.setEnabled(True)
-    
-    def disable_corpus_widgets(self):
-        """ Disable any widget that assumes that a corpus is available."""
-        self.ui.centralwidget.setEnabled(False)
-        self.ui.action_statistics.setEnabled(False)
-        self.ui.action_remove_corpus.setEnabled(False)
-
     def display_results(self, drop=True):
         self.ui.data_preview.setEnabled(True)
 
@@ -1800,10 +1803,14 @@ class CoqueryApp(QtGui.QMainWindow):
             self.corpusListUpdated.connect(self.corpus_manager.update)
             
             result = self.corpus_manager.exec_()
+            
+            self.corpusListUpdated.disconnect(self.corpus_manager.update)
+            
             try:
                 self.corpus_manager.close()
             except AttributeError:
                 pass
+
             self.corpus_manager = None
             self.fill_combo_corpus()
             
@@ -1865,6 +1872,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
 
+        self.fill_combo_corpus()
         self.change_corpus()
 
     def test_mysql_connection(self):
