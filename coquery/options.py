@@ -791,7 +791,7 @@ def save_configuration():
         if d["type"] == SQL_MYSQL:
             required_vars = ["name", "host", "port", "user", "password", "type"]
         elif d["type"] == SQL_SQLITE:
-            required_vars = ["name", "type"]
+            required_vars = ["name", "type", "path"]
         else:
             required_vars = []
         for x in required_vars:
