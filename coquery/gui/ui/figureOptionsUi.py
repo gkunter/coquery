@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'gui/ui/figureOptions.ui'
+# Form implementation generated from reading ui file 'figureOptions.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #
@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_FigureOptions(object):
     def setupUi(self, FigureOptions):
         FigureOptions.setObjectName(_fromUtf8("FigureOptions"))
-        FigureOptions.resize(476, 678)
+        FigureOptions.resize(476, 538)
         self.gridLayout = QtGui.QGridLayout(FigureOptions)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         self.buttonBox = QtGui.QDialogButtonBox(FigureOptions)
@@ -237,7 +237,7 @@ class Ui_FigureOptions(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName(_fromUtf8("scrollArea"))
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 452, 578))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 452, 460))
         self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
@@ -412,9 +412,9 @@ class Ui_FigureOptions(object):
         self.horizontalLayout_11.setObjectName(_fromUtf8("horizontalLayout_11"))
         spacerItem4 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_11.addItem(spacerItem4)
-        self.pushButton = QtGui.QPushButton(self.scrollAreaWidgetContents)
-        self.pushButton.setObjectName(_fromUtf8("pushButton"))
-        self.horizontalLayout_11.addWidget(self.pushButton)
+        self.button_font_select = QtGui.QPushButton(self.scrollAreaWidgetContents)
+        self.button_font_select.setObjectName(_fromUtf8("button_font_select"))
+        self.horizontalLayout_11.addWidget(self.button_font_select)
         self.verticalLayout_2.addLayout(self.horizontalLayout_11)
         spacerItem5 = QtGui.QSpacerItem(20, 220, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem5)
@@ -506,7 +506,7 @@ class Ui_FigureOptions(object):
         self.label_12.setText(_translate("FigureOptions", "Entries", None))
         self.label_sample_legend_entries.setText(_translate("FigureOptions", "Default font", None))
         self.spin_size_legend_entries.setSuffix(_translate("FigureOptions", " pt", None))
-        self.pushButton.setText(_translate("FigureOptions", "Select font for all...", None))
+        self.button_font_select.setText(_translate("FigureOptions", "Change font...", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_fonts), _translate("FigureOptions", "Fonts", None))
 
 

@@ -194,13 +194,12 @@ class Visualizer(vis.BaseVisualizer):
                 circ.set_edgecolor("black")
                 
                 try:
-                    font = self.options.get(
-                                "font_x_axis", 
-                                options.cfg.main_window.font())
+                    font = self.options.get("font_x_axis", self.options["figure_font"])
                     ax.text(x, y, 
                             "{}: {}".format(label.replace(" | ", "\n"), freq), 
                             ha="center", 
                             va="center",
+                            family=font.family(),
                             fontsize=font.pointSize())
                 except Exception as e:
                     print(e)

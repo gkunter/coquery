@@ -59,9 +59,6 @@ if pyside:
     mpl.use("Qt4Agg")
     mpl.rcParams["backend.qt4"] = "PySide"
 
-mpl.rcParams["font.family"] = str(QtGui.QFont().family())
-
-
 from ui.visualizerUi import Ui_Visualizer
 import QtProgress
 
@@ -209,6 +206,8 @@ class BaseVisualizer(QtCore.QObject):
                 else:
                     self.options["color_palette"] = "RdPu"
             
+        self.options["figure_font"] = options.cfg.figure_font
+            
         if not self.options.get("color_palette_values"):
             self.set_palette_values(self.options["color_number"])
 
@@ -266,6 +265,10 @@ class BaseVisualizer(QtCore.QObject):
     @_validate_layout
     def setup_figure(self):
         """ Prepare the matplotlib figure for plotting. """ 
+        
+        sns.set_style(rc={"font.family": self.options["figure_font"].family()})
+        mpl.rc("font", family=str(self.options["figure_font"].family()))
+
         with sns.plotting_context("paper"):
             self.g = sns.FacetGrid(self._table, 
                             col=self._col_factor,
@@ -465,46 +468,38 @@ class BaseVisualizer(QtCore.QObject):
         for ax in self.g.fig.axes:
             for element, font in [(ax.xaxis.label, "font_x_axis"),
                                   (ax.yaxis.label, "font_y_axis")]:
-                self.options[font] = self.options.get(font, QtGui.QFont())
+                self.options[font] = self.options.get(font, QtGui.QFont(self.options["figure_font"].family()))
                 element.set_fontsize(self.options[font].pointSize())
 
             if not self.options.get("font_x_ticks"):
-                self.options["font_x_ticks"] = QtGui.QFont()
-                self.options["font_x_ticks"].setPointSize(round(self.options["font_x_axis"].pointSize() / 1.2))
+                self.options["font_x_ticks"] = QtGui.QFont(
+                    self.options["font_x_axis"].family(), round(self.options["font_x_axis"].pointSize() / 1.2))
             for element in ax.get_xticklabels():
                 element.set_fontsize(self.options["font_x_ticks"].pointSize())
                 
             if not self.options.get("font_y_ticks"):
-                self.options["font_y_ticks"] = QtGui.QFont()
-                self.options["font_y_ticks"].setPointSize(round(self.options["font_y_axis"].pointSize() / 1.2))
+                self.options["font_y_ticks"] = QtGui.QFont(
+                    self.options["font_y_axis"].family(), round(self.options["font_y_axis"].pointSize() / 1.2))
             for element in ax.get_yticklabels():
                 element.set_fontsize(self.options["font_y_ticks"].pointSize())
 
-        # This should be one way to get fonts for the different elements:
-        #x_font = mpl.font_manager.FontProperties(
-            #family=self.options["font_x_axis"].family(), 
-            #style='normal', 
-            #size=self.options["font_x_axis"].pointSize(), 
-            #weight='normal', 
-            #stretch='normal')
-
         # Set font size of main title:
         if not self.options.get("font_main"):
-            self.options["font_main"] = QtGui.QFont()
-            self.options["font_main"].setPointSize(round(QtGui.QFont().pointSize() * 1.2))
+            self.options["font_main"] = QtGui.QFont(
+                    self.options["figure_font"].family(), round(self.options["figure_font"].pointSize() * 1.2))
         if "label_main" in self.options:
             plt.title(self.options["label_main"], size=self.options["font_main"].pointSize())
         
+        if not self.options.get("font_legend"):
+            self.options["font_legend"] = QtGui.QFont(self.options["figure_font"].family())
+        if not self.options.get("font_legend_entries"):
+            self.options["font_legend_entries"] = QtGui.QFont(
+                self.options["font_legend"].family(), round(self.options["font_legend"].pointSize() / 1.2))
+
         # set font size of legend:
         legend = plt.gca().get_legend()
         if legend:
-            if not self.options.get("font_legend"):
-                self.options["font_legend"] = QtGui.QFont()
             legend.get_title().set_fontsize(self.options["font_legend"].pointSize())
-            
-            if not self.options.get("font_legend_entries"):
-                self.options["font_legend_entries"] = QtGui.QFont()
-                self.options["font_legend_entries"].setPointSize(round(self.options["font_legend"].pointSize() / 1.2))
             plt.setp(legend.get_texts(), fontsize=self.options["font_legend_entries"].pointSize())
         
     def get_content_tree(self, table, label="count"):

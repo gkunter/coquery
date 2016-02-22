@@ -100,6 +100,10 @@ class Visualizer(vis.BaseVisualizer):
                 row_value = None
                 col_value = None
         
+        
+        if not hasattr(self, "ct"):
+            return ""
+        
         # this is a rather klunky way of getting the frequency from the
         # cross table:
         if self._row_factor:

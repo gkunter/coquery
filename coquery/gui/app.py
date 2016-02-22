@@ -136,6 +136,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.restoreState(options.settings.value("main_state"))
         except TypeError:
             pass
+        options.cfg.figure_font = options.settings.value("figure_font", QtGui.QLabel().font())
+        options.cfg.table_font = options.settings.value("table_font", QtGui.QLabel().font())
+        
 
         # Taskbar icons in Windows require a workaround as described here:
         # https://stackoverflow.com/questions/1551605#1552105
@@ -1818,6 +1821,8 @@ class CoqueryApp(QtGui.QMainWindow):
         def shutdown():
             options.settings.setValue("main_geometry", self.saveGeometry())
             options.settings.setValue("main_state", self.saveState())
+            options.settings.setValue("figure_font", options.cfg.figure_font)
+            options.settings.setValue("table_font", options.cfg.table_font)
             while self.widget_list:
                 x = self.widget_list.pop(0)
                 x.close()

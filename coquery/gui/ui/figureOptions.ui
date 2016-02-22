@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>476</width>
-    <height>678</height>
+    <height>538</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -552,7 +552,7 @@
             <x>0</x>
             <y>0</y>
             <width>452</width>
-            <height>578</height>
+            <height>460</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -909,9 +909,9 @@
               </spacer>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton">
+              <widget class="QPushButton" name="button_font_select">
                <property name="text">
-                <string>Select font for all...</string>
+                <string>Change font...</string>
                </property>
               </widget>
              </item>
