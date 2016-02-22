@@ -147,7 +147,8 @@ class CoqueryApp(QtGui.QMainWindow):
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
-        self.create_output_options_tree()
+        self.ui.options_tree = self.create_output_options_tree()
+        self.ui.output_columns.addWidget(self.ui.options_tree)
         
         if options.cfg.current_resources:
             # add available resources to corpus dropdown box:
@@ -569,9 +570,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_query_string.setChecked(True)
 
     def create_output_options_tree(self):
-        """ Remove any existing tree widget for the output options, create a
-        new, empty tree, add it to the layout, and return it. """
-        # replace old tree widget by a new, still empty tree:
+        """ 
+        Create and setup a tree widget for the output columns
+        """
         tree = classes.CoqTreeWidget()
         tree.setColumnCount(1)
         tree.setHeaderHidden(True)
@@ -584,15 +585,11 @@ class CoqueryApp(QtGui.QMainWindow):
         tree.addFunction.connect(self.add_function)
         tree.removeItem.connect(self.remove_item)
         
-        #self.ui.options_list.removeWidget(tree)
-        #self.ui.options_tree.close()
-        #self.ui.options_list.addWidget(tree)
-        self.ui.options_tree = tree
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.ui.options_tree.sizePolicy().hasHeightForWidth())
-        self.ui.options_tree.setSizePolicy(sizePolicy)
+        sizePolicy.setHeightForWidth(tree.sizePolicy().hasHeightForWidth())
+        tree.setSizePolicy(sizePolicy)
 
         return tree
     
@@ -709,7 +706,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         
         if not options.cfg.current_resources:
-            self.update_output_options_tree()
+            self.ui.options_tree.clear()
             return
         
         table_dict = self.resource.get_table_dict()
@@ -735,10 +732,9 @@ class CoqueryApp(QtGui.QMainWindow):
         tables.append("coquery")
         
         last_checked = list(self.ui.options_tree.get_checked())
-        self.ui.options_tree.hide()
-        tree = self.update_output_options_tree()
+        self.ui.options_tree.clear()
         
-        # populate the tree with a root for each table:
+        # populate the self.ui.options_tree with a root for each table:
         for table in tables:
             root = classes.CoqTreeItem()
             root.setObjectName(ui.coqueryUi._fromUtf8("{}_table".format(table)))
@@ -751,7 +747,7 @@ class CoqueryApp(QtGui.QMainWindow):
             root.setText(0, label)
             root.setCheckState(0, QtCore.Qt.Unchecked)
             if table_dict[table]:
-                tree.addTopLevelItem(root)
+                self.ui.options_tree.addTopLevelItem(root)
             
             # add a leaf for each table variable, in alphabetical order:
             for _, var in sorted([(getattr(self.resource, x), x) for x in table_dict[table]]):
@@ -795,15 +791,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     leaf.setCheckState(0, QtCore.Qt.Unchecked)
                 leaf.update_checkboxes(0, expand=True)
-        self.ui.options_tree = tree
         
-    def update_output_options_tree(self):
-        while self.ui.output_columns.count():
-            self.ui.output_columns.takeAt(0)
-        tree = self.create_output_options_tree()
-        self.ui.output_columns.addWidget(tree)
-        return tree
-                
     def fill_combo_corpus(self):
         """ 
         Add the available corpus names to the corpus selection combo box. 
