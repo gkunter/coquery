@@ -16,7 +16,7 @@ import sys
 import re
 
 from pyqt_compat import QtCore, QtGui
-from renameColumnUi import Ui_Dialog
+from ui.renameColumnUi import Ui_Dialog
 
 import options
 
