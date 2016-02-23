@@ -236,8 +236,6 @@ class CoqDetailBox(QtGui.QWidget):
 
         if not box:
             self.box = QtGui.QFrame(self)
-            self.box.setFrameShape(frameShape)
-            self.box.setFrameShadow(QtGui.QFrame.Sunken)
         else:
             self.box = box
 
