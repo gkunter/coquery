@@ -120,14 +120,17 @@ class CoqNavigationToolbar(NavigationToolbar):
             if isinstance(x, QtGui.QToolButton):
                 self._buttons[str(x.text())] = x
 
-        self._buttons["Forward"].setIcon(options.cfg.main_window.get_icon("sign-left"))
-        self._buttons["Back"].setIcon(options.cfg.main_window.get_icon("sign-right"))
+        self._buttons["Forward"].setIcon(options.cfg.main_window.get_icon("sign-right"))
+        self._buttons["Back"].setIcon(options.cfg.main_window.get_icon("sign-left"))
         self._buttons["Home"].setIcon(options.cfg.main_window.get_icon("sign-up"))
         self._buttons["Zoom"].setIcon(options.cfg.main_window.get_icon("search"))
         self._buttons["Save"].setIcon(options.cfg.main_window.get_icon("floppy"))
         self._buttons["Customize"].setIcon(options.cfg.main_window.get_icon("pencil"))
         self._buttons["Pan"].setIcon(options.cfg.main_window.get_icon("pan"))
         self._buttons["Subplots"].setIcon(options.cfg.main_window.get_icon("scale"))
+        
+        self._buttons["Subplots"].setToolTip("Adjust figure margins")
+        self._buttons["Customize"].setToolTip("Edit labels, colors, and fonts")
 
         self._buttons["Zoom"].toggled.connect(self.toggle_zoom)
         self._buttons["Pan"].toggled.connect(self.toggle_pan)
@@ -180,6 +183,7 @@ class BaseVisualizer(QtCore.QObject):
         self.setup_figure()
 
         self.function = self.draw
+        mpl.rcParams["axes.formatter.useoffset"] = "False"
 
     def set_defaults(self):
         if self._plot_frequency:
@@ -455,6 +459,32 @@ class BaseVisualizer(QtCore.QObject):
         #if not self._groupby:
             #raise VisualizationNoDataError
 
+    def add_legend(self, levels=None):
+        """
+        Add a legend to the figure, using the current option settings.
+        """
+        if levels:
+            legend_bar = [
+                plt.Rectangle(
+                    (0, 0), 1, 1,
+                    fc=self.options["color_palette_values"][i], 
+                    edgecolor="none") for i, _ in enumerate(levels)
+                ]
+            self.g.fig.get_axes()[-1].legend(
+                legend_bar, levels,
+                ncol=self.options.get("label_legend_columns", 1),
+                title=self.options.get("label_legend", ""), 
+                frameon=True, 
+                framealpha=0.7, 
+                loc="lower left").draggable()
+        else:
+            self.g.fig.get_axes()[-1].legend(
+                ncol=self.options.get("label_legend_columns", 1),
+                title=self.options.get("label_legend", ""), 
+                frameon=True, 
+                framealpha=0.7, 
+                loc="lower left").draggable()
+
     def adjust_fonts(self):
         """
         Adjust the fonts of the figure.
@@ -634,6 +664,8 @@ class BaseVisualizer(QtCore.QObject):
         x_overlap = False
 
         for ax in self.g.fig.axes:
+            #ax.get_xaxis().get_major_formatter().set_scientific(False)
+            
             xtl = ax.get_xticklabels()
             ytl = ax.get_yticklabels()
             plt.setp(xtl, rotation="horizontal")
@@ -984,9 +1016,16 @@ class VisualizerDialog(QtGui.QWidget):
             self.thread = QtProgress.ProgressThread(self.visualizer.draw, parent=self)
             self.thread.taskStarted.connect(self.startplot)
             self.thread.taskFinished.connect(self.finishplot)
+            self.thread.taskException.connect(self.plotexception)
 
             self.visualizer.moveToThread(self.thread)
             self.thread.start()
+
+    def plotexception(self, e):
+        print(e)
+        QtGui.QMessageBox.critical(self, "Error while plotting – Coquery", 
+            msg_visualization_error.format(self.exception),
+            QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
 
     def startplot(self):
         self.ui.box_visualize.hide()

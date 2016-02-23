@@ -125,6 +125,12 @@ computer. Without this module, the visualization functions are not available.</p
 <a href="http://stanford.edu/~mwaskom/software/seaborn/index.html">http://stanford.edu/~mwaskom/software/seaborn/index.html</a>.
 </p>
 """
+msg_visualization_error = """
+<p><b>An error occurred while plotting.</b></p>
+<p>While plotting the visualization, the following error was encountered:</p>
+<p><code>{}</code></p>
+<p>The visualization may be incorrect. Please contact the Coquery maintainers.</p>
+"""
 msg_no_lemma_information = """
 <p><b>The current resource does not provide lemma information.</b></p>
 <p>Your last query makes use of the lemma search syntax by enclosing query 
