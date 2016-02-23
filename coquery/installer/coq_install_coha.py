@@ -130,18 +130,18 @@ class BuilderClass(BaseCorpusBuilder):
         if db_type == SQL_MYSQL:
             return """
             <p><b>MySQL installation note</b><p>
-            <p>The COHA installer uses a feature of MySQL servers which
-            allows programs to load large chunks of data into the 
-            database in a single step.</p>
-            <p>This feature speeds up the installation of the COHA corpus.
-            However, it is not enabled by default on many MySQL servers.
-            In this is the case with your MySQL server as well, the 
-            installation may fail with an eror message like the following:</p>
+            <p>The COHA installer uses a special feature of MySQL servers 
+            which allows to load large chunks of data into the database in a 
+            single step.</p>
+            <p>This feature notably speeds up the installation of the COHA 
+            corpus. However, it may be disabled on your MySQL servers. In that 
+            case, the installation will fail with an error message similar to 
+            the following: </p>
             <p><code>The used command is not allowed with this MySQL version</code></p>
-            <p>If you receive this or a similar error message, please 
-            ask your MySQL server administrator to enable loading of local
-            in-files by setting the option <code>local-infile</code> in 
-            the MySQL configuration file.</p>                
+            <p>Should the installation fail, please ask your MySQL server 
+            administrator to enable loading of local in-files by setting the 
+            option <code>local-infile</code> in the MySQL configuration file.
+            </p>                
             """
         else:
             return None
