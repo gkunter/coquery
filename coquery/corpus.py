@@ -2294,13 +2294,14 @@ class CorpusClass(object):
                 
                 # highlight words that are in the results table:
                 if context_token_id in self.id_list:
-                    context.append("<span style='{}'; >".format(self.resource.render_token_style))
+                    context.append("<span style='{};'>".format(self.resource.render_token_style))
                 # additional highlight if the word is the target word:
                 if token_id <= context_token_id < token_id + token_width:
                     context.append("<b>")
-                context.append(word)
-                if token_id <= context_token_id < token_id + token_width:
+                    context.append(word)
                     context.append("</b>")
+                else:
+                    context.append(word)
                 if context_token_id in self.id_list:
                     context.append("</span>")
             
