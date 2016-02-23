@@ -278,10 +278,6 @@ class BaseVisualizer(QtCore.QObject):
             fonts = QtGui.QFontDatabase().families()
             for x in ["Humor Sans", "DigitalStrip", "Comic Sans MS"]:
                 if x in fonts:
-                    # Oh well... for some reason, "Humor Sans", even though
-                    # this is the font used by the xkcd theme, doesn't turn up 
-                    # in the plots even if it is correctly detected (and it 
-                    # is being displayed in the figure options).
                     self.options["figure_font"] = QtGui.QFont(x, pointSize=self.options["figure_font"].pointSize())
                     break
             else:
