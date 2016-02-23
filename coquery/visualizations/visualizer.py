@@ -288,7 +288,7 @@ class BaseVisualizer(QtCore.QObject):
                             break
             plt.xkcd()
 
-        sns.set_style(rc={"font.family": self.options["figure_font"].family()})
+        sns.set_style(rc={"font.family": str(self.options["figure_font"].family())})
         mpl.rc("font", family=str(self.options["figure_font"].family()))
 
         with sns.plotting_context("paper"):
