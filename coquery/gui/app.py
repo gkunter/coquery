@@ -1836,7 +1836,7 @@ class CoqueryApp(QtGui.QMainWindow):
             options.settings.setValue("main_state", self.saveState())
             options.settings.setValue("figure_font", options.cfg.figure_font)
             options.settings.setValue("table_font", options.cfg.table_font)
-            options.settings.setValue("contexxt_font", options.cfg.context_font)
+            options.settings.setValue("context_font", options.cfg.context_font)
             while self.widget_list:
                 x = self.widget_list.pop(0)
                 x.close()
