@@ -803,7 +803,7 @@ class VisualizerDialog(QtGui.QWidget):
         self.spinner.setMaximum(10)
         self.spinner.setMinimum(1)
         self.spinner.setSuffix(" year(s)")
-        self.spinner_label = QtGui.QLabel("Buckets: ")
+        self.spinner_label = QtGui.QLabel("Bandwidth: ")
         self.spinner.valueChanged.connect(self.update_plot)
         
         self.toolbar = None
@@ -868,8 +868,8 @@ class VisualizerDialog(QtGui.QWidget):
             if options.cfg.experimental:
                 self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
             if self.smooth:
-                self.toolbar.addWidget(self.spinner)
                 self.toolbar.addWidget(self.spinner_label)
+                self.toolbar.addWidget(self.spinner)
             self.ui.navigation_layout.addWidget(self.toolbar)
         else:
             self.toolbar.canvas = self.canvas

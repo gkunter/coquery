@@ -332,9 +332,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_barchart_plot.triggered.connect(lambda: self.visualize_data("barplot"))
         self.ui.action_stacked_barchart_plot.triggered.connect(lambda: self.visualize_data("barplot", percentage=True, stacked=True))
         
-        self.ui.action_percentage_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=True))
-        self.ui.action_stacked_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=False))
-        self.ui.action_line_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=False, percentage=False))
+        self.ui.action_percentage_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=True, smooth=True))
+        self.ui.action_stacked_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=False, smooth=True))
+        self.ui.action_line_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=False, percentage=False, smooth=True))
         
         self.ui.action_toggle_filters.triggered.connect(lambda: self.ui.filter_switch.toggle())
         self.ui.action_toggle_stopwords.triggered.connect(lambda: self.ui.stopword_switch.toggle())
