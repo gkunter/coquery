@@ -513,7 +513,7 @@ class Table(object):
                             # do not add AUTO_INCREMENT to strings or ENUMs:
                             str_list.insert(0, "{}_primary INT AUTO_INCREMENT".format(self.name))
                             str_list.insert(1, "{} {}".format(column.name, column.data_type))
-                            str_list.append("PRIMARY KEY ({}_primary)".format(self.name)
+                            str_list.append("PRIMARY KEY ({}_primary)".format(self.name))
                         else:
                             # do not add AUTO_INCREMENT to strings or ENUMs:
                             if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
