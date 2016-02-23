@@ -48,6 +48,7 @@ class Visualizer(vis.BaseVisualizer):
             else:
                 self.options["label_y_axis"] = "Frequency"
         self.options["label_x_axis"] = self._groupby[-1]
+        self.options["label_legend"] = self._groupby[0]
         super(Visualizer, self).set_defaults()
     
     def update_data(self, bandwidth=1):
@@ -158,9 +159,7 @@ class Visualizer(vis.BaseVisualizer):
             self.g.set(ylim=(0, self.vmax))
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         
-        #self.setup_axis("Y")
-        #self.setup_axis("X")
         if len(self._groupby) == 2:
-            self.g.fig.get_axes()[-1].legend(title=self._groupby[0], framealpha=0.7, frameon=True, loc="lower left").draggable()
+            self.add_legend()
 
 logger = logging.getLogger(__init__.NAME)

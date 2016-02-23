@@ -265,27 +265,9 @@ class Visualizer(vis.BaseVisualizer):
         if self.percentage:
             # Percentage bars: always add a legend
             if len(self._groupby) == 2:
-                category_levels = self._levels[1]
+                self.add_legend(self._levels[1])
             else:
-                category_levels = self._levels[0]
-            legend_bar = [
-                plt.Rectangle(
-                    (0, 0), 1, 1,
-                    fc=self.options["color_palette_values"][i], 
-                    edgecolor="none") for i, _ in enumerate(category_levels)
-                ]
-            self.g.fig.get_axes()[-1].legend(
-                legend_bar, category_levels,
-                ncol=self.options["label_legend_columns"],
-                title=self.options["label_legend"], 
-                frameon=True, 
-                framealpha=0.7, 
-                loc="lower left").draggable()
+                self.add_legend(self._levels[0])
+                
         elif len(self._groupby) == 2:
-            # Normal bars: add a legend only if there are two grouping factors
-            self.g.fig.get_axes()[-1].legend(
-                title=self.options["label_legend"], 
-                ncol=self.options["label_legend_columns"],
-                frameon=True, 
-                framealpha=0.7, 
-                loc="lower left").draggable()
+            self.add_legend()
