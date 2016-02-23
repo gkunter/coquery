@@ -138,7 +138,7 @@ class CoqueryApp(QtGui.QMainWindow):
             pass
         options.cfg.figure_font = options.settings.value("figure_font", QtGui.QLabel().font())
         options.cfg.table_font = options.settings.value("table_font", QtGui.QLabel().font())
-        
+        options.cfg.context_font = options.settings.value("context_font", QtGui.QLabel().font())
 
         # Taskbar icons in Windows require a workaround as described here:
         # https://stackoverflow.com/questions/1551605#1552105
@@ -555,7 +555,12 @@ class CoqueryApp(QtGui.QMainWindow):
                 "coquery_invisible_number_of_tokens" not in self.Session.output_order or
                 pd.isnull(data["coquery_invisible_corpus_id"]) or
                 pd.isnull(data["coquery_invisible_number_of_tokens"])):
-                QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
+                if isinstance(self.Session, StatisticsSession):
+                    column = data.index[model_index.column()]
+                    self.show_unique_values(rc_feature=data["coquery_invisible_rc_feature"],
+                                            uniques=column != "coq_statistics_entries")
+                else:
+                    QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
                 return
                     
             token_id = data["coquery_invisible_corpus_id"]
@@ -876,8 +881,7 @@ class CoqueryApp(QtGui.QMainWindow):
         header = self.ui.data_preview.horizontalHeader()
         for i in range(header.count()):
             column = self.table_model.header[header.logicalIndex(i)]
-
-            if column in ("coq_conditional_probability", "statistics_overall_proportion", "statistics_query_proportion", "Uniqueness ratio"):
+            if column in ("coq_conditional_probability", "statistics_overall_proportion", "statistics_query_proportion", "coq_statistics_uniquenessratio"):
                 deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
             elif column in ("statistics_column_total"):
                 deleg = classes.CoqTotalDelegate(self.ui.data_preview)                
@@ -1120,7 +1124,11 @@ class CoqueryApp(QtGui.QMainWindow):
                 view_unique = QtGui.QAction("View &unique values", self)
                 view_unique.triggered.connect(lambda: self.show_unique_values(item))
                 menu.addAction(view_unique)
+                view_entries = QtGui.QAction("View all &values", self)
+                view_entries.triggered.connect(lambda: self.show_unique_values(item, uniques=False))
+                menu.addAction(view_entries)
                 view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
+                view_entries.setEnabled(options.cfg.gui.test_mysql_connection())
                 menu.addSeparator()
 
                 if item._link_by or (parent and parent._link_by):
@@ -1150,16 +1158,20 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             return menu
 
-    def show_unique_values(self, item):
+    def show_unique_values(self, item=None, rc_feature=None, uniques=True):
         import uniqueviewer
         resource = self.resource
-        rc_feature = item.objectName()
+        if item != None:
+            rc_feature = item.objectName()
+        else:
+            rc_feature = rc_feature
+        
         _, db_name, table, feature = resource.split_resource_feature(rc_feature)
         if not db_name:
             db_name = resource.db_name
         uniqueviewer.UniqueViewer.show(
             "{}_{}".format(table, feature),
-            db_name, parent=self)
+            db_name, uniques=uniques, parent=self)
 
     def get_column_submenu(self, selection=[], point=None):
         """
@@ -1824,6 +1836,7 @@ class CoqueryApp(QtGui.QMainWindow):
             options.settings.setValue("main_state", self.saveState())
             options.settings.setValue("figure_font", options.cfg.figure_font)
             options.settings.setValue("table_font", options.cfg.table_font)
+            options.settings.setValue("contexxt_font", options.cfg.context_font)
             while self.widget_list:
                 x = self.widget_list.pop(0)
                 x.close()
