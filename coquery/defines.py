@@ -54,6 +54,7 @@ INSTALLER_CUSTOM = "Downloaded corpus installers"
 INSTALLER_ADHOC = "User corpora"
 
 COLUMN_NAMES = {
+    # Labels that are used in the Collocations aggregation:
     "coq_context_left": "Left context",
     "coq_context_right": "Right context",
     "coq_context_string": "Context",
@@ -65,10 +66,12 @@ COLUMN_NAMES = {
     "coq_mutual_information": "Mutual information",
     "coq_conditional_probability": "Pcond",
 
+    # Labels that are used in the Coquery special table:
     "coquery_query_token": "Query token",
     "coquery_expanded_query_string": "Matched query string",
     "coquery_query_string": "Query string",
-    
+
+    # Labels that are used in the Statistics special table:
     "statistics_frequency": "Frequency", 
     "statistics_overall_proportion": "Overall proportion",
     "statistics_overall_entropy": "Overall entropy",
@@ -76,6 +79,15 @@ COLUMN_NAMES = {
     "statistics_per_million_words": "Frequency (pmw)",
     "statistics_query_entropy": "Query entropy",
     "statistics_column_total": "ALL",
+
+    # Labels that are used when displaying the corpus statistics:
+    "coq_statistics_table": "Table",
+    "coq_statistics_column": "Column",
+    "coq_statistics_entries": "Entries",
+    "coq_statistics_uniques": "Uniques",
+    "coq_statistics_uniquenessratio": "Uniqueness ratio",
+    "coq_statistics_averagefrequency": "Average frequency",
+
         }
 
 DEFAULT_CONFIGURATION = "Default"

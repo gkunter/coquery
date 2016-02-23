@@ -906,12 +906,16 @@ class StatisticsQuery(TokenQuery):
         df : pandas.DataFrame
         """
         self.results_frame = self.Session.Resource.get_statistics()
-        self.Session.output_order = ["Table", "Column", "Entries", "Uniques", "Uniqueness ratio", "Average frequency"]
+        self.Session.output_order = [
+            "coq_statistics_table",
+            "coq_statistics_column",
+            "coq_statistics_entries",
+            "coq_statistics_uniques",
+            "coq_statistics_uniquenessratio",
+            "coq_statistics_averagefrequency",
+            "coquery_invisible_rc_feature"]
         self.results_frame.columns = self.Session.output_order
-        if df.empty:
-            return self.results_frame
-        else:
-            return df.append(self.results_frame)
+        return self.results_frame
 
 class CollocationQuery(TokenQuery):
     
