@@ -122,6 +122,7 @@ class Options(object):
         self.args.input_separator = ','
         self.args.output_separator = ","
         self.args.quote_char = '"'
+        self.args.xkcd = None
 
     @property
     def cfg(self):
@@ -614,6 +615,10 @@ class Options(object):
                                 self.args.quote_char = config_file.get("main", "csv_quote_char")
                             except (NoOptionError, ValueError):
                                 pass
+                        try:
+                            self.args.xkcd = config_file.getboolean("main", "xkcd")
+                        except (NoOptionError, ValueError):
+                            pass
 
                     elif section == "output":
                         for variable, value in config_file.items("output"):
@@ -777,6 +782,8 @@ def save_configuration():
         config.set("main", "csv_quote_char", cfg.quote_char)
     config.set("main", "one_by_one", cfg.server_side)
     config.set("main", "context_mode", cfg.context_mode)
+    if cfg.xkcd != None:
+        config.set("main", "xkcd", cfg.xkcd)
     
     if cfg.custom_installer_path:
         config.set("main", "custom_installer_path", cfg.custom_installer_path)

@@ -76,7 +76,6 @@ import matplotlib.pyplot as plt
 
 import seaborn as sns
 
-
 #def table_to_tree(table, label="count"):
     #""" Return a tree that contains a tree representation of the table. It
     #is assumed that the first column represents the highest tree level, the
@@ -268,8 +267,31 @@ class BaseVisualizer(QtCore.QObject):
     
     @_validate_layout
     def setup_figure(self):
-        """ Prepare the matplotlib figure for plotting. """ 
+        """ 
+        Prepare the matplotlib figure for plotting. 
         
+        This method sets the default font, and the overall apearance of the 
+        figure.
+        """ 
+        
+        if options.cfg.xkcd:
+            fonts = QtGui.QFontDatabase().families()
+            for x in ["Humor Sans", "DigitalStrip", "Comic Sans MS"]:
+                if x in fonts:
+                    # Oh well... for some reason, "Humor Sans", even though
+                    # this is the font used by the xkcd theme, doesn't turn up 
+                    # in the plots even if it is correctly detected (and it 
+                    # is being displayed in the figure options).
+                    self.options["figure_font"] = QtGui.QFont(x, pointSize=self.options["figure_font"].pointSize())
+                    break
+            else:
+                for x in ["comic", "cartoon"]:
+                    for y in fonts:
+                        if x.lower() in y.lower():
+                            self.options["figure_font"] = QtGui.QFont(x, pointSize=self.options["figure_font"].pointSize())
+                            break
+            plt.xkcd()
+
         sns.set_style(rc={"font.family": self.options["figure_font"].family()})
         mpl.rc("font", family=str(self.options["figure_font"].family()))
 
@@ -474,14 +496,14 @@ class BaseVisualizer(QtCore.QObject):
                 legend_bar, levels,
                 ncol=self.options.get("label_legend_columns", 1),
                 title=self.options.get("label_legend", ""), 
-                frameon=True, 
+                frameon=True,
                 framealpha=0.7, 
                 loc="lower left").draggable()
         else:
             self.g.fig.get_axes()[-1].legend(
                 ncol=self.options.get("label_legend_columns", 1),
                 title=self.options.get("label_legend", ""), 
-                frameon=True, 
+                frameon=True,
                 framealpha=0.7, 
                 loc="lower left").draggable()
 
@@ -530,7 +552,11 @@ class BaseVisualizer(QtCore.QObject):
         legend = plt.gca().get_legend()
         if legend:
             legend.get_title().set_fontsize(self.options["font_legend"].pointSize())
-            plt.setp(legend.get_texts(), fontsize=self.options["font_legend_entries"].pointSize())
+            legend.get_title().set_fontname(self.options["font_legend"].family())
+            for x in legend.get_texts():
+                x.set_fontsize(self.options["font_legend_entries"].pointSize())
+                x.set_fontname(self.options["font_legend_entries"].family())
+            #plt.setp(legend.get_texts(), fontsize=self.options["font_legend_entries"].pointSize(), )
         
     def get_content_tree(self, table, label="count"):
         """ 
