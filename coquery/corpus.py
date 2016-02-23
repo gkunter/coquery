@@ -809,7 +809,7 @@ class SQLResource(BaseResource):
                 #df = pd.read_sql(S, engine)
                 S = "SELECT {} FROM {}".format(column, table)
                 df = pd.read_sql(S, engine)
-                stats.append([table, column, table_sizes[table], len(df[column].unique())])
+                stats.append([table, column, table_sizes[table], len(df[column].unique()), 0, 0, rc_feature])
         
         df = pd.DataFrame(stats)
 
@@ -2193,10 +2193,10 @@ class CorpusClass(object):
             df = df.sort(columns=["COQ_TOKEN_ID", "COQ_TAG_ID"])
         self._context_cache[(token_id, source_id, token_width)] = df
         
-    def render_context(self, token_id, source_id, token_width, context_width, widget):
-        """ Return a visual representation of the context around the 
-        specified token. The result is shown in an instance of the 
-        ContextView class.
+    def get_rendered_context(self, token_id, source_id, token_width, context_width, widget):
+        """ 
+        Return a string containing the markup for the context around the 
+        specified token.
         
         The most simple visual representation of the context is a plain text
         display, but in principle, a corpus might implement a more elaborate
@@ -2336,4 +2336,4 @@ class CorpusClass(object):
             if tag:
                 context.appendleft("<{}>".format(self.tag_to_html(tag)))
 
-        widget.ui.context_area.setText(collapse_words(context))
+        return collapse_words(context)

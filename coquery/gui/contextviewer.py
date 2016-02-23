@@ -38,12 +38,11 @@ class ContextView(QtGui.QWidget):
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
         self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
         self.ui.slider_context_width.setTracking(True)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
 
         # Add clickable header
         self.ui.button_ids = classes.CoqDetailBox("Token ID: {}, Source ID: {}".format(token_id, source_id))
         self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", str(not self.ui.button_ids.isExpanded())))
-        self.ui.verticalLayout_2.insertWidget(0, self.ui.button_ids)
+        self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
         self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
         
         L = self.corpus.get_origin_data(token_id)
@@ -77,7 +76,7 @@ class ContextView(QtGui.QWidget):
         Add the label 'name' with value 'content' to the context viewer.
         """
         layout_row = self.ui.form_information.count()
-        self.ui.source_name = QtGui.QLabel(self.ui.box_context)
+        self.ui.source_name = QtGui.QLabel(self)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -86,7 +85,7 @@ class ContextView(QtGui.QWidget):
         self.ui.source_name.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTop|QtCore.Qt.AlignTrailing)
         self.ui.source_name.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
         self.ui.form_information.setWidget(layout_row, QtGui.QFormLayout.LabelRole, self.ui.source_name)
-        self.ui.source_content = QtGui.QLabel(self.ui.box_context)
+        self.ui.source_content = QtGui.QLabel(self)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -127,11 +126,16 @@ class ContextView(QtGui.QWidget):
     
     def update_context(self):
         if self.corpus:
-            self.corpus.render_context(
+            context = self.corpus.get_rendered_context(
                 self.token_id, 
                 self.source_id, 
                 self.token_width,
                 self.ui.slider_context_width.value(), self)
+            font = options.cfg.context_font
+            line_height = 'line-height: {}px'.format(font.pointSize() * 1.5)
+            font_str = 'font: {}px "{}"'.format(font.pointSize(), font.family())
+            s = "<div style='{}; {}'>{}</div>".format(font_str, line_height, context)
+            self.ui.context_area.setText(s)
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
