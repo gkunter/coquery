@@ -96,7 +96,7 @@ class InstallerGui(QtGui.QDialog):
             self.ui.notes_box = classes.CoqDetailBox("Installation notes")
             self.ui.verticalLayout.addWidget(self.ui.notes_box)
 
-            self.ui.notes_scroll = QtGui.QScrollArea(Form)                                                                                    
+            self.ui.notes_scroll = QtGui.QScrollArea(self)                                                                                    
             self.ui.notes_scroll.setWidgetResizable(True)                                                                                     
             self.ui.notes_scroll.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)                                  
 
@@ -114,21 +114,6 @@ class InstallerGui(QtGui.QDialog):
             self.ui.notes_layout.addWidget(self.ui.notes_label)                                                                               
             self.ui.notes_scroll.setWidget(self.scrollAreaWidgetContents)                                                                     
                                                                                                                                         
-
-            #self.ui.notes_label = QtGui.QLabel(notes)
-            #self.ui.notes_label.setWordWrap(True)
-            ##self.ui.notes_label.setMinimumSize(self.ui.notes_label.size())
-
-            #sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-            #sizePolicy.setHorizontalStretch(0)
-            #sizePolicy.setVerticalStretch(0)
-            ##sizePolicy.setHeightForWidth(self.ui.notes_label.sizePolicy().hasHeightForWidth())
-            #self.ui.notes_label.setSizePolicy(sizePolicy)
-            
-            #self.ui.notes_scroll = QtGui.QScrollArea()
-            #self.ui.notes_scroll.setWidgetResizable(True)
-            #self.ui.notes_scroll.setWidget(self.ui.notes_label)
-
             self.ui.notes_box.replaceBox(self.ui.notes_scroll)
         try:
             self.resize(options.settings.value("corpusinstaller_size"))
@@ -267,11 +252,6 @@ class InstallerGui(QtGui.QDialog):
         started if the path is valid, or if the user decides to ignore
         the invalid path.
         """
-        
-        if self.builder_class.get_installation_note():
-            QtGui.QMessageBox.information(
-                self, "Installation note – Coquery",
-                self.builder_class.get_installation_note())
         
         if self.ui.radio_complete.isChecked():
             l = self.builder_class.get_file_list(
