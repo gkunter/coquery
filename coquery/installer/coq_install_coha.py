@@ -59,19 +59,19 @@ class BuilderClass(BaseCorpusBuilder):
         super(BuilderClass, self).__init__(gui, *args)
 
         self.create_table_description(self.word_table,
-            [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+            [Identifier(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(26) NOT NULL"),
              Column(self.word_labelcs, "VARCHAR(48) NOT NULL"),
              Column(self.word_lemma, "VARCHAR(24) NOT NULL"),
              Column(self.word_pos, "VARCHAR(24) NOT NULL")])
 
         self.create_table_description(self.file_table,
-            [Primary(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+            [Identifier(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "CHAR(8) NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
 
         self.create_table_description(self.source_table,
-            [Primary(self.source_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+            [Identifier(self.source_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.source_words, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.source_genre, "ENUM('FIC','MAG','NEWS','NF') NOT NULL"),
              Column(self.source_year, "SMALLINT(4) NOT NULL"),
@@ -79,7 +79,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.source_author, "VARCHAR(100) NOT NULL")])
             
         self.create_table_description(self.corpus_table,
-            [Primary(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
+            [Identifier(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_source_id, self.source_table)])
 

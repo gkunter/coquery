@@ -171,7 +171,7 @@ class Corpus(CorpusClass):
 class Column(object):
     """ Define an object that stores the description of a column in one 
     MySQL table."""
-    primary = False
+    is_identifier = False
     key = False
     
     def __init__(self, name, data_type, index_length=None):
@@ -193,6 +193,7 @@ class Column(object):
         self._name = name
         self._data_type = data_type
         self.index_length = index_length        
+        self.unique = False
         
     def __repr__(self):
         return "Column({}, {}, {})".format(self._name, self._data_type, self.index_length)
@@ -241,15 +242,16 @@ class Column(object):
     def data_type(self, new_type):
         self._data_type = new_type
         
-class Primary(Column):
+class Identifier(Column):
     """ Define a Column class that acts as the primary key in a table."""
-    primary = True
+    is_identifier = True
 
-    def __init__(self, name, data_type, index_length=None):
-        super(Primary, self).__init__(name, data_type, index_length)
+    def __init__(self, name, data_type, unique=True, index_length=None):
+        super(Identifier, self).__init__(name, data_type, index_length)
+        self.unique = unique
 
     def __repr__(self):
-        return "Primary(name='{}', data_type='{}', {})".format(self._name, self._data_type, self.index_length)
+        return "Identifier(name='{}', data_type='{}', unique={}, index_length={})".format(self._name, self._data_type, self.unique, self.index_length)
         
 class Link(Column):
     """ Define a Column class that links a table to another table. In MySQL
@@ -460,7 +462,7 @@ class Table(object):
         
     def add_column(self, column):
         self.columns.append(column)
-        if column.primary:
+        if column.is_identifier:
             self.primary = column
         else:
             self._row_order.append(column.name)
@@ -505,14 +507,21 @@ class Table(object):
         for column in self.columns:
             if column.name not in columns_added:
                 if db_type == SQL_MYSQL:
-                    if column.primary:
-                        # do not add AUTO_INCREMENT to strings or ENUMs:
-                        if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
-                            pattern = "{} {}"
+                    if column.is_identifier:
+                        if not column.unique:
+                            # add surrogate key 
+                            # do not add AUTO_INCREMENT to strings or ENUMs:
+                            str_list.insert(0, "{}_primary INT AUTO_INCREMENT".format(self.name))
+                            str_list.insert(1, "{} {}".format(column.name, column.data_type))
+                            str_list.append("PRIMARY KEY ({}_primary)".format(self.name)
                         else:
-                            pattern = "{} {} AUTO_INCREMENT"
-                        str_list.insert(0, pattern.format(column.name, column.data_type))
-                        str_list.append("PRIMARY KEY ({})".format(column.name))
+                            # do not add AUTO_INCREMENT to strings or ENUMs:
+                            if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
+                                pattern = "{} {}"
+                            else:
+                                pattern = "{} {} AUTO_INCREMENT"
+                            str_list.insert(0, pattern.format(column.name, column.data_type))
+                            str_list.append("PRIMARY KEY ({})".format(column.name))
                     else:
                         str_list.append("{} {}".format(
                             column.name,
@@ -529,9 +538,14 @@ class Table(object):
                     else:
                         data_type = column.data_type
                     
-                    if column.primary:
-                        str_list.insert(0, "{} {} PRIMARY KEY".format(
-                            column.name, data_type))
+                    if column.is_identifier:
+                        if not column.unique:
+                            # add surrogate key 
+                            str_list.insert(0, "{}_primary INT PRIMARY KEY".format(self.name))
+                            str_list.insert(1, "{} {}".format(column.name, data_type))
+                        else:
+                            str_list.insert(0, "{} {} PRIMARY KEY".format(
+                                column.name, data_type))
                     else:
                         str_list.append("{} {}".format(
                             column.name, data_type))
@@ -627,7 +641,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.tag_attribute = "Attribute"
         
         self.create_table_description(self.tag_table,
-            [Primary(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+            [Identifier(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
              Column(self.tag_label, "TINYTEXT NOT NULL"),
              Link(self.tag_corpus_id, self.corpus_table),
@@ -1622,7 +1636,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         for table_name in self._new_tables:
             table = self._new_tables[table_name]
             for column in table.columns:
-                if not isinstance(column, Primary) and (table.name, column.name) not in self._blocklist:
+                if not isinstance(column, Identifier) and (table.name, column.name) not in self._blocklist:
                     index_list.append((table.name, column.name))
 
         if self._widget:

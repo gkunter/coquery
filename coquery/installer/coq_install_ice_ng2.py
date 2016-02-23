@@ -505,7 +505,7 @@ class BuilderClass(BaseCorpusBuilder):
         #self.word_pos = "Pos"
         
         #self.create_table_description(self.word_table,
-            #[Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
+            #[Identifier(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              #Column(self.word_label, "VARCHAR(36) NOT NULL"),
              #Column(self.word_lemma, "VARCHAR(36) NOT NULL"),
              #Column(self.word_pos, "ENUM('CC','CD','DT','EX','FW','IN','JJ','JJR','JJS','LS','MD','NN','NNS','NP','NPS','PDT','POS','PP','PP$','PUNCT','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBN','VBP','VBZ','WDT','WP','WP$','WRB') NOT NULL")])
@@ -529,7 +529,7 @@ class BuilderClass(BaseCorpusBuilder):
         #self.file_path = "Path"
         
         self.create_table_description(self.file_table,
-            [Primary(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+            [Identifier(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "TINYTEXT NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
             
@@ -555,7 +555,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_time_feature(self.source_age)
 
         self.create_table_description(self.source_table,
-            [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+            [Identifier(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
             Column(self.source_mode, "TINYTEXT NOT NULL"),
             Column(self.source_date, "VARCHAR(10) NOT NULL"), 
             Column(self.source_icetext, "ENUM('Academic writing humanities','Academic writing natural sciences','Academic writing social sciences','Academic writing technical','Administrative/instructive writing','Business letters','Editorials','Exams','Instructive writing/skills and hobbies','Novels','Popular writing humanities','Popular writing natural sciences','Popular writing social sciences','Popular writing technology','Press reportage','Social letters','Students essays') NOT NULL"), 
@@ -566,7 +566,7 @@ class BuilderClass(BaseCorpusBuilder):
             Column(self.source_ethnicity, "VARCHAR(15) NOT NULL")])
 
         self.create_table_description(self.corpus_table,
-            [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+            [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.corpus_word, "VARCHAR(36) NOT NULL"),
              Column(self.corpus_lemma, "VARCHAR(36) NOT NULL"),
              Column(self.corpus_pos, "ENUM('CC','CD','DT','EX','FW','IN','JJ','JJR','JJS','LS','MD','NN','NNS','NP','NPS','PDT','POS','PP','PP$','PUNCT','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBN','VBP','VBZ','WDT','WP','WP$','WRB') NOT NULL"),

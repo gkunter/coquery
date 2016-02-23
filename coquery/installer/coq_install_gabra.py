@@ -144,14 +144,14 @@ class BuilderClass(BaseCorpusBuilder):
         super(BuilderClass, self).__init__(gui, *args)
 
         self.create_table_description(self.root_table,
-            [Primary(self.root_id, "SMALLINT(4) UNSIGNED"),
+            [Identifier(self.root_id, "SMALLINT(4) UNSIGNED"),
             Column(self.root_radicals, "VARCHAR(9)"),
             Column(self.root_type, "ENUM('geminated','irregular','strong','weak-final','weak-initial','weak-medial')"),
             Column(self.root_alternatives, "ENUM('','?-g?-b-r','?-j-j','?-k-l-m','?-l-?-q','?-m-j²','?-n-?-l','?-n-?-r','?-w-?','?-w-f','b-d-j','b-h-r-?','b-s-b-s','d-?-d-?','d-?-q','f-r-q-n','f-s-j','g-b-x','g-z-z','h-j-d-r','h-n-d-b','h-r-h-r','k-?-b-r','l-m-b-b','l-n-b-t','n-?-g?','n-w-n-m','p-s-d-j','q-?-d-r','q-l-q-l','q-w-w','s-r-d-k','s-r-w-n','see h-?-?','see h-?-h-?','see p-n-n','see p-n-p-n','see p-x-p-x','see p-x-x','t-b-t-b','z-p-z-p')"),
             Column(self.root_variant, "ENUM('0', '1','2','3','4','5')")])
             
         self.create_table_description(self.source_table,
-            [Primary(self.source_id, "ENUM('1','2','3','4','5','6','7','8','9','10')"),
+            [Identifier(self.source_id, "ENUM('1','2','3','4','5','6','7','8','9','10')"),
              Column(self.source_key, "ENUM('Apertium2014','Camilleri2013','DM2015','Ellul2013','Falzon2013','KelmaKelma','KelmetilMalti','Mayer2013','Spagnol2011','UserFeedback')"),
              Column(self.source_label, "ENUM('A computational grammar and lexicon for Maltese','A Tale of Two Morphologies. Verb structure and argument alternations in Maltese','Anonymous feedback suggestions from users','Apertium: A free/open-source machine translation platform','Basic English-Maltese Dictionary','Deverbal nouns in Maltese','Dizzjunarju Malti','Fixing the broken plural in Maltese','Kelma Kelma Facebook Page','Kelmet il-Malti Facebook Group')"),
              Column(self.source_year, "ENUM('','2011','2013','2014','2015')"),
@@ -159,7 +159,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.source_note, "ENUM('','(in print)','Contributions by research assistants funded by the DM project','Germany: University of Konstanz dissertation','http://www.apertium.org/','https://www.facebook.com/groups/246657308743181/','https://www.facebook.com/kelmakelma.mt','Malta: University of Malta dissertation','Sweden: Chalmers University of Technology, M.Sc. thesis')")])
             
         self.create_table_description(self.lemma_table,
-            [Primary(self.lemma_id, "SMALLINT(5) UNSIGNED"),
+            [Identifier(self.lemma_id, "SMALLINT(5) UNSIGNED"),
              Column(self.lemma_label, "VARCHAR(50)", index_length=8),
              Column(self.lemma_adjectival, "ENUM('','Y')"),
              Column(self.lemma_adverbial, "ENUM('','Y')"),
@@ -191,7 +191,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.lemma_verbalnoun, "ENUM('','Y')")])           
 
         self.create_table_description(self.corpus_table,
-            [Primary(self.corpus_id, "MEDIUMINT(7) UNSIGNED"),
+            [Identifier(self.corpus_id, "MEDIUMINT(7) UNSIGNED"),
              Column(self.corpus_word, "VARCHAR(50)", index_length=15),
              Column(self.corpus_adverbial, "ENUM('','N','Y')"),
              Column(self.corpus_alternatives, "VARCHAR(26)"),
