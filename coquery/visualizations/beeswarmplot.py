@@ -78,4 +78,3 @@ class Visualizer(vis.BaseVisualizer):
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         if not hasattr(sns, "swarmplot"):
             self.g.set(xticklabels=self._levels[-1])
-        self.g.fig.tight_layout()
