@@ -892,6 +892,9 @@ class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session)
         
+    def insert_static_data(self, df):
+        return df
+        
     def append_results(self, df):
         """
         Append the last results to the data frame.
