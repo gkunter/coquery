@@ -687,7 +687,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <x>0</x>
      <y>0</y>
      <width>805</width>
-     <height>34</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -733,20 +733,12 @@ The number of occurrences of each token matching the query string is counted. Th
     <property name="title">
      <string>&amp;Visualizations</string>
     </property>
-    <widget class="QMenu" name="menuTime_data">
-     <property name="title">
-      <string>&amp;Time data</string>
-     </property>
-     <addaction name="action_percentage_area_plot"/>
-     <addaction name="action_stacked_area_plot"/>
-     <addaction name="action_line_plot"/>
-    </widget>
     <widget class="QMenu" name="menuFrequencies">
      <property name="title">
       <string>&amp;Bar charts</string>
      </property>
-     <addaction name="action_stacked_barchart_plot"/>
-     <addaction name="action_Stacked_bars"/>
+     <addaction name="action_percentage_bars"/>
+     <addaction name="action_stacked_bars"/>
      <addaction name="action_barchart_plot"/>
     </widget>
     <widget class="QMenu" name="menuFrequency_maps">
@@ -771,6 +763,14 @@ The number of occurrences of each token matching the query string is counted. Th
      </property>
      <addaction name="action_kde_plot"/>
      <addaction name="action_ecd_plot"/>
+    </widget>
+    <widget class="QMenu" name="menuTime_data">
+     <property name="title">
+      <string>&amp;Time data</string>
+     </property>
+     <addaction name="action_percentage_area_plot"/>
+     <addaction name="action_stacked_area_plot"/>
+     <addaction name="action_line_plot"/>
     </widget>
     <addaction name="menuCorpus_locations"/>
     <addaction name="menuFrequencies"/>
@@ -1006,15 +1006,12 @@ The number of occurrences of each token matching the query string is counted. Th
     <string>&amp;Stop words...</string>
    </property>
   </action>
-  <action name="action_stacked_barchart_plot">
+  <action name="action_percentage_bars">
    <property name="text">
     <string>&amp;Percentage bars</string>
    </property>
   </action>
-  <action name="action_Stacked_bars">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
+  <action name="action_stacked_bars">
    <property name="text">
     <string>&amp;Stacked bars</string>
    </property>

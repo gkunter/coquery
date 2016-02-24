@@ -330,7 +330,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_ecd_plot.triggered.connect(lambda: self.visualize_data("densityplot", cumulative=True))
             
         self.ui.action_barchart_plot.triggered.connect(lambda: self.visualize_data("barplot"))
-        self.ui.action_stacked_barchart_plot.triggered.connect(lambda: self.visualize_data("barplot", percentage=True, stacked=True))
+        self.ui.action_percentage_bars.triggered.connect(lambda: self.visualize_data("barplot", percentage=True, stacked=True))
+        self.ui.action_stacked_bars.triggered.connect(lambda: self.visualize_data("barplot", percentage=False, stacked=True))
         
         self.ui.action_percentage_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=True, smooth=True))
         self.ui.action_stacked_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=False, smooth=True))
