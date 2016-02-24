@@ -266,7 +266,7 @@ class SqlDB (object):
         return cursor
 
     def load_infile(self, file_name, table_name, arguments):
-        self.connection.execute("LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
+        self.connection.execution_options(autocommit=False).execute("LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
 
     def get_field_type(self, table_name, column_name):
         """
@@ -457,9 +457,9 @@ class SqlDB (object):
         index_length : int or None
             The length of the index (applies to TEXT or BLOB fields)
         """
-        # Do not create an index if the table is empty:
-        if not self.connection.execute("SELECT * FROM {} LIMIT 1".format(table_name)).fetchone():
-            return
+        ## Do not create an index if the table is empty:
+        #if not self.connection.execute("SELECT * FROM {} LIMIT 1".format(table_name)).fetchone():
+            #return
         
         if index_length:
             variables = ["%s(%s)" % (variables[0], index_length)]
