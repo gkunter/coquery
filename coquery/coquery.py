@@ -117,7 +117,10 @@ def main():
         logger.addHandler(options.cfg.gui_logger)
 
         options.cfg.app = QtGui.QApplication(sys.argv)
- 
+        if sys.platform == "darwin":
+            QtGui.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
+            QtGui.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
+        
         Coq = CoqueryApp()
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
