@@ -164,6 +164,25 @@ class Session(object):
 
         return frequency_table
 
+    def mask_data(self):
+        """
+        Return a data frame that contains the currently visible rows and 
+        columns from the session's data table.
+        """
+        
+        print(options.cfg.row_visibility)
+        print(options.cfg.column_visibility)
+        print(self.query_type)
+        
+        invisible_rows = options.cfg.row_visibility[self.query_type].keys()
+        visible_columns = [x for x in self.output_order if options.cfg.column_visibility[self.query_type].get(x, True)]
+
+        print(invisible_rows)
+        print(visible_columns)
+        
+        print(self.data_table[visible_columns].iloc[~self.data_table.index.isin(invisible_rows)])
+        
+
     def aggregate_data(self, recalculate=True):
         """
         Apply the aggegate function from the current query type to the 
@@ -192,7 +211,7 @@ class Session(object):
         else:
             tab = self.data_table.iloc[
                     ~self.data_table.index.isin(
-                        pd.Series(options.cfg.row_visibility[queries.TokenQuery].keys()))]
+                        pd.Series(list(options.cfg.row_visibility[queries.TokenQuery].keys())))]
 
         self.output_object = self.query_type.aggregate_it(
             tab,
