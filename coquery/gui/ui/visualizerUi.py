@@ -47,7 +47,7 @@ class Ui_Visualizer(object):
         self.frame_2.setFrameShadow(QtGui.QFrame.Plain)
         self.frame_2.setObjectName(_fromUtf8("frame_2"))
         self.navigation_layout = QtGui.QHBoxLayout(self.frame_2)
-        self.navigation_layout.setContentsMargins(6, 4, 6, 4)
+        self.navigation_layout.setContentsMargins(6, 0, 6, 0)
         self.navigation_layout.setObjectName(_fromUtf8("navigation_layout"))
         self.horizontalLayout_3.addWidget(self.frame_2)
         self.verticalLayout_2.addWidget(self.frame)
