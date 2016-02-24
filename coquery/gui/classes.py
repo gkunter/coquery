@@ -53,14 +53,8 @@ class CoqSwitch(QtGui.QWidget):
     
     def __init__(self, state=None, on="on", off="off", text="", *args, **kwargs):
         super(CoqSwitch, self).__init__(*args, **kwargs)
-        #sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
-        #sizePolicy.setHorizontalStretch(0)
-        #sizePolicy.setVerticalStretch(0)
-        #sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        #self.setSizePolicy(sizePolicy)
         
         self._layout = QtGui.QHBoxLayout(self)
-        self._layout.setSizeConstraint(QtGui.QLayout.SetFixedSize)
         self._layout.setMargin(0)
         self._layout.setSpacing(-1)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -68,30 +62,32 @@ class CoqSwitch(QtGui.QWidget):
         self._frame = QtGui.QFrame()
         self._frame.setFrameShape(frameShape)
         self._frame.setFrameShadow(QtGui.QFrame.Sunken)
+        size = QtCore.QSize(
+            QtGui.QRadioButton().sizeHint().height() * 2,
+            QtGui.QRadioButton().sizeHint().height())
+        #self._frame.setMaximumSize(size)
         self._layout.addWidget(self._frame)
 
         self._inner_layout = QtGui.QHBoxLayout(self._frame)
-        self._inner_layout.setSizeConstraint(QtGui.QLayout.SetFixedSize)
         self._inner_layout.setMargin(0)
         self._inner_layout.setSpacing(-1)
         self._inner_layout.setContentsMargins(0, 0, 0, 0)
 
         self._slider = QtGui.QSlider(self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        self._slider.setOrientation(QtCore.Qt.Horizontal)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self._slider.sizePolicy().hasHeightForWidth())
         self._slider.setSizePolicy(sizePolicy)
-        
-        size = self._slider.size()
-        size.setWidth(int(size.height() * 1.25))
-        size.setHeight(int(size.height() * 0.82))
-        
+        size = QtCore.QSize(
+            self._slider.sizeHint().height() * 1.61,
+            self._slider.sizeHint().height())
         self._slider.setMaximumSize(size)
+        self._frame.setMaximumSize(size)
+
         self._slider.setMaximum(1)
         self._slider.setPageStep(1)
         self._slider.setSliderPosition(0)
-        self._slider.setOrientation(QtCore.Qt.Horizontal)
         self._slider.setTickPosition(QtGui.QSlider.NoTicks)
         self._slider.setTickInterval(1)
         self._slider.setInvertedAppearance(True)
@@ -100,12 +96,11 @@ class CoqSwitch(QtGui.QWidget):
         self._inner_layout.addWidget(self._slider)
 
         self._label = CoqClickableLabel(self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self._label.sizePolicy().hasHeightForWidth())
         self._label.setSizePolicy(sizePolicy)
-        self._label.setMaximumWidth(max(QtGui.QLabel(on).size().width(), QtGui.QLabel(off).size().width()))
+        self._label.setMinimumWidth(max(QtGui.QLabel(on).sizeHint().width(), QtGui.QLabel(off).sizeHint().width()))
 
         self._on_text = on
         self._off_text = off
@@ -118,7 +113,7 @@ class CoqSwitch(QtGui.QWidget):
         br = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
 
         self._style_handle = """QSlider#_slider::handle:horizontal {{
-            background: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                background: qlineargradient(x1:0, y1:1, x2:0, y2:0,
                 stop:0 rgb({g0_r}, {g0_g}, {g0_b}), 
                 stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
                 border: 1px solid rgb({g1_r}, {g1_g}, {g1_b});
@@ -130,6 +125,7 @@ class CoqSwitch(QtGui.QWidget):
                 stop:0 rgb({g2_r}, {g2_g}, {g2_b}), 
                 stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
                 border: 2px solid rgb({g2_r}, {g2_g}, {g2_b});
+                margin: -2px 0;
                 border-radius: {rad}px;
             }}
         """.format(
@@ -137,7 +133,9 @@ class CoqSwitch(QtGui.QWidget):
             g1_r = grad1.red(), g1_g=grad1.green(), g1_b=grad1.blue(),
             g2_r = grad2.red(), g2_g=grad2.green(), g2_b=grad2.blue(),
             b_r = br.red(), b_g=br.green(), b_b=br.blue(),
-            rad=int(QtGui.QLabel().sizeHint().height()*0.4))
+            rad=int(self._slider.sizeHint().height()*0.4))
+
+        self._style_handle = ""
 
         if not state:
             self.setOff()
