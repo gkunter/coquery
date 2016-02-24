@@ -114,7 +114,7 @@ class Options(object):
         self.args.column_width = {}
         self.args.column_color = {}
         self.args.column_names = {}
-        self.args.column_visibility = {}
+        self.args.column_visibility = collections.defaultdict(dict)
         self.args.row_visibility = collections.defaultdict(dict)
         self.args.row_color = {}
         # Set defaults for CSV files:

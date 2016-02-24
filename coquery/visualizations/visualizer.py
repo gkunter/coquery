@@ -52,7 +52,7 @@ import __init__
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
-    
+
 from pyqt_compat import QtGui, QtCore, pyside
 # Tell matplotlib if PySide is being used:
 if pyside:
@@ -72,6 +72,11 @@ from matplotlib.figure import Figure
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+import matplotlib.backends.backend_qt4agg
+from matplotlib.backends.backend_qt5 import SubplotToolQt
+from matplotlib.widgets import SubplotTool
+from matplotlib.backends.qt_editor.formsubplottool import UiSubplotTool
+
 import matplotlib.pyplot as plt
 
 import seaborn as sns
@@ -104,6 +109,9 @@ import seaborn as sns
     #return i
 
 class CoqNavigationToolbar(NavigationToolbar):
+    """
+    See matplotlib/backends/backend_qt5.py for the implementation.
+    """
     
     def __init__(self, canvas, parent, coordinates=True):
         super(CoqNavigationToolbar, self).__init__(canvas, parent, coordinates)
@@ -156,6 +164,15 @@ class CoqNavigationToolbar(NavigationToolbar):
             self.parent.visualizer.options.update(new_values)
             self.parent.update_plot()
 
+    def configure_subplots(self):
+        self.margin_dialog = SubplotToolQt(self.canvas.figure, self.parent)
+        self.margin_dialog.setWindowTitle("Adjust figure margins – Coquery")
+        self.margin_dialog.donebutton.hide()
+        self.margin_dialog.resetbutton.hide()
+        self.margin_dialog.tightlayout.setText("&Reset")
+        self.margin_dialog.show()
+        options.cfg.main_window.widget_list.add(self.margin_dialog)
+        
 class BaseVisualizer(QtCore.QObject):
     """ 
     Define a class that contains the code to visualize data in several
@@ -413,12 +430,14 @@ class BaseVisualizer(QtCore.QObject):
         except NameError:
             self._time_columns = []
        
+        #options.cfg.main_window.Session.mask_data()
+       
         try:
             self._table = self._df[column_order]
         except TypeError:
             self._table = options.cfg.main_window.Session.data_table.iloc[
                     ~options.cfg.main_window.Session.data_table.index.isin(
-                        pd.Series(options.cfg.row_visibility[queries.TokenQuery].keys()))]
+                        pd.Series(list(options.cfg.row_visibility[queries.TokenQuery].keys())))]
 
             self._table = self._table[column_order]
 
@@ -477,7 +496,7 @@ class BaseVisualizer(QtCore.QObject):
         #if not self._groupby:
             #raise VisualizationNoDataError
 
-    def add_legend(self, levels=None):
+    def add_legend(self, levels=None, loc="lower left"):
         """
         Add a legend to the figure, using the current option settings.
         """
@@ -494,14 +513,14 @@ class BaseVisualizer(QtCore.QObject):
                 title=self.options.get("label_legend", ""), 
                 frameon=True,
                 framealpha=0.7, 
-                loc="lower left").draggable()
+                loc=loc).draggable()
         else:
             self.g.fig.get_axes()[-1].legend(
                 ncol=self.options.get("label_legend_columns", 1),
                 title=self.options.get("label_legend", ""), 
                 frameon=True,
                 framealpha=0.7, 
-                loc="lower left").draggable()
+                loc=loc).draggable()
 
     def adjust_fonts(self):
         """
@@ -848,7 +867,7 @@ class VisualizerDialog(QtGui.QWidget):
         self.ui.label.hide()
         
         self.setWindowIcon(options.cfg.icon)
-        self.dialog_stack = []
+        self.margin_dialoglog_stack = []
 
         self.frozen = False
         self.spinner = QtGui.QSpinBox()
@@ -889,6 +908,13 @@ class VisualizerDialog(QtGui.QWidget):
         Finally, the draw() method of the visualizer is called to plot the
         visualization again. 
         """
+        if hasattr(self.toolbar, "margin_dialog"):
+            _margin_dialog = True
+            self.toolbar.margin_dialog.hide()
+            self.toolbar.margin_dialog.close()
+            options.cfg.main_window.widget_list.remove(self.margin_dialog)
+            del self.toolbar.margin_dialog
+            
         if self.smooth:
             self.spinner.setEnabled(False)
             self.visualizer.update_data(bandwidth=self.spinner.value())
@@ -901,12 +927,18 @@ class VisualizerDialog(QtGui.QWidget):
         self.add_matplot()
             
         self.visualizer.draw()
+        if self.visualizer.options.get("label_main"):
+            self.visualizer.g.fig.suptitle(self.visualizer.options["label_main"])
+
         self.visualizer.g.fig.tight_layout()
         self.visualizer.adjust_axes()
         self.visualizer.adjust_fonts()
-
         if self.smooth:
             self.spinner.setEnabled(True)
+        self.visualizer.g.fig.tight_layout()
+        
+        if _margin_dialog:
+            self.toolbar.configure_subplots()
 
     def add_matplot(self):
         """ Add a matplotlib canvas and a navigation bar to the dialog. """
@@ -1066,12 +1098,15 @@ class VisualizerDialog(QtGui.QWidget):
         self.repaint()
         
         self.visualizer.g.fig.canvas.draw()
+        if self.visualizer.options.get("label_main"):
+            self.visualizer.g.fig.suptitle(self.visualizer.options["label_main"])
+
         self.visualizer.g.fig.tight_layout()
         self.visualizer.adjust_axes()
         self.visualizer.adjust_fonts()
 
         self.visualizer.set_hover()
-
+        self.visualizer.g.fig.tight_layout()
         self.show()
 
         # Create an alert in the system taskbar to indicate that the

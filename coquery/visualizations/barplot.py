@@ -159,16 +159,19 @@ class Visualizer(vis.BaseVisualizer):
     def draw(self):
         """ Plot bar charts. """
         def plot_facet(data, color):
-            if self.percentage:
+            if self.stacked:
                 ax=plt.gca()
                 if len(self._groupby) == 2:
                     # seperate stacked percentage bars for each grouping
                     # variable
-                    self.ct = pd.crosstab(
-                        data[self._groupby[0]], data[self._groupby[-1]])
+                    self.ct = pd.crosstab(data[self._groupby[0]], data[self._groupby[-1]])
                     df = pd.DataFrame(self.ct)
                     df = df.reindex_axis(self._levels[1], axis=1).fillna(0)
-                    df = df[self._levels[1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
+                    if self.percentage:
+                        df = df[self._levels[1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
+                    else:
+                        df = df[self._levels[1]].cumsum(axis=1)
+                        
                     df = df.reindex_axis(self._levels[0], axis=0).fillna(0)
                     order = df.columns
                     df = df.reset_index()
@@ -185,7 +188,10 @@ class Visualizer(vis.BaseVisualizer):
                     # spine chart)
                     self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
                     df = pd.DataFrame(self.ct)
-                    df = df.apply(lambda x: 100 * x / x.sum(), axis=0).cumsum(axis=0)
+                    if self.percentage:
+                        df = df.apply(lambda x: 100 * x / x.sum(), axis=0).cumsum(axis=0)
+                    else:
+                        df = df.cumsum(axis=0)
                     df = df.transpose()
                     for i, stack in enumerate(df.columns[::-1]):
                         sns.barplot(
@@ -255,19 +261,18 @@ class Visualizer(vis.BaseVisualizer):
                     left=False, right=False, top=False, bottom=False)
 
         self.map_data(plot_facet)
-            
-        # Add axis labels:
+        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
+
         if self.percentage:
             self.g.set(xlim=(0, 100))
-
-        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
-        
-        if self.percentage:
-            # Percentage bars: always add a legend
+            
+        # Add axis labels:
+        if self.stacked:
+            # Stacked bars always show a legend
             if len(self._groupby) == 2:
-                self.add_legend(self._levels[1])
+                self.add_legend(self._levels[1], loc="lower right")
             else:
-                self.add_legend(self._levels[0])
-                
+                self.add_legend(self._levels[0], loc="lower right")
         elif len(self._groupby) == 2:
-            self.add_legend()
+            # Otherwise, only show a legend if there are grouped bars
+            self.add_legend(loc="lower right")

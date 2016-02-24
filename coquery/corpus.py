@@ -1203,6 +1203,14 @@ class CorpusClass(object):
     def get_corpus_size(self, ignore_filters=False):
         """ 
         Return the number of tokens in the corpus.
+
+        If there are currently active filters and ignore_filters is False,
+        the number of tokens that are not filtered is returned. Otherwise, 
+        the total number of tokens in the corpus is returned: either the value 
+        of the resource attribute 'number_of_tokens' (which is usually set 
+        during the installation of the corpus), or the number of rows in the 
+        SQL table. 
+        
         
         Parameters
         ----------
@@ -1215,14 +1223,15 @@ class CorpusClass(object):
         size : int 
             The number of tokens in the corpus, or in the filtered corpus.
         """
-        self.lexicon.table_list = []
-        self.lexicon.joined_tables = []
 
+        if (ignore_filters or not self.resource.filter_list) and hasattr(self.resource, "number_of_tokens"):
+            return self.resource.number_of_tokens
+        
         filter_list = self.resource.translate_filters(self.resource.filter_list)
-        filter_strings = ["{}.{} {} '{}'".format(
-            tab, col, op, val[0]) for col, _, tab, op, val, _ in filter_list]
-            
         if filter_list and not ignore_filters:
+            filter_strings = ["{}.{} {} '{}'".format(tab, col, op, val[0]) for col, _, tab, op, val, _ in filter_list]
+            self.lexicon.table_list = []
+            self.lexicon.joined_tables = []
             for column, corpus_feature, table, operator, value_list, val_range in filter_list:
                 self.lexicon.add_table_path("corpus_id", corpus_feature)
             from_str = "{} WHERE {}".format(" ".join([self.resource.corpus_table] + self.lexicon.table_list), " AND ".join(filter_strings))

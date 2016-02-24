@@ -1583,24 +1583,24 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             for column in table.columns:
                 try:
-                    ot = self.DB.get_optimal_field_type(table.name, column.name).strip()
+                    optimal = self.DB.get_optimal_field_type(table.name, column.name).strip()
                 except TypeError:
                     continue
-                dt = self.DB.get_field_type(table.name, column.name).strip()
-                if dt.lower() != ot.lower() and not ot.lower().split()[0].endswith("text"):
+                current = self.DB.get_field_type(table.name, column.name).strip()
+                if current.lower() != optimal.lower() and "text" not in optimal.lower().split()[0].strip():
                     try:
-                        ot = ot.decode("utf-8")
+                        optimal = optimal.decode("utf-8")
                     except AttributeError:
                         pass
                     self.logger.info("Optimising column {}.{} from {} to {}".format(
-                        table.name, column.name, dt, ot))
+                        table.name, column.name, current, optimal))
                     try:
-                        self.DB.modify_field_type(table.name, column.name, ot)
+                        self.DB.modify_field_type(table.name, column.name, optimal)
                     except Exception as e:
                         print(e)
                         self.logger.warning(e)
                     else:
-                        column.data_type = ot
+                        column.data_type = optimal
                 column_count += 1
 
                 if self._widget:
@@ -1660,7 +1660,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     if this_column.index_length:
                         length = this_column.index_length
                     else:
-                        length = self.DB.get_index_length(self.DB.engine, table, column)
+                        length = sqlhelper.get_index_length(self.DB.engine, table, column)
                 else:
                     length = None
                 
@@ -2015,9 +2015,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """ Wrap up everything after the corpus installation is complete. """
         if self.interrupted:
             self.remove_build()
-            self.logger.info("--- Interrupted (after %.3f seconds) ---" % (time.time() - self.start_time))
+            self.logger.info("--- Interrupted building {} (after {:.3f} seconds) ---".format(self.name, time.time() - self.start_time))
         else:
-            self.logger.info("--- Done (after %.3f seconds) ---" % (time.time() - self.start_time))
+            self.logger.info("--- Done building {} (after {:.3f} seconds) ---".format(self.name, time.time() - self.start_time))
         
     def build(self):
         """ 
@@ -2103,7 +2103,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     current = progress_next(current)
                     self.build_create_indices()
                     progress_done()
-
+                    
                 if self.verify_corpus() and not self.interrupted:
                     current = progress_next(current)
                     self.build_write_module()
@@ -2116,11 +2116,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
                 self.build_finalize()
             except Exception as e:
-                self.remove_build()
                 for x in get_error_repr(sys.exc_info()):
                     print(x)
                 warnings.warn(str(e))
                 print(str(e))
+                self.remove_build()
                 raise e
         self.DB.engine.dispose()
         
