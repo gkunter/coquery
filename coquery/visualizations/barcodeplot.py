@@ -38,12 +38,10 @@ def lineplot(x=None, y=None, data=None, order=None, palette=None,
     if len(order) < 2:
         ax.set(yticks=[])
     else:
-        ax.set(yticks=[0.5 + x for x in range(len(order))])
+        ax.set(yticks=[0.5 + n for n in range(len(order))])
         ax.set(yticklabels=order)
-
     ax.set(xlim=(0, max(x)))
     ax.set(ylim=(len(order), 0))
-
     return ax
 
 class Visualizer(vis.BaseVisualizer):
