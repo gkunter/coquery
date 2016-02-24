@@ -233,6 +233,7 @@ class LexiconClass(object):
                             S = unicode(dummy.S)
                         else:
                             S = dummy.S
+                        S = S.replace("'", "''")
                         S = S.replace('"', '""')
                         format_string = "{} {} '{}'"
                         if self.resource.db_type == SQL_SQLITE and not options.cfg.case_sensitive:
@@ -305,7 +306,6 @@ class LexiconClass(object):
         if stopwords:
             stopword_ids = self.get_stopword_ids()
         S = self.sql_string_get_matching_wordids(token)
-
         df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
         if not len(df.index):
             if token.negated:
