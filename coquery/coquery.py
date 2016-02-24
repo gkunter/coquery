@@ -9,7 +9,7 @@ Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-any later version. A Coquery exception applies as an Additional 
+any later version. A Coquery exception applies as an Additional
 permission under GNU GPL version 3 section 7.
 
 This program is distributed in the hope that it will be useful,
@@ -18,7 +18,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-version 3 along with this program.  If not, see 
+version 3 along with this program.  If not, see
 <http://www.gnu.org/licenses/>. For the Coquery exception, see
 <http://www.coquery.org/license/>
 """
@@ -52,7 +52,7 @@ def check_system():
         if options._use_qt:
             from pyqt_compat import QtGui
             app = QtGui.QApplication(sys.argv)
-            QtGui.QMessageBox.critical(None, 
+            QtGui.QMessageBox.critical(None,
                 "Missing dependencies – Coquery",
                 msg_missing_modules.format("<br/>".join([str(x) for x in options.missing_modules])))
         else:
@@ -89,23 +89,23 @@ def main():
 
             if options.cfg.corpus not in options.cfg.current_resources:
                 raise CorpusUnavailableError(options.cfg.corpus)
-            
+
     except Exception as e:
         print_exception(e)
         sys.exit(1)
 
     # In verbose mode, debugging messages will be printed as well. Also, all
-    # logging messages will be printed to the console, and not only to the 
+    # logging messages will be printed to the console, and not only to the
     # log file.
     if options.cfg.verbose:
         logger.setLevel(logging.DEBUG)
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
         logger.addHandler(stream_handler)
-    
+
     if options.cfg.comment:
         logger.info(options.cfg.comment)
-    
+
     # Run the Application GUI?
     if options.cfg.gui:
         from pyqt_compat import QtGui, QtCore
@@ -116,11 +116,12 @@ def main():
         options.cfg.gui_logger.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
         logger.addHandler(options.cfg.gui_logger)
 
-        options.cfg.app = QtGui.QApplication(sys.argv)
         if sys.platform == "darwin":
             QtGui.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
             QtGui.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
-        
+            QtGui.QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
+        options.cfg.app = QtGui.QApplication(sys.argv)
+
         Coq = CoqueryApp()
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
@@ -150,10 +151,10 @@ def main():
                 Session = session.SessionCommandLine()
             else:
                 Session = session.SessionStdIn()
-        
+
         # Catch keyboard interruptions:
         try:
-            # Check if profiling is requested. If so, wrap the profiler 
+            # Check if profiling is requested. If so, wrap the profiler
             # around the query execution:
             if options.cfg.profile:
                 import cProfile
@@ -173,5 +174,3 @@ if __name__ == "__main__":
             print("Execution time (25 times): {}".format(benchmark_time))
             sys.exit(0)
     main()
-
-    
