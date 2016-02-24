@@ -11,24 +11,25 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 import options
 from defines import *
 from pyqt_compat import QtGui
 
 import visualizer as vis
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-from beeswarm import *
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
 
     def format_coord(self, x, y, title):
-        return "Corpus position: {}".format(int(y))
+        return "{}: <b>{}</b>, corpus position: {}".format(
+            self._groupby[-1], sorted(self._levels[-1])[int(round(x))], int(y))
     
     def setup_figure(self):
-        with sns.axes_style("whitegrid"):
+        with sns.axes_style("ticks"):
             super(Visualizer, self).setup_figure()
  
     def set_defaults(self):
@@ -42,25 +43,39 @@ class Visualizer(vis.BaseVisualizer):
             self.options["label_x_axis"] = self._groupby[0]
 
     def onclick(self, event):
-         options.cfg.main_window.result_cell_clicked(token_id=int(event.ydata))
+        try:
+            options.cfg.main_window.result_cell_clicked(token_id=int(event.ydata))
+        except TypeError:
+            pass
  
     def draw(self):
         def plot_facet(data, color):
-            values = [data[data[self._groupby[-1]] == x]["coquery_invisible_corpus_id"].values for x in self._levels[-1]]
-
-            col = ["#{:02X}{:02X}{:02X}".format(
-                    int(255*r), int(255*g), int(255*b)) for r, g, b in self.options["color_palette_values"]][:len(values)]
-            beeswarm(
-                values=values,
-                method="center",
-                s=5,
-                positions=range(len(self._levels[-1])),
-                col=col, 
-                ax=plt.gca())
+            if hasattr(sns, "swarmplot"):
+                ax = sns.swarmplot(
+                    x=data[self._groupby[-1]],
+                    y=data["coquery_invisible_corpus_id"],
+                    order=sorted(self._levels[-1]),
+                    palette=self.options["color_palette_values"],
+                    data=data)
+            else:
+                # If the current Seaborn version doesn't provide swarmplots
+                # yet (they were introduced in 0.7.0), use an alternative 
+                # swarm package (see https://github.com/mgymrek/pybeeswarm)
+                from beeswarm import *
+                values = [data[data[self._groupby[-1]] == x]["coquery_invisible_corpus_id"].values for x in sorted(self._levels[-1])]
+                col = ["#{:02X}{:02X}{:02X}".format(int(255*r), int(255*g), int(255*b)) for r, g, b in self.options["color_palette_values"]][:len(values)]
+                beeswarm(
+                    values=values,
+                    method="center",
+                    s=5,
+                    positions=range(len(self._levels[-1])),
+                    col=col, 
+                    ax=plt.gca())
         
         self.g.map_dataframe(plot_facet)
-        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
-        self.g.set(xticklabels=self._levels[-1])
-        self.g.fig.tight_layout()
 
-        #sns.despine(self.g.fig, left=False, right=False, top=False, bottom=False)
+        self.g.set(ylim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
+        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
+        if not hasattr(sns, "swarmplot"):
+            self.g.set(xticklabels=self._levels[-1])
+        self.g.fig.tight_layout()
