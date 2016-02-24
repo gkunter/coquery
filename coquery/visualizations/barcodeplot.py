@@ -24,48 +24,40 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-
-def lineplot(a, level=0, start=0, end=1, axis="x", color="black", ax=None, **kwargs):
-    """Plot datapoints in an array as sticks on an axis.
-
-    Parameters
-    ----------
-    a : vector
-        1D array of observations.
-    height : scalar, optional
-        Height of ticks as proportion of the axis.
-    axis : {'x' | 'y'}, optional
-        Axis to draw rugplot on.
-    ax : matplotlib axes
-        Axes to draw plot into; otherwise grabs current axes.
-    kwargs : key, value mappings
-        Other keyword arguments are passed to ``axvline`` or ``axhline``.
-
-    Returns
-    -------
-    ax : matplotlib axes
-        The Axes object with the plot on it.
-
-    """
+def lineplot(x=None, y=None, data=None, order=None, palette=None,
+             linewidth=0, ax=None, orient="v", **kwargs):
     if ax is None:
         ax = plt.gca()
-    vertical = kwargs.pop("vertical", axis == "y")
-    func = ax.axhline if vertical else ax.axvline
-    kwargs.setdefault("linewidth", 1)
-    a.reset_index(drop=True, inplace=True)
-    level.reset_index(drop=True, inplace=True)
-    for i in a.index:
-        func(a[i], start[level[i]], end[level[i]], color=color[level[i]], **kwargs)
+    if not order:
+        order = y.unique()
+    order = list(sorted(order))
+    func = plt.vlines if orient=="v" else plt.hlines
+    for i, lev in enumerate(order):
+        func(x[y == lev], i + 0.025, i + 0.975, colors=palette[i], linewidth=1)
+
+    if len(order) < 2:
+        ax.set(yticks=[])
+    else:
+        ax.set(yticks=[0.5 + x for x in range(len(order))])
+        ax.set(yticklabels=order)
+
+    ax.set(xlim=(0, max(x)))
+    ax.set(ylim=(len(order), 0))
+
     return ax
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
     
     def format_coord(self, x, y, title):
-        return "Corpus position: {}".format(int(x))
+        return "{}: <b>{}</b>, Corpus position: {}".format(
+            self._groupby[-1], sorted(self._levels[-1])[int(y)], int(x))
     
     def onclick(self, event):
-         options.cfg.main_window.result_cell_clicked(token_id=int(event.xdata))
+        try:
+            options.cfg.main_window.result_cell_clicked(token_id=int(event.xdata))
+        except TypeError:
+            pass
     
     def set_defaults(self):
         self.options["color_palette"] = "Paired"
@@ -88,32 +80,18 @@ class Visualizer(vis.BaseVisualizer):
         token id so that tokens that occur in the same part of the corpus
         will also have lines that are placed close to each other. """
         def plot_facet(data, color):
-            offset = 0.025 * (1 / len(self._levels[0]))
-            starts = dict(zip(
-                self._levels[0],
-                [offset + x / len(self._levels[0]) for x in range(len(self._levels[0]))]))
-            ends = dict(zip(
-                self._levels[0],
-                [(x+1) / len(self._levels[0]) - offset for x in range(len(self._levels[0]))]))
-                #sns.color_palette("Paired", len(self._levels[0]))))
-            colors = dict(zip(
-                self._levels[0],
-                self.options["color_palette_values"]))
-            lineplot(data.coquery_invisible_corpus_id,
-                     level=data[self._groupby[-1]],
-                     start=starts, end=ends, color=colors, ax=plt.gca())
+            lineplot(
+                    x=data["coquery_invisible_corpus_id"],
+                    y=data[self._groupby[-1]],
+                    order=self._levels[-1],
+                    palette=self.options["color_palette_values"],
+                    data=data)
 
-        sns.despine(self.g.fig, 
-                    left=False, right=False, top=False, bottom=False)
 
-        self._ticks = [(x+0.5) / len(self._levels[0]) for x in range(len(self._levels[0]))]
+        #sns.despine(self.g.fig, 
+                    #left=False, right=False, top=False, bottom=False)
 
         self.map_data(plot_facet)
 
-        if not self._levels or len(self._levels[0]) < 2:
-            self.g.set(yticks=[])
-        else:
-            self.g.set(yticks=self._ticks)
-            self.g.set(yticklabels=self._levels[0])
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
