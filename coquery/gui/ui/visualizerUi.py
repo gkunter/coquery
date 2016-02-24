@@ -27,7 +27,7 @@ class Ui_Visualizer(object):
         Visualizer.setObjectName(_fromUtf8("Visualizer"))
         Visualizer.resize(640, 480)
         self.verticalLayout_2 = QtGui.QVBoxLayout(Visualizer)
-        self.verticalLayout_2.setContentsMargins(0, -1, 0, 0)
+        self.verticalLayout_2.setMargin(0)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.frame = QtGui.QFrame(Visualizer)
         self.frame.setFrameShape(QtGui.QFrame.NoFrame)
