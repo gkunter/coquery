@@ -67,6 +67,7 @@ class Options(object):
         self.args.query_label = ""
         self.args.input_path = ""
         self.args.query_string = ""
+        self.args.ask_on_quit = True
         self.args.save_query_string = True
         self.args.save_query_file = True
         self.args.reaggregate_data = True
