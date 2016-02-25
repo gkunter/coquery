@@ -277,8 +277,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer.start(10000)
 
         if sys.platform == "darwin":
-            self.menuBar().setNativeMenuBar(False)
-
+            self.menuBar = QtGui.QMenuBar()
+            
     def statusBar(self):
         if hasattr(self.ui, "statusbar"):
             return self.ui.statusbar
