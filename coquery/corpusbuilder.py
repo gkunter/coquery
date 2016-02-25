@@ -440,7 +440,7 @@ class Table(object):
         Returns
         -------
         id : int 
-            The id of the entry, as it is stored in the MySQL table.
+            The id of the entry, as it is stored in the SQL table.
         """
         try:
             row_id = self._add_cache[tuple([values[x] for x in self._row_order])][0]
@@ -1106,14 +1106,32 @@ class BaseCorpusBuilder(corpus.BaseResource):
         file_name : string
             The path name of the file that is to be processed
         """
-        
-        # Read raw text from file:
+
+
+        # try to identify supported file types:
+
+        raw_text = None
+        _, ext = os.path.splitext(file_name)
+
+        with open(file_name, "rb") as fp:
+            first_line = fp.readline()
+        # try to harvest text from PDF documents:
         try:
-            with codecs.open(file_name, "r", encoding=self.arguments.encoding) as input_file:
-                raw_text = input_file.read()
-        except UnicodeDecodeError:
-            with codecs.open(file_name, "r", encoding="ISO-8859-1") as input_file:
-                raw_text = input_file.read()
+            header = first_line[:5].decode("utf-8")
+            if header == "%PDF-":
+                import pdf2txt
+                raw_text = pdf2txt.pdf_to_txt(file_name)
+        except (UnicodeDecodeError, TypeError) as e:
+            pass
+
+        if raw_text == None:
+            # Read raw text from file:
+            try:
+                with codecs.open(file_name, "r", encoding=self.arguments.encoding) as input_file:
+                    raw_text = input_file.read()
+            except UnicodeDecodeError:
+                with codecs.open(file_name, "r", encoding="ISO-8859-1") as input_file:
+                    raw_text = input_file.read()
             
         tokens = []
 
@@ -2081,6 +2099,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 if self.arguments.l and not self.interrupted:
                     current = progress_next(current)
                     self.build_load_files()
+                    self.commit_data()
                     progress_done()
 
                 if self.arguments.self_join and not self.interrupted:
