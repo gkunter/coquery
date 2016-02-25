@@ -55,7 +55,6 @@ class BuilderClass(BaseCorpusBuilder):
                       "lexicon.txt", 
                       "Sub-genre codes.txt"]
     expected_files = special_files + [
-        "coca-sources.txt", "lexicon.txt", "Sub-genre codes.txt",
         "db_acad_1990.txt", "db_acad_1991.txt", "db_acad_1992.txt", 
         "db_acad_1993.txt", "db_acad_1994.txt", "db_acad_1995.txt", 
         "db_acad_1996.txt", "db_acad_1997.txt", "db_acad_1998.txt", 
