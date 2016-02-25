@@ -61,10 +61,10 @@ class Visualizer(vis.BaseVisualizer):
                 # If the current Seaborn version doesn't provide swarmplots
                 # yet (they were introduced in 0.7.0), use an alternative 
                 # swarm package (see https://github.com/mgymrek/pybeeswarm)
-                from beeswarm import *
+                import beeswarm
                 values = [data[data[self._groupby[-1]] == x]["coquery_invisible_corpus_id"].values for x in sorted(self._levels[-1])]
                 col = ["#{:02X}{:02X}{:02X}".format(int(255*r), int(255*g), int(255*b)) for r, g, b in self.options["color_palette_values"]][:len(values)]
-                beeswarm(
+                beeswarm.beeswarm(
                     values=values,
                     method="center",
                     s=5,
