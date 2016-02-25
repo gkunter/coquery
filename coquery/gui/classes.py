@@ -354,7 +354,6 @@ class CoqSpinner(QtGui.QWidget):
         return anim
 
     def __init__(self, size=None, *args, **kwargs):
-        print(size)
         super(CoqSpinner, self).__init__(*args, **kwargs)
         self._layout = QtGui.QHBoxLayout(self)
         self._label = QtGui.QLabel()
