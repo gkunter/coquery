@@ -556,7 +556,10 @@ class TokenQuery(object):
             elif column == "statistics_query_entropy":
                 df[column] = self.entropy
             elif column == "statistics_query_proportion":
-                df = pd.merge(df, self.freqs, on=columns)
+                try:
+                    df = pd.merge(df, self.freqs, on=columns)
+                except ValueError:
+                    pass
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
