@@ -1310,12 +1310,61 @@ _recent_python = sys.version_info < (2, 7)
 _use_nltk = has_module("nltk")
 _use_mysql = has_module("pymysql")
 _use_seaborn = has_module("seaborn")
+_use_pdfminer = has_module("pdfminer")
 _use_qt = has_module("PyQt4") or has_module("PySide")
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:
     if not has_module(mod):
         missing_modules.append(mod)
+
+# the tuples in module_information represent the following
+# - title
+# - minimum version
+# - short description
+# - URL
+module_information = {
+    "SQLAlchemy": ("The Python SQL toolkit",
+            "1.0",
+            "Use SQL databases for corpus storage",
+            "http://http://www.sqlalchemy.org/"),
+    "Pandas": ("Python data analysis library",
+            "0.16",
+            "Provides data structures to manage query result tables",
+            "http://pandas.pydata.org/index.html"),
+    "NLTK": ("The Natural Language Toolkit", 
+             "3.0",
+            "Lemmatization and tagging when building your own corpora", 
+            "http://www.nltk.org"),
+    "PyMySQL": ("A pure-Python MySQL client library",
+            "0.6.4",
+            "Connect to MySQL database servers",
+            "https://github.com/PyMySQL/PyMySQL/"),
+    "PDFMiner": ("PDF parser and analyzer (for Python 2.7)",
+            ""
+            "Build your own corpora from PDF documents",
+            "http://euske.github.io/pdfminer/index.html"),
+    "pdfminer3k": ("PDF parser and analyzer (for Python 3.x)",
+            "1.3",
+            "Build your own corpora from PDF documents",
+            "https://pypi.python.org/pypi/pdfminer3k"),
+    "Seaborn": ("A Python statistical data visualization library",
+            "0.7",
+            "Create visualizations of your query results",
+            "http://stanford.edu/~mwaskom/software/seaborn/")}
+
+missing_optional_modules = []
+if not _use_nltk:
+    missing_optional_modules.append("NLTK")
+if not _use_mysql:
+    missing_optional_modules.append("PyMySQL")
+if not _use_pdfminer:
+    if sys.version_info.major == 2:
+        missing_optional_modules.append("PDFMiner")
+    else:
+        missing_optional_modules.append("pdfminer3k")
+if not _use_seaborn:
+    missing_optional_modules.append("Seaborn")
 
 try:
     logger = logging.getLogger(__init__.NAME)
