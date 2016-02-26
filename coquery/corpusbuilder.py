@@ -1184,6 +1184,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             
             # use a dumb tokenizer that simply splits the file content by 
             # spaces:            
+            
             tokens = raw_text.replace("\n", " ").split(" ")
             
             for token in [x.strip() for x in tokens if x.strip()]:
@@ -1193,9 +1194,35 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 while token and token[0] in string.punctuation:
                     self.add_token(token[0], "PUNCT")
                     token = token[1:]
+                # next, detect any word-final punctuation:
+                final_punctuation = []
+                for ch in reversed(token):
+                    if ch in string.punctuation:
+                        final_punctuation.insert(0, ch)
+                    else:
+                        break
+                if final_punctuation == ["."]:
+                    # a single word-final full stop is considered to be a part 
+                    # of an abbreviation if there are more than one full stop 
+                    # in the token, e.g. in "U.S.A.". Otherwise, it is treated
+                    # as sentence punctuation.
+                    # This simple approach will also strip the full stop from
+                    # abbreviations such as "Mr.".
+                    if token.count(".") > 1:
+                        final_punctuation = []
+                
+                # strip final punctuation from token:
+                if final_punctuation:
+                    token = token[:-len(final_punctuation)]
+                
+                # add the token to the corpus:
                 if token:
-                    # add the token to the corpus:
                     self.add_token(token)
+                    
+                # add final punctuation:
+                for p in final_punctuation:
+                    self.add_token(p, "PUNCT")
+
     
     def add_next_token_to_corpus(self, values):
         self._corpus_id += 1
