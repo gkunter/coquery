@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_Visualizer(object):
     def setupUi(self, Visualizer):
         Visualizer.setObjectName(_fromUtf8("Visualizer"))
-        Visualizer.resize(640, 480)
+        Visualizer.resize(800, 600)
         self.verticalLayout_2 = QtGui.QVBoxLayout(Visualizer)
         self.verticalLayout_2.setMargin(0)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
