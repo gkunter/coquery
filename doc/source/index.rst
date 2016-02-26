@@ -1,3 +1,5 @@
+.. title:: Coquery – a free corpus query tool
+
 .. toctree::
     :hidden:
         
@@ -37,7 +39,7 @@
             <div class="col-xs-4">
                 <h2>Tutorial</h2>
                 <p>Follow these steps to build and query a text corpus in five minutes.</p>
-                <p><a href="doc/tutorial.html" class="btn btn-primary">First steps &raquo;</a></p>
+                <p><a href="doc/tutorial/index.html" class="btn btn-primary">First steps &raquo;</a></p>
             </div>
 
         </div>

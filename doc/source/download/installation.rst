@@ -31,15 +31,15 @@ Installation using pip
 In addition to the Python interpreter, the following set of additional 
 python modules is required in order to run Coquery:
 
-* pandas 0.15.0 or later
+* Pandas 0.15.0 or later
 * SQLAlchemy 1.0 or later
-* PySide 1.2.0 or later OR PyQT4 4.11.0 or later
+* PySide 1.2.0 or later OR PyQt4 4.11.0 or later
 
 Python comes with an easy-to-use module installation system called ``pip``. 
 In order to install Coquery and all required Python modules in a single step, 
 open a command line and execute the following command::
 
-    pip install numpy pandas sqlalchemy pyside coquery
+    pip install coquery
 
 Optional Python modules
 =======================
@@ -48,15 +48,19 @@ If you use the software installation, you may want to install the following
 optional Python packages to enable all features in Coquery. They are already
 included in the binary installation.
 
-* Matplotlib 1.4.0 or later (for visualizations)
-* Seaborn 0.6.0 or later (for visualizations)
-* PyMySQL 0.6.4 or later (for MySQL database connections)
-* Natural Language Toolkit 3.0 or later (for automatic tagging and 
-  lemmatization)
+* `PyMySQL <https://github.com/PyMySQL/PyMySQL/>`, version 0.6.4 or later – A pure-Python MySQL client library (Connect to MySQL database servers)
+* `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`, version 0.7 or later – A Python statistical data visualization library (Create visualizations of your query results)
+* `NLTK <http://www.nltk.org>`, version 3.0 or later – The Natural Language Toolkit (Lemmatization and tagging when building your own corpora)
+* `PDFMiner <http://euske.github.io/pdfminer/index.html>`, current version – PDF parser and analyzer (for Python 2.7) (Build your own corpora from PDF documents)
+* `pdfminer3k <https://pypi.python.org/pypi/pdfminer3k>`, version 1.3 or later – PDF parser and analyzer (for Python 3.x) (Build your own corpora from PDF documents)
 
-The following command installs these modules using ``pip``::
+The following command installs these modules using ``pip`` (for Python 2.7)::
 
-    pip install matplotlib seaborn pymysql nltk
+    pip install pymysql seaborn nltk pdfminer
+    
+The following command installs these modules using ``pip`` (for Python 3.x)::
+
+    pip install pymysql seaborn nltk pdfminer3k
 
 MySQL server
 ============
@@ -89,5 +93,7 @@ Coquery on different computers via the network. In this way, users do not
 have to allocate harddisk space and system resources to the corpus 
 databases.
 
-The configuration of MySQL connections and a guide to setting up a MySQL 
+MySQL connections are only available if the optional python package 
+```pymysql``` is installed on this computer (see previous section). The 
+configuration of MySQL connections and a guide to setting up a MySQL 
 server is described in detail in :ref:`connections`.
