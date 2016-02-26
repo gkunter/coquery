@@ -103,6 +103,8 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.widget_list = []
         self.Session = None
+        
+        self._first_corpus = True
 
         size = QtGui.QApplication.desktop().screenGeometry()
         # Retrieve font and metrics for the CoqItemDelegates
@@ -761,6 +763,16 @@ class CoqueryApp(QtGui.QMainWindow):
         tables.append("coquery")
         
         last_checked = list(self.ui.options_tree.get_checked())
+        
+        # After installing the first corpus during the first launch of 
+        # Coquery, the word_label column is automatically selected so that 
+        # new users unfamiliar with the concept of output columns will get 
+        # reasonable defaults:
+        if options.cfg.first_run:
+            if self._first_corpus:
+                last_checked = ["word_label"]
+                self._first_corpus = False
+        
         self.ui.options_tree.clear()
         
         # populate the self.ui.options_tree with a root for each table:
@@ -2165,14 +2177,14 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.context_left_span.setValue(options.cfg.context_left)
         self.ui.context_right_span.setValue(options.cfg.context_right)
         
-        if options.cfg.context_mode == CONTEXT_NONE:
-            self.ui.radio_context_none.setChecked(True)
+        if options.cfg.context_mode == CONTEXT_KWIC:
+            self.ui.radio_context_mode_kwic.setChecked(True)
         elif options.cfg.context_mode == CONTEXT_STRING:
             self.ui.radio_context_mode_string.setChecked(True)
         elif options.cfg.context_mode == CONTEXT_COLUMNS:
             self.ui.radio_context_mode_columns.setChecked(True)
         else:
-            self.ui.radio_context_mode_kwic.setChecked(True)
+            self.ui.radio_context_none.setChecked(True)
         self.update_context_widgets()
             
         #for filt in list(options.cfg.filter_list):

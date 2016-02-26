@@ -76,6 +76,7 @@ class Options(object):
         self.args.current_server = None
         self.args.current_resources = None
         self.args.main_window = None
+        self.args.first_run = False
 
         self.args.filter_list = []
         self.args.stopword_list = []
@@ -103,7 +104,7 @@ class Options(object):
         except AttributeError:
             self.args.parameter_string = " ".join([x for x in sys.argv [1:]])
 
-        self.args.selected_features= []
+        self.args.selected_features= ["word_label"]
         self.args.external_links = {}
         #self.args.external_links = defaultdict(list)
         self.args.selected_functions = []
@@ -124,6 +125,8 @@ class Options(object):
         self.args.output_separator = ","
         self.args.quote_char = '"'
         self.args.xkcd = None
+        
+        self.args.output_to_lower = True
 
     @property
     def cfg(self):
@@ -463,11 +466,6 @@ class Options(object):
         self.args.show_id = False
         self.args.show_phon = False
 
-        if self.args.context_mode == CONTEXT_COLUMNS:
-            self.args.context_columns = True
-        else:
-            self.args.context_columns = False
-            
         self.args.context_sentence = False
 
         try:
@@ -492,7 +490,6 @@ class Options(object):
                 self.args.query_list = [x.decode("utf8") for x in self.args.query_list]
             except AttributeError:
                 pass
-        
         logger.info("Command line parameters: " + self.args.parameter_string)
         
     def setup_default_connection(self):
@@ -581,11 +578,11 @@ class Options(object):
                         try:
                             self.args.context_mode = config_file.get("main", "context_mode")
                         except NoOptionError:
-                            self.args.context_mode = CONTEXT_KWIC
+                            self.args.context_mode = CONTEXT_NONE
                         try:
                             self.args.output_case_sensitive = config_file.getboolean("main", "output_case_sensitive")
                         except NoOptionError:
-                            self.args.output_case_sensitive = True
+                            self.args.output_case_sensitive = False
                         try:
                             self.args.output_to_lower = config_file.getboolean("main", "output_to_lower")
                         except NoOptionError:
@@ -745,7 +742,8 @@ class Options(object):
                                                 self.args.column_width[column] = int(value)
                                     except ValueError:
                                         pass
-                            
+        else:
+            self.args.first_run = True
 cfg = None
 
 class UnicodeConfigParser(RawConfigParser):
