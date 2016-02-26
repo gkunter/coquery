@@ -1125,15 +1125,13 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         fg = self.get_foreground(option, index)
         bg = self.get_background(option, index)
         if bg:
-            painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
-            painter.setBackground(bg)
             if option.state & QtGui.QStyle.State_Selected:
                 painter.fillRect(option.rect, bg)
             elif value:
                 rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
                 rect.setWidth(option.rect.width() * value)
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
-        if fg:
+        if fg: 
             painter.setPen(QtGui.QPen(fg))
         try:
             if align & QtCore.Qt.AlignLeft:
