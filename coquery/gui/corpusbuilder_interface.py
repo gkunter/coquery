@@ -139,7 +139,8 @@ class InstallerGui(QtGui.QDialog):
                 return            
 
     def display(self):
-        return self.exec_()
+        self.exec_()
+        return self.state
 
     def general_update(self, i):
         self.ui.progress_general.setValue(i)
@@ -199,6 +200,8 @@ class InstallerGui(QtGui.QDialog):
             self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
             self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
+            self.parent().showMessage(S)
+            self.accept()
         self.parent().showMessage(S)
         
     def install_exception(self):
