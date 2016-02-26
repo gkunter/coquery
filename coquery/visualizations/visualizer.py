@@ -912,7 +912,7 @@ class VisualizerDialog(QtGui.QWidget):
             _margin_dialog = True
             self.toolbar.margin_dialog.hide()
             self.toolbar.margin_dialog.close()
-            options.cfg.main_window.widget_list.remove(self.margin_dialog)
+            options.cfg.main_window.widget_list.remove(self.toolbar.margin_dialog)
             del self.toolbar.margin_dialog
             
         if self.smooth:
