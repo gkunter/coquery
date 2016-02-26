@@ -136,15 +136,7 @@ class LexiconClass(object):
         current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
         rc_feature = getattr(self.resource, QUERY_ITEM_POS)
         _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-        if self.resource.db_type == SQL_MYSQL:
-            S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-            getattr(self.resource, "{}_id".format(table)),
-            getattr(self.resource, "{}_table".format(table)),
-            getattr(self.resource, rc_feature),
-            self.resource.get_operator(current_token),
-            pos)
-        else:
-            S = "SELECT {} FROM {} WHERE {} {} '{}' COLLATE NOCASE LIMIT 1".format(
+        S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
             getattr(self.resource, "{}_id".format(table)),
             getattr(self.resource, "{}_table".format(table)),
             getattr(self.resource, rc_feature),
@@ -236,8 +228,12 @@ class LexiconClass(object):
                         S = S.replace("'", "''")
                         S = S.replace('"', '""')
                         format_string = "{} {} '{}'"
-                        if self.resource.db_type == SQL_SQLITE and not options.cfg.case_sensitive:
-                            format_string = "{} {} '{}' COLLATE NOCASE"
+                        if options.cfg.query_case_sensitive:
+                            if self.resource.db_type == SQL_SQLITE:
+                                format_string = "{} COLLATE BINARY".format(format_string)
+                            elif self.resource.db_type == SQL_MYSQL:
+                                format_string = "BINARY {} {} '{}'"
+                                
                         sub_clauses.append(format_string.format(
                             target, self.resource.get_operator(dummy), S))
             if sub_clauses:

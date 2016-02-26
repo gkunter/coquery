@@ -109,7 +109,20 @@ class Settings(QtGui.QDialog):
 
     def set_ui_options(self):
         try:
-            self.ui.check_ignore_case.setChecked(not bool(self._options.case_sensitive))
+            if not self._options.output_case_sensitive:
+                try:
+                    if self._options.output_to_lower:
+                        self.ui.radio_output_case_lower.setChecked(True)
+                    else:
+                        self.ui.radio_output_case_upper.setChecked(True)
+                except AttributeError:
+                    self.ui.radio_output_case_lower.setChecked(True)
+            else:
+                self.ui.radio_output_case_leave.setChecked(True)
+        except AttributeError as e:
+            self.ui.radio_output_case_leave.setChecked(True)
+        try:
+            self.ui.check_ignore_case_query.setChecked(not self._options.query_case_sensitive)
         except AttributeError:
             pass
         #try:
@@ -158,7 +171,9 @@ class Settings(QtGui.QDialog):
             pass
         
     def change_options(self):
-        self._options.case_sensitive = not bool(self.ui.check_ignore_case.isChecked())
+        self._options.output_case_sensitive = bool(self.ui.radio_output_case_leave.isChecked())
+        self._options.output_to_lower = bool(self.ui.radio_output_case_lower.isChecked())
+        self._options.query_case_sensitive = not bool(self.ui.check_ignore_case_query.isChecked())
         #self._options.reaggregate_data = bool(self.ui.check_reaggregate_data.isChecked())
         #self._options.server_side= bool(self.ui.check_server_side.isChecked())
         #self._options.ignore_punctuation = bool(self.ui.check_ignore_punctuation.isChecked())

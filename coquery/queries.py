@@ -328,11 +328,15 @@ class TokenQuery(object):
                 connection.close()
                 self.add_output_columns(self.Session)
 
-            if not options.cfg.case_sensitive and len(df.index) > 0:
+            if not options.cfg.output_case_sensitive and len(df.index) > 0:
                 for x in df.columns:
                     if x.startswith("coq_word") or x.startswith("coq_lemma"):
                         try:
-                            df[x] = df[x].apply(lambda x: x.lower() if x else x)
+                            if options.cfg.output_to_lower:
+                                df[x] = df[x].apply(lambda x: x.lower() if x else x)
+                            else:
+                                df[x] = df[x].apply(lambda x: x.upper() if x else x)
+
                         except AttributeError:
                             pass
             df = self.apply_functions(df)
@@ -503,13 +507,16 @@ class TokenQuery(object):
                 self.entropy = 0
             else:
                 # get a frequency table for the current data frame:
-                if options.cfg.case_sensitive:
+                if options.cfg.output_case_sensitive:
                     self.freqs = df.groupby(columns).count().reset_index()
                 else:
                     df2 = df
                     for column in df2.columns:
                         if df2[column].dtype == object:
-                            df2[column] = df2[column].str.lower()
+                            if options.cfg.output_to_lower:
+                                df2[column] = df2[column].str.lower()
+                            else:
+                                df2[column] = df2[column].str.upper()
                     self.freqs = df2.groupby(columns).count().reset_index()
                 columns.append("statistics_frequency")
                 self.freqs.columns = columns
@@ -990,11 +997,17 @@ class CollocationQuery(TokenQuery):
             right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
             left_context_span = df[fix_col + left_cols]
             right_context_span = df[fix_col + right_cols]
-            if not options.cfg.case_sensitive:
-                for column in left_cols:
-                    left_context_span[column] = left_context_span[column].apply(lambda x: x.lower())
-                for column in right_cols:
-                    right_context_span[column] = right_context_span[column].apply(lambda x: x.lower())
+            if not options.cfg.output_case_sensitive:
+                if options.cfg.output_to_lower:
+                    for column in left_cols:
+                        left_context_span[column] = left_context_span[column].apply(lambda x: x.lower())
+                    for column in right_cols:
+                        right_context_span[column] = right_context_span[column].apply(lambda x: x.lower())
+                else:
+                    for column in left_cols:
+                        left_context_span[column] = left_context_span[column].apply(lambda x: x.upper())
+                    for column in right_cols:
+                        right_context_span[column] = right_context_span[column].apply(lambda x: x.upper())
 
             left = left_context_span[left_cols].stack().value_counts()
             right = right_context_span[right_cols].stack().value_counts()

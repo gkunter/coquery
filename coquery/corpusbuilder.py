@@ -528,6 +528,7 @@ class Table(object):
                             column.data_type))
                     columns_added.add(column.name)
                 elif db_type == SQL_SQLITE:
+                    # replace ENUM by VARCHAR:
                     match = re.match("^\s*enum\((.+)\)(.*)$", column.data_type, re.IGNORECASE)
                     if match:
                         max_len = 0
@@ -550,6 +551,13 @@ class Table(object):
                         str_list.append("{} {}".format(
                             column.name, data_type))
                     columns_added.add(column.name)
+
+        if db_type == SQL_SQLITE:
+            # make SQLite columns case-insensitive by default
+            for i, x in enumerate(list(str_list)):
+                field_type = x.split()[1]
+                if "VARCHAR" in field_type.upper() or "TEXT" in field_type.upper():
+                    str_list[i] = "{} COLLATE NOCASE".format(x)
 
         S = ", ".join(str_list)
         command_list.insert(0, S)

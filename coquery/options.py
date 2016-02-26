@@ -168,7 +168,8 @@ class Options(object):
 
         # Query options:
         group = self.parser.add_argument_group("Query options")
-        group.add_argument("-C", "--case", help="be case-sensitive (default: be COCA-compatible and ignore case)", action="store_true", dest="case_sensitive")
+        group.add_argument("-C", "--output_case", help="be case-sensitive in the output (default: ignore case)", action="store_true", dest="output_case_sensitive")
+        group.add_argument("--query_case", help="be case-sensitive when querying (default: ignore case)", action="store_true", dest="query_case_sensitive")
         group.add_argument("--one_by_one", help="retrieve results from server one by one (somewhat slower, but uses less memory)", action="store_true", dest="server_side")
         #group.add_argument("-L", "--lemmatize-tokens", help="treat all tokens in query as lemma searches (default: be COCA-compatible and only do lemma searches if explicitly specified in query string)", action="store_true")
         group.add_argument("-r", "--regexp", help="use regular expressions", action="store_true", dest="regexp")
@@ -581,7 +582,18 @@ class Options(object):
                             self.args.context_mode = config_file.get("main", "context_mode")
                         except NoOptionError:
                             self.args.context_mode = CONTEXT_KWIC
-                            
+                        try:
+                            self.args.output_case_sensitive = config_file.getboolean("main", "output_case_sensitive")
+                        except NoOptionError:
+                            self.args.output_case_sensitive = True
+                        try:
+                            self.args.output_to_lower = config_file.getboolean("main", "output_to_lower")
+                        except NoOptionError:
+                            self.args.output_to_lower = True
+                        try:
+                            self.args.query_case_sensitive = config_file.getboolean("main", "query_case_sensitive")
+                        except NoOptionError:
+                            self.args.query_case_sensitive = True
                         try:
                             self.args.custom_installer_path = config_file.get("main", "custom_installer_path")
                         except NoOptionError:
@@ -783,6 +795,12 @@ def save_configuration():
         config.set("main", "csv_quote_char", cfg.quote_char)
     config.set("main", "one_by_one", cfg.server_side)
     config.set("main", "context_mode", cfg.context_mode)
+    config.set("main", "output_case_sensitive", cfg.output_case_sensitive)
+    config.set("main", "query_case_sensitive", cfg.query_case_sensitive)
+    try:
+        config.set("main", "output_to_lower", cfg.output_to_lower)
+    except AttributeError:
+        pass
     if cfg.xkcd != None:
         config.set("main", "xkcd", cfg.xkcd)
     
