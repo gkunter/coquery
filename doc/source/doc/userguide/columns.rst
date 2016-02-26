@@ -1,6 +1,8 @@
+.. title:: Coquery Documentation: Output columns
+
 .. _columns:
 
-.. |tag| image:: /../../../coquery/icons/small-n-flat/SVG/tag.svg
+.. |tag| image:: /../../coquery/icons/small-n-flat/SVG/tag.svg
 
 Output columns
 ==============
@@ -87,11 +89,6 @@ Overall statistics and the Query statistics are initially identical. Yet, the
 columns *Overall entropy* and *Overall proportion* are calculated for the 
 currently visible results table, and their values will be recalculated if you 
 hide or show some of the columns in the results table. 
-
-.. note::
-    Currently, the *Frequency (pmw)* column ignores any corpus filter, and 
-    always normalizes the frequency against the total number of tokens in the 
-    corpus. For details, see :ref:`filters`.
 
 The last special table is the **Coquery** table. The columns of this table 
 allow you to include in the results table the query string that matched the 

@@ -1,3 +1,5 @@
+.. title:: Coquery Documentation: Contexts
+
 .. _contexts:
 
 Working with contexts

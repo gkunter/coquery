@@ -1,3 +1,5 @@
+.. title:: Coquery Documentation: Main interface
+
 .. _interface:
 
 Main interface

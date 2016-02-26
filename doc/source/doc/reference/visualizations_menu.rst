@@ -1,3 +1,6 @@
+.. title:: Coquery Documentation: Visualizations menu
+
+
 .. _visualizations_menu:
 
 Visualizations menu

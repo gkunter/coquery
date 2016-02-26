@@ -1,3 +1,5 @@
+.. title:: Coquery Documentation: Users manual
+
 .. _users:
 
 Users manual

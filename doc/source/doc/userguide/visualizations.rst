@@ -1,3 +1,5 @@
+.. title:: Coquery Documentation: Visualizations
+
 .. _visualizations:
 
 Visualizations

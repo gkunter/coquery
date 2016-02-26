@@ -1,3 +1,5 @@
+.. title:: Coquery Documentation: Query syntax
+
 .. _syntax:
 
 Query syntax

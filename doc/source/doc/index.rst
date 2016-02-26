@@ -1,3 +1,5 @@
+.. title:: Coquery Documentation
+
 Coquery documentation
 #####################
 
@@ -16,3 +18,4 @@ Coquery documentation
     tutorial/index.rst
     userguide/index.rst
     reference/index.rst
+    corpora/index.rst

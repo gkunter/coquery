@@ -1,3 +1,5 @@
+.. title:: Coquery Documentation: Connections
+
 .. _connections:
 
 Database connections
