@@ -126,13 +126,13 @@ msg_missing_modules = """
 <p>Some of the Python modules that are required to run and use Coquery could 
 not be located on your system. The missing modules are:</p>
 <p><code>\t{}</code></p>
-<p>Please refer to <a href="http://coquery.org/documentation/">http://coquery.org/documentation</a>
+<p>Please refer to the <a href="http://coquery.org/doc/">Coquery documentation</a>
 for instructions on how to install the required modules.</p>
 """
 msg_missing_seaborn_module = """
-<p><b>One of the required Python module could not be loaded.</b></p>
-<p>The Python module called 'seaborn' does not appear to be installed on this 
-computer. Without this module, the visualization functions are not available.</p>
+<p><b>The required visualization module could not be loaded.</b></p>
+<p>The Python module called 'Seaborn' is not installed on this computer. 
+Without this module, the visualization functions are not available.</p>
 <p>Please visit the Seaborn website for installation instructions:
 <a href="http://stanford.edu/~mwaskom/software/seaborn/index.html">http://stanford.edu/~mwaskom/software/seaborn/index.html</a>.
 </p>
