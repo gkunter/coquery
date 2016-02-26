@@ -29,7 +29,7 @@ translators, and anybody who wishes to search and analyse a text corpus.
             <div class="col-md-6">
                 <h2>Queries</h2>
                 <ul>
-                    <li>Query by orthography, phonetic transcription, lemma, or gloss, and restrict your query part-of-speech</li>
+                    <li>Query by orthography, phonetic transcription, lemma, or gloss, and restrict your query by part-of-speech</li>
                     <li>Use string functions e.g. to test if a token contains a letter sequence</li>
                     <li>Use the same query syntax for all installed corpora</li>
                     <li>Automate queries by reading them from an input file</li>
