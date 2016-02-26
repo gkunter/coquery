@@ -44,7 +44,7 @@ class Ui_corpusManager(object):
         self.list_corpora.setWidgetResizable(True)
         self.list_corpora.setObjectName(_fromUtf8("list_corpora"))
         self.list_content = QtGui.QWidget()
-        self.list_content.setGeometry(QtCore.QRect(0, 0, 778, 492))
+        self.list_content.setGeometry(QtCore.QRect(0, 0, 778, 522))
         self.list_content.setObjectName(_fromUtf8("list_content"))
         self.list_layout = QtGui.QVBoxLayout(self.list_content)
         self.list_layout.setMargin(0)
@@ -71,16 +71,9 @@ class Ui_corpusManager(object):
         self.button_search_installer.setObjectName(_fromUtf8("button_search_installer"))
         self.horizontalLayout.addWidget(self.button_search_installer)
         self.verticalLayout.addWidget(self.frame)
-        self.buttonBox = QtGui.QDialogButtonBox(corpusManager)
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Close)
-        self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
-        self.verticalLayout.addWidget(self.buttonBox)
         self.verticalLayout.setStretch(0, 1)
 
         self.retranslateUi(corpusManager)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), corpusManager.accept)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), corpusManager.reject)
         QtCore.QMetaObject.connectSlotsByName(corpusManager)
 
     def retranslateUi(self, corpusManager):
