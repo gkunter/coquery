@@ -87,8 +87,8 @@ class Options(object):
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
-        self.args.corpus_source_path = os.path.join(self.args.base_path, "texts")
-        self.args.text_source_path = os.path.expanduser("~")
+        self.args.text_source_path = os.path.join(self.args.base_path, "texts", "alice")
+        self.args.corpus_source_path = os.path.expanduser("~")
         self.args.stopwords_file_path = os.path.expanduser("~")
         self.args.filter_file_path = os.path.expanduser("~")
 
@@ -1341,7 +1341,7 @@ module_information = {
             "Connect to MySQL database servers",
             "https://github.com/PyMySQL/PyMySQL/"),
     "PDFMiner": ("PDF parser and analyzer (for Python 2.7)",
-            ""
+            "",
             "Build your own corpora from PDF documents",
             "http://euske.github.io/pdfminer/index.html"),
     "pdfminer3k": ("PDF parser and analyzer (for Python 3.x)",
@@ -1352,6 +1352,11 @@ module_information = {
             "0.7",
             "Create visualizations of your query results",
             "http://stanford.edu/~mwaskom/software/seaborn/")}
+
+#for x in module_information:
+    #name = x
+    #title, version, desc, url = module_information[x]
+    #print("* `{} <{}>`, version {} or later – {} ({})".format(name, url, version, title, desc))
 
 missing_optional_modules = []
 if not _use_nltk:
