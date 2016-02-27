@@ -19,7 +19,6 @@ import pandas as pd
 
 import __init__
 from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
-import QtProgress
 import errorbox as errorbox
 
 import queryfilter
@@ -29,6 +28,44 @@ import queries
 from errors import *
 from defines import *
 
+class CoqThread(QtCore.QThread):
+    taskStarted = QtCore.Signal()
+    taskFinished = QtCore.Signal()
+    taskException = QtCore.Signal(Exception)
+    taskAbort = QtCore.Signal()
+    
+    def __init__(self, FUN, parent=None, *args, **kwargs):
+        super(CoqThread, self).__init__(parent)
+        self.FUN = FUN
+        self.exiting = False
+        self.args = args
+        self.kwargs = kwargs
+    
+    def __del__(self):
+        self.exiting = True
+        try:
+            self.wait()
+        except RuntimeError:
+            pass
+    
+    def setInterrupt(self, fun):
+        self.INTERRUPT_FUN = fun
+    
+    def quit(self):
+        self.INTERRUPT_FUN()
+        super(CoqThread, self).quit()
+    
+    def run(self):
+        self.taskStarted.emit()
+        self.exiting = False
+        try:
+            self.FUN(*self.args, **self.kwargs)
+        except Exception as e:
+            if self.parent:
+                self.parent().exc_info = sys.exc_info()
+                self.parent().exception = e
+            self.taskException.emit(e)
+        self.taskFinished.emit()
 
 class CoqHelpBrowser(QtGui.QTextBrowser):
     def __init__(self, help_engine, *args, **kwargs):
@@ -976,7 +1013,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.layoutAboutToBeChanged.emit()
 
         options.cfg.main_window.start_progress_indicator()
-        self_sort_thread = QtProgress.ProgressThread(self.do_sort, self)
+        self_sort_thread = CoqThread(self.do_sort, self)
         self_sort_thread.taskFinished.connect(self.sort_finished)
         self_sort_thread.taskException.connect(self.exception_during_sort)
         self_sort_thread.start()

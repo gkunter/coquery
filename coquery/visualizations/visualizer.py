@@ -60,7 +60,6 @@ if pyside:
     mpl.rcParams["backend.qt4"] = "PySide"
 
 from ui.visualizerUi import Ui_Visualizer
-import QtProgress
 
 import options
 from defines import *
@@ -1067,7 +1066,7 @@ class VisualizerDialog(QtGui.QWidget):
             options.cfg.main_window.widget_list.append(self)
             self.add_matplot()
             
-            self.thread = QtProgress.ProgressThread(self.visualizer.draw, parent=self)
+            self.thread = classes.CoqThread(self.visualizer.draw, parent=self)
             self.thread.taskStarted.connect(self.startplot)
             self.thread.taskFinished.connect(self.finishplot)
             self.thread.taskException.connect(self.plotexception)

@@ -22,7 +22,6 @@ from ui.uniqueViewerUi import Ui_UniqueViewer
 import sqlhelper
 import options
 import errorbox
-import QtProgress
 import classes
 
 class UniqueViewer(QtGui.QDialog):
@@ -185,7 +184,7 @@ class UniqueViewer(QtGui.QDialog):
         self.ui.button_details.hide()
         self.ui.label.hide()
 
-        self.thread = QtProgress.ProgressThread(self.get_unique, self)
+        self.thread = classes.CoqThread(self.get_unique, self)
         self.thread.taskFinished.connect(self.finalize)
         self.thread.taskException.connect(self.onException)
         self.thread.start()

@@ -22,7 +22,6 @@ from ui.corpusInstallerUi import Ui_CorpusInstaller
 import logging
 import classes
 import errorbox
-import QtProgress
 from defines import * 
 from errors import *
 import options
@@ -293,7 +292,7 @@ class InstallerGui(QtGui.QDialog):
         #else:
             #self.finish_install()
 
-        self.install_thread = QtProgress.ProgressThread(self.do_install, self)
+        self.install_thread = classes.CoqThread(self.do_install, self)
         self.install_thread.setInterrupt(self.builder.interrupt)
         self.install_thread.taskFinished.connect(self.finish_install)
         self.install_thread.taskException.connect(self.install_exception)
@@ -424,7 +423,7 @@ class BuilderGui(InstallerGui):
 
         if options._use_nltk:
             self._testing = True
-            self.test_thread = QtProgress.ProgressThread(self.test_nltk_core, parent=self)
+            self.test_thread = classes.CoqThread(self.test_nltk_core, parent=self)
             self.test_thread.taskFinished.connect(self.test_nltk_results)
             self._label_text = str(self.ui.label_pos_tagging.text())
             

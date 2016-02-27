@@ -20,7 +20,6 @@ import sys
 import sqlalchemy
 
 from pyqt_compat import QtCore, QtGui
-import QtProgress
 import classes
 from ui.connectionConfigurationUi import Ui_ConnectionConfig
 
@@ -562,7 +561,7 @@ class ConnectionConfiguration(QtGui.QDialog):
             self.ui.hostname.setEnabled(True)
 
         if check_valid_host(hostname):
-            self.probe_thread = QtProgress.ProgressThread(lambda: self.probe_host(hostname), self)
+            self.probe_thread = classes.CoqThread(lambda: self.probe_host(hostname), self)
             self.ui.button_status.setStyleSheet('QPushButton {background-color: grey; color: grey;}')
             self.timer = QtCore.QTimer()
             self.timer.timeout.connect(self.update_timeout)

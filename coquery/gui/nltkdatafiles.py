@@ -16,7 +16,6 @@ import os
 
 from pyqt_compat import QtCore, QtGui
 from ui.nltkDatafilesUi import Ui_NLTKDatafiles
-import QtProgress
 import errorbox
 
 import options
@@ -79,7 +78,7 @@ class NLTKDatafiles(QtGui.QDialog):
         self.ui.progressBar.show()
         self.ui.progressBar.setMaximum(len(self._missing))
         self.ui.progressBar.setValue(0)
-        self.thread = QtProgress.ProgressThread(self.download_packages, self)
+        self.thread = classes.CoqThread(self.download_packages, self)
         self.thread.taskFinished.connect(self.download_finish)
         self.thread.taskException.connect(self.download_exception)
         self.updateLabel.connect(self.update_label)
