@@ -1,1 +1,1 @@
-sphinx-build -b html -c ../coquery/doc source/doc ../coquery/doc/
+sphinx-build -b html -c ../coquery/help source/doc ../coquery/help/
