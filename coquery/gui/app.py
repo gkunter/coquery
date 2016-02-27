@@ -934,8 +934,8 @@ class CoqueryApp(QtGui.QMainWindow):
             
     def file_options(self):
         """ Get CSV file options for current query input file. """
-        import csvOptions
-        results = csvOptions.CSVOptions.getOptions(
+        import csvoptions
+        results = csvoptions.CSVOptions.getOptions(
             str(self.ui.edit_file_name.text()), 
             (options.cfg.input_separator,
              options.cfg.query_column_number,

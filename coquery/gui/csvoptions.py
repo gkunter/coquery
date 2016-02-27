@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-csvOptions.py is part of Coquery.
+csvoptions.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
