@@ -33,7 +33,58 @@ class Visualizer(vis.BaseVisualizer):
         rect = Rectangle((p[0], p[1]), q[0] - p[0], q[1] - p[1], 
                          facecolor=self.colors[name], label=name)
         self.subplot.add_patch(rect)
+       
+    def get_content_tree(self, table, label="count"):
+        """ 
+        Return a tree that contains a tree representation of the table.
         
+        It is assumed that the first column represents the highest tree 
+        level, the second column the second tree level, and so on. The last 
+        column gives the values of the terminal nodes.
+        
+        Parameters
+        ----------
+        table : container object
+            A data object containing one or more columns that will be used
+            as branches for the tree, and a numeric column as the last 
+            column which will be used as the weight value for each branch.
+        label : string
+            The string used to label branch weights.        
+            
+        Returns
+        -------
+        tree : dict
+            A dictionary containing the tree structure of the data table.
+        """
+        tree = {}
+        
+        # go through each table entry:
+        for path in table:
+            parent = tree
+            for i, child in enumerate(path[:-1]):
+                if i == len(path[:-1]) - 1:
+                    parent = parent.setdefault(child, {label: path[-1]})
+                else:
+                    parent = parent.setdefault(child, {})
+        return tree
+
+    def tree_weight(self, tree):
+        """
+        Return the summed values of all terminal nodes in the tree.
+        
+        Parameters
+        ----------
+        tree : dict
+            A dictionary created by :func:`get_content_tree`.
+        """
+        i = 0
+        for node in tree:
+            if isinstance(tree[node], (int, float, long)):
+                i += tree[node]
+            else:
+                i += self.tree_weight(tree[node])
+        return i
+       
     def tree_map(self, root, p, q, axis, color, name=None, label="count"):
         """ P and Q are the upper right and lower left corners of the display. 
         By setting the axis argument to zero the initial partitions are made
