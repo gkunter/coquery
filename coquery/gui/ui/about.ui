@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>480</width>
+    <width>610</width>
     <height>640</height>
    </rect>
   </property>
@@ -84,7 +84,7 @@
       <item>
        <widget class="QLabel" name="label_description">
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Coquery is a corpus query tool.&lt;/p&gt;&lt;p&gt;Copyright (c) {date} Gero Kunter&lt;/p&gt;&lt;p&gt;Initial development supported by:&lt;br/&gt;Department of English, Heinrich-Heine Universität Düsseldorf&lt;/p&gt;&lt;p&gt;Website: &lt;a href=&quot;http://www.coquery.org&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;http://www.coquery.org&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;Follow on Twitter: &lt;a href=&quot;https://twitter.com/CoqueryTool&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;@CoqueryTool&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Coquery is a free corpus query tool.&lt;/p&gt;&lt;p&gt;Copyright (c) {date} Gero Kunter&lt;/p&gt;&lt;p&gt;Initial development supported by:&lt;br/&gt;Department of English, Heinrich-Heine Universität Düsseldorf&lt;/p&gt;&lt;p&gt;Website: &lt;a href=&quot;http://www.coquery.org&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;http://www.coquery.org&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;Follow on Twitter: &lt;a href=&quot;https://twitter.com/CoqueryTool&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;@CoqueryTool&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
