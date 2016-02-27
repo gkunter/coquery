@@ -87,5 +87,10 @@ website for detailed instructions and requirements.
 
 Copyright (c) 2016 Gero Kunter
 
+Initial development was supported by:
+    English Linguistics
+    Institut für Amerikanistik und Amerikanistik
+    Heinrich-Heine-Universität Düsseldorf
+    
 Coquery is free software released under the terms of the 
 [GNU General Public license](https://www.gnu.org/licenses/gpl-3.0-standalone.html) (version 3).
