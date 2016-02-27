@@ -38,7 +38,7 @@ import queries
 import contextviewer
 
 # add required paths:
-sys.path.append(os.path.join(sys.path[0], "visualizations"))
+sys.path.append(os.path.join(sys.path[0], "visualizer"))
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -1657,7 +1657,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 msg_missing_seaborn_module)
             return
         
-        import visualizer
+        import visualization
         
         # try to import the specified visualization module:
         try:
@@ -1673,7 +1673,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         # try to do the visualization:
         try:
-            dialog = visualizer.VisualizerDialog()
+            dialog = visualization.VisualizerDialog()
             dialog.Plot(
                 self.table_model,
                 self.ui.data_preview,
