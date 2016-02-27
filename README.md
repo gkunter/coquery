@@ -13,6 +13,8 @@ Tutorials and documentation can be found on the Coquery website: http://www.coqu
 
 ## Features
 
+An incomplete list of the things you can do with Coquery:
+
 ### Corpora
 * Use the corpus manager to install one of the supported corpora, or to 
   build your own corpus
