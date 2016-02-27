@@ -1,115 +1,118 @@
-# Coquery #
+.. _overview:
 
-Coquery is a corpus query tool.
+About Coquery
+#############
 
-## About ##
-Coquery is a tool that can search a number of linguistic corpora using a unified interface. Its initial purpose was to handle the off-line texts from the [Corpus of Contemporary American English](http://corpus.byu.edu/coca/) on your own computer, but has quickly developed into a more generic corpus query tool.
+.. toctree::
+    :maxdepth: 2
 
-The latest release is version 0.9. 
+Features
+========
 
-## Features ##
-* Different query modes: Frequency, Collocations, Token, Types
-* One query syntax for all supported corpora
-* Flexible selection of query output columns
-* Multiple queries can be read from an input file (useful for creating frequency lists)
-* Data columns from different corpora can be linked
-* Build-in graphical visualizations
-* Simple corpus creation from local text files (including lemmatization and tagging)
-* New corpora can be added quite easily
+Coquery is a free corpus query tool for linguistis, lexicographers, 
+translators, and anybody who wishes to search and analyse a text corpus.
 
-## Supported corpora ##
-* [Bostom University Radio Speech Corpus](https://catalog.ldc.upenn.edu/LDC96S36)
-* [British National Corpus](http://www.natcorp.ox.ac.uk/)
-* [Corpus of Contemporary American English](http://corpus.byu.edu/coca/)
-* [Corpus of Historical American English](http://corpus.byu.edu/coha/)
-* [Buckeye Corpus](http://buckeyecorpus.osu.edu/)
-* [CELEX Lexical Database](https://catalog.ldc.upenn.edu/LDC96L14)
-* [ICE-Nigeria](http://sourceforge.net/projects/ice-nigeria/)
+You can either build your own corpus from a collection of text files
+or PDF documents in a directory on your computer, or install a corpus 
+module for one of the supported corpora (the corpus data files are not
+provided by Coquery).
 
-Coquery does not provide any corpus data. You can only use these corpora if you have acquired the data files from the corpus maintainers. Coquery supplies tools that read these data files into MySQL databases that then can be queried. You can also build and query your own part-of-speech-tagged corpus using Coquery: simply put your text files into a folder and run the necessary tool.
-
-## Getting started ##
-Before you start Coquery for the first time, make sure that all system 
-requirements are met. See the file INSTALLATION.md for details.
-
-### Starting Coquery ###
-
-Coquery can either be run either using a graphical user interface (GUI) or as 
-a command line tool. The GUI offers many features that are not available 
-when using the the command line, e.g. table linking, data functions, extended
-context views, or graphical visualizations. Yet, the command line tool 
-requires less memory and can execute queries somewhat faster. 
-
-For new users, it is recommended that you try the GUI first. You can start it
-by executing the following command from the folder where you unpacked the 
-source code:
+.. raw:: html
     
-```
-python coquery.py --gui
-```
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-6">
+                <h2>Corpora</h2>
+                <ul>
+                    <li>Use the corpus manager to install one of the 
+                    supported corpora, or to build your own corpus</li>
+                    <li>Filter your query for example by year, genre, or speaker gender</li>
+                    <li>Choose which corpus features will be included in your query results</li>
+                    <li>View every token that matches your query within its context</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h2>Queries</h2>
+                <ul>
+                    <li>Query by orthography, phonetic transcription, lemma, or gloss, and restrict your query by part-of-speech</li>
+                    <li>Use string functions e.g. to test if a token contains a letter sequence</li>
+                    <li>Use the same query syntax for all installed corpora</li>
+                    <li>Automate queries by reading them from an input file</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <h2>Analysis</h2>
+                <ul>
+                    <li>Summarize the query results as frequency tables</li>
+                    <li>Calculate entropies and relative frequencies</li>
+                    <li>Fetch collocations, and calculate association statistics like mutual information scores or conditional probabilities</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h2>Visualizations</h2>
+                <ul>
+                    <li>Use bar charts, heat maps, or bubble charts to 
+                    visualize frequency distributions</li>
+                    <li>Illustrate diachronic changes by using time series plots</li>
+                    <li>Show the distribution of tokens within a corpus in a barcode or a beeswarm plot</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3">
+            </div>
+            <div class="col-md-6">
+                <h2>Databases</h2>
+                <ul>
+                    <li>Either use easy-to-use internal databases, or connect to a powerful MySQL server</li>
+                    <li>Access large corpora on a MySQL server over the network</li>
+                    <li>Link data tables from different corpora, e.g. to include phonetic transcriptions in a corpus that does not contain them.</li>
+                </ul>
+            </div>
+            <div class="col-md-3">
+            </div>
+        </div>
+    </div>
+    
 
-### Setting up the MySQL server ###
-The first step that you'll have to do is to ensure that the connectio to the
-MySQL database server can be established. Once you have started the GUI, call
-"MySQL settings" from the Settings menu. 
+Supported corpora
+=================
 
-### Installing a corpus ###
-Now that the MySQL server can be used, you can either install your first 
-corpus, or you can choose a directory with text files in order to 
-compile a custom corpus from these files.
+Coquery already has installers for the following linguistic corpora:
 
-To install a corpus, call "Manage corpora" from the Corpus menu. In the 
-dialog, all currently supported corpora are listed. Choose the corpus that
-you want to install. If you haven't done so yet, you can download the corpus
-data files following the link given for each corpus. Then, press the Install 
-button. In the next dialog, select the directory that contains the corpus 
-data files, and click on "Install". A status bar at the bottom of the dialog 
-will show the progress of the installation. 
+.. raw:: html
 
-Please note that depending on the size and structure of the corpus, the
-installation may take a long time, and require a considerable amount of 
-memory and hard disk space. For example, installing the British National 
-Corpus requires about 3Gb memory and about 6Gb hard disk space. Depending on
-your hardware speed, this process may take four hours or more. Other, smaller
-corpora can be installed almost instantly. The ICE Nigeria for example is 
-typically installed in less than two minutes.
+    <div class="list-group">
+        <a class="list-group-item" href="https://catalog.ldc.upenn.edu/LDC96S36">Bostom University Radio Speech Corpus</a>
+        <a class="list-group-item" href="http://www.natcorp.ox.ac.uk/">British National Corpus</a>
+        <a class="list-group-item" href="http://corpus.byu.edu/coca/">Corpus of Contemporary American English</a>
+        <a class="list-group-item" href="http://corpus.byu.edu/coha/">Corpus of Historical American English</a>
+        <a class="list-group-item" href="http://buckeyecorpus.osu.edu/">Buckeye Corpus</a>
+        <a class="list-group-item" href="https://catalog.ldc.upenn.edu/LDC96L14">CELEX Lexical Database</a>
+        <a class="list-group-item" href="http://sourceforge.net/projects/ice-nigeria/">ICE-Nigeria</a> 
+    </div>
 
-If you wish to use your own collection of texts as a corpus, call "Build new
-corpus" from the Corpus menu. Enter the name of the new corpus, and select the
-directory that contains your text files. If you have the Natural Language 
-Toolkit (NLTK) installed, you can use the toolkit to lemmatize and tag the 
-words in your text files. After pressing Ok, your texts will be processed, and
-be made available for queries.
+Note that in order to use these corpora, you first need to obtain the corpus 
+data from the linked websites.
 
-### Querying a corpus ###
-Coquery uses a syntax that is very similar to the syntax from the BYU corpus resources, with a few extensions and modifications. For example, it is not possible to query the asterisk '*' in COCA, because it is always interpreted as a placeholder for any number of characters. In a Coquery string, the asterisk ``*`` has also this interpretation, but in addition, the term ``\*`` (i.e. an asterisk preceded by a backslash) queries the asterisk.
+If you are missing a corpus from the list of installed corpora, you can 
+either program a custom installer for your corpus, or you can :ref:`contact` 
+the Coquery developer whether an installer for your corpus may be included 
+in a future release of Coquery. 
 
-## Acknowledgements ##
-Initial development was supported by: 
+License
+=======
 
-Anglistik III, English Language and Linguistics
-Heinrich-Heine-Universität Düsseldorf
+Coquery is free software released under the terms of the 
+:ref:`GNU General Public License (version 3) license`. This license gives you 
+the freedom to use Coquery for any purpose. It also allows you to copy, 
+modify, and redistribute the software for as long as the modified software is 
+also licensed under the GNU GPL. 
 
-## License ##
-Copyright (c) Gero Kunter (gero.kunter@coquery.org)
-
-Coquery is free software: you can redistribute it and/or modify
-it under the terms of the [GNU General Public License](http://www.gnu.org/licenses/), 
-either version 3 of the License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-### Additional permission under GNU GPL version 3 section 7 ###
-
-In addition to the terms of the GNU GPL version 3, as a special exception, 
-the copyright holders of Coquery grant you permission to distribute the 
-source code of any corpus installer generated by the "Build new corpus" 
-functionality of Coquery under terms of your choice, so long as 
-the docstring of the corpus installer file contains the following
-statement:
-
-    This corpus installer was generated by the corpus query tool Coquery
-    (http://www.coquery.org).
+Coquery can be :ref:`downloaded download` free of charge. Corpus installers 
+that are not contained in the official download packages may be released 
+under other licenses.
