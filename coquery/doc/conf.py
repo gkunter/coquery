@@ -145,12 +145,12 @@ html_sidebars = {'**' : []}
 
 #html_theme = 'bootstrap'
 #html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
-html_logo = "../logo/logo_small.png"
+html_logo = "../../coquery/icons/artwork/logo_small.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['../../doc/source/_static']
+html_static_path = ['../../html/source/_static']
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'Coquerydoc'

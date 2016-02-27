@@ -1,0 +1,277 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Output menu &mdash; Coquery 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Coquery 0.9 documentation" href="../index.html" />
+    <link rel="up" title="Menu entries" href="menu.html" />
+    <link rel="next" title="Preferences menu" href="preferences_menu.html" />
+    <link rel="prev" title="Help menu" href="help_menu.html" /> 
+  </head>
+  <body role="document">
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="../index.html">
+            <img class="logo" src="../_static/logo_small.png" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="../index.html">Coquery 0.9 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="help_menu.html" title="Help menu"
+             accesskey="P">previous</a> |
+          <a href="preferences_menu.html" title="Preferences menu"
+             accesskey="N">next</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="output-menu">
+<span id="id1"></span><h1>Output menu</h1>
+<div class="section" id="output-column-submenu">
+<span id="id2"></span><h2>Output column submenu</h2>
+<div class="section" id="view-unique-values">
+<h3>View unique values</h3>
+<div class="figure align-left" id="id4">
+<img alt="../_images/uniquevalues.png" src="../_images/uniquevalues.png" />
+<p class="caption"><span class="caption-text">The <cite>Unique values</cite> viewer for the column <em>Word</em> in the table <em>Lexicon</em>
+from the corpus <em>ALICE</em>.</span></p>
+</div>
+<p>This function creates an alphabetical list of all occurring values in the
+column. Each value occurs exactly once in the list. For the column <em>Word</em> in
+the example above, this corresponds to a list of all word types occuring in
+the corpus <em>ALICE</em>.</p>
+<p>Clicking on the list header expands the header to show the number of unique
+values in the list. Clicking on the header again hides this number.</p>
+<p>Clicking &#8216;Ok&#8217; closes the Unique value viewer. Clicking &#8216;Save&#8217; creates a
+comma-separated text file (CSV) containing all unique values.</p>
+</div>
+<div class="section" id="link-to-external-table">
+<h3>Link to external table</h3>
+<div class="figure align-left" id="id5">
+<img alt="../_images/externallink.png" src="../_images/externallink.png" />
+<p class="caption"><span class="caption-text">The <cite>Link to an external table</cite> dialog for the column <em>Word</em> in the table <em>Lexicon</em>
+from the corpus <em>ALICE</em>.</span></p>
+</div>
+<p>This function allows to link the current column to another column from a
+table that is provided by an external corpus. This external table will be
+shown in the Output columns tree as a subtable of the current column.</p>
+<p>If you include an output column from an external table in the results table,
+Coquery will look up the content of the linked column from the current
+corpus in the column from the external table selected in this dialog, and
+display the matching contents from the external table.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If you select an output column from an external table, only those tokens
+from the current corpus will be shown that also have a matching entry
+in the linked external table. Tokens without a matching entry in the
+external table will not be shown in the query results.</p>
+</div>
+<p>By linking columns from the current corpus to external tables in this way,
+a corpus may be extended with annotations not provided by the corpus itself.
+For example, a corpus may be extended with part-of-speech labels by linking
+the <em>Word</em> column to a table from a corpus that contains POS labels.
+Likewise, phonetic transcriptions may be obtained from e.g. an external
+pronunciation dictionary.</p>
+<p>A column can be linked to more than one external table. To remove a linked
+external table, right-click on any output column from that external table,
+and select &#8216;Remove link&#8217;.</p>
+</div>
+<div class="section" id="add-a-function">
+<h3>Add a function</h3>
+<div class="figure align-left" id="id6">
+<a class="reference internal image-reference" href="../_images/functionadd.png"><img alt="../_images/functionadd.png" src="../_images/functionadd.png" style="width: 400px;" /></a>
+<p class="caption"><span class="caption-text">The <cite>Add a function</cite> dialog for the column <em>Word</em> in the table <em>Lexicon</em>
+from the corpus <em>ALICE</em>.</span></p>
+</div>
+<p>By using this dialog, a new output column is created, the values of which are
+calculated on the basis of the values of the current column. The following
+functions are available:</p>
+<blockquote>
+<div><ul class="simple">
+<li>COUNT</li>
+<li>LENGTH</li>
+<li>MATCH</li>
+<li>REGEXP</li>
+</ul>
+</div></blockquote>
+<p>There is an entry field for functions that require an additional parameter.</p>
+<p><strong>COUNT</strong> counts the number of occurrences of the parameter value in the
+current column. For example <code class="docutils literal"><span class="pre">COUNT</span></code> with a parameter value of <code class="docutils literal"><span class="pre">a</span></code> counts
+the number of occurrences of the letter <em>a</em> for each value of the current
+column.</p>
+<p><strong>LENGTH</strong> counts the number of characters for each value of the current
+column. This function does not use the content of the parameter entry field.</p>
+<p><strong>MATCH</strong> returns the text <em>yes</em> for each value of the current column that
+matches the parameter, or <em>no</em> otherwise. Note that the parameter is
+evaluated as a regular expression. For example, <code class="docutils literal"><span class="pre">MATCH</span></code> with a parameter
+value of <code class="docutils literal"><span class="pre">^a|b</span></code> returns <em>yes</em> for all values in the current column that
+begin with either the letter <em>a</em> or the letter <em>b</em>, and <em>no</em> for all other
+values.</p>
+<p><strong>REGEXP</strong> matches each value of the current column with the parameter, and
+returns the matching string. For example, <code class="docutils literal"><span class="pre">REGEXP</span></code> with a parameter value
+of <code class="docutils literal"><span class="pre">plain.*</span></code> returns from all values in the current column the substring
+that starts with the letter sequence <em>plain</em>, followed by any number of
+additional letters. If the parameter does not match a value in the current
+column, the function returns an empty string.</p>
+<p>The following table illustrates the result of <code class="docutils literal"><span class="pre">REGEXP(plain.*)</span></code> for the
+<em>Word</em> column from the corpus <em>ALICE</em>:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="46%" />
+<col width="54%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><strong>Column value</strong></th>
+<th class="head"><strong>Function result</strong></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>plainly</td>
+<td>plainly</td>
+</tr>
+<tr class="row-odd"><td>complaining</td>
+<td>plaining</td>
+</tr>
+<tr class="row-even"><td>explained</td>
+<td>plained</td>
+</tr>
+<tr class="row-odd"><td>complained</td>
+<td>plained</td>
+</tr>
+<tr class="row-even"><td>explain</td>
+<td>plain</td>
+</tr>
+<tr class="row-odd"><td>learning</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>considering</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>promise</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>clean</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>...</td>
+<td>...</td>
+</tr>
+</tbody>
+</table>
+<p>The function output column created in this way can be selected and
+unselected just like a column that is provided by the corpus itself. To
+remove a function, right-click on the function output column and select
+&#8216;Remove function&#8217;.</p>
+</div>
+</div>
+<div class="section" id="column-options-submenu">
+<h2>Column options submenu</h2>
+<div class="section" id="hide-column-show-column">
+<h3>Hide column/Show column</h3>
+</div>
+<div class="section" id="rename-column">
+<h3>Rename column</h3>
+</div>
+<div class="section" id="change-color-reset-color">
+<h3>Change color/Reset color</h3>
+</div>
+<div class="section" id="sorting-do-not-sort">
+<h3>Sorting/Do not sort</h3>
+</div>
+</div>
+<div class="section" id="row-options-submenu">
+<h2>Row options submenu</h2>
+<div class="section" id="hide-row-show-row">
+<h3>Hide row/Show row</h3>
+</div>
+<div class="section" id="id3">
+<h3>Change color/Reset color</h3>
+</div>
+</div>
+</div>
+
+
+          </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguide/index.html">Users manual</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Reference guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="interface.html">Main interface</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="menu.html">Menu entries</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../corpora/index.html">Corpus guide</a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+            <p class="searchtip" style="font-size: 90%">
+                Enter search terms or a module, class or function name.
+            </p>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="help_menu.html" title="Help menu"
+              >previous</a> |
+            <a href="preferences_menu.html" title="Preferences menu"
+              >next</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

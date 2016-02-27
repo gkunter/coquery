@@ -1,0 +1,282 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Coquery Documentation: Query syntax &mdash; Coquery 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Coquery 0.9 documentation" href="../index.html" />
+    <link rel="up" title="Users manual" href="index.html" />
+    <link rel="next" title="Output columns" href="columns.html" />
+    <link rel="prev" title="Users manual" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="../index.html">
+            <img class="logo" src="../_static/logo_small.png" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="../index.html">Coquery 0.9 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="index.html" title="Users manual"
+             accesskey="P">previous</a> |
+          <a href="columns.html" title="Output columns"
+             accesskey="N">next</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="query-syntax">
+<span id="syntax"></span><h1>Query syntax</h1>
+<div class="section" id="query-strings">
+<h2>Query strings</h2>
+<p>A valid query string in Coquery consists of one or more query item.
+Items are separated by spaces. The number of query items in a query
+string is not limited, but query duration increases with the number of
+items.</p>
+</div>
+<div class="section" id="query-items">
+<h2>Query items</h2>
+<p>Query items are the smallest unit in a query string. Each query string
+has to contain at least one query item. The number of query items is not
+limited, but the time required to execute a query increases with the
+number of query items.</p>
+<p>Query items are not case-sensitive: <cite>Walk</cite>, <cite>walk</cite>,
+and <cite>WALK</cite> all specify the same query item. There are four
+different types of query items. Word items, Transcription items, Lemma
+items, and Gloss items.</p>
+<div class="section" id="word-items">
+<h3>Word items</h3>
+<p>Word items are used to match tokens in the corpus based on how they are
+spelled. For example, the Word item <cite>walk</cite> matches all
+tokens that are spelled &lt;i&gt;walk&lt;/i&gt;. Word items are supported by all
+corpora.</p>
+</div>
+<div class="section" id="transcription-items">
+<h3>Transcription items</h3>
+<p>Transcription items are used to match tokens in the corpus based on their
+phonetic or phonological transcription. Slashes are used to distinguish
+Transcription items from Word items. The format of the transcription
+(e.g. International Phonetic Alphabet, SAMPA transcription symbols) may
+differ between corpora, and not all corpora provide phonetic or
+phonological transcriptions.</p>
+<p>In order to match the token &lt;i&gt;walk&lt;/i&gt; in the CMUdict Pronunciation
+Dictionary, the Transcription item <cite>/W AO1 K/</cite> is used. In the
+CELEX Lexical Database, the token &lt;i&gt;walk&lt;/i&gt; is matched by <cite>/&#8217;w$k/</cite>.</p>
+</div>
+<div class="section" id="lemma-items">
+<h3>Lemma items</h3>
+<p>Lemma items are used to match tokens in the corpus that are assigned to
+the same lemma. Square brackets are used to distinguish Lemma items from
+Word items. For example, <cite>[walk]</cite> in CELEX matches the tokens
+&lt;i&gt;walk&lt;/i&gt;, &lt;i&gt;walking&lt;/i&gt;, &lt;i&gt;walks&lt;/i&gt;, and &lt;i&gt;walked&lt;/i&gt;.</p>
+</div>
+<div class="section" id="gloss-items">
+<h3>Gloss items</h3>
+<p>Gloss items are used to match tokens for which a gloss or a translation is
+available, for example in a dictionary corpus. Double quotation marks are
+used to mark gloss items.</p>
+</div>
+</div>
+<div class="section" id="part-of-speech-specifiers">
+<h2>Part-of-speech specifiers</h2>
+<p>If you want to restrict the matches of a query item to a particular
+word-class, you can add a part-of-speech (POS) specifier to the query
+item. POS specifiers are separated from the query item by a dot
+<cite>.</cite>, and consist of a POS tag enclosed in square brackets.
+For example, <cite>walk.[nn1]</cite> matches all &lt;i&gt;walk&lt;/i&gt; tokens in
+the BNC that are tagged as singular nouns.</p>
+<p>The set of available POS tags may differ between different corpora. For
+example, COCA uses the CLAWS7 tag set, while BNC uses CLAWS5. A list of
+the POS tags that are available in the active corpus can be displayed by
+first right-clicking on the part-of-speech column column in the Output
+column list, and then selecting &#8220;View unique values&#8221; from the context
+menu.</p>
+<p>For convenience, and in order to retain syntactic compatibility with the
+BYU syntax (see below), POS specifiers can also be used without providing
+also a query item. Thus, <cite>[nn1]</cite> matches all tokens
+tagged as singular nouns (NN1) in the BNC. Note that this syntax is
+potentially ambiguous: For example, the tag POS is used in the BNC to
+tag the possessive marker &lt;i&gt;&#8217;s&lt;/i&gt;. At the same time, there are a few
+tokens that have &lt;i&gt;POS&lt;/i&gt; as their lemma. Similarly, articles in CLAWS7
+are tagged by AT, which also exists as a lemma &lt;i&gt;at&lt;/i&gt;. In the case of
+such ambiguities between POS tags and lemmas, Coquery is compatible to
+BYU-COCA and gives precedence to the part-of-speech tag.</p>
+<p>Some corpora (e.g. the CMUdict Pronunciation Dictionary) are not tagged
+for part-of-speech. With these corpora, POS specifiers cannot be used.</p>
+</div>
+<div class="section" id="wildcard-characters">
+<h2>Wildcard characters</h2>
+<p>In order to allow for partial matching, query items and POS specifiers
+can contain any number of wildcard characters. There are two types of
+wildcards characters: question marks <cite>?</cite> and asterisks
+<cite>*</cite>. They can be used within any query item type (i.e. Word,
+Lemma, Transcription, Gloss), as well as within the tags of POS specifiers.</p>
+<div class="section" id="question-mark-wildcard">
+<h3>Question mark wildcard</h3>
+<p>A question mark matches exactly one character. This wildcard character
+can be used to match tokens with a specific length. For example, the
+query item <cite>?</cite> matches all words in the corpus that are
+spelled using only a single character, for example &lt;i&gt;I&lt;/i&gt;, the
+numericals &lt;i&gt;1&lt;/i&gt;, &lt;i&gt;2&lt;/i&gt;, and so on, but also tokens that consist of
+a single punctuation mark or a special character such as &lt;i&gt;.&lt;/i&gt;,
+&lt;i&gt;_&lt;/i&gt;, or &lt;i&gt;&#64;&lt;/i&gt;. Similarly, the query item <cite>???</cite> matches
+all tokens that consist of three characters, for example &lt;i&gt;the&lt;/i&gt;,
+&lt;i&gt;web&lt;/i&gt;, &lt;i&gt;911&lt;/i&gt;, or &lt;i&gt;:-)&lt;/i&gt;.</p>
+<p>If the query item contains other characters in addition to question mark
+wildcards, the token has to match exactly the other characters, but can
+have any character in the position of the wildcard. For example,
+<cite>?alk</cite> matches in CELEX the tokens &lt;i&gt;balk&lt;/i&gt;, &lt;i&gt;calk&lt;/i&gt;,
+&lt;i&gt;talk&lt;/i&gt;, and &lt;i&gt;walk&lt;/i&gt;, but not &lt;i&gt;chalk&lt;/i&gt; or &lt;i&gt;stalk&lt;/i&gt;. It
+would also not match &lt;i&gt;alk&lt;/i&gt; if that token existed in
+CELEX.</p>
+</div>
+<div class="section" id="asterisk-wildcard">
+<h3>Asterisk wildcard</h3>
+<p>The asterisk matches any number of characters, including zero and one.
+A query item <cite>*</cite> consisting only of the asterisk wildcard will
+match all tokens in the corpus. This can be useful in longer query
+strings, or if the query item is restricted to a particular part of
+speech (see below).</p>
+<p>For example, <cite>w*</cite> matches any token that begins with the
+character &lt;i&gt;w&lt;/i&gt;. <cite>w*lk</cite> matches any token that begins with
+the character &lt;i&gt;w&lt;/i&gt; and ends with the character sequence &lt;i&gt;lk&lt;/i&gt;,
+e.g. &lt;i&gt;walk&lt;/i&gt;, &lt;i&gt;whelk&lt;/i&gt;, and &lt;i&gt;waterfolk&lt;/i&gt;. <cite>w*l*k</cite>
+matches any token that begins with the character &lt;i&gt;w&lt;/i&gt; and ends in the
+character &lt;i&gt;k&lt;/i&gt;, and which also contains the character &lt;i&gt;l&lt;/i&gt; in any
+position. This item matches the same tokens as <cite>w*lk</cite>, but
+also tokens such as &lt;i&gt;warlock&lt;/i&gt; and &lt;i&gt;woolsack&lt;/i&gt;.</p>
+<p>In combination with POS specifiers, asterisk wildcards are particularly
+useful to match only tokens that belong to a particular word-class. For
+example, <cite>*.[n*]</cite> matches any token with a POS tag that starts
+with &lt;i&gt;n&lt;/i&gt;. In the BNC, this matches the singular noun &lt;i&gt;walk&lt;/i&gt;
+(tagged as NN1) as well as the plural noun &lt;i&gt;walks&lt;/i&gt; (tagged as NN2).</p>
+</div>
+</div>
+<div class="section" id="escaping-characters">
+<h2>Escaping characters</h2>
+<p>If you want to query any character that has a special meaning in query
+items (for example the wildcard characters, the square brackets, the
+quotation mark, or the slashes), you must precede it by the &#8216;escape&#8217;
+character <cite>\</cite> (the backslash). For example, if you want to match
+all</p>
+</div>
+<div class="section" id="quantified-query-items">
+<h2>Quantified query items</h2>
+</div>
+<div class="section" id="union-query-items">
+<h2>Union query items</h2>
+</div>
+<div class="section" id="additional-examples">
+<h2>Additional examples</h2>
+<p><cite>/?/</cite> matches all tokens with a transcription that consists of
+only a single character.</p>
+</div>
+<div class="section" id="coca-byu-syntax-compatibility">
+<h2>COCA/BYU syntax compatibility</h2>
+<p>The syntax of the query strings used by Coquery is modelled after the
+syntax used in the Bigham Young University web corpus interfaces such as
+COCA or BYU-BNC. A description of the BYU syntax can be found here:
+&lt;a href=&#8221;<a class="reference external" href="http://corpus.byu.edu/coca/help/syntax_e.asp">http://corpus.byu.edu/coca/help/syntax_e.asp</a>&#8220;&gt;http://corpus.byu.edu/coca/help/syntax_e.asp&lt;/a&gt;</p>
+<p>Most query strings that are valid in the BYU web interfaces are also
+valid query strings in Coquery. However, where BYU-COCA uses
+<cite>-</cite> to negate query items, Coquery uses the hash mark
+<cite>#</cite>. Also, Coquery currently does not support synonym matching:
+<cite>[=beat].[v*]</cite> matches verbs like &lt;i&gt;hit&lt;/i&gt;, &lt;i&gt;strike&lt;/i&gt;,
+or &lt;i&gt;defeat&lt;/i&gt; in BYU-COCA. In contrast, Coquery matches this query
+string to all tokens that are tagged as verbs, and which are written as
+&lt;i&gt;=beat&lt;/i&gt;. Most likely, no token will be matched.</p>
+<p>Coquery extends the BYU syntax by allowing for quantified query items.
+Also, Transcription queries are not supported by the BYU syntax.</p>
+</div>
+</div>
+
+
+          </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Users manual</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="">Query syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="columns.html">Output columns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contexts.html">Working with contexts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filters.html">Corpus filters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizations.html">Visualizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregations.html">Aggregations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="connections.html">Database connections</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../corpora/index.html">Corpus guide</a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+            <p class="searchtip" style="font-size: 90%">
+                Enter search terms or a module, class or function name.
+            </p>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="index.html" title="Users manual"
+              >previous</a> |
+            <a href="columns.html" title="Output columns"
+              >next</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>
