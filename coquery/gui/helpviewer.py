@@ -36,7 +36,7 @@ class HelpViewer(QtGui.QMainWindow):
         self.ui.action_prev.triggered.connect(self.ui.content.backward)
         self.ui.action_next.triggered.connect(self.ui.content.forward)
         self.ui.action_home.triggered.connect(lambda:
-            self.ui.content.setSource(QtCore.QUrl(os.path.join(options.cfg.base_path, "doc", "html", "index.html"))))
+            self.ui.content.setSource(QtCore.QUrl(os.path.join(options.cfg.base_path, "doc", "index.html"))))
         self.ui.action_zoom_in.triggered.connect(self.ui.content.zoomIn)
         self.ui.action_zoom_in.triggered.connect(self.ui.index.zoomIn)
         self.ui.action_zoom_out.triggered.connect(self.ui.content.zoomOut)
@@ -61,9 +61,9 @@ class HelpViewer(QtGui.QMainWindow):
         
         
         self.ui.content.setSource(QtCore.QUrl(
-            os.path.join(options.cfg.base_path, "doc", "html", "index.html")))
+            os.path.join(options.cfg.base_path, "doc", "index.html")))
         self.ui.index.setSource(QtCore.QUrl(
-            os.path.join(options.cfg.base_path, "doc", "html", "index.html")))
+            os.path.join(options.cfg.base_path, "doc", "index.html")))
 
         self.ui.splitter.setSizes([
             self.sizeHint().width() * 0.38,
