@@ -16,6 +16,7 @@ import unittest
 import sys, os
 
 sys.path.append(os.path.join(sys.path[0], "../installer"))
+sys.path.append(os.path.join(sys.path[0], ".."))
 from coq_install_celex import *
 
 class TestCELEX(unittest.TestCase):
