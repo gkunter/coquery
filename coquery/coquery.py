@@ -2,15 +2,14 @@
 # -*- coding: utf-8 -*-
 
 """
-This is the main module of Coquery.
+This is the main module of Coquery, a free corpus query tool.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-any later version. A Coquery exception applies as an Additional
-permission under GNU GPL version 3 section 7.
+any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,8 +18,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 version 3 along with this program.  If not, see
-<http://www.gnu.org/licenses/>. For the Coquery exception, see
-<http://www.coquery.org/license/>
+<http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals

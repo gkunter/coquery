@@ -1,29 +1,14 @@
 # -*- coding: utf-8 -*-
+
+""" 
+tokens.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-FILENAME: tokens.py -- part of Coquery corpus query tool
-
-This module defines classes that represent tokens in a query string.
-
-"""
-
-# tokens.py contains classes that represent a query token from a query 
-# string. For instance, the COCA query [n*] has [v*] consists of the three
-# tokens [n*], 'has', and [v*]. 
-#
-# The syntax used for the tokens is corpus-specific, and different classes
-# can be used to represent different syntaxes.
-#
-# Each QueryToken should be parseable into several types of specification:
-#    
-# word_specifiers       a list of strings that specify word-forms
-# lemma_specifiers      a list of strings that specifies lemmas
-# class_specifiers      a list of strings that specifies part-of-speech
-# transcript_specifiers a list of strings that specifies phonemic transcripts
-# gloss_specifiers      a list of strings that specify glosses
-# negated               a boolean flag that indicates negation
-#
-# The method parse() is used to translate the token string into these
-# structures.
 
 from __future__ import unicode_literals
 
@@ -38,6 +23,24 @@ class QueryToken(object):
     """ 
     Define the QueryToken class. A query token is one element in a query
     string.
+
+    For instance, the COCA query [n*] has [v*] consists of the three
+    tokens [n*], 'has', and [v*]. 
+    
+    The syntax used for the tokens is corpus-specific, and different classes
+    can be used to represent different syntaxes.
+    
+    Each QueryToken should be parseable into several types of specification:
+       
+    word_specifiers       a list of strings that specify word-forms
+    lemma_specifiers      a list of strings that specifies lemmas
+    class_specifiers      a list of strings that specifies part-of-speech
+    transcript_specifiers a list of strings that specifies phonemic transcripts
+    gloss_specifiers      a list of strings that specify glosses
+    negated               a boolean flag that indicates negation
+    
+    The method parse() is used to translate the token string into these
+    structures.
     """
     
     bracket_open = "("
@@ -145,6 +148,7 @@ class QueryToken(object):
 
 
 class COCAToken(QueryToken):
+
     bracket_open = "["
     bracket_close = "]"
     transcript_open = "/"
