@@ -70,19 +70,6 @@ you can either write your own corpus installer in Python using the installer
 API, or you can [contact](http://www.coquery/org./contact) the Coquery 
 maintainers and ask them for assistance.
 
-## Installation
-
-For Windows, an installer executable is available. For systems running Linux 
-and Mac OS X, Coquery can be installed using the Python Index Packager 
-`pip`:
-    
-```
-    pip install coquery
-```
-
-See the [Download section](http://www.coquery.org/download/) of the Coquery
-website for detailed instructions and requirements.
-    
 ## License
 
 Copyright (c) 2016 Gero Kunter
