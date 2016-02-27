@@ -2,6 +2,9 @@
 
 .. _corpora:
 
+Corpus guide
+############
+
 .. _building:
 
 Building your own corpus
