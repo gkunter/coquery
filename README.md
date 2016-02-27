@@ -77,7 +77,7 @@ and Mac OS X, Coquery can be installed using the Python Index Packager
 `pip`:
     
 ```
-    pip install coqueryf
+    pip install coquery
 ```
 
 See the [Download section](http://www.coquery.org/download/) of the Coquery
