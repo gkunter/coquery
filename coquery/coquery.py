@@ -125,12 +125,12 @@ def main():
         Coq = CoqueryApp()
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
-        Coq.logo = QtGui.QPixmap("{}/logo/title.png".format(sys.path[0]))
+        #Coq.logo = QtGui.QPixmap(Coq.get_icon("title.png"))
+        Coq.logo = Coq.get_icon("title.png").pixmap(16)
         Coq.show()
         Coq.setGUIDefaults()
 
-        options.cfg.icon = QtGui.QIcon()
-        options.cfg.icon.addPixmap(QtGui.QPixmap("{}/logo/logo_tiny.png".format(sys.path[0])))
+        options.cfg.icon = Coq.get_icon("logo_tiny.png", small_n_flat=False)
         Coq.setWindowIcon(options.cfg.icon)
         if options.cfg.profile:
             import cProfile

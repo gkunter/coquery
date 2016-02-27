@@ -662,16 +662,25 @@ class CoqueryApp(QtGui.QMainWindow):
         self.thread.start()
 
     @staticmethod
-    def get_icon(s):
+    def get_icon(s, small_n_flat=True):
         """
         Return an icon that matches the given string.
+        
+        Parameters
+        ----------
+        s : str 
+            The name of the icon. In the case of small-n-flat icons, the name 
+            does not contain an extension, this is added automatically.
+        small_n_flat : bool 
+            True if the icon is from the 'small-n-flat' icon set. False if it 
+            is artwork provided by Coquery (in the icons/artwork/ 
+            subdirectory).
         """
         icon = QtGui.QIcon()
-        #if sys.platform == 'win32':
-            #icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s)))
-        #else:
-            #icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "SVG", "{}.svg".format(s)))
-        icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s)))
+        if small_n_flat:
+            icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s)))
+        else:
+            icon.addFile(os.path.join(options.cfg.base_path, "icons", "artwork", s))
         return icon
 
     def show_query_status(self):
@@ -2129,8 +2138,7 @@ class CoqueryApp(QtGui.QMainWindow):
         dialog = QtGui.QDialog(self)
         dialog.ui = Ui_AboutDialog()
         dialog.ui.setupUi(dialog)
-
-        image = QtGui.QImage(self.logo)
+        image = QtGui.QImage(self.get_icon("title.png", small_n_flat=False).pixmap(dialog.size()))
         painter = QtGui.QPainter(image)
         painter.setPen(QtCore.Qt.black)
         painter.drawText(image.rect(), QtCore.Qt.AlignBottom, "Version {}".format(__init__.__version__))
