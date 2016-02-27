@@ -125,8 +125,6 @@ def main():
         Coq = CoqueryApp()
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
-        #Coq.logo = QtGui.QPixmap(Coq.get_icon("title.png"))
-        Coq.logo = Coq.get_icon("title.png").pixmap(16)
         Coq.show()
         Coq.setGUIDefaults()
 
