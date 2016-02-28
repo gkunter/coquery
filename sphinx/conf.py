@@ -143,8 +143,8 @@ html_theme_options = {
         ("About", "about/index"),
         ("Downloads", "download/index"),
         ("Documentation", "doc/index"),
-        ("Get involved", "development/index"),
-        ("Blog", "blog"),
+        #("Get involved", "development/index"),
+        #("Blog", "blog"),
         ("Contact", "contact"),
     ],
 

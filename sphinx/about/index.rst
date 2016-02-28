@@ -12,6 +12,9 @@ Features
 Coquery is a free corpus query tool for linguistis, lexicographers, 
 translators, and anybody who wishes to search and analyse a text corpus.
 
+.. image:: ../_static/interface/showcase.png
+    :align: center
+
 .. raw:: html
     
     <div class="container-fluid">
@@ -29,7 +32,7 @@ translators, and anybody who wishes to search and analyse a text corpus.
             <div class="col-md-6">
                 <h2>Queries</h2>
                 <ul>
-                    <li>Query by orthography, phonetic transcription, lemma, or gloss, and restrict your query by part-of-speech</li>
+                    <li>Match tokens by orthography, phonetic transcription, lemma, or gloss, and restrict your query by part-of-speech</li>
                     <li>Use string functions e.g. to test if a token contains a letter sequence</li>
                     <li>Use the same query syntax for all installed corpora</li>
                     <li>Automate queries by reading them from an input file</li>
@@ -82,20 +85,22 @@ Coquery already has installers for the following linguistic corpora:
 .. raw:: html
 
     <div class="list-group">
-        <a class="list-group-item" href="https://catalog.ldc.upenn.edu/LDC96S36">Bostom University Radio Speech Corpus</a>
-        <a class="list-group-item" href="http://www.natcorp.ox.ac.uk/">British National Corpus</a>
-        <a class="list-group-item" href="http://corpus.byu.edu/coca/">Corpus of Contemporary American English</a>
-        <a class="list-group-item" href="http://corpus.byu.edu/coha/">Corpus of Historical American English</a>
+        <a class="list-group-item" href="http://www.natcorp.ox.ac.uk/">British National Corpus (BNC)</a>
         <a class="list-group-item" href="http://buckeyecorpus.osu.edu/">Buckeye Corpus</a>
-        <a class="list-group-item" href="https://catalog.ldc.upenn.edu/LDC96L14">CELEX Lexical Database</a>
-        <a class="list-group-item" href="http://sourceforge.net/projects/ice-nigeria/">ICE-Nigeria</a> 
+        <a class="list-group-item" href="https://catalog.ldc.upenn.edu/LDC96L14">CELEX Lexical Database (English)</a>
+        <a class="list-group-item" href="http://www.speech.cs.cmu.edu/cgi-bin/cmudict">Carnegie Mellon Pronunciation Dictionary (CMUdict)</a>
+        <a class="list-group-item" href="http://corpus.byu.edu/coca/">Corpus of Contemporary American English (COCA)</a>
+        <a class="list-group-item" href="http://corpus.byu.edu/coha/">Corpus of Historical American English (COHA)</a>
+        <a class="list-group-item" href="http://mlrs.research.um.edu.mt/resources/gabra/">Ġabra: an open lexicon for Maltese</a>
+        <a class="list-group-item" href="http://sourceforge.net/projects/ice-nigeria/">ICE-Nigeria</a>
     </div>
+
 
 Note that in order to use these corpora, you first need to obtain the corpus 
 data from the linked websites.
 
-If you are missing a corpus from the list of installed corpora, you can 
-either program a custom installer for your corpus, or you can :ref:`contact` 
+If you are missing a corpus from the list of supported corpora, you can 
+either program a custom installer for your corpus, or you can `contact <../contact.php>`_ 
 the Coquery developer whether an installer for your corpus may be included 
 in a future release of Coquery. 
 
@@ -103,11 +108,7 @@ License
 =======
 
 Coquery is free software released under the terms of the 
-:ref:`GNU General Public License (version 3) license`. This license gives you 
+`GNU General Public License (version 3) <../license.html>`_. This license gives you 
 the freedom to use Coquery for any purpose. It also allows you to copy, 
 modify, and redistribute the software for as long as the modified software is 
 also licensed under the GNU GPL. 
-
-Coquery can be :ref:`downloaded download` free of charge. Corpus installers 
-that are not contained in the official download packages may be released 
-under other licenses.

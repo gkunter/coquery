@@ -9,10 +9,10 @@ or PDF documents in a directory on your computer, or install a corpus
 module for one of the supported corpora (the corpus data files are not
 provided by Coquery).
 
+![Coquery: Main interface](http://www.coquery.org/_images/interface.png)
+
 Tutorials and documentation can be found on the Coquery website: 
     http://www.coquery.org
-
-![Coquery: Main interface](http://www.coquery.org/_images/interface.png)
 
 ## Features
 
@@ -26,7 +26,7 @@ An incomplete list of the things you can do with Coquery:
 * View every token that matches your query within its context
 
 ### Queries
-* Query by orthography, phonetic transcription, lemma, or gloss, and restrict 
+* Match tokens by orthography, phonetic transcription, lemma, or gloss, and restrict 
   your query by part-of-speech
 * Use string functions e.g. to test if a token contains a letter sequence
 * Use the same query syntax for all installed corpora

@@ -5,6 +5,7 @@
         
     download/index.rst
     about/index.rst
+    about/gallery.rst
     doc/index.rst
     license.rst
 
@@ -20,12 +21,13 @@
     </div>
     <div class="container-fluid">
         <div class="row">
-        Coquery is a free corpus query tool for linguistis, lexicographers, translators, and anybody who wishes to search and analyse a text corpus.        </div>
+        <p>Coquery is a free corpus query tool for linguistis, lexicographers, translators, and anybody who wishes to search and analyse a text corpus.
+        Coquery is available for Windows, Linux, and Mac OS X computers.</p>
         </div>
         <div class="row">
             <div class="col-xs-4">
                 <h2>Features</h2>
-                <p>See an overview of what Coquery offers to you.</p>
+                <p>Read a summary of some of the features that Coquery offers.</p>
                 <p><a href="about/index.html" class="btn btn-primary">Overview &raquo;</a></p>
             </div>
             
@@ -37,7 +39,7 @@
 
             <div class="col-xs-4">
                 <h2>Tutorial</h2>
-                <p>Follow these steps to build and query a text corpus in five minutes.</p>
+                <p>Follow these steps to build and query a text corpus in ten minutes.</p>
                 <p><a href="doc/tutorial/index.html" class="btn btn-primary">First steps &raquo;</a></p>
             </div>
 

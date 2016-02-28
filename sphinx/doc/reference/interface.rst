@@ -6,7 +6,7 @@ Main interface
 ##############
 
 .. figure:: ../../_static/interface/interface.png
-    :align: left
+    :scale: 100 %
     
     The main Coquery interface.
 
@@ -14,7 +14,7 @@ Corpus selector
 +++++++++++++++
 
 .. figure:: ../../_static/interface/corpus_select.png
-    :align: left
+    :scale: 100 %
     
     The corpus selector.
 
@@ -35,7 +35,7 @@ Context options
 +++++++++++++++
 
 .. figure:: ../../_static/interface/contexts.png
-    :align: left
+    :scale: 100 %
     
     The context options.
 
@@ -63,14 +63,14 @@ Stop words
 ++++++++++
 
 .. figure:: ../../_static/interface/stopwords_button.png
-    :align: left
+    :scale: 100 %
     
     The Stop words button.
 
 Clicking on the 'Stop-words' button opens the Stop words dialog.
 
 .. figure:: ../../_static/interface/stopwords.png
-    :align: left
+    :scale: 100 %
     
     The Stop words dialog.
 
@@ -100,7 +100,7 @@ Query strings
 The syntax of query strings in Coquery is described in detail in :ref:`syntax`.
 
 .. figure:: ../../_static/interface/queries.png
-    :align: left
+    :scale: 100 %
     
     The query string entry field and the query file selector.
 
@@ -123,7 +123,7 @@ button to specify the format of the text file. The Input file dialog will
 appear:
     
 .. figure:: ../../_static/interface/csvoptions.png
-    :align: left
+    :scale: 100 %
     
     The Input file options dialog.
 
@@ -153,7 +153,7 @@ Output columns
 ++++++++++++++
 
 .. figure:: ../../_static/interface/output_options.png
-    :align: left
+    :scale: 100 %
     
     The Output columns tree for the corpus *ALICE*.
 

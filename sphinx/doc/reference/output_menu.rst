@@ -12,7 +12,7 @@ View unique values
 ''''''''''''''''''
 
 .. figure:: ../../_static/interface/uniquevalues.png
-    :align: left
+    :scale: 100 %
     
     The `Unique values` viewer for the column *Word* in the table *Lexicon* 
     from the corpus *ALICE*.
@@ -32,7 +32,7 @@ Link to external table
 ''''''''''''''''''''''
 
 .. figure:: ../../_static/interface/externallink.png
-    :align: left
+    :scale: 100 %
     
     The `Link to an external table` dialog for the column *Word* in the table *Lexicon* 
     from the corpus *ALICE*.
@@ -67,7 +67,7 @@ Add a function
 ''''''''''''''
 
 .. figure:: ../../_static/interface/functionadd.png
-    :align: left
+    :scale: 100 %
     :width: 400px
     
     The `Add a function` dialog for the column *Word* in the table *Lexicon* 
