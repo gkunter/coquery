@@ -15,8 +15,8 @@ from __future__ import unicode_literals
 import unittest
 import sys, os
 
-sys.path.append(os.path.join(sys.path[0], "../installer"))
-sys.path.append(os.path.join(sys.path[0], ".."))
+sys.path.append(os.path.join(sys.path[0], "../coquery/installer"))
+sys.path.append(os.path.join(sys.path[0], "../coquery"))
 from coq_install_ice_ng import *
 
 class TestReplace(unittest.TestCase):

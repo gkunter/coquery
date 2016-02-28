@@ -4,7 +4,7 @@ import unittest
 import os.path
 import sys
 
-sys.path.append(os.path.join(sys.path[0], ".."))
+sys.path.append(os.path.join(sys.path[0], "coquery"))
 from bibliography import *
 
 class TestName(unittest.TestCase):

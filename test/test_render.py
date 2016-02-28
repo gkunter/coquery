@@ -4,8 +4,8 @@ import sys
 from PySide import QtCore, QtGui
 import os
 
-sys.path.append(os.path.join(sys.path[0], ".."))
-sys.path.append(os.path.join(sys.path[0], "../corpora"))
+sys.path.append(os.path.join(sys.path[0], "../coquery"))
+sys.path.append(os.path.join(sys.path[0], "../coquery/corpora"))
 from corpus import collapse_words
 from ice_ng import Resource
 

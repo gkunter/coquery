@@ -6,7 +6,7 @@ import unittest
 import os.path
 import sys
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "..")))
+sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
 import tokens
 from corpus import LexiconClass, BaseResource
 

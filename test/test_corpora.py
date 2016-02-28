@@ -3,9 +3,9 @@ import unittest
 import os.path
 import sys
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "..")))
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../gui")))
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../installer")))
+sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
+sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery/gui")))
+sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery/installer")))
 import defines
 import corpus
 import options
