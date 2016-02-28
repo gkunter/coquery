@@ -34,13 +34,15 @@ class ContextView(QtGui.QWidget):
         
         self.ui = Ui_ContextView()
         self.ui.setupUi(self)
-        
+
+        self.setWindowIcon(options.cfg.icon)
+
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
         self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
         self.ui.slider_context_width.setTracking(True)
 
         # Add clickable header
-        self.ui.button_ids = classes.CoqDetailBox("Token ID: {}, Source ID: {}".format(token_id, source_id))
+        self.ui.button_ids = classes.CoqDetailBox("{} – Token ID {}".format(corpus.resource.name, token_id))
         self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", str(not self.ui.button_ids.isExpanded())))
         self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
         self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
