@@ -58,16 +58,13 @@ def check_system():
         sys.exit(1)
 
 def main():
+    check_system()
     options.process_options()
     coquery_home = options.get_home_dir()
     logger = set_logger(os.path.join(coquery_home, "coquery.log"))
 
     if options._use_qt:
         sys.path.append(os.path.join(sys.path[0], "gui"))
-
-    check_system()
-
-    import session
 
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (__init__.NAME, __init__.__version__))
@@ -137,6 +134,7 @@ def main():
 
     # Otherwise, run program as a command-line tool:
     else:
+        import session
         # Choose the appropriate Session type instance:
         if options.cfg.MODE == QUERY_MODE_STATISTICS:
             Session = session.StatisticsSession()
