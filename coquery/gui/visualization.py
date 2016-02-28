@@ -129,7 +129,7 @@ class CoqNavigationToolbar(NavigationToolbar):
         self.margin_dialog.resetbutton.hide()
         self.margin_dialog.tightlayout.setText("&Reset")
         self.margin_dialog.show()
-        options.cfg.main_window.widget_list.add(self.margin_dialog)
+        options.cfg.main_window.widget_list.append(self.margin_dialog)
         
 class VisualizerDialog(QtGui.QWidget):
     """ Defines a QDialog that is used to visualize the data in the main 
@@ -196,7 +196,6 @@ class VisualizerDialog(QtGui.QWidget):
         visualization again. 
         """
         if hasattr(self.toolbar, "margin_dialog"):
-            _margin_dialog = True
             self.toolbar.margin_dialog.hide()
             self.toolbar.margin_dialog.close()
             options.cfg.main_window.widget_list.remove(self.toolbar.margin_dialog)
@@ -214,8 +213,6 @@ class VisualizerDialog(QtGui.QWidget):
         self.add_matplot()
             
         self.visualizer.draw()
-        if self.visualizer.options.get("label_main"):
-            self.visualizer.g.fig.suptitle(self.visualizer.options["label_main"])
 
         self.visualizer.g.fig.tight_layout()
         self.visualizer.adjust_axes()
@@ -224,7 +221,7 @@ class VisualizerDialog(QtGui.QWidget):
             self.spinner.setEnabled(True)
         self.visualizer.g.fig.tight_layout()
         
-        if _margin_dialog:
+        if hasattr(self.toolbar, "margin_dialog"):
             self.toolbar.configure_subplots()
 
     def add_matplot(self):
@@ -388,8 +385,6 @@ class VisualizerDialog(QtGui.QWidget):
         self.repaint()
         
         self.visualizer.g.fig.canvas.draw()
-        if self.visualizer.options.get("label_main"):
-            self.visualizer.g.fig.suptitle(self.visualizer.options["label_main"])
 
         self.visualizer.g.fig.tight_layout()
         self.visualizer.adjust_axes()
