@@ -16,6 +16,7 @@ import __init__
 import os
 import logging
 import warnings
+import sqlalchemy
 
 try:
     logger = logging.getLogger(__init__.NAME)
@@ -27,9 +28,7 @@ from defines import *
 import options
 
 import sqlhelper
-import sqlalchemy
 
-import sqlite3
 if options._use_mysql:
     import pymysql
     import pymysql.cursors
