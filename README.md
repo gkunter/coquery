@@ -9,7 +9,7 @@ or PDF documents in a directory on your computer, or install a corpus
 module for one of the supported corpora (the corpus data files are not
 provided by Coquery).
 
-![Coquery: Main interface](http://www.coquery.org/_images/interface.png)
+![Coquery: Main interface](http://www.coquery.org/_images/showcase.png)
 
 Tutorials and documentation can be found on the Coquery website: 
     http://www.coquery.org
