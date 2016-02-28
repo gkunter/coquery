@@ -103,8 +103,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.widget_list = []
         self.Session = None
         
-        self._first_corpus = True
-
+        self._first_corpus = False
+        if options.cfg.first_run and not options.cfg.current_resources:
+            self._first_corpus = True
+        
         size = QtGui.QApplication.desktop().screenGeometry()
         # Retrieve font and metrics for the CoqItemDelegates
         options.cfg.font = options.cfg.app.font()

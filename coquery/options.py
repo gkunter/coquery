@@ -104,7 +104,7 @@ class Options(object):
         except AttributeError:
             self.args.parameter_string = " ".join([x for x in sys.argv [1:]])
 
-        self.args.selected_features= ["word_label"]
+        self.args.selected_features= []
         self.args.external_links = {}
         #self.args.external_links = defaultdict(list)
         self.args.selected_functions = []
