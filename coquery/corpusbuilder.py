@@ -332,6 +332,17 @@ class Table(object):
             if data: 
                 df = pd.DataFrame(data)
                 df.columns = fields
+
+                # make sure that all strings are unicode, even under 
+                # Python 2.7:
+                if sys.version_info < (3, 0):
+                    for column in df.columns[df.dtypes == object]:
+                        df[column] = df[column].apply(lambda x: unicode(x)))
+
+                # apply unicode normalization:
+                for column in df.columns[df.dtypes == object]:
+                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
+
                 df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
 
                 # Reset all new keys:
