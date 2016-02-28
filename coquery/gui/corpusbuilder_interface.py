@@ -85,11 +85,16 @@ class InstallerGui(QtGui.QDialog):
                 None, "Corpus error – Coquery", 
                 msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             return
-        
-        self.ui.corpus_description.setText(
-            str(self.ui.corpus_description.text()).format(
-                str(builder_class.get_title()), str(options.cfg.current_server)))
 
+        try:
+            self.ui.corpus_description.setText(
+                str(self.ui.corpus_description.text()).format(
+                    builder_class.get_title(), options.cfg.current_server))
+        except UnicodeEncodeError:
+            self.ui.corpus_description.setText(
+                str(self.ui.corpus_description.text()).format(
+                    builder_class.get_title().encode("utf-8"), options.cfg.current_server))
+            
         notes = builder_class.get_installation_note()
         if notes:
             self.ui.notes_box = classes.CoqDetailBox("Installation notes")
