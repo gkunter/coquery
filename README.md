@@ -70,7 +70,7 @@ lexical databases:
 
 If the list is missing a corpus that you want to see supported in Coquery, 
 you can either write your own corpus installer in Python using the installer 
-API, or you can [contact](http://www.coquery/org./contact) the Coquery 
+API, or you can [contact](http://www.coquery.org/contact) the Coquery 
 maintainers and ask them for assistance.
 
 ## License
@@ -83,4 +83,4 @@ Initial development was supported by:
     Heinrich-Heine-Universität Düsseldorf
     
 Coquery is free software released under the terms of the 
-[GNU General Public license](https://www.gnu.org/licenses/gpl-3.0-standalone.html) (version 3).
+[GNU General Public license](http://www.coquery.org/license) (version 3).
