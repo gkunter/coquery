@@ -134,7 +134,10 @@ def test_configuration(name):
         else:
             res = (True, None)
         finally:
-            engine.dispose()
+            try:
+                engine.dispose()
+            except UnboundLocalError:
+                pass
         return res
     elif d["type"] == SQL_SQLITE:
         if os.access(sqlite_path(name), os.X_OK | os.R_OK):
