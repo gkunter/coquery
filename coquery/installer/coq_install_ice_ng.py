@@ -43,6 +43,24 @@ class corpus_code():
             #print("unsupported tag: ", tag)
             #return tag
 
+    def get_tag_translate(self, tag):
+        translate_dict = {
+            "p": "p",
+            "punctuation": "",
+            "heading": "<span style='font-style: bold; font-size:150%'>",
+            "h1": "<span style='font-style: bold; font-size:150%'>",
+            "boldface": "b",
+            "italics": "i",
+            "underline": "u",
+            "superscript": "sup",
+            "subscript": "sup",
+            "text": "html"}
+        if tag in translate_dict:
+            return translate_dict[tag]
+        else:
+            print("unsupported tag: ", tag)
+            return tag
+
     def renderer_open_element(self, tag, attributes):
         context = super(Corpus, self).renderer_open_element(tag, attributes)
         if tag == "object":
@@ -576,29 +594,26 @@ class BuilderClass(BaseCorpusBuilder):
         self._corpus_code = corpus_code
         
 
-    #def xml_preprocess_tag(self, element):
+    def xml_preprocess_tag(self, element):
         #self.tag_token(self._corpus_id, element.tag, element.attrib, op=True)
-        ##self.tag_next_token(element.tag, element.attrib)
-        ##if element.text or list(element):
-            ##self.tag_next_token(element.tag, element.attrib)
-        ##else:
-            ##self.add_empty_tag(element.tag, element.attrib)
-            ##if element.tag == "x-anonym-x":
-                ### ICE-NG contains anonymized labels for names, placenames,
-                ### and other nouns. Insert a special label in that case:
-                ##self._word_id = self.table_get(self.word_table, 
-                        ##{self.word_label: "ANONYMIZED", 
-                        ##self.word_lemma: "ANONYMIZED", 
-                        ##self.word_pos: "np"}, case=True)
+        self.tag_next_token(element.tag, element.attrib)
+        #if element.text or list(element):
+            #self.tag_next_token(element.tag, element.attrib)
+        #else:
+            #self.add_empty_tag(element.tag, element.attrib)
+            #if element.tag == "x-anonym-x":
+                ## ICE-NG contains anonymized labels for names, placenames,
+                ## and other nouns. Insert a special label in that case:
+                #self._word_id = self.table_get(self.word_table, 
+                        #{self.word_label: "ANONYMIZED", 
+                        #self.word_lemma: "ANONYMIZED", 
+                        #self.word_pos: "np"}, case=True)
 
-    #def xml_postprocess_tag(self, element, this_id):
-        #if element.tag == "x-anonym-x":
-            #print(this_id, "closing")
-            #assert this_id == self._last_opened, self._current_file
-        #self.tag_token(this_id, element.tag, element.attrib, cl=True)
-        ## mon-empty tag
-        ##if element.text or list(element):
-            ##self.tag_last_token(element.tag, element.attrib)
+    def xml_postprocess_tag(self, element):
+        self.tag_token(self._corpus_id, element.tag, element.attrib, cl=True)
+        # mon-empty tag
+        #if element.text or list(element):
+            #self.tag_last_token(element.tag, element.attrib)
 
     def process_text(self, text):
         for row in text.splitlines():
