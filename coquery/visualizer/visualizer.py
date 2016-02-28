@@ -401,7 +401,7 @@ class BaseVisualizer(QtCore.QObject):
             self.options["font_main"] = QtGui.QFont(
                     self.options["figure_font"].family(), round(self.options["figure_font"].pointSize() * 1.2))
         if "label_main" in self.options:
-            plt.title(self.options["label_main"], size=self.options["font_main"].pointSize())
+            plt.suptitle(self.options["label_main"], size=self.options["font_main"].pointSize())
         
         if not self.options.get("font_legend"):
             self.options["font_legend"] = QtGui.QFont(self.options["figure_font"].family())
