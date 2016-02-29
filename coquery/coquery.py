@@ -102,7 +102,7 @@ def main():
         logger.info(options.cfg.comment)
 
     # Run the Application GUI?
-    if options.cfg.gui:
+    if options.cfg.gui and options._use_qt:
         from pyqt_compat import QtGui, QtCore
         from app import CoqueryApp
         from app import GuiHandler
