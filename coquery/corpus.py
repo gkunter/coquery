@@ -292,6 +292,18 @@ class LexiconClass(object):
                 word_table, word_id, " ".join(self.table_list), where_string)
         return S
 
+    def get_lemmatized_wordids(self, token, stopwords=True):
+        """
+        Return a list of all word ids that belong to the same lemmas as the 
+        word ids matched by the token.
+        """
+        if token.S == "%" or token.S == "":
+            return []
+        if stopwords:
+            stopword_ids = self.get_stopword_ids()
+        S = self.sql_string_get_matching_wordids(token)
+        print(S)
+        
     def get_matching_wordids(self, token, stopwords=True):
         """
         Return a list of word ids that match the tokens. This takes the 

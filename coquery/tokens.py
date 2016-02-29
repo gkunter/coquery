@@ -157,6 +157,7 @@ class COCAToken(QueryToken):
     quantification_close = "}"
     pos_separator = "."
     negation_flag = "~"
+    lemmatize_flag = "!"
     quote_char = '"'
     
     def parse (self):
@@ -173,6 +174,9 @@ class COCAToken(QueryToken):
         gloss_specification = None
 
         self.negated = bool(self.S.count(self.negation_flag) & 1)
+        self.negated = bool(re.search("^\s*({}*)".format(self.negation_flag), self.S).group(0).count(self.negation_flag) & 1)
+        self.lemmatize = bool(re.search("^\s*({}*)".format(self.lemmatize_flag), self.S).group(0))
+        
         work = self.S.strip(self.negation_flag)
         
         if work == "//" or work == "[]":
