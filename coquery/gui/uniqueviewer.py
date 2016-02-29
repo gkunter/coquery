@@ -99,11 +99,11 @@ class UniqueViewer(QtGui.QDialog):
     def get_unique(self):
         if not self.db_name:
             return
+        S = "SELECT {0} FROM {1}".format(self.column, self.table)
         if self._uniques:
-            S = "SELECT DISTINCT {0} FROM {1} ORDER BY {0}".format(self.column, self.table)
+            self.df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.db_name))).drop_duplicates()
         else:
-            S = "SELECT {0} FROM {1}".format(self.column, self.table)
-        self.df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.db_name)))
+            self.df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.db_name)))
 
         self.ui.tableWidget.setRowCount(len(self.df.index))
         self.ui.tableWidget.setColumnCount(1)
