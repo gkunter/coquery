@@ -117,10 +117,21 @@ class CoqNavigationToolbar(NavigationToolbar):
 
     def edit_parameters(self, *args):
         import figureoptions
+        
         new_values = figureoptions.FigureOptions.manage(self.parent.visualizer.options)
         if new_values:
             self.parent.visualizer.options.update(new_values)
+
+            #store old margin values:
+            _d = {}
+            for attr in ('left', 'bottom', 'right', 'top', 'wspace', 'hspace', ):
+                _d[attr] = getattr(self.parent.visualizer.g.fig.subplotpars, attr)
+
             self.parent.update_plot()
+
+            #reset margin values:
+            self.parent.visualizer.g.fig.subplots_adjust(**_d)
+
 
     def configure_subplots(self):
         self.margin_dialog = SubplotToolQt(self.canvas.figure, self.parent)
