@@ -37,8 +37,6 @@ class ContextView(QtGui.QWidget):
 
         self.setWindowIcon(options.cfg.icon)
 
-        self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
-        self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
         self.ui.slider_context_width.setTracking(True)
 
         # Add clickable header
@@ -52,6 +50,17 @@ class ContextView(QtGui.QWidget):
             self.add_source_label(table)
             for label in sorted(fields.keys()):
                 self.add_source_label(label, fields[label])
+
+        words = options.settings.value("contextviewer_words", None)
+        if words != None:
+            try:
+                self.ui.spin_context_width.setValue(int(words))
+                self.ui.slider_context_width.setValue(int(words))
+            except ValueError:
+                pass
+            
+        self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
+        self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
 
         self.update_context()
 
@@ -119,12 +128,14 @@ class ContextView(QtGui.QWidget):
         self.ui.slider_context_width.setValue(self.ui.spin_context_width.value())
         self.update_context()
         self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
+        options.settings.setValue("contextviewer_words", self.ui.slider_context_width.value())
     
     def slider_changed(self):
         self.ui.spin_context_width.valueChanged.disconnect(self.spin_changed)
         self.ui.spin_context_width.setValue(self.ui.slider_context_width.value())
         self.update_context()
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
+        options.settings.setValue("contextviewer_words", self.ui.slider_context_width.value())
     
     def update_context(self):
         if self.corpus:
