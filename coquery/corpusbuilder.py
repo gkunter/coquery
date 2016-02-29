@@ -337,7 +337,7 @@ class Table(object):
                 # Python 2.7:
                 if sys.version_info < (3, 0):
                     for column in df.columns[df.dtypes == object]:
-                        df[column] = df[column].apply(lambda x: unicode(x)))
+                        df[column] = df[column].apply(lambda x: unicode(x))
 
                 # apply unicode normalization:
                 for column in df.columns[df.dtypes == object]:
