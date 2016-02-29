@@ -275,6 +275,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.change_mysql_configuration(options.cfg.current_server)
         self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
         
+        state = self.test_mysql_connection()
+        if not state:
+            self.disable_corpus_widgets()
+        
         self.connection_timer = QtCore.QTimer()
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
@@ -1938,8 +1942,10 @@ class CoqueryApp(QtGui.QMainWindow):
         if not options.cfg.current_server:
             return False
         else:
-            state, _ = sqlhelper.test_configuration(options.cfg.current_server)
-
+            try:
+                state, _ = sqlhelper.test_configuration(options.cfg.current_server)
+            except ImportError:
+                state = False
         # Only do something if the current connection status has changed:
         if state != self.last_connection_state or options.cfg.current_server != self.last_connection:
             # Remember the item that has focus:
