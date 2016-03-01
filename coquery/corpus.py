@@ -141,7 +141,7 @@ class LexiconClass(object):
             getattr(self.resource, "{}_table".format(table)),
             getattr(self.resource, rc_feature),
             self.resource.get_operator(current_token),
-            pos)
+            pos.replace("'", "''"))
         return S
 
     def is_part_of_speech(self, pos):
@@ -315,10 +315,16 @@ class LexiconClass(object):
         
         # if the query string already contains a lemma specification, 
         # lemmatization is ignored:
+        if not hasattr(self.resource, QUERY_ITEM_LEMMA):
+            raise UnsupportedQueryItemError("Lemmatization by \"#\" flag")
+        
         if token.lemma_specifiers:
             return self.sql_string_get_matching_wordids(token)
-        print("lemmatize")
-    
+        
+        # first, get a list of word ids that match the token:
+        L = self.get_matching_wordids(token)
+        
+        # next, create a table path from the word table to the lemma table 
         word_feature = getattr(self.resource, QUERY_ITEM_WORD)
         _, _, table, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(table))
@@ -329,27 +335,27 @@ class LexiconClass(object):
         lemma_table = getattr(self.resource, "{}_table".format(table))
         lemma_id = getattr(self.resource, "{}_id".format(table))
         
-        print(word_feature, lemma_feature)
-        print(word_table, word_id, lemma_table, lemma_id)
-        
         self.joined_tables = [word_table]
         self.table_list = [word_table]
         
         self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_LEMMA))
 
-        if token.class_specifiers:
-            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_POS))
+        where_string = "{}.{} IN ({})".format(word_table, word_id, ", ".join(["{}".format(x) for x in L]))
 
-        if token.transcript_specifiers:
-            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_TRANSCRIPT))
-
-        if token.gloss_specifiers:
-            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_GLOSS))
-            
-        where_string = self.sql_string_get_wordid_list_where(token)
+        # using the path, get a list of all lemma labels that belong to 
+        # the word ids from the list:
         S = "SELECT {}.{} FROM {} WHERE {}".format(
-                lemma_table, lemma_id, " ".join(self.table_list), where_string)
-        return S
+                lemma_table, 
+                getattr(self.resource, lemma_feature), " ".join(self.table_list), where_string)
+        
+        engine = self.resource.get_engine()
+        df = pd.read_sql(S, engine, columns=["Lemma"]).drop_duplicates()
+        engine.dispose()
+        # construct a new token that uses the list of lemmas as its token 
+        # specification:
+        token = tokens.COCAToken("[{}]".format("|".join(list(df[getattr(self.resource, lemma_feature)]))), lexicon=self)
+        # return the SQL string for the new token:
+        return self.sql_string_get_matching_wordids(token)
 
     def get_lemmatized_wordids(self, token, stopwords=True):
         """
@@ -362,9 +368,9 @@ class LexiconClass(object):
             stopword_ids = self.get_stopword_ids()
         
         S = self.sql_string_get_lemmatized_wordids(token)
-        print(S)
-
-        df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+        engine = self.resource.get_engine()
+        df = pd.read_sql(S.replace("%", "%%"), engine)
+        engine.dispose()
         if not len(df.index):
             if token.negated:
                 return []
