@@ -1575,7 +1575,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         variables = list(values.keys())
         where = []
         for column, value in values.items():
-            where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
+            where.append("{} = '{}'".format(column, str(value).replace("'", "''")))
         if case:
             S = "SELECT {} FROM {} WHERE BINARY {}".format(", ".join(variables), table, " AND BINARY ".join(where))
         else:

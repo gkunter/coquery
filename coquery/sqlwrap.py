@@ -158,7 +158,7 @@ class SqlDB (object):
         variables = list(values.keys())
         where = []
         for column, value in values.items():
-            where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
+            where.append("{} = '{}'".format(column, str(value).replace("'", "''")))
             
         S = "SELECT {} FROM {}".format(", ".join(variables), table)
 

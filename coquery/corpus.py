@@ -226,7 +226,6 @@ class LexiconClass(object):
                         else:
                             S = dummy.S
                         S = S.replace("'", "''")
-                        S = S.replace('"', '""')
                         format_string = "{} {} '{}'"
                         if options.cfg.query_case_sensitive:
                             if self.resource.db_type == SQL_SQLITE:
@@ -1733,8 +1732,8 @@ class CorpusClass(object):
                     S = current_token.S
                 if S != "%":
                     # take care of quotation marks:
-                    S = S.replace('"', '""')
-                    L.append('%s %s "%s"' % (word_label, self.resource.get_operator(current_token), S))
+                    S = S.replace("'", "''")
+                    L.append("%s %s '%s'" % (word_label, self.resource.get_operator(current_token), S))
         if L:
             where_clauses.append("({})".format(" OR ".join(L)))
 
@@ -1753,8 +1752,8 @@ class CorpusClass(object):
                     S = current_token.S
                 if S != "%":
                     # take care of quotation marks:
-                    S = S.replace('"', '""')
-                    L.append('%s %s "%s"' % (lemma_label, self.resource.get_operator(current_token), S))
+                    S = S.replace("'", "''")
+                    L.append("%s %s '%s'" % (lemma_label, self.resource.get_operator(current_token), S))
         if L:
             where_clauses.append("({})".format(" OR ".join(L)))
             
@@ -1773,8 +1772,8 @@ class CorpusClass(object):
                     S = current_token.S
                 # take care of quotation marks:
                 if S != "%":
-                    S = S.replace('"', '""')
-                    L.append('%s %s "%s"' % (pos_label, self.resource.get_operator(current_token), S))
+                    S = S.replace("'", "''")
+                    L.append("%s %s '%s'" % (pos_label, self.resource.get_operator(current_token), S))
         if L:
             where_clauses.append("({})".format(" OR ".join(L)))
         
