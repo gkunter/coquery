@@ -176,8 +176,8 @@ class COCAToken(QueryToken):
 
         self.negated = bool(self.S.count(self.negation_flag) & 1)
         self.negated = bool(re.search("^\s*({}*)".format(self.negation_flag), self.S).group(0).count(self.negation_flag) & 1)
-        self.lemmatize = bool(re.search("^\s*({}*)(\\#)?(#*)(.*)".format(self.negation_flag, self.lemmatize_flag), self.S).groups()[2])
-        
+        pat = "^\s*({}*)(\\\\#)?(#*)(.*)".format(self.negation_flag, self.lemmatize_flag)
+        self.lemmatize = bool(re.search(pat, self.S).groups()[2])
         work = self.S.strip(self.negation_flag)
         
         if work == "//" or work == "[]":
@@ -315,29 +315,38 @@ def parse_query_string(S, token_type):
                                         token_type.pos_separator]:
                     # Raise exception if another character follows other than 
                     # the character opening a quantification:
-                    raise TokenParseError(S)
+                    raise TokenParseError("{}: expected a quantifier starting with <code style='color: #aa0000'>{}</code> or a part-of-speech specifier of the form <code style='color: #aa0000'>{}{}POS{}</code>".format(
+                        S, 
+                        token_type.quantification_open, 
+                        token_type.pos_separator,
+                        token_type.bracket_open,
+                        token_type.bracket_close))
                 elif current_char == token_type.pos_separator:
                     state = ST_POS_SEPARATOR
                     token_closed = False
 
+            if current_char in set([token_type.negation_flag, token_type.lemmatize_flag]):
+                current_word = add(current_word, current_char)
+                continue
+            
             # check for opening characters:
             if current_char in set([token_type.transcript_open, token_type.bracket_open, token_type.quantification_open, token_type.quote_open]):
-                if current_word:
+                if current_word.strip("".join([token_type.negation_flag, token_type.lemmatize_flag])):
                     # raise an exception if an opening bracket occurs within
                     # a word, but not after a full stop (i.e. if it does not 
                     # open a POS specification):
                     if current_char == token_type.bracket_open:
                         if len(current_word) < 2 or current_word[-1] != ".":
-                            raise TokenParseError(S)
+                            raise TokenParseError("{}: unexpected opening bracket <code style='color: #aa0000'>{}</code> within a word".format(S, token_type.bracket_open))
                     # any character other than an opening quantification is 
                     # forbidden if the current word is not empty
                     elif current_char != token_type.quantification_open:
-                        raise TokenParseError(S)
+                        raise TokenParseError("{}: Only quantifiers starting with <code style='color: #aa0000'>{}</code> are allowed after a query token (encountered {})".format(S, token_type.quantification_open, current_char))
                 else:
-                    # quantifications are only allowed if they precede a 
+                    # quantifications are only allowed if they follow a 
                     # query item:
                     if current_char == token_type.quantification_open:
-                        raise TokenParseError(S)
+                        raise TokenParseError("{}: Query items may not start with the quantifier bracket <code style='color: #aa0000'>{}</code>".format(S, token_type.quantification_open))
                 
                 # set new state:
                 if current_char == token_type.transcript_open:
@@ -362,7 +371,8 @@ def parse_query_string(S, token_type):
                 state = ST_IN_BRACKET
                 token_closed = False
             else:
-                raise TokenParseError(S)
+                raise TokenParseError("{}: illegal character after full stop, expected <code style='color: #aa0000'>{}</code>".format(
+                    S, token_type.bracket_open))
         
         # bracket state?
         elif state == ST_IN_BRACKET:
@@ -396,25 +406,27 @@ def parse_query_string(S, token_type):
                         # raise an exception if a comma immediately follows 
                         # an opening bracket:
                         if current_word[-1] == token_type.quantification_open:
-                            raise TokenParseError(S)
+                            raise TokenParseError("{}: no lower range in the quantification".format(S))
                         # raise exception if a comma has already been added:
                         if comma_added:
-                            raise TokenParseError(S)
+                            raise TokenParseError("{}: only one comma is allowed within a quantification".format(S))
                         else:
                             comma_added = True
                     if current_char == token_type.quantification_close:
                         # raise an exception if the closing bracket follows 
                         # immediately after a comma or the opening bracket:
                         if current_word[-1] in [",", token_type.quantification_open]:
-                            raise TokenParseError(S)
+                            raise TokenParseError("{}: no upper range in quantification".format(S))
                         state = ST_NORMAL
                         token_closed = True
 
                     current_word = add(current_word, current_char)
             else:
-                raise TokenParseError(S)
+                raise TokenParseError("{}: Illegal character <code style='color: #aa0000'>{}</code> within the quantification".format(S, current_char))
             
     if state != ST_NORMAL:
+        if state == ST_POS_SEPARATOR:
+            raise TokenParseError("{}: Missing a part-of-speech specification after '.'".format(S))
         if state == ST_IN_BRACKET:
             op = token_type.bracket_open
             cl = token_type.bracket_close
