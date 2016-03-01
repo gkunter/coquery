@@ -9,7 +9,7 @@ About Coquery
 Features
 ========
 
-Coquery is a free corpus query tool for linguistis, lexicographers, 
+Coquery is a free corpus query tool for linguists, lexicographers, 
 translators, and anybody who wishes to search and analyse a text corpus.
 
 .. image:: ../_static/interface/showcase.png

@@ -21,7 +21,7 @@
     </div>
     <div class="container-fluid">
         <div class="row">
-        <p>Coquery is a free corpus query tool for linguistis, lexicographers, translators, and anybody who wishes to search and analyse a text corpus.
+        <p>Coquery is a free corpus query tool for linguists, lexicographers, translators, and anybody who wishes to search and analyse a text corpus.
         Coquery is available for Windows, Linux, and Mac OS X computers.</p>
         </div>
         <div class="row">

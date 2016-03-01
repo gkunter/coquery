@@ -1,6 +1,6 @@
 # Coquery - a free corpus query tool
 
-Coquery is a free corpus query tool for linguistis, lexicographers, 
+Coquery is a free corpus query tool for linguists, lexicographers, 
 translators, and anybody who wishes to search and analyse text corpora.
 It is available for Windows, Linux, and Mac OS X computers.
 
