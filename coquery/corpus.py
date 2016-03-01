@@ -191,7 +191,13 @@ class LexiconClass(object):
         if not hasattr(self, "_cached_stopword_list") or self._cached_stopword_list != options.cfg.stopword_list:
             id_list = set([])
             for stopword in options.cfg.stopword_list:
-                id_list.update(set(self.get_matching_wordids(tokens.COCAToken(stopword, self), stopwords=False)))
+                token = tokens.COCAToken(stopword, self)
+                if token.lemmatize:
+                    L = set(self.lexicon.get_lemmatized_wordids(token, stopwords=False))
+                else:
+                    L = set(self.lexicon.get_matching_wordids(token, stopwords=False))
+
+                id_list.update(L)
             self._cached_stopword_list = list(options.cfg.stopword_list)
             self._cached_stopword_ids = id_list
         return self._cached_stopword_ids
@@ -291,6 +297,60 @@ class LexiconClass(object):
                 word_table, word_id, " ".join(self.table_list), where_string)
         return S
 
+    def sql_string_get_lemmatized_wordids(self, token):
+        """ 
+        Return an SQL string that may be used to gather all word ids which 
+        match the token while using auto-lemmatization.
+        
+        Auto-lemmatization means that first, the lemmas matching the token 
+        specifications are looked up, and then, all word ids linked to these 
+        lemmas are determined.
+        """
+        
+        # How to do that:
+        #
+        # - first, get a normal list of matching word ids 
+        # - second, get the list of lemmas for these word ids 
+        # - third, get a list of all word ids that have these lemmas
+        
+        # if the query string already contains a lemma specification, 
+        # lemmatization is ignored:
+        if token.lemma_specifiers:
+            return self.sql_string_get_matching_wordids(token)
+        print("lemmatize")
+    
+        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
+        _, _, table, _ = self.resource.split_resource_feature(word_feature)
+        word_table = getattr(self.resource, "{}_table".format(table))
+        word_id = getattr(self.resource, "{}_id".format(table))
+
+        lemma_feature = getattr(self.resource, QUERY_ITEM_LEMMA)
+        _, _, table, _ = self.resource.split_resource_feature(lemma_feature)
+        lemma_table = getattr(self.resource, "{}_table".format(table))
+        lemma_id = getattr(self.resource, "{}_id".format(table))
+        
+        print(word_feature, lemma_feature)
+        print(word_table, word_id, lemma_table, lemma_id)
+        
+        self.joined_tables = [word_table]
+        self.table_list = [word_table]
+        
+        self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_LEMMA))
+
+        if token.class_specifiers:
+            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_POS))
+
+        if token.transcript_specifiers:
+            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_TRANSCRIPT))
+
+        if token.gloss_specifiers:
+            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_GLOSS))
+            
+        where_string = self.sql_string_get_wordid_list_where(token)
+        S = "SELECT {}.{} FROM {} WHERE {}".format(
+                lemma_table, lemma_id, " ".join(self.table_list), where_string)
+        return S
+
     def get_lemmatized_wordids(self, token, stopwords=True):
         """
         Return a list of all word ids that belong to the same lemmas as the 
@@ -300,8 +360,21 @@ class LexiconClass(object):
             return []
         if stopwords:
             stopword_ids = self.get_stopword_ids()
-        S = self.sql_string_get_matching_wordids(token)
+        
+        S = self.sql_string_get_lemmatized_wordids(token)
         print(S)
+
+        df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+        if not len(df.index):
+            if token.negated:
+                return []
+            else:
+                raise WordNotInLexiconError
+        else:
+            if stopwords:
+                return [x for x in list(df.ix[:,0]) if not x in stopword_ids]
+            else:
+                return list(df.ix[:,0])
         
     def get_matching_wordids(self, token, stopwords=True):
         """
@@ -1337,7 +1410,11 @@ class CorpusClass(object):
         # specification, then get the list of matching word_ids from the 
         # lexicon:
         else:
-            L = set(self.lexicon.get_matching_wordids(token))
+            if token.lemmatize:
+                L = set(self.lexicon.get_lemmatized_wordids(token))
+            else:
+                L = set(self.lexicon.get_matching_wordids(token))
+                
             if L:
                 if WordTarget.endswith("_id"):
                     L = [str(x) for x in L]

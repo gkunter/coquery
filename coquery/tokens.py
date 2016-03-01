@@ -157,7 +157,7 @@ class COCAToken(QueryToken):
     quantification_close = "}"
     pos_separator = "."
     negation_flag = "~"
-    lemmatize_flag = "!"
+    lemmatize_flag = "#"
     quote_open = '"'
     quote_close = '"'
     
@@ -176,20 +176,22 @@ class COCAToken(QueryToken):
 
         self.negated = bool(self.S.count(self.negation_flag) & 1)
         self.negated = bool(re.search("^\s*({}*)".format(self.negation_flag), self.S).group(0).count(self.negation_flag) & 1)
-        self.lemmatize = bool(re.search("^\s*({}*)".format(self.lemmatize_flag), self.S).group(0))
+        self.lemmatize = bool(re.search("^\s*({}*)(\\#)?(#*)(.*)".format(self.negation_flag, self.lemmatize_flag), self.S).groups()[2])
         
         work = self.S.strip(self.negation_flag)
         
         if work == "//" or work == "[]":
             word_specification = work
         else:
-            match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", work)
+            # try to match WORD|LEMMA|TRANS.[POS]:
+            match = re.match("{}*(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){{1}}(\.\[(?P<class>.*)\]){{1}}".format(self.lemmatize_flag), work)
             if not match:
-                match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}", work)
+                # try to match WORD|LEMMA|TRANS:
+                match = re.match("{}*(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){{1}}".format(self.lemmatize_flag), work)
 
             word_specification = match.groupdict()["word"]
             # word specification that begin and end with quotation marks '"'
-            # are considered gloss specifications:
+            # are considered GLOSS specifications:
             if word_specification and re.match('".+"', word_specification):
                 gloss_specification = word_specification
                 word_specification = None
