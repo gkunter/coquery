@@ -500,7 +500,6 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-
         if "statistics_query_entropy" in self.Session.output_order or "statistics_query_proportion" in self.Session.output_order:
             columns = [x for x in df.columns if not x.startswith("coquery_invisible")]
             if not columns:
@@ -572,7 +571,7 @@ class TokenQuery(object):
                 try:
                     df = pd.merge(df, self.freqs, on=columns)
                 except ValueError:
-                    pass
+                    df[column] = self.freqs[column]
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
