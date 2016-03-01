@@ -108,7 +108,11 @@ class UniqueViewer(QtGui.QDialog):
         self.ui.tableWidget.setRowCount(len(self.df.index))
         self.ui.tableWidget.setColumnCount(1)
         for row, x in enumerate(self.df[self.column]):
-            self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(str(x)))
+            try:
+                self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(str(x)))
+            except UnicodeEncodeError:
+                self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(unicode(x)))
+                
 
     def finalize(self):
         #self.ui.progress_spinner.stop()
