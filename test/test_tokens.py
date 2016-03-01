@@ -66,6 +66,16 @@ class TestModuleMethods(unittest.TestCase):
         S = '"this|that" is a query'
         L = ['"this|that"', 'is', 'a', 'query']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_parse_query_string11(self):
+        S = '#this is a query'
+        L = ['#this', 'is', 'a', 'query']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        
+    def test_parse_query_string12(self):
+        S = '~this is a query'
+        L = ['~this', 'is', 'a', 'query']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
         
     def test_parse_query_string_escape1(self):
         S = '\\"this is a query\\"'
@@ -149,6 +159,12 @@ class TestModuleMethods(unittest.TestCase):
         S = 'b*n*.[n*]'
         L = ['b*n*.[n*]']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        
+    def test_parse_lemmatized_transcript(self):
+        S = "#/'bɐlɐl/"
+        L = ["#/'bɐlɐl/"]
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        
 
 class TestQueryTokenCOCA(unittest.TestCase):
     token_type = tokens.COCAToken
@@ -229,6 +245,37 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
         
+    def test_ambiguous_lemma_pos1(self):
+        token = self.token_type("[N]", self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, ["N"])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+        
+    def test_ambiguous_lemma_pos2(self):
+        token = self.token_type("[N|V]", self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, ["N", "V"])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+        
+    def test_ambiguous_lemma_pos3(self):
+        token = self.token_type("[N|Lemma]", self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, ["N", "Lemma"])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+
+
     def test_lemmas_and_several_pos(self):
         token = self.token_type("[lemma1|lemma2].[N|V]", self.lexicon)
         self.assertFalse(token.negated)
@@ -368,7 +415,6 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.class_specifiers, ["N"])
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
-    
 
     def test_transcripts_and_several_pos(self):
         token = self.token_type("/trans1|trans2/.[N|V]", self.lexicon)
@@ -640,6 +686,56 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, ["abc#"])
+
+    def test_lemmatize5(self):
+        token = self.token_type("#abc|cde", self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertTrue(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["abc", "cde"])
+
+    def test_lemmatize6(self):
+        token = self.token_type("#[abc]", self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertTrue(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, ["abc"])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+
+    def test_lemmatize7(self):
+        token = self.token_type('#"abc"', self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertTrue(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, ["abc"])
+        self.assertEqual(token.word_specifiers, [])
+
+    def test_lemmatize8(self):
+        token = self.token_type("#/abc/", self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertTrue(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, ["abc"])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+
+    def test_lemmatize8a(self):
+        token = self.token_type("#/'bɪrɛr/", self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertTrue(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, ["'bɪrɛr"])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
 
     def test_escape_negation1(self):
         token = self.token_type("\\~abc", self.lexicon)
