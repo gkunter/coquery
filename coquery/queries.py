@@ -330,8 +330,8 @@ class TokenQuery(object):
 
             if not options.cfg.output_case_sensitive and len(df.index) > 0:
                 for x in df.columns:
-                    word_column = getattr(self.Resource, QUERY_ITEM_WORD)
-                    lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA)
+                    word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
+                    lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
                     if ((word_column and word_column in x) or 
                         (lemma_column and lemma_column in x)):
                         try:
@@ -515,8 +515,8 @@ class TokenQuery(object):
                 else:
                     df2 = df
                     for column in df2.columns:
-                        word_column = getattr(self.Resource, QUERY_ITEM_WORD)
-                        lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA)
+                        word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
+                        lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
                         if ((word_column and word_column in column) or 
                             (lemma_column and lemma_column in column)) and df2[column].dtype == object:
                             if options.cfg.output_to_lower:
