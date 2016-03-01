@@ -1166,7 +1166,7 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
                 painter.fillRect(option.rect, bg)
             elif value:
                 rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
-                rect.setWidth(option.rect.width() * value)
+                rect.setWidth(int(option.rect.width() * min(1, value)))
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
         if fg: 
             painter.setPen(QtGui.QPen(fg))
