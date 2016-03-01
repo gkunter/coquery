@@ -1188,7 +1188,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_unique_values(self, item=None, rc_feature=None, uniques=True):
         import uniqueviewer
         resource = self.resource
-        if item != None:
+        if item is not None:
             rc_feature = item.objectName()
         else:
             rc_feature = rc_feature
@@ -1622,6 +1622,8 @@ class CoqueryApp(QtGui.QMainWindow):
                     QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     return
                 self.new_session = SessionInputFile()
+        except TokenParseError as e:
+            QtGui.QMessageBox.critical(self, "Query string parsing error – Coquery", e.par, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except SQLNoConfigurationError:
             QtGui.QMessageBox.critical(self, "Database configuration error – Coquery", msg_sql_no_configuration, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except SQLInitializationError as e:

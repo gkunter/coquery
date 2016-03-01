@@ -105,6 +105,17 @@ except NameError:
     unicode = str
     long = int
 
+msg_token_dangling_open = """
+<p><b>Your query string <code style='color: #aa0000'>{str}</code> misses a 
+closing character.</b></p>
+<p>There is no matching closing character <code style='color: 
+#aa0000'>{close}</code> for the opening character <code style='color: 
+#aa0000'>{open}</code>.</p>
+<p>Please fix your query string by supplying the closing character. If you
+want to query for the opening character, try to escape it by using 
+<code style='color: #aa0000'>\\{open}</code> instead.</p>
+"""
+
 msg_invalid_filter = """
 <p><b>The corpus filter '{}' is not valid.</b></p>
 <p>One of your filters is not not valid for the currently selected corpus.

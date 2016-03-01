@@ -158,7 +158,8 @@ class COCAToken(QueryToken):
     pos_separator = "."
     negation_flag = "~"
     lemmatize_flag = "!"
-    quote_char = '"'
+    quote_open = '"'
+    quote_close = '"'
     
     def parse (self):
         self.word_specifiers = []
@@ -318,7 +319,7 @@ def parse_query_string(S, token_type):
                     token_closed = False
 
             # check for opening characters:
-            if current_char in set([token_type.transcript_open, token_type.bracket_open, token_type.quantification_open, token_type.quote_char]):
+            if current_char in set([token_type.transcript_open, token_type.bracket_open, token_type.quantification_open, token_type.quote_open]):
                 if current_word:
                     # raise an exception if an opening bracket occurs within
                     # a word, but not after a full stop (i.e. if it does not 
@@ -341,7 +342,7 @@ def parse_query_string(S, token_type):
                     state = ST_IN_TRANSCRIPT
                 elif current_char == token_type.bracket_open:
                     state = ST_IN_BRACKET
-                elif current_char == token_type.quote_char:
+                elif current_char == token_type.quote_open:
                     state = ST_IN_QUOTE
                 elif current_char == token_type.quantification_open:
                     state = ST_IN_QUANTIFICATION
@@ -378,7 +379,7 @@ def parse_query_string(S, token_type):
         # quote state?
         elif state == ST_IN_QUOTE:
             current_word = add(current_word, current_char)
-            if current_char == token_type.quote_char:
+            if current_char == token_type.quote_close:
                 state = ST_NORMAL
                 token_closed = True
                 
@@ -412,7 +413,19 @@ def parse_query_string(S, token_type):
                 raise TokenParseError(S)
             
     if state != ST_NORMAL:
-        raise TokenParseError(S)
+        if state == ST_IN_BRACKET:
+            op = token_type.bracket_open
+            cl = token_type.bracket_close
+        elif state == ST_IN_TRANSCRIPT:
+            op = token_type.transcript_open
+            cl = token_type.transcript_close
+        elif state == ST_IN_QUOTE:
+            op = token_type.quote_open
+            cl = token_type.quote_close
+        elif state == ST_IN_QUANTIFICATION:
+            op = token_type.quantification_open
+            cl = token_type.quantification_close
+        raise TokenParseError(msg_token_dangling_open.format(str=S, open=op, close=cl))
     if current_word:
         tokens.append(current_word)
     return tokens
