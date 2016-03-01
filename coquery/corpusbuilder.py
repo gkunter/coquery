@@ -73,6 +73,7 @@ import warnings
 import time
 import sqlalchemy
 import pandas as pd
+import unicodedata
 
 import sqlhelper
 import sqlwrap
@@ -341,7 +342,7 @@ class Table(object):
 
                 # apply unicode normalization:
                 for column in df.columns[df.dtypes == object]:
-                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
+                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x) if isinstance(x, str) else x)
 
                 df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
 
