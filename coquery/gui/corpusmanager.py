@@ -309,11 +309,11 @@ class CorpusManager(QtGui.QDialog):
                     ## only those instructions that are allowed for installer 
                     ## modules.
                     
-                    #try:
-                        #hashsum = options.validate_module(module_path, 
-                                #expected_classes=["BuilderClass"], 
-                                #whitelisted_modules="all",
-                                #allow_if = True).hexdigest()
+                    try:
+                        hashsum = options.validate_module(module_path, 
+                                expected_classes=["BuilderClass"], 
+                                whitelisted_modules="all",
+                                allow_if = True).hexdigest()
                     #except (IllegalCodeInModuleError,
                             #IllegalFunctionInModuleError,
                             #IllegalImportInModuleError,
@@ -322,16 +322,16 @@ class CorpusManager(QtGui.QDialog):
                             #None, "Corpus validation error – Coquery", 
                             #msg_invalid_installer.format(name=basename, code=str(e)), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                         #continue
-                    #except (ImportError, SyntaxError) as e:
-                        #msg = msg_corpus_broken.format(
-                            #name=basename,
-                            #type=sys.exc_info()[0],
-                            #code=sys.exc_info()[1])
-                        #logger.error(msg)
-                        #QtGui.QMessageBox.critical(
-                            #None, "Corpus error – Coquery", 
-                            #msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                        #continue
+                    except (ImportError, SyntaxError) as e:
+                        msg = msg_corpus_broken.format(
+                            name=basename,
+                            type=sys.exc_info()[0],
+                            code=sys.exc_info()[1])
+                        logger.error(msg)
+                        QtGui.QMessageBox.critical(
+                            None, "Corpus error – Coquery", 
+                            msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                        continue
                         
                     # load the module:
                     module = imp.load_source(basename, module_path)
