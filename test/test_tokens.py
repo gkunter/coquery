@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ This model tests the Coquery token parsers."""
 
 from __future__ import print_function
@@ -103,6 +104,16 @@ class TestModuleMethods(unittest.TestCase):
         L = ['this is', 'a', 'query']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
         
+    def test_parse_query_string_unicode1(self):
+        S = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
+        L = ['ȧƈƈḗƞŧḗḓ', 'ŧḗẋŧ', 'ƒǿř', 'ŧḗşŧīƞɠ']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        
+    def test_parse_query_string_unicode2(self):
+        S = '[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ] ƒǿř ŧḗşŧīƞɠ'
+        L = ['[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ]', 'ƒǿř', 'ŧḗşŧīƞɠ']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
     def test_parse_query_string_bad1(self):
         L = ['"this is a query',
              '/this is a query',
@@ -164,7 +175,6 @@ class TestModuleMethods(unittest.TestCase):
         S = "#/'bɐlɐl/"
         L = ["#/'bɐlɐl/"]
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
-        
 
 class TestQueryTokenCOCA(unittest.TestCase):
     token_type = tokens.COCAToken
