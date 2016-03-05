@@ -1020,14 +1020,16 @@ class BuilderClass(BaseCorpusBuilder):
         
     @staticmethod
     def get_references():
-        return [Reference(
-                author=[Name(first = "Eva-Maria", last = "Wunder"), Name(first = "Holger", last = "Voormann"), Name(first = "Ulrike", last = "Gut")], 
+        return [str(Article(
+                author=NameList(
+                    Name(first = "Eva-Maria", last = "Wunder"), 
+                    Name(first = "Holger", last = "Voormann"), 
+                    Name(first = "Ulrike", last = "Gut")), 
                 title = "The ICE Nigeria corpus project: Creating an open, rich and accurate corpus",
                 year = 2009,
                 journal = "ICAME Journal",
                 volume = 34,
-                pages = "78-88",
-                pub_type = "article").get_html()]
+                pages = "78-88"))]
 
     @staticmethod
     def get_url():
