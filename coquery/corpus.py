@@ -763,7 +763,6 @@ class BaseResource(object):
             for link, external_feature in options.cfg.external_links:
                 if external_feature == "{}_{}".format(table, feature):
                     return link.rc_feature
-                print(link.rc_feature, external_feature, rc_feature)
                 #if rc_feature == link.rc_feature:
                     #return link.key_feature
             
@@ -1612,7 +1611,6 @@ class CorpusClass(object):
                         column_list.append(variable_string)
                         column_list.append(linking_variable)
                         select_list.add(feature_name)
-                        break
                 
                 # construct subquery that joins the external table:
                 columns = ", ".join(set(column_list))
