@@ -1021,10 +1021,10 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_references():
         return [str(Article(
-                author=NameList(
-                    Name(first = "Eva-Maria", last = "Wunder"), 
-                    Name(first = "Holger", last = "Voormann"), 
-                    Name(first = "Ulrike", last = "Gut")), 
+                authors=PersonList(
+                    Person(first = "Eva-Maria", last = "Wunder"), 
+                    Person(first = "Holger", last = "Voormann"), 
+                    Person(first = "Ulrike", last = "Gut")), 
                 title = "The ICE Nigeria corpus project: Creating an open, rich and accurate corpus",
                 year = 2009,
                 journal = "ICAME Journal",
