@@ -206,7 +206,7 @@ class Options(object):
         """
         self.corpus_argument_dict = {
             "help": "specify the corpus to use", 
-            "choices": get_available_resources(DEFAULT_CONFIGURATION).keys(), 
+            "choices": [x.encode("utf-8") for x in get_available_resources(DEFAULT_CONFIGURATION).keys()], 
             "type": type(str(""))}
 
         self.setup_parser()
@@ -1115,6 +1115,10 @@ def get_available_resources(configuration):
     # cycle through the modules in the corpus path:
     for module_name in glob.glob(os.path.join(corpora_path, "*.py")):
         corpus_name, ext = os.path.splitext(os.path.basename(module_name))
+        try:
+            corpus_name = corpus_name.encode("utf-8")
+        except Exception as e:
+            print(e)
         #try:
             #validate_module(
                 #module_name, 
@@ -1139,6 +1143,8 @@ def get_available_resources(configuration):
         except SyntaxError as e:
             warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
             raise e
+        except UnicodeEncodeError as e:
+            print(corpus_name, e)
         except Exception as e:
             print(corpus_name, e)
             raise e

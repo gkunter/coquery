@@ -16,9 +16,7 @@ with open("README.md", "rb") as f:
 
 DESCRIPTION = "Coquery: a free corpus query tool"
 
-
 if __name__ == "__main__":
-    install_requires = check_dependencies()
 
     setup(name="coquery",
         author="Gero Kunter",
@@ -27,21 +25,20 @@ if __name__ == "__main__":
         maintainer_email="gero.kunter@coquery.org",
         description="Coquery: A free corpus query tool",
         long_description=long_descr,
-        license=GPL3,
+        license="GPL3",
         url="http://www.coquery.org",
         version=version,
-        install_requires=get_required_modules(),
-        packages=['coquery'],
+        install_requires=["pandas", "sqlalchemy"],
+        packages=['coquery', 'coquery/installer', 'coquery/gui', 'coquery/gui/ui/', 'coquery/visualizer'],
+        entry_points={
+            'console_scripts': ['coqcon = coquery.coquery:main_console', ],
+            'gui_scripts': ['coquery = coquery.coquery:main', ]
+            },
+        keywords="corpus linguistics query corpora analysis visualization",
         classifiers=[
-            'Development Status :: 5 - Production/Stable',
-            'Environment :: Console',
-            'Environment :: MacOS X',
-            'Environment :: Win32 (MS Windows)',
-            'Environment :: X11 Applications',
-            'Environment :: X11 Applications :: Qt',
+            'Development Status :: 4 - Beta',
             'Intended Audience :: Science/Research',
             'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-            'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
             'Operating System :: MacOS',
             'Operating System :: Windows',
             'Operating System :: POSIX',
