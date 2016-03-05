@@ -10,13 +10,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-from __future__ import print_function
-
-import sys
-import math
-import itertools
-import re
-import textwrap
 
 VERSION = "0.9"
 NAME = "Coquery"
@@ -367,78 +360,4 @@ Coquery, select <b>Manage corpora...</b> from the Corpus menu.</p>"""
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
-
-def printex(exc, *args, **kwargs):
-    """
-    Prints the exception string. XML tags are stripped.
-    """
-    l = [x.strip() for x in str(exc).split("</p>")]
-    
-    for par in [x.strip(" ") for x in str(exc).split("</p>") if x.strip(" ")]:
-        par = par.replace("\n", " ").strip(" ")
-        par = par.replace("  ", " ")
-        print("\n".join(
-            textwrap.wrap(re.sub('<[^>]*>', '', par), width=70, replace_whitespace=False)), 
-            *args, **kwargs)
-        print("")
-
-class FileSize(long):
-    """ Define a long class that can store file sizes, and which allows
-    custom formatting by using the format specifier S, which displays a 
-    human-readable file size with suffixes b, kb, Mb etc.
-    Adapted from http://code.activestate.com/recipes/578321-human-readable-filememory-sizes/
-    """
-    def __format__(self, fmt):
-        if self < 0:
-            return "(unknown)"
-        if fmt == "" or fmt[-1] != "S":
-            if fmt[-1].tolower() in ['b','c','d','o','x','n','e','f','g','%']:
-                # Numeric format.
-                return long(self).__format__(fmt)
-            else:
-                return str(self).__format__(fmt)
-
-        val, suffixes = float(self), ["b ","Kb","Mb","Gb","Tb","Pb"]
-        if val < 1:
-            # Can't take log(0) in any base.
-            i, v = 0, 0
-            exp = 0
-        else:
-            exp = int(math.log(val,1024))+1
-            v = val / math.pow(1024, exp)
-            # Move to the next bigger suffix when the value is large enough:
-            v, exp = (v, exp) if v > 0.5 else (v * 1024, exp - 1)
-        return ("{0:{1}f}" + suffixes[exp]).format(v, fmt[:-1])
-
-def dict_product(d):
-    """ Create a Cartesian product of the lists stored as values in the
-    dictionary 'd'.
-    
-    This product is useful for example to create a table of all factor level
-    combinations. The factor levels can be accessed by the column names. """
-    
-    cart_product = itertools.product(*d.itervalues())
-    
-    return (dict(itertools.izip(d, x)) for x in cart_product)
-
-
-#resource_list = ResourceList()
-
-def memory_dump():
-    import gc
-    x = 0
-    for obj in gc.get_objects():
-        i = id(obj)
-        size = sys.getsizeof(obj, 0)
-        # referrers = [id(o) for o in gc.get_referrers(obj)]
-        try:
-            cls = str(obj.__class__)
-        except:
-            cls = "<no class>"
-        if size > 1024 * 50:
-            referents = set([id(o) for o in gc.get_referents(obj)])
-            x += 1
-            print(x, {'id': i, 'class': cls, 'size': size, "ref": len(referents)})
-            #if len(referents) < 2000:
-                #print(obj)
 

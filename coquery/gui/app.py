@@ -2379,6 +2379,24 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
     
+def memory_dump():
+    import gc
+    x = 0
+    for obj in gc.get_objects():
+        i = id(obj)
+        size = sys.getsizeof(obj, 0)
+        # referrers = [id(o) for o in gc.get_referrers(obj)]
+        try:
+            cls = str(obj.__class__)
+        except:
+            cls = "<no class>"
+        if size > 1024 * 50:
+            referents = set([id(o) for o in gc.get_referents(obj)])
+            x += 1
+            print(x, {'id': i, 'class': cls, 'size': size, "ref": len(referents)})
+            #if len(referents) < 2000:
+                #print(obj)
+
 logger = logging.getLogger(NAME)
 
 
