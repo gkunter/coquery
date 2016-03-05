@@ -1,6 +1,13 @@
 from __future__ import unicode_literals
 import warnings
 
+# Create a tuple containing the available string types 
+# (Python 3 has no unicode):
+try:
+    string_types = (unicode, str)
+except NameError:
+    string_types = (str, )
+
 class Person(object):
     """
     This class defines a person that can be used in a bibliographic reference.
@@ -19,7 +26,13 @@ class Person(object):
     def __init__(self, first=None, middle=[], last=None, prefix=None, suffix=None, sortby=None):
         self.first = first
         self.last = last
-        self.middle = middle
+        if isinstance(middle, string_types):
+            self.middle = [middle]
+        elif isinstance(middle, list):
+            self.middle = middle
+        else:
+            pass
+            #raise ValueError("Person: middle names must be either strings or list, not {}.".format(type(middle)))
         self.prefix = prefix
         self.suffix = suffix
         self.sortby = sortby
@@ -62,7 +75,7 @@ class Person(object):
         s : string
             The joined string
         """
-        return sep.join([str(x) for x in l if x])
+        return sep.join(["{}".format(x) for x in l if x])
     
     def _middlename(self, mode="full"):
         """
@@ -73,6 +86,8 @@ class Person(object):
         ----------
         mode : 
         """
+        if not hasattr(self, "middle"):
+            return None
         if mode not in ["initials", "full"]:
             warnings.Warning("Unknown mode '{}' for Name.middlename(), assuming 'full' instead".format(mode))
             mode = "full"
@@ -104,7 +119,6 @@ class Person(object):
         if mode not in ["none", "middle", "all"]:
             warnings.Warning("Unknown mode '{}' for Name.full_name(), assuming 'none' instead".format(mode))
             mode = "none"
-        
         if mode == "none": 
             first = self.first
             middle = self._middlename("full")
@@ -136,21 +150,21 @@ class Person(object):
         if initials == "none": 
             S = "{}, {}".format(
                 self._join([self.last, self.suffix]),
-                self._join([self.prefix, self.first, self._join(self.middle)]))
+                self._join([self.prefix, self.first, self._join(getattr(self, "middle", []))]))
         elif initials == "middle":
             S = "{}, {}".format(
                 self._join([self.last, 
                            self.suffix]),
                 self._join([self.prefix, 
                            self.first, 
-                           self._join(["{}.".format(x[:1]) for x in self.middle])]))
+                           self._join(["{}.".format(x[:1]) for x in getattr(self, "middle", [])])]))
         else: 
             S = "{}, {}".format(
                 self._join([self.last, 
                            self.suffix]),
                 self._join([self.prefix, 
                            "{}.".format(self.first[:1]), 
-                           self._join(["{}.".format(x[:1]) for x in self.middle])]))
+                           self._join(["{}.".format(x[:1]) for x in getattr(self, "middle", [])])]))
         return S.strip(" ,")
     
 class PersonList(object):
@@ -268,6 +282,16 @@ class EditorList(PersonList):
         else:
             return "{} {}".format(s, many_editors)
 
+def stop(S):
+    """
+    Add a full stop, but only if the string doesn't end already in a 
+    full stop.
+    """
+    if isinstance(S, string_types):
+        return "{}.".format(S) if not S.endswith(".") else S
+    else:
+        return "{}.".format(S)
+    
 class Reference(object):
     """
     This class defines a minimal bibliographic reference.
@@ -354,13 +378,13 @@ class Reference(object):
         if hasattr(self, "authors") and hasattr(self, "year"):
             authors = self.authors.get_names(**kwargs)
             year = self.year
-            return "{}. {}. <i>{}</i>.".format(authors, year, title)
+            return "{} {} <i>{}</i>.".format(stop(authors), stop(year), title)
         elif hasattr(self, "authors"):
             authors = self.authors.get_names(**kwargs)
-            return "{}. <i>{}</i>.".format(authors, title)
+            return "{} <i>{}</i>.".format(stop(authors), title)
         elif hasattr(self, "year"):
             year = self.year
-            return "{}. <i>{}</i>.".format(year, title)
+            return "{} <i>{}</i>.".format(stop(year), title)
         else:
             return "<i>{}</i>.".format(title)
         
@@ -435,17 +459,17 @@ class Article(Reference):
         else:
             vol = ""
 
-        S = "{authors}. {year}. {title}. <i>{journal}</i>".format(
-            authors=self.authors.get_names(), 
-            year=self.year, 
-            title=self.title, 
+        S = "{authors} {year} {title} <i>{journal}</i>".format(
+            authors=stop(self.authors.get_names()), 
+            year=stop(self.year), 
+            title=stop(self.title), 
             journal=self.journal)
         if vol:
             S = "{} {}".format(S, vol)
         if hasattr(self, "pages"):
-            S = "{}. {}".format(S, self.pages)
+            S = "{} {}".format(stop(S), self.pages)
             
-        return "{}.".format(S)
+        return "{}".format(stop(S))
 
 class Book(Reference):
     """
@@ -566,11 +590,11 @@ class Book(Reference):
         else:
             persons = self.authors
             
-        S = "{persons}. {year}. {title}. {pub}.".format(
-            persons=persons.get_names(), 
-            year=self.year, 
-            title=self.get_book_title(), 
-            pub=self.get_publishing_information())
+        S = "{persons} {year} {title} {pub}".format(
+            persons=stop(persons.get_names()), 
+            year=stop(self.year), 
+            title=stop(self.get_book_title()), 
+            pub=stop(self.get_publishing_information()))
         return S
 
 class InCollection(Book):
@@ -684,16 +708,14 @@ class InCollection(Book):
         source = self.get_source_information()
         
         if hasattr(self, "pages"):
-            pag = ", {pages}".format(
+            source= "{source}, {pages}".format(
+                source=source,
                 pages=self.pages)
-        else:
-            pag = ""
-            
-        S = "{authors}. {year}. {contributiontitle}. {source}{pages}. {pub}.".format(
-            authors=self.authors.get_names(**kwargs),
-            year=self.year,
-            contributiontitle=self.contributiontitle,
-            source=source,
-            pages=pag,
-            pub=self.get_publishing_information())
+        
+        S = "{authors} {year} {contributiontitle} {source} {pub}".format(
+            authors=stop(self.authors.get_names(**kwargs)),
+            year=stop(self.year),
+            contributiontitle=stop(self.contributiontitle),
+            source=stop(source),
+            pub=stop(self.get_publishing_information()))
         return S

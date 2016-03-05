@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
 """ This module tests the bibliography module."""
+
+from __future__ import unicode_literals
 
 import unittest
 import os.path
@@ -7,55 +10,77 @@ import sys
 sys.path.append(os.path.join(sys.path[0], "../coquery"))
 from bibliography import *
 
+# Create a tuple containing the available string types 
+# (Python 3 has no unicode):
+try:
+    string_types = (unicode, str)
+except NameError:
+    string_types = (str, )
+
 class TestPerson(unittest.TestCase):
     def test_property_name(self):
         name = Person()
-        name.first = "Max"
+        name.first = "Jürgen"
         name.middle = ["Otto", "Emil"]
         name.prefix = "Dr."
         name.suffix = "MA"
-        name.last = "Mustermann"
+        name.last = "Münster"
 
-        self.assertEqual(name.first, "Max")
+        self.assertEqual(name.first, "Jürgen")
         self.assertEqual(name.middle, ["Otto", "Emil"])
         self.assertEqual(name.prefix, "Dr.")
         self.assertEqual(name.suffix, "MA")
-        self.assertEqual(name.last, "Mustermann")
+        self.assertEqual(name.last, "Münster")
+
+        name = Person(first="Jürgen", middle="M.", last="Münster")
+        self.assertTrue(isinstance(name.first, (unicode, str)))
+        self.assertTrue(isinstance(name.middle, list))
+        self.assertTrue(isinstance(name.last, (unicode, str)))
 
     def test_repr(self):
-        name = Person(first="Max", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Mustermann")
+        name = Person(first="Jürgen", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Münster")
         # The order of the named arguments in __repr__ is not fixed, so we 
         # test equality by sorting all the characters in the strings:
-        self.assertEqual(sorted(name.__repr__()), sorted("Person(first='Max', middle=['Otto', 'Emil'], prefix='Dr.', suffix='MA', last='Mustermann')"))
+        self.assertEqual(sorted(name.__repr__()), sorted("Person(first='Jürgen', middle=['Otto', 'Emil'], prefix='Dr.', suffix='MA', last='Münster')"))
 
     def test_name_str(self):
-        name = Person(first="Max", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Mustermann")
+        name = Person(first="Jürgen", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Münster")
         self.assertEqual(name.__str__(), name.full_name())
-        
-    def test_full_name(self):
-        name = Person(first="Max", last="Mustermann")
-        self.assertEqual(name.full_name(), "Max Mustermann")
-        self.assertEqual(name.full_name("middle"), "Max Mustermann")
-        self.assertEqual(name.full_name("all"), "M. Mustermann")
 
-        name = Person(first="Max", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Mustermann")
-        self.assertEqual(name.full_name(), "Dr. Max Otto Emil Mustermann MA")
-        self.assertEqual(name.full_name("middle"), "Dr. Max O. E. Mustermann MA")
-        self.assertEqual(name.full_name("all"), "Dr. M. O. E. Mustermann MA")
+    def test_full_name(self):
+        name = Person(first="Jürgen", last="Münster")
+        self.assertEqual(name.full_name(), "Jürgen Münster")
+        self.assertEqual(name.full_name("middle"), "Jürgen Münster")
+        self.assertEqual(name.full_name("all"), "J. Münster")
+
+        name = Person(first="Jürgen", middle="M.", last="Münster")
+        self.assertEqual(name.full_name(), "Jürgen M. Münster")
+        self.assertEqual(name.full_name("middle"), "Jürgen M. Münster")
+        self.assertEqual(name.full_name("all"), "J. M. Münster")
+
+        name = Person(first="Jürgen", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Münster")
+        self.assertEqual(name.full_name(), "Dr. Jürgen Otto Emil Münster MA")
+        self.assertEqual(name.full_name("middle"), "Dr. Jürgen O. E. Münster MA")
+        self.assertEqual(name.full_name("all"), "Dr. J. O. E. Münster MA")
 
     def test_bibliographic_name(self):
-        name = Person(first="Max", last="Mustermann")
-        self.assertEqual(name.bibliographic_name(), "Mustermann, Max")
-        self.assertEqual(name.bibliographic_name("middle"), "Mustermann, Max")
-        self.assertEqual(name.bibliographic_name("all"), "Mustermann, M.")
+        name = Person(first="Jürgen", last="Münster")
+        self.assertEqual(name.bibliographic_name(), "Münster, Jürgen")
+        self.assertEqual(name.bibliographic_name("middle"), "Münster, Jürgen")
+        self.assertEqual(name.bibliographic_name("all"), "Münster, J.")
 
-        name = Person(first="Max", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Mustermann")
-        self.assertEqual(name.bibliographic_name(), "Mustermann MA, Dr. Max Otto Emil")
-        self.assertEqual(name.bibliographic_name("middle"), "Mustermann MA, Dr. Max O. E.")
-        self.assertEqual(name.bibliographic_name("all"), "Mustermann MA, Dr. M. O. E.")
+        name = Person(first="Jürgen", middle="M.", last="Münster")
+        self.assertEqual(name.bibliographic_name(), "Münster, Jürgen M.")
+        self.assertEqual(name.bibliographic_name("middle"), "Münster, Jürgen M.")
+        self.assertEqual(name.bibliographic_name("all"), "Münster, J. M.")
+
+        name = Person(first="Jürgen", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Münster")
+        self.assertEqual(name.bibliographic_name(), "Münster MA, Dr. Jürgen Otto Emil")
+        self.assertEqual(name.bibliographic_name("middle"), "Münster MA, Dr. Jürgen O. E.")
+        self.assertEqual(name.bibliographic_name("all"), "Münster MA, Dr. J. O. E.")
 
 class TestPersonList(unittest.TestCase):
-    name1 = Person(first="Max", last="Mustermann")
+    name1 = Person(first="Jürgen", last="Münster")
     name2 = Person(first="John", middle=["William"], last="Doe")
     name3 = Person(first="Juan", last="Pérez")
 
@@ -113,19 +138,19 @@ class TestPersonList(unittest.TestCase):
     def test_get_names_name_orders(self):
         authors = PersonList(self.name1, self.name2, self.name3)
         # start first name with first name:
-        self.assertEqual(authors.get_names(mode_first="first"), "Max Mustermann, John William Doe, and Juan Pérez")
+        self.assertEqual(authors.get_names(mode_first="first"), "Jürgen Münster, John William Doe, and Juan Pérez")
         # start other names with last names:
-        self.assertEqual(authors.get_names(mode_others="last"), "Mustermann, Max, Doe, John William, and Pérez, Juan")
+        self.assertEqual(authors.get_names(mode_others="last"), "Münster, Jürgen, Doe, John William, and Pérez, Juan")
 
     def test_get_names_initialization(self):
         authors = PersonList(self.name1, self.name2, self.name3)
         # only middle as initials:
-        self.assertEqual(authors.get_names(initials="middle"), "Mustermann, Max, John W. Doe, and Juan Pérez")
+        self.assertEqual(authors.get_names(initials="middle"), "Münster, Jürgen, John W. Doe, and Juan Pérez")
         # first and middle as initials:
-        self.assertEqual(authors.get_names(initials="all"), "Mustermann, M., J. W. Doe, and J. Pérez")
+        self.assertEqual(authors.get_names(initials="all"), "Münster, J., J. W. Doe, and J. Pérez")
 
 class TestEditorList(unittest.TestCase):
-    name1 = Person(first="Max", last="Mustermann")
+    name1 = Person(first="Jürgen", last="Münster")
     name2 = Person(first="John", middle=["William"], last="Doe")
     name3 = Person(first="Juan", last="Pérez")
     
@@ -185,7 +210,7 @@ class TestEditorList(unittest.TestCase):
             self.name1.bibliographic_name(), self.name2.full_name(), self.name3.full_name()))
 
 class TestReference(unittest.TestCase):
-    name1 = Person(first="Max", last="Mustermann")
+    name1 = Person(first="Jürgen", last="Müstermann")
     name2 = Person(first="John", middle=["William"], last="Doe")
 
     title = "test document"
@@ -238,7 +263,7 @@ class TestReference(unittest.TestCase):
 
         ref = Reference(title=self.title, authors=self.namelist)
         self.assertEqual(ref.__str__(), "{authors}. <i>{title}</i>.".format(
-            authors=self.namelist.get_names().__str__(), 
+            authors=self.namelist.get_names(), 
             title=self.title))
 
         ref = Reference(title=self.title, year=self.year)
@@ -253,7 +278,7 @@ class TestReference(unittest.TestCase):
             title=self.title))
 
 class TestArticle(unittest.TestCase):
-    name1 = Person(first="Max", last="Mustermann")
+    name1 = Person(first="Jürgen", last="Münster")
 
     title = "test article"
     year = 1999
@@ -405,7 +430,7 @@ class TestArticle(unittest.TestCase):
             pages=self.pages))
 
 class TestBook(unittest.TestCase):
-    name1 = Person(first="Max", last="Mustermann")
+    name1 = Person(first="Jürgen", last="Münster")
     namelist = PersonList(name1)
     editorlist = EditorList(name1)
 
@@ -571,7 +596,7 @@ class TestBook(unittest.TestCase):
             pub=book.get_publishing_information()))
 
 class TestInCollection(unittest.TestCase):
-    name1 = Person(first="Max", last="Mustermann")
+    name1 = Person(first="Jürgen", last="Münster")
     name2 = Person(first="John", middle=["William"], last="Doe")
     namelist = PersonList(name1)
     editorlist = EditorList(name2)
