@@ -3,12 +3,13 @@ import unittest
 import os.path
 import sys
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery/gui")))
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery/installer")))
-import defines
-import corpus
-import options
+sys.path.append(os.path.normpath(os.path.join(sys.path[0], "..")))
+
+
+from coquery import options
+
+sys.path.append(os.path.join(options.get_home_dir(), "connections", "Default", "corpora"))
+
 import ICE_NG as ice_ng
 import argparse
 
