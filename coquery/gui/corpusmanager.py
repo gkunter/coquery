@@ -23,7 +23,7 @@ from coquery.errors import *
 from coquery.defines import *
 
 import classes
-import corpusbuilder
+from coquery import corpusbuilder
 from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 from ui.corpusManagerUi import Ui_corpusManager
 
@@ -330,9 +330,20 @@ class CorpusManager(QtGui.QDialog):
                             msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                         continue
                         
-                    # load the module:
-                    module = imp.load_source(basename, module_path)
 
+                    try:
+                        # load the module:
+                        module = imp.load_source(basename, module_path)
+                    except ImportError:
+                        msg = msg_corpus_broken.format(
+                            name=basename,
+                            type=sys.exc_info()[0],
+                            code=sys.exc_info()[1])
+                        logger.error(msg)
+                        QtGui.QMessageBox.critical(
+                            None, "Corpus error – Coquery", 
+                            msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                        continue
                     try:
                         builder_class = module.BuilderClass
                     except AttributeError:
