@@ -14,11 +14,9 @@ from __future__ import unicode_literals
 import os
 import sys
 
+from coquery import classes
+from coquery import options
 from pyqt_compat import QtCore, QtGui, QtHelp
-
-import classes
-import options
-
 from ui.helpViewerUi import Ui_HelpViewer
 
 class HelpViewer(QtGui.QMainWindow):

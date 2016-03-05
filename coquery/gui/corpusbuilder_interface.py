@@ -15,18 +15,18 @@ from __future__ import print_function
 import argparse
 import codecs
 import re
-
-from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
-
-from ui.corpusInstallerUi import Ui_CorpusInstaller
 import logging
+
+from coquery import options
+from coquery import sqlhelper
+from coquery import sqlwrap
+from coquery.defines import * 
+from coquery.errors import *
+
 import classes
 import errorbox
-from defines import * 
-from errors import *
-import options
-import sqlhelper
-import sqlwrap
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from ui.corpusInstallerUi import Ui_CorpusInstaller
 
 class InstallerGui(QtGui.QDialog):
     button_label = "&Install"
@@ -44,7 +44,7 @@ class InstallerGui(QtGui.QDialog):
         super(InstallerGui, self).__init__(parent)
 
         import __init__
-        self.logger = logging.getLogger(__init__.NAME)        
+        self.logger = logging.getLogger(NAME)        
 
         self.state = None
         
@@ -349,7 +349,7 @@ class BuilderGui(InstallerGui):
         self.ui.input_path.textChanged.disconnect()
 
         import __init__
-        self.logger = logging.getLogger(__init__.NAME)        
+        self.logger = logging.getLogger(NAME)        
 
         self._nltk_lemmatize = False
         self._nltk_tokenize = False

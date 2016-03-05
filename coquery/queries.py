@@ -20,7 +20,6 @@ try:
 except NameError:
     pass
 
-import __init__
 import collections
 import datetime
 
@@ -1062,4 +1061,4 @@ class CollocationQuery(TokenQuery):
     def remove_output_columns(session):
         session.output_order = session._old_output_order
         
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)

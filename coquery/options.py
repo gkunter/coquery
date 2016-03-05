@@ -11,8 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import __init__
-
 # Python 3.x: import configparser 
 # Python 2.x: import ConfigParser as configparser
 try:
@@ -56,9 +54,9 @@ class Options(object):
         
         self.args.coquery_home = get_home_dir(create=True)
 
-        self.prog_name = __init__.NAME
-        self.config_name = "%s.cfg" % __init__.NAME.lower()
-        self.version = __init__.__version__
+        self.prog_name = NAME
+        self.config_name = "%s.cfg" % NAME.lower()
+        self.version = VERSION
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False)
 
         self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
@@ -744,6 +742,7 @@ class Options(object):
                                         pass
         else:
             self.args.first_run = True
+
 cfg = None
 
 class UnicodeConfigParser(RawConfigParser):
@@ -1107,7 +1106,7 @@ def get_available_resources(configuration):
     d  = {}
     if configuration == None:
         return d
-    
+
     # add corpus_path to sys.path so that modules can be imported from
     # that location:
     corpora_path = os.path.join(get_home_dir(), "connections", configuration, "corpora")
@@ -1133,6 +1132,7 @@ def get_available_resources(configuration):
         #except IndentationError as e:
             #warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
             #continue
+        
         try:
             find = imp.find_module(corpus_name, [corpora_path])
             module = imp.load_module(corpus_name, *find)
@@ -1310,6 +1310,7 @@ _use_mysql = has_module("pymysql")
 _use_seaborn = has_module("seaborn")
 _use_pdfminer = has_module("pdfminer")
 _use_qt = has_module("PyQt4") or has_module("PySide")
+_use_chardet = has_module("chardet")
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:
@@ -1349,7 +1350,11 @@ module_information = {
     "Seaborn": ("A Python statistical data visualization library",
             "0.7",
             "Create visualizations of your query results",
-            "http://stanford.edu/~mwaskom/software/seaborn/")}
+            "http://stanford.edu/~mwaskom/software/seaborn/"),
+    "chardet": ("The universal character encoding detector",
+            "2.0.0",
+            "Detect the encoding of your text files",
+            "https://github.com/chardet/chardet")}
 
 #for x in module_information:
     #name = x
@@ -1370,7 +1375,7 @@ if not _use_seaborn:
     missing_optional_modules.append("Seaborn")
 
 try:
-    logger = logging.getLogger(__init__.NAME)
+    logger = logging.getLogger(NAME)
 except AttributeError:
     pass
 

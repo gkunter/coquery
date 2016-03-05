@@ -14,11 +14,10 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
-from errors import *
-import options
 import logging
-import __init__
+
+from coquery.errors import *
+from coquery import options
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
@@ -109,4 +108,4 @@ class Visualizer(vis.BaseVisualizer):
             print(e)
             raise e
         
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)

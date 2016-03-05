@@ -14,11 +14,10 @@ from __future__ import unicode_literals
 
 import sys
 
+from coquery import options
+from coquery.errors import *
 from pyqt_compat import QtCore, QtGui
 from ui.errorUi import Ui_ErrorDialog
-
-import options
-from errors import *
 
 class ErrorBox(QtGui.QDialog):
     def __init__(self, exc_info, exception, no_trace=False, message="", parent=None):

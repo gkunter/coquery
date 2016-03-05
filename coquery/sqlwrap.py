@@ -11,17 +11,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import __init__
-
 import os
 import logging
 import warnings
 import sqlalchemy
-
-try:
-    logger = logging.getLogger(__init__.NAME)
-except AttributeError:
-    pass
 
 from errors import *
 from defines import *
@@ -489,3 +482,6 @@ class SqlDB (object):
             self.connection.execute("DROP DATABASE {}".format(database_name.split()[0]))
         elif self.db_type == SQL_SQLITE:
             os.remove(self.sqlite_path(database_name))
+
+logger = logging.getLogger(NAME)
+

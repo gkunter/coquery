@@ -14,10 +14,9 @@ from __future__ import unicode_literals
 import random
 import sys
 
-from pyqt_compat import QtCore, QtGui
-
 import classes
-import options
+from pyqt_compat import QtCore, QtGui
+from coquery import options
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

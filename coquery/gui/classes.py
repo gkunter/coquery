@@ -17,16 +17,14 @@ import collections
 import numpy as np
 import pandas as pd
 
-import __init__
+from coquery import options
+from coquery import queries
+from coquery.errors import *
+from coquery.defines import *
+
 from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
-import errorbox as errorbox
-
+import errorbox
 import queryfilter
-import options
-import queries
-
-from errors import *
-from defines import *
 
 class CoqThread(QtCore.QThread):
     taskStarted = QtCore.Signal()
@@ -1293,5 +1291,5 @@ class CoqFlowLayout(QtGui.QLayout):
  
         return y + lineHeight - rect.y()
 
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)
 

@@ -74,9 +74,6 @@ import time
 import sqlalchemy
 import pandas as pd
 import unicodedata
-
-import sqlhelper
-import sqlwrap
 import argparse
 import re
 import time
@@ -93,8 +90,11 @@ except ImportError:
         
 import difflib
 
+import sqlhelper
+import sqlwrap
 import options
 import corpus
+
 from errors import *
 from defines import *
 
@@ -138,7 +138,7 @@ module_code = """# -*- coding: utf-8 -*-
 #
 
 from __future__ import unicode_literals
-from corpus import *
+from coquery.corpus import *
 
 class Resource(SQLResource):
     name = '{name}'

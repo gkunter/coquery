@@ -23,19 +23,16 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-import sqlhelper
-
-import __init__
-from session import *
-from defines import *
-from pyqt_compat import QtCore, QtGui, QtHelp
-
-import ui.coqueryUi
+from coquery import queries
+from coquery import sqlhelper
+from coquery.session import *
+from coquery.defines import *
 
 import classes
 import errorbox
-import queries
 import contextviewer
+from pyqt_compat import QtCore, QtGui, QtHelp
+from ui import coqueryUi
 
 # add required paths:
 sys.path.append(os.path.join(sys.path[0], "visualizer"))
@@ -112,7 +109,7 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.font = options.cfg.app.font()
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
 
-        self.ui = ui.coqueryUi.Ui_MainWindow()
+        self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
 
         self.setMenuBar(self.ui.menubar)
@@ -147,7 +144,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # https://stackoverflow.com/questions/1551605#1552105
         if sys.platform == "win32":
             import ctypes
-            CoqId = 'Coquery.Coquery.{}'.format(__init__.__version__)
+            CoqId = 'Coquery.Coquery.{}'.format(VERSION)
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)
         
     def setup_app(self):
@@ -252,7 +249,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectionBehavior(QtGui.QAbstractItemView.SelectRows|QtGui.QAbstractItemView.SelectColumns))
 
 
-        self.ui.status_message = QtGui.QLabel("{} {}".format(__init__.NAME, __init__.__version__))
+        self.ui.status_message = QtGui.QLabel("{} {}".format(NAME, VERSION))
 
         self.ui.combo_config = QtGui.QComboBox()
 
@@ -792,7 +789,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # populate the self.ui.options_tree with a root for each table:
         for table in tables:
             root = classes.CoqTreeItem()
-            root.setObjectName(ui.coqueryUi._fromUtf8("{}_table".format(table)))
+            root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
             root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
             try:
                 label = getattr(self.resource, str("{}_table".format(table)))
@@ -807,7 +804,7 @@ class CoqueryApp(QtGui.QMainWindow):
             # add a leaf for each table variable, in alphabetical order:
             for _, var in sorted([(getattr(self.resource, x), x) for x in table_dict[table]]):
                 leaf = classes.CoqTreeItem()
-                leaf.setObjectName(ui.coqueryUi._fromUtf8(var))
+                leaf.setObjectName(coqueryUi._fromUtf8(var))
                 root.addChild(leaf)
                 label = getattr(self.resource, var)
                 # Add labels if this feature is mapped to a query item type
@@ -1659,7 +1656,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
 
-    def visualize_data(self, module, **kwargs):
+    def visualize_data(self, name, **kwargs):
         """
         Visualize the current results table using the specified visualization 
         module.
@@ -1677,15 +1674,17 @@ class CoqueryApp(QtGui.QMainWindow):
         import visualization
         
         # try to import the specified visualization module:
+        print(name)
+        name = "coquery.visualizer.{}".format(name)
         try:
-            module = importlib.import_module(module)
+            module = importlib.import_module(name)
         except Exception as e:
             msg = "<code style='color: darkred'>{type}: {code}</code>".format(
                 type=type(e).__name__, code=sys.exc_info()[1])
             logger.error(msg)
             QtGui.QMessageBox.critical(
                 self, "Visualization error – Coquery",
-                VisualizationModuleError(module, msg).error_message)
+                VisualizationModuleError(name, msg).error_message)
             return 
         
         # try to do the visualization:
@@ -2151,13 +2150,13 @@ class CoqueryApp(QtGui.QMainWindow):
         image = QtGui.QImage(self.get_icon("title.png", small_n_flat=False).pixmap(dialog.size()))
         painter = QtGui.QPainter(image)
         painter.setPen(QtCore.Qt.black)
-        painter.drawText(image.rect(), QtCore.Qt.AlignBottom, "Version {}".format(__init__.__version__))
+        painter.drawText(image.rect(), QtCore.Qt.AlignBottom, "Version {}".format(VERSION))
         painter.end()
         dialog.ui.label_pixmap.setPixmap(QtGui.QPixmap.fromImage(image))
         dialog.ui.label_pixmap.setAlignment(QtCore.Qt.AlignCenter)
 
         dialog.ui.label_description.setText(
-            unicode(dialog.ui.label_description.text()).format(version=__init__.__version__, date=__init__.DATE))
+            unicode(dialog.ui.label_description.text()).format(version=VERSION, date=DATE))
         dialog.exec_()
 
     def setGUIDefaults(self):
@@ -2380,6 +2379,6 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
     
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)
 
 

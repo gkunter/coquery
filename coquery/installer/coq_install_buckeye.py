@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import codecs
 import csv
 
-from corpusbuilder import *
+from coquery.corpusbuilder import *
 
 # The class corpus_code contains the Python source code that will be
 # embedded into the corpus library. It provides the Python code that will

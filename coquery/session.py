@@ -21,7 +21,6 @@ import collections
 
 import pandas as pd
 
-import __init__
 import options
 from errors import *
 from corpus import *
@@ -494,5 +493,5 @@ class SessionStdIn(Session):
         if options.cfg.skip_lines:
             logger.info("Skipping first %s %s." % (options.cfg.skip_lines, "query" if options.cfg.skip_lines == 1 else "queries"))
     
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)
     

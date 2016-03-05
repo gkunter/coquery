@@ -13,11 +13,10 @@ from __future__ import unicode_literals
 
 import sys
 
+from coquery import options
+import classes
 from pyqt_compat import QtCore, QtGui
 from ui.logfileUi import Ui_logfileDialog
-
-import classes
-import options
 
 class LogfileViewer(QtGui.QDialog):
     def __init__(self, parent=None):

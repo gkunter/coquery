@@ -15,8 +15,8 @@ from __future__ import print_function
 import codecs
 import unicodedata
 
-from corpusbuilder import *
-from defines import *
+from coquery.corpusbuilder import *
+from coquery.defines import *
 
 def dia_to_unicode(s):
     """

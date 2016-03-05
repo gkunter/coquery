@@ -18,17 +18,14 @@ import os
 import imp
 import logging
 
-import __init__
-
-import options
-from errors import *
-from defines import *
-
-from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
-from ui.corpusManagerUi import Ui_corpusManager
+from coquery import options
+from coquery.errors import *
+from coquery.defines import *
 
 import classes
 import corpusbuilder
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from ui.corpusManagerUi import Ui_corpusManager
 
 class CoqAccordionEntry(QtGui.QWidget):
     """ Define a QWidget that can be used as an entry in a accordion list."""
@@ -432,4 +429,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)

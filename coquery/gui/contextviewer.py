@@ -16,11 +16,10 @@ import sys
 import os
 import pandas as pd
 
+from coquery import options
+import classes
 from pyqt_compat import QtCore, QtGui
 from ui.contextViewerUi import Ui_ContextView
-
-import options
-import classes
 
 class ContextView(QtGui.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, parent=None):

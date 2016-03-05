@@ -18,8 +18,8 @@ try:
 except ImportError:
     from io import StringIO
     
-from corpusbuilder import *
-from bibliography import *
+from coquery.corpusbuilder import *
+from coquery.bibliography import *
 
 class corpus_code():
     #def get_tag_translate(self, tag):

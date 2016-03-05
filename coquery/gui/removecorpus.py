@@ -13,10 +13,9 @@ from __future__ import unicode_literals
 
 import sys
 
+from coquery import options
 from pyqt_compat import QtCore, QtGui
 from ui.removeCorpusUi import Ui_RemoveCorpus
-
-import options
 
 class RemoveCorpusDialog(QtGui.QDialog):
     def __init__(self, entry, configuration_name, parent=None):

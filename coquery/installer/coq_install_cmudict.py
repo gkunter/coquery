@@ -13,9 +13,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 
-from corpusbuilder import *
-import transpose
 import codecs
+
+from coquery.corpusbuilder import *
+from coquery import transpose
 
 class BuilderClass(BaseCorpusBuilder):
     encoding = "latin-1"

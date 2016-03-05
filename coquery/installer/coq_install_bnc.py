@@ -12,7 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals 
 
-from corpusbuilder import *
+from coquery.corpusbuilder import *
 import re
 
 class BuilderClass(BaseCorpusBuilder):

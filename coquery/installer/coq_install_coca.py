@@ -16,9 +16,9 @@ import csv
 import itertools
 import tempfile
 
-from corpusbuilder import *
-from defines import *
-import options
+from coquery.corpusbuilder import *
+from coquery.defines import *
+from couqery import options
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.txt"

@@ -18,6 +18,10 @@ import itertools
 import re
 import textwrap
 
+VERSION = "0.9"
+NAME = "Coquery"
+DATE = "2016"
+
 DEFAULT_MISSING_VALUE = "<NA>"
 
 # The following labels are used to refer to the different types of query 

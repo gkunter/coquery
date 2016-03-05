@@ -12,8 +12,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-from corpusbuilder import *
-from errors import *
+from coquery.corpusbuilder import *
+from coquery.errors import *
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "*.bson"

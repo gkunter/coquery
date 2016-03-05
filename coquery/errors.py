@@ -16,7 +16,6 @@ import sys
 import traceback
 import os
 import logging
-import __init__
 
 from defines import *
 
@@ -278,7 +277,4 @@ def print_exception(e):
     error_string += "ERROR %s: %s\n" % (type(e).__name__, e)
     printex(error_string, file=sys.stderr)
 
-try:
-    logger = logging.getLogger(__init__.NAME)
-except AttributeError:
-    pass
+logger = logging.getLogger(NAME)
