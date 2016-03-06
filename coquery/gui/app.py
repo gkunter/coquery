@@ -1674,7 +1674,6 @@ class CoqueryApp(QtGui.QMainWindow):
         import visualization
         
         # try to import the specified visualization module:
-        print(name)
         name = "coquery.visualizer.{}".format(name)
         try:
             module = importlib.import_module(name)
