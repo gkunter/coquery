@@ -937,6 +937,7 @@ class SQLResource(BaseResource):
             query_string = ""
             
         Query.Session.output_order = self.get_select_list(Query)
+        
         return query_string
 
     def get_context(self, token_id, origin_id, number_of_tokens, case_sensitive, db_connection):
@@ -1618,6 +1619,11 @@ class CorpusClass(object):
                     corpus=db_name, table=link.table_name, 
                     external_feature=link.rc_feature, alias=alias)
                 external_links.append(S)
+                
+                if self.resource.db_type == SQL_SQLITE:
+                    if not hasattr(self.resource, "attach_list"):
+                        self.resource.attach_list = set([])
+                    self.resource.attach_list.add(link.db_name)
             else:
                 rc_tab = rc_table.split("_")[0]
                 sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
