@@ -311,14 +311,14 @@ class CorpusManager(QtGui.QDialog):
                                 expected_classes=["BuilderClass"], 
                                 whitelisted_modules="all",
                                 allow_if = True).hexdigest()
-                    #except (IllegalCodeInModuleError,
-                            #IllegalFunctionInModuleError,
-                            #IllegalImportInModuleError,
-                            #ModuleIncompleteError) as e:
-                        #QtGui.QMessageBox.critical(
-                            #None, "Corpus validation error – Coquery", 
-                            #msg_invalid_installer.format(name=basename, code=str(e)), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                        #continue
+                    except (IllegalCodeInModuleError,
+                            IllegalFunctionInModuleError,
+                            IllegalImportInModuleError,
+                            ModuleIncompleteError) as e:
+                        QtGui.QMessageBox.critical(
+                            None, "Corpus validation error – Coquery", 
+                            msg_invalid_installer.format(name=basename, code=str(e)), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                        continue
                     except (ImportError, SyntaxError) as e:
                         msg = msg_corpus_broken.format(
                             name=basename,
