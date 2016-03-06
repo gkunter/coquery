@@ -8,8 +8,16 @@ import os.path
 import sys
 
 sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
-import tokens
+
+# Mock module requirements:
+class mock_module(object):
+    pass
+
+sys.modules["sqlalchemy"] = mock_module
+sys.modules["options"] = mock_module
 from corpus import LexiconClass, BaseResource
+
+import tokens
 
 class TestLexicon(LexiconClass):
     def is_part_of_speech(self, pos):
@@ -104,14 +112,29 @@ class TestModuleMethods(unittest.TestCase):
         L = ['this is', 'a', 'query']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
         
-    def test_parse_query_string_unicode1(self):
+    def test_unicode_1(self):
+        B = b"string"
+        U = u"string"
+        self.assertEqual(type(tokens.parse_query_string(B, tokens.COCAToken)[0]), 
+                         type(U))
+        B = "string_äöü"
+        U = u"string"
+        self.assertEqual(type(tokens.parse_query_string(B, tokens.COCAToken)[0]), 
+                         type(U))
+
+    def test_unicode_2(self):
         S = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
-        L = ['ȧƈƈḗƞŧḗḓ', 'ŧḗẋŧ', 'ƒǿř', 'ŧḗşŧīƞɠ']
+        L = [u'ȧƈƈḗƞŧḗḓ', u'ŧḗẋŧ', u'ƒǿř', u'ŧḗşŧīƞɠ']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
         
-    def test_parse_query_string_unicode2(self):
+    def test_unicode_3(self):
         S = '[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ] ƒǿř ŧḗşŧīƞɠ'
-        L = ['[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ]', 'ƒǿř', 'ŧḗşŧīƞɠ']
+        L = [u'[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ]', u'ƒǿř', u'ŧḗşŧīƞɠ']
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_unicode_3(self):
+        S = u'[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ] ƒǿř ŧḗşŧīƞɠ'
+        L = [u'[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ]', u'ƒǿř', u'ŧḗşŧīƞɠ']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
 
     def test_parse_query_string_bad1(self):
@@ -173,7 +196,8 @@ class TestModuleMethods(unittest.TestCase):
         
     def test_parse_lemmatized_transcript(self):
         S = "#/'bɐlɐl/"
-        L = ["#/'bɐlɐl/"]
+        L = [u"#/'bɐlɐl/"]
+        result = tokens.parse_query_string(S, tokens.COCAToken)
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
 
 class TestQueryTokenCOCA(unittest.TestCase):
@@ -185,6 +209,14 @@ class TestQueryTokenCOCA(unittest.TestCase):
     def setUp(self):
         self.lexicon = TestLexicon()
     
+    def test_unicode_1(self):
+        token = self.token_type(b"word", self.lexicon)
+        self.assertEqual(type(token.S), type(u"word"))
+        token = self.token_type(u"word", self.lexicon)
+        self.assertEqual(type(token.S), type(u"word"))
+        token = self.token_type(u"'ȧƈƈḗƞŧḗḓ ŧḗẋŧ'", self.lexicon)
+        self.assertEqual(type(token.S), type(u"word"))
+
     def test_word_only(self):
         token = self.token_type("word", self.lexicon)
         self.assertFalse(token.negated)
@@ -617,6 +649,32 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertFalse(token.has_wildcards("abc\\_abc"))
         self.assertFalse(token.has_wildcards("abc\\_"))
         
+    def test_replace_wildcards(self):
+        self.assertEqual(self.token_type.replace_wildcards("*ab"), "%ab")
+        self.assertEqual(self.token_type.replace_wildcards("a*b"), "a%b")
+        self.assertEqual(self.token_type.replace_wildcards("ab*"), "ab%")
+
+        self.assertEqual(self.token_type.replace_wildcards("\\*ab"), "*ab")
+        self.assertEqual(self.token_type.replace_wildcards("a\\*b"), "a*b")
+        self.assertEqual(self.token_type.replace_wildcards("ab\\*"), "ab*")
+
+        self.assertEqual(self.token_type.replace_wildcards("%ab"), "\\%ab")
+        self.assertEqual(self.token_type.replace_wildcards("a%b"), "a\\%b")
+        self.assertEqual(self.token_type.replace_wildcards("ab%"), "ab\\%")
+
+        self.assertEqual(self.token_type.replace_wildcards("?ab"), "_ab")
+        self.assertEqual(self.token_type.replace_wildcards("a?b"), "a_b")
+        self.assertEqual(self.token_type.replace_wildcards("ab?"), "ab_")
+
+        self.assertEqual(self.token_type.replace_wildcards("\\?ab"), "?ab")
+        self.assertEqual(self.token_type.replace_wildcards("a\\?b"), "a?b")
+        self.assertEqual(self.token_type.replace_wildcards("ab\\?"), "ab?")
+
+        self.assertEqual(self.token_type.replace_wildcards("_ab"), "\\_ab")
+        self.assertEqual(self.token_type.replace_wildcards("a_b"), "a\\_b")
+        self.assertEqual(self.token_type.replace_wildcards("ab_"), "ab\\_")
+
+        
     def test_negation0(self):
         token = self.token_type("abc", self.lexicon)
         self.assertFalse(token.negated)
@@ -742,7 +800,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertFalse(token.negated)
         self.assertTrue(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, ["'bɪrɛr"])
+        self.assertEqual(token.transcript_specifiers, [u"'bɪrɛr"])
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
@@ -918,6 +976,7 @@ class TestQuantification(unittest.TestCase):
         except AttributeError:
             self.assertCountEqual(tokens.preprocess_query(S), L)
 
+# An CQL query syntax is not implemented yet, but might be in the future.
 #class TestQueryTokenCQL(unittest.TestCase):
     #token_type = tokens.CQLToken
     
@@ -1054,7 +1113,8 @@ if __name__ == '__main__':
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestModuleMethods),
         unittest.TestLoader().loadTestsFromTestCase(TestQueryTokenCOCA),
-        unittest.TestLoader().loadTestsFromTestCase(TestQuantification)])
+        unittest.TestLoader().loadTestsFromTestCase(TestQuantification),
+        ])
     
     print()
     print(" ----- START ----- ")

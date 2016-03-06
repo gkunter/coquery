@@ -225,12 +225,9 @@ class LexiconClass(object):
                 target = self.resource.get_field(rc_feature)
                 for spec in spec_list:
                     if spec != "%":
-                        dummy = tokens.COCAWord(spec, self, replace=False, parse=False)
+                        dummy = tokens.COCAToken(spec, self, replace=False, parse=False)
                         dummy.negated = token.negated
-                        if not isinstance(dummy.S, unicode):
-                            S = unicode(dummy.S)
-                        else:
-                            S = dummy.S
+                        S = dummy.S
                         S = S.replace("'", "''")
                         format_string = "{} {} '{}'"
                         if options.cfg.query_case_sensitive:
@@ -1805,12 +1802,9 @@ class CorpusClass(object):
             pass
         else:
             for word in token.word_specifiers:
-                current_token = tokens.COCAWord(word, self, replace=False, parse=False)
+                current_token = tokens.COCAToken(word, self, replace=False, parse=False)
                 current_token.negated = token.negated
-                if not isinstance(current_token.S, unicode):
-                    S = unicode(current_token.S)
-                else:
-                    S = current_token.S
+                S = current_token.S
                 if S != "%":
                     # take care of quotation marks:
                     S = S.replace("'", "''")
@@ -1825,12 +1819,9 @@ class CorpusClass(object):
             pass
         else:
             for lemma in token.lemma_specifiers:
-                current_token = tokens.COCAWord(lemma, self, replace=False, parse=False)
+                current_token = tokens.COCAToken(lemma, self, replace=False, parse=False)
                 current_token.negated = token.negated
-                if not isinstance(current_token.S, unicode):
-                    S = unicode(current_token.S)
-                else:
-                    S = current_token.S
+                S = current_token.S
                 if S != "%":
                     # take care of quotation marks:
                     S = S.replace("'", "''")
@@ -1845,12 +1836,9 @@ class CorpusClass(object):
             pass
         else:
             for pos in token.class_specifiers:
-                current_token = tokens.COCAWord(pos, self, replace=False, parse=False)
+                current_token = tokens.COCAToken(pos, self, replace=False, parse=False)
                 current_token.negated = token.negated
-                if not isinstance(current_token.S, unicode):
-                    S = unicode(current_token.S)
-                else:
-                    S = current_token.S
+                S = current_token.S
                 # take care of quotation marks:
                 if S != "%":
                     S = S.replace("'", "''")
