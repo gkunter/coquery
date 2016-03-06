@@ -18,7 +18,7 @@ import tempfile
 
 from coquery.corpusbuilder import *
 from coquery.defines import *
-from couqery import options
+from coquery import options
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.txt"
