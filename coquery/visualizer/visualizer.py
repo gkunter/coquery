@@ -88,6 +88,12 @@ class BaseVisualizer(QtCore.QObject):
     def format_coord(self, x, y, title):
         pass
 
+    def set_tooltip(self, s):
+        try:
+            self.g.fig.canvas.setToolTip(s)
+        except Exception as e:
+            print(e)
+            
     def set_hover(self, fun=None):
         if fun == None:
             fun = self.format_coord
