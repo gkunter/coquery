@@ -1145,7 +1145,6 @@ def get_available_resources(configuration):
             logger.warn("There is a Unicode error in corpus module {}: {}".format(corpus_name, str(e)))
         except Exception as e:
             logger.warn("There is an error in corpus module {}: {}".format(corpus_name, str(e)))
-            raise e
         else:
             try:
                 d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
