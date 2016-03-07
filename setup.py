@@ -8,6 +8,7 @@ except ImportError:
     from distutils.core import setup
 
 import re
+import os
 
 from coquery.defines import VERSION as version
 
@@ -29,7 +30,16 @@ if __name__ == "__main__":
         url="http://www.coquery.org",
         version=version,
         install_requires=["pandas", "sqlalchemy"],
-        packages=['coquery', 'coquery/installer', 'coquery/gui', 'coquery/gui/ui/', 'coquery/visualizer'],
+        packages=['coquery', 
+                  os.path.join('coquery', 'installer'), 
+                  os.path.join('coquery', 'gui'), 
+                  os.path.join('coquery', 'gui', 'ui'), 
+                  os.path.join('coquery', 'visualizer')],
+        package_data={'': [
+                  os.path.join('coquery', 'icons/*'), 
+                  os.path.join('coquery', 'help/*'), 
+                  os.path.join('coquery', 'texts/*')]},
+        include_package_data=True,
         entry_points={
             'console_scripts': ['coqcon = coquery.coquery:main_console', ],
             'gui_scripts': ['coquery = coquery.coquery:main', ]
