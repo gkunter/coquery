@@ -363,6 +363,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_save_selection.setDisabled(True)
             self.ui.action_save_results.setDisabled(True)
             self.ui.action_copy_to_clipboard.setDisabled(True)
+            self.ui.action_create_textgrid.setDisabled(True)
             return
 
         # enable "Save results"
@@ -373,6 +374,10 @@ class CoqueryApp(QtGui.QMainWindow):
         if self.ui.data_preview.selectionModel() and self.ui.data_preview.selectionModel().selection():
             self.ui.action_save_selection.setEnabled(True)
             self.ui.action_copy_to_clipboard.setEnabled(True)
+            
+        # enable "Create textgrid", but only if tgt is available:
+        if options._use_tgt:
+            self.ui.action_create_textgrid.setEnabled(True)
             
     def show_corpus_menu(self):
         if self.ui.combo_corpus.count():

@@ -1315,6 +1315,7 @@ _use_seaborn = has_module("seaborn")
 _use_pdfminer = has_module("pdfminer")
 _use_qt = has_module("PyQt4") or has_module("PySide")
 _use_chardet = has_module("chardet")
+_use_tgt = has_module("tgt")
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:
@@ -1358,7 +1359,11 @@ module_information = {
     "chardet": ("The universal character encoding detector",
             "2.0.0",
             "Detect the encoding of your text files",
-            "https://github.com/chardet/chardet")}
+            "https://github.com/chardet/chardet"),
+    "tgt": ("TextGridTools -- Read, write, and manipulate Praat TextGrid files",
+            "1.3.1",
+            "Export query results with time indices as Praat textgrids",
+            "http://github.com/hbuschme/TextGridTools/")}
 
 #for x in module_information:
     #name = x
