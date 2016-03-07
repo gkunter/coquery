@@ -19,11 +19,12 @@ import imp
 import logging
 
 from coquery import options
+from coquery import corpusbuilder
 from coquery.errors import *
 from coquery.defines import *
+from coquery.unicode import utf8
 
 import classes
-from coquery import corpusbuilder
 from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 from ui.corpusManagerUi import Ui_corpusManager
 
@@ -219,7 +220,7 @@ class CoqAccordionEntry(QtGui.QWidget):
             for name, module, url in self._modules:
                 if url:
                    s = "<p>{module} (<a href='{url}'>{url}</a>)</p>".format(
-                       module=module, url=url)
+                       module=utf8(module), url=utf8(url))
                 else:
                    s = "<p>{}</p>".format(module)
                 l.append(s)
@@ -258,6 +259,7 @@ class CorpusManager(QtGui.QDialog):
         self.paths.append((options.cfg.installer_path, INSTALLER_DEFAULT))
         if options.cfg.custom_installer_path:
             self.paths.append((options.cfg.custom_installer_path, INSTALLER_CUSTOM))
+ 
         self.update()
 
     def built_in(self, path):
@@ -329,7 +331,6 @@ class CorpusManager(QtGui.QDialog):
                             None, "Corpus error – Coquery", 
                             msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                         continue
-                        
 
                     try:
                         # load the module:
@@ -352,7 +353,7 @@ class CorpusManager(QtGui.QDialog):
                     # create a new accordion entry:
                     entry = CoqAccordionEntry(stack=self)
 
-                    name = builder_class.get_name()
+                    name = utf8(builder_class.get_name())
                     self.detail_box = classes.CoqDetailBox(name, entry, alternative=name)
 
                     if basename != "coq_install_generic":
@@ -363,25 +364,26 @@ class CorpusManager(QtGui.QDialog):
                         #entry.setChecksum(hashsum)
 
                     
-                        title = builder_class.get_title()
+                        title = utf8(builder_class.get_title())
                         entry.setTitle(title)
                         
                         if builder_class.get_url():
-                            entry.setURL(builder_class.get_url())
-                        
+                            entry.setURL(utf8(builder_class.get_url()))
+                            
                         if builder_class.get_description():
                             entry.setDescription(
-                                "".join(["<p>{}</p>".format(x) for x in builder_class.get_description()]))
+                                "".join(["<p>{}</p>".format(utf8(x)) for x in builder_class.get_description()]))
+                                
+                        if builder_class.get_language():
+                            entry.setLanguage(
+                                utf8(builder_class.get_language()), utf8(builder_class.get_language_code()))
                             
-                        entry.setLanguage(builder_class.get_language(),
-                                    builder_class.get_language_code())      
-                        
                         if builder_class.get_references():
-                            references = "".join(["<p><span style='padding-left: 2em; text-indent: 2em;'>{}</span></p>".format(x) for x in builder_class.get_references()])
+                            references = "".join(["<p><span style='padding-left: 2em; text-indent: 2em;'>{}</span></p>".format(utf8(x)) for x in builder_class.get_references()])
                             entry.setReferences("<p><b>References</b>{}".format(references))
-                            
+                                
                         if builder_class.get_license():
-                            entry.setLicense("<p><b>License</b></p><p>{}</p>".format(builder_class.get_license()))
+                            entry.setLicense("<p><b>License</b></p><p>{}</p>".format(utf8(builder_class.get_license())))
 
                         if builder_class.get_modules():
                             entry.setModules(builder_class.get_modules())
