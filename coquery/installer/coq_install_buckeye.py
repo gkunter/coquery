@@ -37,7 +37,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     word_table = "Lexicon"
     word_id = "WordId"
-    word_label = "Wprd"
+    word_label = "Word"
     word_pos = "POS"
     word_transcript = "Transcript"
     word_lemmatranscript = "Lemma_Transcript"
@@ -234,6 +234,7 @@ class BuilderClass(BaseCorpusBuilder):
         self._corpus_code = corpus_code
         
         self.add_time_feature(self.corpus_time)
+        self.add_time_index(self.corpus_time)
     
     @staticmethod
     def get_name():
