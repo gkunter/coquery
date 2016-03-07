@@ -696,6 +696,7 @@ The number of occurrences of each token matching the query string is counted. Th
     </property>
     <addaction name="action_save_results"/>
     <addaction name="action_save_selection"/>
+    <addaction name="action_create_textgrid"/>
     <addaction name="action_copy_to_clipboard"/>
     <addaction name="separator"/>
     <addaction name="action_view_log"/>
@@ -1018,7 +1019,7 @@ The number of occurrences of each token matching the query string is counted. Th
   </action>
   <action name="action_view_log">
    <property name="text">
-    <string>View log file...</string>
+    <string>View &amp;log file...</string>
    </property>
   </action>
   <action name="action_mysql_server_help">
@@ -1062,7 +1063,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>Save results...</string>
+    <string>&amp;Save results...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -1074,7 +1075,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>Copy selection to clipboard</string>
+    <string>&amp;Copy selection to clipboard</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
@@ -1096,7 +1097,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>Save selection...</string>
+    <string>Sa&amp;ve selection...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
@@ -1116,6 +1117,11 @@ The number of occurrences of each token matching the query string is counted. Th
    </property>
    <property name="text">
     <string>Use stop&amp;words</string>
+   </property>
+  </action>
+  <action name="action_create_textgrid">
+   <property name="text">
+    <string>Create te&amp;xtgrid...</string>
    </property>
   </action>
  </widget>

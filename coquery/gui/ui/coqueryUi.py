@@ -2,7 +2,8 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt4 UI code generator 4.11.4
+# Created: Mon Mar  7 19:22:38 2016
+#      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -44,8 +45,8 @@ class Ui_MainWindow(object):
         self.options_area.setSizePolicy(sizePolicy)
         self.options_area.setObjectName(_fromUtf8("options_area"))
         self.horizontalLayout_7 = QtGui.QHBoxLayout(self.options_area)
-        self.horizontalLayout_7.setContentsMargins(0, 0, 0, 8)
         self.horizontalLayout_7.setSpacing(12)
+        self.horizontalLayout_7.setContentsMargins(0, 0, 0, 8)
         self.horizontalLayout_7.setObjectName(_fromUtf8("horizontalLayout_7"))
         self.widget = QtGui.QWidget(self.options_area)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.MinimumExpanding)
@@ -55,8 +56,8 @@ class Ui_MainWindow(object):
         self.widget.setSizePolicy(sizePolicy)
         self.widget.setObjectName(_fromUtf8("widget"))
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.widget)
-        self.verticalLayout_3.setMargin(0)
         self.verticalLayout_3.setSpacing(0)
+        self.verticalLayout_3.setMargin(0)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.box_corpus_select = QtGui.QGroupBox(self.widget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
@@ -256,9 +257,9 @@ class Ui_MainWindow(object):
         self.box_output_options = QtGui.QGroupBox(self.options_area)
         self.box_output_options.setObjectName(_fromUtf8("box_output_options"))
         self.output_columns = QtGui.QVBoxLayout(self.box_output_options)
+        self.output_columns.setSpacing(0)
         self.output_columns.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
         self.output_columns.setContentsMargins(8, -1, 8, 6)
-        self.output_columns.setSpacing(0)
         self.output_columns.setObjectName(_fromUtf8("output_columns"))
         self.horizontalLayout_7.addWidget(self.box_output_options)
         self.splitter = QtGui.QSplitter(self.splitter_2)
@@ -286,9 +287,9 @@ class Ui_MainWindow(object):
         self.layoutWidget = QtGui.QWidget(self.splitter)
         self.layoutWidget.setObjectName(_fromUtf8("layoutWidget"))
         self.verticalLayout_4 = QtGui.QVBoxLayout(self.layoutWidget)
+        self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
         self.verticalLayout_4.setContentsMargins(4, -1, -1, -1)
-        self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setObjectName(_fromUtf8("verticalLayout_4"))
         self.group_aggregation = QtGui.QGroupBox(self.layoutWidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
@@ -501,8 +502,11 @@ class Ui_MainWindow(object):
         self.action_toggle_stopwords = QtGui.QAction(MainWindow)
         self.action_toggle_stopwords.setCheckable(True)
         self.action_toggle_stopwords.setObjectName(_fromUtf8("action_toggle_stopwords"))
+        self.action_create_textgrid = QtGui.QAction(MainWindow)
+        self.action_create_textgrid.setObjectName(_fromUtf8("action_create_textgrid"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
+        self.menuFile.addAction(self.action_create_textgrid)
         self.menuFile.addAction(self.action_copy_to_clipboard)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.action_view_log)
@@ -631,7 +635,7 @@ class Ui_MainWindow(object):
         self.actionStop_words_2.setText(_translate("MainWindow", "&Stop words...", None))
         self.action_percentage_bars.setText(_translate("MainWindow", "&Percentage bars", None))
         self.action_stacked_bars.setText(_translate("MainWindow", "&Stacked bars", None))
-        self.action_view_log.setText(_translate("MainWindow", "View log file...", None))
+        self.action_view_log.setText(_translate("MainWindow", "View &log file...", None))
         self.action_mysql_server_help.setText(_translate("MainWindow", "MySQL server help", None))
         self.action_Column_context_menu.setText(_translate("MainWindow", "[Column context menu]", None))
         self.action_Row_context_menu.setText(_translate("MainWindow", "[Row context menu]", None))
@@ -639,15 +643,16 @@ class Ui_MainWindow(object):
         self.actionSave_results.setText(_translate("MainWindow", "Save", None))
         self.action_Selection_menu.setText(_translate("MainWindow", "[Selection menu]", None))
         self.action_bubble_chart.setText(_translate("MainWindow", "&Bubble chart", None))
-        self.action_save_results.setText(_translate("MainWindow", "Save results...", None))
+        self.action_save_results.setText(_translate("MainWindow", "&Save results...", None))
         self.action_save_results.setShortcut(_translate("MainWindow", "Ctrl+S", None))
-        self.action_copy_to_clipboard.setText(_translate("MainWindow", "Copy selection to clipboard", None))
+        self.action_copy_to_clipboard.setText(_translate("MainWindow", "&Copy selection to clipboard", None))
         self.action_copy_to_clipboard.setShortcut(_translate("MainWindow", "Ctrl+C", None))
         self.action_kde_plot.setText(_translate("MainWindow", "Kernel Density Estimate", None))
         self.action_ecd_plot.setText(_translate("MainWindow", "Estimated cumulative distribution", None))
-        self.action_save_selection.setText(_translate("MainWindow", "Save selection...", None))
+        self.action_save_selection.setText(_translate("MainWindow", "Sa&ve selection...", None))
         self.action_save_selection.setShortcut(_translate("MainWindow", "Ctrl+Shift+S", None))
         self.action_toggle_filters.setText(_translate("MainWindow", "Use &filters", None))
         self.action_toggle_stopwords.setText(_translate("MainWindow", "Use stop&words", None))
+        self.action_create_textgrid.setText(_translate("MainWindow", "Create te&xtgrid...", None))
 
 
