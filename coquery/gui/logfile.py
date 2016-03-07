@@ -26,12 +26,18 @@ class LogfileViewer(QtGui.QDialog):
         self.ui = Ui_logfileDialog()
         self.ui.setupUi(self)
         
+        self.setWindowIcon(options.cfg.icon)
+        
         self.log_table = classes.LogTableModel(self)
         self.log_proxy = classes.LogProxyModel()
         self.log_proxy.setSourceModel(self.log_table)
         self.log_proxy.sortCaseSensitivity = False
         self.ui.log_table.setModel(self.log_proxy)
-        self.ui.log_table.horizontalHeader().setStretchLastSection(True)        
+        
+        #self.ui.log_table.horizontalHeader().setStretchLastSection(True)        
+        #self.log_table.setVisible(False)
+        self.ui.log_table.resizeColumnsToContents()
+        #self.log_table.setVisible(True)
 
         try:
             self.resize(options.settings.value("logfile_size"))
