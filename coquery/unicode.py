@@ -20,7 +20,7 @@ def _utf8(s):
     2.7 and 3.x, which is plainly horrible in the old Python version. 
     """
     try:
-        s = s.decode("utf-8")
+        s = s.__str__().decode("utf-8")
     except UnicodeEncodeError:
         # This exception is raised by Python 2.7 if s is already a unicode 
         # string. In this case, do nothing.
