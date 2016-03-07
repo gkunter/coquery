@@ -45,6 +45,7 @@ import hashlib
 from collections import defaultdict
 
 import tokens
+from unicode import utf8
 from defines import *
 from errors import *
 
@@ -1115,10 +1116,7 @@ def get_available_resources(configuration):
     # cycle through the modules in the corpus path:
     for module_name in glob.glob(os.path.join(corpora_path, "*.py")):
         corpus_name, ext = os.path.splitext(os.path.basename(module_name))
-        try:
-            corpus_name = corpus_name.encode("utf-8")
-        except Exception as e:
-            print(e)
+        corpus_name = utf8(corpus_name)
         #try:
             #validate_module(
                 #module_name, 
@@ -1141,17 +1139,18 @@ def get_available_resources(configuration):
             find = imp.find_module(corpus_name, [corpora_path])
             module = imp.load_module(corpus_name, *find)
         except SyntaxError as e:
-            warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+            logger.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
             raise e
         except UnicodeEncodeError as e:
-            print(corpus_name, e)
+            logger.warn("There is a Unicode error in corpus module {}: {}".format(corpus_name, str(e)))
         except Exception as e:
-            print(corpus_name, e)
+            logger.warn("There is an error in corpus module {}: {}".format(corpus_name, str(e)))
             raise e
-        try:
-            d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
-        except (AttributeError, ImportError) as e:
-            warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+        else:
+            try:
+                d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
+            except (AttributeError, ImportError) as e:
+                warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
 
 def get_resource(name, configuration):
@@ -1380,8 +1379,4 @@ if not _use_pdfminer:
 if not _use_seaborn:
     missing_optional_modules.append("Seaborn")
 
-try:
-    logger = logging.getLogger(NAME)
-except AttributeError:
-    pass
-
+logger = logging.getLogger(NAME)
