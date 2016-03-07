@@ -674,6 +674,16 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(self.token_type.replace_wildcards("a_b"), "a\\_b")
         self.assertEqual(self.token_type.replace_wildcards("ab_"), "ab\\_")
 
+
+    def test_underscore1(self):
+        token = self.token_type("\\{b_trans}", self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["{b\\_trans}"])
         
     def test_negation0(self):
         token = self.token_type("abc", self.lexicon)
