@@ -608,6 +608,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.module_code = module_code
         self.table_description = {}
         self._time_features = []
+        self._time_index = None
         self._id_count = {}
         self._primary_keys = {}
         self._interrupted = False
@@ -949,8 +950,24 @@ class BaseCorpusBuilder(corpus.BaseResource):
         elif item_type == QUERY_ITEM_GLOSS:
             self.query_item_gloss = rc_feature
 
-    def add_time_feature(self, x):
-        self._time_features.append(x)
+    def add_time_feature(self, rc_feature):
+        """
+        Add the resource feature to the list of time features.
+        
+        Time features are those features that can be visualized using a
+        time series visualization.        
+        """
+        self._time_features.append(rc_feature)
+    
+    def set_time_index(self, rc_feature):
+        """
+        Use the resource feature as the time index for tokens.
+        
+        In corpora that have time annotations, the time index is used to mark
+        the start time of a token. The end time of the token is the start time 
+        of the next token.
+        """
+        self._time_index = rc_feature
     
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
