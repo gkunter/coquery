@@ -29,7 +29,7 @@ class ErrorBox(QtGui.QDialog):
         self.setWindowIcon(options.cfg.icon)
         self.ui.icon_label.setPixmap(QtGui.QIcon.fromTheme("dialog-error").pixmap(32, 32))
         
-        exc_type, exc_message, exc_trace = get_error_repr(exc_info)
+        exc_type, exc_message, exc_trace, exc_location = get_error_repr(exc_info)
         exc_type = type(exception).__name__
         
         if message:
@@ -38,7 +38,7 @@ class ErrorBox(QtGui.QDialog):
             error_text = "<table><tr><td>Type</td><td><b>{}</b></td></tr><tr><td>Message</td><td><b>{}</b></td></tr></table><p>{}</p>".format(
             exc_type, exc_message, exc_trace.replace("\n", "<br>").replace(" ", "&nbsp;"))
         else:
-            error_text = "<table><tr><td>Type</td><td><b>{}</b></td></tr><tr><td>Message</td><td><b>{}</b></td></tr></table>".format(exc_type, exc_message)
+            error_text = "<table><tr><td>Type</td><td><b>{}</b></td></tr><tr><td>Message</td><td><b>{}</b></td></tr><tr><td>Location</td><td><b>{}</b></td></tr></table>".format(exc_type, exc_message, exc_location)
             
         self.ui.trace_area.setText(error_text)
         

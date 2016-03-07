@@ -266,9 +266,10 @@ def get_error_repr(exc_info):
         ModuleName = os.path.split(FileName) [1]
         trace_string += "%s %s, line %s: %s\n" % (Indent, ModuleName, LineNo, FunctionName)
         Indent += "  "
+    file_location = "{}, line {}".format(FileName, LineNo)
     if Text:
         trace_string += "%s> %s\n" % (Indent[:-1], Text)
-    return (exc_type, exc_obj, trace_string)
+    return (exc_type, exc_obj, trace_string, file_location)
 
 def print_exception(exc):
     """
@@ -277,7 +278,7 @@ def print_exception(exc):
     error_string = ""
     if isinstance(exc, Exception):
         if not isinstance(exc, NoTraceException):
-            _, _, error_string = get_error_repr(sys.exc_info())
+            _, _, error_string, _ = get_error_repr(sys.exc_info())
             error_string = "TRACE:\n{}".format(error_string)
         error_string += "ERROR {}: {}\n".format(type(exc).__name__, exc)
     else:
