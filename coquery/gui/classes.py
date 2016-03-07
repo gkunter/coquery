@@ -632,9 +632,9 @@ class LogTableModel(QtCore.QAbstractTableModel):
                 return None
         elif role == QtCore.Qt.BackgroundRole:
             if record.levelno == logging.WARNING:
-                return QtGui.QBrush(QtCore.Qt.yellow)
+                return QtGui.QBrush(QtGui.QColor("lightyellow"))
             elif record.levelno in [logging.ERROR, logging.CRITICAL]:
-                return QtGui.QBrush(QtCore.Qt.red)
+                return QtGui.QBrush(QtGui.QColor("#aa0000"))
         else:
             return None
         
