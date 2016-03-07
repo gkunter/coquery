@@ -97,6 +97,7 @@ import corpus
 
 from errors import *
 from defines import *
+from unicode import utf8
 
 insert_cache = collections.defaultdict(list)
 
@@ -1876,7 +1877,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         path : str 
             The path to the corpus module.
         """
-        return os.path.join(options.cfg.corpora_path, "{}.py".format(self.name))
+        return os.path.join(options.cfg.corpora_path, "{}.py".format(name))
 
     def build_write_module(self):
         """ Write a Python module with the necessary specifications to the
@@ -1914,18 +1915,17 @@ class BaseCorpusBuilder(corpus.BaseResource):
         
         self.module_content = self.module_code.format(
                 name=self.name,
-                display_name=self.get_name(),
-                db_name=self.arguments.db_name,
-                url=self.get_url(),
-                variables=variable_code,
-                corpus_code=self.get_corpus_code(),
-                lexicon_code=self.get_lexicon_code(),
-                resource_code=self.get_resource_code())
+                display_name=utf8(self.get_name()),
+                db_name=utf8(self.arguments.db_name),
+                url=utf8(self.get_url()),
+                variables=utf8(variable_code),
+                corpus_code=utf8(self.get_corpus_code()),
+                lexicon_code=utf8(self.get_lexicon_code()),
+                resource_code=utf8(self.get_resource_code()))
         self.module_content = self.module_content.replace("\\", "\\\\")
-
-        path = self.get_module_path(self.name)
+        path = self.get_module_path(self.arguments.db_name)
         # write module code:
-        with codecs.open(path, "w") as output_file:
+        with codecs.open(path, "w", encoding="utf-8") as output_file:
             output_file.write(self.module_content)
             self.logger.info("Library %s written." % path)
             
@@ -2030,11 +2030,18 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if not self._widget:
             print("\n%s\n" % textwrap.TextWrapper(width=79).fill(" ".join(self.get_description())))
             
-        for module, package, url in self.get_modules():
-            try:
-                exec("import {}".format(module))
-            except ImportError:
-                raise DependencyError(package, url)
+        # Corpus installers may require additional modules. For example, 
+        # Gabra is currently distributed as MongoDB files, which are read by 
+        # using the pymongo library.
+        # Unless the user wishes to install only the corpus module, try to 
+        # import these additional modules, and raise an exception if they are 
+        # unavailable:
+        if not self.arguments.only_module:
+            for module, package, url in self.get_modules():
+                try:
+                    exec("import {}".format(module))
+                except ImportError:
+                    raise DependencyError(package, url)
         if self.arguments.use_nltk:
             import nltk
             

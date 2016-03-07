@@ -27,6 +27,7 @@ from coquery import queries
 from coquery import sqlhelper
 from coquery.session import *
 from coquery.defines import *
+from coquery.unicode import utf8
 
 import classes
 import errorbox
@@ -722,7 +723,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.centralwidget.setEnabled(True)
 
         if self.ui.combo_corpus.count():
-            corpus_name = str(self.ui.combo_corpus.currentText())
+            corpus_name = utf8(self.ui.combo_corpus.currentText())
             self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[corpus_name]
 
             #self.ui.filter_box.resource = self.resource
@@ -733,7 +734,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 #self.filter_variable_model.setStringList(corpus_variables)
             #except AttributeError:
                 #pass
-        options.cfg.corpus = str(self.ui.combo_corpus.currentText())
+        options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
         self.change_corpus_features()
 
     def change_corpus_features(self):
@@ -855,7 +856,7 @@ class CoqueryApp(QtGui.QMainWindow):
             pass
 
         # remember last corpus name:
-        last_corpus = str(self.ui.combo_corpus.currentText())
+        last_corpus = utf8(self.ui.combo_corpus.currentText())
 
         # add corpus names:
         self.ui.combo_corpus.clear()
@@ -940,7 +941,7 @@ class CoqueryApp(QtGui.QMainWindow):
             name = name[0]
         
         if name:
-            options.cfg.query_file_path = os.path.dirname(str(name))
+            options.cfg.query_file_path = os.path.dirname(utf(name))
             self.ui.edit_file_name.setText(name)
             self.switch_to_file()
             
@@ -948,7 +949,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Get CSV file options for current query input file. """
         import csvoptions
         results = csvoptions.CSVOptions.getOptions(
-            str(self.ui.edit_file_name.text()), 
+            utf8(self.ui.edit_file_name.text()), 
             (options.cfg.input_separator,
              options.cfg.query_column_number,
              options.cfg.file_has_headers,
@@ -1134,9 +1135,9 @@ class CoqueryApp(QtGui.QMainWindow):
         
         # no options are shown for entries from the special tables and for 
         # linked tables (but for columns from linked tables)
-        if not (str(item.objectName()).startswith("coquery") or 
-                str(item.objectName()).startswith("statistics") or
-                str(item.objectName()).endswith("_table")):
+        if not (utf8(item.objectName()).startswith("coquery") or 
+                utf8(item.objectName()).startswith("statistics") or
+                utf8(item.objectName()).endswith("_table")):
             add_link = QtGui.QAction("&Link to external table", self)
             add_function = QtGui.QAction("&Add a function", self)
             remove_link = QtGui.QAction("&Remove link", self)
@@ -1168,7 +1169,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 menu.addAction(remove_function)
                 remove_function.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
         else:
-            if str(item.objectName()).endswith("_table"):
+            if utf8(item.objectName()).endswith("_table"):
                 unavailable = QtGui.QAction(_translate("MainWindow", "No option available for tables.", None), self)
             else:
                  unavailable = QtGui.QAction(_translate("MainWindow", "No option available for special columns.", None), self)
@@ -1709,7 +1710,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def open_corpus_help(self):
         if self.ui.combo_corpus.isEnabled():
-            current_corpus = str(self.ui.combo_corpus.currentText())
+            current_corpus = utf8(self.ui.combo_corpus.currentText())
             resource, _, _, module = options.cfg.current_resources[current_corpus]
             try:
                 url = resource.url
@@ -1888,11 +1889,11 @@ class CoqueryApp(QtGui.QMainWindow):
     def change_current_server(self):
         name = self.ui.combo_config.currentText()
         if name:
-            name = str(name)
+            name = utf8(name)
             self.change_mysql_configuration(name)
 
     def switch_configuration(self, x):
-        name = str(self.ui.combo_config.itemText(int(x)))
+        name = utf8(self.ui.combo_config.itemText(int(x)))
         self.change_mysql_configuration()
 
     def change_mysql_configuration(self, name=None):
@@ -1902,7 +1903,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         
         if not name:
-            name = str(self.ui.combo_config.currentText())
+            name = utf8(self.ui.combo_config.currentText())
             
         try:
             self.ui.combo_config.currentIndexChanged.disconnect()
@@ -2006,7 +2007,7 @@ class CoqueryApp(QtGui.QMainWindow):
         in the GUI. """
         
         if options.cfg:
-            options.cfg.corpus = str(self.ui.combo_corpus.currentText())
+            options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
         
             # determine query mode:
             if self.ui.radio_aggregate_uniques.isChecked():
@@ -2038,10 +2039,10 @@ class CoqueryApp(QtGui.QMainWindow):
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
                 if type(self.ui.edit_query_string) == QtGui.QLineEdit:
-                    options.cfg.query_list = [str(self.ui.edit_query_string.text())]
+                    options.cfg.query_list = [utf8(self.ui.edit_query_string.text())]
                 else:
-                    options.cfg.query_list = [str(self.ui.edit_query_string.toPlainText())]
-            options.cfg.input_path = str(self.ui.edit_file_name.text())
+                    options.cfg.query_list = [utf8(self.ui.edit_query_string.toPlainText())]
+            options.cfg.input_path = utf8(self.ui.edit_file_name.text())
 
             # get context options:
             options.cfg.context_left = self.ui.context_left_span.value()
@@ -2139,7 +2140,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def show_log(self):
         import logfile
-        logfile.LogfileViewer.view()
+        log_view = logfile.LogfileViewer(parent=self)
+        log_view.show()
+        self.widget_list.append(log_view)
 
     def show_about(self):
         from ui.aboutUi import Ui_AboutDialog
