@@ -5,24 +5,40 @@ import unittest
 import os.path
 import sys
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "..")))
+sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
 
+# Mock module requirements:
+class mock_module(object):
+    pass
 
+sys.modules["sqlalchemy"] = mock_module
+sys.modules["options"] = mock_module
+from corpus import LexiconClass, BaseResource
 from coquery import options
+from defines import *
+#sys.path.append(os.path.join(options.get_home_dir(), "connections", "Default", "corpora"))
 
-sys.path.append(os.path.join(options.get_home_dir(), "connections", "Default", "corpora"))
+from gui.linkselect import Link
 
-import ICE_NG as ice_ng
+#from corpus import LexiconClass, BaseResource
 import argparse
 
+# mock corpus module:
+BaseResource.corpus_table = "Corpus"
+BaseResource.corpus_id = "ID"
+BaseResource.corpus_word_id = "WordId"
+BaseResource.word_table = "Lexicon"
+BaseResource.word_id = "WordId"
+BaseResource.word_label = "Word"
+BaseResource.db_name = "MockCorpus"
+BaseResource.query_item_word = "word_label"
+
 class TestCorpus(unittest.TestCase):
-    resource = ice_ng.Resource
+    resource = BaseResource()
     
     def setUp(self):
         options.cfg = argparse.Namespace()
-        options.cfg.external_links = {
-            u'cmudict.word_transcript': (
-                u'cmudict.word_table.word_label', u'word_table.word_label')}    
+        options.cfg.external_links = [(Link(), "word_label")]
     
     def test_is_lexical(self):
         self.assertTrue(self.resource.is_lexical("word_label"))

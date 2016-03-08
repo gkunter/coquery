@@ -12,7 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-def _utf8(s):
+def _utf8(s, errors):
     """
     Return the string s as a unicode string.
     
@@ -20,7 +20,7 @@ def _utf8(s):
     2.7 and 3.x, which is plainly horrible in the old Python version. 
     """
     try:
-        s = s.__str__().decode("utf-8")
+        s = s.__str__().decode("utf-8", errors=errors)
     except UnicodeEncodeError:
         # This exception is raised by Python 2.7 if s is already a unicode 
         # string. In this case, do nothing.
@@ -34,7 +34,7 @@ def _utf8(s):
     
     return s
 
-def utf8(x):
+def utf8(x, errors="strict"):
     """
     Convert the passed argument to unicode.
     
@@ -52,6 +52,6 @@ def utf8(x):
     """
     
     if isinstance(x, list):
-        return [_utf8(s) for s in x]
+        return [_utf8(s, errors=errors) for s in x]
     else:
-        return _utf8(x)
+        return _utf8(x, errors=errors)

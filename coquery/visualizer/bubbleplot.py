@@ -24,7 +24,6 @@ class Visualizer(vis.BaseVisualizer):
     dimensionality=2
 
     sqrt_dict = {}
-    circles = []
 
     _angle_cache = {}
     _angle_calls = 0
@@ -33,8 +32,13 @@ class Visualizer(vis.BaseVisualizer):
     _vector_cache = {}
     _vector_calls = 0
 
+    def __init__(self, *args, **kwargs):
+        super(Visualizer, self).__init__(*args, **kwargs)
+        self.circles = []
+
+
     def set_defaults(self):
-        self.options["color_palette"] = "RdPu"
+        self.options["color_palette"] = "Blues"
         self.options["color_number"] = len(self._levels[-1])
         super(Visualizer, self).set_defaults()
         self.options["label_y_axis"] = ""
@@ -310,3 +314,5 @@ class Visualizer(vis.BaseVisualizer):
             print(e)
             raise e
         
+        if len(self._groupby) == 2:
+            self.add_legend(levels=self._levels[-1])
