@@ -1175,7 +1175,7 @@ class SQLResource(BaseResource):
         select_list.append("coquery_invisible_number_of_tokens")
         
         return select_list
-
+    
 class CorpusClass(object):
     
     def __init__(self):
@@ -1195,6 +1195,37 @@ class CorpusClass(object):
             token_id)
         df = pd.read_sql(S, self.resource.get_engine())
         return df.values.ravel()[0]
+
+    def get_file_data(self, token_id, features):
+        """
+        Return a data frame containing the requested features for the token
+        id.
+        """
+        if isinstance(token_id, list):
+            tokens = token_id
+        elif isinstance(token_id, pd.Series):
+            tokens = list(token_id.values)
+        else:
+            tokens = list(token_id)
+
+        self.lexicon.joined_tables = ["corpus"]
+        self.lexicon.table_list = ["corpus"]
+        
+        self.lexicon.add_table_path("corpus_id", "file_id")
+
+        f = ", ".join(["{}.{}".format(
+                    self.resource.file_table, getattr(self.resource, x)) for x in features] + ["{}.{}".format(self.resource.corpus_table, self.resource.corpus_id)])
+        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN {token_ids}".format(
+                features=f,
+                corpus=self.resource.corpus_table,
+                path = " ".join(self.lexicon.table_list),
+                files=self.resource.file_table,
+                corpus_file=self.resource.corpus_file_id,
+                file_id=self.resource.file_id,
+                corpus_id=self.resource.corpus_id,
+                token_ids="({})".format(", ".join([str(x) for x in tokens])))
+
+        return pd.read_sql(S, self.resource.get_engine())
 
     def get_origin_data(self, token_id):
         """
