@@ -228,6 +228,13 @@ class LexiconClass(object):
                         dummy = tokens.COCAToken(spec, self, replace=False, parse=False)
                         dummy.negated = token.negated
                         S = dummy.S
+                        # For the construction of the query string, 
+                        # any escaped wildcard-like string is replaced 
+                        # by the unescaped equivalent. This fixes 
+                        # Issue #175.
+                        if not dummy.has_wildcards(S):
+                            S = S.replace("\\_", "_")
+                            S = S.replace("\\%", "%")
                         S = S.replace("'", "''")
                         format_string = "{} {} '{}'"
                         if options.cfg.query_case_sensitive:
