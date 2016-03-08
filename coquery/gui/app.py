@@ -2195,7 +2195,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.radio_query_file.setChecked(True)
             
         for rc_feature in options.cfg.selected_features:
-            self.ui.options_tree.setCheckState(rc_feature, True)
+            self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.Checked)
         
         self.ui.context_left_span.setValue(options.cfg.context_left)
         self.ui.context_right_span.setValue(options.cfg.context_right)
@@ -2296,7 +2296,7 @@ class CoqueryApp(QtGui.QMainWindow):
             tree = classes.CoqTreeLinkItem()
             tree.setLink(link)
             tree.setText(column, "{}.{}.{}".format(link.resource, link.table_name, link.feature_name))
-            tree.setCheckState(column, False)
+            tree.setCheckState(column, QtCore.Qt.Unchecked)
             tree.setObjectName("{}.{}_table".format(link.db_name, link.table))
             
             resource = options.cfg.current_resources[link.resource][0]
@@ -2312,7 +2312,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     new_item.setText(0, getattr(resource, rc_feature))
                     new_item.rc_feature = rc_feature
                     new_item.setObjectName("{}.{}".format(link.db_name, rc_feature))
-                    new_item.setCheckState(column, False)
+                    new_item.setCheckState(column, QtCore.Qt.Unchecked)
                     tree.addChild(new_item)
 
             # Insert newly created table as a child of the linked item:
@@ -2378,13 +2378,16 @@ class CoqueryApp(QtGui.QMainWindow):
             item.parent().removeChild(item)
 
 
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+#try:
+    #_encoding = QtGui.QApplication.UnicodeUTF8
+    #def _translate(context, text, disambig):
+        #return QtGui.QApplication.translate(context, text, disambig, _encoding)
+#except AttributeError:
+    #def _translate(context, text, disambig):
+        #return QtGui.QApplication.translate(context, text, disambig)
+
+def _translate(x, text, y):
+    return utf8(text)
     
 def memory_dump():
     import gc
