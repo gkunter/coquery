@@ -1074,6 +1074,31 @@ class CoqueryApp(QtGui.QMainWindow):
             if not selection and not clipboard:
                 self.last_results_saved = True
     
+
+    def create_textgrids(self):
+        name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.textgrids_file_path, options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            options.cfg.corpus_source_path = name
+            self.ui.input_path.setText(name)
+        else:
+            return
+        
+        options.cfg.textgrids_file_path = os.path.dirname(name)
+
+        header = self.ui.data_preview.horizontalHeader()
+        ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
+        ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
+        tab = self.table_model.content[ordered_headers]
+
+        # exclude invisble rows:
+        tab = tab.iloc[~tab.index.isin(pd.Series(
+            options.cfg.row_visibility[self.Session.query_type].keys()))]
+            
+        writer = textgrids.TextgridWriter(tab, self.resource)
+        writer.write_grids(name)
+    
     def showMessage(self, S):
         self.ui.status_message.setText(S)
         
