@@ -289,7 +289,6 @@ class Session(object):
         s : string
             The display name of the resource string
         """
-        
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
         if not ignore_alias and header in options.cfg.column_names:
@@ -348,8 +347,8 @@ class Session(object):
                 pass
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
         
-        # special treatment of lexicon freatures:
-        if rc_feature in [x for x, _ in resource.get_lexicon_features()]:
+        # special treatment of lexicon features:
+        if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
             try:
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
