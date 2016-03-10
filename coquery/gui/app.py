@@ -35,6 +35,7 @@ import contextviewer
 from pyqt_compat import QtCore, QtGui, QtHelp
 from ui import coqueryUi
 
+
 # add required paths:
 sys.path.append(os.path.join(sys.path[0], "visualizer"))
 
@@ -310,6 +311,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_save_results.triggered.connect(self.save_results)
         self.ui.action_save_selection.triggered.connect(lambda: self.save_results(selection=True))
         self.ui.action_copy_to_clipboard.triggered.connect(lambda: self.save_results(selection=True, clipboard=True))
+        self.ui.action_create_textgrid.triggered.connect(self.create_textgrids)
         self.ui.action_quit.triggered.connect(self.close)
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
         self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
@@ -933,7 +935,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if self.table_model.rowCount():
             self.last_results_saved = False
-            
+        
         if options.cfg.memory_dump:
             memory_dump()
 
@@ -1076,28 +1078,37 @@ class CoqueryApp(QtGui.QMainWindow):
     
 
     def create_textgrids(self):
+        if not options._use_tgt:
+            QtGui.QMessageBox.critical(
+                self, "Missing Python module: tgt – Coquery",
+                msg_missing_seaborn_module)
+            return
+
         name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.textgrids_file_path, options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
         if type(name) == tuple:
             name = name[0]
         if name:
             options.cfg.corpus_source_path = name
-            self.ui.input_path.setText(name)
         else:
             return
-        
-        options.cfg.textgrids_file_path = os.path.dirname(name)
+
+        from coquery.textgrids import TextgridWriter
+
+        options.cfg.textgrids_file_path = name
 
         header = self.ui.data_preview.horizontalHeader()
         ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
         ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
+        ordered_headers.append("coquery_invisible_corpus_id")
         tab = self.table_model.content[ordered_headers]
 
         # exclude invisble rows:
         tab = tab.iloc[~tab.index.isin(pd.Series(
             options.cfg.row_visibility[self.Session.query_type].keys()))]
             
-        writer = textgrids.TextgridWriter(tab, self.resource)
-        writer.write_grids(name)
+        writer = TextgridWriter(tab, self.Session.Resource)
+        n = writer.write_grids(name)
+        self.showMessage("Done writing {} text grids to {}.".format(n, name))
     
     def showMessage(self, S):
         self.ui.status_message.setText(S)
