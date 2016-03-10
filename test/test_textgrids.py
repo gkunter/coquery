@@ -54,7 +54,7 @@ BaseResource.source_title = "Title"
 
 BaseResource.file_table = "Files"
 BaseResource.file_id = "FileId"
-BaseResource.file_label = "Filename"
+BaseResource.file_name = "Filename"
 BaseResource.file_duration = "Duration"
 
 BaseResource.db_name = "Test"
@@ -97,7 +97,7 @@ class TestModuleMethods(unittest.TestCase):
     def test_get_file_data(self):
         options.cfg.selected_features = self.selected_features1
         writer = textgrids.TextgridWriter(self.df1, self.resource1)
-        df = _get_file_data([1, 2, 3, 4, 5], [self.resource1.corpus_id, self.resource1.file_label, self.resource1.file_duration])
+        df = _get_file_data([1, 2, 3, 4, 5], [self.resource1.corpus_id, self.resource1.file_name, self.resource1.file_duration])
         assert_frame_equal(writer.get_file_data(), df)
 
     def test_prepare_textgrids_number_of_grids(self):

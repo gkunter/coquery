@@ -13,84 +13,31 @@ from __future__ import unicode_literals
 
 import collections
 import warnings
+import os
 
 import tgt
 
 import options
 from unicode import utf8
-
-#def write_to_textgrid(df, resource, filename):
-    #"""
-    #Evaluate the data frame, and export the timing information to a Praat
-    #text grid.
-    
-    #Parameters
-    #----------
-    #df : pandas.DataFrame
-        #A data frame constructed by a corpus query
-    #resource : corpus.SQLResource
-        #A resource with resource features
-    #filename : string 
-        #The file name of the textgrid
-    #"""
-    
-    #lexicon_features = resource.get_lexicon_features()
-    #corpus_features = resource.get_corpus_features()
-    
-    #all_features = [rc_feat for rc_feat, _ in resource.get_resource_features()]
-    
-    ## keep stock of tables that contain timing information. The keys in the
-    ## dictionary are the tables, the values are tuple
-    #timed_tables = []
-    #lexicon_tables = []
-    #corpus_tables = []
-    
-    #grid = tgt.TextGrid()
-    #for rc_feature in options.cfg.selected_features:
-        #_, db_name, tab, feature = resource.split_resource_feature(rc_feature)
-        #if db_name == resource.db_name:
-            #if feature == "starttime" and "{}_endtime".format(tab) in all_features:
-                #timed_tables.append("{}_table".format(tab))
-                #grid.tiers.append(tgt.IntervalTier(getattr(resource, tab)))
-            
-    #grid.write_textgrid(filename)
-
 class TextgridWriter(object):
     def __init__(self, df, resource):
         self.df = df
         self.resource = resource
-        self.dur_label = "{}.{}".format(self.resource.file_table, self.resource.file_duration)
-        self.name_label = "{}.{}".format(self.resource.file_table, self.resource.file_label)
-        self.corpus_id = "{}.{}".format(self.resource.corpus_table, self.resource.corpus_id)
         self._artificial_corpus_id = False
 
     def get_file_data(self):
         file_data = self.resource.corpus.get_file_data(
-            self.df.coquery_invisible_corpus_id, ["file_label", "file_duration"])
+            self.df.coquery_invisible_corpus_id, ["file_name", "file_duration"])
         file_data.reset_index(drop=True, inplace=True)
         return file_data
         
     def prepare_textgrids(self):
-        #all_features = [rc_feat for rc_feat, _ in self.resource.get_resource_features()]
-
-        #all_features = self.resource.get_resource_features()
-
-        #lexicon_features = self.resource.get_lexicon_features()
-        #corpus_features = self.resource.get_corpus_features()
-
-
-        # keep stock of tables that contain timing information. The keys in the
-        # dictionary are the tables, the values are tuple
-
         grids = {}
         
         self.file_data = self.get_file_data()
         self.feature_timing = dict()
-        
-        for f in self.file_data[self.name_label]:
+        for f in self.file_data[self.resource.file_name]:
             grids[f] = tgt.TextGrid()
-
-        #file_ids = self.df.apply(lambda x: self.resource.get_file_id(x["coquery_invisible_corpus_id"]), axis=1).unique()
 
         #
         # for feature in selected_features:
@@ -110,7 +57,11 @@ class TextgridWriter(object):
             _, db_name, tab, feature = self.resource.split_resource_feature(rc_feature)
 
             if db_name != self.resource.db_name:
-                continue
+                for link, linked_feature in options.cfg.external_links:
+                    if linked_feature == "{}_{}".format(tab, feature):
+                        external_tab = tab
+                        _, _, tab, _ = self.resource.split_resource_feature(link.key_feature)
+                        break
 
             # determine the table that contains timing information by 
             # following the table path:
@@ -118,7 +69,7 @@ class TextgridWriter(object):
             self.resource.lexicon.table_list = ["corpus"]
             self.resource.lexicon.add_table_path("corpus_id", "{}_id".format(tab))
 
-            for current_tab in self.resource.lexicon.table_list:
+            for current_tab in self.resource.lexicon.joined_tables:
                 # check if timing information has been selected for the 
                 # current table from the table path:
                 start_label = "{}_starttime".format(current_tab)
@@ -131,12 +82,15 @@ class TextgridWriter(object):
                         rc_feature.endswith(("endtime", "starttime"))):
                     self.feature_timing[rc_feature] = (start_label, end_label)
             
-            # add an interval tier to all text grids for this feature...
             rc_feat = "{}_{}".format(tab, feature)
+            if db_name != self.resource.db_name:
+                tier_name = "{}.{}_{}".format(db_name, external_tab, feature)
+            else:
+                tier_name = rc_feat
             if not (rc_feat == start_label or rc_feat == end_label):
                 # ... but only if it is not containing timing information
                 for x in grids:
-                    grids[x].add_tier(tgt.IntervalTier(name=rc_feat))
+                    grids[x].add_tier(tgt.IntervalTier(name=tier_name))
 
         # if there is no tier in the grids, but the corpus times were 
         # selected, add a tier for the corpus IDs in all grids:
@@ -144,7 +98,6 @@ class TextgridWriter(object):
             self._artificial_corpus_id = True
             for f in grids:
                 grids[f].add_tier(tgt.IntervalTier(name="corpus_id"))
-            
         return grids
 
     def fill_grids(self):
@@ -157,17 +110,17 @@ class TextgridWriter(object):
         """
         grids = self.prepare_textgrids()
         file_data = self.get_file_data()
-        
+
         for i in self.df.index:
-            row = self.df.iloc[i]
+            row = self.df.loc[i]
             
             # get grid for the file containing this token:
             file_index = row["coquery_invisible_corpus_id"]
-            file_name = file_data[file_data[self.corpus_id] == file_index][self.name_label].values[0]
+            file_name = file_data[file_data[self.resource.corpus_id] == file_index][self.resource.file_name].values[0]
             grid = grids[file_name]
             
             # set all tiers to the durations stored in the file table.
-            file_duration = file_data[file_data[self.corpus_id] == file_index][self.dur_label].values[0]
+            file_duration = file_data[file_data[self.resource.corpus_id] == file_index][self.resource.file_duration].values[0]
             for tier in grid.tiers:
                 tier.end_time = file_duration
             
@@ -176,38 +129,87 @@ class TextgridWriter(object):
                 if col == "coquery_invisible_corpus_id" and self._artificial_corpus_id:
                     rc_feature = "corpus_id"
                 else:
-                    s = col.partition("coq_")[-1]
-                    rc_feature, _, number = s.rpartition("_")
+                    # special treatment of columns from linked tables:
+                    # handle external columns:
+                    if "$" in col:
+                        db_name, column = col.split("$")
+                        external_db = db_name.partition("coq_")[-1]
+                        external_feature, _, number = column.rpartition("_")
+                        for link, link_feature in options.cfg.external_links:
+                            if link_feature == external_feature:
+                                rc_feature = link.key_feature
+                                break
+                    else:
+                        s = col.partition("coq_")[-1]
+                        rc_feature, _, number = s.rpartition("_")
                 if rc_feature:
                     if not hasattr(self.resource, rc_feature):
-                        warnings.warn("Textgrid export not possible for column {}".format(col))
+                        logger.warn("Textgrid export not possible for column {}".format(col))
                     else:
                         _, db_name, tab, feature = self.resource.split_resource_feature(rc_feature)
                         rc_feat = "{}_{}".format(tab, feature)
                         
+                        # special tier name for external columns:
+                        if "$" in col:
+                            tier_name = "{}.{}".format(external_db, external_feature)
+                        else:
+                            tier_name = rc_feat
                         if not rc_feat.endswith(("_starttime", "_endtime")):
-                            start_label, end_label = self.feature_timing[rc_feat]
-                            start = row["coq_{}_{}".format(start_label, number)]
-                            end = row["coq_{}_{}".format(end_label, number)]
-                            content = row[col]
-                            
-                            if rc_feature == "corpus_id":
-                                content = utf8(int(content))
+                            if rc_feat in [x for x, _ in self.resource.get_corpus_features()] and not self.resource.is_tokenized(rc_feat):
+                                tier = grid.get_tier_by_name(tier_name)
+                                start = 0
+                                end = tier.end_time
+                                content = utf8(row[col])
+                                interval = tgt.Interval(start, end, content)
+                                if len(tier.intervals) == 0:
+                                    grid.get_tier_by_name(tier_name).add_interval(interval)
                             else:
-                                content = utf8(content)
-                            interval = tgt.Interval(start, end, content)
-                            grid.get_tier_by_name(rc_feat).add_interval(interval)
+                                start_label, end_label = self.feature_timing[rc_feat]
+                                start = row["coq_{}_{}".format(start_label, number)]
+                                end = row["coq_{}_{}".format(end_label, number)]
+                                content = row[col]
+                                if rc_feature == "corpus_id":
+                                    content = utf8(int(content))
+                                else:
+                                    content = utf8(content)
+                                interval = tgt.Interval(start, end, content)
+                                try:
+                                    grid.get_tier_by_name(tier_name).add_interval(interval)
+                                except ValueError as e:
+                                    # ValueErrors occur if the new interval 
+                                    # overlaps with a previous interval. This
+                                    # can happen if the boundaries are not 
+                                    # exactly aligned. It also happens, and 
+                                    # this is absolutely harmless, if the 
+                                    # data frame contains multiple rows per 
+                                    # token, e.g. because the token is
+                                    # segmented.
+                                    # Anyway. in this case, the overlapping
+                                    # interval is discarded silently:
+                                    pass
 
             grids[file_name] = grid
 
         return grids
     
     def write_grids(self, path):
-        grids = fill_grids(self)
+        grids = self.fill_grids()
         
         for x in grids:
             grid = grids[x]
-            for tier in grid.tiers:
-                tier.name = getattr(self.resource, tier.name)
-            filename, ext = os.path.splitext(x)
+            for i, tier in enumerate(grid.tiers):
+                _, db_name, tab, feature = self.resource.split_resource_feature(tier.name)
+                if db_name != self.resource.db_name:
+                    for res in options.cfg.current_resources:
+                        resource, _, _, _ = options.cfg.current_resources[res]
+                        if resource.db_name == db_name:
+                            external_feature = "{}_{}".format(tab, feature) 
+                            name = getattr(resource, external_feature)
+                            tier_name = "{}.{}".format(resource.name, name)
+                            grid.tiers[i].name = tier_name
+                            break
+                else:
+                    tier.name = getattr(self.resource, tier.name, tier.name)
+            filename, ext = os.path.splitext(os.path.basename(x))
             tgt.write_to_file(grid, os.path.join(path, "{}.TextGrid".format(filename)))
+        return len(grids)
