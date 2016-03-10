@@ -247,7 +247,8 @@ class LexiconClass(object):
                             target, self.resource.get_operator(dummy), S))
             if sub_clauses:
                 where_clauses.append("({})".format(" OR ".join(sub_clauses)))
-        return " AND ".join(where_clauses)
+        S = " AND ".join(where_clauses)
+        return S
             
     def add_table_path(self, start_feature, end_feature):
         """
@@ -281,8 +282,21 @@ class LexiconClass(object):
         word_table = getattr(self.resource, "{}_table".format(table))
         word_id = getattr(self.resource, "{}_id".format(table))
         
-        self.joined_tables = [word_table]
-        self.table_list = [word_table]
+        if hasattr(self.resource, "word_table"):
+            start_table = self.resource.word_table
+        else:
+            start_table = self.resource.corpus_table
+        
+        self.joined_tables = []
+        self.table_list = [start_table]
+        
+        if word_table != start_table:
+            # this happens if there is a meta table between corpus and 
+            # lexicon, e.g. in the Buckeye corpus:
+            self.add_table_path("word_id", getattr(self.resource, QUERY_ITEM_WORD))
+            _, _, table, _ = self.resource.split_resource_feature("word_id")
+            word_table = getattr(self.resource, "{}_table".format(table))
+            word_id = getattr(self.resource, "{}_id".format(table))            
         
         if token.lemma_specifiers:
             self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_LEMMA))
@@ -404,10 +418,12 @@ class LexiconClass(object):
                 raise WordNotInLexiconError
         else:
             if stopwords:
-                return [x for x in list(df.ix[:,0]) if not x in stopword_ids]
+                l = [x for x in list(df.ix[:,0]) if not x in stopword_ids]
+                return l
             else:
-                return list(df.ix[:,0])
-
+                x = list(df.ix[:,0])
+                return x
+        
 class BaseResource(object):
     """
     """
@@ -706,10 +722,11 @@ class BaseResource(object):
         variables are returned that all resource variable names that are 
         desendants of table 'word'. """
         table_dict = cls.get_table_dict()
-        try:
-            _, _, table, _ = cls.split_resource_feature(getattr(cls, QUERY_ITEM_WORD))
-        except AttributeError:
-            return []
+        table = "word"
+        #try:
+            #_, _, table, _ = cls.split_resource_feature(getattr(cls, QUERY_ITEM_WORD))
+        #except AttributeError:
+            #return []
         #if table == "corpus":
             #return []
         lexicon_tables = cls.get_table_tree(table)
@@ -786,6 +803,19 @@ class BaseResource(object):
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         resource = cls.get_referent_feature(rc_feature)
         return resource in lexicon_features
+    
+    @classmethod
+    def is_tokenized(cls, rc_feature):
+        """
+        Tokenized features are features that contain token-specific 
+        data. In an output table, they should occur numbered for each 
+        query item. 
+        
+        Unlike lexical features, they are not descendants of word_table,
+        but are directly stored in the corpus table.
+        """
+        return (rc_feature == "corpus_id") or (
+                rc_feature.startswith("corpus_") and not rc_feature.endswith("_id"))
     
     @classmethod
     def translate_filters(cls, filters):
@@ -1005,6 +1035,9 @@ class SQLResource(BaseResource):
                 if not hasattr(self, "corpus_word_id"):
                     return word_id
 
+                # FIXME: use table_path to determine the path to the table of
+                # QUERY_ITEM_WORD
+                
                 # prepare a partial SQL query:
                 S = "SELECT {} FROM {} WHERE {} = ".format(
                             self.word_label, 
@@ -1116,7 +1149,7 @@ class SQLResource(BaseResource):
 
         # then, add an appropriately aliased name for each selected feature:
         for rc_feature in options.cfg.selected_features:
-            if rc_feature in lexicon_features:
+            if rc_feature in lexicon_features or cls.is_tokenized(rc_feature):
                 select_list += ["coq_{}_{}".format(rc_feature, x+1) for x in range(max_token_count)]
             elif rc_feature in corpus_features:
                 select_list.append("coq_{}_1".format(rc_feature))
@@ -1180,7 +1213,6 @@ class SQLResource(BaseResource):
 
         select_list.append("coquery_invisible_corpus_id")
         select_list.append("coquery_invisible_number_of_tokens")
-        
         return select_list
     
 class CorpusClass(object):
@@ -1216,7 +1248,7 @@ class CorpusClass(object):
             tokens = list(token_id)
 
         self.lexicon.joined_tables = ["corpus"]
-        self.lexicon.table_list = ["corpus"]
+        self.lexicon.table_list = [self.resource.corpus_table]
         
         self.lexicon.add_table_path("corpus_id", "file_id")
 
@@ -1303,7 +1335,7 @@ class CorpusClass(object):
             try:
                 _, _, tab, feat = self.resource.split_resource_feature(feature)
             except ValueError:
-                # split_resource_features() raises a ValueError exception if 
+                # split_resource_feature() raises a ValueError exception if 
                 # the passed string does not appear to be a resource feature.
                 # In that case, the resource is not considered for origin data.                
                 continue
@@ -1507,7 +1539,7 @@ class CorpusClass(object):
                 if options.cfg.token_origin_id:
                     requested_features.append(options.cfg.token_origin_id)
         else:
-            corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
+            corpus_variables = [x for x, _ in self.resource.get_corpus_features() if not x.endswith(("_starttime", "_endtime"))]
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
         # add all features that are required for the query filters:
@@ -1530,6 +1562,7 @@ class CorpusClass(object):
                 requested_features.append(link.key_feature)
 
         # make sure that the word_id is always included in the query:
+        # FIXME: Why is this needed?
         requested_features.append("corpus_word_id")
 
         try:
@@ -2075,7 +2108,7 @@ class CorpusClass(object):
         final_select = []        
         for rc_feature in self.resource.get_preferred_output_order():
             if rc_feature in options.cfg.selected_features:
-                if rc_feature in [x for x, _ in lexicon_features]:
+                if rc_feature in [x for x, _ in lexicon_features] or self.resource.is_tokenized(rc_feature):
                     for i in range(Query.Session.get_max_token_count()):
                         if options.cfg.align_quantified:
                             last_offset = 0
@@ -2275,6 +2308,12 @@ class CorpusClass(object):
         if origin_id:
             format_string += " AND {corpus}.{source_id} = {current_source_id}"
     
+        word = self.resource.QUERY_ITEM_WORD
+        _, _, tab, _ = self.resource.split_resource_feature(word)
+        word_table = "{}_table".format(tab)
+        word_id = "{}_id".format(tab)
+        
+        # FIXME: this needs to use a table path!
         if hasattr(self.resource, "tag_table"):
             S = format_string.format(
                 corpus=self.resource.corpus_table,
@@ -2282,9 +2321,9 @@ class CorpusClass(object):
                 corpus_word_id=self.resource.corpus_word_id,
                 source_id=origin_id,
                 
-                word=self.resource.word_label,
-                word_table=self.resource.word_table,
-                word_id=self.resource.word_id,
+                word=word,
+                word_table=word_table,
+                word_id=word_id,
                 
                 tag_table=self.resource.tag_table,
                 tag=self.resource.tag_label,
@@ -2303,9 +2342,9 @@ class CorpusClass(object):
                 corpus_word_id=self.resource.corpus_word_id,
                 source_id=origin_id,
                 
-                word=self.resource.word_label,
-                word_table=self.resource.word_table,
-                word_id=self.resource.word_id,
+                word=word,
+                word_table=word_table,
+                word_id=word_id,
                 
                 current_source_id=source_id,
                 start=max(0, token_id - 1000), 
