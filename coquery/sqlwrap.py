@@ -257,6 +257,28 @@ class SqlDB (object):
         cursor.execute(S)
         return cursor
 
+    def load_dataframe(self, df, table_name, index_label, if_exists="append"):
+        """
+        Load the table with content from the dataframe.
+        
+        Parameters
+        ----------
+        df : Pandas DataFrame 
+            The dataframe that is to be loaded into the database table
+        table_name : string 
+            The name of the table
+        index_label : string 
+            The name of the index column. If empty, no additional index column 
+            is created.
+        if_exists : string, either "fail", "replace", or "append"
+            If "append" (the default), the rows from the dataframe are 
+            appended to the table; the table is created if it does not 
+            exist. If "replace", any existing table is replaced by the 
+            rows from the dataframe. If "fail", the dataframe is NOT 
+            loaded into the table.
+        """
+        df.to_sql(table_name, self.engine, if_exists=if_exists, index=bool(index_label), index_label=index_label)
+
     def load_infile(self, file_name, table_name, arguments):
         self.connection.execution_options(autocommit=False).execute("LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
 
