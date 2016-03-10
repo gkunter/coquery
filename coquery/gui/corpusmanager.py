@@ -64,7 +64,7 @@ class CoqAccordionEntry(QtGui.QWidget):
         self.corpus_description.setWordWrap(True)
         self.corpus_description.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.corpus_description.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByKeyboard|QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextBrowserInteraction|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
-        self.corpus_description.setOpenExternalLinks(True)
+        self.corpus_description.linkActivated.connect(self.open_link)
 
         self.verticalLayout_3.addWidget(self.corpus_description)
         
@@ -92,32 +92,84 @@ class CoqAccordionEntry(QtGui.QWidget):
     def builtin(self):
         return self._builtin
 
+    def open_link(self, link):
+        """
+        Process any link clicked from the corpus description label.
+        
+        Usually, the URL of the link is opened. One exception is the link 
+        '_to_clipboard', which copies the references to the clipboard.
+        """
+        if utf8(link) == "_to_clipboard":
+            QtGui.QApplication.clipboard().setText("\n".join([utf8(x) for x in self._reference_list]))
+        else:
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl(link))
+
     def setup_buttons(self, installed, entry_widget):
+        """
+        Add buttons depending on the install state of the entry. 
+        
+        For entries that are not installed, add an "Install" button. 
+        For installed adhoc corpora, add a "Remove" button.
+        For other installed corpora, add both a "Remove" and a "Reinstall"
+        button.
+        
+        Also conenct the buttons to the appropriate methods.
+        """
+        self.widget_layout = QtGui.QHBoxLayout()
+        entry_widget.header_layout.addLayout(self.widget_layout)
+        
+        button_build = QtGui.QPushButton()
+        button_build.setIcon(self._stack.parent().get_icon("cone"))
+        button_build.setText("Build")
+        button_build.setToolTip("Build new corpus")
+        button_remove = QtGui.QPushButton()
+        button_remove.setIcon(self._stack.parent().get_icon("sign-delete"))
+        button_remove.setText("Remove")
+        button_remove.setToolTip("Remove corpus")
+        button_install = QtGui.QPushButton()
+        button_install.setIcon(self._stack.parent().get_icon("sign-add"))
+        button_install.setText("Install")
+        button_install.setToolTip("Install corpus")
+        button_reinstall = QtGui.QPushButton()
+        button_reinstall.setIcon(self._stack.parent().get_icon("sign-sync"))
+        button_reinstall.setText("Reinstall")
+        button_reinstall.setToolTip("Reinstall corpus")
+
+        # make all buttons the same width:
+        max_width = 0
+        for button in [button_build, button_remove, button_install, button_reinstall]:
+            max_width = max(max_width, button.sizeHint().width())
+        
+        for button in [button_build, button_remove, button_install, button_reinstall]:
+            button.setMinimumWidth(max_width)
+        
         if self._is_builder:
-            self.button_build = QtGui.QPushButton(entry_widget)
-            self.button_build.setIcon(self._stack.parent().get_icon("sign-add"))
+            self.button_build = button_build
+            self.button_build.setParent(entry_widget)
             entry_widget.header_layout.addWidget(self.button_build)
             self.button_build.clicked.connect(lambda: self._stack.buildCorpus.emit(self))
         else:
-            if not self._adhoc:
-                self.button_install = QtGui.QPushButton(entry_widget)
-                self.button_layout.insertWidget(0, self.button_install)
-                if not installed:
-                    self.button_install.setText("Install")
-
-                    self.validation_label.setText(
-                        "<b>MD5 checksum:</b> {} ({})".format(
-                        self._checksum, self._validation))
-                else:
-                    self.button_install.setText("Reinstall")
             if installed or not self._builtin:
-                self.button_remove = QtGui.QPushButton(entry_widget)
-                self.button_remove.setIcon(self._stack.parent().get_icon("sign-delete"))
-                entry_widget.header_layout.addWidget(self.button_remove)
+                self.button_remove = button_remove
+                self.button_remove.setParent(entry_widget)
+                self.widget_layout.addWidget(self.button_remove)
 
                 if self._stack:
                     self.button_remove.clicked.connect(lambda: 
                     self._stack.removeCorpus.emit(self))
+
+            if not self._adhoc:
+                if not installed:
+                    self.button_install = button_install
+                else:
+                    self.button_install = button_reinstall
+                self.button_install.setParent(entry_widget)
+                self.widget_layout.addWidget(self.button_install)
+
+                if self._checksum:
+                    self.validation_label.setText(
+                        "<b>MD5 checksum:</b> {} ({})".format(
+                        self._checksum, self._validation))
 
             if self._stack and not self._adhoc:
                 self.button_install.clicked.connect(self.safe_install)
@@ -148,7 +200,10 @@ class CoqAccordionEntry(QtGui.QWidget):
             self._stack.installCorpus.emit(self._builder_class)
     
     def setReferences(self, ref):
-        self._references = ref
+        self._reference_list = ref
+    
+        references = "".join(["<p><span style='padding-left: 2em; text-indent: 2em;'>{}</span></p>".format(utf8(x)) for x in ref])
+        self._references = "<p><b>References</b> <a href='_to_clipboard'>(copy to clipboard)</a>{}</p>".format(references)
         self.change_description()
     
     def setTitle(self, title):
@@ -379,8 +434,7 @@ class CorpusManager(QtGui.QDialog):
                                 utf8(builder_class.get_language()), utf8(builder_class.get_language_code()))
                             
                         if builder_class.get_references():
-                            references = "".join(["<p><span style='padding-left: 2em; text-indent: 2em;'>{}</span></p>".format(utf8(x)) for x in builder_class.get_references()])
-                            entry.setReferences("<p><b>References</b>{}".format(references))
+                            entry.setReferences(builder_class.get_references())
                                 
                         if builder_class.get_license():
                             entry.setLicense("<p><b>License</b></p><p>{}</p>".format(utf8(builder_class.get_license())))
