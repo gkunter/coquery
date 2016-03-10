@@ -254,6 +254,13 @@ class Identifier(Column):
 
     def __repr__(self):
         return "Identifier(name='{}', data_type='{}', unique={}, index_length={})".format(self._name, self._data_type, self.unique, self.index_length)
+    
+    @property
+    def name(self):
+        if self.unique:
+            return self._name
+        else:
+            return "{}_primary".format(self._name)
         
 class Link(Column):
     """ Define a Column class that links a table to another table. In MySQL
@@ -394,7 +401,8 @@ class Table(object):
         and store the data in add cache of the table. 
         """ 
         self._current_id += 1
-        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        key = tuple([row[x] for x in self._row_order])
+        self._add_cache[key] = (self._current_id, row)
         if self._max_cache and len(self._add_cache) > self._max_cache:
             self.flush_cache()
         return self._current_id
@@ -405,7 +413,8 @@ class Table(object):
         expected to be already in the row, so it is not added.
         """
         self._current_id = row[self.primary.name]
-        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        key = tuple([row[x] for x in self._row_order])
+        self._add_cache[key] = (self._current_id, row)
         if self._max_cache and len(self._add_cache) > self._max_cache:
             self.flush_cache()
         return self._current_id
@@ -524,9 +533,9 @@ class Table(object):
                         if not column.unique:
                             # add surrogate key 
                             # do not add AUTO_INCREMENT to strings or ENUMs:
-                            str_list.insert(0, "{}_primary INT AUTO_INCREMENT".format(self.name))
-                            str_list.insert(1, "{} {}".format(column.name, column.data_type))
-                            str_list.append("PRIMARY KEY ({}_primary)".format(self.name))
+                            str_list.insert(0, "{} INT AUTO_INCREMENT".format(column.name))
+                            str_list.insert(1, "{} {}".format(column.name.replace("_primary", ""), column.data_type))
+                            str_list.append("PRIMARY KEY ({})".format(column.name))
                         else:
                             # do not add AUTO_INCREMENT to strings or ENUMs:
                             if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
@@ -555,8 +564,8 @@ class Table(object):
                     if column.is_identifier:
                         if not column.unique:
                             # add surrogate key 
-                            str_list.insert(0, "{}_primary INT PRIMARY KEY".format(self.name))
-                            str_list.insert(1, "{} {}".format(column.name, data_type))
+                            str_list.insert(0, "{} INT PRIMARY KEY".format(column.name))
+                            str_list.insert(1, "{} {}".format(column.name.replace("_primary", ""), data_type))
                         else:
                             str_list.insert(0, "{} {} PRIMARY KEY".format(
                                 column.name, data_type))
@@ -603,6 +612,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
     expected_files = []
     special_files = []
     __version__ = "1.0"
+    
+    _read_file_formatter = "Reading {file} (%v of %m)..."
     
     def __init__(self, gui=False):
         self.module_code = module_code
@@ -1511,16 +1522,19 @@ class BaseCorpusBuilder(corpus.BaseResource):
             return
 
         if self._widget:
-            self._widget.progressSet.emit(len(self._file_list), "Reading text files... (%v of %m)")
+            self._widget.progressSet.emit(len(self._file_list), "")
             self._widget.progressUpdate.emit(0)
             
         for i, file_name in enumerate(self._file_list):
+            if self._widget:
+                self._widget.labelSet.emit(self._read_file_formatter.format(file=file_name))
+
             if self.interrupted:
                 return
             if not self.db_has(self.file_table, {self.file_path: file_name}):
                 self.logger.info("Loading file %s" % (file_name))
-                self.store_filename(file_name)
                 self.process_file(file_name)
+                self.store_filename(file_name)
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
             self.commit_data()
