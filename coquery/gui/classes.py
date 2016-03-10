@@ -71,7 +71,6 @@ class CoqHelpBrowser(QtGui.QTextBrowser):
         super(CoqHelpBrowser, self).__init__(*args, **kwargs)
     
     def loadResource(self, resource_type, name):
-        print(name, name.scheme())
         if name.scheme() == "qthelp":
             return self.help_engine.fileData(name)
         else:
@@ -108,27 +107,30 @@ class CoqSwitch(QtGui.QWidget):
         self._inner_layout.setSpacing(-1)
         self._inner_layout.setContentsMargins(0, 0, 0, 0)
 
-        self._slider = QtGui.QSlider(self)
-        self._slider.setOrientation(QtCore.Qt.Horizontal)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        self._slider.setSizePolicy(sizePolicy)
-        size = QtCore.QSize(
-            self._slider.sizeHint().height() * 1.61,
-            self._slider.sizeHint().height())
-        self._slider.setMaximumSize(size)
-        self._frame.setMaximumSize(size)
+        self._check = QtGui.QCheckBox(self)
+        self._check.setObjectName("_check")
+        self._inner_layout.addWidget(self._check)
+        #self._slider = QtGui.QSlider(self)
+        #self._slider.setOrientation(QtCore.Qt.Horizontal)
+        #sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        #sizePolicy.setHorizontalStretch(0)
+        #sizePolicy.setVerticalStretch(0)
+        #self._slider.setSizePolicy(sizePolicy)
+        #size = QtCore.QSize(
+            #self._slider.sizeHint().height() * 1.61,
+            #self._slider.sizeHint().height())
+        #self._slider.setMaximumSize(size)
+        #self._frame.setMaximumSize(size)
 
-        self._slider.setMaximum(1)
-        self._slider.setPageStep(1)
-        self._slider.setSliderPosition(0)
-        self._slider.setTickPosition(QtGui.QSlider.NoTicks)
-        self._slider.setTickInterval(1)
-        self._slider.setInvertedAppearance(True)
-        self._slider.setObjectName("_slider")
+        #self._slider.setMaximum(1)
+        #self._slider.setPageStep(1)
+        #self._slider.setSliderPosition(0)
+        #self._slider.setTickPosition(QtGui.QSlider.NoTicks)
+        #self._slider.setTickInterval(1)
+        #self._slider.setInvertedAppearance(True)
+        #self._slider.setObjectName("_slider")
 
-        self._inner_layout.addWidget(self._slider)
+        #self._inner_layout.addWidget(self._slider)
 
         self._label = CoqClickableLabel(self)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
@@ -140,37 +142,38 @@ class CoqSwitch(QtGui.QWidget):
         self._on_text = on
         self._off_text = off
         
-        self._layout.addWidget(self._label)
+        #self._layout.addWidget(self._label)
+        self._inner_layout.addWidget(self._label)
 
-        grad0 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Mid)
-        grad1 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Button)
-        grad2 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Light)
-        br = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
+        #grad0 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Mid)
+        #grad1 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Button)
+        #grad2 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Light)
+        #br = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
 
-        self._style_handle = """QSlider#_slider::handle:horizontal {{
-                background: qlineargradient(x1:0, y1:1, x2:0, y2:0,
-                stop:0 rgb({g0_r}, {g0_g}, {g0_b}), 
-                stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
-                border: 1px solid rgb({g1_r}, {g1_g}, {g1_b});
-                border-radius: {rad}px;
-            }}
+        #self._style_handle = """QSlider#_slider::handle:horizontal {{
+                #background: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                #stop:0 rgb({g0_r}, {g0_g}, {g0_b}), 
+                #stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
+                #border: 1px solid rgb({g1_r}, {g1_g}, {g1_b});
+                #border-radius: {rad}px;
+            #}}
         
-            QSlider#_slider::handle:horizontal:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 rgb({g2_r}, {g2_g}, {g2_b}), 
-                stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
-                border: 2px solid rgb({g2_r}, {g2_g}, {g2_b});
-                margin: -2px 0;
-                border-radius: {rad}px;
-            }}
-        """.format(
-            g0_r = grad0.red(), g0_g=grad0.green(), g0_b=grad0.blue(),
-            g1_r = grad1.red(), g1_g=grad1.green(), g1_b=grad1.blue(),
-            g2_r = grad2.red(), g2_g=grad2.green(), g2_b=grad2.blue(),
-            b_r = br.red(), b_g=br.green(), b_b=br.blue(),
-            rad=int(self._slider.sizeHint().height()*0.4))
+            #QSlider#_slider::handle:horizontal:hover {{
+                #background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                #stop:0 rgb({g2_r}, {g2_g}, {g2_b}), 
+                #stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
+                #border: 2px solid rgb({g2_r}, {g2_g}, {g2_b});
+                #margin: -2px 0;
+                #border-radius: {rad}px;
+            #}}
+        #""".format(
+            #g0_r = grad0.red(), g0_g=grad0.green(), g0_b=grad0.blue(),
+            #g1_r = grad1.red(), g1_g=grad1.green(), g1_b=grad1.blue(),
+            #g2_r = grad2.red(), g2_g=grad2.green(), g2_b=grad2.blue(),
+            #b_r = br.red(), b_g=br.green(), b_b=br.blue(),
+            #rad=int(self._slider.sizeHint().height()*0.4))
 
-        self._style_handle = ""
+        #self._style_handle = ""
 
         if not state:
             self.setOff()
@@ -180,60 +183,64 @@ class CoqSwitch(QtGui.QWidget):
 
     def _update(self):        
         if self._on:
-            self._slider.setValue(1)
+            self._check.setCheckState(QtCore.Qt.Checked)
+            #self._slider.setValue(1)
             self._label.setText(self._on_text)
 
-            col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
-            s = """
-            {style_handle}
+            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
+            #s = """
+            #{style_handle}
             
-            QSlider#_slider::add-page:horizontal {{
-                background: rgb({r}, {g}, {b});
-            }}
+            #QSlider#_slider::add-page:horizontal {{
+                #background: rgb({r}, {g}, {b});
+            #}}
 
-            QSlider#_slider::sub-page:horizontal {{
-                background: rgb({r}, {g}, {b});
-            }}
-            """
+            #QSlider#_slider::sub-page:horizontal {{
+                #background: rgb({r}, {g}, {b});
+            #}}
+            #"""
         else:
-            self._slider.setValue(0)
+            #self._slider.setValue(0)
+            self._check.setCheckState(QtCore.Qt.Unchecked)
             self._label.setText(self._off_text)
             
-            col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Dark)
-            s = """
-            {style_handle}
+            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Dark)
+            #s = """
+            #{style_handle}
 
-            QSlider#_slider::add-page:horizontal {{
-                background: rgb({r}, {g}, {b});
-            }}
+            #QSlider#_slider::add-page:horizontal {{
+                #background: rgb({r}, {g}, {b});
+            #}}
 
-            QSlider#_slider::sub-page:horizontal {{
-                background: rgb({r}, {g}, {b});
-            }}
-            """
+            #QSlider#_slider::sub-page:horizontal {{
+                #background: rgb({r}, {g}, {b});
+            #}}
+            #"""
             
-        self.setStyleSheet(s.format(
-                style_handle=self._style_handle,
-                r=col.red(), g=col.green(), b=col.blue()))
+        #self.setStyleSheet(s.format(
+                #style_handle=self._style_handle,
+                #r=col.red(), g=col.green(), b=col.blue()))
     
     def _connect_signals(self):
-        self._slider.valueChanged.connect(self.toggle)
-        self._slider.sliderReleased.connect(self._check_release)
-        self._slider.sliderPressed.connect(self._remember)
+        #self._slider.valueChanged.connect(self.toggle)
+        #self._slider.sliderReleased.connect(self._check_release)
+        #self._slider.sliderPressed.connect(self._remember)
+        self._check.stateChanged.connect(self.toggle)
         self._label.clicked.connect(self.toggle)
 
     def _disconnect_signals(self):
-        self._slider.valueChanged.disconnect(self.toggle)
-        self._slider.sliderReleased.disconnect(self._check_release)
-        self._slider.sliderPressed.disconnect(self._remember)
+        #self._slider.valueChanged.disconnect(self.toggle)
+        #self._slider.sliderReleased.disconnect(self._check_release)
+        #self._slider.sliderPressed.disconnect(self._remember)
+        self._check.stateChanged.disconnect(self.toggle)
         self._label.clicked.disconnect(self.toggle)
         
-    def _remember(self):
-        self._old_pos = int(self._slider.value())
+    #def _remember(self):
+        #self._old_pos = int(self._slider.value())
         
-    def _check_release(self):
-        if int(self._slider.value()) == self._old_pos:
-            self.toggle()
+    #def _check_release(self):
+        #if int(self._slider.value()) == self._old_pos:
+            #self.toggle()
         
     def toggle(self):
         self._disconnect_signals()
