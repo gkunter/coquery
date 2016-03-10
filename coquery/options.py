@@ -87,6 +87,7 @@ class Options(object):
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
+        self.args.textgrids_file_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.join(self.args.base_path, "texts", "alice")
         self.args.corpus_source_path = os.path.expanduser("~")
         self.args.stopwords_file_path = os.path.expanduser("~")
@@ -674,9 +675,9 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.query_file_path = os.path.expanduser("~")
                         try:
-                            self.args.query_file_path = config_file.get("gui", "query_file_path")
+                            self.args.textgrids_file_path = config_file.get("gui", "textgrids_file_path")
                         except (NoOptionError, ValueError):
-                            self.args.query_file_path = os.path.expanduser("~")
+                            self.args.textgrids_file_path = os.path.expanduser("~")
                         try:
                             self.args.results_file_path = config_file.get("gui", "results_file_path")
                         except (NoOptionError, ValueError):
@@ -879,6 +880,10 @@ def save_configuration():
         except AttributeError:
             config.set("gui", "results_file_path", os.path.expanduser("~"))
         try:
+            config.set("gui", "textgrids_file_path", cfg.textgrids_file_path)
+        except AttributeError:
+            config.set("gui", "textgrids_file_path", os.path.expanduser("~"))
+        try:
             config.set("gui", "stopwords_file_path", cfg.stopwords_file_path)
         except AttributeError:
             config.set("gui", "stopwords_file_path", os.path.expanduser("~"))
@@ -975,7 +980,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                 if whitelisted_modules != "all" and element not in whitelisted_modules:
                     raise IllegalImportInModuleError(corpus_name, cfg.current_server, element, node.lineno)
         
-        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.AugAssign, ast.Return, ast.TryExcept, ast.TryFinally, ast.Pass, ast.Raise)):
+        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.AugAssign, ast.Return, ast.TryExcept, ast.TryFinally, ast.Pass, ast.Raise, ast.Assert, ast.Print)):
             pass
         
         elif isinstance(node, ast.Expr):
@@ -999,6 +1004,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
             if not isinstance(parent, allowed_parents):
                 raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
         else:
+            print(node)
             raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
 
         # recursively validate the content of the node:
@@ -1139,8 +1145,7 @@ def get_available_resources(configuration):
             find = imp.find_module(corpus_name, [corpora_path])
             module = imp.load_module(corpus_name, *find)
         except SyntaxError as e:
-            logger.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-            raise e
+            logger.warn("There is a syntax error in corpus module {}. The corpus is not available for queries. contact the corpus module maintainer.".format(corpus_name))
         except UnicodeEncodeError as e:
             logger.warn("There is a Unicode error in corpus module {}: {}".format(corpus_name, str(e)))
         except Exception as e:
