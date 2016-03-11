@@ -257,7 +257,7 @@ class LexiconClass(object):
         
         This method modifies the class attributes joined_tables (to keep
         track of tables that are already included in the join) and 
-        table_list (wich contains the join strings).
+        table_list (which contains the join strings).
         """
         _, _, last_table, _ = self.resource.split_resource_feature(start_feature)
         _, _, end_table, _ = self.resource.split_resource_feature(end_feature)
@@ -2301,19 +2301,22 @@ class CorpusClass(object):
                 origin_id = self.resource.corpus_sentence_id
 
         if hasattr(self.resource, "tag_table"):
-            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word} AS COQ_WORD, {tag} AS COQ_TAG_TAG, {tag_table}.{tag_type} AS COQ_TAG_TYPE, {attribute} AS COQ_ATTRIBUTE, {tag_id} AS COQ_TAG_ID FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
+            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word_table}.{word} AS COQ_WORD, {tag} AS COQ_TAG_TAG, {tag_table}.{tag_type} AS COQ_TAG_TYPE, {attribute} AS COQ_ATTRIBUTE, {tag_id} AS COQ_TAG_ID FROM {corpus} {joined_tables} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
         else:
-            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word} AS COQ_WORD FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
+            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word_table}.{word} AS COQ_WORD FROM {corpus} {joined_tables} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
             
         if origin_id:
             format_string += " AND {corpus}.{source_id} = {current_source_id}"
     
-        word = self.resource.QUERY_ITEM_WORD
-        _, _, tab, _ = self.resource.split_resource_feature(word)
-        word_table = "{}_table".format(tab)
-        word_id = "{}_id".format(tab)
+        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
+        _, _, tab, _ = self.resource.split_resource_feature(word_feature)
+        word_table = getattr(self.resource, "{}_table".format(tab))
+        word_id = getattr(self.resource, "{}_id".format(tab))
         
-        # FIXME: this needs to use a table path!
+        self.lexicon.table_list = []
+        self.lexicon.joined_tables = []
+        self.lexicon.add_table_path("corpus_id", word_feature)
+
         if hasattr(self.resource, "tag_table"):
             S = format_string.format(
                 corpus=self.resource.corpus_table,
@@ -2321,9 +2324,11 @@ class CorpusClass(object):
                 corpus_word_id=self.resource.corpus_word_id,
                 source_id=origin_id,
                 
-                word=word,
+                word=getattr(self.resource, word_feature),
                 word_table=word_table,
                 word_id=word_id,
+                
+                joined_tables=" ".join(self.lexicon.table_list),
                 
                 tag_table=self.resource.tag_table,
                 tag=self.resource.tag_label,
@@ -2335,6 +2340,7 @@ class CorpusClass(object):
                 current_source_id=source_id,
                 start=max(0, token_id - 1000), 
                 end=token_id + token_width + 999)
+            headers = ["COQ_TOKEN_ID", "COQ_TAG_ID"]
         else:
             S = format_string.format(
                 corpus=self.resource.corpus_table,
@@ -2342,23 +2348,25 @@ class CorpusClass(object):
                 corpus_word_id=self.resource.corpus_word_id,
                 source_id=origin_id,
                 
-                word=word,
+                word=getattr(self.resource, word_feature),
                 word_table=word_table,
                 word_id=word_id,
+
+                joined_tables=" ".join(self.lexicon.table_list),
                 
                 current_source_id=source_id,
                 start=max(0, token_id - 1000), 
                 end=token_id + token_width + 999)
-
+            headers = ["COQ_TOKEN_ID"]
         if options.cfg.verbose:
             logger.info(S)
 
         df = pd.read_sql(S, self.resource.get_engine())
 
         try:
-            df = df.sort_values(by=["COQ_TOKEN_ID", "COQ_TAG_ID"])
+            df = df.sort_values(by=headers)
         except AttributeError:
-            df = df.sort(columns=["COQ_TOKEN_ID", "COQ_TAG_ID"])
+            df = df.sort(columns=headers)
         self._context_cache[(token_id, source_id, token_width)] = df
         
     def get_rendered_context(self, token_id, source_id, token_width, context_width, widget):
