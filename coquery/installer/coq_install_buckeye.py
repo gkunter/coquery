@@ -277,9 +277,9 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.content_table,
             [Identifier(self.content_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-             Column(self.content_label, "TEXT NOT NULL", index_length=13),
+             Column(self.content_label, "VARCHAR(40) NOT NULL"),
              Column(self.content_pos, "ENUM('CC','CD','DT','DT_VBZ','EX','EX_VBZ','FW','IN','JJ','JJR','JJS','LS','MD','MD_RB','NN','NNP','NNPS','NNS','null','PDT','PRP','PRP_MD','PRP_VBP','PRP_VBZ','PRP$','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBG_TO','VBN','VBP','VBP_RB','VBP_TO','VBZ','VBZ_RB','WDT','WP','WP_VBZ','WP$','WRB') NOT NULL"),
-             Column(self.content_transcript, "TINYTEXT NOT NULL", index_length=16),
+             Column(self.content_transcript, "VARCHAR(41) NOT NULL"),
              Column(self.content_lemmatranscript, "VARCHAR(41) NOT NULL")])
 
         self.create_table_description(self.word_table,
@@ -543,7 +543,7 @@ class BuilderClass(BaseCorpusBuilder):
                     if len(split_values) == 3:
                         # check if last value is a valid POS tag, or "null", 
                         # i.e. a non-speech label:
-                        if split_values[2] in [_valid_pos, "null"]:
+                        if split_values[2] in [self._valid_pos, "null"]:
                             self._value_content_transcript = split_values[1]
                             self._value_content_pos = split_values[2]
                         else:
@@ -553,7 +553,7 @@ class BuilderClass(BaseCorpusBuilder):
                     elif len(split_values) == 2:
                         # check if last value is a valid POS tag, or "null", 
                         # i.e. a non-speech label:
-                        if split_values[1] in [_valid_pos, "null"]:
+                        if split_values[1] in [self._valid_pos, "null"]:
                             self._value_content_pos = split_values[1]
                             if split_values[-1] == "null":
                                 # apparently, 'U' is used as transcription of 
