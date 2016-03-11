@@ -22,6 +22,7 @@ from coquery import sqlhelper
 from coquery import sqlwrap
 from coquery.defines import * 
 from coquery.errors import *
+from coquery.unicode import utf8
 
 import classes
 import errorbox
@@ -62,6 +63,8 @@ class InstallerGui(QtGui.QDialog):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setText(self.button_label)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).clicked.connect(self.start_install)
         
+        self.ui.verticalLayout_3.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
+        
         self.installStarted.connect(self.show_progress)
         self.progressSet.connect(self.set_progress)
         self.labelSet.connect(self.set_label)
@@ -100,23 +103,15 @@ class InstallerGui(QtGui.QDialog):
             self.ui.notes_box = classes.CoqDetailBox("Installation notes")
             self.ui.verticalLayout.addWidget(self.ui.notes_box)
 
-            self.ui.notes_scroll = QtGui.QScrollArea(self)                                                                                    
-            self.ui.notes_scroll.setWidgetResizable(True)                                                                                     
-            self.ui.notes_scroll.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)                                  
+            self.ui.notes_label = QtGui.QLabel(notes)
+            self.ui.notes_label.setWordWrap(True)
+            self.ui.notes_label.setOpenExternalLinks(True)            
+            self.ui.notes_label.setBackgroundRole(QtGui.QPalette.ColorRole.Base)
+            self.ui.notes_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
 
-            self.scrollAreaWidgetContents = QtGui.QWidget()                                                                              
-            #self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 530, 356))                                                      
-
-            self.ui.notes_layout = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)                                                     
-            self.ui.notes_layout.setMargin(0)                                                                                           
-            self.ui.notes_layout.setSpacing(0)                                                                                          
-
-            self.ui.notes_label = QtGui.QTextEdit(self.scrollAreaWidgetContents)                                                               
-            self.ui.notes_label.setReadOnly(True)                                                                                              
-
-            self.ui.notes_label.setHtml(notes)
-            self.ui.notes_layout.addWidget(self.ui.notes_label)                                                                               
-            self.ui.notes_scroll.setWidget(self.scrollAreaWidgetContents)                                                                     
+            self.ui.notes_scroll = QtGui.QScrollArea()                                                                                      
+            self.ui.notes_scroll.setWidgetResizable(True)
+            self.ui.notes_scroll.setWidget(self.ui.notes_label)
                                                                                                                                         
             self.ui.notes_box.replaceBox(self.ui.notes_scroll)
         try:
@@ -559,15 +554,17 @@ class BuilderGui(InstallerGui):
 
         if self.state == "finished":
             # Create an installer in the adhoc directory:
-            with codecs.open(os.path.join(
-                options.cfg.adhoc_path, "coq_install_{}.py".format(str(self.ui.corpus_name.text()))), "w") as output_file:
+            path = os.path.join(
+                options.cfg.adhoc_path, "coq_install_{}.py".format(
+                    self.builder.arguments.db_name))
+            with codecs.open(path, "w", encoding="utf-8") as output_file:
                 for line in self.builder.create_installer_module():
-                    output_file.write(line)
+                    output_file.write(utf8(line))
     
     def get_arguments_from_gui(self):
         namespace = super(BuilderGui, self).get_arguments_from_gui()
 
-        namespace.name = str(self.ui.corpus_name.text())
+        namespace.name = utf8(self.ui.corpus_name.text())
         namespace.use_nltk = self.ui.use_pos_tagging.checkState()
         namespace.db_name = "coq_{}".format(namespace.name).lower()
         return namespace
