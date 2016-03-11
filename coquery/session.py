@@ -328,9 +328,9 @@ class Session(object):
             
         # special treatment of context columns:
         if header.startswith("context_lc"):
-            return "LC{}".format(header.split("context_lc")[-1])
+            return "L{}".format(header.split("context_lc")[-1])
         if header.startswith("context_rc"):
-            return "RC{}".format(header.split("context_rc")[-1])
+            return "R{}".format(header.split("context_rc")[-1])
         
         rc_feature, _, number = header.rpartition("_")
         
