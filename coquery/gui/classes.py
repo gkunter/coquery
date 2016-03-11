@@ -26,6 +26,8 @@ from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 import errorbox
 import queryfilter
 
+from xml.sax.saxutils import escape
+
 class CoqThread(QtCore.QThread):
     taskStarted = QtCore.Signal()
     taskFinished = QtCore.Signal()
@@ -856,9 +858,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 
                 if role == QtCore.Qt.ToolTipRole:
                     if isinstance(value, (float, np.float64)):
-                        return "<div>{}</div>".format(QtCore.Qt.escape(("{:.%if}" % options.cfg.digits).format(value)))
+                        return "<div>{}</div>".format(escape(("{:.%if}" % options.cfg.digits).format(value)))
                     else:
-                        return "<div>{}</div>".format(QtCore.Qt.escape(str(value)))
+                        return "<div>{}</div>".format(escape(str(value)))
                 else:
                     if isinstance(value, (float, np.float64)):
                         return ("{:.%if}" % options.cfg.digits).format(value)
