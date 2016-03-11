@@ -54,6 +54,7 @@ class corpus_code():
             "underline": "u",
             "superscript": "sup",
             "subscript": "sup",
+            "object": "object",
             "text": "html"}
         if tag in translate_dict:
             return translate_dict[tag]
@@ -64,13 +65,21 @@ class corpus_code():
     def renderer_open_element(self, tag, attributes):
         context = super(Corpus, self).renderer_open_element(tag, attributes)
         if tag == "object":
+            path = os.path.join(options.cfg.base_path, "icons", "artwork")
             # add placeholder images for <object> tags
-            if attributes.get("type", "") == "table":
-                context.append("<br/><img src='../logo/placeholder_table.png'/><br/>")
-            if attributes.get("type", "") == "graphic":
-                context.append("<br/><img src='../logo/placeholder.png'/><br/>")
-            if attributes.get("type", "") == "formula":
-                context.append("<br/><img src='../logo/formula.png'/><br/>")
+            if attributes.get("type") == "formula":
+                context.append("<br/><img src='{}/formula.png'/><br/>".format(path))
+            elif attributes.get("type") == "table":
+                context.append("<br/><img src='{}/placeholder_table.png'/><br/>".format(path))
+            elif attributes.get("type") == "graphic":
+                context.append("<br/><img src='{}/placeholder.png'/><br/>".format(path))
+        if tag == "x-anonym-x":
+            anon_type = "anonymized"
+            try:
+                anon_type = attributes["type"]
+            except KeyError:
+                pass
+            context.append(' <span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span> '.format(anon_type))
 
         if tag == "x-anonym-x":
             anon_type = "anonymized"
