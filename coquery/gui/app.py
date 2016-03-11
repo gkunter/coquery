@@ -558,12 +558,12 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         Launch the context viewer.
         """
-        
+        token_width = 1
+
         if index != None:
             model_index = index
             row = model_index.row()
             data = self.table_model.content.iloc[row]
-            
             if ("coquery_invisible_corpus_id" not in self.Session.output_order or
                 "coquery_invisible_number_of_tokens" not in self.Session.output_order or
                 pd.isnull(data["coquery_invisible_corpus_id"]) or
@@ -578,8 +578,6 @@ class CoqueryApp(QtGui.QMainWindow):
                     
             token_id = data["coquery_invisible_corpus_id"]
             token_width = data["coquery_invisible_number_of_tokens"]
-        if token_id != None:
-            token_width = 1
             
         origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
         
@@ -1827,7 +1825,8 @@ class CoqueryApp(QtGui.QMainWindow):
             # text files:
             if rm_installer and success:
                 try:
-                    path = os.path.join(options.cfg.adhoc_path, "coq_install_{}.py".format(entry.name))
+                    res, _, _, _ = options.cfg.current_resources[entry.name]
+                    path = os.path.join(options.cfg.adhoc_path, "coq_install_{}.py".format(res.db_name))
                     os.remove(path)
                 except Exception as e:
                     print(e)
