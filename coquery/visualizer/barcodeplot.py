@@ -14,8 +14,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import unittest
-from coquery import  options
+from coquery import options
 from coquery.defines import *
+from coquery.unicode import utf8
 
 import visualizer as vis
 import seaborn as sns
@@ -79,17 +80,15 @@ class Visualizer(vis.BaseVisualizer):
         will also have lines that are placed close to each other. """
         def plot_facet(data, color):
             lineplot(
-                    x=data["coquery_invisible_corpus_id"],
-                    y=data[self._groupby[-1]],
-                    order=self._levels[-1],
-                    palette=self.options["color_palette_values"],
-                    data=data)
-
+                x=data["coquery_invisible_corpus_id"],
+                y=data[self._groupby[-1]],
+                order=self._levels[-1],
+                palette=self.options["color_palette_values"],
+                data=data)
 
         #sns.despine(self.g.fig, 
                     #left=False, right=False, top=False, bottom=False)
 
         self.map_data(plot_facet)
-
-        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
+        self.g.set_axis_labels(utf8(self.options["label_x_axis"]), utf8(self.options["label_y_axis"]))
         self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
