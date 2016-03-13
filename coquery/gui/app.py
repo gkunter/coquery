@@ -1947,7 +1947,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
         try:
             self.ui.combo_config.currentIndexChanged.disconnect()
-        except TypeError:
+        except (RuntimeError, TypeError):
             pass
         
         self.ui.combo_config.clear()
