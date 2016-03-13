@@ -140,7 +140,7 @@ class Options(object):
         # If Qt is available, the GUI is used by default. The command line 
         # interface can be selected by using the --con option:
         if _use_qt:
-            group.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
+            self.parser.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
         
         # General options:
         self.parser.add_argument("-o", "--outputfile", help="write results to OUTPUTFILE (default: write to console)", type=str, dest="output_path")
