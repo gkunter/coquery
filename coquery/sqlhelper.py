@@ -10,15 +10,16 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import os
 import logging
 import warnings
 import sqlalchemy
 
-from errors import *
-from defines import *
-import options
+from .errors import *
+from .defines import *
+from . import options
 
 def _conf_dict(configuration):
     """

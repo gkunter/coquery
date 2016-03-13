@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 from __future__ import print_function
+from __future__ import absolute_import
 
 from collections import *
 try:
@@ -21,11 +22,11 @@ except ImportError:
     # so we can pass any ImportError here.
     pass
 
-from errors import *
-import tokens
-import options
-import sqlhelper
-from defines import *
+from .errors import *
+from .defines import *
+from . import tokens
+from . import options
+from . import sqlhelper
 
 def collapse_words(word_list):
     
@@ -210,7 +211,7 @@ class LexiconClass(object):
         Returns
         -------
         S : str 
-            A strin that can be used in an SQL query created in 
+            A string that can be used in an SQL query created in 
             get_wordid_list().
         """
         where_clauses = []
