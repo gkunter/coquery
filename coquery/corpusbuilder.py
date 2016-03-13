@@ -603,7 +603,7 @@ class Table(object):
                 if "VARCHAR" in field_type.upper() or "TEXT" in field_type.upper():
                     str_list[i] = "{} COLLATE NOCASE".format(x)
 
-        S = ", ".join(str_list)
+        S = ", ".join(set(str_list))
         command_list.insert(0, S)
         table_str = "; ".join(command_list)
         if db_type == SQL_SQLITE:
