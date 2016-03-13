@@ -123,7 +123,7 @@ def main():
         Coq.show()
         Coq.setGUIDefaults()
 
-        options.cfg.icon = Coq.get_icon("logo_tiny.png", small_n_flat=False)
+        options.cfg.icon = Coq.get_icon("coquerel_icon.png", small_n_flat=False)
         Coq.setWindowIcon(options.cfg.icon)
         if options.cfg.profile:
             import cProfile
