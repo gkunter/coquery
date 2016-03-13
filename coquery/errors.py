@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import sys
 import traceback
@@ -19,7 +20,7 @@ import logging
 import re
 import textwrap
 
-from defines import *
+from .defines import *
 
 class GenericException(Exception):
     def __init__(self, *par):

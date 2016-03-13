@@ -22,6 +22,7 @@ version 3 along with this program.  If not, see
 """
 
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import sys
 import os.path
@@ -30,11 +31,9 @@ import time
 import logging
 import logging.handlers
 
-#import __init__
-#sys.path.append(os.path.join(sys.path[0], "gui"))
-from errors import *
-import options
-from defines import *
+from .errors import *
+from . import options
+from .defines import *
 
 def set_logger(log_file_path):
     logger = logging.getLogger(NAME)
@@ -48,7 +47,7 @@ def set_logger(log_file_path):
 def check_system():
     if options.missing_modules:
         if options._use_qt:
-            from gui.pyqt_compat import QtGui
+            from .gui.pyqt_compat import QtGui
             app = QtGui.QApplication(sys.argv)
             QtGui.QMessageBox.critical(None,
                 "Missing dependencies – Coquery",
@@ -104,9 +103,9 @@ def main():
 
     # Run the Application GUI?
     if options.cfg.gui and options._use_qt:
-        from gui.pyqt_compat import QtGui, QtCore
-        from gui.app import CoqueryApp
-        from gui.app import GuiHandler
+        from .gui.pyqt_compat import QtGui, QtCore
+        from .gui.app import CoqueryApp
+        from .gui.app import GuiHandler
 
         options.cfg.gui_logger = GuiHandler()
         options.cfg.gui_logger.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
@@ -135,7 +134,8 @@ def main():
 
     # Otherwise, run program as a command-line tool:
     else:
-        import session
+        options.set_current_server(options.cfg.current_server)
+        from . import session
         # Choose the appropriate Session type instance:
         if options.cfg.MODE == QUERY_MODE_STATISTICS:
             Session = session.StatisticsSession()

@@ -12,6 +12,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
+from __future__ import absolute_import
+
 import math
 import re
 
@@ -36,9 +38,9 @@ import pandas as pd
 
 from defines import *
 from errors import *
-import corpus
-import tokens
-import options
+from . import corpus
+from . import tokens
+from . import options
 
 class QueryFilter(object):
     """ Define a class that stores a query filter. 
@@ -800,7 +802,7 @@ class FrequencyQuery(TokenQuery):
             # column:
             aggr_dict = {"statistics_frequency": len}
             aggr_dict.update(
-                {col: lambda x: x.head(1) for col in sample_columns})
+                {col: lambda x: x.iloc[0] for col in sample_columns})
             # group the data frame by the group columns, apply the aggregate
             # functions to each group, and return the aggregated data frame:
             result = cls.do_the_grouping(df, group_columns, aggr_dict)

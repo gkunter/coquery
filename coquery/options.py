@@ -10,6 +10,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 # Python 3.x: import configparser 
 # Python 2.x: import ConfigParser as configparser
@@ -44,10 +45,10 @@ if not hasattr(ast, "TryFinally"):
 import hashlib
 from collections import defaultdict
 
-import tokens
-from unicode import utf8
-from defines import *
-from errors import *
+from . import tokens
+from .unicode import utf8
+from .defines import *
+from .errors import *
 
 class Options(object):
     def __init__(self):
@@ -133,11 +134,14 @@ class Options(object):
         return self.args
         
     def setup_parser(self):
-        group = self.parser.add_mutually_exclusive_group()
         self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS, QUERY_MODE_CONTINGENCY, QUERY_MODE_COLLOCATIONS), type=str, nargs="?")
         self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
         
-        group.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
+        # If Qt is available, the GUI is used by default. The command line 
+        # interface can be selected by using the --con option:
+        if _use_qt:
+            group.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
+        
         # General options:
         self.parser.add_argument("-o", "--outputfile", help="write results to OUTPUTFILE (default: write to console)", type=str, dest="output_path")
         group = self.parser.add_mutually_exclusive_group()
@@ -208,7 +212,7 @@ class Options(object):
         """
         self.corpus_argument_dict = {
             "help": "specify the corpus to use", 
-            "choices": [x.encode("utf-8") for x in get_available_resources(DEFAULT_CONFIGURATION).keys()], 
+            "choices": [utf8(x) for x in get_available_resources(DEFAULT_CONFIGURATION).keys()], 
             "type": type(str(""))}
 
         self.setup_parser()
@@ -233,7 +237,7 @@ class Options(object):
             self.args.corpus = ""
         # if no corpus is selected and no GUI is requested, display the help
         # and exit.
-        if not self.args.corpus and not (args.gui):
+        if not self.args.corpus and not (self.args.gui):
             self.parser.print_help()
             sys.exit(1)
         

@@ -11,13 +11,14 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
+from __future__ import absolute_imports
 
 import itertools
 import string
 import re
 
-from defines import *
-from errors import *
+from .defines import *
+from .errors import *
 
 class QueryToken(object):
     """ 

@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import sys
 import time, datetime
@@ -21,12 +22,12 @@ import collections
 
 import pandas as pd
 
-import options
-from errors import *
-from corpus import *
-from defines import *
-import queries
-import tokens
+from . import options
+from .errors import *
+from .corpus import *
+from .defines import *
+from . import queries
+from . import tokens
 
 class Session(object):
     def __init__(self):
