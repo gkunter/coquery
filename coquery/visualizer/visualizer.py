@@ -26,6 +26,7 @@ from coquery import options
 from coquery import queries
 from coquery.defines import *
 from coquery.errors import *
+from coquery.unicode import utf8
 
 class BaseVisualizer(QtCore.QObject):
     """ 
@@ -200,7 +201,7 @@ class BaseVisualizer(QtCore.QObject):
             self.g.map_dataframe(func) 
         else:
             func(self._table, None)
-    
+
     def get_grid_layout(self, n):
         """ Return a tuple containing a nrows, ncols pair that can be used to
         utilize the screen space more or less nicely for the number of grids
@@ -320,7 +321,8 @@ class BaseVisualizer(QtCore.QObject):
         else:
             self._groupby = []
 
-        self._levels = [list(pd.unique(self._table[x].ravel())) for x in self._groupby]
+        self._levels = [[utf8(y) for y in pd.unique(self._table[x].ravel())] for x in self._groupby]
+
 
         if len(self._factor_columns) > self.dimensionality:
             self._col_factor = self._factor_columns[-self.dimensionality - 1]
@@ -361,14 +363,14 @@ class BaseVisualizer(QtCore.QObject):
             self.g.fig.get_axes()[-1].legend(
                 legend_bar, levels,
                 ncol=self.options.get("label_legend_columns", 1),
-                title=self.options.get("label_legend", ""), 
+                title=utf8(self.options.get("label_legend", "")), 
                 frameon=True,
                 framealpha=0.7, 
                 loc=loc).draggable()
         else:
             self.g.fig.get_axes()[-1].legend(
                 ncol=self.options.get("label_legend_columns", 1),
-                title=self.options.get("label_legend", ""), 
+                title=utf8(self.options.get("label_legend", "")), 
                 frameon=True,
                 framealpha=0.7, 
                 loc=loc).draggable()
@@ -406,7 +408,7 @@ class BaseVisualizer(QtCore.QObject):
             self.options["font_main"] = QtGui.QFont(
                     self.options["figure_font"].family(), round(self.options["figure_font"].pointSize() * 1.2))
         if "label_main" in self.options:
-            plt.suptitle(self.options["label_main"], size=self.options["font_main"].pointSize())
+            plt.suptitle(utf8(self.options["label_main"]), size=self.options["font_main"].pointSize())
         
         if not self.options.get("font_legend"):
             self.options["font_legend"] = QtGui.QFont(self.options["figure_font"].family())
