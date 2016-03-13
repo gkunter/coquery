@@ -16,13 +16,12 @@ import sys
 import pandas as pd
 import sqlalchemy
 
-from pyqt_compat import QtCore, QtGui
-from ui.uniqueViewerUi import Ui_UniqueViewer
-
-import sqlhelper
-import options
+from coquery import sqlhelper
+from coquery import options
 import errorbox
 import classes
+from pyqt_compat import QtCore, QtGui
+from ui.uniqueViewerUi import Ui_UniqueViewer
 
 class UniqueViewer(QtGui.QDialog):
     def __init__(self, rc_feature=None, db_name=None, uniques=True, parent=None):

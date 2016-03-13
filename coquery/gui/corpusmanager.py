@@ -18,17 +18,15 @@ import os
 import imp
 import logging
 
-import __init__
-
-import options
-from errors import *
-from defines import *
-
-from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
-from ui.corpusManagerUi import Ui_corpusManager
+from coquery import options
+from coquery import corpusbuilder
+from coquery.errors import *
+from coquery.defines import *
+from coquery.unicode import utf8
 
 import classes
-import corpusbuilder
+from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from ui.corpusManagerUi import Ui_corpusManager
 
 class CoqAccordionEntry(QtGui.QWidget):
     """ Define a QWidget that can be used as an entry in a accordion list."""
@@ -66,7 +64,7 @@ class CoqAccordionEntry(QtGui.QWidget):
         self.corpus_description.setWordWrap(True)
         self.corpus_description.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.corpus_description.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByKeyboard|QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextBrowserInteraction|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
-        self.corpus_description.setOpenExternalLinks(True)
+        self.corpus_description.linkActivated.connect(self.open_link)
 
         self.verticalLayout_3.addWidget(self.corpus_description)
         
@@ -94,32 +92,84 @@ class CoqAccordionEntry(QtGui.QWidget):
     def builtin(self):
         return self._builtin
 
+    def open_link(self, link):
+        """
+        Process any link clicked from the corpus description label.
+        
+        Usually, the URL of the link is opened. One exception is the link 
+        '_to_clipboard', which copies the references to the clipboard.
+        """
+        if utf8(link) == "_to_clipboard":
+            QtGui.QApplication.clipboard().setText("\n".join([utf8(x) for x in self._reference_list]))
+        else:
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl(link))
+
     def setup_buttons(self, installed, entry_widget):
+        """
+        Add buttons depending on the install state of the entry. 
+        
+        For entries that are not installed, add an "Install" button. 
+        For installed adhoc corpora, add a "Remove" button.
+        For other installed corpora, add both a "Remove" and a "Reinstall"
+        button.
+        
+        Also conenct the buttons to the appropriate methods.
+        """
+        self.widget_layout = QtGui.QHBoxLayout()
+        entry_widget.header_layout.addLayout(self.widget_layout)
+        
+        button_build = QtGui.QPushButton()
+        button_build.setIcon(self._stack.parent().get_icon("cone"))
+        button_build.setText("Build")
+        button_build.setToolTip("Build new corpus")
+        button_remove = QtGui.QPushButton()
+        button_remove.setIcon(self._stack.parent().get_icon("sign-delete"))
+        button_remove.setText("Remove")
+        button_remove.setToolTip("Remove corpus")
+        button_install = QtGui.QPushButton()
+        button_install.setIcon(self._stack.parent().get_icon("sign-add"))
+        button_install.setText("Install")
+        button_install.setToolTip("Install corpus")
+        button_reinstall = QtGui.QPushButton()
+        button_reinstall.setIcon(self._stack.parent().get_icon("sign-sync"))
+        button_reinstall.setText("Reinstall")
+        button_reinstall.setToolTip("Reinstall corpus")
+
+        # make all buttons the same width:
+        max_width = 0
+        for button in [button_build, button_remove, button_install, button_reinstall]:
+            max_width = max(max_width, button.sizeHint().width())
+        
+        for button in [button_build, button_remove, button_install, button_reinstall]:
+            button.setMinimumWidth(max_width)
+        
         if self._is_builder:
-            self.button_build = QtGui.QPushButton(entry_widget)
-            self.button_build.setIcon(self._stack.parent().get_icon("sign-add"))
+            self.button_build = button_build
+            self.button_build.setParent(entry_widget)
             entry_widget.header_layout.addWidget(self.button_build)
             self.button_build.clicked.connect(lambda: self._stack.buildCorpus.emit(self))
         else:
-            if not self._adhoc:
-                self.button_install = QtGui.QPushButton(entry_widget)
-                self.button_layout.insertWidget(0, self.button_install)
-                if not installed:
-                    self.button_install.setText("Install")
-
-                    self.validation_label.setText(
-                        "<b>MD5 checksum:</b> {} ({})".format(
-                        self._checksum, self._validation))
-                else:
-                    self.button_install.setText("Reinstall")
             if installed or not self._builtin:
-                self.button_remove = QtGui.QPushButton(entry_widget)
-                self.button_remove.setIcon(self._stack.parent().get_icon("sign-delete"))
-                entry_widget.header_layout.addWidget(self.button_remove)
+                self.button_remove = button_remove
+                self.button_remove.setParent(entry_widget)
+                self.widget_layout.addWidget(self.button_remove)
 
                 if self._stack:
                     self.button_remove.clicked.connect(lambda: 
                     self._stack.removeCorpus.emit(self))
+
+            if not self._adhoc:
+                if not installed:
+                    self.button_install = button_install
+                else:
+                    self.button_install = button_reinstall
+                self.button_install.setParent(entry_widget)
+                self.widget_layout.addWidget(self.button_install)
+
+                if self._checksum:
+                    self.validation_label.setText(
+                        "<b>MD5 checksum:</b> {} ({})".format(
+                        self._checksum, self._validation))
 
             if self._stack and not self._adhoc:
                 self.button_install.clicked.connect(self.safe_install)
@@ -150,7 +200,10 @@ class CoqAccordionEntry(QtGui.QWidget):
             self._stack.installCorpus.emit(self._builder_class)
     
     def setReferences(self, ref):
-        self._references = ref
+        self._reference_list = ref
+    
+        references = "".join(["<p><span style='padding-left: 2em; text-indent: 2em;'>{}</span></p>".format(utf8(x)) for x in ref])
+        self._references = "<p><b>References</b> <a href='_to_clipboard'>(copy to clipboard)</a>{}</p>".format(references)
         self.change_description()
     
     def setTitle(self, title):
@@ -222,7 +275,7 @@ class CoqAccordionEntry(QtGui.QWidget):
             for name, module, url in self._modules:
                 if url:
                    s = "<p>{module} (<a href='{url}'>{url}</a>)</p>".format(
-                       module=module, url=url)
+                       module=utf8(module), url=utf8(url))
                 else:
                    s = "<p>{}</p>".format(module)
                 l.append(s)
@@ -261,6 +314,7 @@ class CorpusManager(QtGui.QDialog):
         self.paths.append((options.cfg.installer_path, INSTALLER_DEFAULT))
         if options.cfg.custom_installer_path:
             self.paths.append((options.cfg.custom_installer_path, INSTALLER_CUSTOM))
+ 
         self.update()
 
     def built_in(self, path):
@@ -314,14 +368,14 @@ class CorpusManager(QtGui.QDialog):
                                 expected_classes=["BuilderClass"], 
                                 whitelisted_modules="all",
                                 allow_if = True).hexdigest()
-                    #except (IllegalCodeInModuleError,
-                            #IllegalFunctionInModuleError,
-                            #IllegalImportInModuleError,
-                            #ModuleIncompleteError) as e:
-                        #QtGui.QMessageBox.critical(
-                            #None, "Corpus validation error – Coquery", 
-                            #msg_invalid_installer.format(name=basename, code=str(e)), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-                        #continue
+                    except (IllegalCodeInModuleError,
+                            IllegalFunctionInModuleError,
+                            IllegalImportInModuleError,
+                            ModuleIncompleteError) as e:
+                        QtGui.QMessageBox.critical(
+                            None, "Corpus validation error – Coquery", 
+                            msg_invalid_installer.format(name=basename, code=str(e)), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                        continue
                     except (ImportError, SyntaxError) as e:
                         msg = msg_corpus_broken.format(
                             name=basename,
@@ -332,10 +386,20 @@ class CorpusManager(QtGui.QDialog):
                             None, "Corpus error – Coquery", 
                             msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                         continue
-                        
-                    # load the module:
-                    module = imp.load_source(basename, module_path)
 
+                    try:
+                        # load the module:
+                        module = imp.load_source(basename, module_path)
+                    except ImportError:
+                        msg = msg_corpus_broken.format(
+                            name=basename,
+                            type=sys.exc_info()[0],
+                            code=sys.exc_info()[1])
+                        logger.error(msg)
+                        QtGui.QMessageBox.critical(
+                            None, "Corpus error – Coquery", 
+                            msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                        continue
                     try:
                         builder_class = module.BuilderClass
                     except AttributeError:
@@ -344,7 +408,7 @@ class CorpusManager(QtGui.QDialog):
                     # create a new accordion entry:
                     entry = CoqAccordionEntry(stack=self)
 
-                    name = builder_class.get_name()
+                    name = utf8(builder_class.get_name())
                     self.detail_box = classes.CoqDetailBox(name, entry, alternative=name)
 
                     if basename != "coq_install_generic":
@@ -355,25 +419,25 @@ class CorpusManager(QtGui.QDialog):
                         #entry.setChecksum(hashsum)
 
                     
-                        title = builder_class.get_title()
+                        title = utf8(builder_class.get_title())
                         entry.setTitle(title)
                         
                         if builder_class.get_url():
-                            entry.setURL(builder_class.get_url())
-                        
+                            entry.setURL(utf8(builder_class.get_url()))
+                            
                         if builder_class.get_description():
                             entry.setDescription(
-                                "".join(["<p>{}</p>".format(x) for x in builder_class.get_description()]))
+                                "".join(["<p>{}</p>".format(utf8(x)) for x in builder_class.get_description()]))
+                                
+                        if builder_class.get_language():
+                            entry.setLanguage(
+                                utf8(builder_class.get_language()), utf8(builder_class.get_language_code()))
                             
-                        entry.setLanguage(builder_class.get_language(),
-                                    builder_class.get_language_code())      
-                        
                         if builder_class.get_references():
-                            references = "".join(["<p><span style='padding-left: 2em; text-indent: 2em;'>{}</span></p>".format(x) for x in builder_class.get_references()])
-                            entry.setReferences("<p><b>References</b>{}".format(references))
-                            
+                            entry.setReferences(builder_class.get_references())
+                                
                         if builder_class.get_license():
-                            entry.setLicense("<p><b>License</b></p><p>{}</p>".format(builder_class.get_license()))
+                            entry.setLicense("<p><b>License</b></p><p>{}</p>".format(utf8(builder_class.get_license())))
 
                         if builder_class.get_modules():
                             entry.setModules(builder_class.get_modules())
@@ -432,4 +496,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)

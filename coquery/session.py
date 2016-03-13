@@ -21,7 +21,6 @@ import collections
 
 import pandas as pd
 
-import __init__
 import options
 from errors import *
 from corpus import *
@@ -290,7 +289,6 @@ class Session(object):
         s : string
             The display name of the resource string
         """
-        
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
         if not ignore_alias and header in options.cfg.column_names:
@@ -330,9 +328,9 @@ class Session(object):
             
         # special treatment of context columns:
         if header.startswith("context_lc"):
-            return "LC{}".format(header.split("context_lc")[-1])
+            return "L{}".format(header.split("context_lc")[-1])
         if header.startswith("context_rc"):
-            return "RC{}".format(header.split("context_rc")[-1])
+            return "R{}".format(header.split("context_rc")[-1])
         
         rc_feature, _, number = header.rpartition("_")
         
@@ -349,8 +347,8 @@ class Session(object):
                 pass
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
         
-        # special treatment of lexicon freatures:
-        if rc_feature in [x for x, _ in resource.get_lexicon_features()]:
+        # special treatment of lexicon features:
+        if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
             try:
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
@@ -494,5 +492,5 @@ class SessionStdIn(Session):
         if options.cfg.skip_lines:
             logger.info("Skipping first %s %s." % (options.cfg.skip_lines, "query" if options.cfg.skip_lines == 1 else "queries"))
     
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)
     

@@ -18,8 +18,8 @@ try:
 except ImportError:
     from io import StringIO
     
-from corpusbuilder import *
-from bibliography import *
+from coquery.corpusbuilder import *
+from coquery.bibliography import *
 
 class corpus_code():
     #def get_tag_translate(self, tag):
@@ -54,6 +54,7 @@ class corpus_code():
             "underline": "u",
             "superscript": "sup",
             "subscript": "sup",
+            "object": "object",
             "text": "html"}
         if tag in translate_dict:
             return translate_dict[tag]
@@ -64,13 +65,21 @@ class corpus_code():
     def renderer_open_element(self, tag, attributes):
         context = super(Corpus, self).renderer_open_element(tag, attributes)
         if tag == "object":
+            path = os.path.join(options.cfg.base_path, "icons", "artwork")
             # add placeholder images for <object> tags
-            if attributes.get("type", "") == "table":
-                context.append("<br/><img src='../logo/placeholder_table.png'/><br/>")
-            if attributes.get("type", "") == "graphic":
-                context.append("<br/><img src='../logo/placeholder.png'/><br/>")
-            if attributes.get("type", "") == "formula":
-                context.append("<br/><img src='../logo/formula.png'/><br/>")
+            if attributes.get("type") == "formula":
+                context.append("<br/><img src='{}/formula.png'/><br/>".format(path))
+            elif attributes.get("type") == "table":
+                context.append("<br/><img src='{}/placeholder_table.png'/><br/>".format(path))
+            elif attributes.get("type") == "graphic":
+                context.append("<br/><img src='{}/placeholder.png'/><br/>".format(path))
+        if tag == "x-anonym-x":
+            anon_type = "anonymized"
+            try:
+                anon_type = attributes["type"]
+            except KeyError:
+                pass
+            context.append(' <span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span> '.format(anon_type))
 
         if tag == "x-anonym-x":
             anon_type = "anonymized"
@@ -1020,14 +1029,16 @@ class BuilderClass(BaseCorpusBuilder):
         
     @staticmethod
     def get_references():
-        return [Reference(
-                author=[Name(first = "Eva-Maria", last = "Wunder"), Name(first = "Holger", last = "Voormann"), Name(first = "Ulrike", last = "Gut")], 
+        return [str(Article(
+                authors=PersonList(
+                    Person(first = "Eva-Maria", last = "Wunder"), 
+                    Person(first = "Holger", last = "Voormann"), 
+                    Person(first = "Ulrike", last = "Gut")), 
                 title = "The ICE Nigeria corpus project: Creating an open, rich and accurate corpus",
                 year = 2009,
                 journal = "ICAME Journal",
                 volume = 34,
-                pages = "78-88",
-                pub_type = "article").get_html()]
+                pages = "78-88"))]
 
     @staticmethod
     def get_url():

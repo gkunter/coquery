@@ -16,9 +16,9 @@ import csv
 import itertools
 import tempfile
 
-from corpusbuilder import *
-from defines import *
-import options
+from coquery.corpusbuilder import *
+from coquery.defines import *
+from coquery import options
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "????.txt"
@@ -194,7 +194,10 @@ class BuilderClass(BaseCorpusBuilder):
                         
                         # create and fill temporary file:
                         temp_file = tempfile.NamedTemporaryFile("w", delete=False)
-                        temp_file.write("\n".join([x.strip() for x in lines]))
+                        if sys.version_info < (3, 0):
+                            temp_file.write(u"\n".join([x.strip() for x in lines]).encode("utf-8"))
+                        else:
+                            temp_file.write("\n".join([x.strip() for x in lines]))
                         temp_file.close()
                         self.DB.load_infile(temp_file.name, self.word_table, arguments)
                         os.remove(temp_file.name)
@@ -211,7 +214,10 @@ class BuilderClass(BaseCorpusBuilder):
                         
                         # create and fill temporary file:
                         temp_file = tempfile.NamedTemporaryFile("w", delete=False)
-                        temp_file.write("\n".join([x.strip() for x in lines]))
+                        if sys.version_info < (3, 0):
+                            temp_file.write(u"\n".join([x.strip() for x in lines]).encode("utf-8"))
+                        else:
+                            temp_file.write("\n".join([x.strip() for x in lines]))
                         temp_file.close()
                         self.DB.load_infile(temp_file.name, self.source_table, arguments)
                         os.remove(temp_file.name)

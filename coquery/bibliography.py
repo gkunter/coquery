@@ -1,13 +1,19 @@
 from __future__ import unicode_literals
-
 import warnings
 
-class Name(object):
+# Create a tuple containing the available string types 
+# (Python 3 has no unicode):
+try:
+    string_types = (unicode, str)
+except NameError:
+    string_types = (str, )
+
+class Person(object):
     """
-    This class defines a name that can be used in a bibliographic reference.
+    This class defines a person that can be used in a bibliographic reference.
     
     The approach taken here is -- primarily out of ignorance, but also for
-    practical reasons -- to follow a mostly European naming scheme. A person
+    practical reasons -- to assume a mostly European naming scheme. A person
     has a first (given) name, any number of middle names (including no middle 
     name), and a last (family) name. The last name is the name used in 
     bibliographic references to refer to the person. It is also the name 
@@ -18,73 +24,40 @@ class Name(object):
     titles) which precede and follow the name, respectively.
     """
     def __init__(self, first=None, middle=[], last=None, prefix=None, suffix=None, sortby=None):
-        self._first = first
-        self._last = last
-        self._middle = middle
-        self._prefix = prefix
-        self._suffix = suffix
-        self._sortby = sortby
-        
-    @property
-    def first(self):
-        """
-        string : The first name
-        """
-        return self._first
-    
-    @first.setter
-    def first(self, s):
-        self._first = s
-    
-    @property
-    def last(self):
-        """
-        string : The last name
-        """
-        return self._last
-    
-    @last.setter
-    def last(self, s):
-        self._last = s
-    
-    @property
-    def middle(self):
-        """
-        list : The middle names
-        """
-        return self._middle
-    
-    @middle.setter
-    def middle(self, x):
-        if not isinstance(x, list):
-            x = [x]
-        self._middle = x
+        self.first = first
+        self.last = last
+        if isinstance(middle, string_types):
+            self.middle = [middle]
+        elif isinstance(middle, list):
+            self.middle = middle
+        else:
+            pass
+            #raise ValueError("Person: middle names must be either strings or list, not {}.".format(type(middle)))
+        self.prefix = prefix
+        self.suffix = suffix
+        self.sortby = sortby
 
-    @property
-    def prefix(self):
-        """
-        string : the name prefix.
-        """
-        return self._prefix
+    def __repr__(self):
+        l = []
+        for x in ["first", "middle", "last", "prefix", "suffix", "sortby"]:
+            attr = getattr(self, x)
+            if attr:
+                if isinstance(attr, list):
+                    l.append("{}=[{}]".format(x, ", ".join(["'{}'".format(m) for m in attr])))
+                else:
+                    l.append("{}='{}'".format(x, attr))
+        return "Person({})".format(", ".join(l))
+
+    def __str__(self, **kwargs):
+        return self.full_name(**kwargs)
     
-    @prefix.setter
-    def prefix(self, s):
-        self._prefix= s
-    
-    @property
-    def suffix(self):
-        """
-        string : the name suffix.
-        """
-        return self._suffix
-    
-    @suffix.setter
-    def suffix(self, s):
-        self._suffix= s
-    
+    #def __eq__(self, other):
+        #if self._middle != [] and
+        #if self._middle != other._middle:
+            
     def _join(self, l, sep=" "):
         """
-        Return a string with the list element separated by ``sep``
+        Return a string with the list elements separated by ``sep``
         
         This function is similar to ``sep.join(l)``, but it provides type 
         conversion to string of the list elements, and removes empty 
@@ -102,15 +75,35 @@ class Name(object):
         s : string
             The joined string
         """
-        return sep.join([str(x) for x in l if x])
+        return sep.join(["{}".format(x) for x in l if x])
     
-    def full_name(self, initials='none'):
+    def _middlename(self, mode="full"):
+        """
+        Return the middle names either initialized (if mode is "initials") or
+        in their full form (if mode is "full").        
+        
+        Parameters
+        ----------
+        mode : 
+        """
+        if not hasattr(self, "middle"):
+            return None
+        if mode not in ["initials", "full"]:
+            warnings.Warning("Unknown mode '{}' for Name.middlename(), assuming 'full' instead".format(mode))
+            mode = "full"
+        
+        if mode == "full":
+            return self._join(self.middle)
+        elif mode == "initials":
+            return self._join(["{}.".format(x[:1]) for x in self.middle])
+    
+    def full_name(self, mode='none'):
         """
         Get the full name of the person.
         
         Parameters
         ----------
-        initials : string
+        mode : string
             'none' (the default) if no initials are used, 'middle' if the
             middle names are given in initials, 'all' if all names except
             the last are given in initials
@@ -123,28 +116,20 @@ class Name(object):
             
             prefix - first name - middle name(s) - last name - suffix
         """
-        if initials not in ["none", "middle", "all"]:
-            warnings.Warning("Unknown initial mode '{}', using 'none' instead".format(initials))
-            initials = "none"
-        
-        if initials == "none": 
-            return self._join([self._prefix,
-                            self._first,
-                            self._join(self._middle),
-                            self._last,
-                            self._suffix])
-        elif initials == "middle":
-            return self._join([self._prefix,
-                            self._first,
-                            self._join(["{}.".format(x[:1]) for x in self._middle]),
-                            self._last,
-                            self._suffix])
-        else: 
-            return self._join([self._prefix,
-                            "{}.".format(self._first[:1]),
-                            self._join(["{}.".format(x[:1]) for x in self._middle]),
-                            self._last,
-                            self._suffix])
+        if mode not in ["none", "middle", "all"]:
+            warnings.Warning("Unknown mode '{}' for Name.full_name(), assuming 'none' instead".format(mode))
+            mode = "none"
+        if mode == "none": 
+            first = self.first
+            middle = self._middlename("full")
+        elif mode == "middle":
+            first = self.first
+            middle = self._middlename("initials")
+        else:
+            first = "{}.".format(self.first[0])
+            middle = self._middlename("initials")
+            
+        return self._join([self.prefix, first, middle, self.last, self.suffix])
     
     def bibliographic_name(self, initials="none"):
         """
@@ -164,235 +149,110 @@ class Name(object):
         """
         if initials == "none": 
             S = "{}, {}".format(
-                self._join([self._last, self._suffix]),
-                self._join([self._prefix, self._first, self._join(self._middle)]))
+                self._join([self.last, self.suffix]),
+                self._join([self.prefix, self.first, self._join(getattr(self, "middle", []))]))
         elif initials == "middle":
             S = "{}, {}".format(
-                self._join([self._last, 
-                           self._suffix]),
-                self._join([self._prefix, 
-                           self._first, 
-                           self._join(["{}.".format(x[:1]) for x in self._middle])]))
+                self._join([self.last, 
+                           self.suffix]),
+                self._join([self.prefix, 
+                           self.first, 
+                           self._join(["{}.".format(x[:1]) for x in getattr(self, "middle", [])])]))
         else: 
             S = "{}, {}".format(
-                self._join([self._last, 
-                           self._suffix]),
-                self._join([self._prefix, 
-                           "{}.".format(self._first[:1]), 
-                           self._join(["{}.".format(x[:1]) for x in self._middle])]))
+                self._join([self.last, 
+                           self.suffix]),
+                self._join([self.prefix, 
+                           "{}.".format(self.first[:1]), 
+                           self._join(["{}.".format(x[:1]) for x in getattr(self, "middle", [])])]))
         return S.strip(" ,")
     
-class Reference(object):
+class PersonList(object):
     """
-    This class defines a bibliographic reference.
-  
-    The central method is :func:`get_html`, which returns the bibliographic
-    information as an HTML-formatted string. In order to do so, the method
-    calls a helper function (e.g. :func:`get_article_html`), depending on 
-    the publication type. 
-    
-    For other bibliographic styles than the default, the Reference class can 
-    be subclassed with different implementations of these helper functions.
+    This class defines a list of Persons which can be used in a bibliographic
+    entry.
     """
     
-    def __init__(self, pub_type=None, author=[], title=None, year=None, pages=None, publisher=None, address=None, journal=None, volume=None, number=None, url=None, date=None, access_date=None, editor=None, booktitle=None):
-        self._pub_type = pub_type
-        self._author = author
-        self._title = title
-        self._year = year
-        self._pages = pages
-        self._publisher = publisher
-        self._address = address
-        self._journal = journal
-        self._volume = volume
-        self._number = number
-        self._url = url
-        self._access_date = access_date
-        self._date = date
-        self._editor = editor
-        self._booktitle = booktitle
-        
-    @property
-    def author(self):
+    def __init__(self, *args):
         """
-        list : the author(s),represented as a lsit of Name objects 
-        """
-        return self._author
-    
-    @author.setter
-    def author(self, x):
-        if not isinstance(x, list):
-            x = [x]
-        self._author = x
-            
-    @property
-    def title(self):
-        """
-        string : the title
-        """
-        return self._title
-    
-    @title.setter
-    def title(self, s):
-        self._title = s
-        
-    @property
-    def year(self):
-        """
-        string : the publication year
-        """
-        return self._year
-    
-    @year.setter
-    def year(self, s):
-        if not isinstance(s, str):
-            s = str(s)
-        self._year = s
-        
-    @property
-    def journal(self):
-        """
-        string : the name of the journal
-        """
-        return self._journal
-    
-    @journal.setter
-    def journal(self, s):
-        self._journal = s
-        
-    @property
-    def pages(self):
-        """
-        string : the page numbers
-        """
-        return self._pages
-    
-    @pages.setter
-    def pages(self, s):
-        if not isinstance(s, str):
-            s = str(s)
-        self._pages = s
-        
-    @property
-    def volume(self):
-        """
-        string : the journal volume
-        """
-        return self._volume
-
-    @volume.setter
-    def volume(self, s):
-        if not isinstance(s, str):
-            s = str(s)
-        self._volume = s
-
-    @property
-    def number(self):
-        """
-        string : the journal number
-        """
-        return self._number
-
-    @number.setter
-    def number(self, s):
-        if not isinstance(s, str):
-            s = str(s)
-        self._number = s
-    
-    @property
-    def pub_type(self):
-        """
-        string : the publication type
-
-        The publication type is used in getHTML to format the reference.
-        Currently, the only supported publication types are "article" and 
-        "book".
-        """
-        return self._pub_type
-
-    @pub_type.setter
-    def pub_type(self, s):
-        self._pub_type = s
-
-    def get_html(self):
-        """
-        Get a HTML representation of the publication.
-        
-        In order to get the HTML representation for the different 
-        publication types, helper functions like :func:`get_article_html` 
-        are called.
-        
-        Returns
-        -------
-        s : string
-            A HTML representation of the reference
-        """
-        if self.pub_type == "article":
-            return self.get_article_html()
-        elif self.pub_type == "book":
-            return self.get_book_html()
-        else:
-            raise ValueError("The publication type '{}' is currently not supported.".format(self.pub_type))
-        
-    def get_names(self, mode_first="last", mode_others="first", sep=", ", two_sep=", and ", last_sep=", and "):
-        """
-        Return the author name(s) in a form suitable for a bibliography.
+        Initialize the name list.
         
         Parameters
         ----------
-        mode_first : string
-            If "last", the first author is given in the form "last name, 
-            first name(s)". If "first", the first author is given in the 
-            form "first name(s) last names".
+        *args : any number of Person objects
+        """
+        self._list = args
+        
+    def __repr__(self):
+        people = [x.__repr__() for x in self._list]
+        return "PersonList({})".format(", ".join(people))
+
+    def __str__(self, **kwargs):
+        return self.get_names(**kwargs)
+    
+    def get_names(self, mode_first="last", mode_others="first", sep=", ", two_sep=", and ", last_sep=", and ", initials="none"):
+        """
+        Return the name(s) in a form suitable for a bibliography.
+        
+        Parameters
+        ----------
+        mode_first : string, either "last" or "first"
+            If "last", the name of the first Person is given in the form 
+            "last name, first name(s)". If "first", the name of the first 
+            Person is given in the form "first name(s) last name(s)".
             
-        mode_others : string
-            If "last", the other authors (if any) are given in the form 
-            "last name, first name(s)". If "first", they are given in the 
+        mode_others : string, either "last" or "first"
+            If "last", the names of any other other Person are given in the 
+            form "last name, first name(s)". If "first", they are given in the 
             form "first name(s) last names".
             
         sep : string
-            The character or string used to separate the author names except
-            the last
+            The character or string used to separate the Persons except the 
+            last Person.
             
         two_sep : string
-            The character or string used to separate two author names. If 
-            there is only one author, `two_sep` is ignored. If there are 
-            more than two authors, `two_sep` is ignored and `sep` is used
-            instead. 
+            The character or string used to separate two Persons. If there is 
+            only one Person, `two_sep` is ignored. If there are more than two 
+            Persons, `two_sep` is ignored, and `sep` is used instead. 
             
         last_sep : string
-            The character or string used to separate the author names except
-            the last. If there is only one author, `last_sep` is ignored. If 
-            thare two authors, `last_sep` is ignored and `two_sep` is used 
-            instead.
+            The character or string used to separate the names of Persons 
+            the last Person. If there is only one Person, `last_sep` is 
+            ignored. If thare two Persons, `last_sep` is ignored and `two_sep`
+            is used instead.
+            
+        initials : string, either "none", "middle", or "all", default: "none"
+            'none' (the default) if no initials are used, 'middle' if the
+            middle names are given in initials, 'all' if all names except
+            the last are given in initials
         
         Returns
         -------
         s : string
-            The author name(s). 
+            The name(s). 
         """
+        
+        if not self._list:
+            return ""
         
         if mode_first not in ["last", "first"]:
             raise ValueError("Illegal value '{}' for parameter 'mode_first'.".format(mode_first))
         if mode_others not in ["last", "first"]:
             raise ValueError("Illegal value '{}' for parameter 'mode_others'.".format(mode_others))
         
-        if not self.author:
-            return ""
-        
         if mode_first == "first":
-            first_name = self.author[0].full_name()
+            first_name = self._list[0].full_name(initials)
         else:
-            first_name = self.author[0].bibliographic_name()
+            first_name = self._list[0].bibliographic_name(initials)
 
         if mode_others == "first":
-            other_names = [x.full_name() for x in self.author[1:]]
+            other_names = [x.full_name(initials) for x in self._list[1:]]
         else:
-            other_names = [x.bibliographic_name() for x in self.author[1:]]
+            other_names = [x.bibliographic_name(initials) for x in self._list[1:]]
 
-        if len(self.author) == 1:
+        if len(self._list) == 1:
             return first_name
-        elif len(self.author) == 2:
+        elif len(self._list) == 2:
             return "{first}{sep}{second}".format(
                 first = first_name,
                 sep=two_sep,
@@ -404,61 +264,458 @@ class Reference(object):
                 next=sep.join(other_names[:-1]),
                 last_sep=last_sep,
                 last=other_names[-1])
-        
-    def get_article_html(self):
+
+class EditorList(PersonList):
+    """
+    This class defines a list of names that are the editors of a source.
+    """
+    def __repr__(self):
+        people = [x.__repr__() for x in self._list]
+        return "EditorList({})".format(", ".join(people))
+
+    def get_names(self, one_editor="(ed.)", two_editors="(eds.)", many_editors="(eds.)", **kwargs):
+        s = super(EditorList, self).get_names(**kwargs)
+        if len(self._list) == 1:
+            return "{} {}".format(s, one_editor)
+        elif len(self._list) == 2:
+            return "{} {}".format(s, two_editors)
+        else:
+            return "{} {}".format(s, many_editors)
+
+def stop(S):
+    """
+    Add a full stop, but only if the string doesn't end already in a 
+    full stop.
+    """
+    if isinstance(S, string_types):
+        return "{}.".format(S) if not S.endswith(".") else S
+    else:
+        return "{}.".format(S)
+    
+class Reference(object):
+    """
+    This class defines a minimal bibliographic reference.
+  
+    Properties
+    ----------
+    
+    title: string 
+        The title of the reference
+
+    authors: NameList (optional)
+        A NameList of author names
+    
+    year: string (optional)
+        The publication year.
+  
+    Reference is a minimal bibliographic entry. The property 'title' is 
+    required, and 'author' and 'year' are optional properties. Other types of 
+    bibliographic entries are specified by subclassing :class:`Reference`.
+    
+    :func:`__str__` returns a string representation of the reference that can 
+    be used in a bibliography. If you want to adjust the formatting of the 
+    entry, you can subclass Reference and overload :func:`__str__` to return 
+    the desired representation.    
+    """
+    _class_name = "Reference"
+    _required = ["title"]
+    
+    def __init__(self, **kwargs):
         """
-        Return the bibliographic entry as a journal publication
+        Initialize the reference.
+        
+        __init__() calls :func:`validate` to determine whether all required 
+        data are passed as named arguments. :func:`validate` raises a 
+        ValueError if any required argument is missing.
+        """
+        self.validate(kwargs)
+        self.title = kwargs.get("title")
+        try:
+            self.authors = kwargs["authors"]
+        except KeyError:
+            pass
+        try:
+            self.year = kwargs["year"]
+        except KeyError:
+            pass
+
+    @classmethod
+    def required_properties(cls):
+        """
+        Return a list of property names that are required for this type of 
+        bibliographic reference.
         
         Returns
         -------
-        s : string
-            An HTML string of the bibliographic entry
+        req: list of strings 
+            A list containing all property names that are required.
         """
+        return cls._required
+
+    @classmethod
+    def validate(cls, kwargs):
+        missing = []
+        for prop in cls.required_properties():
+            if not prop in kwargs:
+                missing.append(prop)
+        if missing:
+            raise ValueError("One or more propery is missing for entry type {}. Missing properties: {}".format(cls._class_name, ", ".join(missing)))
+
+    def __repr__(self):
+        l = []
+        for x in dir(self):
+            attr = getattr(self, x)
+            if not x.startswith("_") and not hasattr(attr, "__call__"):
+                if isinstance(attr, list):
+                    l.append("{}=[{}]".format(x, ", ".join(["'{}'".format(m.__repr__()) for m in attr])))
+                else:
+                    l.append("{}={}".format(x, attr.__repr__()))
+        return "{}({})".format(self._class_name, ", ".join(l))
         
-        if self.number:
+    def __str__(self, **kwargs):
+        title = self.title
+        
+        if hasattr(self, "authors") and hasattr(self, "year"):
+            authors = self.authors.get_names(**kwargs)
+            year = self.year
+            return "{} {} <i>{}</i>.".format(stop(authors), stop(year), title)
+        elif hasattr(self, "authors"):
+            authors = self.authors.get_names(**kwargs)
+            return "{} <i>{}</i>.".format(stop(authors), title)
+        elif hasattr(self, "year"):
+            year = self.year
+            return "{} <i>{}</i>.".format(stop(year), title)
+        else:
+            return "<i>{}</i>.".format(title)
+        
+class Article(Reference):
+    """
+    This class defines an Article reference.
+  
+    The default format string of the Article class is:
+    
+    {authors}. {year}. {title}. <i>{journal}</i> {volume}({number}). {pages}.
+    
+    Properties
+    ----------
+    authors: NameList
+        A list of authors
+        
+    title: string 
+        The title of the article 
+        
+    year: string
+        The year of publication
+        
+    journal: string
+        The name of the journal
+        
+    volume: string (optional)
+        The volume in which the article appeared
+        
+    number: string (optional)
+        The number in which the article appeared. Can be None if the journal 
+        is not published in numbered issues.
+        
+    pages: string (optional)
+        The pages of the article
+    """
+    _class_name = "Article"
+    _required = ["authors", "year", "title", "journal"]
+
+    def __init__(self, **kwargs):
+        self.validate(kwargs)
+        self.authors = kwargs["authors"]
+        self.year = kwargs["year"]
+        self.title = kwargs["title"]
+        self.journal = kwargs["journal"]
+
+        # optional arguments:
+        try:
+            self.volume = kwargs["volume"]
+        except KeyError:
+            pass
+        try:
+            self.number = kwargs["number"]
+        except KeyError:
+            pass
+        try:
+            self.pages = kwargs["pages"]
+        except KeyError:
+            pass
+        
+    @classmethod
+    def validate(cls, kwargs):
+        super(Article, cls).validate(kwargs)
+        if "number" in kwargs and not "volume" in kwargs:
+            raise ValueError("Article: you have specified a journal number, but no journal volume.")
+
+  
+    def __str__(self):
+        if hasattr(self, "number"):
             vol = "{}({})".format(self.volume, self.number)
-        elif self.volume:
+        elif hasattr(self, "volume"):
             vol = "{}".format(self.volume)
         else:
             vol = ""
 
-        S = "{names}. {year}. {title}. <i>{journal}</i>".format(
-            names=self.get_names(), 
-            year=self.year, 
-            title=self.title, 
+        S = "{authors} {year} {title} <i>{journal}</i>".format(
+            authors=stop(self.authors.get_names()), 
+            year=stop(self.year), 
+            title=stop(self.title), 
             journal=self.journal)
         if vol:
             S = "{} {}".format(S, vol)
-        if self.pages:
-            S = "{}. {}".format(S, self.pages)
+        if hasattr(self, "pages"):
+            S = "{} {}".format(stop(S), self.pages)
             
-        return "{}.".format(S)
-    
-    def get_book_html(self):
-        """
-        Return the bibliographic entry as a book publication
-        
-        Returns
-        -------
-        s : string
-            An HTML string of the bibliographic entry
-        """
-        
-        if self.publisher and self.address:
-            addr = "{}: {}".format(self.address, self.publisher)
-        elif self.publisher:
-            addr = self.publisher
-        elif self.address:
-            addr = self.address
-        else:
-            addr = ""
+        return "{}".format(stop(S))
 
-        S = "{names} {year}. <i>{title}</i>.".format(
-            names=self.get_names(), 
-            year=self.year, 
-            title=self.title)
-        if addr:
-            S = "{}. {}".format(S, addr)
-            
-        return S
+class Book(Reference):
+    """
+    This class defines a Book reference.
+  
+    The default format string of the Book class is:
     
+    {authors}. {year}. <i>{title}</i>. {address}: {publisher}.
+
+    Books published in a series takes the form:
+
+    {authors}. {year}. <i>{title}</i> ({series} {number}). {address}: {publisher}.
+
+    Instead of authors, a list of editors can also be provided, but not both 
+    at the same time.
+    
+    Properties
+    ----------
+    authors: NameList
+        A list of authors (mutually exclusive with editors)
+        
+    editors: NameList
+        A list of editors (mutually exclusive with authors)
+        
+    title: string 
+        The title of the book
+        
+    year: string
+        The year of publication
+
+    publisher: string 
+        The publishing company or organization
+        
+    address: string  (ptional)
+        The location of the publisher
+        
+    series : string (optional)
+        The name of the series in which the book is published
+        
+    number : string (optional)
+        The number in the series
+        
+    """
+    _class_name = "Book"
+    _required = ["year", "title", "publisher"]
+
+    def __init__(self, **kwargs):
+        self.validate(kwargs)
+        try:
+            self.authors = kwargs["authors"]
+        except KeyError:
+            pass
+        try:
+            self.editors = kwargs["editors"]
+        except KeyError:
+            pass
+        
+        self.year = kwargs["year"]
+        self.title = kwargs["title"]
+        self.publisher = kwargs["publisher"]
+        
+        # optional arguments:
+        try:
+            self.address = kwargs["address"]
+        except KeyError:
+            pass
+        try:
+            self.series = kwargs["series"]
+        except KeyError:
+            pass
+        try:
+            self.number = kwargs["number"]
+        except KeyError:
+            pass
+        
+    @classmethod
+    def validate(cls, kwargs):
+        super(Book, cls).validate(kwargs)
+        if "number" in kwargs and not "series" in kwargs:
+            raise ValueError("Book: you have specified a series number, but no series name.")
+        if "authors" in kwargs and "editors" in kwargs:
+            raise ValueError("Book: you have specified both author(s) and editor(s).")
+        if not "authors" in kwargs and not "editors" in kwargs:
+            raise ValueError("Book: you have specified neither author(s) nor editor(s).")
+    
+    def get_book_title(self):
+        """
+        Return the formatted title of the book. If the book appeared in a 
+        series, include the formatted series title and the number, if given.
+        """
+        if hasattr(self, "series") and hasattr(self, "number"):
+            ser = "({} {})".format(self.series, self.number)
+        elif hasattr(self, "series"):
+            ser = "({})".format(self.series)
+        else:
+            ser = ""
+            
+        if ser:
+            return "<i>{}</i> {}".format(self.title, ser)
+        else:
+            return "<i>{}</i>".format(self.title)
+
+    def get_publishing_information(self):
+        """
+        Return the publisher and the publishing address (if available) as a 
+        string formatted for a bibliographic entry.
+        """
+        if hasattr(self, "publisher") and hasattr(self, "address"):
+            return "{address}: {publisher}".format(
+                address=self.address, 
+                publisher=self.publisher)
+        else:
+            return self.publisher
+            
+    def __str__(self):
+        if hasattr(self, "editors"):
+            persons = self.editors
+        else:
+            persons = self.authors
+            
+        S = "{persons} {year} {title} {pub}".format(
+            persons=stop(persons.get_names()), 
+            year=stop(self.year), 
+            title=stop(self.get_book_title()), 
+            pub=stop(self.get_publishing_information()))
+        return S
+
+class InCollection(Book):
+    """
+    This class defines a InCollection reference, i.e. a contribution in an 
+    edited volume.
+  
+    The default format string of the InCollection class is:
+    
+    {authors}. {year}. {contributiontitle}. In {editors}, <i>{title}</i>, {pages}. {address}: {publisher}.
+
+    If there are no editors (which is, for example, sometimes the case with 
+    conference proceedings), the format takes the following form:
+
+    {authors}. {year}. {contributiontitle}. In <i>{title}</i>, {pages}. {address}: {publisher}.
+
+    If no pages are given (for example in an online publication), the 
+    following format is used:
+
+    {authors}. {year}. {contributiontitle}. In {editors}, <i>{title}</i>. {address}: {publisher}.
+
+    The format of the title is inherited from Book.
+
+    Properties
+    ----------
+    authors: NameList
+        A list of authors
+        
+    editors: NameList (optional)
+        A list of editors
+        
+    booktitle: string
+        The title of the book
+        
+    contributiontitle: string 
+        The title of the contribution
+        
+    year: string
+        The year of publication
+
+    publisher: string 
+        The publishing company or organization
+        
+    address: string 
+        The location of the publisher
+        
+    series : string (optional)
+        The name of the series in which the book is published
+        
+    number : string (optional)
+        The number in the series
+        
+    pages : string (optional)
+        The pages in the edited volume
+        
+    """
+    _class_name = "InCollection"
+    _required = ["authors", "contributiontitle", "year", "title", "publisher"]
+
+    def __init__(self, **kwargs):
+        self.validate(kwargs)
+        self.authors = kwargs["authors"]
+        self.contributiontitle = kwargs["contributiontitle"]
+        self.year = kwargs["year"]
+        self.title = kwargs["title"]
+        self.publisher = kwargs["publisher"]
+        
+        # optional arguments:
+        try:
+            self.address = kwargs["address"]
+        except KeyError:
+            pass
+        try:
+            self.editors = kwargs["editors"]
+        except KeyError:
+            pass
+        try:
+            self.series = kwargs["series"]
+        except KeyError:
+            pass
+        try:
+            self.number = kwargs["number"]
+        except KeyError:
+            pass
+        try:
+            self.pages = kwargs["pages"]
+        except KeyError:
+            pass
+        
+    @classmethod
+    def validate(cls, kwargs):
+        # skip the inherited method of Book:
+        super(Book, cls).validate(kwargs)
+        if "number" in kwargs and not "series" in kwargs:
+            raise ValueError("InCollection: you have specified a series number, but no series name.")
+    
+    def get_source_information(self, **kwargs):
+        """
+        Returns editors (if given) and the title of the volume as a formatted 
+        string.
+        """
+        if hasattr(self, "editors"):
+            return "In {editors}, {title}".format(
+                editors=self.editors.get_names(**kwargs),
+                title=self.get_book_title())
+        else:
+            return "In {title}".format(
+                title=self.get_book_title())
+
+    def __str__(self, **kwargs):
+        source = self.get_source_information()
+        
+        if hasattr(self, "pages"):
+            source= "{source}, {pages}".format(
+                source=source,
+                pages=self.pages)
+        
+        S = "{authors} {year} {contributiontitle} {source} {pub}".format(
+            authors=stop(self.authors.get_names(**kwargs)),
+            year=stop(self.year),
+            contributiontitle=stop(self.contributiontitle),
+            source=stop(source),
+            pub=stop(self.get_publishing_information()))
+        return S

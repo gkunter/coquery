@@ -16,7 +16,8 @@ import sys
 import traceback
 import os
 import logging
-import __init__
+import re
+import textwrap
 
 from defines import *
 
@@ -35,8 +36,7 @@ class GenericException(Exception):
         try:
             logger.error(S)
         except Exception as e:
-            print(S)
-            printex(e)
+            print_exception(e)
         return S
 
 class NoTraceException(GenericException):
@@ -266,19 +266,31 @@ def get_error_repr(exc_info):
         ModuleName = os.path.split(FileName) [1]
         trace_string += "%s %s, line %s: %s\n" % (Indent, ModuleName, LineNo, FunctionName)
         Indent += "  "
+    file_location = "{}, line {}".format(FileName, LineNo)
     if Text:
         trace_string += "%s> %s\n" % (Indent[:-1], Text)
-    return (exc_type, exc_obj, trace_string)
+    return (exc_type, exc_obj, trace_string, file_location)
 
-def print_exception(e):
+def print_exception(exc):
+    """
+    Prints the exception string to StdErr. XML tags are stripped.
+    """
     error_string = ""
-    if not isinstance(e, NoTraceException):
-        _, _, error_string = get_error_repr(sys.exc_info())
-        error_string = "TRACE:\n" + error_string
-    error_string += "ERROR %s: %s\n" % (type(e).__name__, e)
-    printex(error_string, file=sys.stderr)
+    if isinstance(exc, Exception):
+        if not isinstance(exc, NoTraceException):
+            _, _, error_string, _ = get_error_repr(sys.exc_info())
+            error_string = "TRACE:\n{}".format(error_string)
+        error_string += "ERROR {}: {}\n".format(type(exc).__name__, exc)
+    else:
+        error_string = exc
 
-try:
-    logger = logging.getLogger(__init__.NAME)
-except AttributeError:
-    pass
+    for par in [x.strip(" ") for x in error_string.split("</p>") if x.strip(" ")]:
+        par = par.replace("\n", " ").strip(" ")
+        par = par.replace("  ", " ")
+        print("\n".join(
+            textwrap.wrap(re.sub('<[^>]*>', '', par), width=70, replace_whitespace=False)), 
+            file=sys.stderr)
+        print(file=sys.stderr)
+
+
+logger = logging.getLogger(NAME)

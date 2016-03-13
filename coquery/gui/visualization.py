@@ -43,22 +43,20 @@ indicate the position within the corpus for each token in the result table.
 """
 
 import logging
-import __init__
-
 import matplotlib as mpl
 
+from coquery import options
+from coquery.defines import *
+from coquery.errors import *
+
+import classes
+from ui.visualizerUi import Ui_Visualizer
 from pyqt_compat import QtGui, QtCore, pyside
+
 # Tell matplotlib whether PySide or PyQt4 is used:
 if pyside:
     mpl.use("Qt4Agg")
     mpl.rcParams["backend.qt4"] = "PySide"
-
-from ui.visualizerUi import Ui_Visualizer
-
-import options
-from defines import *
-from errors import *
-import classes
 
 # import required matplotlib classes
 from matplotlib.backend_bases import key_press_handler
@@ -420,4 +418,4 @@ if __name__ == "__main__":
     #sys.exit(app.exec_())
 
 
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)

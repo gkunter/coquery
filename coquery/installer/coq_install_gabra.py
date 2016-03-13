@@ -12,8 +12,9 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-from corpusbuilder import *
-from errors import *
+from coquery.corpusbuilder import *
+from coquery.errors import *
+from coquery.bibliography import *
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "*.bson"
@@ -130,7 +131,11 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_references():
-        return ['John J. Camilleri. "<i>A Computational Grammar and Lexicon for Maltese</i>", M.Sc. Thesis. Chalmers University of Technology. Gothenburg, Sweden, September 2013. ']
+        return [Reference(
+            authors=PersonList(Person(
+                first="John", middle="J.", last="Camilleri")),
+            title="A Computational Grammar and Lexicon for Maltese", 
+            other="M.Sc. Thesis. Chalmers University of Technology. Gothenburg, Sweden, September 2013.")]
 
     @staticmethod
     def get_url():

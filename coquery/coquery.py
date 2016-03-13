@@ -30,14 +30,14 @@ import time
 import logging
 import logging.handlers
 
-import __init__
-sys.path.append(os.path.join(sys.path[0], "gui"))
+#import __init__
+#sys.path.append(os.path.join(sys.path[0], "gui"))
 from errors import *
 import options
 from defines import *
 
 def set_logger(log_file_path):
-    logger = logging.getLogger(__init__.NAME)
+    logger = logging.getLogger(NAME)
     logger.setLevel(logging.INFO)
     file_handler = logging.handlers.RotatingFileHandler(log_file_path, maxBytes=1024*1024, backupCount=10)
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
@@ -48,13 +48,14 @@ def set_logger(log_file_path):
 def check_system():
     if options.missing_modules:
         if options._use_qt:
-            from pyqt_compat import QtGui
+            from gui.pyqt_compat import QtGui
             app = QtGui.QApplication(sys.argv)
             QtGui.QMessageBox.critical(None,
                 "Missing dependencies – Coquery",
                 msg_missing_modules.format("<br/>".join([str(x) for x in options.missing_modules])))
+            print_exception(msg_missing_modules.format(", ".join(options.missing_modules)))
         else:
-            printex(msg_missing_modules.format(", ".join(options.missing_modules)))
+            print_exception(msg_missing_modules.format(", ".join(options.missing_modules)))
         sys.exit(1)
 
 def main():
@@ -63,11 +64,11 @@ def main():
     coquery_home = options.get_home_dir()
     logger = set_logger(os.path.join(coquery_home, "coquery.log"))
 
-    if options._use_qt:
-        sys.path.append(os.path.join(sys.path[0], "gui"))
+    #if options._use_qt:
+        #sys.path.append(os.path.join(sys.path[0], "gui"))
 
     start_time = time.time()
-    logger.info("--- Started (%s %s) ---" % (__init__.NAME, __init__.__version__))
+    logger.info("--- Started (%s %s) ---" % (NAME, VERSION))
     logger.info("{}".format(sys.version))
     try:
         options.cfg.coquery_home = coquery_home
@@ -103,9 +104,9 @@ def main():
 
     # Run the Application GUI?
     if options.cfg.gui and options._use_qt:
-        from pyqt_compat import QtGui, QtCore
-        from app import CoqueryApp
-        from app import GuiHandler
+        from gui.pyqt_compat import QtGui, QtCore
+        from gui.app import CoqueryApp
+        from gui.app import GuiHandler
 
         options.cfg.gui_logger = GuiHandler()
         options.cfg.gui_logger.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))

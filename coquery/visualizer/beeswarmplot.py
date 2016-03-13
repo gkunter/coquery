@@ -15,9 +15,9 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-import options
-from defines import *
-from pyqt_compat import QtGui
+from coquery import options
+from coquery.defines import *
+from coquery.gui.pyqt_compat import QtGui
 
 import visualizer as vis
 

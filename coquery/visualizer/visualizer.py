@@ -15,18 +15,17 @@ from __future__ import unicode_literals
 
 import math
 import logging
-import __init__
 
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from pyqt_compat import QtCore, QtGui
-import options
-from defines import *
-from errors import *
-import queries
+from coquery.gui.pyqt_compat import QtCore, QtGui
+from coquery import options
+from coquery import queries
+from coquery.defines import *
+from coquery.errors import *
 
 class BaseVisualizer(QtCore.QObject):
     """ 
@@ -89,6 +88,12 @@ class BaseVisualizer(QtCore.QObject):
     def format_coord(self, x, y, title):
         pass
 
+    def set_tooltip(self, s):
+        try:
+            self.g.fig.canvas.setToolTip(s)
+        except Exception as e:
+            print(e)
+            
     def set_hover(self, fun=None):
         if fun == None:
             fun = self.format_coord
@@ -585,4 +590,4 @@ class BaseVisualizer(QtCore.QObject):
         fact = self._table[column].unique()
         return dict(zip(fact, (col * (1 + (len(fact) // len(col))))[0:len(fact)]))
 
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)

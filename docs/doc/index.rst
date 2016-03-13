@@ -19,3 +19,4 @@ Coquery documentation
     userguide/index.rst
     reference/index.rst
     corpora/index.rst
+    performance/index.rst

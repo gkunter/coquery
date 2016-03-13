@@ -19,14 +19,14 @@ import string
 import sys
 import sqlalchemy
 
+from coquery import sqlhelper
+from coquery import options
+from coquery.errors import *
+from coquery.defines import *
+
 from pyqt_compat import QtCore, QtGui
 import classes
 from ui.connectionConfigurationUi import Ui_ConnectionConfig
-
-import sqlhelper
-import options
-from errors import *
-from defines import *
 
 def check_valid_host(s):
     """

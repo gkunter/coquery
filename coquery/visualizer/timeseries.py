@@ -14,10 +14,9 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
-from errors import *
 import logging
-import __init__
+
+from coquery.errors import *
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
@@ -162,4 +161,4 @@ class Visualizer(vis.BaseVisualizer):
         if len(self._groupby) == 2:
             self.add_legend()
 
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)

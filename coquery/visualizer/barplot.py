@@ -13,11 +13,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import collections
+
 import visualizer as vis
 import seaborn as sns
 from seaborn.palettes import cubehelix_palette
 import pandas as pd
 import matplotlib.pyplot as plt
+
+from coquery.gui.pyqt_compat import QtCore
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
@@ -33,7 +37,21 @@ class Visualizer(vis.BaseVisualizer):
             self.stacked = False
         super(Visualizer, self).__init__(*args, **kwargs)
 
+        # The dictionary _rectangles manages the boxes for mouse-over lookup.
+        
+        # The keys are strings, and represent the grouping level of the plot.
+        # The values are themselves dictionaries. The keys of these 
+        # dictionaries are tuples and coorrespond to the horizontal 
+        # coordinates of the respective box, i.e. (x0, x1). The associated 
+        # value is a tuple (label, count), where label is the factor level 
+        # of the box, and the count is either the frequency or the 
+        # percentage of that level.
+        self._rectangles = dict()
+
     def set_defaults(self):
+        """
+        Set the plot defaults.
+        """
         # choose the "Paired" palette if the number of grouping factor
         # levels is even and below 13, or the "Set3" palette otherwise:
         if len(self._levels[1 if len(self._groupby) == 2 else 0]) in (2, 4, 6, 8, 12):
@@ -66,95 +84,107 @@ class Visualizer(vis.BaseVisualizer):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
 
-    def format_coord(self, x, y, title):
+    def format_coord(self, x, y, ax):
+        """
+        Get the box information at the given position.
+        
+        This method checks if the mouse is currently inside of a box. If so, 
+        return a string containing the grouping labels and the size of the 
+        box.
+        
+        As a side effect, this method also sets the tooltip for the widget so 
+        that the string is shown as the tooltip.
+        
+        Parameters
+        ----------
+        x, y : float 
+            The grid coordinates of the mouse cursor
+        
+        ax : Axis 
+            The axis that the mouse is currently located in
+            
+        Returns
+        -------
+        s : string 
+            A formatted string with the grouping levels and the size of the 
+            box.
+        """
         y = y + 0.5
-        offset = y - int(y)
-        # Check if mouse is outside the bar area:
-        if not 0.1 < offset < 0.91:
-            return ""
+
+        row = self._rectangles[ax][int(y)]
+        for rect in row:
+            (x0, x1), (y0, y1) = rect
+            if (x0 <= x <= x1) and (y0 <= y <= y1):
+                label, value = row[rect]
+                break
         else:
-            y_cat = self._levels[0][int(y)]
+            self.set_tooltip("")
+            return ""
+
+        if len(self._groupby) > 1:
+            prefix = "{} – ".format(self._levels[0][int(y)])
+        else:
+            prefix = ""
+
+        if self.percentage:
+            S = "{}{}: {:.1f}%".format(prefix, label, value)
+        else:
+            S = "{}{}: {}".format(prefix, label, int(value))
+
+        self.set_tooltip(S)
+        return S
+
+    def set_hover(self):
+        pass
+
+    def add_rectangles(self, df, ax, stacked):
+        """
+        Add the information stored in the data frame as rectangles to 
+        the rectangle list for the axis.
+        """
+        if stacked:
+            for row in df.index:
+                offset = len(self._groupby) - 1
+                edges = [0] + list(df.iloc[row].values.ravel())[offset:]
+                last_content = 0
+                for i in range(len(edges) - 1):
+                    content = df.iloc[row][i+offset]
+                    if content != last_content:
+                        key = ((edges[i] + 0.0000001, edges[i+1]),
+                               (row + 0.1, row + 0.91))
+                        val = (df.columns[i+offset], content - last_content)
+                        if ax not in self._rectangles:
+                            self._rectangles[ax] = collections.defaultdict(dict)
+                        self._rectangles[ax][row][key] = val
+                        last_content = content
+        else:
+            # no stacks:
             if len(self._groupby) == 2:
-                try:
-                    # calculate the factor level number from the y
-                    # coordinate. The vaules used here seem to work, but
-                    # are only derived empirically:
-                    sub_cat = sorted(self._levels[1])[int(((offset - 0.1) / 0.8) * len(self._levels[1]))]                    
-                except IndexError:
-                    sub_cat = sorted(self._levels[1])[-1]
+                # two grouping factors:
+                for row in df.index:
+                    offset = len(self._groupby) - 1
+                    height = 0.8 / len(self._levels[-1])
+                    for i, col in enumerate(df.columns[offset:]):
+                        content = df.iloc[row][i+offset]
+                        if content:
+                            y_pos = row + 0.1
+                            key = (
+                                (0, df.iloc[row][col]),
+                                (y_pos + i * height, y_pos + (i+1) * height))
+                            val = (col, df.iloc[row][col])
+                            if ax not in self._rectangles:
+                                self._rectangles[ax] = collections.defaultdict(dict)
+                            self._rectangles[ax][row][key] = val
             else:
-                sub_cat = None
-                
-            if title:
-                # obtain the grid row and column from the axes title:
-                if self._row_factor:
-                    row_spec, col_spec = title.split(" | ")
-                    _, row_value = row_spec.split(" = ")
-                    assert _ == self._row_factor
-                else:
-                    col_spec = title
-                    row_value = None
-                _, col_value = col_spec.split(" = ")
-                assert _ == self._col_factor
-            else:
-                row_value = None
-                col_value = None
-        
-        
-        if not hasattr(self, "ct"):
-            return ""
-        
-        # this is a rather klunky way of getting the frequency from the
-        # cross table:
-        if self._row_factor:
-            try:
-                freq = self.ct[col_value]
-                freq = freq[sub_cat]
-                freq = freq[row_value]
-                freq = freq[y_cat]
-            except KeyError:
-                return ""
-            else:
-                return "{} = {} | {} = {} | {} = {} | {} = {}, Freq: {}".format(
-                    self._row_factor, row_value,
-                    self._col_factor, col_value,
-                    self._groupby[0], y_cat,
-                    self._groupby[1], sub_cat,
-                    freq)
-        elif self._col_factor:
-            try:
-                freq = self.ct[col_value]
-                freq = freq[sub_cat]
-                freq = freq[y_cat]
-            except KeyError:
-                return ""
-            else:
-                return "{} = {} | {} = {} | {} = {}, Freq: {}".format(
-                    self._col_factor, col_value,
-                    self._groupby[0], y_cat,
-                    self._groupby[1], sub_cat,
-                    freq)
-        elif len(self._groupby) == 2:
-            try:
-                freq = self.ct[sub_cat]
-                freq = freq[y_cat]
-            except KeyError:
-                return ""
-            else:
-                return "{} = {} | {} = {}, Freq: {}".format(
-                    self._groupby[0], y_cat,
-                    self._groupby[1], sub_cat,
-                    freq)
-        else:
-            try:
-                freq = self.ct[y_cat]
-            except KeyError:
-                return ""
-            else:
-                return "{} = {}, Freq: {}".format(
-                    self._groupby[0], y_cat,
-                    freq)
-        return ""
+                # one grouping factor
+                for i, col in enumerate(df.columns):
+                    content = df.iloc[0][col]
+                    if content:
+                        key = (0, content), (i + 0.1, i + 0.9)
+                        val = (col, content)
+                        if ax not in self._rectangles:
+                            self._rectangles[ax] = collections.defaultdict(dict)
+                        self._rectangles[ax][i][key] = val
 
     def draw(self):
         """ Plot bar charts. """
@@ -162,98 +192,77 @@ class Visualizer(vis.BaseVisualizer):
             if self.stacked:
                 ax=plt.gca()
                 if len(self._groupby) == 2:
-                    # seperate stacked percentage bars for each grouping
+                    # seperate stacked bars for each grouping
                     # variable
                     self.ct = pd.crosstab(data[self._groupby[0]], data[self._groupby[-1]])
                     df = pd.DataFrame(self.ct)
                     df = df.reindex_axis(self._levels[1], axis=1).fillna(0)
+                    
                     if self.percentage:
-                        df = df[self._levels[1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
+                        df = df[self._levels[-1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
                     else:
-                        df = df[self._levels[1]].cumsum(axis=1)
+                        df = df[self._levels[-1]].cumsum(axis=1)
                         
                     df = df.reindex_axis(self._levels[0], axis=0).fillna(0)
                     order = df.columns
                     df = df.reset_index()
                     ax=plt.gca()
                     for i, stack in enumerate(order[::-1]):
-                        sns.barplot(
+                        tmp = sns.barplot(
                             x=stack,
                             y=self._groupby[0],
                             data = df, 
                             color=self.options["color_palette_values"][::-1][i], 
                             ax=plt.gca())
                 else:
-                    # one stacked percentage bar (so, this is basically a 
-                    # spine chart)
+                    # one stacked bar (so, this is basically a spine chart)
                     self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
                     df = pd.DataFrame(self.ct)
-                    if self.percentage:
-                        df = df.apply(lambda x: 100 * x / x.sum(), axis=0).cumsum(axis=0)
-                    else:
-                        df = df.cumsum(axis=0)
                     df = df.transpose()
-                    for i, stack in enumerate(df.columns[::-1]):
-                        sns.barplot(
+                    if self.percentage:
+                        df = df.apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
+                    else:
+                        df = df.cumsum(axis=1)
+                    order = df.columns
+                    for i, stack in enumerate(order[::-1]):
+                        tmp = sns.barplot(
                             x=stack,
-                            data = df, 
+                            data = df[self._levels[-1]], 
                             color=self.options["color_palette_values"][::-1][i], 
                             ax=plt.gca())
+                self.add_rectangles(df, ax, stacked=True)
+                ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
             else:
                 if len(self._groupby) == 2:
+                    self.ct = pd.crosstab(data[self._groupby[0]], data[self._groupby[-1]])
+                    df = pd.DataFrame(self.ct)
+                    df = df.reindex_axis(self._levels[1], axis=1).fillna(0)
+                    df = df[self._levels[-1]]
+                    df = df.reindex_axis(self._levels[0], axis=0).fillna(0)
+                    order = df.columns
+                    df = df.reset_index()
+                    
                     ax = sns.countplot(
                         y=data[self._groupby[0]],
                         order=self._levels[0],
                         hue=data[self._groupby[1]],
-                        hue_order=sorted(self._levels[1]),
+                        hue_order=self._levels[1],
                         palette=self.options["color_palette_values"],
                         data=data)
                 else:
                     # Don't use the 'hue' argument if there is only a single 
                     # grouping factor:
+                    self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
+                    df = pd.DataFrame(self.ct)
+                    df = df.transpose()
+
                     ax = sns.countplot(
                         y=data[self._groupby[0]],
                         order=self._levels[0],
                         palette=self.options["color_palette_values"],
                         data=data)
-            #ax.format_coord = lambda x, y: my_format_coord(x, y, ax.get_title())
-            return
-                
-            #if len(self._groupby) == 1:
-                ## Don't use the 'hue' argument if there is only a single 
-                ## grouping factor:
-                #ax = sns.countplot(
-                    #y=data[self._groupby[0]],
-                    #order=self._levels[0],
-                    #palette=self.options["color_palette_values"],
-                    #data=data)
-            #else:
-                ## Use the 'hue' argument if there are two grouping factors:
-                #ax = sns.countplot(
-                    #y=data[self._groupby[0]],
-                    #order=self._levels[0],
-                    #hue=data[self._groupby[1]],
-                    #hue_order=sorted(self._levels[1]),
-                    #palette=palette_name,
-                    #data=data)
-            ## add a custom annotator for this axes:
-            #return ax
-
-        #if self._row_factor:
-            #self.ct = pd.crosstab(
-                #[self._table[self._row_factor], self._table[self._groupby[0]]],
-                #[self._table[self._col_factor], self._table[self._groupby[1]]])
-        #elif self._col_factor:
-            #self.ct = pd.crosstab(
-                #self._table[self._groupby[0]],
-                #[self._table[self._col_factor], self._table[self._groupby[1]]])
-        #elif len(self._groupby) == 2:
-            #self.ct = pd.crosstab(
-                #self._table[self._groupby[0]],
-                #self._table[self._groupby[1]])
-        #else:
-            #self.ct = self._table[self._groupby[0]].value_counts()
-                
+                self.add_rectangles(df, ax, stacked=False)
+                ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
         if self.percentage:
             self._levels[-1] = sorted(self._levels[-1])
                 

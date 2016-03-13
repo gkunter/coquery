@@ -14,8 +14,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import unittest
-import options
-from defines import *
+from coquery import  options
+from coquery.defines import *
 
 import visualizer as vis
 import seaborn as sns

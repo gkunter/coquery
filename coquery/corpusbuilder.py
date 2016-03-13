@@ -74,9 +74,6 @@ import time
 import sqlalchemy
 import pandas as pd
 import unicodedata
-
-import sqlhelper
-import sqlwrap
 import argparse
 import re
 import time
@@ -93,10 +90,14 @@ except ImportError:
         
 import difflib
 
+import sqlhelper
+import sqlwrap
 import options
 import corpus
+
 from errors import *
 from defines import *
+from unicode import utf8
 
 insert_cache = collections.defaultdict(list)
 
@@ -138,7 +139,7 @@ module_code = """# -*- coding: utf-8 -*-
 #
 
 from __future__ import unicode_literals
-from corpus import *
+from coquery.corpus import *
 
 class Resource(SQLResource):
     name = '{name}'
@@ -253,6 +254,13 @@ class Identifier(Column):
 
     def __repr__(self):
         return "Identifier(name='{}', data_type='{}', unique={}, index_length={})".format(self._name, self._data_type, self.unique, self.index_length)
+    
+    @property
+    def name(self):
+        if self.unique:
+            return self._name
+        else:
+            return "{}_primary".format(self._name)
         
 class Link(Column):
     """ Define a Column class that links a table to another table. In MySQL
@@ -274,6 +282,16 @@ class Table(object):
         self._current_id = 0
         self._row_order = []
         self._add_cache = dict()
+        # The defaultdict _add_lookup will store the index of rows in this 
+        # table. It uses the trick described at http://ikigomu.com/?p=186
+        # to achieve an O(1) lookup. When looking up a row as in 
+        #
+        # x = self._add_lookup[tuple([row[x] for x in self._row_order])]
+        # 
+        # the returned value is the length of the lookup table at the time 
+        # the entry was created. In other words, this is the row id of that 
+        # row.
+        self._add_lookup = collections.defaultdict(lambda: len(self._add_lookup) + 1)
         self._commited = {}
         self._col_names = None
         self._engine = None
@@ -338,11 +356,11 @@ class Table(object):
                 # Python 2.7:
                 if sys.version_info < (3, 0):
                     for column in df.columns[df.dtypes == object]:
-                        df[column] = df[column].apply(lambda x: unicode(x))
+                        df[column] = df[column].apply(utf8)
 
                 # apply unicode normalization:
                 for column in df.columns[df.dtypes == object]:
-                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x) if isinstance(x, str) else x)
+                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
 
                 df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
 
@@ -383,6 +401,16 @@ class Table(object):
             if data: 
                 df = pd.DataFrame(data)
                 df.columns = fields
+                # make sure that all strings are unicode, even under 
+                # Python 2.7:
+                if sys.version_info < (3, 0):
+                    for column in df.columns[df.dtypes == object]:
+                        df[column] = df[column].apply(utf8)
+
+                # apply unicode normalization:
+                for column in df.columns[df.dtypes == object]:
+                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
+
                 df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
 
             self._add_cache = {}
@@ -393,7 +421,9 @@ class Table(object):
         and store the data in add cache of the table. 
         """ 
         self._current_id += 1
-        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        key = tuple([row[x] for x in self._row_order])
+        self._add_lookup[key]
+        self._add_cache[key] = (self._current_id, row)
         if self._max_cache and len(self._add_cache) > self._max_cache:
             self.flush_cache()
         return self._current_id
@@ -404,7 +434,9 @@ class Table(object):
         expected to be already in the row, so it is not added.
         """
         self._current_id = row[self.primary.name]
-        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
+        key = tuple([row[x] for x in self._row_order])
+        self._add_lookup[key] = row[self.primary.name]
+        self._add_cache[key] = (self._current_id, row)
         if self._max_cache and len(self._add_cache) > self._max_cache:
             self.flush_cache()
         return self._current_id
@@ -432,9 +464,10 @@ class Table(object):
             self._current_id += 1
             self.add = self._add_next_with_primary
 
-        self._add_cache[tuple([row[x] for x in self._row_order])] = (self._current_id, row)
-        return self._current_id
-        
+        key = tuple([row[x] for x in self._row_order])
+        self._add_lookup[key] = self._current_id
+        self._add_cache[key] = (self._current_id, row)
+        return self._current_id        
     def get_or_insert(self, values, case=False):
         """ 
         Returns the id of the first entry matching the values from the table.
@@ -454,12 +487,11 @@ class Table(object):
         id : int 
             The id of the entry, as it is stored in the SQL table.
         """
-        try:
-            row_id = self._add_cache[tuple([values[x] for x in self._row_order])][0]
-        except KeyError:
-            return self.add(values)
+        key = tuple([values[x] for x in self._row_order])
+        if key in self._add_lookup:
+            return self._add_lookup[key]
         else:
-            return row_id
+            return self.add(values)
 
     def find(self, values):
         """ 
@@ -523,9 +555,9 @@ class Table(object):
                         if not column.unique:
                             # add surrogate key 
                             # do not add AUTO_INCREMENT to strings or ENUMs:
-                            str_list.insert(0, "{}_primary INT AUTO_INCREMENT".format(self.name))
-                            str_list.insert(1, "{} {}".format(column.name, column.data_type))
-                            str_list.append("PRIMARY KEY ({}_primary)".format(self.name))
+                            str_list.insert(0, "{} INT AUTO_INCREMENT".format(column.name))
+                            str_list.insert(1, "{} {}".format(column.name.replace("_primary", ""), column.data_type))
+                            str_list.append("PRIMARY KEY ({})".format(column.name))
                         else:
                             # do not add AUTO_INCREMENT to strings or ENUMs:
                             if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
@@ -554,8 +586,8 @@ class Table(object):
                     if column.is_identifier:
                         if not column.unique:
                             # add surrogate key 
-                            str_list.insert(0, "{}_primary INT PRIMARY KEY".format(self.name))
-                            str_list.insert(1, "{} {}".format(column.name, data_type))
+                            str_list.insert(0, "{} INT PRIMARY KEY".format(column.name))
+                            str_list.insert(1, "{} {}".format(column.name.replace("_primary", ""), data_type))
                         else:
                             str_list.insert(0, "{} {} PRIMARY KEY".format(
                                 column.name, data_type))
@@ -603,6 +635,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
     special_files = []
     __version__ = "1.0"
     
+    _read_file_formatter = "Reading {file} (%v of %m)..."
+    
     def __init__(self, gui=False):
         self.module_code = module_code
         self.table_description = {}
@@ -610,7 +644,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._id_count = {}
         self._primary_keys = {}
         self._interrupted = False
-        self._blocklist = set()
         self._new_tables = {}
         
         self._corpus_buffer = None
@@ -640,17 +673,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
         self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
         self.additional_arguments()
-
-    def add_tag_table(self):
+        
+    def add_tag_table(self, features_only=False):
         """ 
         Create the table description for a tag table.
         
         Corpora should usually have a tag table that is used to store
         text information. This method is called during :func:`build` and
         adds a tag table if none is present yet.
-        
-        Currently, the tag table cannot be queried, so no indices will be
-        created for the data columns.
         """
         
         self.tag_table = "tags"
@@ -660,16 +690,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.tag_corpus_id = self.corpus_id
         self.tag_attribute = "Attribute"
         
-        self.create_table_description(self.tag_table,
-            [Identifier(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
-             Column(self.tag_label, "TINYTEXT NOT NULL"),
-             Link(self.tag_corpus_id, self.corpus_table),
-             Column(self.tag_attribute, "TINYTEXT NOT NULL")])
-
-        self.add_index_to_blocklist(("tags", self.tag_label))
-        self.add_index_to_blocklist(("tags", self.tag_type))
-        self.add_index_to_blocklist(("tags", self.tag_attribute))
+        if not features_only:
+            self.create_table_description(self.tag_table,
+                [Identifier(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+                Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
+                Column(self.tag_label, "TINYTEXT NOT NULL"),
+                Link(self.tag_corpus_id, self.corpus_table),
+                Column(self.tag_attribute, "TINYTEXT NOT NULL")])
 
     def interrupt(self):
         """
@@ -794,9 +821,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         information given in the table description (see
         :func:``create_table_description``).
         """
-        
         self.add_tag_table()
-
+        
         # initialize progress bars:
         if self._widget:
             self._widget.progressSet.emit(len(self._new_tables), "Creating tables... (%v of %m)")
@@ -948,8 +974,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
         elif item_type == QUERY_ITEM_GLOSS:
             self.query_item_gloss = rc_feature
 
-    def add_time_feature(self, x):
-        self._time_features.append(x)
+    def add_time_feature(self, rc_feature):
+        """
+        Add the resource feature to the list of time features.
+        
+        Time features are those features that can be visualized using a
+        time series visualization.        
+        """
+        self._time_features.append(rc_feature)
     
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
@@ -1504,10 +1536,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
             return
 
         if self._widget:
-            self._widget.progressSet.emit(len(self._file_list), "Reading text files... (%v of %m)")
+            self._widget.progressSet.emit(len(self._file_list), "")
             self._widget.progressUpdate.emit(0)
             
         for i, file_name in enumerate(self._file_list):
+            if self._widget:
+                self._widget.labelSet.emit(self._read_file_formatter.format(file=file_name))
+
             if self.interrupted:
                 return
             if not self.db_has(self.file_table, {self.file_path: file_name}):
@@ -1674,12 +1709,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self.interrupted:
             return
         
-    def add_index_to_blocklist(self, index):
-        self._blocklist.add(index)
-        
-    def remove_index_from_blocklist(self, index):
-        self._blocklist.remove(index)
-        
     def build_create_indices(self):
         """ 
         Create a MySQL index for each column in the database. 
@@ -1701,7 +1730,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         for table_name in self._new_tables:
             table = self._new_tables[table_name]
             for column in table.columns:
-                if not isinstance(column, Identifier) and (table.name, column.name) not in self._blocklist:
+                if not isinstance(column, Identifier):
                     index_list.append((table.name, column.name))
 
         if self._widget:
@@ -1876,7 +1905,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         path : str 
             The path to the corpus module.
         """
-        return os.path.join(options.cfg.corpora_path, "{}.py".format(self.name))
+        return os.path.join(options.cfg.corpora_path, "{}.py".format(name))
 
     def build_write_module(self):
         """ Write a Python module with the necessary specifications to the
@@ -1914,18 +1943,17 @@ class BaseCorpusBuilder(corpus.BaseResource):
         
         self.module_content = self.module_code.format(
                 name=self.name,
-                display_name=self.get_name(),
-                db_name=self.arguments.db_name,
-                url=self.get_url(),
-                variables=variable_code,
-                corpus_code=self.get_corpus_code(),
-                lexicon_code=self.get_lexicon_code(),
-                resource_code=self.get_resource_code())
+                display_name=utf8(self.get_name()),
+                db_name=utf8(self.arguments.db_name),
+                url=utf8(self.get_url()),
+                variables=utf8(variable_code),
+                corpus_code=utf8(self.get_corpus_code()),
+                lexicon_code=utf8(self.get_lexicon_code()),
+                resource_code=utf8(self.get_resource_code()))
         self.module_content = self.module_content.replace("\\", "\\\\")
-
-        path = self.get_module_path(self.name)
+        path = self.get_module_path(self.arguments.db_name)
         # write module code:
-        with codecs.open(path, "w") as output_file:
+        with codecs.open(path, "w", encoding="utf-8") as output_file:
             output_file.write(self.module_content)
             self.logger.info("Library %s written." % path)
             
@@ -2030,11 +2058,18 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if not self._widget:
             print("\n%s\n" % textwrap.TextWrapper(width=79).fill(" ".join(self.get_description())))
             
-        for module, package, url in self.get_modules():
-            try:
-                exec("import {}".format(module))
-            except ImportError:
-                raise DependencyError(package, url)
+        # Corpus installers may require additional modules. For example, 
+        # Gabra is currently distributed as MongoDB files, which are read by 
+        # using the pymongo library.
+        # Unless the user wishes to install only the corpus module, try to 
+        # import these additional modules, and raise an exception if they are 
+        # unavailable:
+        if not self.arguments.only_module:
+            for module, package, url in self.get_modules():
+                try:
+                    exec("import {}".format(module))
+                except ImportError:
+                    raise DependencyError(package, url)
         if self.arguments.use_nltk:
             import nltk
             
@@ -2070,7 +2105,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         except:
             pass
         
-        path = os.path.join(options.cfg.adhoc_path, "coq_install_{}.py".format(self.arguments.name))
+        path = os.path.join(options.cfg.adhoc_path, "coq_install_{}.py".format(self.arguments.db_name))
         try:
             os.remove(path)
         except:
@@ -2142,6 +2177,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     current = progress_next(current)
                     self.build_create_tables()
                     progress_done()
+                else:
+                    # At the very least, the tag table features are added so
+                    # that the corpus module will always contain that table.
+                    self.add_tag_table(features_only=True)
             
                 if self.arguments.l and not self.interrupted:
                     current = progress_next(current)
@@ -2212,15 +2251,15 @@ class BaseCorpusBuilder(corpus.BaseResource):
             tagging_state = "Part-of-speech tags are not available for this corpus."
         
         description = ["<p>The {label} '{name}' was created on {date}. It contains {tokens} words of text. {tagging_state}</p><p>Directory:<br/> <code>{path}</code></p><p>File{s}:<br/><code>{files}</code></p><p>".format(
-            label = is_tagged_label,
-            date = time.strftime("%c"),
-            user = getpass.getuser(),
-            name = self.arguments.name,
-            path = self.arguments.path,
+            label = utf8(is_tagged_label),
+            date = utf8(time.strftime("%c")),
+            user = utf8(getpass.getuser()),
+            name = utf8(self.arguments.name),
+            path = utf8(self.arguments.path),
             s = "s" if len(self._file_list) > 1 else "",
-            files = "<br/>".join([os.path.basename(x) for x in sorted(self._file_list)]),
+            files = "<br/>".join([utf8(os.path.basename(x)) for x in sorted(self._file_list)]),
             tokens = self._corpus_id,
-            tagging_state = tagging_state)]
+            tagging_state = utf8(tagging_state))]
         
         new_code = new_code_str.format(
             name=self.name, 

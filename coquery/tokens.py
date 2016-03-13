@@ -51,6 +51,19 @@ class QueryToken(object):
     
     def __init__(self, S, lexicon, replace=True, parse=True):
         self.lexicon = lexicon
+        # token strings should always be unicode. They are already in 
+        # Python 3.x, but for Python 2.7, we convert them first:
+        try:
+            S = S.decode("utf-8")
+        except (UnicodeEncodeError):
+            # This happens if S is already a unicode string
+            pass
+        except (AttributeError):
+            # This happens in Python 3.x, because unicode strings don't have 
+            # decode() any more.
+            pass
+        assert type(S) == type(u"")
+        
         self.S = S.strip()
         if replace:
             self.S = self.replace_wildcards(self.S)
@@ -110,6 +123,19 @@ class QueryToken(object):
     
     @staticmethod
     def replace_wildcards(s):
+        """
+        Replace the wildcards '*' and '?' by SQL wildcards '%' and '_', 
+        respectively. Escape exististing characters '%' and '_'.
+        
+        Parameters
+        ----------
+        s : string 
+        
+        Returns
+        -------
+        s : string 
+            The input string, with wildcard characters replaced.
+        """
         rep = []
         parse_next = False
         
@@ -144,8 +170,7 @@ class QueryToken(object):
         corpus-specific. """
         self.lemma_specifiers = []
         self.class_specifiers = []
-        self.word_specifiers = self.S.split(",")
-
+        self.word_specifiers = [self.S]
 
 class COCAToken(QueryToken):
 
@@ -225,13 +250,6 @@ class COCAToken(QueryToken):
         if all([x in set(["%", "_"]) for x in self.word_specifiers]) and self.class_specifiers:
             self.word_specifiers = []
 
-class COCAWord(COCAToken):
-    """ A class that is simply parsed as a single word. """
-    def parse(self):
-        self.lemma_specifiers = []
-        self.class_specifiers = []
-        self.word_specifiers = [self.S]
-
 class COCATextToken(COCAToken):
     # do not use the corpus to determine whether a token string like 
     # [xx] contains a part-of-speech tag:
@@ -271,7 +289,7 @@ def parse_query_string(S, token_type):
     """
 
     def add(S, ch):
-        return "%s%s" % (S, ch)
+        return "{}{}".format(S, ch)
     
     ST_NORMAL = "NORMAL"
     ST_IN_BRACKET = "BRACKET"
@@ -288,7 +306,14 @@ def parse_query_string(S, token_type):
     escaping = False
     token_closed = False
     comma_added = False
-    
+    try:
+        S = S.decode("utf-8")
+    except UnicodeEncodeError:
+        # already a unicode string
+        pass
+    except AttributeError:
+        # using Python 3.x
+        pass
     for current_char in S:
         if escaping:
             current_word = add(current_word, current_char)

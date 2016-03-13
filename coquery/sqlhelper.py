@@ -11,17 +11,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import __init__
-
 import os
 import logging
 import warnings
 import sqlalchemy
-
-try:
-    logger = logging.getLogger(__init__.NAME)
-except AttributeError:
-    pass
 
 from errors import *
 from defines import *
@@ -395,3 +388,5 @@ def get_index_length(engine, table, column, coverage=0.95):
         logger.info("{}.{}: index length {}".format(table, column, max_c[0]))
         return int(max_c[0])
     return None
+
+logger = logging.getLogger(NAME)

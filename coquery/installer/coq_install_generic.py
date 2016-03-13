@@ -12,13 +12,11 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-#try:
-    #import chardet
-#except ImportError:
-    #warnings.warn("The Python library 'chardet' is not available. The encoding of the input text files cannot be determined automatically.")
-    #warnings.warn("Using default Unicode encoding 'utf-8'.")
+from coquery.corpusbuilder import *
+from coquery import options
 
-from corpusbuilder import *
+if options._use_chardet:
+    import chardet
 
 class BuilderClass(BaseCorpusBuilder):
     corpus_table = "Corpus"

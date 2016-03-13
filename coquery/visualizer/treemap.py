@@ -12,7 +12,7 @@ from __future__ import print_function
 import unittest
 import math
 
-from defines import *
+from coquery.defines import *
 
 from matplotlib.patches import Rectangle
 import visualizer as vis

@@ -18,16 +18,27 @@ import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import options
+from coquery import options
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality=2
 
     sqrt_dict = {}
-    circles = []
+
+    _angle_cache = {}
+    _angle_calls = 0
+    _r_cache = {}
+    _r_calls = 0
+    _vector_cache = {}
+    _vector_calls = 0
+
+    def __init__(self, *args, **kwargs):
+        super(Visualizer, self).__init__(*args, **kwargs)
+        self.circles = []
+
 
     def set_defaults(self):
-        self.options["color_palette"] = "RdPu"
+        self.options["color_palette"] = "Blues"
         self.options["color_number"] = len(self._levels[-1])
         super(Visualizer, self).set_defaults()
         self.options["label_y_axis"] = ""
@@ -44,9 +55,12 @@ class Visualizer(vis.BaseVisualizer):
         for (cx, cy), r, label in self.circles:
             if math.sqrt((cx - x) ** 2 + (cy - y) ** 2) <= r:
                 if title:
-                    return "{} – {}".format(title, label)
+                    S = "{} – {}".format(title, label)
                 else:
-                    return label
+                    S = label
+                self.set_tooltip(S)
+                return S
+        self.set_tooltip("")
         return ""
 
     def draw(self):
@@ -54,18 +68,14 @@ class Visualizer(vis.BaseVisualizer):
         Draw a bubble chart. 
         """
         
-        def get_radius(freq):
-            """
-            Calculate the radius of the bubble based on the frequency.
-            
-            The radius is chosen so that the area of the bubble is 
-            proportional to the frequency.
-            """
-            return math.sqrt(freq / math.pi)
-        
         def plot_facet(data, color):
             def r(freq):
-                return math.sqrt(freq / math.pi)
+                self._r_calls += 1
+                try:
+                    return self._r_cache[freq]
+                except KeyError:
+                    self._r_cache[freq] = math.sqrt(freq / math.pi)
+                    return self._r_cache[freq]
 
             def rotate_vector(v, angle):
                 """
@@ -76,9 +86,16 @@ class Visualizer(vis.BaseVisualizer):
                 v : tuple
                     The rotated vector.
                 """
+                self._vector_calls += 1
                 (x, y) = v
-                cos_theta = math.cos(angle)
-                sin_theta = math.sin(angle)
+                _key = round(angle, 2)
+                try:
+                    cos_theta, sin_theta = self._vector_cache[_key]
+                except KeyError:
+                    cos_theta = math.cos(angle)
+                    sin_theta = math.sin(angle)
+                    self._vector_cache[_key] = (cos_theta, sin_theta)
+
                 return x*cos_theta - y*sin_theta, x*sin_theta + y*cos_theta
 
             def get_angle(a, b, c):
@@ -91,14 +108,20 @@ class Visualizer(vis.BaseVisualizer):
                     The length of sides a, b, c in a triangle.
                 
                 """
-                x = (b**2 + c**2 - a**2) / (2 * b * c)
-                if x > 2:
-                    raise ValueError("Illegal angle")
-                # Allow angles > 180 degrees:
-                if x > 1:
-                    return(math.acos(x-1))
-                else:
-                    return math.acos(x)
+                self._angle_calls += 1
+                _key = (round(a, 2), round(b, 2), round(c, 2))
+                try:
+                    return self._angle_cache[_key]
+                except KeyError:
+                    x = (b**2 + c**2 - a**2) / (2 * b * c)
+                    if x > 2:
+                        raise ValueError("Illegal angle")
+                    # Allow angles > 180 degrees:
+                    if x > 1:
+                        self._angle_cache[_key] = (math.acos(x-1))
+                    else:
+                        self._angle_cache[_key] = math.acos(x)
+                return self._angle_cache[_key]
             
             #def angle_vect((x1, y1), (x2, y2)):
                 #return math.atan2(x1*y2 - y1*x2, x1*x2 + y1*y2)  # atan2(y, x) or atan2(sin, cos)
@@ -185,8 +208,9 @@ class Visualizer(vis.BaseVisualizer):
                 freq = row["Freq"]
                 rad = row["r"]
                 label = " | ".join(list(row[self._groupby]))
-                c = self.options["color_palette_values"][k % self.options["color_number"]]
-                
+                #c = self.options["color_palette_values"][k % self.options["color_number"]]
+
+                c = self._col_dict[row[self._groupby[-1]]]
                 x, y = self.pos[k]
                 
                 circ = plt.Circle((x, y), max(0, rad - 0.05), color=c)
@@ -222,14 +246,16 @@ class Visualizer(vis.BaseVisualizer):
             columns = list(df_freq.columns)
             columns[-1] = "Freq"
             df_freq.columns = columns
+            self.set_palette_values(len(set(df_freq[self._groupby[-1]])))
             if len(self._groupby) == 2:
-                df_freq.sort([self._groupby[0], "Freq"], ascending=[True, False], inplace=True)
+                df_freq.sort([self._groupby[-1], "Freq"], ascending=[False, False], inplace=True)
+                self._col_dict = dict(zip(self._levels[-1], self.options["color_palette_values"]))
             else:
                 df_freq.sort("Freq", ascending=False, inplace=True)
+                self._col_dict = dict(zip(df_freq[self._groupby[-1]], self.options["color_palette_values"]))
             df_freq["r"] = df_freq["Freq"].map(r)
             ax = plt.gca()
             
-            self.set_palette_values(len(set(df_freq[self._groupby[-1]])))
 
             self.max_x = 0
             self.max_y = 0
@@ -260,7 +286,7 @@ class Visualizer(vis.BaseVisualizer):
                         # (at least, that's the idea, but it doesn't seem to
                         # work like this -- therefore, this speed-up is 
                         # currently disabled)
-                        #completed = a
+                        # completed = a
                         # If there is no position at which the next bubble can be 
                         # placed so that it is tangent to both the neighbor and 
                         # the anchor, get_position() raises a ValueError 
@@ -287,3 +313,6 @@ class Visualizer(vis.BaseVisualizer):
         except Exception as e:
             print(e)
             raise e
+        
+        if len(self._groupby) == 2:
+            self.add_legend(levels=self._levels[-1])

@@ -20,7 +20,6 @@ try:
 except NameError:
     pass
 
-import __init__
 import collections
 import datetime
 
@@ -299,6 +298,12 @@ class TokenQuery(object):
             self._current_number_of_tokens = len(self._sub_query)
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
 
+
+            if self.Resource.db_type == SQL_SQLITE:
+                # SQLite: keep track of databases that need to be attached. 
+                self.Resource.attach_list = set([])
+                # This list is filled by get_query_string().
+            
             # This SQLAlchemy optimization including the string folder 
             # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
             query_string = self.Resource.get_query_string(self, self._sub_query)
@@ -309,6 +314,14 @@ class TokenQuery(object):
                 else:
                     if options.cfg.verbose:
                         logger.info(query_string)
+                    
+                    # SQLite: attach external databases
+                    if self.Resource.db_type == SQL_SQLITE:
+                        for db_name in self.Resource.attach_list:
+                            path = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
+                            S = "ATTACH DATABASE '{}' AS {}".format(path, db_name)
+                            connection.execute(S)
+
                     try:
                         results = connection.execution_options(stream_results=True).execute(query_string.replace("%", "%%"))
                     except Exception as e:
@@ -1062,4 +1075,4 @@ class CollocationQuery(TokenQuery):
     def remove_output_columns(session):
         session.output_order = session._old_output_order
         
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)

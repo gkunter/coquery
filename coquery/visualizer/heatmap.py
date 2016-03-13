@@ -32,8 +32,9 @@ def _annotate_heatmap(self, ax, mesh):
     except Exception as e:
         print(e)
         raise e
-    
-sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
+
+if sns.__version__ < "0.7.0":
+    sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality=2
