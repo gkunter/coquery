@@ -11,13 +11,14 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import sys
 
 from coquery import options
 from coquery.errors import *
-from pyqt_compat import QtCore, QtGui
-from ui.errorUi import Ui_ErrorDialog
+from .pyqt_compat import QtCore, QtGui
+from .ui.errorUi import Ui_ErrorDialog
 
 class ErrorBox(QtGui.QDialog):
     def __init__(self, exc_info, exception, no_trace=False, message="", parent=None):

@@ -10,13 +10,14 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import random
 import sys
 
-import classes
-from pyqt_compat import QtCore, QtGui
-from coquery import options
+#from coquery.gui import classes
+from .pyqt_compat import QtCore, QtGui
+#from coquery import options
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

@@ -24,10 +24,10 @@ from coquery.defines import *
 from coquery.errors import *
 from coquery.unicode import utf8
 
-import classes
-import errorbox
-from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
-from ui.corpusInstallerUi import Ui_CorpusInstaller
+from . import classes
+from . import errorbox
+from .pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from .ui.corpusInstallerUi import Ui_CorpusInstaller
 
 class InstallerGui(QtGui.QDialog):
     button_label = "&Install"
@@ -44,7 +44,6 @@ class InstallerGui(QtGui.QDialog):
     def __init__(self, builder_class, parent=None):
         super(InstallerGui, self).__init__(parent)
 
-        import __init__
         self.logger = logging.getLogger(NAME)        
 
         self.state = None
@@ -106,7 +105,10 @@ class InstallerGui(QtGui.QDialog):
             self.ui.notes_label = QtGui.QLabel(notes)
             self.ui.notes_label.setWordWrap(True)
             self.ui.notes_label.setOpenExternalLinks(True)            
-            self.ui.notes_label.setBackgroundRole(QtGui.QPalette.ColorRole.Base)
+            try:
+                self.ui.notes_label.setBackgroundRole(QtGui.QPalette.ColorRole.Base)
+            except:
+                print(dir(QtGui.QPalette.ColorRole))
             self.ui.notes_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
 
             self.ui.notes_scroll = QtGui.QScrollArea()                                                                                      
@@ -343,7 +345,6 @@ class BuilderGui(InstallerGui):
         super(BuilderGui, self).__init__(builder_class, parent)
         self.ui.input_path.textChanged.disconnect()
 
-        import __init__
         self.logger = logging.getLogger(NAME)        
 
         self._nltk_lemmatize = False
@@ -385,6 +386,7 @@ class BuilderGui(InstallerGui):
             label_text.append("(unavailble – NLTK is not installed)")
             self.ui.label_pos_tagging.setEnabled(False)
             self.ui.use_pos_tagging.setEnabled(False)
+            self.ui.use_pos_tagging.setChecked(False)
         else:
             self.ui.use_pos_tagging.clicked.connect(self.pos_check)
             size = QtGui.QCheckBox().sizeHint()

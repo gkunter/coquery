@@ -16,11 +16,10 @@ import logging
 import warnings
 import sqlalchemy
 
-from errors import *
-from defines import *
-import options
-
-import sqlhelper
+from .errors import *
+from .defines import *
+from . import options
+from . import sqlhelper
 
 if options._use_mysql:
     import pymysql

@@ -36,8 +36,8 @@ except ImportError:
 import numpy as np        
 import pandas as pd
 
-from defines import *
-from errors import *
+from .defines import *
+from .errors import *
 from . import corpus
 from . import tokens
 from . import options

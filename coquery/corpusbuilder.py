@@ -90,14 +90,14 @@ except ImportError:
         
 import difflib
 
-import sqlhelper
-import sqlwrap
-import options
-import corpus
+from . import sqlhelper
+from . import sqlwrap
+from . import options
+from . import corpus
 
-from errors import *
-from defines import *
-from unicode import utf8
+from .errors import *
+from .defines import *
+from .unicode import utf8
 
 insert_cache = collections.defaultdict(list)
 
