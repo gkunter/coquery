@@ -970,6 +970,15 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
     allowed_parents = (ast.If, ast.FunctionDef, ast.TryExcept, ast.TryFinally, ast.While, ast.For,
                        ast.With)
 
+    if sys.version_info < (3, 0):
+        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign, 
+                              ast.Return, ast.TryExcept, ast.TryFinally, 
+                              ast.Pass, ast.Raise, ast.Assert, ast.Print)
+    else:
+        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign, 
+                              ast.Return, ast.TryExcept, ast.TryFinally, 
+                              ast.Pass, ast.Raise, ast.Assert)
+
     def validate_node(node, parent):
         if isinstance(node, ast.ClassDef):
             if node.name in expected_classes:
@@ -984,7 +993,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                 if whitelisted_modules != "all" and element not in whitelisted_modules:
                     raise IllegalImportInModuleError(corpus_name, cfg.current_server, element, node.lineno)
         
-        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.AugAssign, ast.Return, ast.TryExcept, ast.TryFinally, ast.Pass, ast.Raise, ast.Assert, ast.Print)):
+        elif isinstance(node, allowed_statements):
             pass
         
         elif isinstance(node, ast.Expr):
