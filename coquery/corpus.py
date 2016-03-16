@@ -1000,70 +1000,30 @@ class SQLResource(BaseResource):
             """
             if not hasattr(word_id, "__iter__"):
                 word_id = [word_id]
-            
-                if hasattr(self, QUERY_ITEM_WORD):
-                    rc_feature = getattr(self, QUERY_ITEM_WORD)
-                    _, _, table, feature = self.split_resource_feature(rc_feature)
-                    S = "SELECT {} FROM {} WHERE {} = ".format(
-                        getattr(self, rc_feature),
-                        getattr(self, "{}_table".format(table)),
-                        getattr(self, "{}_id".format(table)))
-
-                    # build the word list:
-                    L = []
-                    for x in word_id:
-                        # check the word cache:
-                        try:
-                            L.append(self._word_cache[x])
-                        except KeyError:
-                            results = db_connection.execute("{}{}".format(S, x))
-                            try:
-                                orth = results.fetchone()[0][0]
-                            except IndexError:
-                                # no entry for this word_id -- use default value:
-                                orth = DEFAULT_MISSING_VALUE
-                            finally:
-                                L.append(orth)
-                                # add to cache:
-                                self._word_cache[x] = orth
-                    return L
+            if not hasattr(self, "corpus_word_id"):
+                return word_id
             else:
-                # if there is no attribute "corpus_word_id" in the resource, we
-                # have to assume that the identifies provided are already all the 
-                # information that we have on the words. This makes sense for 
-                # example in the case of dictionaries. So, in that case, we simply
-                # return the list:
-                if not hasattr(self, "corpus_word_id"):
-                    return word_id
+                if any([x not in self._word_cache for x in word_id]):
+                    if hasattr(self, "surface_feature"):
+                        word_feature = self.surface_feature
+                    else:
+                        word_feature = getattr(self, QUERY_ITEM_WORD)
+                    _, _, table, feature = self.split_resource_feature(word_feature)
 
-                # FIXME: use table_path to determine the path to the table of
-                # QUERY_ITEM_WORD
-                
-                # prepare a partial SQL query:
-                S = "SELECT {} FROM {} WHERE {} = ".format(
-                            self.word_label, 
-                            self.word_table,
-                            self.word_id)
-
-                # build the word list:
-                L = []
-                #cur = db_connection.cursor()
-                for x in word_id:
-                    # check the word cache:
-                    try:
-                        L.append(self._word_cache[x])
-                    except KeyError:
-                        results = db_connection.execute("{}{}".format(S, x))
-                        try:
-                            orth = results.fetchone()[0]
-                        except IndexError:
-                            # no entry for this word_id -- use default value:
-                            orth = "<NA>"
-                        finally:
-                            L.append(orth)
-                            # add to cache:
-                            self._word_cache[x] = orth
-                return L
+                    self.lexicon.joined_tables = []
+                    self.lexicon.table_list = [self.word_table]
+                    self.lexicon.add_table_path("word_id", word_feature)
+                    
+                    S = "SELECT {} FROM {} WHERE {}.{} IN ({})".format(
+                        getattr(self, word_feature),
+                        " ".join(self.lexicon.table_list),
+                        self.word_table,
+                        self.word_id,
+                        ", ".join([str(x) for x in word_id]))
+                    results = [x for x, in db_connection.execute(S)]
+                    return results
+                else:
+                    return [self._word_cache[x] for x in word_id]
 
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
@@ -1085,10 +1045,9 @@ class SQLResource(BaseResource):
         # Get words in left context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 start, 
-                token_id - 1, origin_id)        
+                token_id - 1, origin_id)
         
         results = db_connection.execute(S)
-        
         left_context_words = get_orth([x for x, in results])
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
@@ -2309,7 +2268,11 @@ class CorpusClass(object):
         if origin_id:
             format_string += " AND {corpus}.{source_id} = {current_source_id}"
     
-        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
+        if hasattr(self, "surface_feature"):
+            word_feature = self.surface_feature
+        else:
+            word_feature = getattr(self, QUERY_ITEM_WORD)
+            
         _, _, tab, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(tab))
         word_id = getattr(self.resource, "{}_id".format(tab))

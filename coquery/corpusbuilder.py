@@ -1773,7 +1773,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
     def set_query_items(self):
         """
-        Setup the mapping between query item types and resource features.
+        Set up the mapping between query item types and resource features.
         
         This method generates the attributes that specifies in the corpus 
         module in which field the program should look when looking for word, 
@@ -1806,11 +1806,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         Gloss           gloss_label, word_gloss, lemma_gloss, corpus_gloss
         POS             pos_label, word_pos, lemma_pos, corpus_pos
         
-        Returns
-        -------
-        s : str 
-            A string that sets the 
-        
         """
         l = []
         if not hasattr(self, "query_item_word"):
@@ -1839,6 +1834,20 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 if hasattr(self, x):
                     self.query_item_gloss = x
                     break
+
+    def set_surface_feature(self, rc_feature):
+        """
+        Set the surface feature, i.e. the one that is used to display the 
+        context of tokens either in the context viewer or in the results 
+        table. By default, the surface feature is the same as the word query
+        feature.
+        
+        Parameters
+        ----------
+        rc_feature : string 
+            The feature that will be used as the new surface feature.
+        """
+        self.surface_feature = rc_feature
 
     def verify_corpus(self):
         """
