@@ -88,14 +88,9 @@ class InstallerGui(QtGui.QDialog):
                 msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             return
 
-        try:
-            self.ui.corpus_description.setText(
-                str(self.ui.corpus_description.text()).format(
-                    builder_class.get_title(), options.cfg.current_server))
-        except UnicodeEncodeError:
-            self.ui.corpus_description.setText(
-                str(self.ui.corpus_description.text()).format(
-                    builder_class.get_title().encode("utf-8"), options.cfg.current_server))
+        self.ui.corpus_description.setText(
+                utf8(self.ui.corpus_description.text()).format(
+                    utf8(builder_class.get_title()), utf8(options.cfg.current_server)))
             
         notes = builder_class.get_installation_note()
         if notes:
