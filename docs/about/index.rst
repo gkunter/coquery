@@ -23,7 +23,7 @@ translators, and anybody who wishes to search and analyse a text corpus.
                 <h2>Corpora</h2>
                 <ul>
                     <li>Use the corpus manager to install one of the 
-                    supported corpora, or to build your own corpus</li>
+                    supported corpora, or to build your own corpus from PDF or text files</li>
                     <li>Filter your query for example by year, genre, or speaker gender</li>
                     <li>Choose which corpus features will be included in your query results</li>
                     <li>View every token that matches your query within its context</li>
@@ -36,6 +36,7 @@ translators, and anybody who wishes to search and analyse a text corpus.
                     <li>Use string functions e.g. to test if a token contains a letter sequence</li>
                     <li>Use the same query syntax for all installed corpora</li>
                     <li>Automate queries by reading them from an input file</li>
+                    <li>Store your results as CSV files or <a href="http://www.praat.org">Praat</a> TextGrid files (if timing information is available)</li>
                 </ul>
             </div>
         </div>
@@ -93,6 +94,7 @@ Coquery already has installers for the following linguistic corpora:
         <a class="list-group-item" href="http://corpus.byu.edu/coha/">Corpus of Historical American English (COHA)</a>
         <a class="list-group-item" href="http://mlrs.research.um.edu.mt/resources/gabra/">Ġabra: an open lexicon for Maltese</a>
         <a class="list-group-item" href="http://sourceforge.net/projects/ice-nigeria/">ICE-Nigeria</a>
+        <a class="list-group-item" href="https://catalog.ldc.upenn.edu/LDC97S62">Switchboard-1 Telephone Speech Corpus</a>
     </div>
 
 
