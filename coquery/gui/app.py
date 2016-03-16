@@ -1771,7 +1771,7 @@ class CoqueryApp(QtGui.QMainWindow):
             The entry from the corpus manager that has been selected for 
             removal
         """
-        import removecorpus
+        from . import removecorpus
 
         try:
             resource, _, _, module = options.cfg.current_resources[entry.name]
