@@ -18,7 +18,7 @@ import pandas as pd
 try:
     from cStringIO import StringIO
 except ImportError:
-    from io import StringIO
+    from io import StringIO, BytesIO
 
 from coquery.corpusbuilder import *
 from coquery.unicode import utf8
@@ -424,7 +424,13 @@ class BuilderClass(BaseCorpusBuilder):
             if speaker_name in self._zip_files:
                 if self._interrupted:
                     return
-                small_zip_file = zipfile.ZipFile(StringIO(zip_file.read(small_zip_name)))
+                try:
+                    # Python 2.7:
+                    _io = StringIO(zip_file.read(small_zip_name))
+                except TypeError:
+                    # Python 3.x:
+                    _io = BytesIO(zip_file.read(small_zip_name))
+                small_zip_file = zipfile.ZipFile(_io)
                 self._process_words_file(small_zip_file, speaker_name)
 
                 self._value_file_name = "{}/{}".format(os.path.basename(filename), speaker_name)
