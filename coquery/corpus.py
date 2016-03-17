@@ -29,7 +29,6 @@ from . import options
 from . import sqlhelper
 
 def collapse_words(word_list):
-    
     def is_tag(s):
         # there are some tags that should still be preceded by spaces. In 
         # paricular those that are normally used for typesetting, including
@@ -47,36 +46,37 @@ def collapse_words(word_list):
     contraction = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
     token_list = []
     punct = '!\'),-./:;?^_`}’”]'
-    context_list = [x.strip() for x in word_list]
+    context_list = [x.strip() if hasattr(x, "strip") else x for x in word_list]
     open_quote = {}
     open_quote ['"'] = False
     open_quote ["'"] = False
     last_token = ""
     for i, current_token in enumerate(context_list):
-        if '""""' in current_token:
-            current_token = '"'
-    
-        # stupid list of exceptions in which the current_token should NOT
-        # be preceded by a space:
-        no_space = False
-        if all([x in punct for x in current_token]):
-            no_space = True        
-        if current_token in contraction:
-            no_space = True            
-        if last_token in '({[‘“':
-            no_space = True            
-        if is_tag(last_token):
-            no_space = True        
-        if is_tag(current_token):
-            no_space = True
-        if last_token.endswith("/"):
-            no_space = True
-            
-        if not no_space:
-            token_list.append(" ")
+        if current_token:
+            if '""""' in current_token:
+                current_token = '"'
         
-        token_list.append(current_token)
-        last_token = current_token
+            # stupid list of exceptions in which the current_token should NOT
+            # be preceded by a space:
+            no_space = False
+            if all([x in punct for x in current_token]):
+                no_space = True        
+            if current_token in contraction:
+                no_space = True            
+            if last_token in '({[‘“':
+                no_space = True            
+            if is_tag(last_token):
+                no_space = True        
+            if is_tag(current_token):
+                no_space = True
+            if last_token.endswith("/"):
+                no_space = True
+                
+            if not no_space:
+                token_list.append(" ")
+            
+            token_list.append(current_token)
+            last_token = current_token
     return "".join(token_list)
 
 #class ResFeature(str):
@@ -1014,13 +1014,14 @@ class SQLResource(BaseResource):
                     self.lexicon.table_list = [self.word_table]
                     self.lexicon.add_table_path("word_id", word_feature)
                     
-                    S = "SELECT {} FROM {} WHERE {}.{} IN ({})".format(
+                    S = "SELECT {0}, {2}.{3} FROM {1} WHERE {2}.{3} IN ({4})".format(
                         getattr(self, word_feature),
                         " ".join(self.lexicon.table_list),
                         self.word_table,
                         self.word_id,
                         ", ".join([str(x) for x in word_id]))
-                    results = [x for x, in db_connection.execute(S)]
+                    results = [x for x, _ in sorted(list(db_connection.execute(S)),
+                               key=lambda x: word_id.index(x[1]))]
                     return results
                 else:
                     return [self._word_cache[x] for x in word_id]
@@ -1051,6 +1052,15 @@ class SQLResource(BaseResource):
         left_context_words = get_orth([x for x, in results])
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
+        if options.cfg.context_mode == CONTEXT_STRING:
+            # Get words matching the query:
+            S = self.corpus.sql_string_get_wordid_in_range(
+                    token_id,
+                    token_id + number_of_tokens - 1,
+                    origin_id)
+            results = db_connection.execute(S)
+            string_context_words = get_orth([x for (x, ) in results if x])
+
         # Get words in right context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
@@ -1060,16 +1070,8 @@ class SQLResource(BaseResource):
         right_context_words = get_orth([x for x, in results])
         right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
-        if options.cfg.context_mode == CONTEXT_STRING:
-            # Get words matching the query:
-            S = self.corpus.sql_string_get_wordid_in_range(
-                    token_id,
-                    token_id + number_of_tokens - 1,
-                    origin_id)
-            results = db_connection.execute(S)
-            string_context_words = get_orth([x for (x, ) in results])
-
         options.cfg.verbose = old_verbose
+        
         return (left_context_words, string_context_words, right_context_words)
 
     def get_context_sentence(self, sentence_id):
@@ -2269,9 +2271,9 @@ class CorpusClass(object):
             format_string += " AND {corpus}.{source_id} = {current_source_id}"
     
         if hasattr(self, "surface_feature"):
-            word_feature = self.surface_feature
+            word_feature = self.resource.surface_feature
         else:
-            word_feature = getattr(self, QUERY_ITEM_WORD)
+            word_feature = getattr(self.resource, QUERY_ITEM_WORD)
             
         _, _, tab, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(tab))
