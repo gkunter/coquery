@@ -332,26 +332,27 @@ class Table(object):
                 ", ".join(fields), 
                 ", ".join(["?"] * len(fields)))
             
-            self._add_cache = dict()
-            
-            #data = []
-            #new_keys = []
-            ## build a list of all new entries, i.e. those for which the value
-            ## is not Null
-            #for row in self._add_cache:
-                #row_id, row_data = self._add_cache[row]
-                #if row_data:
-                    #if strange_check:
-                        #if len(row_data) == 1:
-                            #for x in row_data:
-                                #row_data[x] = ["", row_data[x][0], "u"]
-                    #if self.primary.name in self._col_names:
-                        #data.append(list(row_data.values()))
-                    #else:
-                        #data.append([row_id] + list(row_data.values()))
-                    #new_keys.append(row)
+            #print(sql_string)
+            data = []
+            new_keys = []
+            # build a list of all new entries, i.e. those for which the value
+            # is not Null
+            for row in self._add_cache:
+                row_id, row_data = self._add_cache[row]
+                if row_data:
+                    if strange_check:
+                        if len(row_data) == 1:
+                            for x in row_data:
+                                row_data[x] = ["", row_data[x][0], "u"]
+                    if self.primary.name in self._col_names:
+                        data.append(list(row_data.values()))
+                    else:
+                        data.append([row_id] + list(row_data.values()))
+                    new_keys.append(row)
 
-            #if data: 
+            if data: 
+                with self._DB.engine.connect() as connection:                
+                    connection.execute(sql_string, data)
                 #df = pd.DataFrame(data)
                 #df.columns = fields
 
@@ -367,9 +368,9 @@ class Table(object):
 
                 #df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
 
-                ## Reset all new keys:
-                #for row in new_keys:
-                    #self._add_cache[row] = (self._add_cache[row][0], None)
+                # Reset all new keys:
+                for row in new_keys:
+                    self._add_cache[row] = (self._add_cache[row][0], None)
 
     def flush_cache(self):
         """
@@ -384,39 +385,39 @@ class Table(object):
         this ensures that all new table rows are commited, while at the same
         time preserving some memory space.
         """
-        if self._add_cache:
-            if self.primary.name not in self._col_names:
-                fields = [self.primary.name] + self._col_names
-            else:
-                fields = self._col_names
-            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self._name, ", ".join(fields), ", ".join(["%s"] * len(fields)))
-            data = []
-            # build a list of all new entries, i.e. those for which the value
-            # is not Null
-            for row in self._add_cache:
-                row_id, row_data = self._add_cache[row]
-                if self.primary.name in self._col_names:
-                    data.append(list(row_data.values()))
-                else:
-                    data.append([row_id] + list(row_data.values()))
+        #if self._add_cache:
+            #if self.primary.name not in self._col_names:
+                #fields = [self.primary.name] + self._col_names
+            #else:
+                #fields = self._col_names
+            #sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
+                #self._name, ", ".join(fields), ", ".join(["%s"] * len(fields)))
+            #data = []
+            ## build a list of all new entries, i.e. those for which the value
+            ## is not Null
+            #for row in self._add_cache:
+                #row_id, row_data = self._add_cache[row]
+                #if self.primary.name in self._col_names:
+                    #data.append(list(row_data.values()))
+                #else:
+                    #data.append([row_id] + list(row_data.values()))
 
-            if data: 
-                df = pd.DataFrame(data)
-                df.columns = fields
-                # make sure that all strings are unicode, even under 
-                # Python 2.7:
-                if sys.version_info < (3, 0):
-                    for column in df.columns[df.dtypes == object]:
-                        df[column] = df[column].apply(utf8)
+            #if data: 
+                #df = pd.DataFrame(data)
+                #df.columns = fields
+                ## make sure that all strings are unicode, even under 
+                ## Python 2.7:
+                #if sys.version_info < (3, 0):
+                    #for column in df.columns[df.dtypes == object]:
+                        #df[column] = df[column].apply(utf8)
 
-                # apply unicode normalization:
-                for column in df.columns[df.dtypes == object]:
-                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
+                ## apply unicode normalization:
+                #for column in df.columns[df.dtypes == object]:
+                    #df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
 
-                df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
+                #df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
 
-            self._add_cache = {}
+            #self._add_cache = {}
     
     def _add_next_with_primary(self, row):
         """ 
@@ -470,7 +471,7 @@ class Table(object):
         key = tuple([row[x] for x in self._row_order])
         self._add_lookup[key] = self._current_id
         self._add_cache[key] = (self._current_id, row)
-        return self._current_id   
+        return self._current_id
     
     def get_or_insert(self, values, case=False):
         """ 
@@ -493,6 +494,7 @@ class Table(object):
         """
         key = tuple([values[x] for x in self._row_order])
         if key in self._add_lookup:
+            print(".")
             return self._add_lookup[key]
         else:
             return self.add(values)
