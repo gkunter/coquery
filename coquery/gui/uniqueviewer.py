@@ -18,10 +18,12 @@ import sqlalchemy
 
 from coquery import sqlhelper
 from coquery import options
-import errorbox
-import classes
-from pyqt_compat import QtCore, QtGui
-from ui.uniqueViewerUi import Ui_UniqueViewer
+from coquery.unicode import utf8
+
+from . import errorbox
+from . import classes
+from .pyqt_compat import QtCore, QtGui
+from .ui.uniqueViewerUi import Ui_UniqueViewer
 
 class UniqueViewer(QtGui.QDialog):
     def __init__(self, rc_feature=None, db_name=None, uniques=True, parent=None):
@@ -101,17 +103,17 @@ class UniqueViewer(QtGui.QDialog):
         S = "SELECT {0} FROM {1}".format(self.column, self.table)
         if self._uniques:
             self.df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.db_name))).drop_duplicates()
+            try:
+                self.df.sort_values(by=self.column, inplace=True)
+            except AttributeError:
+                self.df.sort(columns=self.column, inplace=True)
         else:
             self.df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.db_name)))
 
         self.ui.tableWidget.setRowCount(len(self.df.index))
         self.ui.tableWidget.setColumnCount(1)
         for row, x in enumerate(self.df[self.column]):
-            try:
-                self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(str(x)))
-            except UnicodeEncodeError:
-                self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(unicode(x)))
-                
+            self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(utf8(x)))
 
     def finalize(self):
         #self.ui.progress_spinner.stop()

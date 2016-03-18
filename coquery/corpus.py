@@ -861,6 +861,9 @@ class BaseResource(object):
         return item_map
 
 class SQLResource(BaseResource):
+    _word_cache = {}
+    _get_orth_str = None
+    
     def get_operator(self, Token):
         """ returns a string containing the appropriate operator for an 
         SQL query using the Token (considering wildcards and negation) """
@@ -877,7 +880,6 @@ class SQLResource(BaseResource):
         self.lexicon = lexicon
         self.corpus = corpus
         _, _, self.db_type, _, _ = options.get_con_configuration()
-        self._word_cache = {}
 
         # FIXME: in order to make this not depend on a fixed database layout 
         # (here: 'source' and 'file' tables), we should check # for any table 
@@ -891,7 +893,7 @@ class SQLResource(BaseResource):
             options.cfg.token_origin_id = "corpus_file_id"
         else:
             options.cfg.token_origin_id = None
-
+            
     @classmethod
     def get_engine(cls):
         return sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, cls.db_name))
@@ -984,7 +986,7 @@ class SQLResource(BaseResource):
             """ 
             Return the orthographic forms of the word_ids.
             
-            If word_id_list is not a list, it is converted into one.
+            If word_id is not a list, it is converted into one.
             
             Parameters
             ----------
@@ -1003,75 +1005,62 @@ class SQLResource(BaseResource):
             if not hasattr(self, "corpus_word_id"):
                 return word_id
             else:
-                if any([x not in self._word_cache for x in word_id]):
-                    if hasattr(self, "surface_feature"):
-                        word_feature = self.surface_feature
-                    else:
-                        word_feature = getattr(self, QUERY_ITEM_WORD)
-                    _, _, table, feature = self.split_resource_feature(word_feature)
+                L = []
+                for i in word_id:
+                    if i not in self._word_cache:
+                        if not self._get_orth_str:
+                            if hasattr(self, "surface_feature"):
+                                word_feature = self.surface_feature
+                            else:
+                                word_feature = getattr(self, QUERY_ITEM_WORD)
+                            _, _, table, feature = self.split_resource_feature(word_feature)
 
-                    self.lexicon.joined_tables = []
-                    self.lexicon.table_list = [self.word_table]
-                    self.lexicon.add_table_path("word_id", word_feature)
-                    
-                    S = "SELECT {0}, {2}.{3} FROM {1} WHERE {2}.{3} IN ({4})".format(
-                        getattr(self, word_feature),
-                        " ".join(self.lexicon.table_list),
-                        self.word_table,
-                        self.word_id,
-                        ", ".join([str(x) for x in word_id]))
-                    results = [x for x, _ in sorted(list(db_connection.execute(S)),
-                               key=lambda x: word_id.index(x[1]))]
-                    return results
-                else:
-                    return [self._word_cache[x] for x in word_id]
+                            self.lexicon.joined_tables = []
+                            self.lexicon.table_list = [self.word_table]
+                            self.lexicon.add_table_path("word_id", word_feature)
+                            
+                            self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
+                                getattr(self, word_feature),
+                                " ".join(self.lexicon.table_list),
+                                self.word_table,
+                                self.word_id)
+                        self._word_cache[i], = db_connection.execute(self._get_orth_str.format(i)).fetchone()
+                    L.append(self._word_cache[i])
+                return L
 
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
-        token_id = int(token_id)
 
-        old_verbose = options.cfg.verbose
-        options.cfg.verbose = False
+        token_id = int(token_id)
 
         left_span = options.cfg.context_left
         if left_span > token_id:
             start = 1
         else:
             start = token_id - left_span
-
-        left_context_words = []
-        right_context_words = []
-        string_context_words = []
         
         # Get words in left context:
         S = self.corpus.sql_string_get_wordid_in_range(
-                start, 
-                token_id - 1, origin_id)
-        
-        results = db_connection.execute(S)
-        left_context_words = get_orth([x for x, in results])
+                start, token_id - 1, origin_id)
+        left_context_words = get_orth([x for (x, ) in db_connection.execute(S)])
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
         if options.cfg.context_mode == CONTEXT_STRING:
             # Get words matching the query:
             S = self.corpus.sql_string_get_wordid_in_range(
-                    token_id,
-                    token_id + number_of_tokens - 1,
-                    origin_id)
-            results = db_connection.execute(S)
-            string_context_words = get_orth([x for (x, ) in results if x])
+                    token_id, token_id + number_of_tokens - 1, origin_id)
+            string_context_words = get_orth([x for (x, ) in db_connection.execute(S) if x])
+        else:
+            string_context_words = []
 
         # Get words in right context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
-                token_id + number_of_tokens + options.cfg.context_right - 1, origin_id)
-        results = db_connection.execute(S)
-        
-        right_context_words = get_orth([x for x, in results])
+                token_id + number_of_tokens + options.cfg.context_right - 1, 
+                origin_id)
+        right_context_words = get_orth([x for (x, ) in db_connection.execute(S)])
         right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
-        options.cfg.verbose = old_verbose
-        
         return (left_context_words, string_context_words, right_context_words)
 
     def get_context_sentence(self, sentence_id):

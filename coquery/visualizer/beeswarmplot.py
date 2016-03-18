@@ -19,7 +19,7 @@ from coquery import options
 from coquery.defines import *
 from coquery.gui.pyqt_compat import QtGui
 
-import visualizer as vis
+from coquery.visualizer import visualizer as vis
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1

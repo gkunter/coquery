@@ -15,8 +15,8 @@ import numpy as np
 
 from coquery import options
 from coquery.errors import *
-from pyqt_compat import QtGui, QtCore
-from ui.csvOptionsUi import Ui_FileOptions
+from .pyqt_compat import QtGui, QtCore
+from .ui.csvOptionsUi import Ui_FileOptions
 
 class MyTableModel(QtCore.QAbstractTableModel):
 

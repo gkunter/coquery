@@ -282,6 +282,7 @@ class Table(object):
         self._current_id = 0
         self._row_order = []
         self._add_cache = dict()
+        self._add_cache2 = list()
         # The defaultdict _add_lookup will store the index of rows in this 
         # table. It uses the trick described at http://ikigomu.com/?p=186
         # to achieve an O(1) lookup. When looking up a row as in 
@@ -313,162 +314,51 @@ class Table(object):
         Commit the table content to the data base.
         
         This table commits the unsaved content of the table to the data base.
-        After commiting, the values of all table entries are set to None, and
-        only those data that have a value different from None will be 
-        commited the next time this method is called.
         
         As this method is usually called after a file has been processed, 
         this ensures that all new table rows are commited, while at the same
         time preserving some memory space.
         """
-        if self._add_cache:
-            if self.primary.name not in self._col_names:
-                fields = [self.primary.name] + self._col_names
-            else:
-                fields = self._col_names
+        
+        if self._add_cache2:
+            df = pd.DataFrame(self._add_cache2)
+            df.columns = self._get_field_order()
 
-            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self._name, 
-                ", ".join(fields), 
-                ", ".join(["?"] * len(fields)))
-            data = []
-            new_keys = []
-            # build a list of all new entries, i.e. those for which the value
-            # is not Null
-            for row in self._add_cache:
-                row_id, row_data = self._add_cache[row]
-                if row_data:
-                    if strange_check:
-                        if len(row_data) == 1:
-                            for x in row_data:
-                                row_data[x] = ["", row_data[x][0], "u"]
-                    if self.primary.name in self._col_names:
-                        data.append(list(row_data.values()))
-                    else:
-                        data.append([row_id] + list(row_data.values()))
-                    new_keys.append(row)
-
-            if data: 
-                df = pd.DataFrame(data)
-                df.columns = fields
-
-                # make sure that all strings are unicode, even under 
-                # Python 2.7:
-                if sys.version_info < (3, 0):
-                    for column in df.columns[df.dtypes == object]:
-                        df[column] = df[column].apply(utf8)
-
-                # apply unicode normalization:
+            # make sure that all strings are unicode, even under 
+            # Python 2.7:
+            if sys.version_info < (3, 0):
                 for column in df.columns[df.dtypes == object]:
-                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
+                    df[column] = df[column].apply(utf8)
 
-                df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
+            # apply unicode normalization:
+            for column in df.columns[df.dtypes == object]:
+                df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
 
-                # Reset all new keys:
-                for row in new_keys:
-                    self._add_cache[row] = (self._add_cache[row][0], None)
+            df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
+            self._add_cache2 = list()
 
-    def flush_cache(self):
-        """
-        Commit the table content to the data base.
+    def add(self, values):
+        """ 
+        Store the 'values' dictionary in the add cache of the table. If 
+        necessary, a valid primary key is added to the values.
         
-        This table commits the unsaved content of the table to the data base.
-        After committing, the values of all table entries are set to None, and
-        only those data that have a value different from None will be 
-        commited the next time this method is called.
-        
-        As this method is usually called after a file has been processed, 
-        this ensures that all new table rows are commited, while at the same
-        time preserving some memory space.
-        """
-        if self._add_cache:
-            if self.primary.name not in self._col_names:
-                fields = [self.primary.name] + self._col_names
-            else:
-                fields = self._col_names
-            sql_string = "INSERT INTO {} ({}) VALUES ({})".format(
-                self._name, ", ".join(fields), ", ".join(["%s"] * len(fields)))
-            data = []
-            # build a list of all new entries, i.e. those for which the value
-            # is not Null
-            for row in self._add_cache:
-                row_id, row_data = self._add_cache[row]
-                if self.primary.name in self._col_names:
-                    data.append(list(row_data.values()))
-                else:
-                    data.append([row_id] + list(row_data.values()))
-
-            if data: 
-                df = pd.DataFrame(data)
-                df.columns = fields
-                # make sure that all strings are unicode, even under 
-                # Python 2.7:
-                if sys.version_info < (3, 0):
-                    for column in df.columns[df.dtypes == object]:
-                        df[column] = df[column].apply(utf8)
-
-                # apply unicode normalization:
-                for column in df.columns[df.dtypes == object]:
-                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
-
-                df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
-
-            self._add_cache = {}
-    
-    def _add_next_with_primary(self, row):
         """ 
-        Add a valid primary key to the data in the 'row' dictionary, 
-        and store the data in add cache of the table. 
-        """ 
-        self._current_id += 1
-        key = tuple([row[x] for x in self._row_order])
-        self._add_lookup[key]
-        self._add_cache[key] = (self._current_id, row)
-        if self._max_cache and len(self._add_cache) > self._max_cache:
-            self.flush_cache()
-        return self._current_id
+        l = [values[x] for x in self._row_order]
 
-    def _add_next_no_primary(self, row):
-        """ 
-        Store the row in the add cache of the table. The primary key is 
-        expected to be already in the row, so it is not added.
-        """
-        self._current_id = row[self.primary.name]
-        key = tuple([row[x] for x in self._row_order])
-        self._add_lookup[key] = row[self.primary.name]
-        self._add_cache[key] = (self._current_id, row)
-        if self._max_cache and len(self._add_cache) > self._max_cache:
-            self.flush_cache()
-        return self._current_id
-    
-    def add(self, row):
-        """ 
-        Store the 'row' dictionary in the add cache of the table. If 
-        necessary, a valid primary key is added to the row.
-        
-        NOTE: To increase the performance, this method overwrites itself with 
-        either _add_next_no_primary() or _add_next_with_primary(), depending 
-        on whether the submitted row dictionary contains a primary key or not. 
-        In this way, the primary key test is done only for the first time a 
-        row is added to the table, which leads to somewhat faster execution 
-        times.        
-        """ 
-        if not self._col_names:
-            self._col_names = list(row.keys())
-        if self.primary.name in self._col_names:
-            # if the primary key is in the row, use it:
-            self._current_id = row[self.primary.name]
-            self.add = self._add_next_no_primary
-        else:
-            # otherwise, the primary key is created:
+        if not self.primary.name in values:
             self._current_id += 1
-            self.add = self._add_next_with_primary
+            self._add_cache2.append(tuple([self._current_id] + l))
+        else:
+            self._current_id = values[self.primary.name]
+            self._add_cache2.append(tuple(l))
 
-        key = tuple([row[x] for x in self._row_order])
-        self._add_lookup[key] = self._current_id
-        self._add_cache[key] = (self._current_id, row)
-        return self._current_id   
-    
+        self._add_lookup[tuple(l)] = self._current_id
+
+        if self._max_cache and len(self._add_cache2) > self._max_cache:
+            self.commit()
+
+        return self._current_id
+            
     def get_or_insert(self, values, case=False):
         """ 
         Returns the id of the first entry matching the values from the table.
@@ -492,25 +382,13 @@ class Table(object):
         if key in self._add_lookup:
             return self._add_lookup[key]
         else:
-            try:
-                self._current_id = values[self.primary.name]
-            except KeyError:
-                self._current_id += 1
-                
-            # this somewhat odd-looking instruction uses the trick described
-            # at http://ikigomu.com/?p=186 to obtain an O(1) lookup 
-            # performance: just by accessing the defaultdict's element, it is 
-            # automatically initialized with the value of _current_id:
-            self._add_lookup[key]
-            
-            self._add_cache[key] = (self._current_id, values)
-            if self._max_cache and len(self._add_cache) > self._max_cache:
-                self.flush_cache()
+            return self.add(values)
 
-            if not self._col_names:
-                self._col_names = list(values.keys())
-
-            return self._current_id
+    def _get_field_order(self):
+        if not self.primary.name in self._row_order:
+            return [self.primary.name] + self._row_order
+        else:
+            return self._row_order
 
     def find(self, values):
         """ 
@@ -574,7 +452,8 @@ class Table(object):
                         if not column.unique:
                             # add surrogate key 
                             # do not add AUTO_INCREMENT to strings or ENUMs:
-                            str_list.insert(0, "{} INT AUTO_INCREMENT".format(column.name))
+                            #str_list.insert(0, "{} INT AUTO_INCREMENT".format(column.name))
+                            str_list.insert(0, "{} INT".format(column.name))
                             str_list.insert(1, "{} {}".format(column.name.replace("_primary", ""), column.data_type))
                             str_list.append("PRIMARY KEY ({})".format(column.name))
                         else:
@@ -583,6 +462,7 @@ class Table(object):
                                 pattern = "{} {}"
                             else:
                                 pattern = "{} {} AUTO_INCREMENT"
+                            pattern = "{} {}"
                             str_list.insert(0, pattern.format(column.name, column.data_type))
                             str_list.append("PRIMARY KEY ({})".format(column.name))
                     else:

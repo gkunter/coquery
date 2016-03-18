@@ -103,7 +103,7 @@ class InstallerGui(QtGui.QDialog):
             try:
                 self.ui.notes_label.setBackgroundRole(QtGui.QPalette.ColorRole.Base)
             except:
-                print(dir(QtGui.QPalette.ColorRole))
+                print(dir(QtGui.QPalette.ColorRole), type(QtGui.QPalette.ColorRole))
             self.ui.notes_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
 
             self.ui.notes_scroll = QtGui.QScrollArea()                                                                                      

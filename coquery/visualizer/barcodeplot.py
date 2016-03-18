@@ -13,12 +13,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import unittest
 from coquery import options
 from coquery.defines import *
 from coquery.unicode import utf8
 
-import visualizer as vis
+from coquery.visualizer import visualizer as vis
+
 import seaborn as sns
 import pandas as pd
 import numpy as np

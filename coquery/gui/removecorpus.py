@@ -15,8 +15,8 @@ import sys
 
 from coquery import options
 from coquery.unicode import utf8
-from pyqt_compat import QtCore, QtGui
-from ui.removeCorpusUi import Ui_RemoveCorpus
+from .pyqt_compat import QtCore, QtGui
+from .ui.removeCorpusUi import Ui_RemoveCorpus
 
 class RemoveCorpusDialog(QtGui.QDialog):
     def __init__(self, entry, configuration_name, parent=None):

@@ -24,9 +24,9 @@ from coquery import options
 from coquery.errors import *
 from coquery.defines import *
 
-from pyqt_compat import QtCore, QtGui
-import classes
-from ui.connectionConfigurationUi import Ui_ConnectionConfig
+from .pyqt_compat import QtCore, QtGui
+from . import classes
+from .ui.connectionConfigurationUi import Ui_ConnectionConfig
 
 def check_valid_host(s):
     """

@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 from __future__ import division
 import math
 
-import visualizer as vis
+from coquery.visualizer import visualizer as vis
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt

@@ -947,7 +947,7 @@ class CoqueryApp(QtGui.QMainWindow):
             name = name[0]
         
         if name:
-            options.cfg.query_file_path = os.path.dirname(utf(name))
+            options.cfg.query_file_path = os.path.dirname(utf8(name))
             self.ui.edit_file_name.setText(name)
             self.switch_to_file()
             
@@ -1041,7 +1041,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
             # exclude invisble rows:
             tab = tab.iloc[~tab.index.isin(pd.Series(
-                options.cfg.row_visibility[self.Session.query_type].keys()))]
+                list(options.cfg.row_visibility[self.Session.query_type].keys())))]
             
             # restrict to selection?
             if selection or clipboard:
@@ -1463,7 +1463,7 @@ class CoqueryApp(QtGui.QMainWindow):
         ----------
         column : column index
         """
-        from renamecolumn import RenameColumnDialog
+        from .renamecolumn import RenameColumnDialog
         
         column_name = self.Session.translate_header(column, ignore_alias=True)
         current_name = options.cfg.column_names.get(column, column_name)
@@ -2186,7 +2186,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.widget_list.append(log_view)
 
     def show_about(self):
-        from ui.aboutUi import Ui_AboutDialog
+        from .ui.aboutUi import Ui_AboutDialog
         dialog = QtGui.QDialog(self)
         dialog.ui = Ui_AboutDialog()
         dialog.ui.setupUi(dialog)
