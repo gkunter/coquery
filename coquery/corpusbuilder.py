@@ -467,7 +467,8 @@ class Table(object):
         key = tuple([row[x] for x in self._row_order])
         self._add_lookup[key] = self._current_id
         self._add_cache[key] = (self._current_id, row)
-        return self._current_id        
+        return self._current_id   
+    
     def get_or_insert(self, values, case=False):
         """ 
         Returns the id of the first entry matching the values from the table.
@@ -491,7 +492,21 @@ class Table(object):
         if key in self._add_lookup:
             return self._add_lookup[key]
         else:
-            return self.add(values)
+            if not self._col_names:
+                self._col_names = list(values.keys())
+            try:
+                self._current_id = values[self.primary.name]
+            except KeyError:
+                self._current_id += 1
+            # this somewhat odd-looking instruction uses the trick described
+            # at http://ikigomu.com/?p=186 to obtain an O(1) lookup 
+            # performance: just by accessing the defaultdict's element, it is 
+            # automatically initialized with the value of _current_id:
+            self._add_lookup[key]
+            self._add_cache[key] = (self._current_id, values)
+            if self._max_cache and len(self._add_cache) > self._max_cache:
+                self.flush_cache()
+            return self._current_id
 
     def find(self, values):
         """ 
