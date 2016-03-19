@@ -34,6 +34,7 @@ import logging.handlers
 from .errors import *
 from . import options
 from .defines import *
+from .unicode import utf8
 
 def set_logger(log_file_path):
     logger = logging.getLogger(NAME)
@@ -82,6 +83,7 @@ def main():
             if not options.cfg.corpus:
                 raise NoCorpusSpecifiedError
 
+            options.cfg.corpus = utf8(options.cfg.corpus)
             if options.cfg.corpus not in options.cfg.current_resources:
                 raise CorpusUnavailableError(options.cfg.corpus)
 

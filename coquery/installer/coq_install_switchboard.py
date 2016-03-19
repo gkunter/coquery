@@ -13,6 +13,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 import codecs
 import tarfile
+import os
 import pandas as pd
 
 try:
@@ -30,6 +31,7 @@ class BuilderClass(BaseCorpusBuilder):
     word_table = "Lexicon"
     word_id = "WordId"
     word_label = "Word"
+    word_uttered = "UtteredWord"
     word_transcript = "Transcript"
     
     file_table = "Files"
@@ -58,12 +60,12 @@ class BuilderClass(BaseCorpusBuilder):
     # https://www.isip.piconepress.com/projects/switchboard/doc/statistics/ms98_conv_stats.text
     source_table = "Conversations"
     source_id = "ConversationId"
-    source_label = "Conversation"
+    source_label = "Conversation" # this is the number used e.g. in the file names
     source_topic = "Topic"
     source_difficulty = "Difficulty"
 
     expected_files = [
-        "call_con_tab.csv", "rating_tab.csv", "caller_tab.csv",
+        "call_con_tab.csv", "caller_tab.csv",
         "switchboard_word_alignments.tar.gz"]
 
     def __init__(self, gui=False, *args):
@@ -72,7 +74,8 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.word_table,
             [Identifier(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-             Column(self.word_label, "VARCHAR(40) NOT NULL"),
+             Column(self.word_label, "VARCHAR(32) NOT NULL"),
+             Column(self.word_uttered, "VARCHAR(23) NOT NULL"),
              Column(self.word_transcript, "VARCHAR(50) NOT NULL")])
 
         self.create_table_description(self.file_table,
@@ -98,7 +101,7 @@ class BuilderClass(BaseCorpusBuilder):
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_speaker_id, self.speaker_table),
              Link(self.corpus_source_id, self.source_table),
-             Column(self.corpus_starttime, "DECIMAL(17,6) NOT NULL"),
+             Column(self.corpus_starttime, "DECIMAL(17,6) UNSIGNED NOT NULL"),
              Column(self.corpus_endtime, "DECIMAL(17,6) NOT NULL")])
 
         self.add_time_feature(self.corpus_starttime)
@@ -106,6 +109,8 @@ class BuilderClass(BaseCorpusBuilder):
         
         self._file_id = 0
         self._token_id = 0
+        
+        self.surface_feature = "word_uttered"
 
     @staticmethod
     def get_name():
@@ -171,7 +176,6 @@ class BuilderClass(BaseCorpusBuilder):
         download the following files:
         <ul>
             <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/call_con_tab.csv'>call_con_tab.csv</a> – conversation details</li>
-            <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/rating_tab.csv'>rating_tab.csv</a> – conversation ratings</li>
             <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/caller_tab.csv'>caller_tab.csv</a> – speaker information</li></ul></p>
         <p>Transcriptions and word alignments are provided for free by the 
         <a href='https://www.isip.piconepress.com/'>Institute for Signal and Information Processing</a>. From their <a href='https://www.isip.piconepress.com/projects/switchboard/'>Switchboard project site</a>, the following file is required for installation:
@@ -179,40 +183,81 @@ class BuilderClass(BaseCorpusBuilder):
             <li><a href='https://www.isip.piconepress.com/projects/switchboard/releases/switchboard_word_alignments.tar.gz'>switchboard_word_alignments.tar.gz</a> – Manually corrected word alignments</li></ul></p>
         """
 
-
     def process_file(self, filename):
-
-        if filename == "call_con_tab.csv":
-            self._df_conv = pd.DataFrame.from_csv(filename)
-        elif filename == "rating_tab.csv":
-            self._df_rating = pd.DataFrame.from_csv(filename)
-        elif filename == "caller_tab.csv":
-            self._df_caller = pd.DataFrame.from_csv(filename)
-        elif filename == "switchboard_word_alignments.tar.gz":
-            tar_file = tarfile.TarFile(filename)
+        basename = os.path.basename(filename)
+        if basename == "call_con_tab.csv":
+            self._df_conv = pd.read_csv(filename, sep=", ",
+                names=["ConvId", "Side", "SpeakerId", "PhoneNum", "Length", "IVI_No", "Remarks", "Active"])
             
-            # taken from Buckeye installer:
-            
-            #for small_zip_name in zip_file.namelist():
-                #speaker_name = os.path.basename(small_zip_name)
-                #self._speaker_id = int(speaker_name[1:3])
-                #if speaker_name in self._zip_files:
-                    #small_zip_file = zipfile.ZipFile(StringIO(zip_file.read(small_zip_name)))
-                    #self._process_words_file(small_zip_file, speaker_name)
+        elif basename == "caller_tab.csv":
+            self._df_caller = pd.read_csv(filename)
+            #self.DB.load_dataframe(
+                #self._df_caller, 
+                #self.speaker_table, 
+                #self.speaker_id)
+        elif basename == "switchboard_word_alignments.tar.gz":
+            with tarfile.open(filename, "r:gz") as tar_file:
+                for member in tar_file.getmembers():
+                    if self._interrupted:
+                        return
+                    self._file_id += 1
+                    match = re.search("sw(\d\d\d\d)([A|B])-ms98-a-word\.text", 
+                                     member.name)
+                    if match:
+                        self._duration = 0
+                        self._process_words_file(tar_file, member)
+                    
+                        self._value_file_name = "{}/{}".format(basename, member.name)
+                        self._value_file_path = os.path.split(filename)[0]
+                        
+                        d = {self.file_name: self._value_file_name,
+                            self.file_id: self._file_id,
+                            self.file_duration: self._duration,
+                            self.file_path: self._value_file_path}
+                        self.table(self.file_table).add(d)
+                        self.commit_data()
 
-                    #self._value_file_name = "{}/{}".format(os.path.basename(filename), speaker_name)
-                    #self._value_file_path = os.path.split(filename)[0]
-                    #self._value_file_duration = self._duration
-                    #d = {self.file_name: self._value_file_name,
-                        #self.file_duration: self._value_file_duration,
-                        #self.file_path: self._value_file_path}
-                    #self._file_id = self.table(self.file_table).get_or_insert(d)
-            
-            pass
-        return
+    def _process_words_file(self, tar_file, member):
+        match = re.search("sw(\d\d\d\d)([A|B])-ms98-a-word\.text", member.name)        
+        conv_id = int(match.groups()[0])
+        side = '"{}"'.format(match.groups()[1])
+        speaker_id = self._df_conv[(self._df_conv.ConvId == conv_id) & 
+                                   (self._df_conv.Side == side)].SpeakerId.values[0]
+        #source_id = self._df_conv.index[self._df_conv.ConvId == conv_id]
+        source_id = 1
+        
+        input_data = list(tar_file.extractfile(member))
 
-    def _process_words_file(self, speaker_zip, filename):
-        return
+        for row in input_data:
+            if self._interrupted:
+                return
+            try:
+                source, start, end, label = [x.strip() for x in row.split()]
+            except ValueError:
+                print(member.name, row)
+                continue
+            uttered = label
+            match = re.match("(.*)\[(.*)\](.*)", label)
+            if match:
+                matched = match.group(2)
+                if matched.startswith("laughter-"):
+                    label = matched.partition("laughter-")[-1]
+                elif match.group(1) != "" or match.group(3) != "":
+                    # incomplete utterance, e.g. 'reall[y]-' or 'sim[ilar]-'
+                    label = "{}{}{}".format(*match.groups()).strip("-")
+            d = {self.word_label: label.lower(),
+                 self.word_uttered: uttered,
+                 self.word_transcript: ""}
+            self._word_id = self.table(self.word_table).get_or_insert(d)
+            
+            d = {self.corpus_word_id: self._word_id,
+                 self.corpus_starttime: start,
+                 self.corpus_endtime: end,
+                 self.corpus_file_id: self._file_id,
+                 self.corpus_source_id: source_id,
+                 self.corpus_speaker_id: speaker_id}
+            self.add_token_to_corpus(d)
+            self._duration = max(self._duration, float(end))
 
         ## skeleton from Buckeye installer:
         #file_name, _ = os.path.splitext(filename)

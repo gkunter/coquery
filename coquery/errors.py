@@ -21,10 +21,11 @@ import re
 import textwrap
 
 from .defines import *
+from .unicode import utf8
 
 class GenericException(Exception):
     def __init__(self, *par):
-        self.par = ", ".join([str(x) for x in par])
+        self.par = ", ".join([utf8(x) for x in par])
 
     def __str__(self):
         if self.par:

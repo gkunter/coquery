@@ -24,9 +24,9 @@ from coquery.errors import *
 from coquery.defines import *
 from coquery.unicode import utf8
 
-import classes
-from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
-from ui.corpusManagerUi import Ui_corpusManager
+from . import classes
+from .pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from .ui.corpusManagerUi import Ui_corpusManager
 
 class CoqAccordionEntry(QtGui.QWidget):
     """ Define a QWidget that can be used as an entry in a accordion list."""

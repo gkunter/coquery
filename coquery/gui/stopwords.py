@@ -14,7 +14,7 @@ import pandas as pd
 
 from coquery import options
 from coquery.defines import *
-import queryfilter
+from . import classes
 from pyqt_compat import QtCore, QtGui
 from ui.stopwordsUi import Ui_Stopwords
 
@@ -114,7 +114,7 @@ class Stopwords(QtGui.QDialog):
         self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
         self.ui.stopword_list.close()
         #self.ui.stopword_list = CoqStopwordList()
-        self.ui.stopword_list = queryfilter.CoqTagBox(label="Add stop word:")
+        self.ui.stopword_list = classes.CoqTagBox(label="Add stop word:")
         self.ui.horizontalLayout.insertWidget(0, self.ui.stopword_list)
 
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Reset).clicked.connect(self.reset_list)

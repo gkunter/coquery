@@ -18,7 +18,7 @@ import pandas as pd
 try:
     from cStringIO import StringIO
 except ImportError:
-    from io import StringIO
+    from io import StringIO, BytesIO
 
 from coquery.corpusbuilder import *
 from coquery.unicode import utf8
@@ -422,7 +422,15 @@ class BuilderClass(BaseCorpusBuilder):
             speaker_name = os.path.basename(small_zip_name)
             self._speaker_id = int(speaker_name[1:3])
             if speaker_name in self._zip_files:
-                small_zip_file = zipfile.ZipFile(StringIO(zip_file.read(small_zip_name)))
+                if self._interrupted:
+                    return
+                try:
+                    # Python 2.7:
+                    _io = StringIO(zip_file.read(small_zip_name))
+                except TypeError:
+                    # Python 3.x:
+                    _io = BytesIO(zip_file.read(small_zip_name))
+                small_zip_file = zipfile.ZipFile(_io)
                 self._process_words_file(small_zip_file, speaker_name)
 
                 self._value_file_name = "{}/{}".format(os.path.basename(filename), speaker_name)
@@ -432,6 +440,8 @@ class BuilderClass(BaseCorpusBuilder):
                     self.file_duration: self._value_file_duration,
                     self.file_path: self._value_file_path}
                 self._file_id = self.table(self.file_table).get_or_insert(d)
+                self.commit_data()
+                
 
     def _get_segments(self, speaker_zip, filename):
         file_body = False
@@ -443,6 +453,8 @@ class BuilderClass(BaseCorpusBuilder):
         segments = []
         
         for row in input_data:
+            if self._interrupted:
+                return
             while "  " in row:
                 row = row.replace("  ", " ")
             # only process the lines after the hash mark:

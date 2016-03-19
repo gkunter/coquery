@@ -16,19 +16,19 @@ import sys
 import re
 
 from coquery import options
-from pyqt_compat import QtCore, QtGui
-from ui.functionApplyUi import Ui_FunctionDialog
+from .pyqt_compat import QtCore, QtGui
+from .ui.functionApplyUi import Ui_FunctionDialog
 
 def func_regexp(x, s):
-    match = re.search("({})".format(s), x)
-    if match:
-        return match.group(1)
-    else:
+    try:
+        start, end = re.search("({})".format(s), x).span()
+    except AttributeError:
         return ""
+    else:
+        return x[start:end]
 
 def func_match(x, s):
-    match = re.search("({})".format(s), x)
-    if match:
+    if re.search("{}".format(s), x):
         return "yes"
     else:
         return "no"

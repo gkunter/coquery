@@ -29,7 +29,6 @@ from . import options
 from . import sqlhelper
 
 def collapse_words(word_list):
-    
     def is_tag(s):
         # there are some tags that should still be preceded by spaces. In 
         # paricular those that are normally used for typesetting, including
@@ -47,36 +46,37 @@ def collapse_words(word_list):
     contraction = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
     token_list = []
     punct = '!\'),-./:;?^_`}’”]'
-    context_list = [x.strip() for x in word_list]
+    context_list = [x.strip() if hasattr(x, "strip") else x for x in word_list]
     open_quote = {}
     open_quote ['"'] = False
     open_quote ["'"] = False
     last_token = ""
     for i, current_token in enumerate(context_list):
-        if '""""' in current_token:
-            current_token = '"'
-    
-        # stupid list of exceptions in which the current_token should NOT
-        # be preceded by a space:
-        no_space = False
-        if all([x in punct for x in current_token]):
-            no_space = True        
-        if current_token in contraction:
-            no_space = True            
-        if last_token in '({[‘“':
-            no_space = True            
-        if is_tag(last_token):
-            no_space = True        
-        if is_tag(current_token):
-            no_space = True
-        if last_token.endswith("/"):
-            no_space = True
-            
-        if not no_space:
-            token_list.append(" ")
+        if current_token:
+            if '""""' in current_token:
+                current_token = '"'
         
-        token_list.append(current_token)
-        last_token = current_token
+            # stupid list of exceptions in which the current_token should NOT
+            # be preceded by a space:
+            no_space = False
+            if all([x in punct for x in current_token]):
+                no_space = True        
+            if current_token in contraction:
+                no_space = True            
+            if last_token in '({[‘“':
+                no_space = True            
+            if is_tag(last_token):
+                no_space = True        
+            if is_tag(current_token):
+                no_space = True
+            if last_token.endswith("/"):
+                no_space = True
+                
+            if not no_space:
+                token_list.append(" ")
+            
+            token_list.append(current_token)
+            last_token = current_token
     return "".join(token_list)
 
 #class ResFeature(str):
@@ -861,6 +861,9 @@ class BaseResource(object):
         return item_map
 
 class SQLResource(BaseResource):
+    _word_cache = {}
+    _get_orth_str = None
+    
     def get_operator(self, Token):
         """ returns a string containing the appropriate operator for an 
         SQL query using the Token (considering wildcards and negation) """
@@ -877,7 +880,6 @@ class SQLResource(BaseResource):
         self.lexicon = lexicon
         self.corpus = corpus
         _, _, self.db_type, _, _ = options.get_con_configuration()
-        self._word_cache = {}
 
         # FIXME: in order to make this not depend on a fixed database layout 
         # (here: 'source' and 'file' tables), we should check # for any table 
@@ -891,7 +893,7 @@ class SQLResource(BaseResource):
             options.cfg.token_origin_id = "corpus_file_id"
         else:
             options.cfg.token_origin_id = None
-
+            
     @classmethod
     def get_engine(cls):
         return sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, cls.db_name))
@@ -984,7 +986,7 @@ class SQLResource(BaseResource):
             """ 
             Return the orthographic forms of the word_ids.
             
-            If word_id_list is not a list, it is converted into one.
+            If word_id is not a list, it is converted into one.
             
             Parameters
             ----------
@@ -1000,117 +1002,65 @@ class SQLResource(BaseResource):
             """
             if not hasattr(word_id, "__iter__"):
                 word_id = [word_id]
-            
-                if hasattr(self, QUERY_ITEM_WORD):
-                    rc_feature = getattr(self, QUERY_ITEM_WORD)
-                    _, _, table, feature = self.split_resource_feature(rc_feature)
-                    S = "SELECT {} FROM {} WHERE {} = ".format(
-                        getattr(self, rc_feature),
-                        getattr(self, "{}_table".format(table)),
-                        getattr(self, "{}_id".format(table)))
-
-                    # build the word list:
-                    L = []
-                    for x in word_id:
-                        # check the word cache:
-                        try:
-                            L.append(self._word_cache[x])
-                        except KeyError:
-                            results = db_connection.execute("{}{}".format(S, x))
-                            try:
-                                orth = results.fetchone()[0][0]
-                            except IndexError:
-                                # no entry for this word_id -- use default value:
-                                orth = DEFAULT_MISSING_VALUE
-                            finally:
-                                L.append(orth)
-                                # add to cache:
-                                self._word_cache[x] = orth
-                    return L
+            if not hasattr(self, "corpus_word_id"):
+                return word_id
             else:
-                # if there is no attribute "corpus_word_id" in the resource, we
-                # have to assume that the identifies provided are already all the 
-                # information that we have on the words. This makes sense for 
-                # example in the case of dictionaries. So, in that case, we simply
-                # return the list:
-                if not hasattr(self, "corpus_word_id"):
-                    return word_id
-
-                # FIXME: use table_path to determine the path to the table of
-                # QUERY_ITEM_WORD
-                
-                # prepare a partial SQL query:
-                S = "SELECT {} FROM {} WHERE {} = ".format(
-                            self.word_label, 
-                            self.word_table,
-                            self.word_id)
-
-                # build the word list:
                 L = []
-                #cur = db_connection.cursor()
-                for x in word_id:
-                    # check the word cache:
-                    try:
-                        L.append(self._word_cache[x])
-                    except KeyError:
-                        results = db_connection.execute("{}{}".format(S, x))
-                        try:
-                            orth = results.fetchone()[0]
-                        except IndexError:
-                            # no entry for this word_id -- use default value:
-                            orth = "<NA>"
-                        finally:
-                            L.append(orth)
-                            # add to cache:
-                            self._word_cache[x] = orth
+                for i in word_id:
+                    if i not in self._word_cache:
+                        if not self._get_orth_str:
+                            if hasattr(self, "surface_feature"):
+                                word_feature = self.surface_feature
+                            else:
+                                word_feature = getattr(self, QUERY_ITEM_WORD)
+                            _, _, table, feature = self.split_resource_feature(word_feature)
+
+                            self.lexicon.joined_tables = []
+                            self.lexicon.table_list = [self.word_table]
+                            self.lexicon.add_table_path("word_id", word_feature)
+                            
+                            self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
+                                getattr(self, word_feature),
+                                " ".join(self.lexicon.table_list),
+                                self.word_table,
+                                self.word_id)
+                        self._word_cache[i], = db_connection.execute(self._get_orth_str.format(i)).fetchone()
+                    L.append(self._word_cache[i])
                 return L
 
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
-        token_id = int(token_id)
 
-        old_verbose = options.cfg.verbose
-        options.cfg.verbose = False
+        token_id = int(token_id)
 
         left_span = options.cfg.context_left
         if left_span > token_id:
             start = 1
         else:
             start = token_id - left_span
-
-        left_context_words = []
-        right_context_words = []
-        string_context_words = []
         
         # Get words in left context:
         S = self.corpus.sql_string_get_wordid_in_range(
-                start, 
-                token_id - 1, origin_id)        
-        
-        results = db_connection.execute(S)
-        
-        left_context_words = get_orth([x for x, in results])
+                start, token_id - 1, origin_id)
+        left_context_words = get_orth([x for (x, ) in db_connection.execute(S)])
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
-
-        # Get words in right context:
-        S = self.corpus.sql_string_get_wordid_in_range(
-                token_id + number_of_tokens, 
-                token_id + number_of_tokens + options.cfg.context_right - 1, origin_id)
-        results = db_connection.execute(S)
-        
-        right_context_words = get_orth([x for x, in results])
-        right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
         if options.cfg.context_mode == CONTEXT_STRING:
             # Get words matching the query:
             S = self.corpus.sql_string_get_wordid_in_range(
-                    token_id,
-                    token_id + number_of_tokens - 1,
-                    origin_id)
-            results = db_connection.execute(S)
-            string_context_words = get_orth([x for (x, ) in results])
+                    token_id, token_id + number_of_tokens - 1, origin_id)
+            string_context_words = get_orth([x for (x, ) in db_connection.execute(S) if x])
+        else:
+            string_context_words = []
 
-        options.cfg.verbose = old_verbose
+        # Get words in right context:
+        S = self.corpus.sql_string_get_wordid_in_range(
+                token_id + number_of_tokens, 
+                token_id + number_of_tokens + options.cfg.context_right - 1, 
+                origin_id)
+        right_context_words = get_orth([x for (x, ) in db_connection.execute(S)])
+        right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
+
         return (left_context_words, string_context_words, right_context_words)
 
     def get_context_sentence(self, sentence_id):
@@ -2309,7 +2259,11 @@ class CorpusClass(object):
         if origin_id:
             format_string += " AND {corpus}.{source_id} = {current_source_id}"
     
-        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
+        if hasattr(self, "surface_feature"):
+            word_feature = self.resource.surface_feature
+        else:
+            word_feature = getattr(self.resource, QUERY_ITEM_WORD)
+            
         _, _, tab, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(tab))
         word_id = getattr(self.resource, "{}_id".format(tab))

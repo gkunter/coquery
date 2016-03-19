@@ -15,7 +15,7 @@ import math
 from coquery.defines import *
 
 from matplotlib.patches import Rectangle
-import visualizer as vis
+from coquery.visualizer import visualizer as vis
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1

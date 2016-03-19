@@ -12,8 +12,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 import sys
 
 from coquery import options
-from pyqt_compat import QtGui, QtCore
-from ui.settingsUi import Ui_SettingsDialog
+from .pyqt_compat import QtGui, QtCore
+from .ui.settingsUi import Ui_SettingsDialog
 
 class Settings(QtGui.QDialog):
     def __init__(self, _options, parent=None):

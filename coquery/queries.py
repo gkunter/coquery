@@ -36,8 +36,8 @@ except ImportError:
 import numpy as np        
 import pandas as pd
 
-from defines import *
-from errors import *
+from .defines import *
+from .errors import *
 from . import corpus
 from . import tokens
 from . import options
@@ -296,10 +296,16 @@ class TokenQuery(object):
         """
         self.results_frame = pd.DataFrame()
         
-        for self._sub_query in self.query_list:
+        self._max_number_of_tokens = 0
+        for x in self.query_list:
+            self._max_number_of_tokens = max(self._max_number_of_tokens, len(x))
+        
+        for i, self._sub_query in enumerate(self.query_list):
             self._current_number_of_tokens = len(self._sub_query)
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
 
+            if len(self.query_list) > 1:
+                logger.info("Subquery #{} of {}: {}".format(i+1, len(self.query_list), self._current_subquery_string))
 
             if self.Resource.db_type == SQL_SQLITE:
                 # SQLite: keep track of databases that need to be attached. 
@@ -449,7 +455,7 @@ class TokenQuery(object):
         def insert_string(row):
             row["coq_context_string"] = corpus.collapse_words(
                 list(row[left_columns]) + 
-                [x.upper() for x in list(row[target_columns])] + 
+                [x.upper() if hasattr(x, "upper") else x for x in list(row[target_columns])] + 
                 list(row[right_columns]))
             return row
         
@@ -490,10 +496,14 @@ class TokenQuery(object):
         elif options.cfg.context_mode == CONTEXT_STRING:
             left_columns = ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
             right_columns = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
+            #if word_feature in options.cfg.selected_features:
+                #target_columns = ["coq_{}_{}".format(word_feature, x + 1) for x in range(self._current_number_of_tokens)]
+            #else:
+                #target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._current_number_of_tokens)]
             if word_feature in options.cfg.selected_features:
-                target_columns = ["coq_{}_{}".format(word_feature, x + 1) for x in range(self._current_number_of_tokens)]
+                target_columns = ["coq_{}_{}".format(word_feature, x + 1) for x in range(self._max_number_of_tokens)]
             else:
-                target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._current_number_of_tokens)]
+                target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._max_number_of_tokens)]
             df = df.apply(insert_string, axis=1)
         return df
     

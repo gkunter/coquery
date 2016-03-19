@@ -16,8 +16,8 @@ import sys
 import re
 
 from coquery import options
-from pyqt_compat import QtCore, QtGui
-from ui.renameColumnUi import Ui_Dialog
+from .pyqt_compat import QtCore, QtGui
+from .ui.renameColumnUi import Ui_Dialog
 
 def func_regexp(x, s):
     match = re.search("({})".format(s), x)

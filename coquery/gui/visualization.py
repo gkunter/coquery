@@ -49,9 +49,9 @@ from coquery import options
 from coquery.defines import *
 from coquery.errors import *
 
-import classes
-from ui.visualizerUi import Ui_Visualizer
-from pyqt_compat import QtGui, QtCore, pyside
+from . import classes
+from .ui.visualizerUi import Ui_Visualizer
+from .pyqt_compat import QtGui, QtCore, pyside
 
 # Tell matplotlib whether PySide or PyQt4 is used:
 if pyside:
@@ -114,7 +114,7 @@ class CoqNavigationToolbar(NavigationToolbar):
         return self._zoom
 
     def edit_parameters(self, *args):
-        import figureoptions
+        from . import figureoptions
         
         new_values = figureoptions.FigureOptions.manage(self.parent.visualizer.options)
         if new_values:

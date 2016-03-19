@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 
 import collections
 
-import visualizer as vis
+from coquery.visualizer import visualizer as vis
 import seaborn as sns
 from seaborn.palettes import cubehelix_palette
 import pandas as pd

@@ -28,19 +28,19 @@
             <div class="col-xs-4">
                 <h2>Features</h2>
                 <p>Read a summary of some of the features that Coquery offers.</p>
-                <p><a href="about/index.html" class="btn btn-primary">Overview &raquo;</a></p>
+                <p><a href="about/index.html" class="btn btn-primary btn-sm">Overview &raquo;</a></p>
             </div>
             
             <div class="col-xs-4">
                 <h2>Gallery</h2>
                 <p>See screenshots of different components of Coquery in action.</p>
-                <p><a href="about/gallery.html" class="btn btn-primary">View gallery &raquo;</a></p>
+                <p><a href="about/gallery.html" class="btn btn-primary btn-sm">View gallery &raquo;</a></p>
             </div>
 
             <div class="col-xs-4">
                 <h2>Tutorial</h2>
                 <p>Follow these steps to build and query a text corpus in ten minutes.</p>
-                <p><a href="doc/tutorial/index.html" class="btn btn-primary">First steps &raquo;</a></p>
+                <p><a href="doc/tutorial/index.html" class="btn btn-primary btn-sm">First steps &raquo;</a></p>
             </div>
 
         </div>

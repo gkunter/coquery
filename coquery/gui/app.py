@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 from __future__ import print_function
+from __future__ import absolute_import
 
 import sys
 import importlib
@@ -29,11 +30,11 @@ from coquery.session import *
 from coquery.defines import *
 from coquery.unicode import utf8
 
-import classes
-import errorbox
-import contextviewer
-from pyqt_compat import QtCore, QtGui, QtHelp
-from ui import coqueryUi
+from . import classes
+from . import errorbox
+from . import contextviewer
+from .pyqt_compat import QtCore, QtGui, QtHelp
+from .ui import coqueryUi
 
 
 # add required paths:
@@ -353,7 +354,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menuSettings.aboutToShow.connect(self.show_settings_menu)
 
     def help(self):
-        import helpviewer
+        from . import helpviewer
         
         self.helpviewer = helpviewer.HelpViewer(parent=self)
         self.helpviewer.show()
@@ -946,13 +947,13 @@ class CoqueryApp(QtGui.QMainWindow):
             name = name[0]
         
         if name:
-            options.cfg.query_file_path = os.path.dirname(utf(name))
+            options.cfg.query_file_path = os.path.dirname(utf8(name))
             self.ui.edit_file_name.setText(name)
             self.switch_to_file()
             
     def file_options(self):
         """ Get CSV file options for current query input file. """
-        import csvoptions
+        from . import csvoptions
         results = csvoptions.CSVOptions.getOptions(
             utf8(self.ui.edit_file_name.text()), 
             (options.cfg.input_separator,
@@ -988,7 +989,7 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.use_stopwords = self.ui.stopword_switch.isOn()
 
     def manage_stopwords(self):
-        import stopwords 
+        from . import stopwords 
         old_list = options.cfg.stopword_list
         result = stopwords.Stopwords.manage(options.cfg.stopword_list, options.cfg.icon)
         if result != None:
@@ -1011,7 +1012,7 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.use_corpus_filters = self.ui.filter_switch.isOn()
 
     def manage_filters(self):
-        import filterviewer
+        from . import filterviewer
         old_list = options.cfg.filter_list
         result = filterviewer.Filters.manage(options.cfg.filter_list, options.cfg.icon)
         if result != None:
@@ -1040,7 +1041,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
             # exclude invisble rows:
             tab = tab.iloc[~tab.index.isin(pd.Series(
-                options.cfg.row_visibility[self.Session.query_type].keys()))]
+                list(options.cfg.row_visibility[self.Session.query_type].keys())))]
             
             # restrict to selection?
             if selection or clipboard:
@@ -1223,7 +1224,7 @@ class CoqueryApp(QtGui.QMainWindow):
             return menu
 
     def show_unique_values(self, item=None, rc_feature=None, uniques=True):
-        import uniqueviewer
+        from . import uniqueviewer
         resource = self.resource
         if item is not None:
             rc_feature = item.objectName()
@@ -1462,7 +1463,7 @@ class CoqueryApp(QtGui.QMainWindow):
         ----------
         column : column index
         """
-        from renamecolumn import RenameColumnDialog
+        from .renamecolumn import RenameColumnDialog
         
         column_name = self.Session.translate_header(column, ignore_alias=True)
         current_name = options.cfg.column_names.get(column, column_name)
@@ -1711,7 +1712,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 msg_missing_seaborn_module)
             return
         
-        import visualization
+        from . import visualization
         
         # try to import the specified visualization module:
         name = "coquery.visualizer.{}".format(name)
@@ -1770,7 +1771,7 @@ class CoqueryApp(QtGui.QMainWindow):
             The entry from the corpus manager that has been selected for 
             removal
         """
-        import removecorpus
+        from . import removecorpus
 
         try:
             resource, _, _, module = options.cfg.current_resources[entry.name]
@@ -1844,8 +1845,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.change_corpus()
 
     def build_corpus(self):
-        import coq_install_generic
-        from corpusbuilder_interface import BuilderGui
+        from coquery. installer import coq_install_generic
+        from .corpusbuilder_interface import BuilderGui
 
         builder = BuilderGui(coq_install_generic.BuilderClass, self)
         try:
@@ -1859,7 +1860,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.corpusListUpdated.emit()
             
     def install_corpus(self, builder_class):
-        from corpusbuilder_interface import InstallerGui
+        from .corpusbuilder_interface import InstallerGui
 
         builder = InstallerGui(builder_class, self)
         try:
@@ -1873,7 +1874,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.corpusListUpdated.emit()
             
     def manage_corpus(self):
-        import corpusmanager
+        from . import corpusmanager
         
         if self.corpus_manager:
             self.corpus_manager.raise_()
@@ -1922,7 +1923,7 @@ class CoqueryApp(QtGui.QMainWindow):
             shutdown()
         
     def settings(self):
-        import settings
+        from . import settings
         settings.Settings.manage(options.cfg, self)
         self.ui.data_preview.setFont(options.cfg.table_font)
 
@@ -2029,7 +2030,7 @@ class CoqueryApp(QtGui.QMainWindow):
         return state
 
     def connection_settings(self):
-        import connectionconfiguration
+        from . import connectionconfiguration
         try:
             config_dict, name = connectionconfiguration.ConnectionConfiguration.choose(options.cfg.current_server, options.cfg.server_configuration)
         except TypeError:
@@ -2039,7 +2040,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.change_mysql_configuration(name)
 
     def show_mysql_guide(self):
-        import mysql_guide
+        from . import mysql_guide
         mysql_guide.MySqlGuide.display()
 
     def getGuiValues(self):
@@ -2179,13 +2180,13 @@ class CoqueryApp(QtGui.QMainWindow):
         return l
 
     def show_log(self):
-        import logfile
+        from . import logfile
         log_view = logfile.LogfileViewer(parent=self)
         log_view.show()
         self.widget_list.append(log_view)
 
     def show_about(self):
-        from ui.aboutUi import Ui_AboutDialog
+        from .ui.aboutUi import Ui_AboutDialog
         dialog = QtGui.QDialog(self)
         dialog.ui = Ui_AboutDialog()
         dialog.ui.setupUi(dialog)
@@ -2314,7 +2315,7 @@ class CoqueryApp(QtGui.QMainWindow):
         item : CoqTreeItem
             An entry in the output column list
         """
-        import linkselect
+        from . import linkselect
         column = 0
         link = linkselect.LinkSelect.display(
             feature=str(item.text(0)),
@@ -2367,7 +2368,7 @@ class CoqueryApp(QtGui.QMainWindow):
             An entry in the output column list
         """
 
-        import functionapply
+        from . import functionapply
         column = 0
         parent = item.parent()
         

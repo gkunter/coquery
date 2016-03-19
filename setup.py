@@ -10,6 +10,8 @@ except ImportError:
 import re
 import os
 
+from imp import find_module
+
 from coquery.defines import VERSION as version
 
 with open("README.md", "rb") as f:
@@ -17,7 +19,13 @@ with open("README.md", "rb") as f:
 
 DESCRIPTION = "Coquery: a free corpus query tool"
 
+
+
 if __name__ == "__main__":
+    required_modules = ["pandas", "sqlalchemy"]
+    
+    if not find_module("PySide") or find_module("PyQt4"):
+        required_modules.append("PySide")
 
     setup(name="coquery",
         author="Gero Kunter",
@@ -29,7 +37,7 @@ if __name__ == "__main__":
         license="GPL3",
         url="http://www.coquery.org",
         version=version,
-        install_requires=["pandas", "sqlalchemy"],
+        install_requires=required_modules,
         packages=['coquery', 
                   os.path.join('coquery', 'installer'), 
                   os.path.join('coquery', 'gui'), 
@@ -57,7 +65,6 @@ if __name__ == "__main__":
             'Programming Language :: Python :: 3',
             'Programming Language :: Python :: 3.3',
             'Programming Language :: Python :: 3.4',
-            'Programming Language :: Python :: 3.5',
             'Topic :: Education',
             'Topic :: Scientific/Engineering',
             'Topic :: Scientific/Engineering :: Information Analysis',

@@ -940,30 +940,7 @@ class BuilderClass(BaseCorpusBuilder):
         tag = element.tag
         # <u> is an utterance. This element has a who attribute that 
         # specifies the speaker of the utterance.
-        if tag == "u":
-            who = element.attrib["who"].strip()
-            lookup = self._speaker_dict.get(who, None)
-            if lookup:
-                self._speaker_id = lookup
-            else:
-                self._speaker_id = self.table(self.speaker_table).find(
-                    {self.speaker_label: who})
-                if not self._speaker_id:
-                    self._speaker_id = self.table(
-                        self.speaker_table).get_or_insert(
-                            {self.speaker_label: who,
-                                self.speaker_age: "",
-                                self.speaker_sex: "u"})
-                    self._speaker_dict[who] = self._speaker_id
-
-                        
-
-        # <s> is a sentence:
-        elif tag == "s":
-            self._sentence_id = self.table(self.sentence_table).get_or_insert({})
-        
-        #other supported elements:
-        elif tag in set(("w", "c")):
+        if tag in set(("w", "c")):
             if element.text:
                 word_text = element.text.strip()
             else:
@@ -973,7 +950,7 @@ class BuilderClass(BaseCorpusBuilder):
                 lemma_text = element.attrib.get("hw", word_text).strip()
                 lemma_pos = element.attrib.get("pos", "UNC").strip()
                 word_pos = element.attrib.get("c5", "UNC").strip()
-            elif tag == "c":
+            else:
                 lemma_text = word_text
                 lemma_pos = "PUNCT"
                 word_pos = "PUNCT"
@@ -993,6 +970,26 @@ class BuilderClass(BaseCorpusBuilder):
                  self.corpus_speaker_id: self._speaker_id,
                  self.corpus_sentence_id: self._sentence_id,
                  self.corpus_source_id: self._source_id})
+        elif tag == "u":
+            who = element.attrib["who"].strip()
+            lookup = self._speaker_dict.get(who, None)
+            if lookup:
+                self._speaker_id = lookup
+            else:
+                self._speaker_id = self.table(self.speaker_table).find(
+                    {self.speaker_label: who})
+                if not self._speaker_id:
+                    self._speaker_id = self.table(
+                        self.speaker_table).get_or_insert(
+                            {self.speaker_label: who,
+                                self.speaker_age: "",
+                                self.speaker_sex: "u"})
+                    self._speaker_dict[who] = self._speaker_id
+        # <s> is a sentence:
+        elif tag == "s":
+            self._sentence_id = self.table(self.sentence_table).get_or_insert({})
+        
+        #other supported elements:
         else:
             # Unknown tags:
             if element.text or list(element):
