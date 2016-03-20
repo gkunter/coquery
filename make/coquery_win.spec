@@ -1,23 +1,24 @@
 # -*- mode: python -*-
 
-import glob
-import os.path
+import os
 import sys
-
-sys.exit(1)
-
-base_path = "C:\\Users\\dadasd\\coquery\\make"
-coq_path = "C:\\Users\\dadasd\\coquery\\coquery"
+import glob
 
 block_cipher = None
+
+coq_path = os.path.realpath(os.path.join("..", "..", "coquery", "coquery"))
+python_path = os.path.split(sys.executable)[0]
 
 binaries = []
 l = []
 data = []
 
-for file in glob.glob("C:\\Users\\dadasd\\WinPython-32bit-3.4.3.7Slim\\python-3.4.3\\Lib\\site-packages\\numpy\\core\\*.dll"):
-	if "mkl_" in file or "libiomp5md.dll" in file:
-		binaries.append((file, "."))
+if sys.platform == "win32":
+    binaries = []
+    dll_path = os.path.join(python_path, "Lib", "site-packages", "numpy", "core", "*.dll")
+    for file in glob.glob(dll_path):
+        if "mkl_" in file or "libiomp5md.dll" in file:
+            binaries.append((file, "."))
 
 for file in glob.glob(os.path.join(coq_path, "icons", "small-n-flat", "PNG")):
 	data.append((file, os.path.join("icons", "small-n-flat", "PNG")))
@@ -36,7 +37,7 @@ a = Analysis([os.path.join('..', 'Coquery.py')],
              pathex=[coq_path,
                  os.path.join(coq_path, "visualizer"),
                  os.path.join(coq_path, "installer")],
-             binaries=None,
+             binaries=binaries,
              datas=data + l,
              hiddenimports=['transpose'] + [os.path.splitext(os.path.basename(x))[0] for x, _ in l],
              hookspath=[],
@@ -47,15 +48,28 @@ a = Analysis([os.path.join('..', 'Coquery.py')],
              cipher=block_cipher)
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
-exe = EXE(pyz,
-          a.scripts,
-          exclude_binaries=True,
-          name='Coquery',
-          debug=False,
-          strip=False,
-          upx=True,
-          icon=os.path.join(coq_path, 'icons', 'artwork', 'logo.ico'),
-          console=False )
+
+if False and sys.platform == "win32":
+    exe = EXE(pyz,
+              a.scripts,
+              exclude_binaries=True,
+              name='Coquery',
+              debug=False,
+              strip=False,
+              upx=True,
+              icon=os.path.join(coq_path, 'icons', 'artwork', 'coquery.ico'),
+              console=False )
+else:
+    exe = EXE(pyz,
+              a.scripts,
+              exclude_binaries=True,
+              name='Coquery',
+              debug=False,
+              strip=False,
+              upx=True,
+              console=False )
+
+              
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -63,6 +77,11 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                name='Coquery')
+
+if sys.platform == "darwin":
+    app = BUNDLE(exe,
+                 name='Coquery.app',
+                 icon=os.path.join(coq_path, "icons", "artwork", "coquery.icns"))
 
                
 # a.binaries = [x for x in a.binaries if not x[0].startswith("scipy")]
@@ -76,3 +95,4 @@ coll = COLLECT(exe,
 #  ('tk85.dll', None, None),
 #  ('_ssl', None, None),
 #  ('_tkinter', None, None)])
+
