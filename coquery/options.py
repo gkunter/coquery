@@ -197,8 +197,11 @@ class Options(object):
         self.args.use_stopwords = False
         self.args.use_corpus_filters = False
         
-        self.args.base_path, _ = os.path.split(os.path.realpath(__file__))
-        
+        if getattr(sys, "frozen", None):
+            self.args.base_path = os.path.dirname(sys.executable)
+        elif __file__:
+            self.args.base_path = os.path.dirname(__file__)
+
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
