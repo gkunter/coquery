@@ -58,3 +58,16 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                name='coquery')
+
+               
+# a.binaries = [x for x in a.binaries if not x[0].startswith("scipy")]
+
+# a.binaries = [x for x in a.binaries if not x[0].startswith("IPython")]
+
+# a.binaries = [x for x in a.binaries if not x[0].startswith("zmq")]
+
+# a.binaries = a.binaries - TOC([
+#  ('tcl85.dll', None, None),
+#  ('tk85.dll', None, None),
+#  ('_ssl', None, None),
+#  ('_tkinter', None, None)])
