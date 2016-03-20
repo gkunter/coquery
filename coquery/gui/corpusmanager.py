@@ -293,6 +293,7 @@ class CorpusManager(QtGui.QDialog):
         super(CorpusManager, self).__init__(parent)
         self.ui = Ui_corpusManager()
         self.ui.setupUi(self)
+
         try:
             self.resize(options.settings.value("corpusmanager_size"))
         except TypeError:
@@ -314,7 +315,7 @@ class CorpusManager(QtGui.QDialog):
         self.paths.append((options.cfg.installer_path, INSTALLER_DEFAULT))
         if options.cfg.custom_installer_path:
             self.paths.append((options.cfg.custom_installer_path, INSTALLER_CUSTOM))
- 
+
         self.update()
 
     def built_in(self, path):
@@ -418,7 +419,6 @@ class CorpusManager(QtGui.QDialog):
                         
                         #entry.setChecksum(hashsum)
 
-                    
                         title = utf8(builder_class.get_title())
                         entry.setTitle(title)
                         
