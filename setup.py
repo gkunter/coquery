@@ -23,8 +23,21 @@ DESCRIPTION = "Coquery: a free corpus query tool"
 
 if __name__ == "__main__":
     required_modules = ["pandas", "sqlalchemy"]
+    use_pyqt = False
+    use_pyside = False
     
-    if not find_module("PySide") or find_module("PyQt4"):
+    try:
+        if find_module("PyQt4"):
+            use_pyqt = True
+    except ImportError:
+        pass
+    try:
+        if find_module("PySide"):
+            use_pyside = True
+    except ImportError:
+        pass
+    
+    if not use_pyqt and not use_pyside:
         required_modules.append("PySide")
 
     setup(name="coquery",
