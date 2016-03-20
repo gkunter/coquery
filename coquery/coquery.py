@@ -22,7 +22,6 @@ version 3 along with this program.  If not, see
 """
 
 from __future__ import unicode_literals
-from __future__ import absolute_import
 
 import sys
 import os.path
