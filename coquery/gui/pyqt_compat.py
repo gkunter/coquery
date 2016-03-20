@@ -10,6 +10,9 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
+
+import sys
+
 pyside = False
 pyqt = False
 
@@ -55,7 +58,6 @@ def QWebView(*args, **kwargs):
         import PyQt4.QtWebKit as QtWebKit
     return QtWebKit.QWebView(*args, **kwargs)
         
-import sys
 if sys.platform == 'win32':
     frameShadow = QtGui.QFrame.Raised
     frameShape = QtGui.QFrame.Panel

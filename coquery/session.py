@@ -2,15 +2,16 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import sys
 import time, datetime
@@ -21,13 +22,12 @@ import collections
 
 import pandas as pd
 
-import __init__
-import options
-from errors import *
-from corpus import *
-from defines import *
-import queries
-import tokens
+from . import options
+from .errors import *
+from .corpus import *
+from .defines import *
+from . import queries
+from . import tokens
 
 class Session(object):
     def __init__(self):
@@ -84,7 +84,7 @@ class Session(object):
         # verify filter list:
         new_list = []
         if options.cfg.use_corpus_filters:
-            for filt in options.cfg.filter_list :
+            for filt in options.cfg.filter_list:
                 if isinstance(filt, queries.QueryFilter):
                     new_list.append(filt)
                 else:
@@ -105,24 +105,13 @@ class Session(object):
             maximum = max(maximum, query.get_max_tokens())
         return maximum
 
-    def open_output_file(self):
-        if options.cfg.gui:
-            self.output_object = pd.DataFrame()
-        else:
-            if not options.cfg.output_path:
-                self.output_object = sys.stdout
-            else:
-                if options.cfg.append:
-                    file_mode = "a"
-                else:
-                    file_mode = "w"
-                
-                self.output_object = codecs.open(options.cfg.output_path, file_mode, encoding=options.cfg.output_encoding)
-    
     def run_queries(self):
-        """ Process all queries. For each query, go through the entries in 
-        query_list() and yield the results for that subquery. Then, write
-        all results to the output file. """
+        """ 
+        Run each query in the query list, and append the results to the 
+        output object. Afterwards, apply all filters, and aggregate the data.
+        If Coquery is run as a console program, write the aggregated data to 
+        a file (or the standard output).
+        """
         self.start_time = datetime.datetime.now()
         self.end_time = None
         
@@ -158,26 +147,41 @@ class Session(object):
                     file_mode, 
                     encoding=options.cfg.output_encoding)
 
-            self.output_object.to_csv(
+            columns = [x for x in self.output_object.columns.values if not x.startswith("coquery_invisible")]
+
+            self.output_object[columns].to_csv(
                 output_file,
-                header = [self.translate_header(x) for x in self.output_object.columns.values], 
+                header = [self.translate_header(x) for x in columns], 
                 sep=options.cfg.output_separator,
                 encoding="utf-8",
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
 
-    def close(self):
-        """
-        Close the session.
-        """
-        pass
-        
     def get_frequency_table(self):
         frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, session=self)
         frequency_table.fillna("", inplace=True)
         frequency_table.index = range(1, len(frequency_table.index) + 1)
 
         return frequency_table
+
+    def mask_data(self):
+        """
+        Return a data frame that contains the currently visible rows and 
+        columns from the session's data table.
+        """
+        
+        print(options.cfg.row_visibility)
+        print(options.cfg.column_visibility)
+        print(self.query_type)
+        
+        invisible_rows = options.cfg.row_visibility[self.query_type].keys()
+        visible_columns = [x for x in self.output_order if options.cfg.column_visibility[self.query_type].get(x, True)]
+
+        print(invisible_rows)
+        print(visible_columns)
+        
+        print(self.data_table[visible_columns].iloc[~self.data_table.index.isin(invisible_rows)])
+        
 
     def aggregate_data(self, recalculate=True):
         """
@@ -207,7 +211,7 @@ class Session(object):
         else:
             tab = self.data_table.iloc[
                     ~self.data_table.index.isin(
-                        pd.Series(options.cfg.row_visibility[queries.TokenQuery].keys()))]
+                        pd.Series(list(options.cfg.row_visibility[queries.TokenQuery].keys())))]
 
         self.output_object = self.query_type.aggregate_it(
             tab,
@@ -246,16 +250,22 @@ class Session(object):
         """
         if not self.filter_list or not options.cfg.use_corpus_filters:
             return 
+        no_freq = True
         for filt in self.filter_list:
             if filt.var == options.cfg.freq_label:
                 try:
                     self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]
+                    no_freq = False
                 except AttributeError:
                     pass
+        
+        # did at least one of the filters contain a frequency filter?
+        if no_freq:
+            return
+
         columns = [x for x in self.data_table.columns if not x.startswith("coquery_invisible") and x != column]
 
-        for col in columns:
-            self.data_table = self.data_table[self.data_table[col].apply(lambda x: x in list(self.frequency_table[col]))]
+        self.data_table = pd.merge(self.data_table, self.frequency_table[columns], how="inner", copy=False, on=columns)
         
     def translate_header(self, header, ignore_alias=False):
         """ 
@@ -280,7 +290,6 @@ class Session(object):
         s : string
             The display name of the resource string
         """
-        
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
         if not ignore_alias and header in options.cfg.column_names:
@@ -320,9 +329,9 @@ class Session(object):
             
         # special treatment of context columns:
         if header.startswith("context_lc"):
-            return "LC{}".format(header.split("context_lc")[-1])
+            return "L{}".format(header.split("context_lc")[-1])
         if header.startswith("context_rc"):
-            return "RC{}".format(header.split("context_rc")[-1])
+            return "R{}".format(header.split("context_rc")[-1])
         
         rc_feature, _, number = header.rpartition("_")
         
@@ -339,8 +348,8 @@ class Session(object):
                 pass
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
         
-        # special treatment of lexicon freatures:
-        if rc_feature in [x for x, _ in resource.get_lexicon_features()]:
+        # special treatment of lexicon features:
+        if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
             try:
                 number = self.quantified_number_labels[int(number) - 1]
             except ValueError:
@@ -484,5 +493,5 @@ class SessionStdIn(Session):
         if options.cfg.skip_lines:
             logger.info("Skipping first %s %s." % (options.cfg.skip_lines, "query" if options.cfg.skip_lines == 1 else "queries"))
     
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)
     

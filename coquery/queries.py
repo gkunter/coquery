@@ -12,6 +12,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
+from __future__ import absolute_import
+
 import math
 import re
 
@@ -20,7 +22,6 @@ try:
 except NameError:
     pass
 
-import __init__
 import collections
 import datetime
 
@@ -35,11 +36,11 @@ except ImportError:
 import numpy as np        
 import pandas as pd
 
-from defines import *
-from errors import *
-import corpus
-import tokens
-import options
+from .defines import *
+from .errors import *
+from . import corpus
+from . import tokens
+from . import options
 
 class QueryFilter(object):
     """ Define a class that stores a query filter. 
@@ -86,7 +87,7 @@ class QueryFilter(object):
             self._text = s
             self._variable, self._op, self._value_list, self._value_range = self.parse_filter(s)
         else:
-            raise InvalidFilterError
+            raise RuntimeError(msg_invalid_filter.format(s))
     def __repr__(self):
         return "QueryFilter('{}', {})".format(self.text, self.resource)
     
@@ -295,10 +296,22 @@ class TokenQuery(object):
         """
         self.results_frame = pd.DataFrame()
         
-        for self._sub_query in self.query_list:
+        self._max_number_of_tokens = 0
+        for x in self.query_list:
+            self._max_number_of_tokens = max(self._max_number_of_tokens, len(x))
+        
+        for i, self._sub_query in enumerate(self.query_list):
             self._current_number_of_tokens = len(self._sub_query)
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
 
+            if len(self.query_list) > 1:
+                logger.info("Subquery #{} of {}: {}".format(i+1, len(self.query_list), self._current_subquery_string))
+
+            if self.Resource.db_type == SQL_SQLITE:
+                # SQLite: keep track of databases that need to be attached. 
+                self.Resource.attach_list = set([])
+                # This list is filled by get_query_string().
+            
             # This SQLAlchemy optimization including the string folder 
             # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
             query_string = self.Resource.get_query_string(self, self._sub_query)
@@ -309,6 +322,14 @@ class TokenQuery(object):
                 else:
                     if options.cfg.verbose:
                         logger.info(query_string)
+                    
+                    # SQLite: attach external databases
+                    if self.Resource.db_type == SQL_SQLITE:
+                        for db_name in self.Resource.attach_list:
+                            path = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
+                            S = "ATTACH DATABASE '{}' AS {}".format(path, db_name)
+                            connection.execute(S)
+
                     try:
                         results = connection.execution_options(stream_results=True).execute(query_string.replace("%", "%%"))
                     except Exception as e:
@@ -328,11 +349,18 @@ class TokenQuery(object):
                 connection.close()
                 self.add_output_columns(self.Session)
 
-            if not options.cfg.case_sensitive and len(df.index) > 0:
+            if not options.cfg.output_case_sensitive and len(df.index) > 0:
                 for x in df.columns:
-                    if x.startswith("coq_word") or x.startswith("coq_lemma"):
+                    word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
+                    lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
+                    if ((word_column and word_column in x) or 
+                        (lemma_column and lemma_column in x)):
                         try:
-                            df[x] = df[x].apply(lambda x: x.lower() if x else x)
+                            if options.cfg.output_to_lower:
+                                df[x] = df[x].apply(lambda x: x.lower() if x else x)
+                            else:
+                                df[x] = df[x].apply(lambda x: x.upper() if x else x)
+
                         except AttributeError:
                             pass
             df = self.apply_functions(df)
@@ -427,7 +455,7 @@ class TokenQuery(object):
         def insert_string(row):
             row["coq_context_string"] = corpus.collapse_words(
                 list(row[left_columns]) + 
-                [x.upper() for x in list(row[target_columns])] + 
+                [x.upper() if hasattr(x, "upper") else x for x in list(row[target_columns])] + 
                 list(row[right_columns]))
             return row
         
@@ -468,10 +496,14 @@ class TokenQuery(object):
         elif options.cfg.context_mode == CONTEXT_STRING:
             left_columns = ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
             right_columns = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
+            #if word_feature in options.cfg.selected_features:
+                #target_columns = ["coq_{}_{}".format(word_feature, x + 1) for x in range(self._current_number_of_tokens)]
+            #else:
+                #target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._current_number_of_tokens)]
             if word_feature in options.cfg.selected_features:
-                target_columns = ["coq_{}_{}".format(word_feature, x + 1) for x in range(self._current_number_of_tokens)]
+                target_columns = ["coq_{}_{}".format(word_feature, x + 1) for x in range(self._max_number_of_tokens)]
             else:
-                target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._current_number_of_tokens)]
+                target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._max_number_of_tokens)]
             df = df.apply(insert_string, axis=1)
         return df
     
@@ -493,7 +525,6 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-
         if "statistics_query_entropy" in self.Session.output_order or "statistics_query_proportion" in self.Session.output_order:
             columns = [x for x in df.columns if not x.startswith("coquery_invisible")]
             if not columns:
@@ -503,13 +534,19 @@ class TokenQuery(object):
                 self.entropy = 0
             else:
                 # get a frequency table for the current data frame:
-                if options.cfg.case_sensitive:
+                if options.cfg.output_case_sensitive:
                     self.freqs = df.groupby(columns).count().reset_index()
                 else:
                     df2 = df
                     for column in df2.columns:
-                        if df2[column].dtype == object:
-                            df2[column] = df2[column].str.lower()
+                        word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
+                        lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
+                        if ((word_column and word_column in column) or 
+                            (lemma_column and lemma_column in column)) and df2[column].dtype == object:
+                            if options.cfg.output_to_lower:
+                                df2[column] = df2[column].str.lower()
+                            else:
+                                df2[column] = df2[column].str.upper()
                     self.freqs = df2.groupby(columns).count().reset_index()
                 columns.append("statistics_frequency")
                 self.freqs.columns = columns
@@ -556,7 +593,10 @@ class TokenQuery(object):
             elif column == "statistics_query_entropy":
                 df[column] = self.entropy
             elif column == "statistics_query_proportion":
-                df = pd.merge(df, self.freqs, on=columns)
+                try:
+                    df = pd.merge(df, self.freqs, on=columns)
+                except ValueError:
+                    df[column] = self.freqs[column]
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
@@ -772,7 +812,7 @@ class FrequencyQuery(TokenQuery):
             # column:
             aggr_dict = {"statistics_frequency": len}
             aggr_dict.update(
-                {col: lambda x: x.head(1) for col in sample_columns})
+                {col: lambda x: x.iloc[0] for col in sample_columns})
             # group the data frame by the group columns, apply the aggregate
             # functions to each group, and return the aggregated data frame:
             result = cls.do_the_grouping(df, group_columns, aggr_dict)
@@ -892,6 +932,9 @@ class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session)
         
+    def insert_static_data(self, df):
+        return df
+        
     def append_results(self, df):
         """
         Append the last results to the data frame.
@@ -906,12 +949,16 @@ class StatisticsQuery(TokenQuery):
         df : pandas.DataFrame
         """
         self.results_frame = self.Session.Resource.get_statistics()
-        self.Session.output_order = ["Table", "Column", "Entries", "Uniques", "Uniqueness ratio", "Average frequency"]
+        self.Session.output_order = [
+            "coq_statistics_table",
+            "coq_statistics_column",
+            "coq_statistics_entries",
+            "coq_statistics_uniques",
+            "coq_statistics_uniquenessratio",
+            "coq_statistics_averagefrequency",
+            "coquery_invisible_rc_feature"]
         self.results_frame.columns = self.Session.output_order
-        if df.empty:
-            return self.results_frame
-        else:
-            return df.append(self.results_frame)
+        return self.results_frame
 
 class CollocationQuery(TokenQuery):
     
@@ -980,11 +1027,17 @@ class CollocationQuery(TokenQuery):
             right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
             left_context_span = df[fix_col + left_cols]
             right_context_span = df[fix_col + right_cols]
-            if not options.cfg.case_sensitive:
-                for column in left_cols:
-                    left_context_span[column] = left_context_span[column].apply(lambda x: x.lower())
-                for column in right_cols:
-                    right_context_span[column] = right_context_span[column].apply(lambda x: x.lower())
+            if not options.cfg.output_case_sensitive:
+                if options.cfg.output_to_lower:
+                    for column in left_cols:
+                        left_context_span[column] = left_context_span[column].apply(lambda x: x.lower())
+                    for column in right_cols:
+                        right_context_span[column] = right_context_span[column].apply(lambda x: x.lower())
+                else:
+                    for column in left_cols:
+                        left_context_span[column] = left_context_span[column].apply(lambda x: x.upper())
+                    for column in right_cols:
+                        right_context_span[column] = right_context_span[column].apply(lambda x: x.upper())
 
             left = left_context_span[left_cols].stack().value_counts()
             right = right_context_span[right_cols].stack().value_counts()
@@ -1034,4 +1087,4 @@ class CollocationQuery(TokenQuery):
     def remove_output_columns(session):
         session.output_order = session._old_output_order
         
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)

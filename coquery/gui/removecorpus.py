@@ -13,10 +13,10 @@ from __future__ import unicode_literals
 
 import sys
 
-from pyqt_compat import QtCore, QtGui
-from ui.removeCorpusUi import Ui_RemoveCorpus
-
-import options
+from coquery import options
+from coquery.unicode import utf8
+from .pyqt_compat import QtCore, QtGui
+from .ui.removeCorpusUi import Ui_RemoveCorpus
 
 class RemoveCorpusDialog(QtGui.QDialog):
     def __init__(self, entry, configuration_name, parent=None):
@@ -26,7 +26,7 @@ class RemoveCorpusDialog(QtGui.QDialog):
         self.ui = Ui_RemoveCorpus()
         self.ui.setupUi(self)
 
-        self.ui.label.setText(str(self.ui.label.text()).format(entry.name, configuration_name))
+        self.ui.label.setText(utf8(self.ui.label.text()).format(entry.name, configuration_name))
 
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel).clicked.connect(self.reject)

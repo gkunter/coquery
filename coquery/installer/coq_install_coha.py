@@ -16,7 +16,9 @@ import csv
 import itertools
 import tempfile
 
-from corpusbuilder import *
+from coquery.corpusbuilder import *
+from coquery.defines import *
+from coquery import options
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "????.txt"
@@ -57,19 +59,19 @@ class BuilderClass(BaseCorpusBuilder):
         super(BuilderClass, self).__init__(gui, *args)
 
         self.create_table_description(self.word_table,
-            [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+            [Identifier(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(26) NOT NULL"),
              Column(self.word_labelcs, "VARCHAR(48) NOT NULL"),
              Column(self.word_lemma, "VARCHAR(24) NOT NULL"),
              Column(self.word_pos, "VARCHAR(24) NOT NULL")])
 
         self.create_table_description(self.file_table,
-            [Primary(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+            [Identifier(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "CHAR(8) NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
 
         self.create_table_description(self.source_table,
-            [Primary(self.source_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+            [Identifier(self.source_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.source_words, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.source_genre, "ENUM('FIC','MAG','NEWS','NF') NOT NULL"),
              Column(self.source_year, "SMALLINT(4) NOT NULL"),
@@ -77,7 +79,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.source_author, "VARCHAR(100) NOT NULL")])
             
         self.create_table_description(self.corpus_table,
-            [Primary(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
+            [Identifier(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_source_id, self.source_table)])
 
@@ -120,6 +122,29 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_license():
         return "COHA is available under the terms of a commercial license."
+
+    @staticmethod
+    def get_installation_note():
+        _, _, db_type, _, _ = options.get_con_configuration()
+        
+        if db_type == SQL_MYSQL:
+            return """
+            <p><b>MySQL installation note</b><p>
+            <p>The COHA installer uses a special feature of MySQL servers 
+            which allows to load large chunks of data into the database in a 
+            single step.</p>
+            <p>This feature notably speeds up the installation of the COHA 
+            corpus. However, it may be disabled on your MySQL servers. In that 
+            case, the installation will fail with an error message similar to 
+            the following: </p>
+            <p><code>The used command is not allowed with this MySQL version</code></p>
+            <p>Should the installation fail, please ask your MySQL server 
+            administrator to enable loading of local in-files by setting the 
+            option <code>local-infile</code> in the MySQL configuration file.
+            </p>                
+            """
+        else:
+            return None
 
     def build_load_files(self):
         chunk_size = 250000
@@ -169,7 +194,10 @@ class BuilderClass(BaseCorpusBuilder):
                         
                         # create and fill temporary file:
                         temp_file = tempfile.NamedTemporaryFile("w", delete=False)
-                        temp_file.write("\n".join([x.strip() for x in lines]))
+                        if sys.version_info < (3, 0):
+                            temp_file.write(u"\n".join([x.strip() for x in lines]).encode("utf-8"))
+                        else:
+                            temp_file.write("\n".join([x.strip() for x in lines]))
                         temp_file.close()
                         self.DB.load_infile(temp_file.name, self.word_table, arguments)
                         os.remove(temp_file.name)
@@ -186,7 +214,10 @@ class BuilderClass(BaseCorpusBuilder):
                         
                         # create and fill temporary file:
                         temp_file = tempfile.NamedTemporaryFile("w", delete=False)
-                        temp_file.write("\n".join([x.strip() for x in lines]))
+                        if sys.version_info < (3, 0):
+                            temp_file.write(u"\n".join([x.strip() for x in lines]).encode("utf-8"))
+                        else:
+                            temp_file.write("\n".join([x.strip() for x in lines]))
                         temp_file.close()
                         self.DB.load_infile(temp_file.name, self.source_table, arguments)
                         os.remove(temp_file.name)

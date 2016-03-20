@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from coquery.gui.pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_AboutDialog(object):
     def setupUi(self, AboutDialog):
         AboutDialog.setObjectName(_fromUtf8("AboutDialog"))
-        AboutDialog.resize(480, 640)
+        AboutDialog.resize(610, 640)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -77,6 +77,6 @@ class Ui_AboutDialog(object):
 
     def retranslateUi(self, AboutDialog):
         AboutDialog.setWindowTitle(_translate("AboutDialog", "About – Coquery", None))
-        self.label_description.setText(_translate("AboutDialog", "<html><head/><body><p>Coquery is a corpus query tool.</p><p>Copyright (c) {date} Gero Kunter</p><p>Initial development supported by:<br/>Department of English, Heinrich-Heine Universität Düsseldorf</p><p>Website: <a href=\"http://www.coquery.org\"><span style=\" text-decoration: underline; color:#0057ae;\">http://www.coquery.org</span></a><br/>Follow on Twitter: <a href=\"https://twitter.com/CoqueryTool\"><span style=\" text-decoration: underline; color:#0057ae;\">@CoqueryTool</span></a></p></body></html>", None))
+        self.label_description.setText(_translate("AboutDialog", "<html><head/><body><p>Coquery is a free corpus query tool.</p><p>Copyright (c) {date} Gero Kunter</p><p>Initial development supported by:<br/>Department of English, Heinrich-Heine Universität Düsseldorf</p><p>Website: <a href=\"http://www.coquery.org\"><span style=\" text-decoration: underline; color:#0057ae;\">http://www.coquery.org</span></a><br/>Follow on Twitter: <a href=\"https://twitter.com/CoqueryTool\"><span style=\" text-decoration: underline; color:#0057ae;\">@CoqueryTool</span></a></p></body></html>", None))
 
 

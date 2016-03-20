@@ -14,9 +14,9 @@ from __future__ import unicode_literals
 
 import sys
 
-from pyqt_compat import QtCore, QtGui
-from ui.createUserUi import Ui_CreateUser
-import options
+from coquery import options
+from .pyqt_compat import QtCore, QtGui
+from .ui.createUserUi import Ui_CreateUser
 
 class CreateUser(QtGui.QDialog):
     def __init__(self, name=None, password=None, parent=None):

@@ -15,8 +15,8 @@ from __future__ import print_function
 import codecs
 import unicodedata
 
-from corpusbuilder import *
-from defines import *
+from coquery.corpusbuilder import *
+from coquery.defines import *
 
 def dia_to_unicode(s):
     """
@@ -192,7 +192,7 @@ class BuilderClass(BaseCorpusBuilder):
         super(BuilderClass, self).__init__(gui, *args)
 
         self.create_table_description(self.phonolemma_table,
-            [Primary(self.phonolemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
+            [Identifier(self.phonolemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.phonolemma_head, "VARCHAR(34) NOT NULL"),
              Column(self.phonolemma_proncnt, "ENUM('1','10','11','12','13','14','15','16','18','2','20','21','24','25','3','30','32','36','4','40','48','5','6','60','7','8','9') NOT NULL"),
              Column(self.phonolemma_phonstrsdisc, "VARCHAR(40) NOT NULL"),
@@ -200,7 +200,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.phonolemma_phonsylbclx, "VARCHAR(53) NOT NULL")])
 
         self.create_table_description(self.phonoword_table,
-            [Primary(self.phonoword_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+            [Identifier(self.phonoword_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.phonoword_phonstrsdisc, "VARCHAR(41) NOT NULL"),
              Column(self.phonoword_word, "VARCHAR(35) NOT NULL"),
              Column(self.phonoword_proncnt, "ENUM('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','18','20','21','24','25','28','30','32','36','40','48','60') NOT NULL"),
@@ -208,7 +208,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.phonoword_phonsylbclx, "VARCHAR(53) NOT NULL")])
 
         self.create_table_description(self.morphlemma_table,
-            [Primary(self.morphlemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
+            [Identifier(self.morphlemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.morphlemma_morphstatus, "ENUM('C','F','I','M','O','R','U','Z') NOT NULL"),
              Column(self.morphlemma_head, "VARCHAR(34) NOT NULL"),
              Column(self.morphlemma_lang, "ENUM('','A','B','D','F','G','I','L','S') NOT NULL"),
@@ -234,13 +234,13 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.morphlemma_strucopac, "ENUM('','N','Y') NOT NULL")])
 
         self.create_table_description(self.morphword_table,
-            [Primary(self.morphword_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+            [Identifier(self.morphword_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.morphword_word, "VARCHAR(35) NOT NULL"),
              Column(self.morphword_flecttype, "ENUM('a1S','a1Sr','a2S','a2Sr','a3S','a3Sr','aP','aPr','b','c','e1S','e2S','e2Sr','e3S','e3Sr','eP','i','P','pa','par','pe','Pr','S','X') NOT NULL"),
              Column(self.morphword_transinfl, "ENUM('','@','@ @','@ @ @','@ @ @ @','@ @ @ @ @','@ @ @ @ @+s','@ @ @ @-y+ies','@ @ @ @+es','@ @ @ @+s','@ @ @-y+ies','@ @ @+ed','@ @ @+es','@ @ @+ing','@ @ @+s','@ @-e+ing','@ @-f+ves','@ @-fe+ves','@ @-y+ied','@ @-y+ier','@ @-y+ies','@ @-y+iest','@ @+bed','@ @+bing','@ @+d','@ @+ed','@ @+es','@ @+ged','@ @+ging','@ @+ing','@ @+led','@ @+ling','@ @+ped','@ @+ping','@ @+red','@ @+ring','@ @+s','@ @+ted','@ @+ting','@-e+ing','@-e+ing @','@-e+ing @ @','@-ey+ier','@-ey+iest','@-f+ves','@-fe+ves','@-y+ied','@-y+ied @','@-y+ied @ @','@-y+ier','@-y+ier @','@-y+ies','@-y+ies @','@-y+ies @ @','@-y+ies @ @ @','@-y+iest','@-y+iest @','@+@d','@+@ing','@+@s','@+bed','@+bed @','@+bed @ @','@+ber','@+best','@+bing','@+bing @','@+bing @ @','@+d','@+d @','@+d @ @','@+ded','@+ded @','@+der','@+dest','@+ding','@+ding @','@+ed','@+ed @','@+ed @ @','@+ed @ @ @','@+er','@+er @','@+er @ @','@+es','@+es @','@+es @ @','@+es @ @ @','@+est','@+est @','@+ged','@+ged @','@+ged @ @','@+ger','@+gest','@+ging','@+ging @','@+ging @ @','@+ing','@+ing @','@+ing @ @','@+ing @ @ @','@+ked','@+ked @','@+king','@+king @','@+led','@+led @','@+ler','@+lest','@+ling','@+ling @','@+med','@+med @','@+mer','@+mest','@+ming','@+ming @','@+ned','@+ned @','@+ner','@+ner @','@+nest','@+nest @','@+ning','@+ning @','@+ning @ @','@+ped','@+ped @','@+ped @ @','@+ping','@+ping @','@+ping @ @','@+r','@+r @','@+red','@+red @','@+ring','@+ring @','@+s','@+s @','@+s @ @','@+s @ @ @','@+sed','@+sed @','@+ses','@+ses @','@+sing','@+sing @','@+st','@+st @','@+ted','@+ted @','@+ted @ @','@+ter','@+ter @','@+test','@+test @','@+ting','@+ting @','@+ting @ @','@+ved','@+ved @','@+ving','@+ving @','@+zed','@+zes','@+zing','IRR') NOT NULL")])
 
         self.create_table_description(self.syntaxlemma_table,
-            [Primary(self.syntaxlemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
+            [Identifier(self.syntaxlemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.syntaxlemma_head, "VARCHAR(34) NOT NULL"),
              Column(self.syntaxlemma_classnum, "ENUM('1','10','11','12','13','14','15','2','3','4','5','6','7','8','9') NOT NULL"),
              Column(self.syntaxlemma_class, "ENUM('A','ABB','ADV','ART','C','CCON','I','LET','N','NUM','PREP','PRON','SCON','TO','V') NOT NULL"),
@@ -289,17 +289,17 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.syntaxlemma_sub_c, "ENUM('N','Y') NOT NULL")])
             
         self.create_table_description(self.lemma_table,
-            [Primary(self.lemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
+            [Identifier(self.lemma_id, "SMALLINT(5) UNSIGNED NOT NULL", unique=False),
              Column(self.lemma_label, "VARCHAR(34) NOT NULL"),
              Column(self.lemma_headdia, "VARCHAR(34) NOT NULL"),
              Column(self.lemma_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.lemma_orthocnt, "ENUM('1','2','3','4','5') NOT NULL"),
-             Column(self.lemma_orthostatus, "ENUM('B') NOT NULL"),
+             Column(self.lemma_orthostatus, "ENUM('B', 'A') NOT NULL"),
              Column(self.lemma_cobspelldev, "MEDIUMINT(5) UNSIGNED NOT NULL"),
              Column(self.lemma_headsyldia, "VARCHAR(42) NOT NULL")])
 
         self.create_table_description(self.corpus_table,
-            [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+            [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL", unique=False),
              Column(self.corpus_word, "VARCHAR(35) NOT NULL"),
              Column(self.corpus_worddia, "VARCHAR(35) NOT NULL"),
              Column(self.corpus_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
@@ -310,15 +310,40 @@ class BuilderClass(BaseCorpusBuilder):
              Link(self.corpus_morphlemma_id, self.morphlemma_table),
              Link(self.corpus_syntaxlemma_id, self.syntaxlemma_table),
              Column(self.corpus_orthocnt, "ENUM('1','2','3','4','5') NOT NULL"),
-             Column(self.corpus_orthostatus, "ENUM('B') NOT NULL"),
+             Column(self.corpus_orthostatus, "ENUM('B', 'A') NOT NULL"),
              Column(self.corpus_cobspelldev, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.corpus_wordsyldia, "VARCHAR(43) NOT NULL")])
 
         self.map_query_item(QUERY_ITEM_TRANSCRIPT, "phonoword_phonstrsdisc")
         self.map_query_item(QUERY_ITEM_POS, "syntaxlemma_class")
+        self.map_query_item(QUERY_ITEM_WORD, "corpus_worddia")
         
 
     def build_load_files(self):
+        def add_orth_word():
+            self.table(self.corpus_table).add(
+                {self.corpus_id: self._value_corpus_id,
+                self.corpus_word: self._value_corpus_word,
+                self.corpus_worddia: self._value_corpus_worddia,
+                self.corpus_cob: self._value_corpus_cob,
+                self.corpus_lemma_id: self._value_corpus_lemma_id,
+                self.corpus_orthocnt: self._value_corpus_orthocnt,
+                self.corpus_orthostatus: self._value_corpus_orthostatus,
+                self.corpus_cobspelldev: self._value_corpus_cobspelldev,
+                self.corpus_wordsyldia: self._value_corpus_wordsyldia})
+
+        def add_orth_lemma():
+            self.table(self.lemma_table).add(
+                {self.lemma_id: self._value_lemma_id,
+                self.lemma_label: self._value_lemma_label,
+                self.lemma_headdia: self._value_lemma_headdia,
+                self.lemma_cob: self._value_lemma_cob,
+                self.lemma_orthocnt: self._value_lemma_orthocnt,
+                self.lemma_orthostatus: self._value_lemma_orthostatus,
+                self.lemma_cobspelldev: self._value_lemma_cobspelldev,
+                self.lemma_headsyldia: self._value_lemma_headsyldia})
+
+        
         files = [x for x in sorted(self.get_file_list(self.arguments.path, self.file_filter)) if os.path.basename(x).lower() in BuilderClass.expected_files]
         if self._widget:
             self._widget.progressSet.emit(len(files), "")
@@ -370,17 +395,19 @@ class BuilderClass(BaseCorpusBuilder):
                         self._value_corpus_cobspelldev,
                         self._value_corpus_wordsyldia) = columns[:9]
                         self._value_corpus_word = dia_to_unicode(self._value_corpus_worddia)
-                        self.table(self.corpus_table).add(
-                            {self.corpus_id: self._value_corpus_id,
-                            self.corpus_word: self._value_corpus_word,
-                            self.corpus_worddia: self._value_corpus_worddia,
-                            self.corpus_cob: self._value_corpus_cob,
-                            self.corpus_lemma_id: self._value_corpus_lemma_id,
-                            self.corpus_orthocnt: self._value_corpus_orthocnt,
-                            self.corpus_orthostatus: self._value_corpus_orthostatus,
-                            self.corpus_cobspelldev: self._value_corpus_cobspelldev,
-                            self.corpus_wordsyldia: self._value_corpus_wordsyldia})
-                    
+                        add_orth_word()
+                        # add alternative spellings:
+                        for cnt in range(int(self._value_corpus_orthocnt)-1):
+                            try:
+                                (self._value_corpus_worddia,
+                                self._value_corpus_orthostatus,
+                                _,
+                                self._value_corpus_cobspelldev,
+                                self._value_corpus_wordsyldia) = columns[(9+cnt*5):(14+cnt*5)]
+                            except ValueError:
+                                pass
+                            else:
+                                add_orth_word()
                     elif component == "eol":
                         (self._value_lemma_id,
                         self._value_lemma_headdia,
@@ -392,15 +419,20 @@ class BuilderClass(BaseCorpusBuilder):
                         self._value_lemma_headsyldia) = columns[:8]
                         self._value_lemma_label = dia_to_unicode(self._value_lemma_headdia)
                         
-                        self.table(self.lemma_table).add(
-                            {self.lemma_id: self._value_lemma_id,
-                            self.lemma_label: self._value_lemma_label,
-                            self.lemma_headdia: self._value_lemma_headdia,
-                            self.lemma_cob: self._value_lemma_cob,
-                            self.lemma_orthocnt: self._value_lemma_orthocnt,
-                            self.lemma_orthostatus: self._value_lemma_orthostatus,
-                            self.lemma_cobspelldev: self._value_lemma_cobspelldev,
-                            self.lemma_headsyldia: self._value_lemma_headsyldia})
+                        add_orth_lemma()
+                        
+                        # add alternative spellings:
+                        for cnt in range(int(self._value_lemma_orthocnt)-1):
+                            try:
+                                (self._value_lemma_orthostatus,
+                                _,
+                                self._value_lemma_cobspelldev,
+                                self._value_lemma_headsyldia) = columns[(8+cnt*4):(12+cnt*4)]
+                            except ValueError:
+                                print(columns)
+                                pass
+                            else:
+                                add_orth_lemma()
                     
                     elif component == "epw":
                         (self._value_phonoword_id, 

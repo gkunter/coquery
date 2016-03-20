@@ -10,22 +10,16 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-
-import __init__
+from __future__ import absolute_import
 
 import os
 import logging
 import warnings
 import sqlalchemy
 
-try:
-    logger = logging.getLogger(__init__.NAME)
-except AttributeError:
-    pass
-
-from errors import *
-from defines import *
-import options
+from .errors import *
+from .defines import *
+from . import options
 
 def _conf_dict(configuration):
     """
@@ -134,7 +128,10 @@ def test_configuration(name):
         else:
             res = (True, None)
         finally:
-            engine.dispose()
+            try:
+                engine.dispose()
+            except UnboundLocalError:
+                pass
         return res
     elif d["type"] == SQL_SQLITE:
         if os.access(sqlite_path(name), os.X_OK | os.R_OK):
@@ -164,7 +161,7 @@ def sql_url(configuration, db_name=""):
     d = _conf_dict(configuration)
 
     if d["type"] == SQL_MYSQL:
-        S = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4".format(
+        S = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4&local_infile=1".format(
             host=d["host"], port=d["port"], user=d["user"], password=d["password"],
             db_name=db_name)
     elif d["type"] == SQL_SQLITE:
@@ -191,9 +188,9 @@ def sqlite_path(configuration, db_name=None):
         directory in which databases are stored.
     """
     if db_name:
-        S = os.path.join(options.get_home_dir(), "databases", configuration, "{}.db".format(db_name))
+        S = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
     else:
-        S = os.path.join(options.get_home_dir(), "databases", configuration)
+        S = options.cfg.database_path
     return S
 
 def drop_database(configuration, db_name):
@@ -272,11 +269,11 @@ def has_index(engine, table, column):
     b : bool 
         True if the column has an index, or False otherwise.
     """
-    connection = engine.connect()
-    if engine.Dialect.name == SQL_MYSQL:
-        return bool(connection.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table, index)))
-    elif engine.Dialect.name == SQL_SQLITE:
-        return bool(len(connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
+    with engine.connect() as connection:
+        if engine.Dialect.name == SQL_MYSQL:
+            return bool(connection.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table, index)))
+        elif engine.Dialect.name == SQL_SQLITE:
+            return bool(len(connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
 
 def create_index(engine, table, index, variables, length=None):
     """
@@ -300,16 +297,16 @@ def create_index(engine, table, index, variables, length=None):
         The length of the index (applies to TEXT or BLOB fields)
     """
 
-    connection = engine.connect()
-    # Do not create an index if the table is empty:
-    if not connection.execute("SELECT * FROM {} LIMIT 1".format(table)).fetchone():
-        return
-    
-    if length:
-        variables = ["%s(%s)" % (variables[0], length)]
-    S = 'CREATE INDEX {} ON {}({})'.format(
-        index, table, ",".join(variables))
-    connection.execute(S)
+    with engine.connect() as connection:
+        # Do not create an index if the table is empty:
+        if not connection.execute("SELECT * FROM {} LIMIT 1".format(table)).fetchone():
+            return
+        
+        if length:
+            variables = ["%s(%s)" % (variables[0], length)]
+        S = 'CREATE INDEX {} ON {}({})'.format(
+            index, table, ",".join(variables))
+        connection.execute(S)
 
 def has_table(engine, table):
     """
@@ -327,12 +324,12 @@ def has_table(engine, table):
     b : bool 
         True if the table exists, or False otherwise.
     """
-    connection = engine.connect()
-    if engine.Dialect.name == SQL_MYSQL:
-        return bool(connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table = '{}'".format(self.db_name, table)))
-    elif engine.Dialect.name == SQL_SQLITE:
-        S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table)
-        return bool(connection.execute(S).fetchall())
+    with engine.connect() as connection:
+        if engine.Dialect.name == SQL_MYSQL:
+            return bool(connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table = '{}'".format(self.db_name, table)))
+        elif engine.Dialect.name == SQL_SQLITE:
+            S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table)
+            return bool(connection.execute(S).fetchall())
 
 def get_index_length(engine, table, column, coverage=0.95):
     """
@@ -375,8 +372,9 @@ def get_index_length(engine, table, column, coverage=0.95):
         LIMIT  32) count_inc
     GROUP BY len""".format(
         table=table, column=column)
-    connection = engine.connect()
-    results = connection.execute(S)
+    
+    with engine.connect() as connection:
+        results = connection.execute(S)
 
     max_c = None
     for x in results:
@@ -391,3 +389,5 @@ def get_index_length(engine, table, column, coverage=0.95):
         logger.info("{}.{}: index length {}".format(table, column, max_c[0]))
         return int(max_c[0])
     return None
+
+logger = logging.getLogger(NAME)

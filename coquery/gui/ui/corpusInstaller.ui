@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>480</height>
+    <height>443</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -89,7 +89,7 @@
         <item row="1" column="1">
          <widget class="QGroupBox" name="box_build_options">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
@@ -101,6 +101,27 @@
            <property name="verticalSpacing">
             <number>-1</number>
            </property>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="button_input_path">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Browse</string>
+             </property>
+             <property name="icon">
+              <iconset theme="folder">
+               <normaloff/>
+              </iconset>
+             </property>
+             <property name="shortcut">
+              <string>Alt+B</string>
+             </property>
+            </widget>
+           </item>
            <item row="1" column="0">
             <widget class="QLineEdit" name="input_path">
              <property name="enabled">
@@ -133,26 +154,35 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <widget class="QPushButton" name="button_input_path">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Browse</string>
-             </property>
-             <property name="icon">
-              <iconset theme="folder">
-               <normaloff/>
-              </iconset>
-             </property>
-             <property name="shortcut">
-              <string>Alt+B</string>
-             </property>
-            </widget>
+           <item row="2" column="0">
+            <layout class="QHBoxLayout" name="layout_nltk">
+             <item>
+              <widget class="QCheckBox" name="use_pos_tagging">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_pos_tagging">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="buddy">
+                <cstring>use_pos_tagging</cstring>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
          </widget>

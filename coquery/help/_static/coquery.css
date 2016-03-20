@@ -1,0 +1,62 @@
+@font-face {
+    font-family: 'Asenine'; /*a name to be used later*/
+    src: url('ASENINE.TTF'); /*URL to font*/
+}
+
+.btn.btn-primary {
+    color: #ffffff;
+    background-color: #aa0000;
+    background-image: linear-gradient(to bottom, #aa0000, #aa0000);
+    border-color: #0a0000 #0a0000 #0a0000;
+}
+
+.btn.btn-primary-wt {
+    border-color: white white white;
+}
+
+.btn.btn-primary:hover {
+    color: #ffffff;
+    background-color: #900000;
+    background-image: linear-gradient(to bottom, #900000, #900000);
+    border-color: #0a0000 #0a0000 #0a0000;
+}
+
+a {
+    color: #dc963c;
+}
+
+a.navbar-brand {
+    font-family: 'Asenine';
+    font-weight: 600;
+}
+
+a.btn {
+    color: #dc963c;
+    background-color: white;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Asenine';
+}
+
+h1 {
+    font-weight: 500;
+}
+
+.img.logo {
+    border: 1px solid;
+    height: 200px;
+    float: left;
+    vertical-align: text-top;
+}
+
+.jumbotron {
+    position: relative;
+    background: #000 url("library.png") center center;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    color: white;
+    text-shadow: black 0.3em 0.3em 0.3em;
+    overflow: hidden;
+}

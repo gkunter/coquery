@@ -11,24 +11,61 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 from __future__ import print_function
+from __future__ import absolute_import
 
 import logging
 import collections
 import numpy as np
 import pandas as pd
 
-import __init__
-from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
-import QtProgress
-import errorbox as errorbox
+from coquery import options
+from coquery import queries
+from coquery.errors import *
+from coquery.defines import *
 
-import queryfilter
-import options
-import queries
+from .pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from . import errorbox
 
-from errors import *
-from defines import *
+from xml.sax.saxutils import escape
 
+class CoqThread(QtCore.QThread):
+    taskStarted = QtCore.Signal()
+    taskFinished = QtCore.Signal()
+    taskException = QtCore.Signal(Exception)
+    taskAbort = QtCore.Signal()
+    
+    def __init__(self, FUN, parent=None, *args, **kwargs):
+        super(CoqThread, self).__init__(parent)
+        self.FUN = FUN
+        self.exiting = False
+        self.args = args
+        self.kwargs = kwargs
+    
+    def __del__(self):
+        self.exiting = True
+        try:
+            self.wait()
+        except RuntimeError:
+            pass
+    
+    def setInterrupt(self, fun):
+        self.INTERRUPT_FUN = fun
+    
+    def quit(self):
+        self.INTERRUPT_FUN()
+        super(CoqThread, self).quit()
+    
+    def run(self):
+        self.taskStarted.emit()
+        self.exiting = False
+        try:
+            self.FUN(*self.args, **self.kwargs)
+        except Exception as e:
+            if self.parent:
+                self.parent().exc_info = sys.exc_info()
+                self.parent().exception = e
+            self.taskException.emit(e)
+        self.taskFinished.emit()
 
 class CoqHelpBrowser(QtGui.QTextBrowser):
     def __init__(self, help_engine, *args, **kwargs):
@@ -36,7 +73,6 @@ class CoqHelpBrowser(QtGui.QTextBrowser):
         super(CoqHelpBrowser, self).__init__(*args, **kwargs)
     
     def loadResource(self, resource_type, name):
-        print(name, name.scheme())
         if name.scheme() == "qthelp":
             return self.help_engine.fileData(name)
         else:
@@ -47,88 +83,173 @@ class CoqClickableLabel(QtGui.QLabel):
 
     def mousePressEvent(self, ev):
         self.clicked.emit()
-        
-class CoqSwitch(QtGui.QPushButton):
+
+class CoqSwitch(QtGui.QWidget):
     toggled = QtCore.Signal()
     
-    def __init__(self, state=None, on=None, off=None, text="", *args, **kwargs):
+    def __init__(self, state=None, on="on", off="off", text="", *args, **kwargs):
         super(CoqSwitch, self).__init__(*args, **kwargs)
-        self.setFlat(True)
-        self._icon = CoqClickableLabel()
-        self._text = text
-        self._on_icon = on
-        self._off_icon = off
-        self._on = None
-        self._height = QtGui.QPushButton(self._text).sizeHint().height()
         
         self._layout = QtGui.QHBoxLayout(self)
-        self._layout.addWidget(self._icon)
-
-        if self._text:
-            self._label = CoqClickableLabel(text)
-            self._label.clicked.connect(self.toggle)
-            self._layout.addWidget(self._label)
-            self._spacing = 2
-        else:
-            self._spacing = 0
-
-        self._layout.setSpacing(self._spacing)
         self._layout.setMargin(0)
+        self._layout.setSpacing(-1)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
-        self._icon.clicked.connect(self.toggle)
+        self._frame = QtGui.QFrame()
+        self._frame.setFrameShape(frameShape)
+        self._frame.setFrameShadow(QtGui.QFrame.Sunken)
+        size = QtCore.QSize(
+            QtGui.QRadioButton().sizeHint().height() * 2,
+            QtGui.QRadioButton().sizeHint().height())
+        #self._frame.setMaximumSize(size)
+        self._layout.addWidget(self._frame)
+
+        self._inner_layout = QtGui.QHBoxLayout(self._frame)
+        self._inner_layout.setMargin(0)
+        self._inner_layout.setSpacing(-1)
+        self._inner_layout.setContentsMargins(0, 0, 0, 0)
+
+        self._check = QtGui.QCheckBox(self)
+        self._check.setObjectName("_check")
+        self._inner_layout.addWidget(self._check)
+        #self._slider = QtGui.QSlider(self)
+        #self._slider.setOrientation(QtCore.Qt.Horizontal)
+        #sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        #sizePolicy.setHorizontalStretch(0)
+        #sizePolicy.setVerticalStretch(0)
+        #self._slider.setSizePolicy(sizePolicy)
+        #size = QtCore.QSize(
+            #self._slider.sizeHint().height() * 1.61,
+            #self._slider.sizeHint().height())
+        #self._slider.setMaximumSize(size)
+        #self._frame.setMaximumSize(size)
+
+        #self._slider.setMaximum(1)
+        #self._slider.setPageStep(1)
+        #self._slider.setSliderPosition(0)
+        #self._slider.setTickPosition(QtGui.QSlider.NoTicks)
+        #self._slider.setTickInterval(1)
+        #self._slider.setInvertedAppearance(True)
+        #self._slider.setObjectName("_slider")
+
+        #self._inner_layout.addWidget(self._slider)
+
+        self._label = CoqClickableLabel(self)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(1)
+        sizePolicy.setVerticalStretch(0)
+        self._label.setSizePolicy(sizePolicy)
+        self._label.setMinimumWidth(max(QtGui.QLabel(on).sizeHint().width(), QtGui.QLabel(off).sizeHint().width()))
+
+        self._on_text = on
+        self._off_text = off
+        
+        #self._layout.addWidget(self._label)
+        self._inner_layout.addWidget(self._label)
+
+        #grad0 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Mid)
+        #grad1 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Button)
+        #grad2 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Light)
+        #br = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
+
+        #self._style_handle = """QSlider#_slider::handle:horizontal {{
+                #background: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                #stop:0 rgb({g0_r}, {g0_g}, {g0_b}), 
+                #stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
+                #border: 1px solid rgb({g1_r}, {g1_g}, {g1_b});
+                #border-radius: {rad}px;
+            #}}
+        
+            #QSlider#_slider::handle:horizontal:hover {{
+                #background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                #stop:0 rgb({g2_r}, {g2_g}, {g2_b}), 
+                #stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
+                #border: 2px solid rgb({g2_r}, {g2_g}, {g2_b});
+                #margin: -2px 0;
+                #border-radius: {rad}px;
+            #}}
+        #""".format(
+            #g0_r = grad0.red(), g0_g=grad0.green(), g0_b=grad0.blue(),
+            #g1_r = grad1.red(), g1_g=grad1.green(), g1_b=grad1.blue(),
+            #g2_r = grad2.red(), g2_g=grad2.green(), g2_b=grad2.blue(),
+            #b_r = br.red(), b_g=br.green(), b_b=br.blue(),
+            #rad=int(self._slider.sizeHint().height()*0.4))
+
+        #self._style_handle = ""
 
         if not state:
             self.setOff()
         else:
             self.setOn()
-            
-        
-    def setText(self, text):
-        if not self._text:
-            self._label = CoqClickableLabel(text)
-            self._label.clicked.connect(self.toggle)
-            self._layout.addWidget(self._label)
+        self._connect_signals() 
 
-        self._text = text
-
-        if not text:
-            self._spacing = 0
-            self._layout.removeWidget(self._label)
-            del self._label
-        else:
-            self._label.setText(text)
-            self._spacing = 2
-
-        self._layout.setSpacing(self._spacing)
-
-    def text(self, text):
-        return self._text
-
-    def _set_pixmap(self, icon):
-        size = QtCore.QSize(self._height * 1.66, self._height)
-        self._icon.setPixmap(icon.pixmap(size))            
-        
-    def sizeHint(self):
-        if self._text:
-            return QtCore.QSize(
-                self._icon.sizeHint().width() + self._label.sizeHint().width() + self._spacing,
-                self._icon.sizeHint().height())            
-        else:
-            return QtCore.QSize(
-                self._icon.sizeHint().width() + self._spacing + 2,
-                self._icon.sizeHint().height())          
-
-    def _update(self):
+    def _update(self):        
         if self._on:
-            self._set_pixmap(self._on_icon)
+            self._check.setCheckState(QtCore.Qt.Checked)
+            #self._slider.setValue(1)
+            self._label.setText(self._on_text)
+
+            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
+            #s = """
+            #{style_handle}
+            
+            #QSlider#_slider::add-page:horizontal {{
+                #background: rgb({r}, {g}, {b});
+            #}}
+
+            #QSlider#_slider::sub-page:horizontal {{
+                #background: rgb({r}, {g}, {b});
+            #}}
+            #"""
         else:
-            self._set_pixmap(self._off_icon)
+            #self._slider.setValue(0)
+            self._check.setCheckState(QtCore.Qt.Unchecked)
+            self._label.setText(self._off_text)
+            
+            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Dark)
+            #s = """
+            #{style_handle}
+
+            #QSlider#_slider::add-page:horizontal {{
+                #background: rgb({r}, {g}, {b});
+            #}}
+
+            #QSlider#_slider::sub-page:horizontal {{
+                #background: rgb({r}, {g}, {b});
+            #}}
+            #"""
+            
+        #self.setStyleSheet(s.format(
+                #style_handle=self._style_handle,
+                #r=col.red(), g=col.green(), b=col.blue()))
+    
+    def _connect_signals(self):
+        #self._slider.valueChanged.connect(self.toggle)
+        #self._slider.sliderReleased.connect(self._check_release)
+        #self._slider.sliderPressed.connect(self._remember)
+        self._check.stateChanged.connect(self.toggle)
+        self._label.clicked.connect(self.toggle)
+
+    def _disconnect_signals(self):
+        #self._slider.valueChanged.disconnect(self.toggle)
+        #self._slider.sliderReleased.disconnect(self._check_release)
+        #self._slider.sliderPressed.disconnect(self._remember)
+        self._check.stateChanged.disconnect(self.toggle)
+        self._label.clicked.disconnect(self.toggle)
+        
+    #def _remember(self):
+        #self._old_pos = int(self._slider.value())
+        
+    #def _check_release(self):
+        #if int(self._slider.value()) == self._old_pos:
+            #self.toggle()
         
     def toggle(self):
+        self._disconnect_signals()
         self._on = not self._on
         self._update()
         self.toggled.emit()
+        self._connect_signals()
         
     def isOn(self):
         return self._on
@@ -157,8 +278,6 @@ class CoqDetailBox(QtGui.QWidget):
 
         if not box:
             self.box = QtGui.QFrame(self)
-            self.box.setFrameShape(frameShape)
-            self.box.setFrameShadow(QtGui.QFrame.Sunken)
         else:
             self.box = box
 
@@ -255,6 +374,52 @@ class CoqDetailBox(QtGui.QWidget):
 
     def isExpanded(self):
         return self._expanded
+
+class CoqSpinner(QtGui.QWidget):
+    """
+    A QWidget subclass that contains an animated spinner.
+    """
+    
+    @staticmethod
+    def get_spinner(size=None):
+        """
+        Return a movie that shows the spinner animation.
+        
+        Parameters
+        ----------
+        size : QSize or int
+            The size of the spinner
+        """
+        sizes = [24, 32, 64, 96, 128]
+        distances = [abs(x - size) for x in sizes]
+        opt_size = sizes[distances.index(min(distances))]
+        anim = QtGui.QMovie(os.path.join(options.cfg.base_path, "icons", "progress_{0}x{0}.gif".format(opt_size)))
+        anim.setScaledSize(QtCore.QSize(size, size))
+        return anim
+
+    def __init__(self, size=None, *args, **kwargs):
+        super(CoqSpinner, self).__init__(*args, **kwargs)
+        self._layout = QtGui.QHBoxLayout(self)
+        self._label = QtGui.QLabel()
+        self._layout.setSpacing(0)
+        self._layout.setMargin(0)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.addWidget(self._label)
+        self._label.hide()
+        self._size = size
+
+    def sizeHint(self):
+        return self._label.sizeHint()
+        
+    def start(self):
+        self._anim = self.get_spinner(self._label.sizeHint().height())
+        self._label.setMovie(self._anim)
+        self._label.show()
+        self._anim.start()
+        
+    def stop(self):
+        self._label.hide()
+        self._anim.stop()
 
 class CoqTreeItem(QtGui.QTreeWidgetItem):
     """ 
@@ -476,9 +641,9 @@ class LogTableModel(QtCore.QAbstractTableModel):
                 return None
         elif role == QtCore.Qt.BackgroundRole:
             if record.levelno == logging.WARNING:
-                return QtGui.QBrush(QtCore.Qt.yellow)
+                return QtGui.QBrush(QtGui.QColor("lightyellow"))
             elif record.levelno in [logging.ERROR, logging.CRITICAL]:
-                return QtGui.QBrush(QtCore.Qt.red)
+                return QtGui.QBrush(QtGui.QColor("#aa0000"))
         else:
             return None
         
@@ -581,7 +746,314 @@ class CoqTextEdit(QtGui.QTextEdit):
     def setAcceptDrops(self, *args):
         super(CoqTextEdit, self).setAcceptDrops(*args)
 
-class QueryFilterBox(queryfilter.CoqTagBox):
+class CoqTextTag(QtGui.QFrame):
+    """ Define a QFrame that functions as a text tag. """
+
+    def __init__(self, *args):
+        super(CoqTextTag, self).__init__(*args)
+        self.setupUi()
+        self.close_button.clicked.connect(self.removeRequested)
+
+    def setText(self, *args):
+        self.label.setText(*args)
+
+    def text(self, *args):
+        return self.label.text(*args)
+
+    def setupUi(self):
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+        self.horizontalLayout = QtGui.QHBoxLayout(self)
+        self.horizontalLayout.setContentsMargins(2, 1, 2, 1)
+
+        self.label = QtGui.QLabel(self)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
+        self.label.setLineWidth(0)
+
+        self.horizontalLayout.addWidget(self.label)
+        self.close_button = QtGui.QPushButton(self)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.close_button.sizePolicy().hasHeightForWidth())
+        self.close_button.setSizePolicy(sizePolicy)
+        self.close_button.setFlat(True)
+
+        self.horizontalLayout.addWidget(self.close_button)
+
+        icon = options.cfg.main_window.get_icon("sign-ban")
+        
+        height = self.fontMetrics().height()
+        new_height = int(height * 0.75)
+        self._style_font = "font-size: {}px".format(new_height)
+        self._style_border_radius = "border-radius: {}px".format(int(new_height / 3))
+        self.setBackground("lavender")
+        self.close_button.setIcon(icon)
+        self.close_button.setIconSize(QtCore.QSize(new_height, new_height))
+        self.adjustSize()
+
+    def setBackground(self, color):
+        self._style_background = "background-color: {}".format(color)
+        s = " ".join(["{};".format(x) for x in [self._style_background, self._style_border_radius, self._style_font]])
+        self.setStyleSheet(s)
+
+    def content(self):
+        return self.text()
+    
+    def setContent(self, text):
+        """ Set the content of the tag to text. Validate the content, and set 
+        the tag background accordingly. """
+        self.setText(self.format_content(text))
+
+    @staticmethod
+    def format_content(text):
+        """ Return the text string as it appears on the tag. """
+        return text
+    
+    def mouseMoveEvent(self, e):
+        """ Define a mouse event that allows dragging of the tag by pressing
+        and holding the left mouse button on it. """
+        if e.buttons() != QtCore.Qt.LeftButton:
+            return
+
+        mimeData = QtCore.QMimeData()
+        mimeData.setText(self.content())
+        
+        pixmap = QtGui.QPixmap.grabWidget(self)
+        
+        drag = QtGui.QDrag(self)
+        drag.setMimeData(mimeData)
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(e.pos())
+
+        self.parent().parent().parent().parent().dragTag(drag, self)
+
+    def removeRequested(self):
+        self.parent().parent().parent().parent().destroyTag(self)
+
+    def validate(self):
+        """ Validate the content, and return True if the content is valid,
+        or False otherwise. """
+        return True
+    
+class CoqTagEdit(QtGui.QLineEdit):
+    """ Define a QLineEdit class that is used to enter query filters. """
+    
+    filter_examples = []
+
+    def __init__(self, *args):
+        super(CoqTagEdit, self).__init__(*args)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+        #self.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; }'))
+
+        if self.filter_examples:
+            self.setPlaceholderText("e.g. {}".format(random.sample(self.filter_examples, 1)[0]))
+
+class CoqTagBox(QtGui.QWidget):
+    """ Defines a QWidget class that contains and manages filter tags. """
+    
+    def __init__(self, parent=None, label="Filter"):
+        super(CoqTagBox, self).__init__(parent)
+        if not label.endswith(":"):
+            label = label + ":"
+        self._label = label
+        self.setupUi()
+        self.edit_tag.returnPressed.connect(lambda: self.addTag(str(self.edit_tag.text())))
+        self.edit_tag.textEdited.connect(self.editTagText)
+        # self._tagList stores the 
+        self._tagList = []
+        self._filterList = []
+        self._tagType = CoqTextTag
+        self.edit_tag.setStyleSheet("CoqTagEdit { border-radius: 5px; font: condensed; }")
+        
+    def setTagType(self, tagType):
+        self._tagType = tagType
+        
+    def setTagList(self, tagList):
+        self._tagList = tagList
+        
+    def tagList(self):
+        return self._tagList
+        
+    def setupUi(self):        
+        # make this widget take up all available space:
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+
+        self.scroll_area = QtGui.QScrollArea()                                                                      
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)                                       
+        sizePolicy.setHorizontalStretch(0)                                                                                           
+        sizePolicy.setVerticalStretch(0)                                                                                             
+        sizePolicy.setHeightForWidth(self.scroll_area.sizePolicy().hasHeightForWidth())                                              
+        self.scroll_area.setSizePolicy(sizePolicy)                                                                                   
+        self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)                                                     
+        self.scroll_area.setWidgetResizable(True)                                                                                    
+
+        self.scroll_content = QtGui.QWidget()
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)                                         
+        sizePolicy.setHorizontalStretch(0)                                                                                           
+        sizePolicy.setVerticalStretch(0)                                                                                             
+        sizePolicy.setHeightForWidth(self.scroll_content.sizePolicy().hasHeightForWidth())                                           
+        self.scroll_content.setSizePolicy(sizePolicy)                                                                                
+
+        self.cloud_area = CoqFlowLayout(spacing=5)                                                                 
+        self.scroll_content.setLayout(self.cloud_area)
+        self.scroll_area.setWidget(self.scroll_content)                                                                              
+        
+        self.edit_label = QtGui.QLabel(self._label)                                                                            
+        self.edit_tag = CoqTagEdit()
+
+        self.edit_layout = QtGui.QHBoxLayout(spacing=5)                                                                                       
+        self.edit_layout.addWidget(self.edit_label)
+        self.edit_layout.addWidget(self.edit_tag)
+
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.edit_tag.sizePolicy().hasHeightForWidth())
+        self.edit_tag.setSizePolicy(sizePolicy)
+
+        self.layout = QtGui.QVBoxLayout(self)                                                                                        
+        self.layout.addWidget(self.scroll_area)                                                                                  
+        self.layout.addLayout(self.edit_layout)
+        self.layout.setStretch(1,0)
+
+        self.setAcceptDrops(True)
+
+        col =options.cfg.app.palette().color(QtGui.QPalette.Light)
+        color = "{ background-color: rgb(%s, %s, %s) ; }" % (col.red(), col.green(), col.blue())
+        S = 'QScrollArea {}'.format(color)
+        print(S)
+        self.scroll_content.setStyleSheet(S)
+
+    def dragEnterEvent(self, e):
+        e.acceptProposedAction()
+
+    def dragMoveEvent(self, e):
+        current_rect = QtCore.QRect(
+            e.pos() - self.drag.pixmap().rect().topLeft() - self.drag.hotSpot(),
+            e.pos() + self.drag.pixmap().rect().bottomRight() - self.drag.hotSpot())
+        
+        for i, tag in enumerate(self.cloud_area.itemList):
+            if tag.geometry().contains(current_rect.topLeft()) or             tag.geometry().contains(current_rect.bottomLeft()) and abs(i - self.ghost_index) == 1:
+                self.cloud_area.removeWidget(self.ghost_tag)
+                self.cloud_area.insertWidget(i, self.ghost_tag)
+                self.ghost_tag.show()
+                self.ghost_index = i
+                break
+        else:
+            self.cloud_area.removeWidget(self.ghost_tag)
+            self.cloud_area.addWidget(self.ghost_tag)
+            self.ghost_tag.show()
+            self.ghost_index = i
+        e.acceptProposedAction()
+
+
+    def dropEvent(self, e):
+        e.acceptProposedAction()
+
+    def addTag(self, s):
+        """ Add the current text as a query filter. """
+        if not s:
+            s = str(self.edit_tag.text())
+        tag = self._tagType(self)
+
+        tag.setContent(s)
+        #if self.edit_tag.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; background-color: rgb(255, 255, 192); }'))
+            #return
+
+        self._filterList.append(tag)
+        self.cloud_area.addWidget(tag)
+        self.edit_tag.setText("")
+        self.editTagText("")
+
+    def destroyTag(self, tag):
+        self.cloud_area.removeWidget(tag)
+        tag.close()
+        
+    def insertTag(self, index, tag):
+        self.cloud_area.insertWidget(index, tag)
+
+    def hasTag(self, s):
+        """
+        Check if there is a tag with the given string.
+        
+        Parameters
+        ----------
+        s : str
+            The string to search for.
+        
+        Returns
+        -------
+        b : bool
+            True if there is a tag that contains the string as a label, or 
+            False otherwise.        
+        """
+        for tag_label in [str(self.cloud_area.itemAt(x).widget().text()) for x in range(self.cloud_area.count())]:
+            if s == tag_label:
+                return True
+        return False
+
+    def findTag(self, tag):
+        """ Returns the index number of the tag in the cloud area, or -1 if
+        the tag is not in the cloud area. """
+        return self.cloud_area.findWidget(tag)
+
+    def dragTag(self, drag, tag):
+        # check if there is only one tag in the tag area:
+        if self.cloud_area.count() == 1:
+            return
+
+        self.drag = drag
+        #self.ghost_tag = self._tagType(self)
+        #self.ghost_tag.setContent(tag.content())
+        
+        self.ghost_tag = QtGui.QLabel(self)
+        ghost_pixmap = drag.pixmap().copy()
+        painter = QtGui.QPainter(ghost_pixmap)
+        painter.setCompositionMode(painter.CompositionMode_DestinationIn)
+        painter.fillRect(ghost_pixmap.rect(), QtGui.QColor(0, 0, 0, 96))
+        painter.end()
+        self.ghost_tag.setPixmap(ghost_pixmap)
+        
+        
+        # the ghost tag will initially be shown at the old position, but
+        # may move around depending on the drag position
+        old_index = self.findTag(tag)
+        self.ghost_index = old_index
+        self.cloud_area.removeWidget(tag)
+        self.cloud_area.insertWidget(old_index, self.ghost_tag)
+        tag.hide()
+
+        if drag.exec_(QtCore.Qt.MoveAction) == QtCore.Qt.MoveAction:
+            self.insertTag(self.ghost_index, tag)
+        else:
+            self.insertTag(old_index, tag)
+        tag.show()
+        self.cloud_area.removeWidget(self.ghost_tag)
+        self.ghost_tag.close()
+        self.ghost_tag = None
+
+    def editTagText(self, s):
+        """ Set the current background to default. """
+        self.edit_tag.setStyleSheet("CoqTagEdit { border-radius: 5px; font: condensed; }")
+
+
+class QueryFilterBox(CoqTagBox):
     """
     Define a CoqTagBox that manages query filters.
     """
@@ -693,9 +1165,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 
                 if role == QtCore.Qt.ToolTipRole:
                     if isinstance(value, (float, np.float64)):
-                        return "<div>{}</div>".format(QtCore.Qt.escape(("{:.%if}" % options.cfg.digits).format(value)))
+                        return "<div>{}</div>".format(escape(("{:.%if}" % options.cfg.digits).format(value)))
                     else:
-                        return "<div>{}</div>".format(QtCore.Qt.escape(str(value)))
+                        return "<div>{}</div>".format(escape(str(value)))
                 else:
                     if isinstance(value, (float, np.float64)):
                         return ("{:.%if}" % options.cfg.digits).format(value)
@@ -855,7 +1327,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.layoutAboutToBeChanged.emit()
 
         options.cfg.main_window.start_progress_indicator()
-        self_sort_thread = QtProgress.ProgressThread(self.do_sort, self)
+        self_sort_thread = CoqThread(self.do_sort, self)
         self_sort_thread.taskFinished.connect(self.sort_finished)
         self_sort_thread.taskException.connect(self.exception_during_sort)
         self_sort_thread.start()
@@ -878,15 +1350,21 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     fill = False
-    
+
     def __init__(self, *args, **kwargs):
         super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
-        self._app = options.cfg.app
-        self._table = options.cfg.main_window.table_model
-        if not hasattr(self, "fg_color"):
-            self.fg_color = None
-        if not hasattr(self, "fb_color"):
-            self.bg_color = None
+        CoqResultCellDelegate._app = options.cfg.app
+        CoqResultCellDelegate._table = options.cfg.main_window.table_model
+        CoqResultCellDelegate.standard_bg = {
+            True: [CoqResultCellDelegate._app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.AlternateBase),
+                CoqResultCellDelegate._app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Base)],
+            False:[CoqResultCellDelegate._app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.AlternateBase),
+                CoqResultCellDelegate._app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Base)]}        
+
+        if not hasattr(CoqResultCellDelegate, "fg_color"):
+            CoqResultCellDelegate.fg_color = None
+        if not hasattr(CoqResultCellDelegate, "bg_color"):
+            CoqResultCellDelegate.bg_color = None
     
     def get_foreground(self, option, index):
         if option.state & QtGui.QStyle.State_MouseOver:
@@ -915,15 +1393,9 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         if option.state & QtGui.QStyle.State_Selected:
             return self._app.palette().color(QtGui.QPalette().Highlight)
         else:
-            if self._table.is_visible(index):
-                color_group = QtGui.QPalette.Normal
-            else:
-                color_group = QtGui.QPalette.Disabled
             if not self.bg_color:
-                if index.row() & 1:
-                    return self._app.palette().color(color_group, QtGui.QPalette.AlternateBase)
-                else:
-                    return self._app.palette().color(color_group, QtGui.QPalette.Base)
+                col = self.standard_bg[self._table.is_visible(index)][index.row() & 1]
+                return col
             else:
                 return self.bg_color
 
@@ -954,7 +1426,6 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         fg = self.get_foreground(option, index)
         bg = self.get_background(option, index)
         if bg:
-            painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
             painter.setBackground(bg)
             if option.state & QtGui.QStyle.State_Selected or self.fill:
                 painter.fillRect(option.rect, bg)
@@ -1005,15 +1476,13 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         fg = self.get_foreground(option, index)
         bg = self.get_background(option, index)
         if bg:
-            painter.setBackgroundMode(QtCore.Qt.OpaqueMode)
-            painter.setBackground(bg)
             if option.state & QtGui.QStyle.State_Selected:
                 painter.fillRect(option.rect, bg)
             elif value:
                 rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
-                rect.setWidth(option.rect.width() * value)
+                rect.setWidth(int(option.rect.width() * min(1, value)))
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
-        if fg:
+        if fg: 
             painter.setPen(QtGui.QPen(fg))
         try:
             if align & QtCore.Qt.AlignLeft:
@@ -1138,5 +1607,5 @@ class CoqFlowLayout(QtGui.QLayout):
  
         return y + lineHeight - rect.y()
 
-logger = logging.getLogger(__init__.NAME)
+logger = logging.getLogger(NAME)
 

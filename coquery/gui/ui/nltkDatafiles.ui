@@ -21,7 +21,7 @@
     <enum>QLayout::SetMinimumSize</enum>
    </property>
    <item>
-    <widget class="QFrame" name="">
+    <widget class="QFrame" name="frame">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -70,7 +70,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;See the &lt;a href=&quot;http://www.nltk.org/data.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;Natural Language Toolkit website&lt;/span&gt;&lt;/a&gt; for details on NLTK data files. You can use the NLTK downloader to install the missing files, or proceed without tagging and tokenizing being enabled.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Do you want to install the missing NLTK components now?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -78,22 +78,9 @@
        </widget>
       </item>
       <item>
-       <spacer name="verticalSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Do you want to open the NLTK download dialog?</string>
+       <widget class="QProgressBar" name="progressBar">
+        <property name="value">
+         <number>24</number>
         </property>
        </widget>
       </item>

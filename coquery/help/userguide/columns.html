@@ -1,0 +1,223 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Coquery Documentation: Output columns &mdash; Coquery 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Coquery 0.9 documentation" href="../index.html" />
+    <link rel="up" title="Users manual" href="index.html" />
+    <link rel="next" title="Working with contexts" href="contexts.html" />
+    <link rel="prev" title="Query syntax" href="syntax.html" /> 
+  </head>
+  <body role="document">
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="../index.html">
+            <img class="logo" src="../_static/logo_small.png" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="../index.html">Coquery 0.9 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="syntax.html" title="Query syntax"
+             accesskey="P">previous</a> |
+          <a href="contexts.html" title="Working with contexts"
+             accesskey="N">next</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <span class="target" id="columns"></span><div class="section" id="output-columns">
+<h1>Output columns</h1>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<div class="section" id="overview">
+<h2>Overview</h2>
+<p>A corpus may contain information on several levels of description. For
+example, a corpus may provide information on the orthographic wordform,
+the phonological transcription, the part of speech, and the lemma for each of
+the words that are contained in a text. In addition, the corpus may also
+contain information on the text itself, e.g. the title of the text, the year
+it was written, and the genre of the text.</p>
+<p>The different levels of description are typically arranged in different
+tables that each contain different columns. The example corpus from above
+might be described by a table layout as the following, where the first level
+indicates the two tables <cite>Word</cite> and <cite>Texts</cite> and the second levels the columns
+(i.e. <cite>Wordform</cite>, <cite>Transcript</cite>, <cite>Part-of-speech</cite>, <cite>Lemma</cite> and <cite>Title</cite>, <cite>Year</cite>,
+<cite>Genre</cite>):</p>
+<blockquote>
+<div><ul>
+<li><dl class="first docutils">
+<dt>Words</dt>
+<dd><ul class="first last simple">
+<li>Wordform</li>
+<li>Transcript</li>
+<li>Part-of-speech</li>
+<li>Lemma</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Texts</dt>
+<dd><ul class="first last simple">
+<li>Title</li>
+<li>Year</li>
+<li>Genre</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+<p>This table structure is displayed in the main interface in the Output column
+tree. By default, tables are shown collapsed so that the columns stored in
+the table are not visible. You can expand the table either by clicking on the
+expansion symbol at the beginning of the table row, or by double-clicking on
+the table name.</p>
+<p>Each table column can be selected by clicking on the checkbox. Clicking on a
+checked box deselects that column. Only those columns will be included in the
+query results table that are ticked in the Output column tree.</p>
+<p>Some of the columns are marked by the tag icon <img alt="tag" src="../../coquery/icons/small-n-flat/SVG/tag.svg" />. This icon indicates
+that this column is used for looking the query item type that is given in
+square brackets after the column name. For example, <img alt="tag" src="../../coquery/icons/small-n-flat/SVG/tag.svg" /> <strong>Lexeme [Lemma]</strong>
+indicates that the column <em>Lexeme</em> is used when matching a lemma query item
+such as <cite>[write]</cite>.</p>
+<p>Right-clicking on a column in the Output column tree opens the Output column
+context menu. Using the commands in this window, you may view the unique
+values provided by the current corpus for this column, link the current
+column to a different column from an external table (i.e. a table from a
+corpus other than the currently selected one), and add a function to the
+output column. For details, see <a class="reference internal" href="../reference/output_menu.html#output-column-submenu"><span>Output column submenu</span></a>.</p>
+</div>
+<div class="section" id="special-tables">
+<h2>Special tables</h2>
+<p>In addition to the corpus-specific tables, there are also special tables that
+are available for all corpora.</p>
+<p>The first is the <strong>Corpus</strong> table, which contains at least the column <em>ID</em>.
+This column includes a token identifier in the results table which is unique
+for the whole corpus, and which can be used to refer to a token unambiguously.
+Depending on the corpus, the Corpus table can contain additional columns.</p>
+<p>Another special table is the <strong>Statistics</strong> table. The columns table can only
+be selected when the Frequency aggregation mode is selected (see <a class="reference internal" href="aggregations.html#aggregations"><span>Aggregations</span></a>).</p>
+<p>Selecting the column <em>Frequency (pmw)</em> includes a column in the results table
+in which the frequency is normalized per million words. The columns <em>Overall
+entropy</em> and <em>Query entropy</em> calculate the Shannon entropy for the overall
+results table and for a single query string, respectively. The columns
+<em>Overall proportion</em> and <em>Query proportion</em> calculate the relative frequency
+of tokens, i.e. the proportion of that token&#8217;s frequency in relation to the
+overall number of tokens matched by the query. <em>Overall proportion</em> considers
+all tokens in the results table, and <em>Query proportion</em> considers the tokens
+produced by one query string.</p>
+<p>If your query contains only one query string, the values calculated by the
+Overall statistics and the Query statistics are initially identical. Yet, the
+columns <em>Overall entropy</em> and <em>Overall proportion</em> are calculated for the
+currently visible results table, and their values will be recalculated if you
+hide or show some of the columns in the results table.</p>
+<p>The last special table is the <strong>Coquery</strong> table. The columns of this table
+allow you to include in the results table the query string that matched the
+respective token. Three different formats of the query string are available:</p>
+<blockquote>
+<div><ul class="simple">
+<li><em>Query string</em> includes the query string as it was entered</li>
+<li><em>Query token</em> includes one column for each query item in a multi-word
+query string</li>
+<li><em>Expanded query string</em> includes that form of a query string containing
+quantified query items that matched the token</li>
+</ul>
+</div></blockquote>
+<p>Other columns in the Coquery table are the date and time the query was
+completed, and the name of the query input file if any was used.</p>
+</div>
+</div>
+
+
+          </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Users manual</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="syntax.html">Query syntax</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Output columns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contexts.html">Working with contexts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filters.html">Corpus filters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizations.html">Visualizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregations.html">Aggregations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="connections.html">Database connections</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../corpora/index.html">Corpus guide</a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+            <p class="searchtip" style="font-size: 90%">
+                Enter search terms or a module, class or function name.
+            </p>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="syntax.html" title="Query syntax"
+              >previous</a> |
+            <a href="contexts.html" title="Working with contexts"
+              >next</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

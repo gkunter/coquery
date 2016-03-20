@@ -14,12 +14,12 @@ from __future__ import unicode_literals
 
 import sys
 
-from pyqt_compat import QtCore, QtGui
-from ui.linkselectUi import Ui_LinkSelect
+from coquery import options
+from coquery.defines import *
 
-import options
-from defines import *
-from classes import CoqTreeItem
+from .classes import CoqTreeItem
+from .pyqt_compat import QtCore, QtGui
+from .ui.linkselectUi import Ui_LinkSelect
 
 class Link(object):
     def __init__(self, tree_item, ignore_case=True):

@@ -16,7 +16,9 @@ import csv
 import itertools
 import tempfile
 
-from corpusbuilder import *
+from coquery.corpusbuilder import *
+from coquery.defines import *
+from coquery import options
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.txt"
@@ -53,7 +55,6 @@ class BuilderClass(BaseCorpusBuilder):
                       "lexicon.txt", 
                       "Sub-genre codes.txt"]
     expected_files = special_files + [
-        "coca-sources.txt", "lexicon.txt", "Sub-genre codes.txt",
         "db_acad_1990.txt", "db_acad_1991.txt", "db_acad_1992.txt", 
         "db_acad_1993.txt", "db_acad_1994.txt", "db_acad_1995.txt", 
         "db_acad_1996.txt", "db_acad_1997.txt", "db_acad_1998.txt", 
@@ -99,22 +100,22 @@ class BuilderClass(BaseCorpusBuilder):
         super(BuilderClass, self).__init__(gui, *args)
 
         self.create_table_description(self.word_table,
-            [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+            [Identifier(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(43) NOT NULL"),
              Column(self.word_lemma, "VARCHAR(24) NOT NULL"),
              Column(self.word_pos, "VARCHAR(24) NOT NULL")])
 
         self.create_table_description(self.file_table,
-            [Primary(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+            [Identifier(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "ENUM('w_acad_1990.txt', 'w_acad_1991.txt', 'w_acad_1992.txt', 'w_acad_1993.txt', 'w_acad_1994.txt', 'w_acad_1995.txt', 'w_acad_1996.txt', 'w_acad_1997.txt', 'w_acad_1998.txt', 'w_acad_1999.txt', 'w_acad_2000.txt', 'w_acad_2001.txt', 'w_acad_2002.txt', 'w_acad_2003.txt', 'w_acad_2004.txt', 'w_acad_2005.txt', 'w_acad_2006.txt', 'w_acad_2007.txt', 'w_acad_2008.txt', 'w_acad_2009.txt', 'w_acad_2010.txt', 'w_acad_2011.txt', 'w_acad_2012.txt', 'w_fic_1990.txt', 'w_fic_1991.txt', 'w_fic_1992.txt', 'w_fic_1993.txt', 'w_fic_1994.txt', 'w_fic_1995.txt', 'w_fic_1996.txt', 'w_fic_1997.txt', 'w_fic_1998.txt', 'w_fic_1999.txt', 'w_fic_2000.txt', 'w_fic_2001.txt', 'w_fic_2002.txt', 'w_fic_2003.txt', 'w_fic_2004.txt', 'w_fic_2005.txt', 'w_fic_2006.txt', 'w_fic_2007.txt', 'w_fic_2008.txt', 'w_fic_2009.txt', 'w_fic_2010.txt', 'w_fic_2011.txt', 'w_fic_2012.txt', 'w_mag_1990.txt', 'w_mag_1991.txt', 'w_mag_1992.txt', 'w_mag_1993.txt', 'w_mag_1994.txt', 'w_mag_1995.txt', 'w_mag_1996.txt', 'w_mag_1997.txt', 'w_mag_1998.txt', 'w_mag_1999.txt', 'w_mag_2000.txt', 'w_mag_2001.txt', 'w_mag_2002.txt', 'w_mag_2003.txt', 'w_mag_2004.txt', 'w_mag_2005.txt', 'w_mag_2006.txt', 'w_mag_2007.txt', 'w_mag_2008.txt', 'w_mag_2009.txt', 'w_mag_2010.txt', 'w_mag_2011.txt', 'w_mag_2012.txt', 'w_news_1990.txt', 'w_news_1991.txt', 'w_news_1992.txt', 'w_news_1993.txt', 'w_news_1994.txt', 'w_news_1995.txt', 'w_news_1996.txt', 'w_news_1997.txt', 'w_news_1998.txt', 'w_news_1999.txt', 'w_news_2000.txt', 'w_news_2001.txt', 'w_news_2002.txt', 'w_news_2003.txt', 'w_news_2004.txt', 'w_news_2005.txt', 'w_news_2006.txt', 'w_news_2007.txt', 'w_news_2008.txt', 'w_news_2009.txt', 'w_news_2010.txt', 'w_news_2011.txt', 'w_news_2012.txt', 'w_spok_1990.txt', 'w_spok_1991.txt', 'w_spok_1992.txt', 'w_spok_1993.txt', 'w_spok_1994.txt', 'w_spok_1995.txt', 'w_spok_1996.txt', 'w_spok_1997.txt', 'w_spok_1998.txt', 'w_spok_1999.txt', 'w_spok_2000.txt', 'w_spok_2001.txt', 'w_spok_2002.txt', 'w_spok_2003.txt', 'w_spok_2004.txt', 'w_spok_2005.txt', 'w_spok_2006.txt', 'w_spok_2007.txt', 'w_spok_2008.txt', 'w_spok_2009.txt', 'w_spok_2010.txt', 'w_spok_2011.txt', 'w_spok_2012.txt') NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
 
         self.create_table_description(self.subgenre_table,
-            [Primary(self.subgenre_id, "ENUM('0','101','102','103','104','105','106','107','108','109','114','115','116','117','118','123','124','125','126','127','128','129','130','131','132','133','135','136','137','138','139','140','141','142','144','145','146','147','148','149','150','151','152') NOT NULL"),
+            [Identifier(self.subgenre_id, "ENUM('0','101','102','103','104','105','106','107','108','109','114','115','116','117','118','123','124','125','126','127','128','129','130','131','132','133','135','136','137','138','139','140','141','142','144','145','146','147','148','149','150','151','152') NOT NULL"),
              Column(self.subgenre_label, "ENUM('ACAD:Education','ACAD:Geog/SocSci','ACAD:History','ACAD:Humanities','ACAD:Law/PolSci','ACAD:Medicine','ACAD:Misc','ACAD:Phil/Rel','ACAD:Sci/Tech','FIC:Gen (Book)','FIC:Gen (Jrnl)','FIC:Juvenile','FIC:Movies','FIC:SciFi/Fant','MAG:Afric-Amer','MAG:Children','MAG:Entertain','MAG:Financial','MAG:Home/Health','MAG:News/Opin','MAG:Religion','MAG:Sci/Tech','MAG:Soc/Arts','MAG:Sports','MAG:Women/Men','NEWS:Editorial','NEWS:Life','NEWS:Misc','NEWS:Money','NEWS:News_Intl','NEWS:News_Local','NEWS:News_Natl','NEWS:Sports','SPOK:ABC','SPOK:CBS','SPOK:CNN','SPOK:FOX','SPOK:Indep','SPOK:MSNBC','SPOK:NBC','SPOK:NPR','SPOK:PBS') NOT NULL")])
 
         self.create_table_description(self.source_table,
-            [Primary(self.source_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+            [Identifier(self.source_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Column(self.source_year, "ENUM('1990','1991','1992','1993','1994','1995','1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012') NOT NULL"),
              Column(self.source_genre, "ENUM('ACAD','FIC','MAG','NEWS','SPOK') NOT NULL"),
              Link(self.source_subgenre_id, self.subgenre_table),
@@ -122,7 +123,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.source_title, "VARCHAR(255) NOT NULL")])
             
         self.create_table_description(self.corpus_table,
-            [Primary(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
+            [Identifier(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_source_id, self.source_table)])
 
@@ -166,6 +167,30 @@ class BuilderClass(BaseCorpusBuilder):
     def get_license():
         return "COCA is available under the terms of a commercial license."
 
+    @staticmethod
+    def get_installation_note():
+        _, _, db_type, _, _ = options.get_con_configuration()
+        
+        if db_type == SQL_MYSQL:
+            return """
+            <p><b>MySQL installation note</b><p>
+            <p>The COCA installer uses a special feature of MySQL servers 
+            which allows to load large chunks of data into the database in a 
+            single step.</p>
+            <p>This feature notably speeds up the installation of the COCA 
+            corpus. However, it may be disabled on your MySQL servers. In that 
+            case, the installation will fail with an error message similar to 
+            the following: </p>
+            <p><code>The used command is not allowed with this MySQL version</code></p>
+            <p>Should the installation fail, please ask your MySQL server 
+            administrator to enable loading of local in-files by setting the 
+            option <code>local-infile</code> in the MySQL configuration file.
+            </p>                
+            """
+        else:
+            return None
+
+
     def build_load_files(self):
         chunk_size = 250000
         def get_chunk(iterable):
@@ -181,10 +206,6 @@ class BuilderClass(BaseCorpusBuilder):
                 yield itertools.chain(
                     [next(iterable)], 
                     itertools.islice(iterable, chunk_size - 1))
-        
-        # for INFILE loading, autocommit doesn't seem to be harmful, so turn
-        # it on again:
-        self.Con.set_variable("autocommit", 1)
         
         files = sorted(self.get_file_list(self.arguments.path, self.file_filter))
 
@@ -224,7 +245,10 @@ class BuilderClass(BaseCorpusBuilder):
                         return
                     # create and fill temporary file:
                     temp_file = tempfile.NamedTemporaryFile("w", delete=False)
-                    temp_file.write("\n".join([x.strip() for x in lines]))
+                    if sys.version_info < (3, 0):
+                        temp_file.write(u"\n".join([x.strip() for x in lines]).encode("utf-8"))
+                    else:
+                        temp_file.write("\n".join([x.strip() for x in lines]))
                     temp_file.close()
 
                     # set the right arguments for the special files:
@@ -244,7 +268,7 @@ class BuilderClass(BaseCorpusBuilder):
 
                     # load the temporary file containing a chunk from the big 
                     # file into the matching table name:
-                    self.Con.load_infile(temp_file.name, table, arguments)
+                    self.DB.load_infile(temp_file.name, table, arguments)
                     os.remove(temp_file.name)
 
             self.store_filename(file_name)

@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from coquery.gui.pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -53,11 +53,10 @@ class Ui_NLTKDatafiles(object):
         self.label.setWordWrap(True)
         self.label.setObjectName(_fromUtf8("label"))
         self.verticalLayout.addWidget(self.label)
-        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacerItem)
-        self.label_3 = QtGui.QLabel(self.frame)
-        self.label_3.setObjectName(_fromUtf8("label_3"))
-        self.verticalLayout.addWidget(self.label_3)
+        self.progressBar = QtGui.QProgressBar(self.frame)
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setObjectName(_fromUtf8("progressBar"))
+        self.verticalLayout.addWidget(self.progressBar)
         self.verticalLayout_2.addWidget(self.frame)
         self.buttonBox = QtGui.QDialogButtonBox(NLTKDatafiles)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
@@ -73,7 +72,6 @@ class Ui_NLTKDatafiles(object):
     def retranslateUi(self, NLTKDatafiles):
         NLTKDatafiles.setWindowTitle(_translate("NLTKDatafiles", "Missing NLTK data files – Coquery", None))
         self.label_2.setText(_translate("NLTKDatafiles", "<html><head/><body><p><span style=\" font-weight:600;\">The tagger or tokenizer are not available.</span></p><p>Missing NLTK components:</p></body></html>", None))
-        self.label.setText(_translate("NLTKDatafiles", "<html><head/><body><p>See the <a href=\"http://www.nltk.org/data.html\"><span style=\" text-decoration: underline; color:#0057ae;\">Natural Language Toolkit website</span></a> for details on NLTK data files. You can use the NLTK downloader to install the missing files, or proceed without tagging and tokenizing being enabled.</p></body></html>", None))
-        self.label_3.setText(_translate("NLTKDatafiles", "Do you want to open the NLTK download dialog?", None))
+        self.label.setText(_translate("NLTKDatafiles", "<html><head/><body><p>Do you want to install the missing NLTK components now?</p></body></html>", None))
 
 

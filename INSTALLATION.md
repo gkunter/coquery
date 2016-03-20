@@ -1,32 +1,42 @@
-# Requirements
+# Installation
 
-## Required Python modules:
-In order to run Coquery, the following Python packages have to be present on your system:
+See the [Download section](http://www.coquery.org/download/) of the Coquery
+website for detailed instructions and requirements. A Windows installer 
+executable is provided there as well.
 
-- NumPy       (version 1.7.0 or later)
-- pandas      (version 0.15.0 or later)
-- Matplotlib  (version 1.4.0 or later)
-- Seaborn     (version 0.6.0 or later)
-- PyMySQL     (version 0.6.4 or later)
-- EITHER PySide      (recommended, version 1.2.0 or later)
-  OR
-  PyQt4       (alternative, version 4.11.0 or later)
-
-It is recommended to use the Python installer ``pip`` to obtain the latest versions of these packages. In order to install these Python modules using `pip`, open a command shel, and enter:
+Coquery can be installed as a Python module using the Python Index Packager 
+`pip`. Supported Python versions are 2.7 and versions 3.4 or later.
+To install Coquery as a python module, run:
 ```
-pip install numpy pandas matplotlib seaborn pymysql pyside
+    pip install coquery
 ```
 
-## Database server
-In order to install corpora and run queries using Coquery, a database server needs to be installed. MySQL and MariaDB are both database servers which provide the infrastructure required to install corpora and run queries using Coquery. Both are freely available. For Linux, MariaDB is usually the default choice. Only MySQL is available under Windows.
+## Required Python modules
+In order to run Coquery, the following Python packages have to be present on 
+your system:
 
-On most Linux distributions, either database server can easily be installed using the system package manager. Windows and Mac OS X users may want to follow the [MySQL Installation guide](http://dev.mysql.com/doc/refman/5.7/en/installing.html). 
-Note that during installation, you will probably be asked to enter a root password for the database server. Choose a suitable password, and remember it. You will need this password to set up the MySQL connection in Coquery.
+* Pandas 0.15.0 or later
+* SQLAlchemy 1.0 or later
+* either PySide 1.2.0 or PyQt4 4.11.0 or later
 
+If you use `pip` to install Coquery, these modules are also installed
+automatically.
 
-## Optional: Installing the Natural Language Toolkit (NLTK)
-The Python package NLTK Natural Language Toolkit) is only used if you wish to compile your own corpus from a collection of texts, and wish to use an automatic part-of-speech tagger for these texts. You can compile your own corpora without NLTK, but in that case, you cannot include part-of-speech information in your queries.
+## Optional Python modules
+The following modules are optional. You can run Coquery without them, but 
+installing them provides additional functionality to the program:
+    
+* Seaborn 0.6.0 or later
+* PyMySQL 0.6.4 or later
+* NLTK 3.0 or later
+* PDFMiner/pdfminer3k 
 
-Details on the very useful NLTK package are given on the [Natural Language Toolkit homepage](http://www.nltk.org/). 
-The site contains also [Installation instructions](http://www.nltk.org/install.html). In order to use NLTK for the compilation of your own corpus, a tagger and a tokenizer need to be 
-Instructions on how to install these language-specific NLTK data packages are given [here](http://www.nltk.org/data.html). 
+If you wish to install them with `pip`, run
+```
+pip install seaborn pymysql nltk pdfminer
+```
+if you are using Python 2.7, or 
+```
+pip install seaborn pymysql nltk pdfminer3k
+```
+if you are using Python 3.4 or later.

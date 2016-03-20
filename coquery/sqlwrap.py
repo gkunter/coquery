@@ -11,25 +11,16 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import __init__
-
 import os
 import logging
 import warnings
-
-try:
-    logger = logging.getLogger(__init__.NAME)
-except AttributeError:
-    pass
-
-from errors import *
-from defines import *
-import options
-
-import sqlhelper
 import sqlalchemy
 
-import sqlite3
+from .errors import *
+from .defines import *
+from . import options
+from . import sqlhelper
+
 if options._use_mysql:
     import pymysql
     import pymysql.cursors
@@ -59,20 +50,16 @@ class SqlDB (object):
     def create_database(self, db_name):
         self.sql_url = sqlhelper.sql_url(options.cfg.current_server)
         self.engine = sqlalchemy.create_engine(self.sql_url)
-        self.connection = self.engine.connect()
-
-        if self.db_type == SQL_MYSQL:
-            S = "CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name)
-            self.connection.execute(S)
-        self.use_database(db_name)
+        with self.engine.connect() as connection:
+            if self.db_type == SQL_MYSQL:
+                S = "CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name)
+                connection.execute(S)
+            self.use_database(db_name)
 
     def use_database(self, db_name):
         self.db_name = db_name
         self.sql_url = sqlhelper.sql_url(options.cfg.current_server, self.db_name)
         self.engine = sqlalchemy.create_engine(self.sql_url)
-        self.connection = self.engine.connect()
-        if self.db_type == SQL_MYSQL:
-            self.set_variable("NAMES", self.encoding)
 
     def has_database(self, db_name):
         """
@@ -89,7 +76,8 @@ class SqlDB (object):
             True if the database exists, or False otherwise.
         """
         if self.db_type == SQL_MYSQL:
-            results = self.connection.execute("SHOW DATABASES")
+            with self.engine.connect() as connection:
+                results = connection.execute("SHOW DATABASES")
             try:
                 for x in results:
                     if x[0] == db_name.split()[0]:
@@ -115,11 +103,12 @@ class SqlDB (object):
         b : bool 
             True if the table exists, or False otherwise.
         """
-        if self.db_type == SQL_MYSQL:
-            return bool(self.connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name)))
-        elif self.db_type == SQL_SQLITE:
-            S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table_name)
-            return bool(self.connection.execute(S).fetchall())
+        with self.engine.connect() as connection:
+            if self.db_type == SQL_MYSQL:
+                return bool(connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table_name = '{}'".format(self.db_name, table_name)))
+            elif self.db_type == SQL_SQLITE:
+                S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table_name)
+                return bool(connection.execute(S).fetchall())
 
     def create_table(self, table_name, description):
         """
@@ -134,7 +123,8 @@ class SqlDB (object):
             The SQL string used to create the new table
         """
         S = 'CREATE TABLE {} ({})'.format(table_name, description)
-        return self.connection.execute(S)
+        with self.engine.connect() as connection:
+            return connection.execute(S)
             
     def find(self, table, values, case=False):        
         """ 
@@ -160,7 +150,7 @@ class SqlDB (object):
         variables = list(values.keys())
         where = []
         for column, value in values.items():
-            where.append('{} = "{}"'.format(column, str(value).replace('"', '""')))
+            where.append("{} = '{}'".format(column, str(value).replace("'", "''")))
             
         S = "SELECT {} FROM {}".format(", ".join(variables), table)
 
@@ -180,43 +170,6 @@ class SqlDB (object):
         l = self.connection.execute(S).fetchall()
         return l
         
-    @staticmethod
-    def test_connection(host, port, user, password, connect_timeout=60):
-        """
-        Tests if the specified MySQL connection is available.
-        
-        This method attempts to create a connection to the MySQL server using
-        the host, port, user name, and password as provided as arguments.
-        
-        Parameters
-        ----------
-        host : string
-            The host name or IP address of the host
-        port : int 
-            The MySQL port on the host server
-        user : string 
-            The name of the MySQL user 
-        password : string 
-            The password of the MySQL user
-            
-        Returns
-        -------
-        test : bool
-            Returns True if a connection could be created, or False otherwise.
-        """
-        try:
-            con = pymysql.connect(
-                host=host, 
-                port=port, 
-                user=user, 
-                passwd=password,
-                connect_timeout=connect_timeout)
-        except pymysql.Error as e:
-            return False
-        else:
-            con.close()
-        return True
-
     def kill_connection(self):
         try:
             self.Con.kill(self.Con.thread_id())
@@ -303,8 +256,30 @@ class SqlDB (object):
         cursor.execute(S)
         return cursor
 
+    def load_dataframe(self, df, table_name, index_label, if_exists="append"):
+        """
+        Load the table with content from the dataframe.
+        
+        Parameters
+        ----------
+        df : Pandas DataFrame 
+            The dataframe that is to be loaded into the database table
+        table_name : string 
+            The name of the table
+        index_label : string 
+            The name of the index column. If empty, no additional index column 
+            is created.
+        if_exists : string, either "fail", "replace", or "append"
+            If "append" (the default), the rows from the dataframe are 
+            appended to the table; the table is created if it does not 
+            exist. If "replace", any existing table is replaced by the 
+            rows from the dataframe. If "fail", the dataframe is NOT 
+            loaded into the table.
+        """
+        df.to_sql(table_name, self.engine, if_exists=if_exists, index=bool(index_label), index_label=index_label)
+
     def load_infile(self, file_name, table_name, arguments):
-        self.connection.execute("LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
+        self.connection.execution_options(autocommit=False).execute("LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
 
     def get_field_type(self, table_name, column_name):
         """
@@ -495,9 +470,9 @@ class SqlDB (object):
         index_length : int or None
             The length of the index (applies to TEXT or BLOB fields)
         """
-        # Do not create an index if the table is empty:
-        if not self.connection.execute("SELECT * FROM {} LIMIT 1".format(table_name)).fetchone():
-            return
+        ## Do not create an index if the table is empty:
+        #if not self.connection.execute("SELECT * FROM {} LIMIT 1".format(table_name)).fetchone():
+            #return
         
         if index_length:
             variables = ["%s(%s)" % (variables[0], index_length)]
@@ -528,3 +503,6 @@ class SqlDB (object):
             self.connection.execute("DROP DATABASE {}".format(database_name.split()[0]))
         elif self.db_type == SQL_SQLITE:
             os.remove(self.sqlite_path(database_name))
+
+logger = logging.getLogger(NAME)
+

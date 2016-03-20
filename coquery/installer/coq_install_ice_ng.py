@@ -18,8 +18,8 @@ try:
 except ImportError:
     from io import StringIO
     
-from corpusbuilder import *
-from bibliography import *
+from coquery.corpusbuilder import *
+from coquery.bibliography import *
 
 class corpus_code():
     #def get_tag_translate(self, tag):
@@ -43,16 +43,43 @@ class corpus_code():
             #print("unsupported tag: ", tag)
             #return tag
 
+    def get_tag_translate(self, tag):
+        translate_dict = {
+            "p": "p",
+            "punctuation": "",
+            "heading": "<span style='font-style: bold; font-size:150%'>",
+            "h1": "<span style='font-style: bold; font-size:150%'>",
+            "boldface": "b",
+            "italics": "i",
+            "underline": "u",
+            "superscript": "sup",
+            "subscript": "sup",
+            "object": "object",
+            "text": "html"}
+        if tag in translate_dict:
+            return translate_dict[tag]
+        else:
+            print("unsupported tag: ", tag)
+            return tag
+
     def renderer_open_element(self, tag, attributes):
         context = super(Corpus, self).renderer_open_element(tag, attributes)
         if tag == "object":
+            path = os.path.join(options.cfg.base_path, "icons", "artwork")
             # add placeholder images for <object> tags
-            if attributes.get("type", "") == "table":
-                context.append("<br/><img src='../logo/placeholder_table.png'/><br/>")
-            if attributes.get("type", "") == "graphic":
-                context.append("<br/><img src='../logo/placeholder.png'/><br/>")
-            if attributes.get("type", "") == "formula":
-                context.append("<br/><img src='../logo/formula.png'/><br/>")
+            if attributes.get("type") == "formula":
+                context.append("<br/><img src='{}/formula.png'/><br/>".format(path))
+            elif attributes.get("type") == "table":
+                context.append("<br/><img src='{}/placeholder_table.png'/><br/>".format(path))
+            elif attributes.get("type") == "graphic":
+                context.append("<br/><img src='{}/placeholder.png'/><br/>".format(path))
+        if tag == "x-anonym-x":
+            anon_type = "anonymized"
+            try:
+                anon_type = attributes["type"]
+            except KeyError:
+                pass
+            context.append(' <span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span> '.format(anon_type))
 
         if tag == "x-anonym-x":
             anon_type = "anonymized"
@@ -506,7 +533,7 @@ class BuilderClass(BaseCorpusBuilder):
         #self.word_pos = "Pos"
         
         self.create_table_description(self.word_table,
-            [Primary(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
+            [Identifier(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(36) NOT NULL"),
              Column(self.word_lemma, "VARCHAR(36) NOT NULL"),
              Column(self.word_pos, "ENUM('CC','CD','DT','EX','FW','IN','JJ','JJR','JJS','LS','MD','NN','NNS','NP','NPS','PDT','POS','PP','PP$','PUNCT','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBN','VBP','VBZ','WDT','WP','WP$','WRB') NOT NULL")])
@@ -530,7 +557,7 @@ class BuilderClass(BaseCorpusBuilder):
         #self.file_path = "Path"
         
         self.create_table_description(self.file_table,
-            [Primary(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+            [Identifier(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "TINYTEXT NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
             
@@ -556,7 +583,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_time_feature(self.source_age)
 
         self.create_table_description(self.source_table,
-            [Primary(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+            [Identifier(self.source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
             Column(self.source_mode, "TINYTEXT NOT NULL"),
             Column(self.source_date, "VARCHAR(10) NOT NULL"), 
             Column(self.source_icetext, "ENUM('Academic writing humanities','Academic writing natural sciences','Academic writing social sciences','Academic writing technical','Administrative/instructive writing','Business letters','Editorials','Exams','Instructive writing/skills and hobbies','Novels','Popular writing humanities','Popular writing natural sciences','Popular writing social sciences','Popular writing technology','Press reportage','Social letters','Students essays') NOT NULL"), 
@@ -567,7 +594,7 @@ class BuilderClass(BaseCorpusBuilder):
             Column(self.source_ethnicity, "VARCHAR(15) NOT NULL")])
 
         self.create_table_description(self.corpus_table,
-            [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+            [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Link(self.corpus_file_id, self.file_table),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_source_id, self.source_table)])
@@ -576,29 +603,26 @@ class BuilderClass(BaseCorpusBuilder):
         self._corpus_code = corpus_code
         
 
-    #def xml_preprocess_tag(self, element):
+    def xml_preprocess_tag(self, element):
         #self.tag_token(self._corpus_id, element.tag, element.attrib, op=True)
-        ##self.tag_next_token(element.tag, element.attrib)
-        ##if element.text or list(element):
-            ##self.tag_next_token(element.tag, element.attrib)
-        ##else:
-            ##self.add_empty_tag(element.tag, element.attrib)
-            ##if element.tag == "x-anonym-x":
-                ### ICE-NG contains anonymized labels for names, placenames,
-                ### and other nouns. Insert a special label in that case:
-                ##self._word_id = self.table_get(self.word_table, 
-                        ##{self.word_label: "ANONYMIZED", 
-                        ##self.word_lemma: "ANONYMIZED", 
-                        ##self.word_pos: "np"}, case=True)
+        self.tag_next_token(element.tag, element.attrib)
+        #if element.text or list(element):
+            #self.tag_next_token(element.tag, element.attrib)
+        #else:
+            #self.add_empty_tag(element.tag, element.attrib)
+            #if element.tag == "x-anonym-x":
+                ## ICE-NG contains anonymized labels for names, placenames,
+                ## and other nouns. Insert a special label in that case:
+                #self._word_id = self.table_get(self.word_table, 
+                        #{self.word_label: "ANONYMIZED", 
+                        #self.word_lemma: "ANONYMIZED", 
+                        #self.word_pos: "np"}, case=True)
 
-    #def xml_postprocess_tag(self, element, this_id):
-        #if element.tag == "x-anonym-x":
-            #print(this_id, "closing")
-            #assert this_id == self._last_opened, self._current_file
-        #self.tag_token(this_id, element.tag, element.attrib, cl=True)
-        ## mon-empty tag
-        ##if element.text or list(element):
-            ##self.tag_last_token(element.tag, element.attrib)
+    def xml_postprocess_tag(self, element):
+        self.tag_token(self._corpus_id, element.tag, element.attrib, cl=True)
+        # mon-empty tag
+        #if element.text or list(element):
+            #self.tag_last_token(element.tag, element.attrib)
 
     def process_text(self, text):
         for row in text.splitlines():
@@ -1005,14 +1029,16 @@ class BuilderClass(BaseCorpusBuilder):
         
     @staticmethod
     def get_references():
-        return [Reference(
-                author=[Name(first = "Eva-Maria", last = "Wunder"), Name(first = "Holger", last = "Voormann"), Name(first = "Ulrike", last = "Gut")], 
+        return [str(Article(
+                authors=PersonList(
+                    Person(first = "Eva-Maria", last = "Wunder"), 
+                    Person(first = "Holger", last = "Voormann"), 
+                    Person(first = "Ulrike", last = "Gut")), 
                 title = "The ICE Nigeria corpus project: Creating an open, rich and accurate corpus",
                 year = 2009,
                 journal = "ICAME Journal",
                 volume = 34,
-                pages = "78-88",
-                pub_type = "article").get_html()]
+                pages = "78-88"))]
 
     @staticmethod
     def get_url():

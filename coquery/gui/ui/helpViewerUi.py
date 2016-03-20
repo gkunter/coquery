@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from coquery.gui.pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -29,6 +29,7 @@ class Ui_HelpViewer(object):
         self.centralwidget = QtGui.QWidget(HelpViewer)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.verticalLayout = QtGui.QVBoxLayout(self.centralwidget)
+        self.verticalLayout.setContentsMargins(-1, -1, -1, 0)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.splitter = QtGui.QSplitter(self.centralwidget)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
@@ -37,6 +38,8 @@ class Ui_HelpViewer(object):
         self.index.setOpenLinks(False)
         self.index.setObjectName(_fromUtf8("index"))
         self.content = QtGui.QTextBrowser(self.splitter)
+        self.content.setFrameShape(QtGui.QFrame.NoFrame)
+        self.content.setFrameShadow(QtGui.QFrame.Plain)
         self.content.setObjectName(_fromUtf8("content"))
         self.verticalLayout.addWidget(self.splitter)
         HelpViewer.setCentralWidget(self.centralwidget)

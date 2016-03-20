@@ -7,7 +7,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from pyqt_compat import QtCore, QtGui, frameShadow
+from coquery.gui.pyqt_compat import QtCore, QtGui, frameShadow
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

@@ -14,22 +14,25 @@ from __future__ import unicode_literals
 import sys
 import os
 
-sys.path.append(os.path.join(sys.path[0], "gui"))
-
-from pyqt_compat import QtCore, QtGui
-from ui.nltkDatafilesUi import Ui_NLTKDatafiles
-
-import options
-import classes
+from coquery import options
+from . import classes
+from . import errorbox
+from .pyqt_compat import QtCore, QtGui
+from .ui.nltkDatafilesUi import Ui_NLTKDatafiles
 
 class NLTKDatafiles(QtGui.QDialog):
-    def __init__(self, text, parent=None):
+    updateLabel = QtCore.Signal(str)
+    progressTheBar = QtCore.Signal()
+    
+    def __init__(self, missing, parent=None):
         
         super(NLTKDatafiles, self).__init__(parent)
         
         self.ui = Ui_NLTKDatafiles()
         self.ui.setupUi(self)
-        self.ui.textBrowser.setText("<code>{}</code>".format(text.replace("\n", "<br/>")))
+        self._missing = missing
+        self.ui.textBrowser.setText("<code>{}</code>".format("<br/>".join(missing)))
+        self.ui.progressBar.hide()
         
         try:
             self.resize(options.settings.value("nltkdatafiles_size"))
@@ -46,26 +49,50 @@ class NLTKDatafiles(QtGui.QDialog):
         except AttributeError:
             pass
 
-    def accept(self):
+    def download_packages(self):
+        s = "python -c 'import nltk; nltk.download({})'"
+        s = "nltk.download({}, raise_on_error=True)"
         import nltk
-        try:
-            exec "nltk.download()" in globals(), locals()
-        except Exception as e:
-            errorbox.ErrorBox.show(sys.exc_info(), e, no_trace=True)
-        finally:
-            return super(NLTKDatafiles, self).accept()
+        for x in self._missing:
+            package = x.split("/")[1]
+            self.updateLabel.emit(package)
+            exec(s.format('"{}"'.format(package)))
+            self.progressTheBar.emit()
+    
+    def download_finish(self):
+        super(NLTKDatafiles, self).accept()
+
+    def download_exception(self):
+        errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
+
+    def update_label(self, s):
+        self.ui.label.setText("Installing NLTK component {}...".format(s))
+
+    def next_bar(self):
+        self.ui.progressBar.setValue(self.ui.progressBar.value()+1)
+
+    def accept(self):
+        self.ui.textBrowser.hide()
+        self.ui.label_2.hide()
+        self.ui.progressBar.show()
+        self.ui.progressBar.setMaximum(len(self._missing))
+        self.ui.progressBar.setValue(0)
+        self.thread = classes.CoqThread(self.download_packages, self)
+        self.thread.taskFinished.connect(self.download_finish)
+        self.thread.taskException.connect(self.download_exception)
+        self.updateLabel.connect(self.update_label)
+        self.progressTheBar.connect(self.next_bar)
+        self.thread.start()
         
     @staticmethod
-    def ask(text, parent=None):
-        
-        dialog = NLTKDatafiles(text, parent=parent)        
-        dialog.setVisible(True)
+    def ask(missing, parent=None):
+        dialog = NLTKDatafiles(missing, parent=parent)        
         return dialog.exec_() == QtGui.QDialog.Accepted
         
 def main():
     app = QtGui.QApplication(sys.argv)
     NLTKDatafiles.ask("""
-from pyqt_compat import QtCore, QtGui
+from gui.pyqt_compat import QtCore, QtGui
 from ui.nltkDatafilesUi import Ui_NLTKDatafiles
 
 class NLTKDatafiles(QtGui.QDialog):

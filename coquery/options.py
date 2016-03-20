@@ -2,16 +2,15 @@
 """
 options.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-
-import __init__
+from __future__ import absolute_import
 
 # Python 3.x: import configparser 
 # Python 2.x: import ConfigParser as configparser
@@ -33,6 +32,9 @@ import codecs
 import ast
 import collections
 import inspect
+import glob
+import importlib
+import imp
 
 # make ast work in all Python versions:
 if not hasattr(ast, "TryExcept"):
@@ -43,9 +45,124 @@ if not hasattr(ast, "TryFinally"):
 import hashlib
 from collections import defaultdict
 
-import tokens
-from defines import *
-from errors import *
+from . import tokens
+from .unicode import utf8
+from .defines import *
+from .errors import *
+
+# Define a HelpFormatter class that works with Unicode corpus names both in 
+# Python 2.7 and Python 3.x:
+if sys.version_info < (3, 0):
+    class CoqHelpFormatter(argparse.HelpFormatter):
+        """
+        A HelpFormatter class that is able to handle Unicode argument options.
+        
+        The code for _format_actions_usage() is a copy from 
+        python2.7/argparse.py, with the addition of the utf8() conversion in
+        one space.
+        """
+        def _format_actions_usage(self, actions, groups):
+            # find group indices and identify actions in groups
+            group_actions = set()
+            inserts = {}
+            for group in groups:
+                try:
+                    start = actions.index(group._group_actions[0])
+                except ValueError:
+                    continue
+                else:
+                    end = start + len(group._group_actions)
+                    if actions[start:end] == group._group_actions:
+                        for action in group._group_actions:
+                            group_actions.add(action)
+                        if not group.required:
+                            if start in inserts:
+                                inserts[start] += ' ['
+                            else:
+                                inserts[start] = '['
+                            inserts[end] = ']'
+                        else:
+                            if start in inserts:
+                                inserts[start] += ' ('
+                            else:
+                                inserts[start] = '('
+                            inserts[end] = ')'
+                        for i in range(start + 1, end):
+                            inserts[i] = '|'
+
+            # collect all actions format strings
+            parts = []
+            for i, action in enumerate(actions):
+
+                # suppressed arguments are marked with None
+                # remove | separators for suppressed arguments
+                if action.help is argparse.SUPPRESS:
+                    parts.append(None)
+                    if inserts.get(i) == '|':
+                        inserts.pop(i)
+                    elif inserts.get(i + 1) == '|':
+                        inserts.pop(i + 1)
+
+                # produce all arg strings
+                elif not action.option_strings:
+                    part = self._format_args(action, action.dest)
+
+                    # if it's in a group, strip the outer []
+                    if action in group_actions:
+                        if part[0] == '[' and part[-1] == ']':
+                            part = part[1:-1]
+
+                    # add the action string to the list
+                    parts.append(part)
+
+                # produce the first way to invoke the option in brackets
+                else:
+                    option_string = action.option_strings[0]
+
+                    # if the Optional doesn't take a value, format is:
+                    #    -s or --long
+                    if action.nargs == 0:
+                        part = '%s' % option_string
+
+                    # if the Optional takes a value, format is:
+                    #    -s ARGS or --long ARGS
+                    else:
+                        default = action.dest.upper()
+                        args_string = self._format_args(action, default)
+                        part = '%s %s' % (option_string, args_string)
+
+                    # make it look optional if it's not required or in a group
+                    if not action.required and action not in group_actions:
+                        part = '[%s]' % part
+
+                    # add the action string to the list
+                    parts.append(part)
+
+            # insert things at the necessary indices
+            for i in sorted(inserts, reverse=True):
+                parts[i:i] = [inserts[i]]
+
+            # join all the action items with spaces
+            text = u' '.join([item.decode("utf-8") for item in parts if item is not None])
+
+            # clean up separators for mutually exclusive groups
+            open = r'[\[(]'
+            close = r'[\])]'
+            text = argparse._re.sub(r'(%s) ' % open, r'\1', text)
+            text = argparse._re.sub(r' (%s)' % close, r'\1', text)
+            text = argparse._re.sub(r'%s *%s' % (open, close), r'', text)
+            text = argparse._re.sub(r'\(([^|]*)\)', r'\1', text)
+            text = text.strip()
+
+            # return the text
+            return text
+
+        def _join_parts(self, part_strings):
+            part_strings = [utf8(x) for x in part_strings if utf8(x) and x is not argparse.SUPPRESS]
+            return "".join(part_strings)
+else:
+    class CoqHelpFormatter(argparse.HelpFormatter):
+        pass
 
 class Options(object):
     def __init__(self):
@@ -53,10 +170,10 @@ class Options(object):
         
         self.args.coquery_home = get_home_dir(create=True)
 
-        self.prog_name = __init__.NAME
-        self.config_name = "%s.cfg" % __init__.NAME.lower()
-        self.version = __init__.__version__
-        self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False)
+        self.prog_name = NAME
+        self.config_name = "%s.cfg" % NAME.lower()
+        self.version = VERSION
+        self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False, formatter_class=CoqHelpFormatter)
 
         self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
         self.args.disabled_columns = set([])
@@ -64,6 +181,7 @@ class Options(object):
         self.args.query_label = ""
         self.args.input_path = ""
         self.args.query_string = ""
+        self.args.ask_on_quit = True
         self.args.save_query_string = True
         self.args.save_query_file = True
         self.args.reaggregate_data = True
@@ -72,23 +190,29 @@ class Options(object):
         self.args.current_server = None
         self.args.current_resources = None
         self.args.main_window = None
+        self.args.first_run = False
 
         self.args.filter_list = []
         self.args.stopword_list = []
         self.args.use_stopwords = False
         self.args.use_corpus_filters = False
         
-        self.args.base_path, _ = os.path.split(os.path.realpath(__file__))
-        
+        if getattr(sys, "frozen", None):
+            self.args.base_path = os.path.dirname(sys.executable)
+        elif __file__:
+            self.args.base_path = os.path.dirname(__file__)
+
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
-        self.args.corpus_source_path = os.path.join(self.args.base_path, "texts")
-        self.args.text_source_path = os.path.expanduser("~")
+        self.args.textgrids_file_path = os.path.expanduser("~")
+        self.args.text_source_path = os.path.join(self.args.base_path, "texts", "alice")
+        self.args.corpus_source_path = os.path.expanduser("~")
         self.args.stopwords_file_path = os.path.expanduser("~")
         self.args.filter_file_path = os.path.expanduser("~")
 
-        self.args.connection_path = os.path.join(self.args.coquery_home, "connections")
+        self.args.connections_path = os.path.join(self.args.coquery_home, "connections")
+        self.args.installer_path = os.path.join(self.args.base_path, "installer")
         
         self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
         self.args._use_mysql = True
@@ -109,7 +233,7 @@ class Options(object):
         self.args.column_width = {}
         self.args.column_color = {}
         self.args.column_names = {}
-        self.args.column_visibility = {}
+        self.args.column_visibility = collections.defaultdict(dict)
         self.args.row_visibility = collections.defaultdict(dict)
         self.args.row_color = {}
         # Set defaults for CSV files:
@@ -118,17 +242,26 @@ class Options(object):
         self.args.input_separator = ','
         self.args.output_separator = ","
         self.args.quote_char = '"'
+        self.args.xkcd = None
+        
+        self.args.output_to_lower = True
 
     @property
     def cfg(self):
         return self.args
         
     def setup_parser(self):
-        group = self.parser.add_mutually_exclusive_group()
         self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS, QUERY_MODE_CONTINGENCY, QUERY_MODE_COLLOCATIONS), type=str, nargs="?")
+        if sys.version_info < (3, 0):
+            l = [x.encode("utf-8") for x in self.corpus_argument_dict["choices"]]
+            self.corpus_argument_dict["choices"] = l
         self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
         
-        group.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
+        # If Qt is available, the GUI is used by default. The command line 
+        # interface can be selected by using the --con option:
+        if _use_qt:
+            self.parser.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
+        
         # General options:
         self.parser.add_argument("-o", "--outputfile", help="write results to OUTPUTFILE (default: write to console)", type=str, dest="output_path")
         group = self.parser.add_mutually_exclusive_group()
@@ -162,7 +295,8 @@ class Options(object):
 
         # Query options:
         group = self.parser.add_argument_group("Query options")
-        group.add_argument("-C", "--case", help="be case-sensitive (default: be COCA-compatible and ignore case)", action="store_true", dest="case_sensitive")
+        group.add_argument("-C", "--output_case", help="be case-sensitive in the output (default: ignore case)", action="store_true", dest="output_case_sensitive")
+        group.add_argument("--query_case", help="be case-sensitive when querying (default: ignore case)", action="store_true", dest="query_case_sensitive")
         group.add_argument("--one_by_one", help="retrieve results from server one by one (somewhat slower, but uses less memory)", action="store_true", dest="server_side")
         #group.add_argument("-L", "--lemmatize-tokens", help="treat all tokens in query as lemma searches (default: be COCA-compatible and only do lemma searches if explicitly specified in query string)", action="store_true")
         group.add_argument("-r", "--regexp", help="use regular expressions", action="store_true", dest="regexp")
@@ -198,7 +332,7 @@ class Options(object):
         """
         self.corpus_argument_dict = {
             "help": "specify the corpus to use", 
-            "choices": get_available_resources(DEFAULT_CONFIGURATION).keys(), 
+            "choices": [utf8(x) for x in get_available_resources(DEFAULT_CONFIGURATION).keys()], 
             "type": type(str(""))}
 
         self.setup_parser()
@@ -221,9 +355,10 @@ class Options(object):
                 self.args.corpus = ""
         except AttributeError:
             self.args.corpus = ""
+        self.args.corpus = utf8(self.args.corpus)
         # if no corpus is selected and no GUI is requested, display the help
         # and exit.
-        if not self.args.corpus and not (args.gui):
+        if not self.args.corpus and not (self.args.gui):
             self.parser.print_help()
             sys.exit(1)
         
@@ -456,11 +591,6 @@ class Options(object):
         self.args.show_id = False
         self.args.show_phon = False
 
-        if self.args.context_mode == CONTEXT_COLUMNS:
-            self.args.context_columns = True
-        else:
-            self.args.context_columns = False
-            
         self.args.context_sentence = False
 
         try:
@@ -485,7 +615,6 @@ class Options(object):
                 self.args.query_list = [x.decode("utf8") for x in self.args.query_list]
             except AttributeError:
                 pass
-        
         logger.info("Command line parameters: " + self.args.parameter_string)
         
     def setup_default_connection(self):
@@ -539,10 +668,13 @@ class Options(object):
 
                 try:
                     self.args.current_server = config_file.get("sql", "active_configuration")
-                    self.args.current_resources = get_available_resources(self.args.current_server)
+                    if self.args.current_server in self.args.server_configuration:
+                        self.args.current_resources = get_available_resources(self.args.current_server)
+                    else:
+                        raise ValueError
                 except (NoOptionError, ValueError):
-                    self.args.current_server = None
-                    self.args.current_resources = None
+                    self.args.current_server = "Default"
+                    self.args.current_resources = get_available_resources(self.args.current_server)
                 
             # only use the other settings from the configuration file if a 
             # GUI is used:
@@ -571,12 +703,19 @@ class Options(object):
                         try:
                             self.args.context_mode = config_file.get("main", "context_mode")
                         except NoOptionError:
-                            self.args.context_mode = CONTEXT_KWIC
+                            self.args.context_mode = CONTEXT_NONE
                         try:
-                            self.args.connection_path = config_file.get("main", "connection_path")
+                            self.args.output_case_sensitive = config_file.getboolean("main", "output_case_sensitive")
                         except NoOptionError:
-                            pass
-
+                            self.args.output_case_sensitive = False
+                        try:
+                            self.args.output_to_lower = config_file.getboolean("main", "output_to_lower")
+                        except NoOptionError:
+                            self.args.output_to_lower = True
+                        try:
+                            self.args.query_case_sensitive = config_file.getboolean("main", "query_case_sensitive")
+                        except NoOptionError:
+                            self.args.query_case_sensitive = True
                         try:
                             self.args.custom_installer_path = config_file.get("main", "custom_installer_path")
                         except NoOptionError:
@@ -611,6 +750,10 @@ class Options(object):
                                 self.args.quote_char = config_file.get("main", "csv_quote_char")
                             except (NoOptionError, ValueError):
                                 pass
+                        try:
+                            self.args.xkcd = config_file.getboolean("main", "xkcd")
+                        except (NoOptionError, ValueError):
+                            pass
 
                     elif section == "output":
                         for variable, value in config_file.items("output"):
@@ -657,9 +800,9 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.query_file_path = os.path.expanduser("~")
                         try:
-                            self.args.query_file_path = config_file.get("gui", "query_file_path")
+                            self.args.textgrids_file_path = config_file.get("gui", "textgrids_file_path")
                         except (NoOptionError, ValueError):
-                            self.args.query_file_path = os.path.expanduser("~")
+                            self.args.textgrids_file_path = os.path.expanduser("~")
                         try:
                             self.args.results_file_path = config_file.get("gui", "results_file_path")
                         except (NoOptionError, ValueError):
@@ -724,7 +867,9 @@ class Options(object):
                                                 self.args.column_width[column] = int(value)
                                     except ValueError:
                                         pass
-                            
+        else:
+            self.args.first_run = True
+
 cfg = None
 
 class UnicodeConfigParser(RawConfigParser):
@@ -774,7 +919,14 @@ def save_configuration():
         config.set("main", "csv_quote_char", cfg.quote_char)
     config.set("main", "one_by_one", cfg.server_side)
     config.set("main", "context_mode", cfg.context_mode)
-    config.set("main", "connection_path", cfg.connection_path)
+    config.set("main", "output_case_sensitive", cfg.output_case_sensitive)
+    config.set("main", "query_case_sensitive", cfg.query_case_sensitive)
+    try:
+        config.set("main", "output_to_lower", cfg.output_to_lower)
+    except AttributeError:
+        pass
+    if cfg.xkcd != None:
+        config.set("main", "xkcd", cfg.xkcd)
     
     if cfg.custom_installer_path:
         config.set("main", "custom_installer_path", cfg.custom_installer_path)
@@ -789,7 +941,7 @@ def save_configuration():
         if d["type"] == SQL_MYSQL:
             required_vars = ["name", "host", "port", "user", "password", "type"]
         elif d["type"] == SQL_SQLITE:
-            required_vars = ["name", "type"]
+            required_vars = ["name", "type", "path"]
         else:
             required_vars = []
         for x in required_vars:
@@ -853,6 +1005,10 @@ def save_configuration():
         except AttributeError:
             config.set("gui", "results_file_path", os.path.expanduser("~"))
         try:
+            config.set("gui", "textgrids_file_path", cfg.textgrids_file_path)
+        except AttributeError:
+            config.set("gui", "textgrids_file_path", os.path.expanduser("~"))
+        try:
             config.set("gui", "stopwords_file_path", cfg.stopwords_file_path)
         except AttributeError:
             config.set("gui", "stopwords_file_path", os.path.expanduser("~"))
@@ -886,9 +1042,9 @@ def save_configuration():
     with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)
 
-def get_mysql_configuration():
+def get_con_configuration():
     """
-    Returns a tuple containing the currently active MySQL configuration.
+    Returns a tuple containing the currently active connection configuration.
     
     The method uses the configuration name stored in the attribute 
     'current_server' to retrieve the configuration values from the
@@ -935,6 +1091,15 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
     allowed_parents = (ast.If, ast.FunctionDef, ast.TryExcept, ast.TryFinally, ast.While, ast.For,
                        ast.With)
 
+    if sys.version_info < (3, 0):
+        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign, 
+                              ast.Return, ast.TryExcept, ast.TryFinally, 
+                              ast.Pass, ast.Raise, ast.Assert, ast.Print)
+    else:
+        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign, 
+                              ast.Return, ast.TryExcept, ast.TryFinally, 
+                              ast.Pass, ast.Raise, ast.Assert)
+
     def validate_node(node, parent):
         if isinstance(node, ast.ClassDef):
             if node.name in expected_classes:
@@ -949,7 +1114,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                 if whitelisted_modules != "all" and element not in whitelisted_modules:
                     raise IllegalImportInModuleError(corpus_name, cfg.current_server, element, node.lineno)
         
-        elif isinstance(node, (ast.FunctionDef, ast.Assign, ast.AugAssign, ast.Return, ast.TryExcept, ast.TryFinally, ast.Pass, ast.Raise)):
+        elif isinstance(node, allowed_statements):
             pass
         
         elif isinstance(node, ast.Expr):
@@ -973,6 +1138,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
             if not isinstance(parent, allowed_parents):
                 raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
         else:
+            print(node)
             raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
 
         # recursively validate the content of the node:
@@ -981,17 +1147,21 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                 validate_node(child, node)
     
     corpus_name = os.path.splitext(os.path.basename(path))[0]
-    with codecs.open(path, "r") as module_file:
-        content = module_file.read()
-        tree = ast.parse(content)
-        
-        for node in tree.body:
-            validate_node(node, None)
+    try:
+        with codecs.open(path, "r", encoding="utf-8", error="replace") as module_file:
+            content = module_file.read()
+            tree = ast.parse(content)
+            
+            for node in tree.body:
+                validate_node(node, None)
+    except Exception as e:
+        logger.error(e)
+
     if expected_classes:
         raise ModuleIncompleteError(corpus_name, cfg.current_server, expected_classes)
     if hash:
         #return hashlib.md5(content.encode("utf-8"))
-        return hashlib.md5("MD5 hash not available".encode("utf-8"))
+        return hashlib.md5(utf8("MD5 hash not available").encode("utf-8"))
 
 def set_current_server(name):
     """
@@ -1010,18 +1180,30 @@ def set_current_server(name):
     """
     global cfg
     cfg.current_server = name
+    
     if name:
         cfg.current_resources = get_available_resources(name)
     else:
         cfg.current_resources = None
 
-    path = os.path.join(get_home_dir(), "connections", name)
+    # make sure that a subdirectory exists in "connections" for the current
+    # connection:
+    path = os.path.join(cfg.connections_path, name)
     if not os.path.exists(path):
         os.makedirs(path)
+
+    cfg.corpora_path = os.path.join(path, "corpora")
+    if not os.path.exists(cfg.corpora_path):
+        os.makedirs(cfg.corpora_path)
+
+    cfg.adhoc_path = os.path.join(path, "adhoc")
+    if not os.path.exists(cfg.adhoc_path):
+        os.makedirs(cfg.adhoc_path)
+    
     if cfg.server_configuration[name]["type"] == SQL_SQLITE:
-        path = os.path.join(get_home_dir(), "databases", name)
-        if not os.path.exists(path):
-            os.makedirs(path)
+        cfg.database_path = os.path.join(path, "databases")
+        if not os.path.exists(cfg.database_path):
+            os.makedirs(cfg.database_path)
 
 def get_resource_of_database(db_name):
     """
@@ -1061,7 +1243,6 @@ def get_available_resources(configuration):
         """
         Creates an empty file __init__.py in the given path if necessary.
         """
-        return
         if not os.path.exists(path):
             os.makedirs(path)
         if not os.path.exists(os.path.join(path, "__init__.py")):
@@ -1070,48 +1251,48 @@ def get_available_resources(configuration):
     d  = {}
     if configuration == None:
         return d
-    
-    corpus_path = os.path.join(cfg.connection_path, configuration)
-    if os.path.exists(corpus_path):
-        # add corpus_path to sys.path so that modules can be imported from
-        # that location:
-        old_sys_path = list(sys.path)
-        sys.path.append(corpus_path)
 
-        # create the directory if it doesn't exist yet: 
-        # cycle through the modules in the corpus path:
-        for module_name in glob.glob(os.path.join(corpus_path, "*.py")):
-            corpus_name, ext = os.path.splitext(os.path.basename(module_name))
-            try:
-                validate_module(
-                    module_name, 
-                    expected_classes = ["Resource", "Corpus", "Lexicon"],
-                    whitelisted_modules = ["corpus", "__future__"],
-                    allow_if = False,
-                    hash = False)
-            except (ModuleIncompleteError, 
-                    IllegalImportInModuleError, IllegalFunctionInModuleError,
-                    IllegalCodeInModuleError) as e:
-                warnings.warn(str(e))
-            except SyntaxError as e:
-                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-                continue
-            except IndentationError as e:
-                warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-                continue
-            try:
-                module = importlib.import_module(corpus_name)
-            except SyntaxError as e:
-                warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-                raise e
-            except Exception as e:
-                print(corpus_name, e)
-                raise e
+    # add corpus_path to sys.path so that modules can be imported from
+    # that location:
+    corpora_path = os.path.join(get_home_dir(), "connections", configuration, "corpora")
+
+    # create the directory if it doesn't exist yet: 
+    # cycle through the modules in the corpus path:
+    for module_name in glob.glob(os.path.join(corpora_path, "*.py")):
+        corpus_name, ext = os.path.splitext(os.path.basename(module_name))
+        corpus_name = utf8(corpus_name)
+        #try:
+            #validate_module(
+                #module_name, 
+                #expected_classes = ["Resource", "Corpus", "Lexicon"],
+                #whitelisted_modules = ["corpus", "__future__"],
+                #allow_if = False,
+                #hash = False)
+        #except (ModuleIncompleteError, 
+                #IllegalImportInModuleError, IllegalFunctionInModuleError,
+                #IllegalCodeInModuleError) as e:
+            #warnings.warn(str(e))
+        #except SyntaxError as e:
+            #warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+            #continue
+        #except IndentationError as e:
+            #warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
+            #continue
+        
+        try:
+            find = imp.find_module(corpus_name, [corpora_path])
+            module = imp.load_module(corpus_name, *find)
+        except SyntaxError as e:
+            logger.warn("There is a syntax error in corpus module {}. The corpus is not available for queries. contact the corpus module maintainer.".format(corpus_name))
+        except UnicodeEncodeError as e:
+            logger.warn("There is a Unicode error in corpus module {}: {}".format(corpus_name, str(e)))
+        except Exception as e:
+            logger.warn("There is an error in corpus module {}: {}".format(corpus_name, str(e)))
+        else:
             try:
                 d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
             except (AttributeError, ImportError) as e:
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
-        sys.path = old_sys_path
     return d
 
 def get_resource(name, configuration):
@@ -1146,8 +1327,12 @@ def get_home_dir(create=True):
     $COQ_HOME/coquery.cfg               configuration file
     $COQ_HOME/coquery.log               log files
     $COQ_HOME/installer/                additional corpus installers
-    $COQ_HOME/adhoc/                    corpus installer for custom text corpora
-    $COQ_HOME/connections/$MYSQL_CONFIG/ corpus modules installed by the user
+    $COQ_HOME/connections/$MYSQL_CONFIG/corpora
+                                        installed corpus modules
+    $COQ_HOME/connections/$MYSQL_CONFIG/adhoc
+                                        adhoc installer modules
+    $COQ_HOME/connections/$MYSQL_CONFIG/databases
+                                        SQLite databases
     
     The location of $COQ_HOME depends on the operating system:
     
@@ -1170,28 +1355,22 @@ def get_home_dir(create=True):
         basepath = os.path.expanduser("~/Library/Application Support")
         
     coquery_home = os.path.join(basepath, "Coquery")
-
+    connections_path = os.path.join(coquery_home, "connections")
+    custom_installer_path = os.path.join(coquery_home, "installer")
+    
     if create:
         # create Coquery home if it doesn't exist yet:
         if not os.path.exists(coquery_home):
             os.makedirs(coquery_home)
             
-        # create installer directory if it doesn't exist yet:
-        if not os.path.exists(os.path.join(coquery_home, "installer")):
-            os.makedirs(os.path.join(coquery_home, "installer"))
+        # create custom installer directory if it doesn't exist yet:
+        if not os.path.exists(custom_installer_path):
+            os.makedirs(custom_installer_path)
             
         # create connection directory if it doesn't exist yet:
-        if not os.path.exists(os.path.join(coquery_home, "connections")):
-            os.makedirs(os.path.join(coquery_home, "connections"))
-    
-        # create adhoc directory if it doesn't exist yet:
-        if not os.path.exists(os.path.join(coquery_home, "adhoc")):
-            os.makedirs(os.path.join(coquery_home, "adhoc"))
+        if not os.path.exists(connections_path):
+            os.makedirs(connections_path)
 
-        # create SQLite databases directory if it doesn't exist yet:
-        if not os.path.exists(os.path.join(coquery_home, "databases")):
-            os.makedirs(os.path.join(coquery_home, "databases"))
-        
     return coquery_home
 
 def decode_query_string(s):
@@ -1276,15 +1455,75 @@ _recent_python = sys.version_info < (2, 7)
 _use_nltk = has_module("nltk")
 _use_mysql = has_module("pymysql")
 _use_seaborn = has_module("seaborn")
+_use_pdfminer = has_module("pdfminer")
 _use_qt = has_module("PyQt4") or has_module("PySide")
+_use_chardet = has_module("chardet")
+_use_tgt = has_module("tgt")
 
 missing_modules = []
-for mod in ["sqlalchemy", "pandas", "numpy"]:
+for mod in ["sqlalchemy", "pandas"]:
     if not has_module(mod):
         missing_modules.append(mod)
 
-try:
-    logger = logging.getLogger(__init__.NAME)
-except AttributeError:
-    pass
+# the tuples in module_information represent the following
+# - title
+# - minimum version
+# - short description
+# - URL
+module_information = {
+    "SQLAlchemy": ("The Python SQL toolkit",
+            "1.0",
+            "Use SQL databases for corpus storage",
+            "http://http://www.sqlalchemy.org/"),
+    "Pandas": ("Python data analysis library",
+            "0.16",
+            "Provides data structures to manage query result tables",
+            "http://pandas.pydata.org/index.html"),
+    "NLTK": ("The Natural Language Toolkit", 
+             "3.0",
+            "Lemmatization and tagging when building your own corpora", 
+            "http://www.nltk.org"),
+    "PyMySQL": ("A pure-Python MySQL client library",
+            "0.6.4",
+            "Connect to MySQL database servers",
+            "https://github.com/PyMySQL/PyMySQL/"),
+    "PDFMiner": ("PDF parser and analyzer (for Python 2.7)",
+            "",
+            "Build your own corpora from PDF documents",
+            "http://euske.github.io/pdfminer/index.html"),
+    "pdfminer3k": ("PDF parser and analyzer (for Python 3.x)",
+            "1.3",
+            "Build your own corpora from PDF documents",
+            "https://pypi.python.org/pypi/pdfminer3k"),
+    "Seaborn": ("A Python statistical data visualization library",
+            "0.7",
+            "Create visualizations of your query results",
+            "http://stanford.edu/~mwaskom/software/seaborn/"),
+    "chardet": ("The universal character encoding detector",
+            "2.0.0",
+            "Detect the encoding of your text files",
+            "https://github.com/chardet/chardet"),
+    "tgt": ("TextGridTools -- Read, write, and manipulate Praat TextGrid files",
+            "1.3.1",
+            "Export query results with time indices as Praat textgrids",
+            "http://github.com/hbuschme/TextGridTools/")}
 
+#for x in module_information:
+    #name = x
+    #title, version, desc, url = module_information[x]
+    #print("* `{} <{}>`, version {} or later – {} ({})".format(name, url, version, title, desc))
+
+missing_optional_modules = []
+if not _use_nltk:
+    missing_optional_modules.append("NLTK")
+if not _use_mysql:
+    missing_optional_modules.append("PyMySQL")
+if not _use_pdfminer:
+    if sys.version_info.major == 2:
+        missing_optional_modules.append("PDFMiner")
+    else:
+        missing_optional_modules.append("pdfminer3k")
+if not _use_seaborn:
+    missing_optional_modules.append("Seaborn")
+
+logger = logging.getLogger(NAME)

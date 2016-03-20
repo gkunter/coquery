@@ -2,23 +2,22 @@
 """
 defines.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
-Coquery is released under the terms of the GNU General Public License.
+Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
 
-import glob
-import os
-import importlib
-import sys
-import warnings
-import math
-import itertools
-import gc
+VERSION = "0.9"
+NAME = "Coquery"
+DATE = "2016"
+
+VERSION = "0.9"
+NAME = "Coquery"
+DATE = "2016"
 
 DEFAULT_MISSING_VALUE = "<NA>"
 
@@ -56,6 +55,7 @@ INSTALLER_CUSTOM = "Downloaded corpus installers"
 INSTALLER_ADHOC = "User corpora"
 
 COLUMN_NAMES = {
+    # Labels that are used in the Collocations aggregation:
     "coq_context_left": "Left context",
     "coq_context_right": "Right context",
     "coq_context_string": "Context",
@@ -67,10 +67,12 @@ COLUMN_NAMES = {
     "coq_mutual_information": "Mutual information",
     "coq_conditional_probability": "Pcond",
 
+    # Labels that are used in the Coquery special table:
     "coquery_query_token": "Query token",
-    "coquery_expanded_query_string": "Expanded query string",
+    "coquery_expanded_query_string": "Matched query string",
     "coquery_query_string": "Query string",
-    
+
+    # Labels that are used in the Statistics special table:
     "statistics_frequency": "Frequency", 
     "statistics_overall_proportion": "Overall proportion",
     "statistics_overall_entropy": "Overall entropy",
@@ -78,6 +80,15 @@ COLUMN_NAMES = {
     "statistics_per_million_words": "Frequency (pmw)",
     "statistics_query_entropy": "Query entropy",
     "statistics_column_total": "ALL",
+
+    # Labels that are used when displaying the corpus statistics:
+    "coq_statistics_table": "Table",
+    "coq_statistics_column": "Column",
+    "coq_statistics_entries": "Entries",
+    "coq_statistics_uniques": "Uniques",
+    "coq_statistics_uniquenessratio": "Uniqueness ratio",
+    "coq_statistics_averagefrequency": "Average frequency",
+
         }
 
 DEFAULT_CONFIGURATION = "Default"
@@ -87,6 +98,51 @@ SQL_SQLITE = "sqlite"
 
 SQL_ENGINES = [SQL_MYSQL, SQL_SQLITE]
 
+# the tuples in MODULE_INFORMATION contain the following
+# - title
+# - minimum version
+# - short description
+# - URL
+MODULE_INFORMATION = {
+    "PySide": ("The Python Qt bindings project",
+               "1.2.2",
+               "Provides access to the Qt toolkit used for the GUI",
+               "https://pypi.python.org/pypi/PySide/1.2.4"),
+    "PyQt4": ("A set of Python Qt bindings for the Qt toolkit",
+               "4.11",
+               "Provides access to the Qt toolkit used for the GUI",
+               "https://www.riverbankcomputing.com/software/pyqt/download"),
+    "SQLAlchemy": ("The Python SQL toolkit",
+            "1.0",
+            "Use SQL databases for corpus storage",
+            "http://http://www.sqlalchemy.org/"),
+    "Pandas": ("Python data analysis library",
+            "0.16",
+            "Provides data structures to manage query result tables",
+            "http://pandas.pydata.org/index.html"),
+    "NLTK": ("The Natural Language Toolkit", 
+             "3.0",
+            "Lemmatization and tagging when building your own corpora", 
+            "http://www.nltk.org"),
+    "PyMySQL": ("A pure-Python MySQL client library",
+            "0.6.4",
+            "Connect to MySQL database servers",
+            "https://github.com/PyMySQL/PyMySQL/"),
+    "PDFMiner": ("PDF parser and analyzer (for Python 2.7)",
+            "",
+            "Build your own corpora from PDF documents",
+            "http://euske.github.io/pdfminer/index.html"),
+    "pdfminer3k": ("PDF parser and analyzer (for Python 3.x)",
+            "1.3",
+            "Build your own corpora from PDF documents",
+            "https://pypi.python.org/pypi/pdfminer3k"),
+    "Seaborn": ("A Python statistical data visualization library",
+            "0.7",
+            "Create visualizations of your query results",
+            "http://stanford.edu/~mwaskom/software/seaborn/")}
+
+
+
 # for Python 3 compatibility:
 try:
     unicode()
@@ -95,6 +151,23 @@ except NameError:
     unicode = str
     long = int
 
+msg_token_dangling_open = """
+<p><b>Your query string <code style='color: #aa0000'>{str}</code> misses a 
+closing character.</b></p>
+<p>There is no matching closing character <code style='color: 
+#aa0000'>{close}</code> for the opening character <code style='color: 
+#aa0000'>{open}</code>.</p>
+<p>Please fix your query string by supplying the closing character. If you
+want to query for the opening character, try to escape it by using 
+<code style='color: #aa0000'>\\{open}</code> instead.</p>
+"""
+
+msg_invalid_filter = """
+<p><b>The corpus filter '{}' is not valid.</b></p>
+<p>One of your filters is not not valid for the currently selected corpus.
+Please either disable using corpus filter from the Preferences menu, or 
+delete the invalid filter from the filter list.</p>
+"""
 msg_clear_filters = """
 <p><b>You have requested to reset the list of corpus filters.</b></p>
 <p>Click <b>Yes</b> if you really want to delete all filters in the list,
@@ -106,20 +179,26 @@ msg_clear_stopwords = """
 or <b>No</b> if you want to leave the stop word list unchanged.</p>
 """
 msg_missing_modules = """
-<p><b>Not all required Python modules could be found.</b><p>
+<p><b>Not all required Python modules could be found.</b></p>
 <p>Some of the Python modules that are required to run and use Coquery could 
 not be located on your system. The missing modules are:</p>
-<p><code>{}</code></p>
-<p>Please refer to <a href="http://coquery.org/documentation/">http://coquery.org/documentation</a>
-for instructions how to install the required modules.</p>
+<p><code>\t{}</code></p>
+<p>Please refer to the <a href="http://coquery.org/doc/">Coquery documentation</a>
+for instructions on how to install the required modules.</p>
 """
 msg_missing_seaborn_module = """
-<p><b>One of the required Python module could not be loaded.</b></p>
-<p>The Python module called 'seaborn' does not appear to be installed on this 
-computer. Without this module, the visualization functions are not available.</p>
+<p><b>The required visualization module could not be loaded.</b></p>
+<p>The Python module called 'Seaborn' is not installed on this computer. 
+Without this module, the visualization functions are not available.</p>
 <p>Please visit the Seaborn website for installation instructions:
 <a href="http://stanford.edu/~mwaskom/software/seaborn/index.html">http://stanford.edu/~mwaskom/software/seaborn/index.html</a>.
 </p>
+"""
+msg_visualization_error = """
+<p><b>An error occurred while plotting.</b></p>
+<p>While plotting the visualization, the following error was encountered:</p>
+<p><code>{}</code></p>
+<p>The visualization may be incorrect. Please contact the Coquery maintainers.</p>
 """
 msg_no_lemma_information = """
 <p><b>The current resource does not provide lemma information.</b></p>
@@ -142,7 +221,7 @@ installation altogether.</p>
 <p>Do you wish to ignore or to discard the invalid corpus data path?</p>
 """
 msg_mysql_no_configuration = """
-<p><b>No database server configuration is available.</b><p>
+<p><b>No database server configuration is available.</b></p>
 <p>You haven't specified the configuration for your database server yet.
 Please call 'Database servers...' from the Preferences menu, and set up a 
 configuration for your MySQL database server.</p>
@@ -150,7 +229,7 @@ configuration for your MySQL database server.</p>
 server help' from the Help menu.</p>
 """
 msg_warning_statistics = """
-<p><b>You have unsaved data in the results table.</b><p>
+<p><b>You have unsaved data in the results table.</b></p>
 <p>The corpus statistics will discard the results table from your last 
 query.</p>
 <p>If you want to retrieve that results table later, you will have to 
@@ -158,7 +237,7 @@ run the query again.</p>
 <p>Do you wish to continue?</p>
 """
 msg_no_context_available = """
-<p><b>Context information is not available.</b><p>
+<p><b>Context information is not available.</b></p>
 <p>There is no context information available for the item that you have 
 selected.</p>"""
 msg_corpus_no_documentation = """
@@ -261,9 +340,9 @@ When doing so, include the following information in your message:</p>
 {type}
 {code}"""
 msg_disk_error = """
-<p><b>An error occurred while accessing the disk storage.</b></p><p>The 
-results have not been saved. Please try again. If the error persists, try 
-saving to a different location</p>"""
+<p><b>An error occurred while accessing the disk storage.</b></p>
+<p>The results have not been saved. Please try again. If the error persists, 
+try saving to a different location</p>"""
 msg_encoding_error = """
 <p><b>An encoding error occurred while trying to save the results.</b></p>
 <p><span color="darkred">The save file is probably incomplete.</span></p>
@@ -284,8 +363,7 @@ msg_filename_error = """
 name that you have entered is not valid. Please enter a valid query file 
 name, or select a file by pressing the Open button.</p>"""
 msg_initialization_error = """
-<p><b>An error occurred while initializing the database</p>
-<p>{code}</p>
+<p><b>An error occurred while initializing the database {code}.</b></p>
 <p>Possible reasons include:
 <ul><li>The database server is not running.</li>
 <li>The host name or the server port are incorrect.</li>
@@ -294,8 +372,8 @@ privileges.</li>
 <li>You are trying to access a local database on a remote server, or vice
 versa.</li>
 </ul></p>
-<p>Open <b>Database servers</b> in the Preferences menu to check whether the
-connection to the database server is working, and if the settings are 
+<p>Open <b>Database connections </b> in the Preferences menu to check whether 
+the connection to the database server is working, and if the settings are 
 correct.</p>"""
 msg_corpus_remove = """
 <p><b>You have requested to remove the corpus '{corpus}'.</b></p>
@@ -331,63 +409,4 @@ Coquery, select <b>Manage corpora...</b> from the Corpus menu.</p>"""
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
-
-class FileSize(long):
-    """ Define a long class that can store file sizes, and which allows
-    custom formatting by using the format specifier S, which displays a 
-    human-readable file size with suffixes b, kb, Mb etc.
-    Adapted from http://code.activestate.com/recipes/578321-human-readable-filememory-sizes/
-    """
-    def __format__(self, fmt):
-        if self < 0:
-            return "(unknown)"
-        if fmt == "" or fmt[-1] != "S":
-            if fmt[-1].tolower() in ['b','c','d','o','x','n','e','f','g','%']:
-                # Numeric format.
-                return long(self).__format__(fmt)
-            else:
-                return str(self).__format__(fmt)
-
-        val, suffixes = float(self), ["b ","Kb","Mb","Gb","Tb","Pb"]
-        if val < 1:
-            # Can't take log(0) in any base.
-            i, v = 0, 0
-            exp = 0
-        else:
-            exp = int(math.log(val,1024))+1
-            v = val / math.pow(1024, exp)
-            # Move to the next bigger suffix when the value is large enough:
-            v, exp = (v, exp) if v > 0.5 else (v * 1024, exp - 1)
-        return ("{0:{1}f}" + suffixes[exp]).format(v, fmt[:-1])
-
-def dict_product(d):
-    """ Create a Cartesian product of the lists stored as values in the
-    dictionary 'd'.
-    
-    This product is useful for example to create a table of all factor level
-    combinations. The factor levels can be accessed by the column names. """
-    
-    cart_product = itertools.product(*d.itervalues())
-    
-    return (dict(itertools.izip(d, x)) for x in cart_product)
-
-
-#resource_list = ResourceList()
-
-def memory_dump():
-    x = 0
-    for obj in gc.get_objects():
-        i = id(obj)
-        size = sys.getsizeof(obj, 0)
-        # referrers = [id(o) for o in gc.get_referrers(obj)]
-        try:
-            cls = str(obj.__class__)
-        except:
-            cls = "<no class>"
-        if size > 1024 * 50:
-            referents = set([id(o) for o in gc.get_referents(obj)])
-            x += 1
-            print(x, {'id': i, 'class': cls, 'size': size, "ref": len(referents)})
-            #if len(referents) < 2000:
-                #print(obj)
 

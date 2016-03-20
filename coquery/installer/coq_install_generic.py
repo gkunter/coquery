@@ -12,13 +12,11 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-#try:
-    #import chardet
-#except ImportError:
-    #warnings.warn("The Python library 'chardet' is not available. The encoding of the input text files cannot be determined automatically.")
-    #warnings.warn("Using default Unicode encoding 'utf-8'.")
+from coquery.corpusbuilder import *
+from coquery import options
 
-from corpusbuilder import *
+if options._use_chardet:
+    import chardet
 
 class BuilderClass(BaseCorpusBuilder):
     corpus_table = "Corpus"
@@ -41,7 +39,7 @@ class BuilderClass(BaseCorpusBuilder):
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
         #
-        # WordId (Primary)
+        # WordId (Identifier)
         # An int value containing the unique identifier of this word-form.
         #
         # LemmaId
@@ -61,13 +59,13 @@ class BuilderClass(BaseCorpusBuilder):
         if pos:
             self.word_pos = "POS"
             self.create_table_description(self.word_table,
-                [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+                [Identifier(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
                 Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
                 Column(self.word_pos, "VARCHAR(12) NOT NULL"),
                 Column(self.word_label, "VARCHAR(40) NOT NULL")])
         else:
             self.create_table_description(self.word_table,
-                [Primary(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+                [Identifier(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
                 Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
                 Column(self.word_label, "VARCHAR(40) NOT NULL")])
 
@@ -77,7 +75,7 @@ class BuilderClass(BaseCorpusBuilder):
         # more than one token may be linked to each file in this table.
         # The table contains the following columns:
         #
-        # FileId (Primary)
+        # FileId (Identifier)
         # An int value containing the unique identifier of this file.
         # 
         # File 
@@ -87,14 +85,14 @@ class BuilderClass(BaseCorpusBuilder):
         # A text value containing the path that points to this data file.
 
         self.create_table_description(self.file_table,
-            [Primary(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+            [Identifier(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
             Column(self.file_name, "TINYTEXT NOT NULL"),
             Column(self.file_path, "TINYTEXT NOT NULL")])
 
         # Add the main corpus table. Each row in this table represents a 
         # token in the corpus. It has the following columns:
         # 
-        # TokenId (Primary)
+        # TokenId (Identifier)
         # An int value containing the unique identifier of the token
         #
         # WordId
@@ -106,7 +104,7 @@ class BuilderClass(BaseCorpusBuilder):
         # that contains this token.
         
         self.create_table_description(self.corpus_table,
-            [Primary(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
+            [Identifier(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table)])
 

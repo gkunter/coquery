@@ -15,10 +15,9 @@ from __future__ import unicode_literals
 import sys
 import re
 
-from pyqt_compat import QtCore, QtGui
-from renameColumnUi import Ui_Dialog
-
-import options
+from coquery import options
+from .pyqt_compat import QtCore, QtGui
+from .ui.renameColumnUi import Ui_Dialog
 
 def func_regexp(x, s):
     match = re.search("({})".format(s), x)

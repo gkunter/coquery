@@ -15,10 +15,9 @@ import sys
 import seaborn as sns
 import matplotlib as mpl
 
-from pyqt_compat import QtGui, QtCore
-from ui.figureOptionsUi import Ui_FigureOptions
-
-import options
+from coquery import options
+from .pyqt_compat import QtGui, QtCore
+from .ui.figureOptionsUi import Ui_FigureOptions
 
 class CoqColorItem(QtGui.QListWidgetItem):
     def __init__(self, color):
@@ -57,7 +56,7 @@ class FigureOptions(QtGui.QDialog):
         self.ui.label_y_axis.setText(self.options.get("label_y_axis", ""))
         self.ui.label_legend.setText(self.options.get("label_legend", ""))
         self.ui.spin_columns.setValue(self.options.get("label_legend_columns", 1))
-
+    
         # Color editing is currently not implemented, so hide all widgets 
         # that relate to that:
         self.ui.button_remove_custom.hide()
@@ -73,6 +72,10 @@ class FigureOptions(QtGui.QDialog):
         #self.current_palette = QtGui.QStandardItemModel(self.ui.color_test_area)
         if self.palette_name == "custom":
             self.custom_palette = self.options.get("color_palette_values", [])
+
+        # set fonts from options:
+        for x in ["main", "x_axis", "x_ticks", "y_axis", "y_ticks", "legend", "legend_entries"]:
+            self.set_element_font(x, self.options.get("font_{}".format(x)))
 
         self.ui.radio_qualitative.clicked.connect(self.change_palette)
         self.ui.radio_sequential.clicked.connect(self.change_palette)
@@ -96,19 +99,23 @@ class FigureOptions(QtGui.QDialog):
         self.ui.color_test_area.clicked.connect(self.change_color)
 
         # set up fonts tab:
-        self.ui.button_select_main.clicked.connect(lambda: self.font_select("main"))
-        self.ui.button_select_x.clicked.connect(lambda: self.font_select("x"))
-        self.ui.button_select_x_ticks.clicked.connect(lambda: self.font_select("x_ticks"))
-        self.ui.button_select_y.clicked.connect(lambda: self.font_select("y"))
-        self.ui.button_select_y_ticks.clicked.connect(lambda: self.font_select("y_ticks"))
-        self.ui.button_select_legend.clicked.connect(lambda: self.font_select("legend"))
-        self.ui.button_select_legend_entries.clicked.connect(lambda: self.font_select("legend_entries"))
-
+        
+        self.ui.button_font_select.clicked.connect(self.font_select)
+        
+        # set up spinners
         for x in dir(self.ui):
-            if x.startswith("button_select_"):
-                element_name = x.rpartition("button_select_")[-1]
-                default_font = self.options.get("font_{}".format(element_name), self.font())
-                self.set_element_font(element_name, default_font)
+            if x.startswith("spin_size"):
+                element_name = x.rpartition("spin_size_")[-1]
+                font = self.options.get("font_{}".format(element_name))
+                getattr(self.ui, x).setValue(font.pointSize())
+                
+        self.ui.spin_size_main.valueChanged.connect(lambda: self.font_resize("main"))
+        self.ui.spin_size_x_axis.valueChanged.connect(lambda: self.font_resize("x_axis"))
+        self.ui.spin_size_x_ticks.valueChanged.connect(lambda: self.font_resize("x_ticks"))
+        self.ui.spin_size_y_axis.valueChanged.connect(lambda: self.font_resize("y_axis"))
+        self.ui.spin_size_y_ticks.valueChanged.connect(lambda: self.font_resize("y_ticks"))
+        self.ui.spin_size_legend.valueChanged.connect(lambda: self.font_resize("legend"))
+        self.ui.spin_size_legend_entries.valueChanged.connect(lambda: self.font_resize("legend_entries"))
                 
         self.ui.label_main.setFocus()
 
@@ -241,16 +248,31 @@ class FigureOptions(QtGui.QDialog):
             self.ui.color_test_area.addItem(item)
     
     def set_element_font(self, element_name, font):
-        current_field = getattr(self.ui, "label_sample_{}".format(element_name))
+        name = "label_sample_{}".format(element_name)
+        current_field = getattr(self.ui, name)
         current_field.setFont(font)
         current_field.setText("{} {}".format(font.family(), font.pointSize()))
 
-    def font_select(self, element_name):
-        current_field = getattr(self.ui, "label_sample_{}".format(element_name))
-        current_font = current_field.font()
-        font, accepted = QtGui.QFontDialog.getFont(current_font, self.parent)
+    def font_resize(self, element_name):
+        name = "label_sample_{}".format(element_name)
+        current_field = getattr(self.ui, name)
+        font = self.options.get(element_name, current_field.font())
+        font.setPointSize(int(getattr(self.ui, "spin_size_{}".format(element_name)).value()))
+        self.set_element_font(element_name, font)
+
+    def font_select(self, element_name="main"):
+        element_name = "main"
+        name = "label_sample_{}".format(element_name)
+        current_field = getattr(self.ui, name)
+        font = self.options.get(element_name, current_field.font())
+        new_font, accepted = QtGui.QFontDialog.getFont(font, self.parent)
         if accepted:
-            self.set_element_font(element_name, font)
+            self.options["figure_font"] = new_font
+            for x in dir(self.ui):
+                if x.startswith("label_sample_"):
+                    element_name = x.split("label_sample_")[-1]
+                    pointsize = int(getattr(self.ui, "spin_size_{}".format(element_name)).value())
+                    self.set_element_font(element_name, QtGui.QFont(new_font.family(), pointsize))
         
     def accept(self):
         self.options["label_main"] = str(self.ui.label_main.text())
@@ -264,14 +286,12 @@ class FigureOptions(QtGui.QDialog):
         if len(self.options["color_palette_values"]) < self.options.get("color_number", 6):
             self.options["color_palette_values"] = (self.options["color_palette_values"] * self.options.get("color_number", 6))[:self.options.get("color_number", 6)]
 
-        self.options["font_main"] = self.ui.label_sample_main.font()
-        self.options["font_x_axis"] = self.ui.label_sample_x.font()
-        self.options["font_x_axis_ticks"] = self.ui.label_sample_x_ticks.font()
-        self.options["font_y_axis"] = self.ui.label_sample_y.font()
-        self.options["font_y_axis_ticks"] = self.ui.label_sample_legend.font()
-        self.options["font_legend"] = self.ui.label_sample_y.font()
-        self.options["font_legend_entries"] = self.ui.label_sample_legend_entries.font()
+        for x in ["main", "x_axis", "x_ticks", "y_axis", "y_ticks", "legend", "legend_entries"]:
+            self.options["font_{}".format(x)] = getattr(self.ui, "label_sample_{}".format(x)).font()
+        
         super(FigureOptions, self).accept()
+        options.settings.setValue("figureoptions_size", self.size())
+        
 
     @staticmethod
     def get_default():

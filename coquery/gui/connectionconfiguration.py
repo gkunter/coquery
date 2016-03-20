@@ -19,14 +19,14 @@ import string
 import sys
 import sqlalchemy
 
-from pyqt_compat import QtCore, QtGui
-import QtProgress
-from ui.connectionConfigurationUi import Ui_ConnectionConfig
+from coquery import sqlhelper
+from coquery import options
+from coquery.errors import *
+from coquery.defines import *
 
-import sqlhelper
-import options
-from errors import *
-from defines import *
+from .pyqt_compat import QtCore, QtGui
+from . import classes
+from .ui.connectionConfigurationUi import Ui_ConnectionConfig
 
 def check_valid_host(s):
     """
@@ -110,9 +110,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         self.default_user = user
         self.default_password = password
         self.default_type = db_type
-        self.default_path = "{}/databases".format(options.get_home_dir())
 
-    
         self.current_server = name
         self.backup_dict = dict(config_dict)
         self.backup_server = name
@@ -120,6 +118,16 @@ class ConnectionConfiguration(QtGui.QDialog):
         
         self.ui = Ui_ConnectionConfig()
         self.ui.setupUi(self)
+        
+        self.ui.frame_sqlite.hide()
+
+        
+        #self.ui.checkbox_layout.removeWidget(self.ui.checkBox)
+        #self.ui.checkBox.hide()
+        #del self.ui.checkBox
+        #self.ui.switch_default_path = classes.CoqSwitch(text="Use default directory")
+        #self.ui.checkbox_layout.addWidget(self.ui.switch_default_path)
+        #self.ui.label_checkbox.buddy = self.ui.switch_default_path
         
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
 
@@ -149,6 +157,10 @@ class ConnectionConfiguration(QtGui.QDialog):
         self.set_configuration(self.get_configuration())
         self.update_configuration(False)
 
+        #self.ui.switch_default_path.toggled.connect(self.toggle_default_path)
+        self.ui.radio_default_path.clicked.connect(self.toggle_default_path)
+        self.ui.radio_custom_path.clicked.connect(self.toggle_default_path)
+
         self.ui.tree_configuration.itemActivated.connect(self.apply_configuration)
         self.ui.configuration_name.textChanged.connect(lambda: self.update_configuration(False))
 
@@ -159,8 +171,10 @@ class ConnectionConfiguration(QtGui.QDialog):
         self.ui.radio_local.clicked.connect(lambda: self.update_configuration(True))
         self.ui.radio_remote.clicked.connect(lambda: self.update_configuration(True))
 
-        self.ui.input_db_path.textChanged.connect(lambda: self.update_configuration(True))
         self.ui.button_db_path.clicked.connect(self.set_sql_path)
+        self.ui.input_db_path.textChanged.connect(lambda: self.update_configuration(True))
+        
+        self.ui.configuration_name.textEdited.connect(self.set_default_path)
         
         self.ui.radio_mysql.toggled.connect(self.toggle_engine)
         self.ui.radio_sqlite.toggled.connect(self.toggle_engine)
@@ -172,6 +186,27 @@ class ConnectionConfiguration(QtGui.QDialog):
             self.resize(options.settings.value("connectionconfiguration_size"))
         except TypeError:
             pass
+
+    def set_default_path(self):
+        if self.ui.radio_default_path.isChecked():
+            self.ui.input_db_path.setText(
+                    self.get_sql_path(str(self.ui.configuration_name.text())))
+
+    def toggle_default_path(self):
+        if str(self.ui.configuration_name.text()) == "Default":
+            self.ui.radio_default_path.setChecked(True)
+            #self.ui.switch_default_path.setOn()
+        if self.ui.radio_default_path.isChecked():
+        #if self.ui.switch_default_path.isOn():
+            self.ui.button_db_path.setDisabled(True)
+            self.ui.input_db_path.setDisabled(True)
+        else:
+            if str(self.ui.input_db_path.text()) == "":
+                self.ui.input_db_path.setText(
+                    self.get_sql_path(str(self.ui.configuration_name.text())))
+            self.ui.button_db_path.setDisabled(False)
+            self.ui.input_db_path.setDisabled(False)
+            self.update_configuration(True)
 
     def closeEvent(self, event):
         options.settings.setValue("connectionconfiguration_size", self.size())
@@ -205,9 +240,23 @@ class ConnectionConfiguration(QtGui.QDialog):
         self.ui.button_add.setEnabled(False)
         self.ui.button_replace.setEnabled(False)
         self.ui.button_remove.setEnabled(False)
+        self.ui.radio_sqlite.setEnabled(False)
+        self.ui.radio_mysql.setEnabled(False)
+        self.ui.label_7.setEnabled(False)
+        
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
         
         name = str(self.ui.configuration_name.text())
+
+        if name != "Default":
+            self.ui.radio_sqlite.setEnabled(True)
+            self.ui.radio_mysql.setEnabled(True)
+            self.ui.label_7.setEnabled(True)
+        else:
+            # exit if the configuration name is "Default", because this name 
+            # is # reserved:
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+            return
 
         if self.state == "noConnection" or self.state == "configurationError":
             self.ui.group_credentials.setEnabled(False)
@@ -216,11 +265,6 @@ class ConnectionConfiguration(QtGui.QDialog):
 
         # exit if no configuration name has been entered:
         if not name:
-            return
-        # exit if the configuration name is "Default", because this name is 
-        # reserved:
-        if name == "Default":
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
             return
 
         d = self.get_values()
@@ -231,16 +275,23 @@ class ConnectionConfiguration(QtGui.QDialog):
         # enable either the Add or the Remove button, depending on whether
         # there is already a configuration with the current name:
         if self.state == "connected":
-
             if name not in self.config_dict:
-                if d["type"] == SQL_SQLITE:
-                    # Only enable the Add button if the SQLite path exists
-                    # or is empty (in which case the default path will be 
-                    # used):
-                    if d["path"] == "" or os.path.isdir(d["path"]):
-                        self.ui.button_add.setEnabled(True)
-                else:
-                    self.ui.button_add.setEnabled(True)
+                self.ui.button_add.setEnabled(True)
+                #if d["type"] == SQL_SQLITE:
+                    ## Only enable the Add button if the SQLite path exists
+                    ## or is empty (in which case the default path will be 
+                    ## used):
+                    ##if self.ui.switch_default_path.isOn():
+                    #if self.ui.radio_default_path.isChecked():
+                        #self.ui.button_add.setEnabled(True)
+                        #self.ui.input_db_path.setStyleSheet("")
+                    #elif os.path.isdir(d["path"]):
+                        #self.ui.button_add.setEnabled(True)
+                        #self.ui.input_db_path.setStyleSheet("")
+                    #else:
+                        #self.ui.input_db_path.setStyleSheet("QLineEdit { background: lightyellow; }")
+                #else:
+                    #self.ui.button_add.setEnabled(True)
             else:
                 # only enable Replace button if current values are different
                 # from the stored values:
@@ -256,15 +307,16 @@ class ConnectionConfiguration(QtGui.QDialog):
                         # Enable the Ok button:
                         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
                 elif d["type"] == SQL_SQLITE:
-                    # The SQLite db path can be empty (then, the default path 
-                    # will be used. Otherwise, it has to be an existing 
-                    # directory.
-                    if d["path"] == "" or os.path.isdir(d["path"]):
-                        # Enable the Replace button if the path is new:
-                        if (d["path"] != self.config_dict[name]["path"]):
-                            self.ui.button_replace.setEnabled(True)
-                        # Enable the Ok button:
-                        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                    ## The SQLite db path can be empty (then, the default path 
+                    ## will be used). Otherwise, it has to be an existing 
+                    ## directory.
+                    #if d["path"] == "" or os.path.isdir(d["path"]):
+                        ## Enable the Replace button if the path is new:
+                        #if (d["path"] != self.config_dict[name]["path"]):
+                            #self.ui.button_replace.setEnabled(True)
+                        ## Enable the Ok button:
+                        #self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
                     
                 # Select item in tree:
                 self.current_item = self.ui.tree_configuration.findItems(name, QtCore.Qt.MatchExactly, 0)[0]
@@ -275,11 +327,13 @@ class ConnectionConfiguration(QtGui.QDialog):
                 # Also, enable the Remove button:
                 self.ui.button_remove.setEnabled(True)
 
+    def get_sql_path(self, name):
+        return os.path.join(options.get_home_dir(), "connections", name, "databases")
+
     def set_sql_path(self):
         d = self.get_values()
         if d["path"] == "":
-            default_sql_path = "{}/databases".format(options.get_home_dir())
-            sql_path = default_sql_path
+            sql_path = os.path.expanduser("~")
         else:
             sql_path = d["path"]
 
@@ -310,7 +364,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         if d["type"] == SQL_MYSQL:
             self.ui.radio_mysql.setChecked(True)
             self.ui.frame_mysql.show()
-            self.ui.frame_sqlite.hide()
+            #self.ui.frame_sqlite.hide()
 
             if d["host"] == "127.0.0.1":
                 self.ui.radio_local.setChecked(True)
@@ -324,11 +378,18 @@ class ConnectionConfiguration(QtGui.QDialog):
         elif d["type"] == SQL_SQLITE:
             self.ui.radio_sqlite.setChecked(True)
             self.ui.frame_mysql.hide()
-            self.ui.frame_sqlite.show()
-            if d["path"]:
-                self.ui.input_db_path.setText(d["path"])
+            #self.ui.frame_sqlite.show()
+            self.ui.input_db_path.setText(d["path"])
+            if not str(self.ui.input_db_path.text()):
+                #self.ui.switch_default_path.setOn()
+                self.ui.radio_default_path.setChecked(True)
+                self.ui.button_db_path.setDisabled(True)
+                self.ui.input_db_path.setDisabled(True)
             else:
-                self.ui.input_db_path.setText(self.default_path)
+                #self.ui.switch_default_path.setOff()
+                self.ui.radio_custom_path.setChecked(True)
+                self.ui.button_db_path.setDisabled(False)
+                self.ui.input_db_path.setDisabled(False)
        
     def get_configuration(self):
         if self.current_server in self.config_dict:
@@ -344,7 +405,7 @@ class ConnectionConfiguration(QtGui.QDialog):
                 "port": self.default_port,
                 "user": self.default_user,
                 "type": self.default_type,
-                "path": self.default_path,
+                "path": self.get_sql_path("Default"),
                 "password": self.default_password}
     
     def get_values(self):
@@ -354,8 +415,6 @@ class ConnectionConfiguration(QtGui.QDialog):
         d["port"] = int(self.ui.port.text())
         d["user"] = str(self.ui.user.text())
         d["path"] = os.path.expanduser(str(self.ui.input_db_path.text()))
-        if d["path"] == "":
-            d["path"] = self.default_path
         d["password"] = str(self.ui.password.text())
         if self.ui.radio_mysql.isChecked():
             d["type"] = SQL_MYSQL
@@ -443,9 +502,12 @@ class ConnectionConfiguration(QtGui.QDialog):
             self.ui.user.setText(name)
             self.ui.password.setText(password)
             self.check_connection()
-            
+
     def update_configuration(self, connection_changed):
         self.configuration_changed = connection_changed
+        #if not str(self.ui.input_db_path.text()):
+            #self.ui.input_db_path.setText(os.path.join(
+                #options.cfg.connections_path, self.ui.input_db_path.text(), "databases"))
         if connection_changed or self.state == None:
             self.current_connection = self.check_connection()
         self.check_buttons()
@@ -455,11 +517,12 @@ class ConnectionConfiguration(QtGui.QDialog):
         Change the current database engine type.
         """
         self.ui.frame_mysql.hide()
-        self.ui.frame_sqlite.hide()
+        #self.ui.frame_sqlite.hide()
         if self.ui.radio_mysql.isChecked():
             self.ui.frame_mysql.show()
         elif self.ui.radio_sqlite.isChecked():
-            self.ui.frame_sqlite.show()
+            #self.ui.frame_sqlite.show()
+            pass
         self.check_buttons()
             
     def check_connection(self):
@@ -498,7 +561,7 @@ class ConnectionConfiguration(QtGui.QDialog):
             self.ui.hostname.setEnabled(True)
 
         if check_valid_host(hostname):
-            self.probe_thread = QtProgress.ProgressThread(lambda: self.probe_host(hostname), self)
+            self.probe_thread = classes.CoqThread(lambda: self.probe_host(hostname), self)
             self.ui.button_status.setStyleSheet('QPushButton {background-color: grey; color: grey;}')
             self.timer = QtCore.QTimer()
             self.timer.timeout.connect(self.update_timeout)

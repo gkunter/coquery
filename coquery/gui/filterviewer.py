@@ -12,12 +12,11 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 import codecs
 import pandas as pd
 
-from pyqt_compat import QtCore, QtGui
-from ui.stopwordsUi import Ui_Stopwords
-
-import queryfilter
-import options
-from defines import *
+from coquery import options
+from coquery.defines import *
+from . import classes
+from .pyqt_compat import QtCore, QtGui
+from .ui.stopwordsUi import Ui_Stopwords
 
 class Filters(QtGui.QDialog):
     def __init__(self, word_list, default=None, parent=None, icon=None):
@@ -28,7 +27,7 @@ class Filters(QtGui.QDialog):
         self.ui.setupUi(self)
         self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
         self.ui.stopword_list.close()
-        self.ui.filter_list = queryfilter.CoqTagBox(label="Add corpus filter:")
+        self.ui.filter_list = classes.CoqTagBox(label="Add corpus filter:")
         self.ui.horizontalLayout.insertWidget(0, self.ui.filter_list)
 
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Reset).clicked.connect(self.reset_list)

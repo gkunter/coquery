@@ -13,9 +13,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 
-from corpusbuilder import *
-import transpose
 import codecs
+
+from coquery.corpusbuilder import *
+from coquery import transpose
 
 class BuilderClass(BaseCorpusBuilder):
     encoding = "latin-1"
@@ -63,7 +64,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.corpus_ipa = "IPA"
         
         self.create_table_description(self.corpus_table,
-            [Primary(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+            [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.corpus_word, "VARCHAR(50) NOT NULL"),
              Column(self.corpus_transcript, "VARCHAR(100) NOT NULL"),
              Column(self.corpus_ipa, "VARCHAR(100) NOT NULL")])

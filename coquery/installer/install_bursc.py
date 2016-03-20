@@ -5,7 +5,7 @@ import csv
 import os
 import collections, difflib, string
 
-import corpusbuilder
+from coquery import corpusbuilder
 
 # The class corpus_code contains the Python source code that will be
 # embedded into the corpus library. It provides the Python code that will
