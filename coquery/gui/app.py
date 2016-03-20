@@ -38,7 +38,9 @@ from .ui import coqueryUi
 
 
 # add required paths:
-sys.path.append(os.path.join(sys.path[0], "visualizer"))
+sys.path.append(options.cfg.base_path)
+sys.path.append(os.path.join(options.cfg.base_path, "visualizer"))
+sys.path.append(os.path.join(options.cfg.base_path, "installer"))
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -1713,7 +1715,7 @@ class CoqueryApp(QtGui.QMainWindow):
         from . import visualization
         
         # try to import the specified visualization module:
-        name = "coquery.visualizer.{}".format(name)
+        name = "visualizer.{}".format(name)
         try:
             module = importlib.import_module(name)
         except Exception as e:
@@ -1872,20 +1874,25 @@ class CoqueryApp(QtGui.QMainWindow):
             
     def manage_corpus(self):
         from . import corpusmanager
-        
         if self.corpus_manager:
             self.corpus_manager.raise_()
             self.corpus_manager.activateWindow()
         else:
-            self.corpus_manager = corpusmanager.CorpusManager(parent=self)        
+            try:
+                self.corpus_manager = corpusmanager.CorpusManager(parent=self)        
+            except Exception as e:
+                raise e
             self.corpus_manager.show()
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
             self.corpus_manager.buildCorpus.connect(self.build_corpus)
             self.corpusListUpdated.connect(self.corpus_manager.update)
             
-            result = self.corpus_manager.exec_()
-            
+            try:
+                result = self.corpus_manager.exec_()
+            except Exception as e:
+                logger.error(e)
+                raise e
             self.corpusListUpdated.disconnect(self.corpus_manager.update)
             
             try:
