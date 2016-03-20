@@ -348,7 +348,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addItem(spacerItem3)
         self.verticalLayout_6.addWidget(self.splitter_2)
         MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QtGui.QMenuBar(MainWindow)
+        self.menubar = QtGui.QMenuBar()
         self.menubar.setGeometry(QtCore.QRect(0, 0, 805, 23))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
@@ -654,5 +654,3 @@ class Ui_MainWindow(object):
         self.action_toggle_filters.setText(_translate("MainWindow", "Use &filters", None))
         self.action_toggle_stopwords.setText(_translate("MainWindow", "Use stop&words", None))
         self.action_create_textgrid.setText(_translate("MainWindow", "Create te&xtgrid...", None))
-
-
