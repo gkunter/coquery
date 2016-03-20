@@ -90,7 +90,7 @@ class CoqueryApp(QtGui.QMainWindow):
         spetial care, and also sets up some special attributes that relate
         to the GUI, including default appearances of the columns."""
         QtGui.QMainWindow.__init__(self, parent)
-        
+
         self.file_content = None
         self.csv_options = None
         self.query_thread = None
@@ -283,9 +283,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
 
-        if sys.platform == "darwin":
-            self.menuBar = QtGui.QMenuBar()
-            
     def statusBar(self):
         if hasattr(self.ui, "statusbar"):
             return self.ui.statusbar
@@ -688,9 +685,10 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         icon = QtGui.QIcon()
         if small_n_flat:
-            icon.addFile(os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s)))
+            path = os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s))
         else:
-            icon.addFile(os.path.join(options.cfg.base_path, "icons", "artwork", s))
+            path = os.path.join(options.cfg.base_path, "icons", "artwork", s)
+        icon.addFile(path)
         return icon
 
     def show_query_status(self):
@@ -1831,7 +1829,6 @@ class CoqueryApp(QtGui.QMainWindow):
                     os.remove(path)
                 except Exception as e:
                     print(e)
-                    raise e
                 else:
                     success = True
 
@@ -2444,5 +2441,3 @@ def memory_dump():
                 #print(obj)
 
 logger = logging.getLogger(NAME)
-
-
