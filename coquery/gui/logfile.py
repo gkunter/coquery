@@ -14,9 +14,9 @@ from __future__ import unicode_literals
 import sys
 
 from coquery import options
-import classes
-from pyqt_compat import QtCore, QtGui
-from ui.logfileUi import Ui_logfileDialog
+from . import classes
+from .pyqt_compat import QtCore, QtGui
+from .ui.logfileUi import Ui_logfileDialog
 
 class LogfileViewer(QtGui.QDialog):
     def __init__(self, parent=None):

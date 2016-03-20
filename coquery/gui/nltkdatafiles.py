@@ -15,10 +15,10 @@ import sys
 import os
 
 from coquery import options
-import classes
-import errorbox
-from pyqt_compat import QtCore, QtGui
-from ui.nltkDatafilesUi import Ui_NLTKDatafiles
+from . import classes
+from . import errorbox
+from .pyqt_compat import QtCore, QtGui
+from .ui.nltkDatafilesUi import Ui_NLTKDatafiles
 
 class NLTKDatafiles(QtGui.QDialog):
     updateLabel = QtCore.Signal(str)

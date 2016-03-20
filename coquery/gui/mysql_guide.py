@@ -14,8 +14,8 @@ from __future__ import unicode_literals
 import sys
 
 from coquery import options
-from pyqt_compat import QtCore, QtGui
-from ui.mysql_guideUi import Ui_mysql_guide
+from .pyqt_compat import QtCore, QtGui
+from .ui.mysql_guideUi import Ui_mysql_guide
 
 class MySqlGuide(QtGui.QWizard):
     def __init__(self, parent=None):

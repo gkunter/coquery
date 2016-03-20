@@ -16,9 +16,10 @@ import sys
 
 from coquery import options
 from coquery.defines import *
-from classes import CoqTreeItem
-from pyqt_compat import QtCore, QtGui
-from ui.linkselectUi import Ui_LinkSelect
+
+from .classes import CoqTreeItem
+from .pyqt_compat import QtCore, QtGui
+from .ui.linkselectUi import Ui_LinkSelect
 
 class Link(object):
     def __init__(self, tree_item, ignore_case=True):

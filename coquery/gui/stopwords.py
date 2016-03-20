@@ -15,8 +15,8 @@ import pandas as pd
 from coquery import options
 from coquery.defines import *
 from . import classes
-from pyqt_compat import QtCore, QtGui
-from ui.stopwordsUi import Ui_Stopwords
+from .pyqt_compat import QtCore, QtGui
+from .ui.stopwordsUi import Ui_Stopwords
 
 class CoqStopWord(QtGui.QListWidgetItem):
     def __init__(self, *args):

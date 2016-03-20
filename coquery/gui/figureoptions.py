@@ -16,8 +16,8 @@ import seaborn as sns
 import matplotlib as mpl
 
 from coquery import options
-from pyqt_compat import QtGui, QtCore
-from ui.figureOptionsUi import Ui_FigureOptions
+from .pyqt_compat import QtGui, QtCore
+from .ui.figureOptionsUi import Ui_FigureOptions
 
 class CoqColorItem(QtGui.QListWidgetItem):
     def __init__(self, color):
