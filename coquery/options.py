@@ -1148,13 +1148,13 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
     
     corpus_name = os.path.splitext(os.path.basename(path))[0]
     try:
-        with codecs.open(path, "r", encoding="utf-8", error="replace") as module_file:
+        with codecs.open(path, "r") as module_file:
             content = module_file.read()
             tree = ast.parse(content)
             
             for node in tree.body:
                 validate_node(node, None)
-    except Exception as e:
+    except UnicodeEncodeError as e:
         logger.error(e)
 
     if expected_classes:
