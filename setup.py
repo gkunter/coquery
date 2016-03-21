@@ -14,18 +14,16 @@ from imp import find_module
 
 from coquery.defines import VERSION as version
 
-with open("README.md", "rb") as f:
+with open("README.rst", "rb") as f:
     long_descr = f.read().decode("utf-8")
 
 DESCRIPTION = "Coquery: a free corpus query tool"
-
-
 
 if __name__ == "__main__":
     required_modules = ["pandas", "sqlalchemy"]
     use_pyqt = False
     use_pyside = False
-    
+
     try:
         if find_module("PyQt4"):
             use_pyqt = True
@@ -36,7 +34,7 @@ if __name__ == "__main__":
             use_pyside = True
     except ImportError:
         pass
-    
+
     if not use_pyqt and not use_pyside:
         required_modules.append("PySide")
 
@@ -71,7 +69,7 @@ if __name__ == "__main__":
             'Intended Audience :: Science/Research',
             'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
             'Operating System :: MacOS',
-            'Operating System :: Windows',
+            'Operating System :: Microsoft :: Windows',
             'Operating System :: POSIX',
             'Programming Language :: Python :: 2',
             'Programming Language :: Python :: 2.7',
