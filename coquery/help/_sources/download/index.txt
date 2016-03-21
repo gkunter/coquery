@@ -45,8 +45,8 @@ folder on your computer, e.g. the Applications folder.
 
     <p>Mac OS X disk image: <code>coquery-0.9-osx-el-capitan.dmg</code> <a href="coquery-0.9-osx-el-capitan.dmg" class="btn btn-primary btn-sm">Download</a></p>
 
-Python package (Windows, Linux, and Mac OS |nbsp| X)
-----------------------------------------------------
+Linux
+-----
 
 The easiest way of installing Coquery on a Linux computer is as a Python 
 package. This option is also available to Windows and Mac OS X users. 
@@ -62,8 +62,7 @@ In order to install Coquery as a Python package, follow these steps:
   additional Python module that is required to run Coquery. A network 
   connection is needed during the install.
 
-Coquery can now be started by typing ``coquery`` at the command line or in 
-Finder (OS |nbsp| X).
+Coquery can now be started by typing ``coquery`` at the command line.
 
 .. note::
     Most Linux and Mac OS |nbsp| X systems already provide a Python 
