@@ -68,7 +68,7 @@ class BuilderClass(BaseCorpusBuilder):
     source_difficulty = "Difficulty"
 
     expected_files = [
-        "call_con_tab.csv", "caller_tab.csv",
+        "call_con_tab.csv", "caller_tab.csv", "topic_tab.csv",
         "switchboard_word_alignments.tar.gz"]
 
     def __init__(self, gui=False, *args):
@@ -112,6 +112,7 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.add_time_feature(self.corpus_starttime)
         self.add_time_feature(self.corpus_endtime)
+        self.add_time_feature(self.speaker_birth)
         
         self._file_id = 0
         self._token_id = 0
@@ -182,18 +183,39 @@ class BuilderClass(BaseCorpusBuilder):
         download the following files:
         <ul>
             <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/call_con_tab.csv'>call_con_tab.csv</a> – conversation details</li>
-            <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/caller_tab.csv'>caller_tab.csv</a> – speaker information</li></ul></p>
+            <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/caller_tab.csv'>caller_tab.csv</a> – speaker information</li>
+            <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/topic_tab.csv'>topic_tab.csv</a> – conversation topics</li>
+        </ul></p>            
         <p>Transcriptions and word alignments are provided for free by the 
         <a href='https://www.isip.piconepress.com/'>Institute for Signal and Information Processing</a>. From their <a href='https://www.isip.piconepress.com/projects/switchboard/'>Switchboard project site</a>, the following file is required for installation:
         <ul>
             <li><a href='https://www.isip.piconepress.com/projects/switchboard/releases/switchboard_word_alignments.tar.gz'>switchboard_word_alignments.tar.gz</a> – Manually corrected word alignments</li></ul></p>
         """
 
+    def build_load_files(self):
+        super(BuilderClass, self).build_load_files()
+        
+        # try to merge conversation information
+        if hasattr(self, "_df_conv") and hasattr(self, "_df_topic"):
+            # Both call_con_tab.csv and topic_tab.csv have been read:
+            df = self._df_conv.merge(self._df_topic, on="ivi_no")
+            print(df.head())
+
+            df[self.source_label] = df[self.source_id].apply(str)
+            df = df[[self.source_id, self.source_label, self.source_topic]]
+            df[self.source_difficulty] = "NA"
+
+            df = df.drop_duplicates()
+            print(df.head())
+            self.DB.load_dataframe(df, self.source_table, None)
+            
+
     def process_file(self, filename):
         basename = os.path.basename(filename)
         if basename == "call_con_tab.csv":
             self._df_conv = pd.read_csv(filename, sep=", ",
-                names=["ConvId", "Side", "SpeakerId", "PhoneNum", "Length", "IVI_No", "Remarks", "Active"])
+                names=[self.source_id, "Side", "SpeakerId", "PhoneNum", "Length", "ivi_no", "Remarks", "Active"])
+            self._df_conv.ivi_no = self._df_conv.ivi_no.apply(str)
             
         elif basename == "caller_tab.csv":
             self._df_caller = pd.read_csv(filename,
@@ -204,6 +226,8 @@ class BuilderClass(BaseCorpusBuilder):
                        self.speaker_dialectarea, 
                        self.speaker_education,
                        "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10"])
+            self._df_caller[self.speaker_dialectarea] = self._df_caller[self.speaker_dialectarea].apply(lambda x: x.strip('" '))
+            self._df_caller[self.speaker_sex] = self._df_caller[self.speaker_sex].apply(lambda x: x.strip('" '))
 
             self._df_caller[self.speaker_label] = self._df_caller[self.speaker_id].apply(utf8)
             self._df_caller = self._df_caller[
@@ -212,6 +236,12 @@ class BuilderClass(BaseCorpusBuilder):
                  self.speaker_dialectarea, self.speaker_education]]
             
             self.DB.load_dataframe(self._df_caller, self.speaker_table, None)
+            
+        elif basename == "topic_tab.csv":
+            self._df_topic = pd.read_csv(filename,
+                names=[self.source_topic, "ivi_no", "prompt",
+                       "flg", "remarks", "prompt_cont"])
+            self._df_topic.ivi_no = self._df_topic.ivi_no.apply(str)
             
         elif basename == "switchboard_word_alignments.tar.gz":
             with tarfile.open(filename, "r:gz") as tar_file:
