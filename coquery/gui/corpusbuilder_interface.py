@@ -477,7 +477,7 @@ class BuilderGui(InstallerGui):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(self._old_button_state)
         if self.ui.use_pos_tagging.isChecked() and not pass_check():
             self.ui.use_pos_tagging.setChecked(False)
-            import nltkdatafiles
+            from . import nltkdatafiles
             nltkdatafiles.NLTKDatafiles.ask(self.nltk_exceptions, parent=self)
 
         self._testing = False
@@ -565,4 +565,3 @@ class BuilderGui(InstallerGui):
         namespace.use_nltk = self.ui.use_pos_tagging.checkState()
         namespace.db_name = "coq_{}".format(namespace.name).lower()
         return namespace
-
