@@ -136,6 +136,10 @@ MODULE_INFORMATION = {
             "1.3",
             "Build your own corpora from PDF documents",
             "https://pypi.python.org/pypi/pdfminer3k"),
+    "tgt": ("TextGridTools - read, write, and manipulate Praat TextGrid files",
+            "1.3.1",
+            "Create <a href='http://www.praat.org'>Praat TextGrid</a> files for corpus queries",
+            "https://github.com/hbuschme/TextGridTools/"),
     "Seaborn": ("A Python statistical data visualization library",
             "0.7",
             "Create visualizations of your query results",
@@ -186,13 +190,13 @@ not be located on your system. The missing modules are:</p>
 <p>Please refer to the <a href="http://coquery.org/doc/">Coquery documentation</a>
 for instructions on how to install the required modules.</p>
 """
-msg_missing_seaborn_module = """
-<p><b>The required visualization module could not be loaded.</b></p>
-<p>The Python module called 'Seaborn' is not installed on this computer. 
-Without this module, the visualization functions are not available.</p>
-<p>Please visit the Seaborn website for installation instructions:
-<a href="http://stanford.edu/~mwaskom/software/seaborn/index.html">http://stanford.edu/~mwaskom/software/seaborn/index.html</a>.
-</p>
+msg_missing_module = """
+<p><b>The optional Python module '<code>{name}</code>' could not be loaded.</b></p>
+<p>The Python module called '{name}' is not installed on this computer. 
+Without this module, the following function is not available:</p>
+<p>{function}</p>
+<p>Please refer to the <a href="http://coquery.org/download/index.html#optional-python-modules">Coquery website</a> or 
+the module website for installation instructions: <a href="{url}">{url}</a>.</p>
 """
 msg_visualization_error = """
 <p><b>An error occurred while plotting.</b></p>
