@@ -67,6 +67,7 @@ lexical databases:
 * [Corpus of Historical American English (COHA)](http://corpus.byu.edu/coha/)
 * [Ġabra: an open lexicon for Maltese](http://mlrs.research.um.edu.mt/resources/gabra/)
 * [ICE-Nigeria](http://sourceforge.net/projects/ice-nigeria/) 
+* [Switchboard-1 Telephone Speech Corpus](https://catalog.ldc.upenn.edu/LDC97S62)
 
 If the list is missing a corpus that you want to see supported in Coquery, 
 you can either write your own corpus installer in Python using the installer 
