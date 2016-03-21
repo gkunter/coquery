@@ -152,6 +152,9 @@ class CoqueryApp(QtGui.QMainWindow):
             CoqId = 'Coquery.Coquery.{}'.format(VERSION)
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)
         
+        # self.showMessage("Seaborn: {} MySQL: {} NLTK: {} tgt: {} pdfminer: {}".format(options._use_seaborn, options._use_mysql, options._use_nltk, options._use_tgt, options._use_pdfminer))
+        
+        
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
@@ -365,10 +368,12 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_save_selection.setDisabled(True)
             self.ui.action_save_results.setDisabled(True)
             self.ui.action_copy_to_clipboard.setDisabled(True)
+            self.ui.action_create_textgrid.setDisabled(True)
             return
 
         # enable "Save results"
         self.ui.action_save_results.setEnabled(True)
+        self.ui.action_create_textgrid.setEnabled(True)
 
         # enable "Save selection" and "Copy selection to clipboard" if there 
         # is a selection:
