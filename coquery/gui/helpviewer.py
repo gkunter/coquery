@@ -59,9 +59,9 @@ class HelpViewer(QtGui.QMainWindow):
         
         
         self.ui.content.setSource(QtCore.QUrl(
-            os.path.join(options.cfg.base_path, "help", "index.html")))
+            os.path.join(options.cfg.base_path, "help", "doc", "index.html")))
         self.ui.index.setSource(QtCore.QUrl(
-            os.path.join(options.cfg.base_path, "help", "index.html")))
+            os.path.join(options.cfg.base_path, "help", "doc", "index.html")))
 
         self.ui.splitter.setSizes([
             self.sizeHint().width() * 0.38,
