@@ -47,8 +47,9 @@ class corpus_code():
         translate_dict = {
             "p": "p",
             "punctuation": "",
-            "heading": "<span style='font-style: bold; font-size:150%'>",
-            "h1": "<span style='font-style: bold; font-size:150%'>",
+            "heading": "span style='font-style: bold'",
+            #"heading": "span style='font-style: bold; font-size:150%'",
+            #"h1": "span style='font-style: bold; font-size:150%'",
             "boldface": "b",
             "italics": "i",
             "underline": "u",
@@ -56,11 +57,17 @@ class corpus_code():
             "subscript": "sup",
             "object": "object",
             "text": "html"}
+        
         if tag in translate_dict:
             return translate_dict[tag]
         else:
             print("unsupported tag: ", tag)
             return tag
+
+    def get_context_stylesheet(self):
+        """
+        """
+        return "h1 { background-color: #aa0000; }"
 
     def renderer_open_element(self, tag, attributes):
         context = super(Corpus, self).renderer_open_element(tag, attributes)
