@@ -17,8 +17,9 @@ import os
 
 import tgt
 
-import options
-from unicode import utf8
+from . import options
+from .unicode import utf8
+
 class TextgridWriter(object):
     def __init__(self, df, resource):
         self.df = df
