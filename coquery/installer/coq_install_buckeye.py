@@ -592,7 +592,6 @@ class BuilderClass(BaseCorpusBuilder):
             self._token_id += 1
             self._content_id = self.table(self.content_table).get_or_insert(d)
             self._word_id = self.table(self.word_table).add({
-                self.word_id: self._token_id,
                 self.word_content_id: self._content_id,
                 self.word_segment_id: self._token_id})
 
