@@ -691,6 +691,7 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             path = os.path.join(options.cfg.base_path, "icons", "artwork", s)
         icon.addFile(path)
+        assert os.path.exists(path), "Image not found: {}".format(path)
         return icon
 
     def show_query_status(self):
@@ -2190,7 +2191,8 @@ class CoqueryApp(QtGui.QMainWindow):
         dialog = QtGui.QDialog(self)
         dialog.ui = Ui_AboutDialog()
         dialog.ui.setupUi(dialog)
-        image = QtGui.QImage(self.get_icon("title.png", small_n_flat=False).pixmap(dialog.size()))
+        icon = self.get_icon("title.png", small_n_flat=False).pixmap(dialog.size())
+        image = QtGui.QImage(icon.toImage())
         painter = QtGui.QPainter(image)
         painter.setPen(QtCore.Qt.black)
         painter.drawText(image.rect(), QtCore.Qt.AlignBottom, "Version {}".format(VERSION))
