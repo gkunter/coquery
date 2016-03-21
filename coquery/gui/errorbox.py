@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import sys
 
 from coquery import options
+from coquery.defines import *
 from coquery.errors import *
 from .pyqt_compat import QtCore, QtGui
 from .ui.errorUi import Ui_ErrorDialog
@@ -61,6 +62,11 @@ class ErrorBox(QtGui.QDialog):
     def closeEvent(self, *args):
         options.settings.setValue("errorbox_size", self.size())
 
+def alert_missing_module(name, parent=None):
+    _, _, func, url = MODULE_INFORMATION[name]
+    QtGui.QMessageBox.critical(
+        parent, "Missing Python module – Coquery",
+        msg_missing_module.format(name=name, url = url, function=func))
             
 def main():
     app = QtGui.QApplication(sys.argv)

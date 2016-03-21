@@ -77,6 +77,8 @@ class ContextView(QtGui.QWidget):
         else:
             self.ui.button_ids.setExpanded(False)
 
+        self.ui.context_area.setStyleSheet(corpus.get_context_stylesheet())
+
     def closeEvent(self, *args):
         options.settings.setValue("contextviewer_size", self.size())
         options.settings.setValue("contextviewer_words", self.ui.slider_context_width.value())
@@ -121,7 +123,7 @@ class ContextView(QtGui.QWidget):
                 self.ui.source_content.setOpenExternalLinks(True)
                 self.ui.source_content.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
             self.ui.source_content.setText(content)
-
+            
     def spin_changed(self):
         self.ui.slider_context_width.valueChanged.disconnect(self.slider_changed)
         self.ui.slider_context_width.setValue(self.ui.spin_context_width.value())

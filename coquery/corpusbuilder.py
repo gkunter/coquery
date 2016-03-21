@@ -257,6 +257,7 @@ class Identifier(Column):
     
     @property
     def name(self):
+        return self._name
         if self.unique:
             return self._name
         else:
@@ -322,17 +323,32 @@ class Table(object):
         
         if self._add_cache2:
             df = pd.DataFrame(self._add_cache2)
-            df.columns = self._get_field_order()
+            field_order = self._get_field_order()
+            assert len(field_order) == len(df.columns), "Length mismatch while committing table {}.\n{}\n\n{}".format(
+                self.name,
+                "".join(sorted(["{:20}".format(x) for x in field_order])),
+                "".join(sorted(["{:20}".format(x.name) for x in self.columns])))
+            
+            try:
+                df.columns = self._get_field_order()
+            except ValueError as e:
+                raise e
 
             # make sure that all strings are unicode, even under 
             # Python 2.7:
             if sys.version_info < (3, 0):
                 for column in df.columns[df.dtypes == object]:
-                    df[column] = df[column].apply(utf8)
+                    try:
+                        df[column] = df[column].apply(utf8)
+                    except TypeError:
+                        pass
 
             # apply unicode normalization:
             for column in df.columns[df.dtypes == object]:
-                df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
+                try:
+                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
+                except TypeError:
+                    pass
 
             df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
             self._add_cache2 = list()
@@ -345,7 +361,7 @@ class Table(object):
         """ 
         l = [values[x] for x in self._row_order]
 
-        if not self.primary.name in values:
+        if not self.primary.name in self._row_order:
             self._current_id += 1
             self._add_cache2.append(tuple([self._current_id] + l))
         else:
@@ -403,8 +419,15 @@ class Table(object):
         
     def add_column(self, column):
         self.columns.append(column)
+        if column.name in self._row_order:
+            if not column.key:
+                raise ValueError("Duplicate column: {}, {}".format(self._row_order, column.name))
+            else:
+                return
         if column.is_identifier:
             self.primary = column
+            if not column.unique:
+                self._row_order.append(column.name)
         else:
             self._row_order.append(column.name)
 
@@ -453,9 +476,9 @@ class Table(object):
                             # add surrogate key 
                             # do not add AUTO_INCREMENT to strings or ENUMs:
                             #str_list.insert(0, "{} INT AUTO_INCREMENT".format(column.name))
-                            str_list.insert(0, "{} INT".format(column.name))
-                            str_list.insert(1, "{} {}".format(column.name.replace("_primary", ""), column.data_type))
-                            str_list.append("PRIMARY KEY ({})".format(column.name))
+                            str_list.insert(0, "{}_primary INT AUTO_INCREMENT".format(column.name))
+                            str_list.insert(1, "{} {}".format(column.name, column.data_type))
+                            str_list.append("PRIMARY KEY ({}_primary)".format(column.name))
                         else:
                             # do not add AUTO_INCREMENT to strings or ENUMs:
                             if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
@@ -485,8 +508,8 @@ class Table(object):
                     if column.is_identifier:
                         if not column.unique:
                             # add surrogate key 
-                            str_list.insert(0, "{} INT PRIMARY KEY".format(column.name))
-                            str_list.insert(1, "{} {}".format(column.name.replace("_primary", ""), data_type))
+                            str_list.insert(0, "{}_primary INT PRIMARY KEY".format(column.name))
+                            str_list.insert(1, "{} {}".format(column.name, data_type))
                         else:
                             str_list.insert(0, "{} {} PRIMARY KEY".format(
                                 column.name, data_type))
@@ -669,7 +692,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     x.data_type = self._new_tables[x._link].primary.data_type
                 except KeyError:
                     raise KeyError("Table description for '{}' contains a link to unknown table '{}'".format(table_name, x._link))
-            new_table.add_column(x)
+            try:
+                new_table.add_column(x)
+            except ValueError as e:
+                print(table_name, x)
+                raise e
         self._new_tables[table_name] = new_table
 
     def table(self, table_name):

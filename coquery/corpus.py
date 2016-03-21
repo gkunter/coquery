@@ -37,7 +37,7 @@ def collapse_words(word_list):
         
         if s.startswith("<span") or s.startswith("</span"):
             return False
-        if s in set(["</b>", "<b>", "</i>", "<i>", "</u>", "<u>", "</s>", "<s>"]):
+        if s in set(["</b>", "<b>", "</i>", "<i>", "</u>", "<u>", "</s>", "<s>", "<em>", "</em>"]):
             return False
         return s.startswith("<") and s.endswith(">") and len(s) > 2
 
@@ -2217,6 +2217,12 @@ class CorpusClass(object):
             print("unsupported tag: {}".format(tag))
             return None
 
+    def get_context_stylesheet(self):
+        """
+        Return a string that formats the used elements in a context viewer.
+        """
+        return ""
+
     def renderer_open_element(self, tag, attributes):
         label = self.tag_to_html(tag, attributes)
         if label:
@@ -2467,5 +2473,7 @@ class CorpusClass(object):
         for tag in closed_elements:
             if tag:
                 context.appendleft("<{}>".format(self.tag_to_html(tag)))
-
-        return collapse_words(context)
+        s = collapse_words(context)
+        s = s.replace("</p>", "</p>\n")
+        s = s.replace("<br/>", "<br/>\n")
+        return s

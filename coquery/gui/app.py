@@ -152,6 +152,9 @@ class CoqueryApp(QtGui.QMainWindow):
             CoqId = 'Coquery.Coquery.{}'.format(VERSION)
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)
         
+        # self.showMessage("Seaborn: {} MySQL: {} NLTK: {} tgt: {} pdfminer: {}".format(options._use_seaborn, options._use_mysql, options._use_nltk, options._use_tgt, options._use_pdfminer))
+        
+        
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
@@ -370,16 +373,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # enable "Save results"
         self.ui.action_save_results.setEnabled(True)
+        self.ui.action_create_textgrid.setEnabled(True)
 
         # enable "Save selection" and "Copy selection to clipboard" if there 
         # is a selection:
         if self.ui.data_preview.selectionModel() and self.ui.data_preview.selectionModel().selection():
             self.ui.action_save_selection.setEnabled(True)
             self.ui.action_copy_to_clipboard.setEnabled(True)
-            
-        # enable "Create textgrid", but only if tgt is available:
-        if options._use_tgt:
-            self.ui.action_create_textgrid.setEnabled(True)
             
     def show_corpus_menu(self):
         if self.ui.combo_corpus.count():
@@ -1078,9 +1078,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def create_textgrids(self):
         if not options._use_tgt:
-            QtGui.QMessageBox.critical(
-                self, "Missing Python module: tgt – Coquery",
-                msg_missing_seaborn_module)
+            errorbox.alert_missing_module("tgt", self)
             return
 
         name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.textgrids_file_path, options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
@@ -1707,9 +1705,7 @@ class CoqueryApp(QtGui.QMainWindow):
         try:
             import seaborn
         except ImportError:
-            QtGui.QMessageBox.critical(
-                self, "Missing Python module – Coquery",
-                msg_missing_seaborn_module)
+            errorbox.alert_missing_module("Seaborn", self)
             return
         
         from . import visualization
