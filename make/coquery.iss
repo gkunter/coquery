@@ -7,8 +7,8 @@
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{42204621-F37F-40C3-96E2-886FFF94D497}
 AppName=Coquery
-AppVersion=0.9
-;AppVerName=Coquery 0.9
+AppVersion=0.9.1
+;AppVerName=Coquery 0.9.1
 AppPublisherURL=http://www.coquery.org
 AppSupportURL=http://www.coquery.org
 AppUpdatesURL=http://www.coquery.org

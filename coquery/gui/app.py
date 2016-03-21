@@ -150,10 +150,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if sys.platform == "win32":
             import ctypes
             CoqId = 'Coquery.Coquery.{}'.format(VERSION)
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)
-        
-        # self.showMessage("Seaborn: {} MySQL: {} NLTK: {} tgt: {} pdfminer: {}".format(options._use_seaborn, options._use_mysql, options._use_nltk, options._use_tgt, options._use_pdfminer))
-        
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)        
         
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -691,6 +688,7 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             path = os.path.join(options.cfg.base_path, "icons", "artwork", s)
         icon.addFile(path)
+        assert os.path.exists(path), "Image not found: {}".format(path)
         return icon
 
     def show_query_status(self):
@@ -2190,7 +2188,8 @@ class CoqueryApp(QtGui.QMainWindow):
         dialog = QtGui.QDialog(self)
         dialog.ui = Ui_AboutDialog()
         dialog.ui.setupUi(dialog)
-        image = QtGui.QImage(self.get_icon("title.png", small_n_flat=False).pixmap(dialog.size()))
+        icon = self.get_icon("title.png", small_n_flat=False).pixmap(dialog.size())
+        image = QtGui.QImage(icon.toImage())
         painter = QtGui.QPainter(image)
         painter.setPen(QtCore.Qt.black)
         painter.drawText(image.rect(), QtCore.Qt.AlignBottom, "Version {}".format(VERSION))
@@ -2198,8 +2197,16 @@ class CoqueryApp(QtGui.QMainWindow):
         dialog.ui.label_pixmap.setPixmap(QtGui.QPixmap.fromImage(image))
         dialog.ui.label_pixmap.setAlignment(QtCore.Qt.AlignCenter)
 
-        dialog.ui.label_description.setText(
-            unicode(dialog.ui.label_description.text()).format(version=VERSION, date=DATE))
+        dialog.ui.label_description.setText("{}<p>Optional modues:<br/>{}</p>".format(
+            unicode(dialog.ui.label_description.text()).format(version=VERSION, date=DATE),
+            "Seaborn: {} &nbsp;&nbsp;&nbsp; MySQL: {} &nbsp;&nbsp;&nbsp; NLTK: {} &nbsp;&nbsp;&nbsp; tgt: {} &nbsp;&nbsp;&nbsp; pdfminer: {} &nbsp;&nbsp;&nbsp; chardet: {}".format(
+                "yes" if options._use_seaborn else "no", 
+                "yes" if options._use_mysql else "no",
+                "yes" if options._use_nltk else "no", 
+                "yes" if options._use_tgt else "no", 
+                "yes" if options._use_pdfminer else "no", 
+                "yes" if options._use_chardet else "no")))
+
         dialog.exec_()
 
     def setGUIDefaults(self):
