@@ -13,44 +13,76 @@
 Download
 ========
 
-Coquery can be installed in two ways: as a binary package, or as a 
-source code package. 
+The current version of Coquery is 0.9. This version is fully functional, and 
+is sufficiently stable for regular use. 
 
-Binary installer (Windows only)
--------------------------------
+There are a few bugs, problems, and unexpected behaviors, though. For a list 
+of known bugs, see the `Issue tracker <https://github.com/gkunter/coquery/issues>`_ 
+on the Coquery `GitHub site <https://github.com/gkunter/coquery>`_. If you
+encounter a bug that is not listed in the Issue tracker, please do not 
+hesitate to create a new issue so that it can be fixed in a future Coquery 
+release.
 
-The binary package installs all files on your computer required to run 
-Coquery. Currently, it is currently only available on Windows.
+Windows
+-------
+
+The Windows installer will install everything on your computer that is 
+needed to run Coquery. After installing, start Coquery from the Windows application 
+menu.
 
 .. raw:: html
 
-    <p><a href="download/coquery-0.9-win.exe" class="btn btn-primary btn-sm">Download</a></p>
+    <p>Windows installer: <code>coquery-0.9-setup-win32.exe</code> <a href="coquery-0.9-setup-win32.exe" class="btn btn-primary btn-sm">Download</a></p>
 
-After installing, start Coquery from the Windows application menu.
+Mac OS X
+--------
 
-Source code package (Windows, Linux, and Mac OS |nbsp| X)
----------------------------------------------------------
+For Mac OS X, the Coquery application is bundled in a disk image. After 
+downloading and opening the disk image, move the Coquery application to a 
+folder on your computer, e.g. the Applications folder.
 
-In order to run Coquery from a source code package, a Python interpreter has 
-to be available on your system. Most Linux and Mac OS |nbsp| X systems provide
-a Python interpreter by default. Windows users can download and install a 
-free Python distribution, for example Anaconda (|anaconda|).
+.. raw:: html
 
-To install the source code package, you can use the Python package installer 
-``pip``, which will also install required packages if they are not present 
-on your system. Start a command-line interface (``cmd.exe`` on Windows), and 
-type the following command::
+    <p>Mac OS X disk image: <code>coquery-0.9-osx-el-capitan.dmg</code> <a href="coquery-0.9-osx-el-capitan.dmg" class="btn btn-primary btn-sm">Download</a></p>
+
+Python package (Windows, Linux, and Mac OS |nbsp| X)
+----------------------------------------------------
+
+The easiest way of installing Coquery on a Linux computer is as a Python 
+package. This option is also available to Windows and Mac OS X users. 
+
+In order to install Coquery as a Python package, follow these steps:
+    
+* Download and install the free Anaconda Python distribution from |anaconda|.
+* Open a terminal, and execute the following command::
     
     pip install coquery
+    
+  This command will download and install the Coquery program, as well as any 
+  additional Python module that is required to run Coquery. A network 
+  connection is needed during the install.
 
-After installing, start Coquery by typing ``coquery`` at the command line.
+Coquery can now be started by typing ``coquery`` at the command line or in 
+Finder (OS |nbsp| X).
 
+.. note::
+    Most Linux and Mac OS |nbsp| X systems already provide a Python 
+    installation by default. Do not install Anaconda if you do not want to 
+    change this Python interpreter.
+    
+    However, using Anaconda (or a similar distribution) is strongly 
+    recommended. Most of the additional Python packages required by Coquery 
+    are already included in this distribution. On most default Python 
+    installations, many of these packages need to be installed together with 
+    Coquery, and some of them (most notably, the packages NumPy and PySide)
+    can occassionally be rather difficult to install on default Python 
+    installations.
+    
 Optional Python modules
 +++++++++++++++++++++++
 
-If you use the software installation, you may want to install the following
-optional Python packages to enable all features in Coquery. They are already
-included in the binary installation.
+If you have installed Coquery as a Python package, you may want to install 
+the following optional Python packages to enable all features in Coquery. 
 
 * `PyMySQL <https://github.com/PyMySQL/PyMySQL/>`_ 0.6.4 or later – A pure-Python MySQL client library (Connect to MySQL database servers)
 * `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_ 0.7 or later – A Python statistical data visualization library (Create visualizations of your query results)

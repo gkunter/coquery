@@ -53,33 +53,62 @@
             
   <span class="target" id="download"></span><div class="section" id="id1">
 <h1>Download</h1>
-<p>Coquery can be installed in two ways: as a binary package, or as a
-source code package.</p>
-<div class="section" id="binary-installer-windows-only">
-<h2>Binary installer (Windows only)</h2>
-<p>The binary package installs all files on your computer required to run
-Coquery. Currently, it is currently only available on Windows.</p>
-<p><a href="download/coquery-0.9-win.exe" class="btn btn-primary btn-sm">Download</a></p><p>After installing, start Coquery from the Windows application menu.</p>
-</div>
-<div class="section" id="source-code-package-windows-linux-and-mac-os-nbsp-x">
-<h2>Source code package (Windows, Linux, and Mac OS&nbsp;X)</h2>
-<p>In order to run Coquery from a source code package, a Python interpreter has
-to be available on your system. Most Linux and Mac OS&nbsp;X systems provide
-a Python interpreter by default. Windows users can download and install a
-free Python distribution, for example Anaconda (<a href="https://www.continuum.io" target="_blank">https://www.continuum.io</a>).</p>
-<p>To install the source code package, you can use the Python package installer
-<code class="docutils literal"><span class="pre">pip</span></code>, which will also install required packages if they are not present
-on your system. Start a command-line interface (<code class="docutils literal"><span class="pre">cmd.exe</span></code> on Windows), and
-type the following command:</p>
+<p>The current version of Coquery is 0.9. This version is fully functional, and
+is sufficiently stable for regular use.</p>
+<p>There are a few bugs, problems, and unexpected behaviors, though. For a list
+of known bugs, see the <a class="reference external" href="https://github.com/gkunter/coquery/issues">Issue tracker</a>
+on the Coquery <a class="reference external" href="https://github.com/gkunter/coquery">GitHub site</a>. If you
+encounter a bug that is not listed in the Issue tracker, please do not
+hesitate to create a new issue so that it can be fixed in a future Coquery
+release.</p>
+<div class="section" id="windows">
+<h2>Windows</h2>
+<p>The Windows installer will install everything on your computer that is
+needed to run Coquery. After installing, start Coquery from the Windows application
+menu.</p>
+<p>Windows installer: <code>coquery-0.9-setup-win32.exe</code> <a href="coquery-0.9-setup-win32.exe" class="btn btn-primary btn-sm">Download</a></p></div>
+<div class="section" id="mac-os-x">
+<h2>Mac OS X</h2>
+<p>For Mac OS X, the Coquery application is bundled in a disk image. After
+downloading and opening the disk image, move the Coquery application to a
+folder on your computer, e.g. the Applications folder.</p>
+<p>Mac OS X disk image: <code>coquery-0.9-osx-el-capitan.dmg</code> <a href="coquery-0.9-osx-el-capitan.dmg" class="btn btn-primary btn-sm">Download</a></p></div>
+<div class="section" id="python-package-windows-linux-and-mac-os-nbsp-x">
+<h2>Python package (Windows, Linux, and Mac OS&nbsp;X)</h2>
+<p>The easiest way of installing Coquery on a Linux computer is as a Python
+package. This option is also available to Windows and Mac OS X users.</p>
+<p>In order to install Coquery as a Python package, follow these steps:</p>
+<ul>
+<li><p class="first">Download and install the free Anaconda Python distribution from <a href="https://www.continuum.io" target="_blank">https://www.continuum.io</a>.</p>
+</li>
+<li><p class="first">Open a terminal, and execute the following command:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span>pip install coquery
 </pre></div>
 </div>
-<p>After installing, start Coquery by typing <code class="docutils literal"><span class="pre">coquery</span></code> at the command line.</p>
+<p>This command will download and install the Coquery program, as well as any
+additional Python module that is required to run Coquery. A network
+connection is needed during the install.</p>
+</li>
+</ul>
+<p>Coquery can now be started by typing <code class="docutils literal"><span class="pre">coquery</span></code> at the command line or in
+Finder (OS&nbsp;X).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Most Linux and Mac OS&nbsp;X systems already provide a Python
+installation by default. Do not install Anaconda if you do not want to
+change this Python interpreter.</p>
+<p class="last">However, using Anaconda (or a similar distribution) is strongly
+recommended. Most of the additional Python packages required by Coquery
+are already included in this distribution. On most default Python
+installations, many of these packages need to be installed together with
+Coquery, and some of them (most notably, the packages NumPy and PySide)
+can occassionally be rather difficult to install on default Python
+installations.</p>
+</div>
 <div class="section" id="optional-python-modules">
 <h3>Optional Python modules</h3>
-<p>If you use the software installation, you may want to install the following
-optional Python packages to enable all features in Coquery. They are already
-included in the binary installation.</p>
+<p>If you have installed Coquery as a Python package, you may want to install
+the following optional Python packages to enable all features in Coquery.</p>
 <ul class="simple">
 <li><a class="reference external" href="https://github.com/PyMySQL/PyMySQL/">PyMySQL</a> 0.6.4 or later – A pure-Python MySQL client library (Connect to MySQL database servers)</li>
 <li><a class="reference external" href="http://stanford.edu/~mwaskom/software/seaborn/">Seaborn</a> 0.7 or later – A Python statistical data visualization library (Create visualizations of your query results)</li>
