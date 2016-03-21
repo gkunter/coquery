@@ -54,8 +54,11 @@ class BuilderClass(BaseCorpusBuilder):
     speaker_table = "Speakers"
     speaker_id = "SpeakerId"
     speaker_label = "Speaker"
-    speaker_gender = "Gender"
-    
+    speaker_sex = "Sex"
+    speaker_birth = "BirthYear"
+    speaker_dialectarea = "DialectArea"
+    speaker_education = "Education"
+
     # Conversation data is contained in
     # https://www.isip.piconepress.com/projects/switchboard/doc/statistics/ms98_conv_stats.text
     source_table = "Conversations"
@@ -85,10 +88,13 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.file_path, "TINYTEXT NOT NULL")])
 
         self.create_table_description(self.speaker_table,
-            [Identifier(self.speaker_id, "TINYINT(3) UNSIGNED NOT NULL"),
+            [Identifier(self.speaker_id, "INT(4) UNSIGNED NOT NULL"),
              Column(self.speaker_label, "VARCHAR(4) NOT NULL"),
-             Column(self.speaker_gender, "ENUM('F','M') NOT NULL")])
-
+             Column(self.speaker_sex, "ENUM('FEMALE','MALE') NOT NULL"),
+             Column(self.speaker_birth, "INT(4) UNSIGNED NOT NULL"),
+             Column(self.speaker_dialectarea, "VARCHAR(13) NOT NULL"),
+             Column(self.speaker_education, "INT(1) UNSIGNED NOT NULL")])
+    
         self.create_table_description(self.source_table,
             [Identifier(self.source_id, "INT(3) UNSIGNED NOT NULL"),
              Column(self.source_label, "VARCHAR(4) NOT NULL"),
@@ -190,11 +196,23 @@ class BuilderClass(BaseCorpusBuilder):
                 names=["ConvId", "Side", "SpeakerId", "PhoneNum", "Length", "IVI_No", "Remarks", "Active"])
             
         elif basename == "caller_tab.csv":
-            self._df_caller = pd.read_csv(filename)
-            #self.DB.load_dataframe(
-                #self._df_caller, 
-                #self.speaker_table, 
-                #self.speaker_id)
+            self._df_caller = pd.read_csv(filename,
+                names=[self.speaker_id, 
+                       "V1", "V2", 
+                       self.speaker_sex, 
+                       self.speaker_birth, 
+                       self.speaker_dialectarea, 
+                       self.speaker_education,
+                       "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10"])
+
+            self._df_caller[self.speaker_label] = self._df_caller[self.speaker_id].apply(utf8)
+            self._df_caller = self._df_caller[
+                [self.speaker_id, self.speaker_label,
+                 self.speaker_sex, self.speaker_birth,
+                 self.speaker_dialectarea, self.speaker_education]]
+            
+            self.DB.load_dataframe(self._df_caller, self.speaker_table, None)
+            
         elif basename == "switchboard_word_alignments.tar.gz":
             with tarfile.open(filename, "r:gz") as tar_file:
                 for member in tar_file.getmembers():
@@ -218,6 +236,7 @@ class BuilderClass(BaseCorpusBuilder):
                         self.commit_data()
 
     def _process_words_file(self, tar_file, member):
+        logger.info("Processing file {}".format(member.name))
         match = re.search("sw(\d\d\d\d)([A|B])-ms98-a-word\.text", member.name)        
         conv_id = int(match.groups()[0])
         side = '"{}"'.format(match.groups()[1])
@@ -236,6 +255,8 @@ class BuilderClass(BaseCorpusBuilder):
             except ValueError:
                 print(member.name, row)
                 continue
+            label = utf8(label)
+            source = utf8(source)
             uttered = label
             match = re.match("(.*)\[(.*)\](.*)", label)
             if match:
