@@ -1168,12 +1168,13 @@ class SQLResource(BaseResource):
     
 class CorpusClass(object):
     
+    _frequency_cache = {}
+    _corpus_size_cache = {}
+    _context_cache = {}
+    
     def __init__(self):
         self.lexicon = None
         self.resource = None
-        self._frequency_cache = {}
-        self._corpus_size_cache = {}
-        self._context_cache = {}
 
     def get_source_id(self, token_id):
         if not options.cfg.token_origin_id:
@@ -1328,7 +1329,7 @@ class CorpusClass(object):
             The number of tokens in the corpus, or in the filtered corpus.
         """
 
-        if (ignore_filters or not self.resource.filter_list) and hasattr(self.resource, "number_of_tokens"):
+        if (ignore_filters or not self.resource.filter_list) and getattr(self.resource, "number_of_tokens", None):
             return self.resource.number_of_tokens
         
         filter_list = self.resource.translate_filters(self.resource.filter_list)
@@ -1349,14 +1350,18 @@ class CorpusClass(object):
             self._corpus_size_cache[S] = df.values.ravel()[0]
         return self._corpus_size_cache[S]
 
-    def get_frequency(self, s, ignore_filters=False):
+    def get_frequency(self, s, ignore_filters=False, engine=False):
         """ Return a longint that gives the corpus frequency of the token,
         taking the filter list from self.resource.filter_list into account."""
-        if s in self._frequency_cache:
-            return self._frequency_cache[s]
-        
+
+        filter_list = self.resource.translate_filters(self.resource.filter_list)
+
         if s in ["%", "_"]:
             s = "\\" + s
+        
+        if (s, ignore_filters, tuple(filter_list)) in self._frequency_cache:
+            self._get_frequency_cached += 1
+            return self._frequency_cache[(s, ignore_filters, tuple(filter_list))]
         
         if not s:
             return 0
@@ -1379,7 +1384,6 @@ class CorpusClass(object):
             self.lexicon.table_list = []
             self.lexicon.joined_tables = []
 
-            filter_list = self.resource.translate_filters(self.resource.filter_list)
             filter_strings = ["{}.{} {} '{}'".format(
                 tab, col, op, val[0]) for col, _, tab, op, val, _ in filter_list]
                 
@@ -1393,9 +1397,17 @@ class CorpusClass(object):
             S = "SELECT COUNT(*) FROM {} WHERE {}".format(
                 from_str, " AND ".join(where_clauses + filter_strings))
 
-            df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+            if not engine:
+                tmp_engine = self.resource.get_engine()
+                df = pd.read_sql(S.replace("%", "%%"), tmp_engine)
+                tmp_engine.dispose()
+            else:
+                df = pd.read_sql(S.replace("%", "%%"), engine)
+                
             freq = df.values.ravel()[0]
-        self._frequency_cache[s] = freq
+
+        self._get_frequency_retrieved += 1
+        self._frequency_cache[(s, ignore_filters, tuple(filter_list))] = freq
         return freq
 
     def get_whereclauses(self, token, WordTarget, PosTarget):
