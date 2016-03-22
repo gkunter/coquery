@@ -1360,7 +1360,6 @@ class CorpusClass(object):
             s = "\\" + s
         
         if (s, ignore_filters, tuple(filter_list)) in self._frequency_cache:
-            self._get_frequency_cached += 1
             return self._frequency_cache[(s, ignore_filters, tuple(filter_list))]
         
         if not s:
@@ -1406,7 +1405,6 @@ class CorpusClass(object):
                 
             freq = df.values.ravel()[0]
 
-        self._get_frequency_retrieved += 1
         self._frequency_cache[(s, ignore_filters, tuple(filter_list))] = freq
         return freq
 

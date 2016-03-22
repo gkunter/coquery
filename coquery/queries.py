@@ -978,12 +978,13 @@ class CollocationQuery(TokenQuery):
         """
         try:
             MI = math.log((f_coll * size) / (f_1 * f_2 * span)) / math.log(2)
-        except (ZeroDivisionError, TypeError):
+        except (ZeroDivisionError, TypeError, Exception) as e:
+            logger.error("Error while calculating mutual information: f1={} f2={} fcol={} size={} span={}".format(f_1, f_2, f_coll, size, span))
             return None
         return MI
 
     @staticmethod
-    def conditional_propability(freq_left, freq_total):
+    def conditional_probability(freq_left, freq_total):
         """ Calculate the conditional probability Pcond to encounter the query 
         token given that the collocate occurred in the left neighbourhood of
         the token.
@@ -996,7 +997,7 @@ class CollocationQuery(TokenQuery):
         return float(freq_left) / float(freq_total)
 
     @classmethod
-    def aggregate_data(cls, df, resource, **kwargs):
+    def aggregate_data(cls, df, corpus, **kwargs):
         if options.cfg.context_mode != CONTEXT_NONE:
             count_left = collections.Counter()
             count_right = collections.Counter()
@@ -1006,12 +1007,12 @@ class CollocationQuery(TokenQuery):
             right_span = options.cfg.context_right
 
             features = []
-            lexicon_features = resource.resource.get_lexicon_features()
+            lexicon_features = corpus.resource.get_lexicon_features()
             for rc_feature in options.cfg.selected_features:
                 if rc_feature in [x for x, _ in lexicon_features]:
                     features.append("coq_{}".format(rc_feature))
                 
-            corpus_size = resource.get_corpus_size()
+            corpus_size = corpus.get_corpus_size()
             query_freq = 0
             context_info = {}
 
@@ -1045,7 +1046,8 @@ class CollocationQuery(TokenQuery):
             all_words = set(list(left.index) + list(right.index))
         else:
             all_words = []
-            
+        
+        engine = corpus.resource.get_engine()
         if all_words and options.cfg.context_mode != CONTEXT_NONE:
             
             left = left.reindex(all_words).fillna(0).astype(int)
@@ -1055,10 +1057,16 @@ class CollocationQuery(TokenQuery):
             collocates = collocates.reset_index()
             collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
             collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
-            collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(resource.get_frequency)
-            collocates["coq_conditional_probability"] = collocates.apply(
-                lambda x: cls.conditional_propability(
+            collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(corpus.get_frequency, engine=engine)
+            
+            collocates["coq_conditional_probability_left"] = collocates.apply(
+                lambda x: cls.conditional_probability(
                     x["coq_collocate_frequency_left"],
+                    x["statistics_frequency"]) if x["statistics_frequency"] else None, 
+                axis=1)
+            collocates["coq_conditional_probability_right"] = collocates.apply(
+                lambda x: cls.conditional_probability(
+                    x["coq_collocate_frequency_right"],
                     x["statistics_frequency"]) if x["statistics_frequency"] else None, 
                 axis=1)
             
@@ -1072,14 +1080,15 @@ class CollocationQuery(TokenQuery):
                 axis=1)
             aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
         else:
-            aggregate = pd.DataFrame(columns=["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability", "coq_mutual_information"])
+            aggregate = pd.DataFrame(columns=["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability_left", "coq_conditional_probability_right", "coq_mutual_information"])
+        engine.dispose()
         return aggregate
 
     @staticmethod
     def add_output_columns(session):
         session._old_output_order = session.output_order
         session.output_order = []
-        for label in ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability", "coq_mutual_information", "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens"]:
+        for label in ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability_left", "coq_conditional_probability_right", "coq_mutual_information", "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens"]:
             if label not in session.output_order:
                 session.output_order.append(label)
 
