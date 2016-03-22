@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-pdf2txt.py is part of Coquery.
+documents.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
@@ -11,25 +11,43 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-from pdfminer.converter import TextConverter
-from pdfminer.layout import LAParams
-from pdfminer.pdfparser import PDFParser
+from . import options
 
-# account for API change in pdfminer that didn't make it to 
-# the Python 3 version:
-try:
-    from pdfminer.pdfpage import PDFPage
-except ImportError:
-    from pdfminer.pdfparser import PDFDocument
+if options._use_docx:
+    from docx import Document
 
-# Use either cStringIO or io:
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
+if options._use_pdfminer:
+    from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+    from pdfminer.converter import TextConverter
+    from pdfminer.layout import LAParams
+    from pdfminer.pdfparser import PDFParser
+
+    # account for API change in pdfminer that didn't make it to 
+    # the Python 3 version:
+    try:
+        from pdfminer.pdfpage import PDFPage
+    except ImportError:
+        from pdfminer.pdfparser import PDFDocument
+
+    # Use either cStringIO or io:
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from io import StringIO
+
+def docx_to_txt(path, encoding="utf-8"):
+    if not options._use_docx:
+        raise RuntimeError
+    document = Document(path)
+    txt = []
+    for para in document.paragraphs:
+        txt.append(para.text)
+    return "\n".join(txt)
 
 def pdf_to_txt(path, encoding="utf-8"):
+    if not options._use_pdfminer:
+        raise RuntimeError
+            
     content = StringIO()
     manager = PDFResourceManager()
     ## not all versions of TextConverter support encodings:

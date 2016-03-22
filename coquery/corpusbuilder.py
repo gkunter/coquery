@@ -1066,135 +1066,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     {self.corpus_word_id: word_id, 
                         self.corpus_file_id: self._file_id,
                         self.corpus_time: time})
-                
-    def process_text_file(self, file_name):
-        """ 
-        Process a text file.
-        
-        This method reads the content of the file, and interprets it as an
-        plain text file. It first attempt to tokenize the text, and to 
-        assign a POS tag to each token (using NLTK if possible). Then, if
-        the token does not exist in the word table, add a new word with its 
-        POS tag to the word table. Then, try to lemmatize any new word. 
-        Finally, add the token with its word identifier to the corpus table,
-        and proceed with the next word.
-        
-        Parameters
-        ----------
-        file_name : string
-            The path name of the file that is to be processed
-        """
 
-
-        # try to identify supported file types:
-
-        raw_text = None
-        _, ext = os.path.splitext(file_name)
-
-        with open(file_name, "rb") as fp:
-            first_line = fp.readline()
-        # try to harvest text from PDF documents:
-        try:
-            header = first_line[:5].decode("utf-8")
-            if header == "%PDF-":
-                import pdf2txt
-                raw_text = pdf2txt.pdf_to_txt(file_name)
-        except (UnicodeDecodeError, TypeError) as e:
-            pass
-
-        if raw_text == None:
-            # Read raw text from file:
-            try:
-                with codecs.open(file_name, "r", encoding=self.arguments.encoding) as input_file:
-                    raw_text = input_file.read()
-            except UnicodeDecodeError:
-                with codecs.open(file_name, "r", encoding="ISO-8859-1") as input_file:
-                    raw_text = input_file.read()
-            
-        tokens = []
-
-        # if possible, use NLTK for lemmatization, tokenization, and tagging:
-        if self.arguments.use_nltk:
-            import nltk
-
-            # the WordNet lemmatizer will be used to obtain the lemma for a
-            # given word:
-            self._lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
-            
-            # The NLTK POS tagger produces some labels that are different from
-            # the labels used in WordNet. In order to use the WordNet 
-            # lemmatizer for all words, we need a function that translates 
-            # these labels:
-            self._pos_translate = lambda x: {'NN': nltk.corpus.wordnet.NOUN, 
-                'JJ': nltk.corpus.wordnet.ADJ,
-                'VB': nltk.corpus.wordnet.VERB,
-                'RB': nltk.corpus.wordnet.ADV} [x.upper()[:2]]
-
-            # Create a list of sentences from the content of the current file
-            # and process this list one by one:
-            sentence_list = nltk.sent_tokenize(raw_text)
-            for sentence in sentence_list:
-                # use NLTK tokenizer and POS tagger on this sentence:
-                tokens = nltk.word_tokenize(sentence)
-                pos_map = nltk.pos_tag(tokens)
-                    
-                for current_token, current_pos in pos_map:
-                    # store each token:
-                    self.add_token(current_token.strip(), current_pos)
-        else:
-            # The default lemmatizer is pretty dumb and simply turns the 
-            # word-form to lower case so that at least 'Dogs' and 'dogs' are 
-            # assigned the same lemma -- which is a different lemma from the
-            # one assigned to 'dog' and 'Dog'.
-            #
-            # If NLTK is used, the lemmatizer will use the data from WordNet,
-            # which will result in much better results.
-            self._lemmatize = lambda x: x.lower()
-            self._pos_translate = lambda x: x
-            
-            # use a dumb tokenizer that simply splits the file content by 
-            # spaces:            
-            
-            tokens = raw_text.replace("\n", " ").split(" ")
-            
-            for token in [x.strip() for x in tokens if x.strip()]:
-                # any punctuation at the beginning of the token is added to the
-                # corpus as a punctuation token, and is also stripped from the
-                # token:
-                while token and token[0] in string.punctuation:
-                    self.add_token(token[0], "PUNCT")
-                    token = token[1:]
-                # next, detect any word-final punctuation:
-                final_punctuation = []
-                for ch in reversed(token):
-                    if ch in string.punctuation:
-                        final_punctuation.insert(0, ch)
-                    else:
-                        break
-                if final_punctuation == ["."]:
-                    # a single word-final full stop is considered to be a part 
-                    # of an abbreviation if there are more than one full stop 
-                    # in the token, e.g. in "U.S.A.". Otherwise, it is treated
-                    # as sentence punctuation.
-                    # This simple approach will also strip the full stop from
-                    # abbreviations such as "Mr.".
-                    if token.count(".") > 1:
-                        final_punctuation = []
-                
-                # strip final punctuation from token:
-                if final_punctuation:
-                    token = token[:-len(final_punctuation)]
-                
-                # add the token to the corpus:
-                if token:
-                    self.add_token(token)
-                    
-                # add final punctuation:
-                for p in final_punctuation:
-                    self.add_token(p, "PUNCT")
-
+    def process_text_file():
+        raise RuntimeError
     
-    def add_next_token_to_corpus(self, values):
+    def _add_next_token_to_corpus(self, values):
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
         self._corpus_buffer.append(values)
@@ -1207,7 +1083,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._corpus_keys = values.keys()
         self._corpus_buffer = []
         self._corpus_buffer.append(values)
-        self.add_token_to_corpus = self.add_next_token_to_corpus
+        self.add_token_to_corpus = self._add_next_token_to_corpus
     
     def add_token(self, token_string, token_pos=None):
         # get lemma string:
