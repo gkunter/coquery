@@ -273,14 +273,19 @@ class CoqDetailBox(QtGui.QWidget):
     """
     clicked = QtCore.Signal(QtGui.QWidget)
     
-    def __init__(self, text, box=None, alternative=None, *args, **kwargs):
+    def __init__(self, text="", box=None, alternative=None, *args, **kwargs):
+        if isinstance(text, QtGui.QWidget):
+            if args:
+                args = tuple(list(args).insert(0, text))
+            else:
+                args = tuple([text])
+            text = ""
         super(CoqDetailBox, self).__init__(*args, **kwargs)
 
         if not box:
             self.box = QtGui.QFrame(self)
         else:
             self.box = box
-
 
         self.frame = QtGui.QFrame(self)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
