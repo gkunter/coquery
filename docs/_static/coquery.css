@@ -73,3 +73,18 @@ h1 {
     font-style: bold;
     font-size: 2em;
 }
+
+.note {
+    background-color: rgb(204, 204, 204);
+    border-color: #aa0000;
+    background-image: -webkit-linear-gradient(top,#ffffff 0,#fffcfc 100%);
+    background-image: -o-linear-gradient(top,#ffffff 0,#fffcfc 100%);
+    background-image: -webkit-gradient(linear,left top,left bottom,from(#d9edf7),to(#b9def0));
+    background-image: linear-gradient(to bottom,#ffffff 0,#fffcfc 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#fffcfc', endColorstr='#ffffff', GradientType=0);
+    color: black;
+}
+
+code {
+    color: #aa0000;
+}

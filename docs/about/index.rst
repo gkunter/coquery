@@ -22,8 +22,8 @@ translators, and anybody who wishes to search and analyse a text corpus.
             <div class="col-md-6">
                 <h2>Corpora</h2>
                 <ul>
-                    <li>Use the corpus manager to install one of the 
-                    supported corpora, or to build your own corpus from PDF or text files</li>
+                    <li>Use the corpus manager to install one of the supported corpora
+                    <li>Build your own corpus from PDF, .docx, or plain text files</li>
                     <li>Filter your query for example by year, genre, or speaker gender</li>
                     <li>Choose which corpus features will be included in your query results</li>
                     <li>View every token that matches your query within its context</li>

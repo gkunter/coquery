@@ -19,8 +19,8 @@ Tutorials and documentation can be found on the Coquery website:
 An incomplete list of the things you can do with Coquery:
 
 ### Corpora
-* Use the corpus manager to install one of the supported corpora, or to 
-  build your own corpus
+* Use the corpus manager to install one of the supported corpora, or to
+  build your own corpus from PDF, .docx, or plain text files
 * Filter your query for example by year, genre, or speaker gender
 * Choose which corpus features will be included in your query results
 * View every token that matches your query within its context
