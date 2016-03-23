@@ -1030,7 +1030,13 @@ class CoqueryApp(QtGui.QMainWindow):
     
     def save_results(self, selection=False, clipboard=False):
         if not clipboard:
-            name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.results_file_path)
+            if selection:
+                caption = "Save selected query results – Coquery"
+            else:
+                caption = "Save query results – Coquery"
+            name = QtGui.QFileDialog.getSaveFileName(
+                caption=caption,
+                directory=options.cfg.results_file_path)
             if type(name) == tuple:
                 name = name[0]
             if not name:
