@@ -12,8 +12,11 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
+import re
+
 from coquery.corpusbuilder import *
 from coquery import options
+from coquery.documents import *
 
 class BuilderClass(BaseCorpusBuilder):
     corpus_table = "Corpus"
@@ -114,16 +117,17 @@ class BuilderClass(BaseCorpusBuilder):
         """
         Return the text content from the file as a string.
         
-        This method uses a heuristic to detect the file type of the specified 
-        file. Currently supported file types are PDF and MS Word documents. 
-        Planned file types that are not implemented yet are HTML and ODT files.
+        This method uses the function detect_file_type() from the documents.py
+        module in order to detect the text format type of the file. Currently 
+        supported file formats are: PDF, HTML, ODT, DOCX, and PLAIN. BINARY 
+        files are ignored.
         
-        If no supported file type can be detected, the file is assumed to be 
-        a plain text file. If the 'chardet' module is installed, it is used 
-        to detect the encoding of the files. Otherwise, the file is first 
-        decoded assuming UTF-8, and if that fails, assuming Latin-1/ISO-8859-1. 
-        This may fail horribly if the file is NOT a plain text file, but for 
-        example a binary file!
+        If the file is a PLAIN text file, and if the 'chardet' module is 
+        installed, it is used to detect the encoding of the files. Otherwise, 
+        a PLAIN text file is first decoded assuming UTF-8, and if that fails, 
+        assuming Latin-1/ISO-8859-1. Note that this may cause wrong character 
+        encodings in text files that use a different encoding! Using 'chardet'
+        is therefore strongly recommended.
         
         Parameters
         ----------
@@ -135,98 +139,117 @@ class BuilderClass(BaseCorpusBuilder):
         raw_text : str
             The content of the file as a text string.
         """
-        raw_text = None
-        _, ext = os.path.splitext(file_name)
+        raw_text = ""
 
-        with open(file_name, "rb") as fp:
-            first_line = fp.readline().decode("utf-8")
-        if first_line[:5] == "%PDF-":
-            file_type = "PDF"
-        elif first_line[:2] == "PK" and ext.lower() == ".docx":
-            file_type = "DOCX"
-        elif first_line[:2] == "PK" and ext.lower() == ".odt":
-            file_type = "ODT"
-        elif first_line.strip().lower().startswith("<!doctype html>"):
-            file_type = "HTML"
-        else:
-            file_type = "PLAIN"
+        file_type = detect_file_type(file_name)
 
-        if file_type == "PDF" and options._use_pdfminer:
-            from coquery.documents import pdf_to_txt
-            try:
-                raw_text = pdf_to_txt(file_name)
-            except (UnicodeDecodeError, TypeError) as e:
-                logger.error("Error in PDF file {}: {}".format(file_name, e))
-
-        elif file_type == "DOCX" and options._use_docx:
-            from coquery.documents import docx_to_txt
-            try:
-                raw_text = docx_to_txt(file_name)
-            except (Exception) as e:
-                logger.error("Error in MS Word file {}: {}".format(file_name, e))
-
-        elif file_type == "ODT" and options._use_docx:
-            from coquery.documents import odt_to_txt
-            try:
-                raw_text = odt_to_txt(file_name)
-            except (Exception) as e:
-                logger.error("Error in OpenDocument Text file {}: {}".format(file_name, e))
-
-        elif file_type == "HTML":
-            from coquery.documents import html_to_txt
-            try:
-                raw_text = html_to_txt(file_name)
-            except (Exception) as e:
-                logger.error("Error in OpenDocument Text file {}: {}".format(file_name, e))
-                
-        elif file_type == "PLAIN":
-            # Use chardet module for encoding detection?
-            if options._use_chardet:
-                import chardet
-                content = open(file_name, "rb").read()
-                detection = chardet.detect(content)
-                encoding = detection["encoding"]
-                confidence = detection["confidence"]
-                if confidence < 0.5:
-                    logger.warn("Low confidence ({:.2}) about the encoding of file {}. Assuming encoding '{}'.".format(
-                        confidence, file_name, encoding))
-                else:
-                    logger.info("Encoding '{}' detected for file {} (confidence: {:.2})".format(encoding, file_name, confidence))
-                raw_text = content.decode(encoding)
-            else:
+        if file_type == FT_PDF:
+            if options._use_pdfminer:
                 try:
-                    with codecs.open(file_name, "r", encoding=self.arguments.encoding) as input_file:
-                        raw_text = input_file.read()
-                except UnicodeDecodeError:
-                    with codecs.open(file_name, "r", encoding="ISO-8859-1") as input_file:
-                        raw_text = input_file.read()
+                    raw_text = pdf_to_str(file_name)
+                except (UnicodeDecodeError, TypeError) as e:
+                    logger.error("Error in PDF file {}: {}".format(file_name, e))
+                    return ""
+            else:
+                logger.warn("Ignoring PDF file {} (the required Python module 'pdfminer' is not available)".format(
+                    file_name))
+                return ""
 
-        if raw_text == None:
-            logger.warn("No data from file {}".format(file_name))
-        
+        elif file_type == FT_DOCX:
+            if options._use_docx:
+                try:
+                    raw_text = docx_to_str(file_name)
+                except (Exception) as e:
+                    logger.error("Error in MS Word file {}: {}".format(file_name, e))
+                    return ""
+            else:
+                logger.warn("Ignoring MS Word file {} (the required Python module 'python-docx' is not available)".format(
+                    file_name))
+                return ""
+
+        elif file_type == FT_ODT:
+            if options._use_odfpy:
+                try:
+                    raw_text = odt_to_str(file_name)
+                except (Exception) as e:
+                    logger.error("Error in OpenDocument Text file {}: {}".format(file_name, e))
+                    return ""
+            else:
+                logger.warn("Ignoring ODT file {} (the required Python module 'odtpy' is not available)".format(
+                    file_name))
+                return ""
+                
+        elif file_type == FT_HTML:
+            if options._use_bs4:
+                try:
+                    raw_text = html_to_str(file_name)
+                except (Exception) as e:
+                    logger.error("Error in HTML file {}: {}".format(file_name, e))
+                    return ""
+            else:
+                logger.warn("Ignoring HTML file {} (the required Python module 'BeautifulSoup' is not available)".format(
+                    file_name))
+                return ""
+        elif file_type == FT_PLAIN:
+            raw_text = plain_to_str(file_name)
+        else:
+            # Unsupported format, e.g. BINARY.
+            logger.warn("Ignoring unsupported file format {}, file {}".format(file_type, file_name))
+            return ""
+
+        if raw_text == "":
+            logger.warn("No text could be retrieved from {} file {}".format(file_type, file_name))
+        else:
+            logger.info("Read {} file {}, {} characters".format(
+                file_type, file_name, len(raw_text)))
+
         return raw_text
+
+    def add_token(self, token_string, token_pos=None):
+        # get lemma string:
+        if token_string in string.punctuation:
+            token_pos = "PUNCT"
+            lemma = token_string
+        else:
+            try:
+                # use the current lemmatizer to assign the token to a lemma: 
+                lemma = self._lemmatize(token_string, self._pos_translate(token_pos)).lower()
+            except Exception as e:
+                lemma = token_string.lower()
+        
+        # get word id, and create new word if necessary:
+        word_dict = {self.word_lemma: lemma, self.word_label: token_string}
+        if token_pos and self.arguments.use_nltk:
+            word_dict[self.word_pos] = token_pos 
+        word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
+        
+        # store new token in corpus table:
+        return self.add_token_to_corpus(
+            {self.corpus_word_id: word_id,
+             self.corpus_file_id: self._file_id})
 
     def process_file(self, file_name):
         """ 
         Process a text file.
         
-        This method reads the content of the file, and interprets it as an
-        plain text file. It first attempt to tokenize the text, and to 
-        assign a POS tag to each token (using NLTK if possible). Then, if
-        the token does not exist in the word table, add a new word with its 
-        POS tag to the word table. Then, try to lemmatize any new word. 
-        Finally, add the token with its word identifier to the corpus table,
-        and proceed with the next word.
+        This method reads the text content of the file. Several text file 
+        formats are supported (PDF, DOCX, ODT, HTML, PLAIN). 
+        
+        It first attempt to tokenize, lemmatize, and POS-tag the words in the 
+        text. If NLTK is available, it is used for that, otherwise the dumb 
+        default tokenizer/lemmatizer (which is *really* dumb, and does not 
+        even attempt to create POS tags) is used.
+        
+        Then, if the token does not exist in the word table, add a new word 
+        with its lemma and POS tag to the word table. Finally, add the token 
+        with its word identifier to the corpus table, and proceed with the 
+        next token.
         
         Parameters
         ----------
         file_name : string
             The path name of the file that is to be processed
         """
-
-        
-
-        # try to identify supported file types:
 
         raw_text = self._read_text(file_name)
             
@@ -259,7 +282,7 @@ class BuilderClass(BaseCorpusBuilder):
                     
                 for current_token, current_pos in pos_map:
                     # store each token:
-                    self.add_token(current_token.strip(), current_pos)
+                    self.add_token(current_token, current_pos)
         else:
             # The default lemmatizer is pretty dumb and simply turns the 
             # word-form to lower case so that at least 'Dogs' and 'dogs' are 
