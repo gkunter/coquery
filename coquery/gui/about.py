@@ -38,7 +38,8 @@ class AboutDialog(QtGui.QDialog):
         self.ui.label_pixmap.setPixmap(QtGui.QPixmap.fromImage(image))
         self.ui.label_pixmap.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.ui.label_description.setText(utf8(self.ui.label_description.text()).format(version=VERSION, date=DATE))
+        s = utf8(self.ui.label_description.text())
+        self.ui.label_description.setText(s.format(version=VERSION, date=DATE))
 
         self.ui.modules.setText("Check optional modules")
         l = []
@@ -49,7 +50,8 @@ class AboutDialog(QtGui.QDialog):
                   ("chardet", options._use_chardet),
                   ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options._use_pdfminer),
                   ("python-docx", options._use_docx),
-                  ("odfpy", options._use_odfpy)):
+                  ("odfpy", options._use_odfpy),
+                  ("BeautifulSoup", options._use_bs4)):
             _, _, description, url = MODULE_INFORMATION[name]
             
             l.append("<tr><td><a href='{url}'>{name}</a></td><td>{description}</td><td>{available}</td></tr>".format(
