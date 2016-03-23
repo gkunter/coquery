@@ -592,7 +592,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("-l", help="load source files", action="store_true")
         self.parser.add_argument("-c", help="create database tables", action="store_true")
         self.parser.add_argument("-w", help="write corpus module", action="store_true")
-        self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
+        self.parser.add_argument("--lookup_ngram", help="create an ngram lookup table (can be very big)", action="store_true")
         self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
         self.additional_arguments()
         
@@ -1085,30 +1085,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._corpus_buffer.append(values)
         self.add_token_to_corpus = self._add_next_token_to_corpus
     
-    def add_token(self, token_string, token_pos=None):
-        # get lemma string:
-        if token_string in string.punctuation:
-            token_pos = "PUNCT"
-            lemma = token_string
-        else:
-            try:
-                # use the current lemmatizer to assign the token to a lemma: 
-                lemma = self._lemmatize(token_string, self._pos_translate(token_pos)).lower()
-            except Exception as e:
-                lemma = token_string.lower()
-        
-        # get word id, and create new word if necessary:
-        word_dict = {self.word_lemma: lemma, 
-                    self.word_label: token_string}
-        if token_pos and self.arguments.use_nltk:
-            word_dict[self.word_pos] = token_pos 
-        word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
-        
-        # store new token in corpus table:
-        self.add_token_to_corpus(
-            {self.corpus_word_id: word_id,
-             self.corpus_file_id: self._file_id})
-
     ### METHODS FOR XML FILES
 
     def xml_parse_file(self, file_object):
@@ -1355,37 +1331,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 self._widget.progressUpdate.emit(i + 1)
             self.commit_data()
 
-    #def get_optimal_field_type(self, table_name, column_name):
-        #"""
-        #Obtain the optimal field type for the specified column.
-        
-        #This method is not supported for SQLite databases. Here, the return 
-        #value is always the current field type of the column.
-        
-        #Parameters
-        #----------
-        #table_name, column_name : str 
-            #The name of the table and the column, respectively
-            
-        #Returns
-        #-------
-        #s : str 
-            #A string containing the optimal SQL field type for the specified 
-            #column.
-        #"""
-        #if self.db_type == SQL_SQLITE:
-            #return self.get_field_type(table_name, column_name)
-        #cur = self.Con.cursor()
-        #cur.execute("SELECT %s FROM %s PROCEDURE ANALYSE()" % (column_name, table_name), override=True)
-        #x = cur.fetchone()[-1]
-        #try:
-            #if isinstance(x, bytes):
-                #x = x.decode("utf-8")
-        #except NameError:
-            #x = str(x)
-        #return x
-
-
     def db_has(self, table, values, case=False):
         return len(self.db_find(table, values, case).index) > 0
 
@@ -1457,8 +1402,119 @@ class BaseCorpusBuilder(corpus.BaseResource):
         ##resource = module.Resource
         ##print(resource)
         
-    def create_joined_table(self):
-        pass
+    def build_lookup_ngram(self):
+        """
+        Create a lookup table for multi-item query strings.
+        """
+        max_id = self._corpus_id
+        if not max_id:
+            print("no max id!")
+            raise RuntimeError("No max id")
+
+        self.corpus_ngram = "{}Ngram".format(self.corpus_table)
+        if hasattr(self, "corpus_word_id"):
+            word_id = self.corpus_word_id
+            max_word = self._new_tables[self.word_table]._current_id + 1
+        elif hasattr(self, "corpus_word"):
+            word_id = self.corpus_word
+            max_word = DEFAULT_MISSING_VALUE
+
+        corpus_columns = [x.name for x in self._new_tables[self.corpus_table].columns if x.name != word_id]
+        word_columns = ["{}{}".format(word_id, i) for i in range(self.arguments.ngram_width)]
+        base_fields = ["coq_corpus_0.{}".format(x) for x in corpus_columns]
+        additional_words = ["coq_corpus_{}.{}".format(i, word_id) for i in range(self.arguments.ngram_width)]
+        table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i) for i in range(self.arguments.ngram_width)]
+        join_conditions = ["coq_corpus_0.{id} + {n} = {join_corpus}.{id}".format(
+            corpus=self.corpus_table, 
+            id=self.corpus_id,
+            join_corpus="coq_corpus_{}".format(i),
+            n=i) for i in range(1, self.arguments.ngram_width)]
+
+                
+        step = 5000
+        current_id = 0
+
+        iterations = max_id // step + 1
+
+        #if not Verbose:
+            #ProgressBar = progressbar.ProgressBar (Iterations)
+        #ToLog ("Inserting data, %s iterations" % Iterations, logging.info)
+
+        corpus_tab = self._new_tables[self.corpus_table]
+        
+        new_tab_desc = []
+        d = {}
+        for x in corpus_tab.columns:
+            d[x.name] = x
+        
+        for col in corpus_tab.columns:
+            if col.name != word_id:
+                if col.is_identifier:
+                    new_col = Identifier(col.name, col.data_type, unique=col.unique)
+                else:
+                    new_col = Column(col.name, col.data_type)
+                new_tab_desc.append(new_col)
+
+        word_col = d[word_id]
+        for x in word_columns:
+            new_tab_desc.append(Column(x, word_col.data_type))
+
+        self.create_table_description(self.corpus_ngram, new_tab_desc)
+        create_str = self._new_tables[self.corpus_ngram].get_create_string(self.arguments.db_type)
+        self.DB.create_table(self.corpus_ngram, create_str)
+
+        print(create_str)
+
+        sql_template = """
+            INSERT {corpus_ngram} ({columns})
+            SELECT {fields}
+            FROM {join}
+            WHERE {token_range} {join_conditions}"""
+
+        with self.DB.engine.connect() as connection:
+
+            while current_id <= max_id and not self.interrupted:
+                token_range = "coq_corpus_0.{token} >= {lower} AND coq_corpus_0.{token} < {upper}".format(
+                    token=self.corpus_id,
+                    lower=current_id, upper=current_id + step)
+                
+                S = sql_template.format(corpus_ngram=self.corpus_ngram,
+                            columns=", ".join(corpus_columns + word_columns),
+                            fields=", ".join(base_fields + additional_words),
+                            join=", ".join(table_join),
+                            token_range=token_range,
+                            join_conditions=" AND {}".format(
+                                " AND ".join(join_conditions)) if join_conditions else ""
+                            )
+
+                connection.execute(S.strip().replace("\n", " "))
+                current_id = current_id + step
+            
+            # insert missing rows so that the whole corpus is searchable:
+            for n in range(1, self.arguments.ngram_width):
+                token_range = "coq_corpus_0.{token} = {current}".format(
+                    token=self.corpus_id, current=max_id - self.arguments.ngram_width + n + 1)
+                base_fields = [("coq_corpus_0.{}".format(x) 
+                                if x != self.corpus_id 
+                                else str(max_id - self.arguments.ngram_width + n + 1)) for x in corpus_columns]
+                
+                table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i) for i in range(self.arguments.ngram_width - n)]
+                join_conditions = ["coq_corpus_0.{id} + {i} = {join_corpus}.{id}".format(
+                    corpus=self.corpus_table, 
+                    id=self.corpus_id,
+                    join_corpus="coq_corpus_{}".format(i),
+                    i=i) for i in range(1, self.arguments.ngram_width - n)]
+                additional_words = ["coq_corpus_{}.{}".format(i, word_id) for i in range(self.arguments.ngram_width - n)]
+                
+                S = sql_template.format(corpus_ngram=self.corpus_ngram,
+                            columns=", ".join(corpus_columns + word_columns),
+                            fields=", ".join(base_fields + additional_words + [str(max_word)] * n),
+                            join=", ".join(table_join),
+                            token_range=token_range,
+                            join_conditions=" AND {}".format(
+                                " AND ".join(join_conditions)) if join_conditions else ""
+                            )
+                connection.execute(S.strip().replace("\n", " "))
     
     def build_optimize(self):
         """ Optimizes the table columns so that they use a minimal amount
@@ -1494,14 +1550,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         optimal = optimal.decode("utf-8")
                     except AttributeError:
                         pass
-                    self.logger.info("Optimising column {}.{} from {} to {}".format(
-                        table.name, column.name, current, optimal))
                     try:
                         self.DB.modify_field_type(table.name, column.name, optimal)
                     except Exception as e:
                         print(e)
                         self.logger.warning(e)
                     else:
+                        self.logger.info("Optimized column {}.{} from {} to {}".format(
+                            table.name, column.name, current, optimal))
                         column.data_type = optimal
                 column_count += 1
 
@@ -1546,8 +1602,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if self.interrupted:
                 return
 
-            self.logger.info("Creating index {} on table '{}'".format(
-                column, table))
             try:
                 this_column = self._new_tables[table].get_column(column)
                 
@@ -1905,9 +1959,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
         - the corpus installer in case of adhoc corpora
         """
         if self.arguments.c:
-            try:
-                sqlhelper.drop_database(options.cfg.current_server, self.arguments.db_name)
-            except:
+            #try:
+                #sqlhelper.drop_database(options.cfg.current_server, self.arguments.db_name)
+            #except:
                 pass
 
         path = self.get_module_path(self.arguments.name)
@@ -1939,18 +1993,18 @@ class BaseCorpusBuilder(corpus.BaseResource):
         order):
         
         * :func:`build_initialize` to set up the building process, which includes loading the required modules`
-        * :func:`build_create_tables` to create all MySQL tables that were specified by previous calls to :func:`create_table_description`
-        * :func:`build_load_files` to read all datafiles, process their content, and insert the content into the MySQL tables
-        * :func:`build_self_joined` to create a self-joined corpus table that increases query performance of multi-token queries, but which requires a lot of disk space
-        * :func:`build_optimize` to ensure that the MySQL tables use the optimal data format for the data
-        * :func:`build_create_indices` to create database indices that speed up the MySQL queries
+        * :func:`build_create_tables` to create all SQL tables that were specified by previous calls to :func:`create_table_description`
+        * :func:`build_load_files` to read all datafiles, process their content, and insert the content into the SQL tables
+        * :func:`build_lookup_ngram` to create an n-gram lookup table that increases query performance of multi-item queries, but which requires a lot of disk space
+        * :func:`build_optimize` to ensure that the SQL tables use the optimal data format for the data
+        * :func:`build_create_indices` to create database indices that speed up the SQL queries
         * :func:`build_write_module` to write the corpus module to the ``corpora`` sub-directory of the Coquery install directory (or the corpus directory specified in the configuration file)
         
         .. note:: 
         
             Self-joined tables are currently not supported by 
             :class:`BaseCorpusBuilder`. Corpus installers that want to use
-            this feature have to override :func:`build_self_joined`.
+            this feature have to override :func:`build_lookup_ngram`.
         """
 
         def progress_next(count):
@@ -1969,7 +2023,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.setup_logger()
 
         if self._widget:
-            steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.self_join) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
+            steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.lookup_ngram) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
             self._widget.ui.progress_bar.setMaximum(steps)
 
         if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
@@ -1999,10 +2053,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     self.commit_data()
                     progress_done()
 
-                if self.arguments.self_join and not self.interrupted:
+                if self.arguments.lookup_ngram and not self.interrupted:
                     current = progress_next(current)
-                    self.build_self_joined()
-                    current = progress_done()
+                    self.build_lookup_ngram()
+                    progress_done()
 
                 if not self.interrupted:
                     current = progress_next(current)
