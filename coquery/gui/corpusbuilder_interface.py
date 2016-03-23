@@ -91,7 +91,12 @@ class InstallerGui(QtGui.QDialog):
         self.ui.corpus_description.setText(
                 utf8(self.ui.corpus_description.text()).format(
                     utf8(builder_class.get_title()), utf8(options.cfg.current_server)))
-            
+        
+        self.ui.label_ngram_info.setText("")
+        self.ui.label_ngram_info.setPixmap(self.parent().get_icon("sign-info").pixmap(
+            QtCore.QSize(self.ui.spin_n.sizeHint().height(),
+                         self.ui.spin_n.sizeHint().height())))
+        
         notes = builder_class.get_installation_note()
         if notes:
             self.ui.notes_box = classes.CoqDetailBox("Installation notes")
@@ -306,7 +311,7 @@ class InstallerGui(QtGui.QDialog):
             namespace.l = False
             namespace.c = False
             namespace.w = True
-            namespace.self_join = False
+            namespace.lookup_ngram = False
             namespace.only_module = True
         else:
             namespace.w = True
@@ -315,7 +320,11 @@ class InstallerGui(QtGui.QDialog):
             namespace.l = True
             namespace.c = True
             namespace.only_module = False
-            namespace.self_join = False
+            if self.ui.check_ngram.checkState():
+                namespace.lookup_ngram = True
+                namespace.ngram_width = int(self.ui.spin_n.value())
+            else:
+                namespace.lookup_ngram = False
 
         namespace.encoding = self.builder_class.encoding
         
