@@ -23,7 +23,7 @@ translators, and anybody who wishes to search and analyse a text corpus.
                 <h2>Corpora</h2>
                 <ul>
                     <li>Use the corpus manager to install one of the supported corpora
-                    <li>Build your own corpus from PDF, .docx, or plain text files</li>
+                    <li>Build your own corpus from PDF, MS Word, OpenDocument, HTML, or plain text files</li>
                     <li>Filter your query for example by year, genre, or speaker gender</li>
                     <li>Choose which corpus features will be included in your query results</li>
                     <li>View every token that matches your query within its context</li>
