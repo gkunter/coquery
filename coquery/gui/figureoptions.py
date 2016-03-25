@@ -99,8 +99,10 @@ class FigureOptions(QtGui.QDialog):
         self.ui.color_test_area.clicked.connect(self.change_color)
 
         # set up fonts tab:
-        
-        self.ui.button_font_select.clicked.connect(self.font_select)
+        font_family = self.options.get("font_main").family()
+        index = self.ui.combo_font_figure.findText(font_family)
+        self.ui.combo_font_figure.setCurrentIndex(index)
+        self.ui.combo_font_figure.currentIndexChanged.connect(self.change_font)
         
         # set up spinners
         for x in dir(self.ui):
@@ -260,20 +262,15 @@ class FigureOptions(QtGui.QDialog):
         font.setPointSize(int(getattr(self.ui, "spin_size_{}".format(element_name)).value()))
         self.set_element_font(element_name, font)
 
-    def font_select(self, element_name="main"):
-        element_name = "main"
-        name = "label_sample_{}".format(element_name)
-        current_field = getattr(self.ui, name)
-        font = self.options.get(element_name, current_field.font())
-        new_font, accepted = QtGui.QFontDialog.getFont(font, self.parent)
-        if accepted:
-            self.options["figure_font"] = new_font
-            for x in dir(self.ui):
-                if x.startswith("label_sample_"):
-                    element_name = x.split("label_sample_")[-1]
-                    pointsize = int(getattr(self.ui, "spin_size_{}".format(element_name)).value())
-                    self.set_element_font(element_name, QtGui.QFont(new_font.family(), pointsize))
-        
+    def change_font(self):
+        new_font = QtGui.QFont(self.ui.combo_font_figure.currentText())
+        self.options["figure_font"] = new_font
+        for x in dir(self.ui):
+            if x.startswith("label_sample_"):
+                element_name = x.split("label_sample_")[-1]
+                pointsize = int(getattr(self.ui, "spin_size_{}".format(element_name)).value())
+                self.set_element_font(element_name, QtGui.QFont(new_font.family(), pointsize))
+
     def accept(self):
         self.options["label_main"] = str(self.ui.label_main.text())
         self.options["label_x_axis"] = str(self.ui.label_x_axis.text())
