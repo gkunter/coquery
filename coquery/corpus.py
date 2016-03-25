@@ -1803,10 +1803,9 @@ class CorpusClass(object):
         #Return a MySQL SELECT string that queries one token in a query on an 
         #n-gram corpus table.
         #"""
-        
+
         ## get a list of all tables that are required to satisfy the 
         ## feature request:
-        
         #corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
         #requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
@@ -2261,7 +2260,6 @@ class CorpusClass(object):
             "SELECT COQ_OUTPUT_FIELDS FROM ({}) AS e{}".format(token_query_list.pop(referent_id), referent_id)]
         for referent_id, _ in order:
             query_string_part.append(token_query_list[referent_id])
-
 
         ## change the order of the output column so that output columns 
         ## showing the same lexicon feature for different tokens are grouped

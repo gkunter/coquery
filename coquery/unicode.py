@@ -36,8 +36,12 @@ if sys.version_info < (3, 0):
             return s
         else:
             # call __str__() for non-string object, and convert the 
-            # result to unicode:
-            return s.__str__().decode("utf-8", errors=errors)
+            # result to unicode if needed:
+            s_str = s.__str__()
+            if isinstance(s_str, unicode):
+                return s_str
+            else:
+                return s_str.decode("utf-8", errors=errors)
 else:
     def utf8(s, errors="strict"):
         """

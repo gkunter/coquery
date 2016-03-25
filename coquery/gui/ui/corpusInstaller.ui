@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>443</height>
+    <height>480</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -59,33 +59,6 @@
         <property name="verticalSpacing">
          <number>10</number>
         </property>
-        <item row="2" column="0">
-         <widget class="QRadioButton" name="radio_only_module">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QLabel" name="label_5">
-          <property name="text">
-           <string>Install corpus data and corpus module (if you have a local database server)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>Only install corpus module (if you have a network database server)</string>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="1">
          <widget class="QGroupBox" name="box_build_options">
           <property name="sizePolicy">
@@ -101,34 +74,13 @@
            <property name="verticalSpacing">
             <number>-1</number>
            </property>
-           <item row="1" column="1">
-            <widget class="QPushButton" name="button_input_path">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Browse</string>
-             </property>
-             <property name="icon">
-              <iconset theme="folder">
-               <normaloff/>
-              </iconset>
-             </property>
-             <property name="shortcut">
-              <string>Alt+B</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="0">
             <widget class="QLineEdit" name="input_path">
              <property name="enabled">
               <bool>true</bool>
              </property>
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -184,7 +136,126 @@
              </item>
             </layout>
            </item>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="button_input_path">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Browse</string>
+             </property>
+             <property name="icon">
+              <iconset theme="folder">
+               <normaloff/>
+              </iconset>
+             </property>
+             <property name="shortcut">
+              <string>Alt+B</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QWidget" name="widget_ngram" native="true">
+             <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,1,0">
+              <property name="margin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QCheckBox" name="check_ngram">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>&amp;Generate lookup table for multi-item query strings,</string>
+                </property>
+                <property name="buddy">
+                 <cstring>check_ngram</cstring>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="spin_n">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="suffix">
+                 <string> items</string>
+                </property>
+                <property name="prefix">
+                 <string>up to </string>
+                </property>
+                <property name="minimum">
+                 <number>2</number>
+                </property>
+                <property name="value">
+                 <number>2</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_ngram_info">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A lookup table for multi-item queries is an additional database table. For each token in the corpus, this table also contains information on the &lt;span style=&quot; font-style:italic;&quot;&gt;n&lt;/span&gt; following tokens. Using a lookup table can greatly speed up queries that consist of more than one query item. However, it also greatly increases the disk space required for the corpus database, and it increases the time required to install the corpus.&lt;/p&gt;&lt;p&gt;Lookup tables are recommended for the larger corpora such as the BNC, COCA, or COHA.&lt;/p&gt;&lt;p&gt;Note that even if you do not generate a lookup table for multi-item query strings, you can still use query strings that consist of more than one query item, or that are longer than the lookup table. However, in these cases, the query may be relatively slow.&lt;/p&gt;&lt;p&gt;For a detailed description of multi-token lookup tables, see:&lt;/p&gt;&lt;p&gt;Davies, Mark. Semantically-based queries with a joint &lt;span style=&quot; font-style:italic;&quot;&gt;BNC/WordNet&lt;/span&gt; database. In Facchinetti, Roberta (ed.). &lt;span style=&quot; font-style:italic;&quot;&gt;Corpus linguistics 25 years on.&lt;/span&gt; 149–168. Amsterdam: Rodopi.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>?</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
           </layout>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QRadioButton" name="radio_only_module">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>Only install corpus module (e.g. if you have a network database server)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>Install corpus data and corpus module (if you have a local database server)</string>
+          </property>
          </widget>
         </item>
         <item row="0" column="0">
@@ -216,7 +287,7 @@
      <property name="sizeHint" stdset="0">
       <size>
        <width>20</width>
-       <height>40</height>
+       <height>0</height>
       </size>
      </property>
     </spacer>
