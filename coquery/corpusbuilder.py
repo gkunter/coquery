@@ -592,7 +592,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("-l", help="load source files", action="store_true")
         self.parser.add_argument("-c", help="create database tables", action="store_true")
         self.parser.add_argument("-w", help="write corpus module", action="store_true")
-        self.parser.add_argument("--self_join", help="create a self-joined table (can be very big)", action="store_true")
+        self.parser.add_argument("--lookup_ngram", help="create an ngram lookup table (can be very big)", action="store_true")
         self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
         self.additional_arguments()
         
@@ -1066,135 +1066,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     {self.corpus_word_id: word_id, 
                         self.corpus_file_id: self._file_id,
                         self.corpus_time: time})
-                
-    def process_text_file(self, file_name):
-        """ 
-        Process a text file.
-        
-        This method reads the content of the file, and interprets it as an
-        plain text file. It first attempt to tokenize the text, and to 
-        assign a POS tag to each token (using NLTK if possible). Then, if
-        the token does not exist in the word table, add a new word with its 
-        POS tag to the word table. Then, try to lemmatize any new word. 
-        Finally, add the token with its word identifier to the corpus table,
-        and proceed with the next word.
-        
-        Parameters
-        ----------
-        file_name : string
-            The path name of the file that is to be processed
-        """
 
-
-        # try to identify supported file types:
-
-        raw_text = None
-        _, ext = os.path.splitext(file_name)
-
-        with open(file_name, "rb") as fp:
-            first_line = fp.readline()
-        # try to harvest text from PDF documents:
-        try:
-            header = first_line[:5].decode("utf-8")
-            if header == "%PDF-":
-                import pdf2txt
-                raw_text = pdf2txt.pdf_to_txt(file_name)
-        except (UnicodeDecodeError, TypeError) as e:
-            pass
-
-        if raw_text == None:
-            # Read raw text from file:
-            try:
-                with codecs.open(file_name, "r", encoding=self.arguments.encoding) as input_file:
-                    raw_text = input_file.read()
-            except UnicodeDecodeError:
-                with codecs.open(file_name, "r", encoding="ISO-8859-1") as input_file:
-                    raw_text = input_file.read()
-            
-        tokens = []
-
-        # if possible, use NLTK for lemmatization, tokenization, and tagging:
-        if self.arguments.use_nltk:
-            import nltk
-
-            # the WordNet lemmatizer will be used to obtain the lemma for a
-            # given word:
-            self._lemmatize = lambda x,y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
-            
-            # The NLTK POS tagger produces some labels that are different from
-            # the labels used in WordNet. In order to use the WordNet 
-            # lemmatizer for all words, we need a function that translates 
-            # these labels:
-            self._pos_translate = lambda x: {'NN': nltk.corpus.wordnet.NOUN, 
-                'JJ': nltk.corpus.wordnet.ADJ,
-                'VB': nltk.corpus.wordnet.VERB,
-                'RB': nltk.corpus.wordnet.ADV} [x.upper()[:2]]
-
-            # Create a list of sentences from the content of the current file
-            # and process this list one by one:
-            sentence_list = nltk.sent_tokenize(raw_text)
-            for sentence in sentence_list:
-                # use NLTK tokenizer and POS tagger on this sentence:
-                tokens = nltk.word_tokenize(sentence)
-                pos_map = nltk.pos_tag(tokens)
-                    
-                for current_token, current_pos in pos_map:
-                    # store each token:
-                    self.add_token(current_token.strip(), current_pos)
-        else:
-            # The default lemmatizer is pretty dumb and simply turns the 
-            # word-form to lower case so that at least 'Dogs' and 'dogs' are 
-            # assigned the same lemma -- which is a different lemma from the
-            # one assigned to 'dog' and 'Dog'.
-            #
-            # If NLTK is used, the lemmatizer will use the data from WordNet,
-            # which will result in much better results.
-            self._lemmatize = lambda x: x.lower()
-            self._pos_translate = lambda x: x
-            
-            # use a dumb tokenizer that simply splits the file content by 
-            # spaces:            
-            
-            tokens = raw_text.replace("\n", " ").split(" ")
-            
-            for token in [x.strip() for x in tokens if x.strip()]:
-                # any punctuation at the beginning of the token is added to the
-                # corpus as a punctuation token, and is also stripped from the
-                # token:
-                while token and token[0] in string.punctuation:
-                    self.add_token(token[0], "PUNCT")
-                    token = token[1:]
-                # next, detect any word-final punctuation:
-                final_punctuation = []
-                for ch in reversed(token):
-                    if ch in string.punctuation:
-                        final_punctuation.insert(0, ch)
-                    else:
-                        break
-                if final_punctuation == ["."]:
-                    # a single word-final full stop is considered to be a part 
-                    # of an abbreviation if there are more than one full stop 
-                    # in the token, e.g. in "U.S.A.". Otherwise, it is treated
-                    # as sentence punctuation.
-                    # This simple approach will also strip the full stop from
-                    # abbreviations such as "Mr.".
-                    if token.count(".") > 1:
-                        final_punctuation = []
-                
-                # strip final punctuation from token:
-                if final_punctuation:
-                    token = token[:-len(final_punctuation)]
-                
-                # add the token to the corpus:
-                if token:
-                    self.add_token(token)
-                    
-                # add final punctuation:
-                for p in final_punctuation:
-                    self.add_token(p, "PUNCT")
-
+    def process_text_file():
+        raise RuntimeError
     
-    def add_next_token_to_corpus(self, values):
+    def _add_next_token_to_corpus(self, values):
         self._corpus_id += 1
         values[self.corpus_id] = self._corpus_id
         self._corpus_buffer.append(values)
@@ -1207,32 +1083,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._corpus_keys = values.keys()
         self._corpus_buffer = []
         self._corpus_buffer.append(values)
-        self.add_token_to_corpus = self.add_next_token_to_corpus
+        self.add_token_to_corpus = self._add_next_token_to_corpus
     
-    def add_token(self, token_string, token_pos=None):
-        # get lemma string:
-        if token_string in string.punctuation:
-            token_pos = "PUNCT"
-            lemma = token_string
-        else:
-            try:
-                # use the current lemmatizer to assign the token to a lemma: 
-                lemma = self._lemmatize(token_string, self._pos_translate(token_pos)).lower()
-            except Exception as e:
-                lemma = token_string.lower()
-        
-        # get word id, and create new word if necessary:
-        word_dict = {self.word_lemma: lemma, 
-                    self.word_label: token_string}
-        if token_pos and self.arguments.use_nltk:
-            word_dict[self.word_pos] = token_pos 
-        word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
-        
-        # store new token in corpus table:
-        self.add_token_to_corpus(
-            {self.corpus_word_id: word_id,
-             self.corpus_file_id: self._file_id})
-
     ### METHODS FOR XML FILES
 
     def xml_parse_file(self, file_object):
@@ -1479,37 +1331,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 self._widget.progressUpdate.emit(i + 1)
             self.commit_data()
 
-    #def get_optimal_field_type(self, table_name, column_name):
-        #"""
-        #Obtain the optimal field type for the specified column.
-        
-        #This method is not supported for SQLite databases. Here, the return 
-        #value is always the current field type of the column.
-        
-        #Parameters
-        #----------
-        #table_name, column_name : str 
-            #The name of the table and the column, respectively
-            
-        #Returns
-        #-------
-        #s : str 
-            #A string containing the optimal SQL field type for the specified 
-            #column.
-        #"""
-        #if self.db_type == SQL_SQLITE:
-            #return self.get_field_type(table_name, column_name)
-        #cur = self.Con.cursor()
-        #cur.execute("SELECT %s FROM %s PROCEDURE ANALYSE()" % (column_name, table_name), override=True)
-        #x = cur.fetchone()[-1]
-        #try:
-            #if isinstance(x, bytes):
-                #x = x.decode("utf-8")
-        #except NameError:
-            #x = str(x)
-        #return x
-
-
     def db_has(self, table, values, case=False):
         return len(self.db_find(table, values, case).index) > 0
 
@@ -1581,8 +1402,125 @@ class BaseCorpusBuilder(corpus.BaseResource):
         ##resource = module.Resource
         ##print(resource)
         
-    def create_joined_table(self):
-        pass
+    def build_lookup_ngram(self):
+        """
+        Create a lookup table for multi-item query strings.
+        """
+        max_id = self._corpus_id
+        if not max_id:
+            print("no max id!")
+            raise RuntimeError("No max id")
+
+        self.corpusngram_table = "{}Ngram".format(self.corpus_table)
+        self.corpusngram_width = int(self.arguments.ngram_width)
+        if hasattr(self, "corpus_word_id"):
+            word_id = self.corpus_word_id
+            max_word = self._new_tables[self.word_table]._current_id + 1
+        elif hasattr(self, "corpus_word"):
+            word_id = self.corpus_word
+            max_word = DEFAULT_MISSING_VALUE
+
+        corpus_columns = [x.name for x in self._new_tables[self.corpus_table].columns if x.name != word_id]
+        word_columns = ["{}{}".format(word_id, i+1) for i in range(self.arguments.ngram_width)]
+        base_fields = ["coq_corpus_1.{}".format(x) for x in corpus_columns]
+        additional_words = ["coq_corpus_{}.{}".format(i+1, word_id) for i in range(self.arguments.ngram_width)]
+        table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i+1) for i in range(self.arguments.ngram_width)]
+        join_conditions = ["coq_corpus_1.{id} + {n} = {join_corpus}.{id}".format(
+            corpus=self.corpus_table, 
+            id=self.corpus_id,
+            join_corpus="coq_corpus_{}".format(i+1),
+            n=i) for i in range(1, self.arguments.ngram_width)]
+
+        step = 5000
+        current_id = 0
+
+        iterations = max_id // step + 1
+
+        #if not Verbose:
+            #ProgressBar = progressbar.ProgressBar (Iterations)
+        #ToLog ("Inserting data, %s iterations" % Iterations, logging.info)
+
+        corpus_tab = self._new_tables[self.corpus_table]
+        
+        new_tab_desc = []
+        d = {}
+        for x in corpus_tab.columns:
+            d[x.name] = x
+        
+        for col in corpus_tab.columns:
+            if col.name != word_id:
+                if col.is_identifier:
+                    new_col = Identifier(col.name, col.data_type, unique=col.unique)
+                else:
+                    new_col = Column(col.name, col.data_type)
+                new_tab_desc.append(new_col)
+
+        word_col = d[word_id]
+        for x in word_columns:
+            new_tab_desc.append(Column(x, word_col.data_type))
+
+        self.create_table_description(self.corpusngram_table, new_tab_desc)
+        create_str = self._new_tables[self.corpusngram_table].get_create_string(self.arguments.db_type)
+        self.DB.create_table(self.corpusngram_table, create_str)
+
+        sql_template = """
+            INSERT {corpus_ngram} ({columns})
+            SELECT {fields}
+            FROM {join}
+            WHERE {token_range} {join_str}"""
+
+        with self.DB.engine.connect() as connection:
+
+            while current_id <= max_id and not self.interrupted:
+                token_range = "coq_corpus_1.{token} >= {lower} AND coq_corpus_1.{token} < {upper}".format(
+                    token=self.corpus_id,
+                    lower=current_id, upper=current_id + step)
+
+                if join_conditions:
+                    join_str = " AND {}".format(" AND ".join(join_conditions))
+                else:
+                    join_str=""
+                
+                S = sql_template.format(corpus_ngram=self.corpusngram_table,
+                            columns=", ".join(corpus_columns + word_columns),
+                            fields=", ".join(base_fields + additional_words),
+                            join=", ".join(table_join),
+                            token_range=token_range,
+                            join_str=join_str
+                            )
+
+                connection.execute(S.strip().replace("\n", " "))
+                current_id = current_id + step
+            
+            # insert missing rows so that the whole corpus is searchable:
+            for n in range(1, self.arguments.ngram_width):
+                token_range = "coq_corpus_1.{token} = {current}".format(
+                    token=self.corpus_id, current=max_id - self.arguments.ngram_width + n + 1)
+                base_fields = [("coq_corpus_1.{}".format(x) 
+                                if x != self.corpus_id 
+                                else str(max_id - self.arguments.ngram_width + n + 1)) for x in corpus_columns]
+                
+                table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i+1) for i in range(self.arguments.ngram_width - n)]
+                join_conditions = ["coq_corpus_1.{id} + {i} = {join_corpus}.{id}".format(
+                    corpus=self.corpus_table, 
+                    id=self.corpus_id,
+                    join_corpus="coq_corpus_{}".format(i+1),
+                    i=i) for i in range(1, self.arguments.ngram_width - n)]
+                additional_words = ["coq_corpus_{}.{}".format(i+1, word_id) for i in range(self.arguments.ngram_width - n)]
+                
+                if join_conditions:
+                    join_str = " AND {}".format(" AND ".join(join_conditions))
+                else:
+                    join_str=""
+                
+                S = sql_template.format(corpus_ngram=self.corpusngram_table,
+                            columns=", ".join(corpus_columns + word_columns),
+                            fields=", ".join(base_fields + additional_words + [str(max_word)] * n),
+                            join=", ".join(table_join),
+                            token_range=token_range,
+                            join_str=join_str
+                            )
+                connection.execute(S.strip().replace("\n", " "))
     
     def build_optimize(self):
         """ Optimizes the table columns so that they use a minimal amount
@@ -1618,14 +1556,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         optimal = optimal.decode("utf-8")
                     except AttributeError:
                         pass
-                    self.logger.info("Optimising column {}.{} from {} to {}".format(
-                        table.name, column.name, current, optimal))
                     try:
                         self.DB.modify_field_type(table.name, column.name, optimal)
                     except Exception as e:
                         print(e)
                         self.logger.warning(e)
                     else:
+                        self.logger.info("Optimized column {}.{} from {} to {}".format(
+                            table.name, column.name, current, optimal))
                         column.data_type = optimal
                 column_count += 1
 
@@ -1670,8 +1608,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if self.interrupted:
                 return
 
-            self.logger.info("Creating index {} on table '{}'".format(
-                column, table))
             try:
                 this_column = self._new_tables[table].get_column(column)
                 
@@ -2029,9 +1965,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
         - the corpus installer in case of adhoc corpora
         """
         if self.arguments.c:
-            try:
-                sqlhelper.drop_database(options.cfg.current_server, self.arguments.db_name)
-            except:
+            #try:
+                #sqlhelper.drop_database(options.cfg.current_server, self.arguments.db_name)
+            #except:
                 pass
 
         path = self.get_module_path(self.arguments.name)
@@ -2063,18 +1999,18 @@ class BaseCorpusBuilder(corpus.BaseResource):
         order):
         
         * :func:`build_initialize` to set up the building process, which includes loading the required modules`
-        * :func:`build_create_tables` to create all MySQL tables that were specified by previous calls to :func:`create_table_description`
-        * :func:`build_load_files` to read all datafiles, process their content, and insert the content into the MySQL tables
-        * :func:`build_self_joined` to create a self-joined corpus table that increases query performance of multi-token queries, but which requires a lot of disk space
-        * :func:`build_optimize` to ensure that the MySQL tables use the optimal data format for the data
-        * :func:`build_create_indices` to create database indices that speed up the MySQL queries
+        * :func:`build_create_tables` to create all SQL tables that were specified by previous calls to :func:`create_table_description`
+        * :func:`build_load_files` to read all datafiles, process their content, and insert the content into the SQL tables
+        * :func:`build_lookup_ngram` to create an n-gram lookup table that increases query performance of multi-item queries, but which requires a lot of disk space
+        * :func:`build_optimize` to ensure that the SQL tables use the optimal data format for the data
+        * :func:`build_create_indices` to create database indices that speed up the SQL queries
         * :func:`build_write_module` to write the corpus module to the ``corpora`` sub-directory of the Coquery install directory (or the corpus directory specified in the configuration file)
         
         .. note:: 
         
             Self-joined tables are currently not supported by 
             :class:`BaseCorpusBuilder`. Corpus installers that want to use
-            this feature have to override :func:`build_self_joined`.
+            this feature have to override :func:`build_lookup_ngram`.
         """
 
         def progress_next(count):
@@ -2093,7 +2029,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.setup_logger()
 
         if self._widget:
-            steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.self_join) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
+            steps = 2 + int(self.arguments.c) + int(self.arguments.l) + int(self.arguments.lookup_ngram) + int(self.additional_stages != []) + int(self.arguments.o) + int(self.arguments.i) 
             self._widget.ui.progress_bar.setMaximum(steps)
 
         if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
@@ -2123,10 +2059,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     self.commit_data()
                     progress_done()
 
-                if self.arguments.self_join and not self.interrupted:
+                if self.arguments.lookup_ngram and not self.interrupted:
                     current = progress_next(current)
-                    self.build_self_joined()
-                    current = progress_done()
+                    self.build_lookup_ngram()
+                    progress_done()
 
                 if not self.interrupted:
                     current = progress_next(current)
