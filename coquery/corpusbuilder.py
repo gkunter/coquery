@@ -1411,7 +1411,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
             print("no max id!")
             raise RuntimeError("No max id")
 
-        self.corpus_ngram = "{}Ngram".format(self.corpus_table)
+        self.corpusngram_table = "{}Ngram".format(self.corpus_table)
+        self.corpusngram_width = int(self.arguments.ngram_width)
         if hasattr(self, "corpus_word_id"):
             word_id = self.corpus_word_id
             max_word = self._new_tables[self.word_table]._current_id + 1
@@ -1420,17 +1421,16 @@ class BaseCorpusBuilder(corpus.BaseResource):
             max_word = DEFAULT_MISSING_VALUE
 
         corpus_columns = [x.name for x in self._new_tables[self.corpus_table].columns if x.name != word_id]
-        word_columns = ["{}{}".format(word_id, i) for i in range(self.arguments.ngram_width)]
-        base_fields = ["coq_corpus_0.{}".format(x) for x in corpus_columns]
-        additional_words = ["coq_corpus_{}.{}".format(i, word_id) for i in range(self.arguments.ngram_width)]
-        table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i) for i in range(self.arguments.ngram_width)]
-        join_conditions = ["coq_corpus_0.{id} + {n} = {join_corpus}.{id}".format(
+        word_columns = ["{}{}".format(word_id, i+1) for i in range(self.arguments.ngram_width)]
+        base_fields = ["coq_corpus_1.{}".format(x) for x in corpus_columns]
+        additional_words = ["coq_corpus_{}.{}".format(i+1, word_id) for i in range(self.arguments.ngram_width)]
+        table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i+1) for i in range(self.arguments.ngram_width)]
+        join_conditions = ["coq_corpus_1.{id} + {n} = {join_corpus}.{id}".format(
             corpus=self.corpus_table, 
             id=self.corpus_id,
-            join_corpus="coq_corpus_{}".format(i),
+            join_corpus="coq_corpus_{}".format(i+1),
             n=i) for i in range(1, self.arguments.ngram_width)]
 
-                
         step = 5000
         current_id = 0
 
@@ -1459,32 +1459,34 @@ class BaseCorpusBuilder(corpus.BaseResource):
         for x in word_columns:
             new_tab_desc.append(Column(x, word_col.data_type))
 
-        self.create_table_description(self.corpus_ngram, new_tab_desc)
-        create_str = self._new_tables[self.corpus_ngram].get_create_string(self.arguments.db_type)
-        self.DB.create_table(self.corpus_ngram, create_str)
-
-        print(create_str)
+        self.create_table_description(self.corpusngram_table, new_tab_desc)
+        create_str = self._new_tables[self.corpusngram_table].get_create_string(self.arguments.db_type)
+        self.DB.create_table(self.corpusngram_table, create_str)
 
         sql_template = """
             INSERT {corpus_ngram} ({columns})
             SELECT {fields}
             FROM {join}
-            WHERE {token_range} {join_conditions}"""
+            WHERE {token_range} {join_str}"""
 
         with self.DB.engine.connect() as connection:
 
             while current_id <= max_id and not self.interrupted:
-                token_range = "coq_corpus_0.{token} >= {lower} AND coq_corpus_0.{token} < {upper}".format(
+                token_range = "coq_corpus_1.{token} >= {lower} AND coq_corpus_1.{token} < {upper}".format(
                     token=self.corpus_id,
                     lower=current_id, upper=current_id + step)
+
+                if join_conditions:
+                    join_str = " AND {}".format(" AND ".join(join_conditions))
+                else:
+                    join_str=""
                 
-                S = sql_template.format(corpus_ngram=self.corpus_ngram,
+                S = sql_template.format(corpus_ngram=self.corpusngram_table,
                             columns=", ".join(corpus_columns + word_columns),
                             fields=", ".join(base_fields + additional_words),
                             join=", ".join(table_join),
                             token_range=token_range,
-                            join_conditions=" AND {}".format(
-                                " AND ".join(join_conditions)) if join_conditions else ""
+                            join_str=join_str
                             )
 
                 connection.execute(S.strip().replace("\n", " "))
@@ -1492,27 +1494,31 @@ class BaseCorpusBuilder(corpus.BaseResource):
             
             # insert missing rows so that the whole corpus is searchable:
             for n in range(1, self.arguments.ngram_width):
-                token_range = "coq_corpus_0.{token} = {current}".format(
+                token_range = "coq_corpus_1.{token} = {current}".format(
                     token=self.corpus_id, current=max_id - self.arguments.ngram_width + n + 1)
-                base_fields = [("coq_corpus_0.{}".format(x) 
+                base_fields = [("coq_corpus_1.{}".format(x) 
                                 if x != self.corpus_id 
                                 else str(max_id - self.arguments.ngram_width + n + 1)) for x in corpus_columns]
                 
-                table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i) for i in range(self.arguments.ngram_width - n)]
-                join_conditions = ["coq_corpus_0.{id} + {i} = {join_corpus}.{id}".format(
+                table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i+1) for i in range(self.arguments.ngram_width - n)]
+                join_conditions = ["coq_corpus_1.{id} + {i} = {join_corpus}.{id}".format(
                     corpus=self.corpus_table, 
                     id=self.corpus_id,
-                    join_corpus="coq_corpus_{}".format(i),
+                    join_corpus="coq_corpus_{}".format(i+1),
                     i=i) for i in range(1, self.arguments.ngram_width - n)]
-                additional_words = ["coq_corpus_{}.{}".format(i, word_id) for i in range(self.arguments.ngram_width - n)]
+                additional_words = ["coq_corpus_{}.{}".format(i+1, word_id) for i in range(self.arguments.ngram_width - n)]
                 
-                S = sql_template.format(corpus_ngram=self.corpus_ngram,
+                if join_conditions:
+                    join_str = " AND {}".format(" AND ".join(join_conditions))
+                else:
+                    join_str=""
+                
+                S = sql_template.format(corpus_ngram=self.corpusngram_table,
                             columns=", ".join(corpus_columns + word_columns),
                             fields=", ".join(base_fields + additional_words + [str(max_word)] * n),
                             join=", ".join(table_join),
                             token_range=token_range,
-                            join_conditions=" AND {}".format(
-                                " AND ".join(join_conditions)) if join_conditions else ""
+                            join_str=join_str
                             )
                 connection.execute(S.strip().replace("\n", " "))
     
