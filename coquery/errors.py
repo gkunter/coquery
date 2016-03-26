@@ -209,6 +209,9 @@ class LexiconUnsupportedFunctionError(GenericException):
 class WordNotInLexiconError(NoTraceException):
     error_message = "Word is not in the lexicon"
 
+class FullLexiconRequestedError(NoTraceException):
+    error_message = "The complete lexicon was requested."
+
 class NoLemmaInformationError(NoTraceException):
     error_message = "The current resource does not provide lemma information."
 
