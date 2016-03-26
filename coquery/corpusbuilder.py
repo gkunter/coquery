@@ -1801,15 +1801,15 @@ class BaseCorpusBuilder(corpus.BaseResource):
         variable_names = [x for x in dir(self) 
                           if x not in base_variables 
                           and not x.startswith("_")
-                          and not inspect.ismethod(self.__getattribute__(x))]
+                          and not inspect.ismethod(getattr(self, x))]
         variable_strings = []
         for variable_name in sorted(variable_names):
-            try:
-                variable_strings.append("    {} = '{}'".format(
-                    variable_name, type(self).__dict__[variable_name]))
-            except KeyError:
-                variable_strings.append("    {} = '{}'".format(
-                    variable_name, self.__dict__[variable_name]))
+            value = getattr(self, variable_name)
+            if isinstance(value, (int, float)):
+                format_str = "    {} = {}"
+            else:
+                format_str = "    {} = '{}'"
+            variable_strings.append(format_str.format(variable_name, value))
         variable_code = "\n".join(variable_strings)
         
         self.module_content = self.module_code.format(
@@ -2121,7 +2121,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             is_tagged_label = "text corpus"
             tagging_state = "Part-of-speech tags are not available for this corpus."
         
-        description = ["<p>The {label} '{name}' was created on {date}. It contains {tokens} words of text. {tagging_state}</p><p>Directory:<br/> <code>{path}</code></p><p>File{s}:<br/><code>{files}</code></p><p>".format(
+        description = ["<p>The {label} '{name}' was created on {date}. It contains {tokens} text tokens. {tagging_state}</p><p>Directory:<br/> <code>{path}</code></p><p>File{s}:<br/><code>{files}</code></p><p>".format(
             label = utf8(is_tagged_label),
             date = utf8(time.strftime("%c")),
             user = utf8(getpass.getuser()),
