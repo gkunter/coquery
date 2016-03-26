@@ -758,14 +758,17 @@ class CoqueryApp(QtGui.QMainWindow):
         
         table_dict = self.resource.get_table_dict()
         # Ignore denormalized tables:
-        tables = [x for x in table_dict.keys() if not "_denorm_" in x]
+        tables = [x for x in table_dict.keys() if not x.startswith("corpusngram")]
         # ignore internal  variables of the form {table}_id, {table}_table,
         # {table}_table_{other}
         for table in tables:
             for var in list(table_dict[table]):
                 if var == "corpus_id":
                     continue
-                if (var.endswith("_table") or var.endswith("_id") or var.startswith("{}_table".format(table))) or "_denorm_" in var:
+                if (var.endswith("_table") or 
+                    var.endswith("_id") or 
+                    var.startswith("{}_table".format(table)) or
+                    var.startswith("corpusngram_")):
                     table_dict[table].remove(var)
                     
         # Rearrange table names so that they occur in a sensible order:
