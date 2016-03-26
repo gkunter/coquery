@@ -966,18 +966,19 @@ class SQLResource(BaseResource):
             A string that can be executed by an SQL engine.
         """
         try:
-            if hasattr(self, "corpusngram_table"):
-                print("--")
-                print(self.corpus.sql_string_query_lookup(Query, token_list))
-                print("--")
-            #else:
-                #query_string = self.corpus.sql_string_query(Query, token_list)
-            query_string = self.corpus.sql_string_query(Query, token_list)
+            # if there is a lookup ngram table, and if the length of the 
+            # query string does not exceed that table, use it for the 
+            # query
+            if (hasattr(self, "corpusngram_table") and  
+                1 < len(token_list) <= self.corpusngram_width):
+                    query_string = self.corpus.sql_string_query_lookup(Query, token_list)
+            else:
+                # otherwise, use the self-joined corpus table:
+                query_string = self.corpus.sql_string_query(Query, token_list)
         except WordNotInLexiconError:
             query_string = ""
             
         Query.Session.output_order = self.get_select_list(Query)
-        
         return query_string
 
     def get_context(self, token_id, origin_id, number_of_tokens, case_sensitive, db_connection):
@@ -1376,6 +1377,8 @@ class CorpusClass(object):
             word_pos_column = None
         try:
             where_clauses = self.get_whereclauses(token, self.resource.word_id, word_pos_column)
+        except CompleteLexiconRequestedError:
+            where_clauses = []
         except WordNotInLexiconError:
             freq = 0
         else:
@@ -1897,93 +1900,127 @@ class CorpusClass(object):
         Return a string that is sufficient to run the query on the
         MySQL database. 
         """
-
-        """
-            SELECT  coq_word_label_1,
-                    coq_word_label_2,
-                    CorpusNgram.ID AS coquery_invisible_corpus_id,
-                    Files.Filename AS coq_file_name_1
-            FROM    
-                CorpusNgram
-            INNER JOIN
-                (SELECT Word as coq_word_label_1,
-                        WordId
-                FROM    Lexicon) AS E1
-            ON E1.WordId = CorpusNgram.WordId0
-            INNER JOIN
-                (SELECT Word as coq_word_label_2,
-                        WordId
-                FROM    Lexicon) AS E2
-            ON E2.WordId = CorpusNgram.WordId1
-            
-            INNER JOIN
-                Files ON Files.FileId = CorpusNgram.FileId
-            WHERE
-                E1.WordId IN ('163', '708', '5') AND
-                E2.WordId IN ('2400', '2497', '2374');
-        """
-
-        def get_item_string(self):
+        def get_lexicon_features_string():
             """
             Return a string containing the SELECT that is needed to fulfil
             the lexicon feature selection. The string contains a format 
             placeholder {N} that can be filled with the correct query item 
             number. 
             
-            The string is supposed to be used in an inner join with the 
+            The string is supposed to be used as an inner join with the 
             CorpusNgram table, i.e.
             
             CorpusNgram
             INNER JOIN (S) AS E{N} ON E{N}.WordId = CorpusNgram.WordId{N} 
             
             """
+            #sql_template = "INNER JOIN (SELECT {features} FROM {table}) AS {alias} ON {alias}.{alias_id} = {ref_table}.{ref_id}"
+            sql_template = "INNER JOIN (SELECT {features} FROM {table}) AS {alias} ON {alias_id} = {ref_id}"
+
+            table_features = defaultdict(list)
+            table_chain = defaultdict(list)
+            s_set = []
+
+            lexicon_features = [x for x, _ in self.resource.get_lexicon_features()]
+
+            self.lexicon.table_list = []
+            self.lexicon.joined_tables = ["corpus"]
+            #for x in [x for x in options.cfg.selected_features if x in lexicon_features]:
+            for x in [x for x in options.cfg.selected_features if x in lexicon_features]:
+                func, db_name, table, feature = self.resource.split_resource_feature(x)
+                self.lexicon.joined_tables = ["corpus"]
+                self.lexicon.add_table_path("corpus_id", x)
+                table_features[table].append(x)
+                id_feature = "{}_id".format(table)
+                if id_feature not in table_features[table]:
+                    table_features[table].append(id_feature)
+                table_chain[table] = self.lexicon.joined_tables
+                for i, _ in enumerate(self.lexicon.joined_tables[:-1]):
+                    this_tab = self.lexicon.joined_tables[i]
+                    next_tab = self.lexicon.joined_tables[i + 1]
+                    table_features[this_tab].append("{}_id".format(this_tab))
+                    table_features[this_tab].append("{}_{}_id".format(this_tab, next_tab))
+            
+            for table in table_features:
+                if table != "corpus":
+                    l = []
+                    for feature in table_features[table]:
+                        l.append("{} AS coq_{}_{{N}}".format(
+                            getattr(self.resource, feature), feature))
+                    features = ", ".join(l)
+                    prev_table = table_chain[table][-2]
+                    s_set.append(sql_template.format(
+                        features=features,
+                        table=getattr(self.resource, "{}_table".format(table)),
+                        alias="COQ_{}_TABLE_{{N}}".format(table.upper()),
+                        alias_id="coq_{}_id_{{N}}".format(table),
+                        ref_table="COQ_{}_TABLE".format(prev_table.upper()), 
+                        ref_id="coq_{}_{}_id_{{N}}".format(prev_table, table)))
+
+            return "\n".join(s_set)
 
         sql_template = """
         SELECT  {fields}
         FROM    {aliased_corpus}
-                {joined_tables}
+                {table_joins}
         """
 
+        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features()]
+        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features()]
+
+        # determine how words are stored: either directly as a string in a
+        # word column, or as keys to a word table:
         if hasattr(self.resource, "corpus_word_id"):
             word_id_column = self.resource.corpus_word_id
         elif hasattr(self.resource, "corpus_word"):
             word_id_column = self.resource.corpus_id
-        else:
-            word_id_column = None
 
-        corpus_fields = ["{}.{} AS coq_corpus_id_1".format(
-            self.resource.corpusngram_table, self.resource.corpus_id)]
-        for i in range(1, int(self.resource.corpusngram_width)):
-            corpus_fields.append("{tab}.{col}{i} AS coq_word_id_{i}".format(
+        #corpus_fields = ["{tab}.{id} AS coq_corpus_id_1".format(
+        corpus_fields = ["{id} AS coq_corpus_id_1".format(
+            tab=self.resource.corpusngram_table, 
+            id=self.resource.corpus_id)]
+        # FIXME: always word?
+        for i in range(len(token_list)):
+            #corpus_fields.append("{tab}.{col}{i} AS coq_corpus_word_id_{i}".format(
+            corpus_fields.append("{col}{i} AS coq_corpus_word_id_{i}".format(
                 tab=self.resource.corpusngram_table, 
                 col=word_id_column, 
-                i=i))
+                i=i+1))
 
+        # get word_id constraints for each query item:
         where_clauses = []
-
         for i, tup in enumerate(token_list):
             _, item = tup
-            where_clauses += self.get_whereclauses(
-                tokens.COCAToken(item, self.lexicon),
-                "{}{}".format(word_id_column, i+1))
-        
-        for x in [x for x, _ in self.resource.get_lexicon_features() if x in options.cfg.selected_features]:
-            pass
+            try:
+                where_clauses += self.get_whereclauses(
+                    tokens.COCAToken(item, self.lexicon),
+                    "{}{}".format(word_id_column, i+1))
+            except CompleteLexiconRequestedError:
+                where_clauses = []
+                
+        table_joins = []
+        for i in range(len(token_list)):
+            s = get_lexicon_features_string()
+            s = s.format(N=i+1)
+            table_joins.append(s)
 
+        
         final_select = self.get_select_columns(Query, token_list)
-        joined_tables = []
         if where_clauses:
             where_string = "WHERE {}".format(" AND ".join(where_clauses))
         else:
             where_string = ""
-        aliased_corpus = "(SELECT {corpus_fields} FROM {corpusngram_table} {where}) AS COQ_NGRAM_CORPUS".format(
+            
+        # FIXME: Currently, this selects only the word id fields, and not 
+        # any other fields in the corpus table.
+        aliased_corpus = "(SELECT {corpus_fields} FROM {corpusngram_table} {where}) AS COQ_CORPUS_TABLE".format(
             corpus_fields=", ".join(corpus_fields), corpusngram_table=self.resource.corpusngram_table,
             where=where_string)
 
         query_string = sql_template.format(
             fields=", ".join(set(final_select)),
             aliased_corpus=aliased_corpus,
-            joined_tables=joined_tables)
+            table_joins=" ".join(table_joins))
 
         # add LIMIT clause if necessary:
         if options.cfg.number_of_tokens:
