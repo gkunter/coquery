@@ -126,11 +126,12 @@ class Session(object):
             self.data_table = current_query.append_results(self.data_table)
             logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
 
-        self.end_time = datetime.datetime.now()
         self.data_table.index = range(1, len(self.data_table.index) + 1)
-        self.frequency_table = self.get_frequency_table()
+        #self.frequency_table = self.get_frequency_table()
         
         self.filter_data()
+
+        self.end_time = datetime.datetime.now()
 
         if not options.cfg.gui:
             self.aggregate_data()
@@ -253,6 +254,8 @@ class Session(object):
         no_freq = True
         for filt in self.filter_list:
             if filt.var == options.cfg.freq_label:
+                if not hasattr(self, "frequency_table"):
+                    self.frequency_table = self.get_frequency_table()
                 try:
                     self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]
                     no_freq = False
