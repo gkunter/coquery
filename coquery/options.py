@@ -374,7 +374,7 @@ class Options(object):
                 corpus_features = resource.get_corpus_features()
                 lexicon_features = resource.get_lexicon_features()
                 for rc_feature, column in corpus_features + lexicon_features:
-                    if "_denorm_" not in rc_feature:
+                    if not rc_feature.startswith("corpusngram"):
                         table = "{}_table".format(rc_feature.split("_")[0])
                         if table not in D:
                             D[table] = set([])
