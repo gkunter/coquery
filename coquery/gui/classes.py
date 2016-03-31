@@ -59,13 +59,24 @@ class CoqThread(QtCore.QThread):
         self.taskStarted.emit()
         self.exiting = False
         try:
-            self.FUN(*self.args, **self.kwargs)
+            if options.cfg.profile:
+                import cProfile
+                profiler = cProfile.Profile()
+                try:
+                    result = profiler.runcall(self.FUN, *self.args, **self.kwargs)
+                finally:
+                    profiler.dump_stats(os.path.join(
+                        options.get_home_dir(), 
+                        "thread{}.profile".format(hex(id(self)))))
+            else:
+                result = self.FUN(*self.args, **self.kwargs)
         except Exception as e:
             if self.parent:
                 self.parent().exc_info = sys.exc_info()
                 self.parent().exception = e
             self.taskException.emit(e)
         self.taskFinished.emit()
+        return result
 
 class CoqHelpBrowser(QtGui.QTextBrowser):
     def __init__(self, help_engine, *args, **kwargs):
