@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import absolute_import
 
+import warnings
 from collections import *
 try:
     import sqlalchemy
@@ -2204,7 +2205,7 @@ class CorpusClass(object):
             "p": "p"}
         try:
             return tag_translate[s]
-        except AttributeError:
+        except KeyError:
             return s
 
     def tag_to_html(self, tag, attributes={}):
@@ -2275,10 +2276,15 @@ class CorpusClass(object):
         if origin_id:
             format_string += " AND {corpus}.{source_id} = {current_source_id}"
     
-        if hasattr(self, "surface_feature"):
+        if hasattr(self.resource, "surface_feature"):
             word_feature = self.resource.surface_feature
         else:
             word_feature = getattr(self.resource, QUERY_ITEM_WORD)
+            
+        if hasattr(self.resource, "corpus_word_id"):
+            corpus_word_id = self.resource.corpus_word_id
+        else:
+            corpus_word_id = self.resource.corpus_word
             
         _, _, tab, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(tab))
@@ -2292,7 +2298,7 @@ class CorpusClass(object):
             S = format_string.format(
                 corpus=self.resource.corpus_table,
                 corpus_id=self.resource.corpus_id,
-                corpus_word_id=self.resource.corpus_word_id,
+                corpus_word_id=corpus_word_id,
                 source_id=origin_id,
                 
                 word=getattr(self.resource, word_feature),
@@ -2331,6 +2337,7 @@ class CorpusClass(object):
             headers = ["COQ_TOKEN_ID"]
         if options.cfg.verbose:
             logger.info(S)
+            print(S)
 
         df = pd.read_sql(S, self.resource.get_engine())
 
@@ -2486,4 +2493,6 @@ class CorpusClass(object):
         s = collapse_words(context)
         s = s.replace("</p>", "</p>\n")
         s = s.replace("<br/>", "<br/>\n")
+        if options.cfg.verbose:
+            print(s)
         return s
