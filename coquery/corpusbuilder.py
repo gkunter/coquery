@@ -62,34 +62,31 @@ except:
 
 import getpass
 import codecs
-
 import logging
 import collections
 import os.path
-import string
-import imp
-import importlib
 import warnings
 import time
-import sqlalchemy
 import pandas as pd
 import unicodedata
 import argparse
 import re
-import time
 import sys
 import textwrap
 import fnmatch
 import inspect
-import pandas as pd
 
 try:
-    import xml.etree.cElementTree as ET
+    from lxml import etree as ET
+    print("lxml")
 except ImportError:
-    import xml.etree.ElementTree as ET
+    try:
+        import xml.etree.cElementTree as ET
+        print("cElementTree")
+    except ImportError:
+        import xml.etree.ElementTree as ET
+        print("ElementTree")
         
-import difflib
-
 from . import sqlhelper
 from . import sqlwrap
 from . import options
@@ -554,6 +551,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
     file_filter = None
     encoding = "utf-8"
     expected_files = []
+    # special files are expected files that will not be stored in the file 
+    # table. For example, a corpus may include a file with speaker 
+    # information which needs to be evaluated during installation, and which
+    # therefore has to be in the expected_files list, but which does not 
+    # contain token information, and therefore should not be stored as a 
+    # source file.
     special_files = []
     __version__ = "1.0"
     
@@ -936,6 +939,23 @@ class BaseCorpusBuilder(corpus.BaseResource):
         pass
 
     def store_filename(self, file_name):
+        """
+        Store the file in the file table, but not if it is a special file 
+        listed in self.special_files.
+        
+        Parameters
+        ----------
+        file_name : str 
+            The path to the file
+        
+        Returns
+        -------
+        file_id : int or None
+            The id of the file in the table, or None if the file is a special
+            file
+        """
+        if file_name in self.special_files:
+            return None
         self._file_name = file_name
         self._value_file_name = os.path.basename(file_name)
         self._value_file_path = os.path.split(file_name)[0]
@@ -1748,6 +1768,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 if response.upper() in ["Y", "N"]:
                     break
                 else:
+                    import difflib
                     for x in difflib.context_diff(existing_code, output_code):
                         sys.stdout.write(x)
             return response.upper() == "Y"
