@@ -51,6 +51,7 @@ def collapse_words(word_list):
     open_quote = {}
     open_quote ['"'] = False
     open_quote ["'"] = False
+    open_quote["``"] = False
     last_token = ""
     for i, current_token in enumerate(context_list):
         if current_token:
@@ -72,7 +73,16 @@ def collapse_words(word_list):
                 no_space = True
             if last_token.endswith("/"):
                 no_space = True
-                
+
+            if current_token == "``":
+                no_space = False
+                open_quote["``"] = True
+            if current_token == "''" and open_quote["``"]:
+                open_quote["``"] = False
+                no_space = True
+            if last_token == "``":
+                no_space = True
+
             if not no_space:
                 token_list.append(" ")
             
