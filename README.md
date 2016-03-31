@@ -60,6 +60,7 @@ Coquery already has installers for the following linguistic corpora and
 lexical databases:
 
 * [British National Corpus (BNC)](http://www.natcorp.ox.ac.uk/)
+* [Brown Corpus](http://clu.uni.no/icame/manuals/BROWN/INDEX.HTM)
 * [Buckeye Corpus](http://buckeyecorpus.osu.edu/)
 * [CELEX Lexical Database (English)](https://catalog.ldc.upenn.edu/LDC96L14)
 * [Carnegie Mellon Pronunciation Dictionary (CMUdict)](http://www.speech.cs.cmu.edu/cgi-bin/cmudict)
