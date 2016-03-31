@@ -22,7 +22,11 @@ from .ui.figureOptionsUi import Ui_FigureOptions
 class CoqColorItem(QtGui.QListWidgetItem):
     def __init__(self, color):
         super(CoqColorItem, self).__init__()
-        r, g, b = color
+        try:
+            r, g, b = color
+        except ValueError:
+            print(color)
+            r, g, b, _ = color
         self.set_color((int(r * 255), int(g * 255), int(b * 255)))
         self.color = color
     
@@ -61,6 +65,8 @@ class FigureOptions(QtGui.QDialog):
         # that relate to that:
         self.ui.button_remove_custom.hide()
         self.ui.combo_custom.hide()        
+        
+        self.palette_transparency = self.options.get("color_transparency", 1)
         
         # set up colors tab:
         self.palette_name = self.options.get("color_palette", "")
@@ -173,17 +179,16 @@ class FigureOptions(QtGui.QDialog):
             #self.current_palette.appendRow(CoqColorItem(x))
     
     def get_current_palette(self):
-        #items = []
-        #for i in range(self.current_palette.rowCount()):
-            #items.append(
-                #self.current_palette.data(
-                    #self.current_palette.index(i, 0),
-                    #role=QtCore.Qt.UserRole))
-
         items = []
         for i in range(self.ui.color_test_area.count()):
             items.append(QtGui.QColor(self.ui.color_test_area.item(i).text()))
-        items = [(x.red() / 255, x.green() / 255, x.blue() / 255) for x in items]
+
+        try:
+            transparency = self.ui.slide_transparency.value()
+            items = [(x.red() / 255, x.green() / 255, x.blue() / 255, transparency) for x in items]
+        except AttributeError:
+            items = [(x.red() / 255, x.green() / 255, x.blue() / 255) for x in items]
+            
         return items
     
     def reverse_palette(self):
@@ -281,6 +286,11 @@ class FigureOptions(QtGui.QDialog):
         self.options["label_legend"] = str(self.ui.label_legend.text())
         self.options["label_legend_columns"] = int(self.ui.spin_columns.value())
 
+        try:
+            self.options["color_transparency"] = float(self.ui.slide_transparency.value())
+        except AttributeError:
+            pass
+        
         self.options["color_palette"] = self.palette_name
         self.options["color_palette_values"] = self.get_current_palette()
         if len(self.options["color_palette_values"]) < self.options.get("color_number", 6):
