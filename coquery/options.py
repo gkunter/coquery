@@ -1297,7 +1297,7 @@ def get_available_resources(configuration):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
 
-def get_resource(name, configuration):
+def get_resource(name, connection= None):
     """
     Return a tuple containing the Resource, Corpus, and Lexicon of the 
     corpus module specified by 'name'.
@@ -1306,8 +1306,9 @@ def get_resource(name, configuration):
     ---------
     name : str
         The name of the corpus module
-    configuration : str
-        The name of the MySQL configuration
+    connection : str or None
+        The name of the database connection. If None, the current connection
+        is used.
         
     Returns
     -------
@@ -1315,7 +1316,9 @@ def get_resource(name, configuration):
         A tuple consisting of the Resource class, Corpus class, and Lexicon 
         class defined in the corpus module
     """
-    Resource, Corpus, Lexicon, _ = get_available_resources(configuration)[name]
+    if not connection:
+        connection = cfg.current_server
+    Resource, Corpus, Lexicon, _ = get_available_resources(connection)[name]
     return Resource, Corpus, Lexicon
 
 def get_home_dir(create=True):
