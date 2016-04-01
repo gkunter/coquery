@@ -444,6 +444,7 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         return self._link_by != None
 
     def setText(self, column, text, *args):
+        text = utf8(text)
         if self.parent():
             parent = self.parent().objectName()
         feature = unicode(self.objectName())
