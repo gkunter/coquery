@@ -267,12 +267,12 @@ class BuilderClass(BaseCorpusBuilder):
                             if not in_italics:
                                 if pos.endswith("-nc"):
                                     in_italics = True
-                                    self.tag_token(self._corpus_id + 1, "emph", {}, op=True)
+                                    self.tag_token(self._corpus_id + 1, "hi", {"rend": "it"}, op=True)
                                     pos, _, _ = pos.rpartition("-")
                             else:
                                 if not pos.endswith("-nc"):
                                     in_italics = False
-                                    self.tag_token(self._corpus_id, "emph", {}, cl=True)
+                                    self.tag_token(self._corpus_id, "hi", {}, cl=True)
                                     pos, _, _ = pos.rpartition("-")
 
                             if not in_title:
