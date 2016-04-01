@@ -16,24 +16,31 @@ import sys
 
 from coquery import options
 from coquery.defines import *
+from coquery.unicode import utf8
 
 from .classes import CoqTreeItem
 from .pyqt_compat import QtCore, QtGui
 from .ui.linkselectUi import Ui_LinkSelect
 
 class Link(object):
-    def __init__(self, tree_item, ignore_case=True):
+    def __init__(self, tree_item, ignore_case=True, *args):
         self.resource = tree_item.parent().parent().objectName()
         resource = options.cfg.current_resources[self.resource][0] 
 
         self.rc_feature = tree_item.objectName()
-        self.table = "{}".format(tree_item.parent().objectName())
+        self.table = utf8(format(tree_item.parent().objectName()))
         self.db_name = resource.db_name
         self.case = ignore_case
         
         self.table_name = getattr(resource, "{}_table".format(self.table))
         self.feature_name = getattr(resource, self.rc_feature)
         self.label = ".".join([self.resource, self.table_name, self.feature_name])
+        self.item = tree_item
+        self._to = (self.resource, self.rc_feature)
+        self._from = ("", "")
+
+    def __str__(self):
+        return "Link({} --> {})".format(self._from, self._to)
 
 class LinkSelect(QtGui.QDialog):
     def __init__(self, feature, corpus, corpus_omit = [], parent=None):
@@ -106,7 +113,9 @@ class LinkSelect(QtGui.QDialog):
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             selected = dialog.ui.treeWidget.selectedItems()[0]
-            return Link(selected, dialog.ui.checkBox.checkState())
+            link = Link(selected, bool(dialog.ui.checkBox.checkState()))
+            link._from = (corpus, feature, feature)
+            return link
         else:
             return None
         

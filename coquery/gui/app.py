@@ -2327,6 +2327,8 @@ class CoqueryApp(QtGui.QMainWindow):
             return
         else:
             link.key_feature = str(item.objectName())
+            resource, _, _ = options.get_resource(utf8(self.ui.combo_corpus.currentText()))
+            link._from = (resource.name, link.key_feature)
             item.setExpanded(True)
             
             tree = classes.CoqTreeLinkItem()
