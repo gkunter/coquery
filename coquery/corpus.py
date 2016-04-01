@@ -681,12 +681,12 @@ class BaseResource(object):
                     return sub_tree
         return None            
 
-    @classmethod
-    def get_requested_features(cls, tree_structure):
-        requested_features = tree_structure["rc_requested_features"]
-        for child in tree_structure["children"]:
-            requested_features += cls.get_requested_features(child)
-        return requested_features
+    #@classmethod
+    #def get_requested_features(cls, tree_structure):
+        #requested_features = tree_structure["rc_requested_features"]
+        #for child in tree_structure["children"]:
+            #requested_features += cls.get_requested_features(child)
+        #return requested_features
 
     @classmethod
     def get_table_order(cls, tree_structure):
@@ -779,25 +779,28 @@ class BaseResource(object):
         """
 
         func, db_name, table, feature = cls.split_resource_feature(rc_feature)
+
+        # Check if the feature has the same database as the current 
+        # resource, i.e. check if the feature is NOT from a linked table:
         if db_name == cls.db_name:
             return "{}_{}".format(table, feature)
         else:
-            for link, external_feature in options.cfg.external_links:
-                if external_feature == "{}_{}".format(table, feature):
-                    return link.rc_feature
-                #if rc_feature == link.rc_feature:
-                    #return link.key_feature
+            _, _, tab, feat = cls.split_resource_feature(link._from[1])
+            return "{}_{}".format(tab, feat)
+            #for link, _ in options.cfg.external_links:
+                #if "{}_{}".format(tab, feat) == "{}_{}".format(table, feature):
+                    #return link._from[1]
             
-        if "." not in rc_feature:
-            return rc_feature
-        elif rc_feature.startswith("func.") and rc_feature.count(".") == 1:
-            return rc_feature.rpartition("func.")[-1]
-        else:
-            raise RuntimeError("get_referent_feature")
-            prefix_stripped = rc_feature.rpartition("func.")[-1]
-            external, internal = options.cfg.external_links[prefix_stripped]
-            internal_table, internal_feature = internal.split(".")
-            return internal_feature
+        #if "." not in rc_feature:
+            #return rc_feature
+        #elif rc_feature.startswith("func.") and rc_feature.count(".") == 1:
+            #return rc_feature.rpartition("func.")[-1]
+        #else:
+            #raise RuntimeError("get_referent_feature: {}".format(rc_feature))
+            #prefix_stripped = rc_feature.rpartition("func.")[-1]
+            #external, internal = options.cfg.external_links[prefix_stripped]
+            #internal_table, internal_feature = internal.split(".")
+            #return internal_feature
 
     @classmethod
     def is_lexical(cls, rc_feature):
@@ -975,6 +978,8 @@ class SQLResource(BaseResource):
             else:
                 # otherwise, use the self-joined corpus table:
                 query_string = self.corpus.sql_string_query(Query, token_list)
+                l = self.corpus.get_required_features(Query, token_list)
+                print(l)
         except WordNotInLexiconError:
             query_string = ""
             
@@ -1539,6 +1544,116 @@ class CorpusClass(object):
         else:
             return [(x+1, x+1) for x, _ in sort_list]
 
+    def filter_to_sql(self, filt):
+        """
+        Return an SQL string that can be used in a WHERE clause to fulfil 
+        the filter.
+        """
+        variable, rc_feature, table_name, op, value_list, _value_range = filt
+        _, db_name, tab, feat = self.resource.split_resource_feature(rc_feature)
+        if db_name != self.resource.db_name:
+            ext_resource = options.cfg.current_resources[db_name][0]
+            db = ext_resource.db_name
+            sql_field = "{}.{}.{}".format(
+                db, 
+                getattr(ext.resource, "{}_table".format(tab)),
+                getattr(ext.resource, "{}_{}".format(tab, feat)))
+        else:
+            sql_field = getattr(self.resource, rc_feature)
+            
+        if op.upper() == "LIKE":
+            sql_template = "{} LIKE '{}'"
+            if "*" not in value_list[0]:
+                value_list[0] = "*{}*".format(value_list[0])
+            value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
+        else:
+            sql_template = "{} = '{}'"
+        return sql_template.format(sql_field, value_list[0])
+
+    def get_required_features(self, query, token_list, only_lexical=False):
+        """ 
+        Get a set of all feature names that are required to fulfil the 
+        query.
+        """
+
+        required_features = set([])
+
+        # add all features that are required because they are in the current 
+        # selection:
+        for rc_feature in options.cfg.selected_features:
+            func, db_name, table, feat = self.resource.split_resource_feature(rc_feature)
+            s = "{}_{}".format(table, feat)
+            if db_name != self.resource.db_name:
+                res = options.get_resource_of_database(db_name)
+                required_features.add("{}.{}".format(res.name , s))
+            else:
+                required_features.add(s)
+                
+        print(1, required_features)
+        # if a GUI is used, include source features so the entries in the
+        # result table can be made clickable to show the context:
+        if options.cfg.gui or options.cfg.context_left or options.cfg.context_right:
+            if options.cfg.token_origin_id:
+                required_features.add(options.cfg.token_origin_id)
+        print(2, required_features)
+
+        for _, rc_feature, _, _, _, _ in self.resource.translate_filters(self.resource.filter_list):
+            requested_features.add(rc_feature)
+        print(3, required_features)
+
+        # add features required for links:
+        for link, _ in options.cfg.external_links:
+            print(link)
+            required_features.add(link._from[1])
+            required_features.add("{}.{}".format(*link._to))
+        print(4, required_features)
+
+        # make sure that the word_id is always included in the query:
+        # FIXME: Why is this needed?
+        required_features.add("corpus_word_id")
+        print(5, required_features)
+
+        for i, tup in enumerate(token_list):
+            _, tok = tup
+            token = tokens.COCAToken(tok, self.lexicon)
+
+            if token.class_specifiers and not (
+                token.word_specifiers or 
+                token.lemma_specifiers or 
+                token.gloss_specifiers or
+                token.transcript_specifiers):
+                required_features.append(pos_feature)
+
+        for feat in list(required_features):
+            self.lexicon.table_list = []
+            self.lexicon.joined_tables = ["corpus"]
+            self.lexicon.add_table_path("corpus_id", feat)
+            tabs = self.lexicon.joined_tables
+            for i, tab in enumerate(tabs[:-1]):
+                required_features.add("{}_{}_id".format(tab, tabs[i+1]))
+                required_features.add("{}_id".format(tabs[i+1]))
+        print(6, required_features)
+        return required_features
+
+    def get_required_tables(self, feature_list):
+        """
+        Return a list containing the tables required for the feature list.
+        """
+
+        self.lexicon.table_list = []
+        self.lexicon.joined_tables = ["corpus"]
+
+        table_set = set([])
+
+        for rc_feature in feature_list:
+            _, db_name, table, feature = self.resource.split_resource_feature(rc_feature)
+            
+            self.lexicon.joined_tables = ["corpus"]
+            self.lexicon.add_table_path("corpus_id", rc_feature)
+            for tab in self.lexicon.joined_tables:
+                table_set.add(tab)
+        return table_set
+
     def get_token_query_string(self, current_token, number):
         """ 
         Return a SQL SELECT string that selects a table matching the current 
@@ -1652,7 +1767,6 @@ class CorpusClass(object):
                     rc_where_constraints["corpus_table"].add(s)
 
 
-
         # get a list of all tables that are required to satisfy the 
         # feature request:
         
@@ -1687,43 +1801,83 @@ class CorpusClass(object):
         # create a list of the tables 
         select_list = set([])
         for rc_table in required_tables:
-            func, db_name, table, feature = self.resource.split_resource_feature(rc_table)
+            func, ext_db_name, table, feature = self.resource.split_resource_feature(rc_table)
 
-            if db_name != self.resource.db_name:
+            if ext_db_name != self.resource.db_name:
                 # handle linked tables
                 column_list = []
                 # get the link object for the requested external table:
                 for link, rc_feature in options.cfg.external_links:
-                    resource = options.cfg.current_resources[link.resource][0]
-                    if link.db_name == db_name:
+                    # find the link for the current external table:
+                    res = options.get_resource(link._to[0])[0]
+                    _, _, tab, feat = res.split_resource_feature(rc_feature)
+                    rc_feat = "{}_{}".format(tab, feat)
+                    if res.db_name == ext_db_name:
+                        # the feature string is the aliased column name that
+                        # will be used as a field name in the main SELECT:
                         feature_name = "coq_{}${}_{}".format(
                             link.db_name,
-                            rc_feature,
+                            rc_feat,
                             number+1)
+                        # the variable string provides the alias of the 
+                        # content resource feature from within the subquery:
                         variable_string = "{} AS {}".format(
-                            getattr(resource, rc_feature),
+                            getattr(res, rc_feat),
                             feature_name)
+                        # the linking variable is the aliased foreign key 
+                        # from within the subquery that is used in the ON
+                        # clause of the table join:
                         linking_variable = "{} AS coq_{}${}_{}".format(
-                            link.feature_name, 
-                            link.db_name, link.rc_feature, number +1)
+                            getattr(res, link._to[1]),
+                            link.db_name, link._to[1], number+1)
+                        
+                        ##variable_string = "{} AS {}".format(
+                            ##getattr(resource, rc_feature),
+                            ##feature_name)
+                        #variable_string = "{} AS {}".format(
+                            #getattr(resource, link._to[1]),
+                            #feature_name)
+                        #linking_variable = "{} AS coq_{}${}_{}".format(
+                            #link.feature_name, 
+                            #link.db_name, link.rc_feature, number +1)
+
+
+
                         column_list.append(variable_string)
                         column_list.append(linking_variable)
                         select_list.add(feature_name)
                 
                 # construct subquery that joins the external table:
                 columns = ", ".join(set(column_list))
-                alias = "coq_{}_{}".format(db_name, table).upper()
-                S = "INNER JOIN (SELECT {columns} FROM {corpus}.{table}) AS {alias} ON coq_{internal_feature}_{n} = coq_{corpus}${external_feature}_{n}".format(
+                alias = "coq_{}_{}".format(link.db_name, table).upper()
+                
+                sql_template = """
+                INNER JOIN 
+                        (SELECT {columns}
+                        FROM    {corpus}.{table})
+                        AS      {alias}
+                ON      coq_{internal_feature}_{n} = coq_{corpus}${external_feature}_{n}
+                """
+                
+                S = sql_template.format(
                     columns=columns, n=number+1, 
                     internal_feature=link.key_feature, 
-                    corpus=db_name, table=link.table_name, 
+                    corpus=link.db_name, table=link.table_name, 
                     external_feature=link.rc_feature, alias=alias)
+                
                 external_links.append(S)
                 
                 if self.resource.db_type == SQL_SQLITE:
                     if not hasattr(self.resource, "attach_list"):
                         self.resource.attach_list = set([])
                     self.resource.attach_list.add(link.db_name)
+
+                print("--")
+                print(linking_variable)
+                print(variable_string)
+                print(feature_name)
+                print("--")
+
             else:
                 rc_tab = rc_table.split("_")[0]
                 sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
@@ -1900,23 +2054,14 @@ class CorpusClass(object):
         Return a string that is sufficient to run the query on the
         MySQL database. 
         """
-        def get_lexicon_features_string():
+        def sql_string_join_lexical():
             """
-            Return a string containing the SELECT that is needed to fulfil
-            the lexicon feature selection. The string contains a format 
-            placeholder {N} that can be filled with the correct query item 
-            number. 
+            Return a string containing the inline views required to fulfil
+            the lexicon feature selections.
             
-            The string is supposed to be used as an inner join with the 
-            CorpusNgram table, i.e.
-            
-            CorpusNgram
-            INNER JOIN (S) AS E{N} ON E{N}.WordId = CorpusNgram.WordId{N} 
-            
+            The string contains a format placeholder {N} that can be filled 
+            with the correct query item number. 
             """
-            #sql_template = "INNER JOIN (SELECT {features} FROM {table}) AS {alias} ON {alias}.{alias_id} = {ref_table}.{ref_id}"
-            sql_template = "INNER JOIN (SELECT {features} FROM {table}) AS {alias} ON {alias_id} = {ref_id}"
-
             table_features = defaultdict(list)
             table_chain = defaultdict(list)
             s_set = []
@@ -1925,7 +2070,7 @@ class CorpusClass(object):
 
             self.lexicon.table_list = []
             self.lexicon.joined_tables = ["corpus"]
-            #for x in [x for x in options.cfg.selected_features if x in lexicon_features]:
+
             for x in [x for x in options.cfg.selected_features if x in lexicon_features]:
                 func, db_name, table, feature = self.resource.split_resource_feature(x)
                 self.lexicon.joined_tables = ["corpus"]
@@ -1940,7 +2085,14 @@ class CorpusClass(object):
                     next_tab = self.lexicon.joined_tables[i + 1]
                     table_features[this_tab].append("{}_id".format(this_tab))
                     table_features[this_tab].append("{}_{}_id".format(this_tab, next_tab))
-            
+
+            sql_template = """
+            INNER JOIN 
+                    (SELECT {features} 
+                    FROM    {table}) 
+                    AS      {alias} 
+            ON      {alias_id} = {ref_id}
+            """
             for table in table_features:
                 if table != "corpus":
                     l = []
@@ -1959,12 +2111,6 @@ class CorpusClass(object):
 
             return "\n".join(s_set)
 
-        sql_template = """
-        SELECT  {fields}
-        FROM    {aliased_corpus}
-                {table_joins}
-        """
-
         corpus_features = [(x, y) for x, y in self.resource.get_corpus_features()]
         lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features()]
 
@@ -1975,13 +2121,11 @@ class CorpusClass(object):
         elif hasattr(self.resource, "corpus_word"):
             word_id_column = self.resource.corpus_id
 
-        #corpus_fields = ["{tab}.{id} AS coq_corpus_id_1".format(
         corpus_fields = ["{id} AS coq_corpus_id_1".format(
             tab=self.resource.corpusngram_table, 
             id=self.resource.corpus_id)]
-        # FIXME: always word?
+
         for i in range(len(token_list)):
-            #corpus_fields.append("{tab}.{col}{i} AS coq_corpus_word_id_{i}".format(
             corpus_fields.append("{col}{i} AS coq_corpus_word_id_{i}".format(
                 tab=self.resource.corpusngram_table, 
                 col=word_id_column, 
@@ -2000,10 +2144,9 @@ class CorpusClass(object):
                 
         table_joins = []
         for i in range(len(token_list)):
-            s = get_lexicon_features_string()
+            s = sql_string_join_lexical()
             s = s.format(N=i+1)
             table_joins.append(s)
-
         
         final_select = self.get_select_columns(Query, token_list)
         if where_clauses:
@@ -2011,12 +2154,24 @@ class CorpusClass(object):
         else:
             where_string = ""
             
+        # get inline view of corpus table
         # FIXME: Currently, this selects only the word id fields, and not 
         # any other fields in the corpus table.
-        aliased_corpus = "(SELECT {corpus_fields} FROM {corpusngram_table} {where}) AS COQ_CORPUS_TABLE".format(
-            corpus_fields=", ".join(corpus_fields), corpusngram_table=self.resource.corpusngram_table,
+        sql_template = """
+        (SELECT {corpus_fields} 
+        FROM    {corpusngram_table} 
+        {where}) AS COQ_CORPUS_TABLE
+        """
+        aliased_corpus = sql_template.format(
+            corpus_fields=", ".join(corpus_fields), 
+            corpusngram_table=self.resource.corpusngram_table,
             where=where_string)
 
+        sql_template = """
+        SELECT  {fields}
+        FROM    {aliased_corpus}
+                {table_joins}
+        """
         query_string = sql_template.format(
             fields=", ".join(set(final_select)),
             aliased_corpus=aliased_corpus,
@@ -2027,13 +2182,6 @@ class CorpusClass(object):
             query_string = "{} LIMIT {}".format(
                 query_string, options.cfg.number_of_tokens)
 
-        # if verbose, add some line breaks and tabs to the query string so
-        # that it is somewhat easier to read:
-        if options.cfg.verbose:
-            query_string = query_string.replace("INNER JOIN ", "\nINNER JOIN \n\t")
-            query_string = query_string.replace("SELECT ", "SELECT \n\t")
-            query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
-            query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
         return query_string
 
 
@@ -2150,21 +2298,22 @@ class CorpusClass(object):
                                 final_select.append("coq_{}_{}".format(rc_feature, i+1))
                             else:
                                 final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
+        print(109, final_select)
 
         # add any external feature that is not a function:
         for link, rc_feature in options.cfg.external_links:
-            #if link.startswith("func."):
-                #continue
-
-            if self.resource.is_lexical(link.key_feature):
+            _, _, tab, feat = self.resource.split_resource_feature(rc_feature)
+            rc_feat = "{}_{}".format(tab, feat)
+            if self.resource.is_lexical(link._from[1]):
                 for i in range(Query.Session.get_max_token_count()):
                     if options.cfg.align_quantified:
                         if i in positions_lexical_items:
-                            final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
+                            final_select.append("coq_{}${}_{}".format(link.db_name, rc_feat, i+1))
                     else:
-                        final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
+                        final_select.append("coq_{}${}_{}".format(link.db_name, rc_feat, i+1))
             else:
-                final_select.append("coq_{}${}_1".format(link.db_name, rc_feature))
+                final_select.append("coq_{}${}_1".format(link.db_name, rc_feat))
+        print(110, final_select)
 
         # add the corpus features in the preferred order:
         # FIXME: Is this still necessary?
@@ -2176,6 +2325,7 @@ class CorpusClass(object):
         # Add any feature that is selected that is neither a corpus feature,
         # a lexicon feature nor a Coquery feature:
         # FIXME: What does this do, then?
+        print(111, final_select)
         for rc_feature in options.cfg.selected_features:
             if any([x == rc_feature for x, _ in self.resource.get_corpus_features()]):
                 break
@@ -2185,18 +2335,30 @@ class CorpusClass(object):
             if table not in self.resource.special_table_list:
                 if "." not in rc_feature:
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
+        print(112, final_select)
 
         # add any resource feature that is required by a function:
         for res, fun, _ in options.cfg.selected_functions:
-            # check if the function is applied to an external link:
-            if res.count(".") > 1:
-                rc_feature = "_".join(res.split(".")[1:])
+            func, db_name, table, feature = self.resource.split_resource_feature(res)
+            assert func
+            
+            # function on field from external table?
+            if db_name != self.resource.db_name:
+                field_str = "coq_{db_name}${rc_feature}_{{N}}"
             else:
-                rc_feature = res.split(".")[-1]
-            if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
-                final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
-            else:
-                final_select.append("coq_{}_1".format(rc_feature))
+                field_str = "coq_{rc_feature}_{{N}}"
+            rc_feature = "{}_{}".format(table, feature)
+
+            ## check if the function is applied to an external link:
+            #if res.count(".") > 1:
+                #rc_feature = "_".join(res.split(".")[1:])
+            #else:
+                #rc_feature = res.split(".")[-1]
+            #if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
+                #final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
+            #else:
+                #final_select.append("coq_{}_1".format(rc_feature))
+        print(113, final_select)
 
         # add coquery_invisible_origin_id if a context is requested:
         if (options.cfg.context_mode != CONTEXT_NONE and 
@@ -2206,6 +2368,7 @@ class CorpusClass(object):
 
         # Always add the corpus id to the output fields:
         final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
+        print(222, final_select)
         return final_select
 
     def get_lexical_item_positions(self, token_list):
@@ -2289,95 +2452,14 @@ class CorpusClass(object):
                     join_string = "INNER JOIN ({s}) AS e{num} ON coq_corpus_id_{col_number} = coq_corpus_id_{ref_col} + {offset}".format(
                         s = s,
                         num=i+1,
-                        offset=i - referent_id + 1,
                         col_number=column_number + 1,
+                        offset=i - referent_id + 1,
                         ref_col=referent_column)
                     token_query_list[i+1] = join_string
         query_string_part = [
             "SELECT COQ_OUTPUT_FIELDS FROM ({}) AS e{}".format(token_query_list.pop(referent_id), referent_id)]
         for referent_id, _ in order:
             query_string_part.append(token_query_list[referent_id])
-
-        ## change the order of the output column so that output columns 
-        ## showing the same lexicon feature for different tokens are grouped
-        ## together, followed by all corpus features.
-        ## The overall order is specified in resource.get_preferred_output_order()
-        #final_select = []        
-        #for rc_feature in self.resource.get_preferred_output_order():
-            #if rc_feature in options.cfg.selected_features:
-                #if rc_feature in [x for x, _ in lexicon_features] or self.resource.is_tokenized(rc_feature):
-                    #for i in range(Query.Session.get_max_token_count()):
-                        #if options.cfg.align_quantified:
-                            #last_offset = 0
-                            #if i in positions_lexical_items:
-                                #final_select.append("coq_{}_{}".format(rc_feature, i+1))
-                            #else:
-                                #final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
-                        #else:
-                            #if i < len(token_list):
-                                #final_select.append("coq_{}_{}".format(rc_feature, i+1))
-                            #else:
-                                #final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
-
-        ## add any external feature that is not a function:
-        #for link, rc_feature in options.cfg.external_links:
-            ##if link.startswith("func."):
-                ##continue
-
-            #if self.resource.is_lexical(link.key_feature):
-                #for i in range(Query.Session.get_max_token_count()):
-                    #if options.cfg.align_quantified:
-                        #if i in positions_lexical_items:
-                            #final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
-                    #else:
-                        #final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
-            #else:
-                #final_select.append("coq_{}${}_1".format(link.db_name, rc_feature))
-
-        ## add the corpus features in the preferred order:
-        ## FIXME: Is this still necessary?
-        #for rc_feature in self.resource.get_preferred_output_order():
-            #if rc_feature in options.cfg.selected_features:
-                #if rc_feature in [x for x, _ in corpus_features]:
-                    #final_select.append("coq_{}_1".format(rc_feature))
-
-        ## Add any feature that is selected that is neither a corpus feature,
-        ## a lexicon feature nor a Coquery feature:
-        ## FIXME: What does this do, then?
-        #for rc_feature in options.cfg.selected_features:
-            #if any([x == rc_feature for x, _ in self.resource.get_corpus_features()]):
-                #break
-            #if any([x == rc_feature for x, _ in self.resource.get_lexicon_features()]):
-                #break
-            #db, _, table, _ = self.resource.split_resource_feature(rc_feature)
-            #if table not in self.resource.special_table_list:
-                #if "." not in rc_feature:
-                    #final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
-
-        ## add any resource feature that is required by a function:
-        #for res, fun, _ in options.cfg.selected_functions:
-            ## check if the function is applied to an external link:
-            #if res.count(".") > 1:
-                #rc_feature = "_".join(res.split(".")[1:])
-            #else:
-                #rc_feature = res.split(".")[-1]
-            #if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
-                #final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
-            #else:
-                #final_select.append("coq_{}_1".format(rc_feature))
-
-        ## add coquery_invisible_origin_id if a context is requested:
-        #if (options.cfg.context_mode != CONTEXT_NONE and 
-            #options.cfg.token_origin_id != None and
-            #(options.cfg.context_left or options.cfg.context_right)):
-            #final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
-
-        ## Always add the corpus id to the output fields:
-        #final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
-
-        #new_final_select = self.get_select_columns(Query, token_list)
-        #assert set(final_select) == set(new_final_select), "{}\n{}".format(
-            #set(final_select), set(new_final_select))
 
         final_select = self.get_select_columns(Query, token_list)
         
