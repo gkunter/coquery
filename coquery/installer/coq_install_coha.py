@@ -232,15 +232,20 @@ class BuilderClass(BaseCorpusBuilder):
                     for i, lines in enumerate(get_chunk(big_file)):
                         if self.interrupted:
                             return
+
+                        content = list(lines)
+                        self._corpus_id += len(content)
                         
                         # create and fill temporary file:
                         temp_file = tempfile.NamedTemporaryFile("w", delete=False)
-                        temp_file.write("\n".join([x.strip() for x in lines]))
+                        temp_file.write("\n".join([x.strip() for x in content]))
                         temp_file.close()
                         self.DB.load_infile(temp_file.name, self.corpus_table, arguments)
                         os.remove(temp_file.name)
 
-            self.store_filename(file_name)
+            if base_name not in self.special_files:
+                self.store_filename(base_name)
+
             if self._widget:
                 self._widget.progressUpdate.emit(count + 1)
 
