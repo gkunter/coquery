@@ -55,7 +55,8 @@ def collapse_words(word_list):
     last_token = ""
     for i, current_token in enumerate(context_list):
         if current_token:
-            print("<{}>".format(current_token))
+            if options.cfg.experimental:
+                print("<{}>".format(current_token))
             if '""""' in current_token:
                 current_token = '"'
         
@@ -991,7 +992,8 @@ class SQLResource(BaseResource):
                 # otherwise, use the self-joined corpus table:
                 query_string = self.corpus.sql_string_query(Query, token_list)
                 l = self.corpus.get_required_features(Query, token_list)
-                print(l)
+                if options.cfg.verbose:
+                    print(l)
         except WordNotInLexiconError:
             query_string = ""
             
@@ -1461,7 +1463,7 @@ class CorpusClass(object):
                 L = set(self.lexicon.get_matching_wordids(token))
                 
             if L:
-                if WordTarget.endswith("_id"):
+                if hasattr(self.resource, "word_id"):
                     L = [str(x) for x in L]
                 else:
                     L = ["'{}'".format(x) for x in L]
@@ -1601,29 +1603,35 @@ class CorpusClass(object):
             else:
                 required_features.add(s)
                 
-        print(1, required_features)
+        if options.cfg.experimental:
+            print(1, required_features)
         # if a GUI is used, include source features so the entries in the
         # result table can be made clickable to show the context:
         if options.cfg.gui or options.cfg.context_left or options.cfg.context_right:
             if options.cfg.token_origin_id:
                 required_features.add(options.cfg.token_origin_id)
-        print(2, required_features)
+        if options.cfg.experimental:
+            print(2, required_features)
 
         for _, rc_feature, _, _, _, _ in self.resource.translate_filters(self.resource.filter_list):
             requested_features.add(rc_feature)
-        print(3, required_features)
+        if options.cfg.experimental:
+            print(3, required_features)
 
         # add features required for links:
         for link, _ in options.cfg.external_links:
-            print(link)
+            if options.cfg.experimental:
+                print(link)
             required_features.add(link._from[1])
             required_features.add("{}.{}".format(*link._to))
-        print(4, required_features)
+        if options.cfg.experimental:
+            print(4, required_features)
 
         # make sure that the word_id is always included in the query:
         # FIXME: Why is this needed?
         required_features.add("corpus_word_id")
-        print(5, required_features)
+        if options.cfg.experimental:
+            print(5, required_features)
 
         for i, tup in enumerate(token_list):
             _, tok = tup
@@ -1644,7 +1652,8 @@ class CorpusClass(object):
             for i, tab in enumerate(tabs[:-1]):
                 required_features.add("{}_{}_id".format(tab, tabs[i+1]))
                 required_features.add("{}_id".format(tabs[i+1]))
-        print(6, required_features)
+        if options.cfg.experimental:
+            print(6, required_features)
         return required_features
 
     def get_required_tables(self, feature_list):
@@ -1884,11 +1893,12 @@ class CorpusClass(object):
                         self.resource.attach_list = set([])
                     self.resource.attach_list.add(link.db_name)
 
-                print("--")
-                print(linking_variable)
-                print(variable_string)
-                print(feature_name)
-                print("--")
+                if options.cfg.experimental:
+                    print("--")
+                    print(linking_variable)
+                    print(variable_string)
+                    print(feature_name)
+                    print("--")
 
             else:
                 rc_tab = rc_table.split("_")[0]
@@ -2310,7 +2320,8 @@ class CorpusClass(object):
                                 final_select.append("coq_{}_{}".format(rc_feature, i+1))
                             else:
                                 final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
-        print(109, final_select)
+        if options.cfg.experimental:
+            print(109, final_select)
 
         # add any external feature that is not a function:
         for link, rc_feature in options.cfg.external_links:
@@ -2325,7 +2336,8 @@ class CorpusClass(object):
                         final_select.append("coq_{}${}_{}".format(link.db_name, rc_feat, i+1))
             else:
                 final_select.append("coq_{}${}_1".format(link.db_name, rc_feat))
-        print(110, final_select)
+        if options.cfg.experimental:
+            print(110, final_select)
 
         # add the corpus features in the preferred order:
         # FIXME: Is this still necessary?
@@ -2337,7 +2349,8 @@ class CorpusClass(object):
         # Add any feature that is selected that is neither a corpus feature,
         # a lexicon feature nor a Coquery feature:
         # FIXME: What does this do, then?
-        print(111, final_select)
+        if options.cfg.experimental:
+            print(111, final_select)
         for rc_feature in options.cfg.selected_features:
             if any([x == rc_feature for x, _ in self.resource.get_corpus_features()]):
                 break
@@ -2347,7 +2360,8 @@ class CorpusClass(object):
             if table not in self.resource.special_table_list:
                 if "." not in rc_feature:
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
-        print(112, final_select)
+        if options.cfg.experimental:
+            print(112, final_select)
 
         # add any resource feature that is required by a function:
         for res, fun, _ in options.cfg.selected_functions:
@@ -2370,7 +2384,8 @@ class CorpusClass(object):
                 #final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
             #else:
                 #final_select.append("coq_{}_1".format(rc_feature))
-        print(113, final_select)
+        if options.cfg.experimental:
+            print(113, final_select)
 
         # add coquery_invisible_origin_id if a context is requested:
         if (options.cfg.context_mode != CONTEXT_NONE and 
@@ -2380,7 +2395,8 @@ class CorpusClass(object):
 
         # Always add the corpus id to the output fields:
         final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
-        print(222, final_select)
+        if options.cfg.experimental:
+            print(222, final_select)
         return final_select
 
     def get_lexical_item_positions(self, token_list):
@@ -2828,6 +2844,6 @@ class CorpusClass(object):
         s = collapse_words(context)
         s = s.replace("</p>", "</p>\n")
         s = s.replace("<br/>", "<br/>\n")
-        if options.cfg.verbose:
+        if options.cfg.experimental:
             print(s)
         return s
