@@ -89,6 +89,19 @@ class CoqHelpBrowser(QtGui.QTextBrowser):
         else:
             return super(CoqHelpBrowser, self).loadResource(resource_type, name)
 
+class CoqInfoLabel(QtGui.QLabel):
+    entered = QtCore.Signal()
+    left = QtCore.Signal()
+    
+    def __init__(self, *args, **kwargs):
+        super(CoqInfoLabel, self).__init__(*args, **kwargs)
+        self.setCursor(QtCore.Qt.WhatsThisCursor)
+
+        self.setText("")
+        self.setPixmap(options.cfg.main_window.get_icon("sign-info").pixmap(
+            QtCore.QSize(QtGui.QSpinBox().sizeHint().height(),
+                         QtGui.QSpinBox().sizeHint().height())))
+
 class CoqClickableLabel(QtGui.QLabel):
     clicked = QtCore.Signal()
 

@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_CorpusInstaller(object):
     def setupUi(self, CorpusInstaller):
         CorpusInstaller.setObjectName(_fromUtf8("CorpusInstaller"))
-        CorpusInstaller.resize(640, 480)
+        CorpusInstaller.resize(676, 480)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -134,7 +134,7 @@ class Ui_CorpusInstaller(object):
         self.horizontalLayout_3.addWidget(self.spin_n)
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_3.addItem(spacerItem)
-        self.label_ngram_info = QtGui.QLabel(self.widget_ngram)
+        self.label_ngram_info = CoqInfoLabel(self.widget_ngram)
         self.label_ngram_info.setObjectName(_fromUtf8("label_ngram_info"))
         self.horizontalLayout_3.addWidget(self.label_ngram_info)
         self.horizontalLayout_3.setStretch(3, 1)
@@ -219,4 +219,5 @@ class Ui_CorpusInstaller(object):
         self.label.setText(_translate("CorpusInstaller", "Installing...", None))
         self.progress_general.setFormat(_translate("CorpusInstaller", "Stage %v of %m", None))
 
+from ..classes import CoqInfoLabel
 
