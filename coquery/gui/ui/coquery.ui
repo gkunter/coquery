@@ -759,6 +759,9 @@ The number of occurrences of each token matching the query string is counted. Th
      <addaction name="action_beeswarm_plot"/>
     </widget>
     <widget class="QMenu" name="menuDensity_plots">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>Density plots</string>
      </property>
@@ -854,7 +857,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>Corpus &amp;statistics</string>
+    <string>&amp;Statistics</string>
    </property>
   </action>
   <action name="action_connection_settings">
@@ -979,7 +982,7 @@ The number of occurrences of each token matching the query string is counted. Th
      <normaloff>../../../../../../../../.designer/backup</normaloff>../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>Corpus &amp;documentation...</string>
+    <string>&amp;Documentation...</string>
    </property>
   </action>
   <action name="action_percentage_area_plot">

@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Mon Mar  7 19:22:38 2016
-#      by: PyQt4 UI code generator 4.10.4
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -45,8 +44,8 @@ class Ui_MainWindow(object):
         self.options_area.setSizePolicy(sizePolicy)
         self.options_area.setObjectName(_fromUtf8("options_area"))
         self.horizontalLayout_7 = QtGui.QHBoxLayout(self.options_area)
-        self.horizontalLayout_7.setSpacing(12)
         self.horizontalLayout_7.setContentsMargins(0, 0, 0, 8)
+        self.horizontalLayout_7.setSpacing(12)
         self.horizontalLayout_7.setObjectName(_fromUtf8("horizontalLayout_7"))
         self.widget = QtGui.QWidget(self.options_area)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.MinimumExpanding)
@@ -56,8 +55,8 @@ class Ui_MainWindow(object):
         self.widget.setSizePolicy(sizePolicy)
         self.widget.setObjectName(_fromUtf8("widget"))
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.widget)
-        self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setMargin(0)
+        self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.box_corpus_select = QtGui.QGroupBox(self.widget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
@@ -257,9 +256,9 @@ class Ui_MainWindow(object):
         self.box_output_options = QtGui.QGroupBox(self.options_area)
         self.box_output_options.setObjectName(_fromUtf8("box_output_options"))
         self.output_columns = QtGui.QVBoxLayout(self.box_output_options)
-        self.output_columns.setSpacing(0)
         self.output_columns.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
         self.output_columns.setContentsMargins(8, -1, 8, 6)
+        self.output_columns.setSpacing(0)
         self.output_columns.setObjectName(_fromUtf8("output_columns"))
         self.horizontalLayout_7.addWidget(self.box_output_options)
         self.splitter = QtGui.QSplitter(self.splitter_2)
@@ -287,9 +286,9 @@ class Ui_MainWindow(object):
         self.layoutWidget = QtGui.QWidget(self.splitter)
         self.layoutWidget.setObjectName(_fromUtf8("layoutWidget"))
         self.verticalLayout_4 = QtGui.QVBoxLayout(self.layoutWidget)
-        self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
         self.verticalLayout_4.setContentsMargins(4, -1, -1, -1)
+        self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setObjectName(_fromUtf8("verticalLayout_4"))
         self.group_aggregation = QtGui.QGroupBox(self.layoutWidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
@@ -368,6 +367,7 @@ class Ui_MainWindow(object):
         self.menuCorpus_locations = QtGui.QMenu(self.menuAnalyse)
         self.menuCorpus_locations.setObjectName(_fromUtf8("menuCorpus_locations"))
         self.menuDensity_plots = QtGui.QMenu(self.menuAnalyse)
+        self.menuDensity_plots.setEnabled(False)
         self.menuDensity_plots.setObjectName(_fromUtf8("menuDensity_plots"))
         self.menuTime_data = QtGui.QMenu(self.menuAnalyse)
         self.menuTime_data.setObjectName(_fromUtf8("menuTime_data"))
@@ -608,7 +608,7 @@ class Ui_MainWindow(object):
         self.action_distinct_tokens.setText(_translate("MainWindow", "Distinct tokens", None))
         self.action_frequency.setText(_translate("MainWindow", "Frequency", None))
         self.action_all_tokens.setText(_translate("MainWindow", "All tokens", None))
-        self.action_statistics.setText(_translate("MainWindow", "Corpus &statistics", None))
+        self.action_statistics.setText(_translate("MainWindow", "&Statistics", None))
         self.action_connection_settings.setText(_translate("MainWindow", "&Database connections...", None))
         self.action_settings.setText(_translate("MainWindow", "&Settings...", None))
         self.action_quit.setText(_translate("MainWindow", "&Quit", None))
@@ -627,7 +627,7 @@ class Ui_MainWindow(object):
         self.action_beeswarm_plot.setText(_translate("MainWindow", "Bee&swarm plot", None))
         self.action_barchart_plot.setText(_translate("MainWindow", "&Bars", None))
         self.action_time_series_plot.setText(_translate("MainWindow", "T&ime series", None))
-        self.action_corpus_documentation.setText(_translate("MainWindow", "Corpus &documentation...", None))
+        self.action_corpus_documentation.setText(_translate("MainWindow", "&Documentation...", None))
         self.action_percentage_area_plot.setText(_translate("MainWindow", "&Percentage areas", None))
         self.action_stacked_area_plot.setText(_translate("MainWindow", "&Stacked areas", None))
         self.action_line_plot.setText(_translate("MainWindow", "&Lines", None))
@@ -654,3 +654,5 @@ class Ui_MainWindow(object):
         self.action_toggle_filters.setText(_translate("MainWindow", "Use &filters", None))
         self.action_toggle_stopwords.setText(_translate("MainWindow", "Use stop&words", None))
         self.action_create_textgrid.setText(_translate("MainWindow", "Create te&xtgrid...", None))
+
+
