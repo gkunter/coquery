@@ -51,9 +51,7 @@ class BuilderClass(BaseCorpusBuilder):
     subgenre_id = "SubgenreId"
     subgenre_label = "Subgenre"
     
-    special_files = ["coca-sources.txt", 
-                      "lexicon.txt", 
-                      "Sub-genre codes.txt"]
+    special_files = ["coca-sources.txt", "lexicon.txt", "Sub-genre codes.txt"]
     expected_files = special_files + [
         "db_acad_1990.txt", "db_acad_1991.txt", "db_acad_1992.txt", 
         "db_acad_1993.txt", "db_acad_1994.txt", "db_acad_1995.txt", 
@@ -190,7 +188,6 @@ class BuilderClass(BaseCorpusBuilder):
         else:
             return None
 
-
     def build_load_files(self):
         chunk_size = 250000
         def get_chunk(iterable):
@@ -216,19 +213,21 @@ class BuilderClass(BaseCorpusBuilder):
             
             if self._widget:
                 self._widget.labelSet.emit("Reading '{}' (file %v out of %m)".format(os.path.basename(file_name)))
-            
+            logger.info("Reading {}".format(file_name))
                 
             # There seems to be an issue when loading longer files into an
             # MySQL database. Sometimes, the connection is lost
             with codecs.open(file_name, "r", encoding="latin-1") as big_file:
                 base_name = os.path.basename(file_name)
                 if base_name in self.special_files:
-                    # get the target table name from a dictionary that links 
-                    # the file name to the right resource table # name:
-                    table = dict(zip(self.special_files,
-                                        [self.source_table,
-                                        self.word_table,
-                                        self.subgenre_table]))[base_name]
+                    if base_name == "lexicon.txt":
+                        table = self.word_table
+                    elif base_name == "coca-sources.txt":
+                        table = self.source_table
+                    elif base_name == "Sub-genre codes.txt":
+                        table = self.subgenre_table
+                    else:
+                        raise RuntimeError("Unexpected file name: {}".format(base_name))
                 
                 # Unfortunately, the connection to the MySQL server may break 
                 # with larger files. It is as yet unclear whether this can be 
@@ -245,10 +244,14 @@ class BuilderClass(BaseCorpusBuilder):
                         return
                     # create and fill temporary file:
                     temp_file = tempfile.NamedTemporaryFile("w", delete=False)
+                    content = list(lines)
+                    if base_name not in self.special_files:
+                        self._corpus_id += len(content)
+                    
                     if sys.version_info < (3, 0):
-                        temp_file.write(u"\n".join([x.strip() for x in lines]).encode("utf-8"))
+                        temp_file.write(u"\n".join([x.strip() for x in content]).encode("utf-8"))
                     else:
-                        temp_file.write("\n".join([x.strip() for x in lines]))
+                        temp_file.write("\n".join([x.strip() for x in content]))
                     temp_file.close()
 
                     # set the right arguments for the special files:
@@ -270,8 +273,11 @@ class BuilderClass(BaseCorpusBuilder):
                     # file into the matching table name:
                     self.DB.load_infile(temp_file.name, table, arguments)
                     os.remove(temp_file.name)
+                    
 
-            self.store_filename(file_name)
+            if base_name not in self.special_files:
+                self.store_filename(base_name)
+                
             if self._widget:
                 self._widget.progressUpdate.emit(count + 1)
 
