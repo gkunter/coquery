@@ -29,7 +29,7 @@ class BuilderClass(BaseCorpusBuilder):
     file_path = "Path"
 
     corpus_table = "Corpus"
-    corpus_id = "TokenId"
+    corpus_id = "ID"
     corpus_word_id = "WordId"
     corpus_source_id = "SourceId"
 
