@@ -279,7 +279,9 @@ class SqlDB (object):
         df.to_sql(table_name, self.engine, if_exists=if_exists, index=bool(index_label), index_label=index_label)
 
     def load_infile(self, file_name, table_name, arguments):
-        self.connection.execution_options(autocommit=False).execute("LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}".format(file_name, table_name, arguments))
+        sql_template = "LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}"
+        S = sql_template.format(file_name, table_name, arguments)
+        self.connection.execution_options(autocommit=True).execute(S)
 
     def get_field_type(self, table_name, column_name):
         """
