@@ -78,14 +78,11 @@ import inspect
 
 try:
     from lxml import etree as ET
-    print("lxml")
 except ImportError:
     try:
         import xml.etree.cElementTree as ET
-        print("cElementTree")
     except ImportError:
         import xml.etree.ElementTree as ET
-        print("ElementTree")
         
 from . import sqlhelper
 from . import sqlwrap
@@ -483,7 +480,7 @@ class Table(object):
                             else:
                                 pattern = "{} {} AUTO_INCREMENT"
                             pattern = "{} {}"
-                            str_list.insert(0, pattern.format(column.name, column.data_type))
+                            str_list.append(pattern.format(column.name, column.data_type))
                             str_list.append("PRIMARY KEY ({})".format(column.name))
                     else:
                         str_list.append("{} {}".format(
@@ -508,7 +505,7 @@ class Table(object):
                             str_list.insert(0, "{}_primary INT PRIMARY KEY".format(column.name))
                             str_list.insert(1, "{} {}".format(column.name, data_type))
                         else:
-                            str_list.insert(0, "{} {} PRIMARY KEY".format(
+                            str_list.append("{} {} PRIMARY KEY".format(
                                 column.name, data_type))
                     else:
                         str_list.append("{} {}".format(
@@ -522,7 +519,7 @@ class Table(object):
                 if "VARCHAR" in field_type.upper() or "TEXT" in field_type.upper():
                     str_list[i] = "{} COLLATE NOCASE".format(x)
 
-        S = ", ".join(set(str_list))
+        S = ", ".join(str_list)
         command_list.insert(0, S)
         table_str = "; ".join(command_list)
         if db_type == SQL_SQLITE:
@@ -1426,10 +1423,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         Create a lookup table for multi-item query strings.
         """
-        max_id = self._corpus_id
-        if not max_id:
-            print("no max id!")
-            raise RuntimeError("No max id")
+        S = "SELECT MAX({}) FROM {}".format(self.corpus_id, self.corpus_table)
+        with self.DB.engine.connect() as connection:
+            result = connection.execute(S).fetchone()
+        max_id = result[0]
+        logger.info("Creating lookup table, max_id is {}".format(max_id))
 
         self.corpusngram_table = "{}Ngram".format(self.corpus_table)
         self.corpusngram_width = int(self.arguments.ngram_width)
@@ -1451,7 +1449,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             join_corpus="coq_corpus_{}".format(i+1),
             n=i) for i in range(1, self.arguments.ngram_width)]
 
-        step = 5000
+        step = 50000
         current_id = 0
 
         iterations = max_id // step + 1
@@ -1489,8 +1487,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
             FROM {join}
             WHERE {token_range} {join_str}"""
 
-        with self.DB.engine.connect() as connection:
+        if self._widget:
+            self._widget.progressSet.emit(len(self._new_tables), "Creating ngram lookup table... (chunk %v of %m)")
+            self._widget.progressUpdate.emit(1)
 
+        _chunk = 1
+        with self.DB.engine.connect() as connection:
             while current_id <= max_id and not self.interrupted:
                 token_range = "coq_corpus_1.{token} >= {lower} AND coq_corpus_1.{token} < {upper}".format(
                     token=self.corpus_id,
@@ -1511,6 +1513,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
                 connection.execute(S.strip().replace("\n", " "))
                 current_id = current_id + step
+                _chunk += 1
+                if self._widget:
+                    self._widget.progressUpdate.emit(_chunk)
             
             # insert missing rows so that the whole corpus is searchable:
             for n in range(1, self.arguments.ngram_width):
@@ -1757,32 +1762,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 no_fail = False
         return no_fail
     
-    def ask_overwrite(self, warning_msg, existing_code, output_code):
-        existing_code = existing_code.split("\n")
-        output_code = output_code.split("\n")
-        if not self._widget:
-            print("\n|".join(existing_code))
-            print("\n|".join(output_code))
-            while True:
-                print("Enter Y to overwrite the existing version.")
-                print("Enter N to keep the existing version.")
-                print("Enter V to view the difference between the two versions.")
-                try:
-                    response = raw_input("Overwrite? [Y, N, or V] ")
-                except NameError:
-                    response = input("Overwrite? [Y, N, or V] ")
-                if response.upper() in ["Y", "N"]:
-                    break
-                else:
-                    import difflib
-                    for x in difflib.context_diff(existing_code, output_code):
-                        sys.stdout.write(x)
-            return response.upper() == "Y"
-        else:
-            return True
-            #warning_msg = "<p>{}</p><p>Do you really want to overwrite the existing version?</p>".format(warning_msg)
-            #return QtGui.QMessageBox.question(self._widget, "Library exists.", warning_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
-                
     def get_module_path(self, name):
         """
         Return the path to the corpus module that is written during a build.
@@ -2080,10 +2059,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     self.commit_data()
                     progress_done()
 
-                if self.arguments.lookup_ngram and not self.interrupted:
-                    current = progress_next(current)
-                    self.build_lookup_ngram()
-                    progress_done()
+                try:
+                    if self.arguments.lookup_ngram and not self.interrupted:
+                        current = progress_next(current)
+                        self.build_lookup_ngram()
+                        progress_done()
+                except Exception as e:
+                    logger.error("Error building ngram lookup: {}".format(e))
+                    print(e)
 
                 if not self.interrupted:
                     current = progress_next(current)
