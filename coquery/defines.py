@@ -88,6 +88,13 @@ COLUMN_NAMES = {
 
         }
 
+PREFERRED_ORDER = ["corpus_word", "word_label", 
+                   "corpus_pos", "word_pos", "pos_label", 
+                   "corpus_transcript", "word_transcript", "transcript_label", 
+                   "corpus_lemma", "word_lemma", "lemma_label", 
+                   "lemma_pos"]
+
+
 DEFAULT_CONFIGURATION = "Default"
 
 SQL_MYSQL = "mysql"
