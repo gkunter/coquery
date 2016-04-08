@@ -499,19 +499,36 @@ class BaseResource(object):
 
     @classmethod
     def get_preferred_output_order(cls):
-        prefer = ["corpus_word", "word_label", "word_pos", "pos_label", "word_transcript", "transcript_label", "word_lemma", "lemma_label", "lemma_pos"]
-        
         all_features = cls.get_resource_features()
         order = []
         for rc_feature in list(all_features):
-            if rc_feature in prefer:
+            if rc_feature in PREFERRED_ORDER:
                 for i, ordered_feature in enumerate(order):
-                    if prefer.index(ordered_feature) > prefer.index(rc_feature):
+                    if PREFERRED_ORDER.index(ordered_feature) > PREFERRED_ORDER.index(rc_feature):
                         order.insert(i, rc_feature)
                         break
                 else:
                     order.append(rc_feature)
                 all_features.remove(rc_feature)
+        
+        # make sure that if there is timing information, the ending time 
+        # occurs after the start time by default (fixes Issue #177):
+        for i, rc_feature in enumerate(order):
+            _, _, tab, feat = cls.split_resource_feature(rc_feature)
+            if feat == "starttime":
+                j = order.index("{}_starttime".format(tab))
+                if j < i:
+                    order[j] = "{}_starttime".format(tab)
+                    order[i] = "{}_endtime".format(tab)
+
+        for i, rc_feature in enumerate(all_features):
+            _, _, tab, feat = cls.split_resource_feature(rc_feature)
+            if feat == "starttime":
+                j = all_features.index("{}_endtime".format(tab))
+                if j < i:
+                    all_features[j] = "{}_starttime".format(tab)
+                    all_features[i] = "{}_endtime".format(tab)
+
         return order + all_features
     
     @classmethod
@@ -986,7 +1003,7 @@ class SQLResource(BaseResource):
             # query string does not exceed that table, use it for the 
             # query
             if (hasattr(self, "corpusngram_table") and  
-                1 < len(token_list) <= self.corpusngram_width):
+                1 < len(token_list) <= self.corpusngram_width) and options.cfg.experimental:
                     query_string = self.corpus.sql_string_query_lookup(Query, token_list)
             else:
                 # otherwise, use the self-joined corpus table:
@@ -1118,8 +1135,15 @@ class SQLResource(BaseResource):
         # (if present):
         select_list = list(query.Session.input_columns)
 
+        ordered_selected_features = []
+        for feature in cls.get_preferred_output_order():
+            if feature in options.cfg.selected_features:
+                ordered_selected_features.append(feature)
+        print(ordered_selected_features)
+
         # then, add an appropriately aliased name for each selected feature:
-        for rc_feature in options.cfg.selected_features:
+        #for rc_feature in options.cfg.selected_features:
+        for rc_feature in ordered_selected_features:
             if rc_feature in lexicon_features or cls.is_tokenized(rc_feature):
                 select_list += ["coq_{}_{}".format(rc_feature, x+1) for x in range(max_token_count)]
             elif rc_feature in corpus_features:
@@ -1166,20 +1190,56 @@ class SQLResource(BaseResource):
                 else:
                     select_list.append("coq_func_{}_{}_1".format(resource, fc))
 
-        # add contexts for each query match:
-        if (options.cfg.context_left or options.cfg.context_right) and options.cfg.token_origin_id:
+        # if requested and possible, add contexts for each query match:
+        if (options.cfg.context_mode != CONTEXT_NONE and 
+            (options.cfg.context_left or options.cfg.context_right) and
+            options.cfg.token_origin_id):
+
+            # KWIC and context columns should by default be placed around 
+            # the lexical features in order to be similar to standard 
+            # concordancing software. In order to do so, we determine the 
+            # current positions of lexical features in the output list:
+            first_lexical_feature = len(select_list)
+            last_lexical_feature = 0
+            for i, field in enumerate(select_list):
+                try:
+                    feature = re.match("coq_(.*)_\d+$", field).group(1)
+                except AttributeError:
+                    # This is raised if the RE doesn't match the field name.
+                    # In particular, it is raised for columns from special
+                    # tables (Statistics, Coquery, Tag). They never count as
+                    # Lexical features, so they should not be considered as 
+                    # places for the context anyway.
+                    pass
+                else:
+                    if feature in lexicon_features:
+                        first_lexical_feature = min(i, first_lexical_feature)
+                        last_lexical_feature = max(i, last_lexical_feature)
+            
+            # KWIC: add context columns to left and right of lexical features:
             if options.cfg.context_mode == CONTEXT_KWIC:
                 if options.cfg.context_left:
-                    select_list.append("coq_context_left")
+                    select_list.insert(first_lexical_feature, "coq_context_left")
                 if options.cfg.context_right:
-                    select_list.append("coq_context_right")
+                    select_list.insert(last_lexical_feature + int(options.cfg.context_left > 1) + 1, 
+                                       "coq_context_right")
+
+            # Strings and Sentences: add context columns after all other columns
             elif options.cfg.context_mode == CONTEXT_STRING:
                 select_list.append("coq_context_string")
             elif options.cfg.context_mode == CONTEXT_SENTENCE:
                 select_list.append("coq_context_string")
+
+            # Columns: add context columns for each word to left and right of 
+            # lexical features:
             elif options.cfg.context_mode == CONTEXT_COLUMNS:
-                select_list += ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
-                select_list += ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
+                for x in range(options.cfg.context_left):
+                    select_list.insert(first_lexical_feature,
+                                       "coq_context_lc{}".format(x+1))
+                for x in range(options.cfg.context_right):
+                    select_list.insert(last_lexical_feature + options.cfg.context_left + x + 1,
+                                       "coq_context_rc{}".format(x+1))
+                    
             select_list.append("coquery_invisible_origin_id")
 
         select_list.append("coquery_invisible_corpus_id")
@@ -1596,12 +1656,15 @@ class CorpusClass(object):
         # selection:
         for rc_feature in options.cfg.selected_features:
             func, db_name, table, feat = self.resource.split_resource_feature(rc_feature)
-            s = "{}_{}".format(table, feat)
-            if db_name != self.resource.db_name:
-                res = options.get_resource_of_database(db_name)
-                required_features.add("{}.{}".format(res.name , s))
-            else:
-                required_features.add(s)
+            if func:
+                print("FUNCI")
+            if table not in self.resource.special_table_list:
+                s = "{}_{}".format(table, feat)
+                if db_name != self.resource.db_name:
+                    res = options.get_resource_of_database(db_name)
+                    required_features.add("{}.{}".format(res.name , s))
+                else:
+                    required_features.add(s)
                 
         if options.cfg.experimental:
             print(1, required_features)
@@ -1627,6 +1690,15 @@ class CorpusClass(object):
         if options.cfg.experimental:
             print(4, required_features)
 
+        # add features required for functions:
+        for res, _, _ in options.cfg.selected_functions:
+            func, db_name, table, feature = self.resource.split_resource_feature(res)
+            assert db_name == self.resource.db_name, "External functions currently not available"
+            assert func
+            print("FNC", res, table, feature)
+            required_features.add("{}_{}".format(table, feature))
+        
+
         # make sure that the word_id is always included in the query:
         # FIXME: Why is this needed?
         required_features.add("corpus_word_id")
@@ -1642,9 +1714,15 @@ class CorpusClass(object):
                 token.lemma_specifiers or 
                 token.gloss_specifiers or
                 token.transcript_specifiers):
-                required_features.append(pos_feature)
+                
+                try:
+                    required_features.add(
+                        getattr(self.resource, QUERY_ITEM_POS))
+                except AttributeError:
+                    pass
 
         for feat in list(required_features):
+            _, _, tab, _ = self.resource.split_resource_feature(feat)
             self.lexicon.table_list = []
             self.lexicon.joined_tables = ["corpus"]
             self.lexicon.add_table_path("corpus_id", feat)
@@ -2152,6 +2230,11 @@ class CorpusClass(object):
                 tab=self.resource.corpusngram_table, 
                 col=word_id_column, 
                 i=i+1))
+            
+        if options.cfg.token_origin_id:
+            corpus_fields.append("{} AS coq_{}_1".format(
+                getattr(self.resource, options.cfg.token_origin_id),
+                options.cfg.token_origin_id))
 
         # get word_id constraints for each query item:
         where_clauses = []
@@ -2308,6 +2391,7 @@ class CorpusClass(object):
         for rc_feature in self.resource.get_preferred_output_order():
             if rc_feature in options.cfg.selected_features:
                 if rc_feature in [x for x, _ in lexicon_features] or self.resource.is_tokenized(rc_feature):
+                    print(rc_feature)
                     for i in range(Query.Session.get_max_token_count()):
                         if options.cfg.align_quantified:
                             last_offset = 0
@@ -2373,7 +2457,14 @@ class CorpusClass(object):
                 field_str = "coq_{db_name}${rc_feature}_{{N}}"
             else:
                 field_str = "coq_{rc_feature}_{{N}}"
-            rc_feature = "{}_{}".format(table, feature)
+            
+            rc_feature= "{}_{}".format(table, feature)
+            label = field_str.format(db_name=db_name, rc_feature=rc_feature)
+            
+            if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
+                final_select += [label.format(N=x + 1) for x in range(Query.Session.get_max_token_count())]
+            else:
+                final_select.append(label.format(N=1))
 
             ## check if the function is applied to an external link:
             #if res.count(".") > 1:
