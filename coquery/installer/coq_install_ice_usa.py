@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-coq_install_ice_ng.py is part of Coquery.
+coq_install_ice_usa.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
@@ -12,51 +12,84 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 import os.path
-import codecs, string
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
+
+
+#try:
+    #from cStringIO import StringIO
+#except ImportError:
+    #from io import StringIO
     
 from coquery.corpusbuilder import *
 from coquery.bibliography import *
 
+
+ICE_CORPUS_DESIGN = {
+    "Non-printed": {
+        "Student Writing": {
+            "Label": "W1A",
+            "Student Essays": 10,
+            "Exam Scripts": 10
+            },
+        "Letters": {
+            "Label": "W1B",
+            "Social Letters": 15,
+            "Business Letters": 15
+            }
+        },
+    "Printed": {
+        "Academic Writing": {
+            "Label": "W2A",
+            "Humanities": 10,
+            "Social Sciences": 10,
+            "Natural Sciences": 10,
+            "Technology": 10
+            },
+        "Non-Academic Writing": {
+            "Label": "W2B",
+            "Humanities": 10,
+            "Social Sciences": 10,
+            "Natural Sciences": 10,
+            "Technology": 10
+            },
+        "Reportage": {
+            "Label": "W2C",
+            "Press News Reports": 20
+        },
+        "Instructional Writing": {
+            "Label": "W2D",
+            "Administrative Writing": 10,
+            "Skills/hobbies": 10
+            },
+        "Persuasive writing": {
+            "Label": "W2E",
+            "Press editorials": 10
+            },
+        "Creative writing": {
+            "Label": "W2F",
+            "Novels & short stories": 20
+            }
+        }
+    }
+
+
+
 class corpus_code():
-    #def get_tag_translate(self, tag):
-        #translate_dict = {
-            #"p": "p",
-            #"punctuation": "",
-            #"heading": "h1",
-            #"boldface": "b",
-            #"italics": "i",
-            #"underline": "u",
-            #"superscript": "sup",
-            #"subscript": "sup",
-            #"text": "html", 
-            #"deleted": "s",
-            #"other-language": "span style='font-style: italic;'",
-            #"quote": "span style='font-style: italic; color: darkgrey; '",
-            #"error": "s"}
-        #if tag in translate_dict:
-            #return translate_dict[tag]
-        #else:
-            #print("unsupported tag: ", tag)
-            #return tag
 
     def get_tag_translate(self, tag):
         translate_dict = {
+            "i": "html",
             "p": "p",
-            "punctuation": "",
-            "heading": "span style='font-style: bold'",
-            #"heading": "span style='font-style: bold; font-size:150%'",
-            #"h1": "span style='font-style: bold; font-size:150%'",
-            "boldface": "b",
-            "italics": "i",
-            "underline": "u",
-            "superscript": "sup",
-            "subscript": "sup",
-            "object": "object",
-            "text": "html"}
+            "h": "h1",
+            "bold": "b",
+            "it": "i",
+            "ul": "u",
+            "smallcaps": "span style='font-variant: small-caps;'",
+            "quote": "span style='font-style: italic; color: darkgrey; '",
+            "foreign": "span style='font-style: italic;'",
+            "indig": "span style='font-style: italic; color: darkblue; '",
+            "-": "s",
+            "o": "hr",
+            }
         
         if tag in translate_dict:
             return translate_dict[tag]
@@ -64,38 +97,10 @@ class corpus_code():
             print("unsupported tag: ", tag)
             return tag
 
-    def get_context_stylesheet(self):
-        """
-        """
-        return "h1 { background-color: #aa0000; }"
-
     def renderer_open_element(self, tag, attributes):
         context = super(Corpus, self).renderer_open_element(tag, attributes)
-        if tag == "object":
-            path = os.path.join(options.cfg.base_path, "icons", "artwork")
-            # add placeholder images for <object> tags
-            if attributes.get("type") == "formula":
-                context.append("<br/><img src='{}/formula.png'/><br/>".format(path))
-            elif attributes.get("type") == "table":
-                context.append("<br/><img src='{}/placeholder_table.png'/><br/>".format(path))
-            elif attributes.get("type") == "graphic":
-                context.append("<br/><img src='{}/placeholder.png'/><br/>".format(path))
-        if tag == "x-anonym-x":
-            anon_type = "anonymized"
-            try:
-                anon_type = attributes["type"]
-            except KeyError:
-                pass
-            context.append(' <span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span> '.format(anon_type))
-
-        if tag == "x-anonym-x":
-            anon_type = "anonymized"
-            try:
-                anon_type = attributes["type"]
-            except KeyError:
-                pass
-            context.append(' <span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span> '.format(anon_type))
-
+        if tag == "@":
+            context.append(' <span style="color: lightgrey; background: black;">')
         return context
 
     def renderer_close_element(self, tag, attributes):
@@ -105,163 +110,29 @@ class corpus_code():
                 context.append('<span style="color: darkgreen;">{}</span>'.format(attributes["corrected"]))
             except KeyError:
                 pass
-        #if tag == "x-anonym-x":
-            #anon_type = "anonymized"
-            #try:
-                #anon_type = attributes["type"]
-            #except AttributeError:
-                #pass
-            #context.append('<span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span>'.format(anon_type))
-
+        if tag == "@":
+            context.append("</span>")
         return context
-
-
-    #def render_context(self, token_id, source_id, token_width, context_width, widget):
-        #start = max(0, token_id - context_width)
-        #end = token_id + token_width + context_width - 1
-    
-        #S = "SELECT {corpus}.{corpus_id}, {word}, {tag}, {tag_type}, {attribute}, {tag_id} FROM {corpus} INNER JOIN {word_table} ON {corpus}.{corpus_word_id} = {word_table}.{word_id} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end} AND {corpus}.{source_id} = {current_source_id}".format(
-            #corpus=self.resource.corpus_table,
-            #corpus_id=self.resource.corpus_id,
-            #corpus_word_id=self.resource.corpus_word_id,
-            #source_id=self.resource.corpus_source_id,
-            
-            #word=self.resource.word_label,
-            #word_table=self.resource.word_table,
-            #word_id=self.resource.word_id,
-            
-            #tag_table=self.resource.tag_table,
-            #tag=self.resource.tag_label,
-            #tag_id=self.resource.tag_id,
-            #tag_corpus_id=self.resource.tag_corpus_id,
-            #tag_type=self.resource.tag_type,
-            #attribute=self.resource.tag_attribute,
-            
-            #current_source_id=source_id,
-            #start=start, end=end)
-        #cur = self.resource.DB.execute_cursor(S)
-        #entities = {}
-
-        #for row in cur:
-            ##row = [x.decode("utf-8", errors="replace") if isinstance(x, str) else x for x in row]
-            #if row[self.resource.corpus_id] not in entities:
-                #entities[row[self.resource.corpus_id]] = []
-            #entities[row[self.resource.corpus_id]].append(row)
-
-        #context = []
-        ## we need to keep track of any opening and closing tag that does not
-        ## have its matching tag in the selected context:
-        #opened_tags = []
-        #closed_tags = []
-        #correct_word = ""
-        #for token in sorted(entities):
-            #entity_list = sorted(entities[token], key=lambda x:x[self.resource.tag_id])
-            #text_output = False
-            #word = entity_list[0][self.resource.word_label]
-            #for row in entity_list:
-                #tag = row[self.resource.tag_label]
-                
-                ## special treatment for tags:
-                #if tag:
-                    #attributes = row[self.resource.tag_attribute]
-                    #tag_type = row[self.resource.tag_type]
-
-                    #if tag_type == "empty":
-                        #if tag == "object":
-                            ## add placeholder images for <object> tags
-                            #if "type=table" in attributes:
-                                #context.append("<br/><img src='../logo/placeholder_table.png'/><br/>")
-                            #if "type=graphic" in attributes:
-                                #context.append("<br/><img src='../logo/placeholder.png'/><br/>")
-                            #if "type=formula" in attributes:
-                                #context.append("<br/><img src='../logo/formula.png'/><br/>")
-                        #elif tag == "error":
-                            #if attributes.startswith("corrected="):
-                                #correct_word = attributes[len("corrected="):]
-                                #context.append('<span style="color: darkgreen;">{}</span>'.format(correct_word))
-                            #correct_word  = ""
-                        #elif tag == "break":
-                            #context.append("<br/>")
-                        #elif tag == "x-anonym-x":
-                            #context.append('<span style="color: lightgrey; background: black;">&nbsp;&nbsp;&nbsp;{}&nbsp;&nbsp;&nbsp;</span>'.format(attributes[len("type="):]))
-                        #else:
-                            #print(tag)
-                
-                    #elif tag_type == "open":
-                        #if tag == "error":
-                            #if attributes.startswith("corrected="):
-                                #correct_word = attributes[len("corrected="):]
-                            #attributes = 'style="color: darkgrey;"'
-                        ##elif tag == "other-language":
-                            ##context.append('<span style="font-style: italic;">')
-                        #tag = self.tag_to_qhtml(tag)
-                        #if attributes:
-                            #context.append("<{} {}>".format(tag, attributes))
-                        #else:
-                            #context.append("<{}>".format(tag))
-                        #opened_tags.append(row[self.resource.tag_label])
-
-                    #elif tag_type == "close":
-                        ## if there is still a dangling correction from an 
-                        ## open <error> tag, add the correct word now:
-                        #if correct_word:
-                            #context.append('<span style="color: darkgreen;">{}</span>'.format(correct_word))
-                            #correct_word = ""
-                        ## add the current token before processing any other
-                        ## closing tag:
-                        #if not text_output:
-                            #text_output = True
-                            #if token == token_id:
-                                #context.append('<span style="font-weight: bold; background-color: lightyellow; border-style: outset;" >')
-                            #context.append(word)
-                        
-                        #if attributes:
-                            #context.append("</{} {}>".format(self.tag_to_qhtml(tag), attributes))
-                        #else:
-                            #context.append("</{}>".format(self.tag_to_qhtml(tag)))
-                        ## if the current tag closes an earlier opening tag,
-                        ## remove that tag from the list of open environments:
-                        #try:
-                            #if opened_tags[-1] == row[self.resource.tag_label]:
-                                #opened_tags.pop(len(opened_tags)-1)
-                        #except IndexError:
-                            #closed_tags.append(tag)
-                            #pass
-                        #if tag == "other-language":
-                            #context.append('</span>')
-            #if not text_output:
-                #if token == token_id:
-                    #context.append('<span style="font-weight: bold; background-color: lightyellow; border-style: outset;" >')
-                #context.append(word)
-            #if token == token_id + token_width - 1:
-                #context.append('</span>')
-        #for x in opened_tags[::-1]:
-            #context.append("</{}>".format(self.tag_to_qhtml(x)))
-        #for x in closed_tags:
-            #context.insert(0, ("<{}>".format(self.tag_to_qhtml(x))))
-
-        #widget.ui.context_area.setText(collapse_words(context))
 
 class BuilderClass(BaseCorpusBuilder):
     encoding = "latin-1"
-    file_filter = "*.xml.pos"
+    file_filter = "W??-???.TXT"
 
     corpus_table = "Corpus"
     corpus_id = "ID"
-    corpus_word_id = "WordId"
+    corpus_word = "Word"
     corpus_file_id = "FileId"
     corpus_source_id = "SourceId"
-
-    word_table = "Lexicon"
-    word_id = "WordId"
-    word_lemma = "Lemma"
-    word_label = "Word"
-    word_pos = "Pos"
+    corpus_textunit_id = "TextUnitId"
+    corpus_subtext = "Subtext"
 
     file_table = "Files"
     file_id = "FileId"
     file_name = "Filename"
     file_path = "Path"
+    
+    textunit_table = "Text_units"
+    textunit_id = "TextUnitId"
     
     source_table = "Sources"
     source_id = "SourceId"
@@ -273,178 +144,47 @@ class BuilderClass(BaseCorpusBuilder):
     source_icetext = "ICE_text_category"
     source_icetextcode = "ICE_text_code"
     source_place = "Place"
+    
+    speaker_table = "Speakers"
+    speaker_id = "SpeakerId"
+    speaker_forename = "Forename"
+    speaker_surname = "Surname"
+    speaker_age = "Age"
+    speaker_gender = "Gender"
+    speaker_nationality = "Nationality"
+    speaker_ethnicity = "Ethnicity"
+    speaker_birthplace = "Birthplace"
+    speaker_education = "Education"
+    speaker_educationlevel = "Education_level"
+    speaker_occupation = "Occupation"
+    speaker_affiliation = "Affiliation"
+    speaker_l1 = "Mother_tongue"
+    speaker_l2 = "Other_languages"
+
+    
+
 
     expected_files = [
-        'Pr_58.xml.pos', 'Pr_20.xml.pos', 'Pr_25.xml.pos', 
-        'Pr_39.xml.pos', 'Pr_69.xml.pos', 'Pr_59.xml.pos', 
-        'Pr_52.xml.pos', 'Pr_21.xml.pos', 'Pr_42.xml.pos', 
-        'Pr_30.xml.pos', 'Pr_19.xml.pos', 'Pr_53.xml.pos', 
-        'Pr_17.xml.pos', 'Pr_14.xml.pos', 'Pr_43.xml.pos', 
-        'Pr_33.xml.pos', 'Pr_08.xml.pos', 'Pr_22.xml.pos', 
-        'Pr_05.xml.pos', 'Pr_57.xml.pos', 'Pr_26.xml.pos', 
-        'Pr_50.xml.pos', 'Pr_10.xml.pos', 'Pr_67.xml.pos', 
-        'Pr_01.xml.pos', 'Pr_44.xml.pos', 'Pr_27.xml.pos', 
-        'Pr_56.xml.pos', 'Pr_51.xml.pos', 'Pr_62.xml.pos', 
-        'Pr_48.xml.pos', 'Pr_13.xml.pos', 'Pr_49.xml.pos', 
-        'Pr_16.xml.pos', 'Pr_06.xml.pos', 'Pr_35.xml.pos', 
-        'Pr_32.xml.pos', 'Pr_63.xml.pos', 'Pr_36.xml.pos', 
-        'Pr_47.xml.pos', 'Pr_66.xml.pos', 'Pr_31.xml.pos', 
-        'Pr_64.xml.pos', 'Pr_68.xml.pos', 'Pr_12.xml.pos', 
-        'Pr_07.xml.pos', 'Pr_24.xml.pos', 'Pr_38.xml.pos', 
-        'Pr_37.xml.pos', 'Pr_29.xml.pos', 'Pr_02.xml.pos', 
-        'Pr_11.xml.pos', 'Pr_46.xml.pos', 'Pr_28.xml.pos', 
-        'Pr_65.xml.pos', 'Pr_18.xml.pos', 'Pr_61.xml.pos', 
-        'Pr_04.xml.pos', 'Pr_09.xml.pos', 'Pr_60.xml.pos', 
-        'Pr_34.xml.pos', 'Pr_45.xml.pos', 'Pr_23.xml.pos', 
-        'Pr_41.xml.pos', 'Pr_40.xml.pos', 'Pr_03.xml.pos', 
-        'Pr_54.xml.pos', 'Pr_15.xml.pos', 'Pr_55.xml.pos', 
-        'PNsc_13.xml.pos', 'PNsc_04.xml.pos', 'PNsc_09.xml.pos', 
-        'PNsc_01.xml.pos', 'PNsc_05.xml.pos', 'PNsc_02.xml.pos', 
-        'PNsc_14.xml.pos', 'PNsc_11.xml.pos', 'PNsc_06.xml.pos', 
-        'PNsc_18.xml.pos', 'PNsc_15.xml.pos', 'PNsc_16.xml.pos', 
-        'PNsc_19.xml.pos', 'PNsc_10.xml.pos', 'PNsc_12.xml.pos', 
-        'PNsc_07.xml.pos', 'PNsc_03.xml.pos', 'PNsc_17.xml.pos', 
-        'PNsc_08.xml.pos', 'PHum_09.xml.pos', 'PHum_12.xml.pos', 
-        'PHum_08.xml.pos', 'PHum_01.xml.pos', 'PHum_20.xml.pos', 
-        'PHum_02.xml.pos', 'PHum_06.xml.pos', 'PHum_14.xml.pos', 
-        'PHum_11.xml.pos', 'PHum_15.xml.pos', 'PHum_16.xml.pos', 
-        'PHum_10.xml.pos', 'PHum_05.xml.pos', 'PHum_18.xml.pos', 
-        'PHum_13.xml.pos', 'PHum_04.xml.pos', 'PHum_03.xml.pos', 
-        'PHum_07.xml.pos', 'PHum_17.xml.pos', 'PHum_19.xml.pos', 
-        'ASsc_05.xml.pos', 'ASsc_11.xml.pos', 'ASsc_06.xml.pos', 
-        'ASsc_07.xml.pos', 'ASsc_10.xml.pos', 'ASsc_08.xml.pos', 
-        'ASsc_04.xml.pos', 'ASsc_02.xml.pos', 'ASsc_03.xml.pos', 
-        'ASsc_01.xml.pos', 'ASsc_09.xml.pos', 'ess_10.xml.pos', 
-        'ess_09.xml.pos', 'ess_06.xml.pos', 'ess_01.xml.pos', 
-        'ess_07.xml.pos', 'ess_05.xml.pos', 'ess_11.xml.pos', 
-        'ess_03.xml.pos', 'ess_12.xml.pos', 'ess_02.xml.pos', 
-        'ess_04.xml.pos', 'ess_08.xml.pos', 'nov_14.xml.pos', 
-        'nov_03.xml.pos', 'nov_07.xml.pos', 'nov_04.xml.pos', 
-        'nov_15.xml.pos', 'nov_13.xml.pos', 'nov_05.xml.pos', 
-        'nov_16.xml.pos', 'nov_11.xml.pos', 'nov_20.xml.pos', 
-        'nov_06.xml.pos', 'nov_02.xml.pos', 'nov_01.xml.pos', 
-        'nov_08.xml.pos', 'nov_09.xml.pos', 'nov_19.xml.pos', 
-        'nov_12.xml.pos', 'nov_10.xml.pos', 'nov_18.xml.pos', 
-        'nov_17.xml.pos', 'bl_28.xml.pos', 'bl_60.xml.pos', 
-        'bl_15.xml.pos', 'bl_30.xml.pos', 'bl_20.xml.pos', 
-        'bl_43.xml.pos', 'bl_70.xml.pos', 'bl_83.xml.pos', 
-        'bl_33.xml.pos', 'bl_38.xml.pos', 'bl_54.xml.pos', 
-        'bl_23.xml.pos', 'bl_88.xml.pos', 'bl_74.xml.pos', 
-        'bl_82.xml.pos', 'bl_48.xml.pos', 'bl_14.xml.pos', 
-        'bl_85.xml.pos', 'bl_59.xml.pos', 'bl_80.xml.pos', 
-        'bl_36.xml.pos', 'bl_05.xml.pos', 'bl_03.xml.pos', 
-        'bl_22.xml.pos', 'bl_61.xml.pos', 'bl_90.xml.pos', 
-        'bl_73.xml.pos', 'bl_67.xml.pos', 'bl_53.xml.pos', 
-        'bl_69.xml.pos', 'bl_01.xml.pos', 'bl_64.xml.pos', 
-        'bl_91.xml.pos', 'bl_24.xml.pos', 'bl_52.xml.pos', 
-        'bl_93.xml.pos', 'bl_81.xml.pos', 'bl_26.xml.pos', 
-        'bl_18.xml.pos', 'bl_39.xml.pos', 'bl_77.xml.pos', 
-        'bl_86.xml.pos', 'bl_46.xml.pos', 'bl_27.xml.pos', 
-        'bl_42.xml.pos', 'bl_11.xml.pos', 'bl_09.xml.pos', 
-        'bl_50.xml.pos', 'bl_35.xml.pos', 'bl_21.xml.pos', 
-        'bl_16.xml.pos', 'bl_56.xml.pos', 'bl_87.xml.pos', 
-        'bl_45.xml.pos', 'bl_34.xml.pos', 'bl_92.xml.pos', 
-        'bl_68.xml.pos', 'bl_62.xml.pos', 'bl_25.xml.pos', 
-        'bl_58.xml.pos', 'bl_79.xml.pos', 'bl_41.xml.pos', 
-        'bl_72.xml.pos', 'bl_19.xml.pos', 'bl_12.xml.pos', 
-        'bl_75.xml.pos', 'bl_65.xml.pos', 'bl_08.xml.pos', 
-        'bl_89.xml.pos', 'bl_07.xml.pos', 'bl_78.xml.pos', 
-        'bl_32.xml.pos', 'bl_47.xml.pos', 'bl_55.xml.pos', 
-        'bl_10.xml.pos', 'bl_51.xml.pos', 'bl_76.xml.pos', 
-        'bl_06.xml.pos', 'bl_66.xml.pos', 'bl_13.xml.pos', 
-        'bl_49.xml.pos', 'bl_71.xml.pos', 'bl_44.xml.pos', 
-        'bl_63.xml.pos', 'bl_84.xml.pos', 'bl_02.xml.pos', 
-        'bl_37.xml.pos', 'bl_17.xml.pos', 'bl_40.xml.pos', 
-        'bl_57.xml.pos', 'bl_04.xml.pos', 'bl_31.xml.pos', 
-        'bl_29.xml.pos', 'ATec_05.xml.pos', 'ATec_06.xml.pos', 
-        'ATec_02.xml.pos', 'ATec_07.xml.pos', 'ATec_10.xml.pos', 
-        'ATec_04.xml.pos', 'ATec_01.xml.pos', 'ATec_11.xml.pos', 
-        'ATec_08.xml.pos', 'ATec_03.xml.pos', 'ATec_09.xml.pos', 
-        'PSsc_06.xml.pos', 'PSsc_09.xml.pos', 'PSsc_03.xml.pos', 
-        'PSsc_05.xml.pos', 'PSsc_01.xml.pos', 'PSsc_12.xml.pos', 
-        'PSsc_14.xml.pos', 'PSsc_04.xml.pos', 'PSsc_15.xml.pos', 
-        'PSsc_13.xml.pos', 'PSsc_11.xml.pos', 'PSsc_08.xml.pos', 
-        'PSsc_07.xml.pos', 'PSsc_02.xml.pos', 'PSsc_10.xml.pos', 
-        'SkHo_14.xml.pos', 'SkHo_12.xml.pos', 'SkHo_24.xml.pos', 
-        'SkHo_18.xml.pos', 'SkHo_02.xml.pos', 'SkHo_10.xml.pos', 
-        'SkHo_01.xml.pos', 'SkHo_04.xml.pos', 'SkHo_09.xml.pos', 
-        'SkHo_17.xml.pos', 'SkHo_15.xml.pos', 'SkHo_22.xml.pos', 
-        'SkHo_03.xml.pos', 'SkHo_06.xml.pos', 'SkHo_16.xml.pos', 
-        'SkHo_11.xml.pos', 'SkHo_20.xml.pos', 'SkHo_07.xml.pos', 
-        'SkHo_25.xml.pos', 'SkHo_13.xml.pos', 'SkHo_23.xml.pos', 
-        'SkHo_05.xml.pos', 'SkHo_08.xml.pos', 'SkHo_19.xml.pos', 
-        'SkHo_21.xml.pos', 'sl_38.xml.pos', 'sl_09.xml.pos', 
-        'sl_46.xml.pos', 'sl_17.xml.pos', 'sl_15.xml.pos', 
-        'sl_27.xml.pos', 'sl_41.doc.xml.pos', 'sl_23.xml.pos', 
-        'sl_26.xml.pos', 'sl_39.doc.xml.pos', 'sl_32.xml.pos', 
-        'sl_04.xml.pos', 'sl_47.xml.pos', 'sl_18.xml.pos', 
-        'sl_01.xml.pos', 'sl_19.xml.pos', 'sl_30.xml.pos', 
-        'sl_43.xml.pos', 'sl_33.xml.pos', 'sl_06.xml.pos', 
-        'sl_08.xml.pos', 'sl_29.xml.pos', 'sl_03.xml.pos', 
-        'sl_36.xml.pos', 'sl_28.xml.pos', 'sl_35.xml.pos', 
-        'sl_13.xml.pos', 'sl_34.xml.pos', 'sl_24.xml.pos', 
-        'sl_16.xml.pos', 'sl_44.xml.pos', 'sl_10.xml.pos', 
-        'sl_45.xml.pos', 'sl_05.xml.pos', 'sl_14.xml.pos', 
-        'sl_07.xml.pos', 'sl_22.xml.pos', 'sl_25.xml.pos', 
-        'sl_11.xml.pos', 'sl_40.doc.xml.pos', 'sl_12.xml.pos', 
-        'sl_42.xml.pos', 'sl_02.xml.pos', 'sl_20.xml.pos', 
-        'sl_21.xml.pos', 'sl_48.xml.pos', 'sl_37.xml.pos', 
-        'sl_31.xml.pos', 'ANsc_11.xml.pos', 'ANsc_06.xml.pos', 
-        'ANsc_03.xml.pos', 'ANsc_08.xml.pos', 'ANsc_02.xml.pos', 
-        'ANsc_01.xml.pos', 'ANsc_10.xml.pos', 'ANsc_09.xml.pos', 
-        'ANsc_07.xml.pos', 'ANsc_05.xml.pos', 'ANsc_04.xml.pos', 
-        'AHum_10.xml.pos', 'AHum_02.xml.pos', 'AHum_09.xml.pos', 
-        'AHum_07.xml.pos', 'AHum_04.xml.pos', 'AHum_05.xml.pos', 
-        'AHum_11.xml.pos', 'AHum_08.xml.pos', 'AHum_06.xml.pos', 
-        'AHum_01.xml.pos', 'AHum_03.xml.pos', 'ex_30.xml.pos', 
-        'ex_26.xml.pos', 'ex_29.xml.pos', 'ex_33.xml.pos', 
-        'ex_13.xml.pos', 'ex_08.xml.pos', 'ex_02.xml.pos', 
-        'ex_54.xml.pos', 'ex_10.xml.pos', 'ex_35.xml.pos', 
-        'ex_40.xml.pos', 'ex_50.xml.pos', 'ex_42.xml.pos', 
-        'ex_46.xml.pos', 'ex_28.xml.pos', 'ex_16.xml.pos', 
-        'ex_34.xml.pos', 'ex_31.xml.pos', 'ex_21.xml.pos', 
-        'ex_14.xml.pos', 'ex_19.xml.pos', 'ex_23.xml.pos', 
-        'ex_47.xml.pos', 'ex_20.xml.pos', 'ex_25.xml.pos', 
-        'ex_43.xml.pos', 'ex_11.xml.pos', 'ex_39.xml.pos', 
-        'ex_17.xml.pos', 'ex_01.xml.pos', 'ex_15.xml.pos', 
-        'ex_37.xml.pos', 'ex_38.xml.pos', 'ex_41.xml.pos', 
-        'ex_05.xml.pos', 'ex_24.xml.pos', 'ex_44.xml.pos', 
-        'ex_49.xml.pos', 'ex_27.xml.pos', 'ex_06.xml.pos', 
-        'ex_51.xml.pos', 'ex_48.xml.pos', 'ex_09.xml.pos', 
-        'ex_53.xml.pos', 'ex_04.xml.pos', 'ex_07.xml.pos', 
-        'ex_22.xml.pos', 'ex_18.xml.pos', 'ex_52.xml.pos', 
-        'ex_36.xml.pos', 'ex_32.xml.pos', 'ex_03.xml.pos', 
-        'ex_12.xml.pos', 'ex_45.xml.pos', 'PTec_22.xml.pos', 
-        'PTec_19.xml.pos', 'PTec_31.xml.pos', 'PTec_16.xml.pos', 
-        'PTec_01.xml.pos', 'PTec_33.xml.pos', 'PTec_06.xml.pos', 
-        'PTec_13.xml.pos', 'PTec_02.xml.pos', 'PTec_15.xml.pos', 
-        'PTec_12.xml.pos', 'PTec_26.xml.pos', 'PTec_29.xml.pos', 
-        'PTec_27.xml.pos', 'PTec_10.xml.pos', 'PTec_32.xml.pos', 
-        'PTec_14.xml.pos', 'PTec_24.xml.pos', 'PTec_08.xml.pos', 
-        'PTec_07.xml.pos', 'PTec_21.xml.pos', 'PTec_11.xml.pos', 
-        'PTec_17.xml.pos', 'PTec_04.xml.pos', 'PTec_03.xml.pos', 
-        'PTec_09.xml.pos', 'PTec_30.xml.pos', 'PTec_23.xml.pos', 
-        'PTec_20.xml.pos', 'PTec_25.xml.pos', 'PTec_28.xml.pos', 
-        'PTec_18.xml.pos', 'PTec_05.xml.pos', 'adm_30.png.xml.pos', 
-        'adm_26.xml.pos', 'adm_18.xml.pos', 'adm_04.xml.pos', 
-        'adm_09.xml.pos', 'adm_15.xml.pos', 'adm_17.xml.pos', 
-        'adm_28.png.xml.pos', 'adm_13.xml.pos', 'adm_07.xml.pos', 
-        'adm_20.xml.pos', 'adm_21.xml.pos', 'adm_02.xml.pos', 
-        'adm_23.xml.pos', 'adm_06.xml.pos', 'adm_01.xml.pos', 
-        'adm_12.xml.pos', 'adm_25.xml.pos', 'adm_24.xml.pos', 
-        'adm_19.xml.pos', 'adm_16.xml.pos', 'adm_08.xml.pos', 
-        'adm_03.xml.pos', 'adm_14.xml.pos', 'adm_22.xml.pos', 
-        'adm_27.xml.pos', 'adm_05.xml.pos', 'adm_29.png.xml.pos', 
-        'adm_11.xml.pos', 'adm_10.xml.pos', 'ed_16.xml.pos', 
-        'ed_14.xml.pos', 'ed_06.xml.pos', 'ed_25.xml.pos', 
-        'ed_11.xml.pos', 'ed_02.xml.pos', 'ed_20.xml.pos', 
-        'ed_17.xml.pos', 'ed_09.xml.pos', 'ed_26.xml.pos', 
-        'ed_15.xml.pos', 'ed_18.xml.pos', 'ed_22.xml.pos', 
-        'ed_01.xml.pos', 'ed_23.xml.pos', 'ed_10.xml.pos', 
-        'ed_19.xml.pos', 'ed_28.xml.pos', 'ed_27.xml.pos', 
-        'ed_04.xml.pos', 'ed_12.xml.pos', 'ed_13.xml.pos', 
-        'ed_05.xml.pos', 'ed_24.xml.pos', 'ed_21.xml.pos', 
-        'ed_07.xml.pos', 'ed_08.xml.pos', 'ed_03.xml.pos'] 
+        W1A-001.TXT  W1A-017.TXT  W1B-013.TXT  W1B-029.TXT  W2A-015.TXT  W2A-031.TXT  W2B-007.TXT  W2B-023.TXT  W2B-039.TXT  W2C-015.TXT  W2D-011.TXT  W2E-007.TXT  W2F-013.TXT
+        W1A-002.TXT  W1A-018.TXT  W1B-014.TXT  W1B-030.TXT  W2A-016.TXT  W2A-032.TXT  W2B-008.TXT  W2B-024.TXT  W2B-040.TXT  W2C-016.TXT  W2D-012.TXT  W2E-008.TXT  W2F-014.TXT
+        W1A-003.TXT  W1A-019.TXT  W1B-015.TXT  W2A-001.TXT  W2A-017.TXT  W2A-033.TXT  W2B-009.TXT  W2B-025.TXT  W2C-001.TXT  W2C-017.TXT  W2D-013.TXT  W2E-009.TXT  W2F-015.TXT
+        W1A-004.TXT  W1A-020.TXT  W1B-016.TXT  W2A-002.TXT  W2A-018.TXT  W2A-034.TXT  W2B-010.TXT  W2B-026.TXT  W2C-002.TXT  W2C-018.TXT  W2D-014.TXT  W2E-010.TXT  W2F-016.TXT
+        W1A-005.TXT  W1B-001.TXT  W1B-017.TXT  W2A-003.TXT  W2A-019.TXT  W2A-035.TXT  W2B-011.TXT  W2B-027.TXT  W2C-003.TXT  W2C-019.TXT  W2D-015.TXT  W2F-001.TXT  W2F-017.TXT
+        W1A-006.TXT  W1B-002.TXT  W1B-018.TXT  W2A-004.TXT  W2A-020.TXT  W2A-036.TXT  W2B-012.TXT  W2B-028.TXT  W2C-004.TXT  W2C-020.TXT  W2D-016.TXT  W2F-002.TXT  W2F-018.TXT
+        W1A-007.TXT  W1B-003.TXT  W1B-019.TXT  W2A-005.TXT  W2A-021.TXT  W2A-037.TXT  W2B-013.TXT  W2B-029.TXT  W2C-005.TXT  W2D-001.TXT  W2D-017.TXT  W2F-003.TXT  W2F-019.TXT
+        W1A-008.TXT  W1B-004.TXT  W1B-020.TXT  W2A-006.TXT  W2A-022.TXT  W2A-038.TXT  W2B-014.TXT  W2B-030.TXT  W2C-006.TXT  W2D-002.TXT  W2D-018.TXT  W2F-004.TXT  W2F-020.TXT
+        W1A-009.TXT  W1B-005.TXT  W1B-021.TXT  W2A-007.TXT  W2A-023.TXT  W2A-039.TXT  W2B-015.TXT  W2B-031.TXT  W2C-007.TXT  W2D-003.TXT  W2D-019.TXT  W2F-005.TXT
+        W1A-010.TXT  W1B-006.TXT  W1B-022.TXT  W2A-008.TXT  W2A-024.TXT  W2A-040.TXT  W2B-016.TXT  W2B-032.TXT  W2C-008.TXT  W2D-004.TXT  W2D-020.TXT  W2F-006.TXT
+        W1A-011.TXT  W1B-007.TXT  W1B-023.TXT  W2A-009.TXT  W2A-025.TXT  W2B-001.TXT  W2B-017.TXT  W2B-033.TXT  W2C-009.TXT  W2D-005.TXT  W2E-001.TXT  W2F-007.TXT
+        W1A-012.TXT  W1B-008.TXT  W1B-024.TXT  W2A-010.TXT  W2A-026.TXT  W2B-002.TXT  W2B-018.TXT  W2B-034.TXT  W2C-010.TXT  W2D-006.TXT  W2E-002.TXT  W2F-008.TXT
+        W1A-013.TXT  W1B-009.TXT  W1B-025.TXT  W2A-011.TXT  W2A-027.TXT  W2B-003.TXT  W2B-019.TXT  W2B-035.TXT  W2C-011.TXT  W2D-007.TXT  W2E-003.TXT  W2F-009.TXT
+        W1A-014.TXT  W1B-010.TXT  W1B-026.TXT  W2A-012.TXT  W2A-028.TXT  W2B-004.TXT  W2B-020.TXT  W2B-036.TXT  W2C-012.TXT  W2D-008.TXT  W2E-004.TXT  W2F-010.TXT
+        W1A-015.TXT  W1B-011.TXT  W1B-027.TXT  W2A-013.TXT  W2A-029.TXT  W2B-005.TXT  W2B-021.TXT  W2B-037.TXT  W2C-013.TXT  W2D-009.TXT  W2E-005.TXT  W2F-011.TXT
+        W1A-016.TXT  W1B-012.TXT  W1B-028.TXT  W2A-014.TXT  W2A-030.TXT  W2B-006.TXT  W2B-022.TXT  W2B-038.TXT  W2C-014.TXT  W2D-010.TXT  W2E-006.TXT  W2F-012.TXT
+
+
+
+        ] 
 
     def __init__(self, gui=False, *args):
         """
