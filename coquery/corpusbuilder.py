@@ -1488,7 +1488,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             WHERE {token_range} {join_str}"""
 
         if self._widget:
-            self._widget.progressSet.emit(len(self._new_tables), "Creating ngram lookup table... (chunk %v of %m)")
+            self._widget.progressSet.emit(1 + ((max_id-1) // step), "Creating ngram lookup table... (chunk %v of %m)")
             self._widget.progressUpdate.emit(1)
 
         _chunk = 1
@@ -1826,7 +1826,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         # write module code:
         with codecs.open(path, "w", encoding="utf-8") as output_file:
             output_file.write(self.module_content)
-            self.logger.info("Library %s written." % path)
+            self.logger.info("Corpus module %s written." % path)
             
     def setup_db(self):
         """ 
@@ -2118,9 +2118,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self.arguments.use_nltk:
             is_tagged_label = "POS-tagged text corpus"
             try:
-                tagging_state = "Part-of-speech tags were assigned using <code>{}</code>, the currently recommended tagger from the Natural Language Toolkit (NLTK). NLTK used data from WordNet for lemmatization.".format(nltk.tag._POS_TAGGER.split("/")[1])
+                tagging_state = "Part-of-speech tags were assigned using <code>{}</code>, the recommended tagger from the Natural Language Toolkit (NLTK) version {}. NLTK used data from WordNet for lemmatization.".format(
+                    nltk.tag._POS_TAGGER.split("/")[1],
+                    nltk.__version__)
             except:
-                tagging_state = "Part-of-speech tags were assigned using the default tagger from the Natural Language Toolkit (NLTK). NLTK used data from WordNet for lemmatization."
+                tagging_state = "Part-of-speech tags were assigned using the default tagger from the Natural Language Toolkit (NLTK) version {}. NLTK used data from WordNet for lemmatization.".format(
+                    nltk._version__)
         else:
             is_tagged_label = "text corpus"
             tagging_state = "Part-of-speech tags are not available for this corpus."
