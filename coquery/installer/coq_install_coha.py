@@ -243,7 +243,6 @@ class BuilderClass(BaseCorpusBuilder):
                         self.DB.load_infile(temp_file.name, self.corpus_table, arguments)
                         os.remove(temp_file.name)
 
-            if base_name not in self.special_files:
                 self.store_filename(base_name)
 
             if self._widget:
