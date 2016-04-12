@@ -628,6 +628,7 @@ class CoqueryApp(QtGui.QMainWindow):
         return tree
     
     def toggle_frequency_columns(self):
+        return
         for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
             if root.objectName().startswith("statistics"):
                 for child in [root.child(i) for i in range(root.childCount())]:
@@ -917,7 +918,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 "coq_conditional_probability_left", 
                 "coq_conditional_probability_right",  
                 "statistics_overall_proportion", 
-                "statistics_query_proportion", 
+                "statistics_query_proportion",
+                "statistics_normalized",
                 "coq_statistics_uniquenessratio"):
                 deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
             elif column in ("statistics_column_total"):
