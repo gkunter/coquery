@@ -391,7 +391,7 @@ class CorpusManager(QtGui.QDialog):
                     try:
                         # load the module:
                         module = imp.load_source(basename, module_path)
-                    except ImportError:
+                    except (ImportError, SyntaxError) as e:
                         msg = msg_corpus_broken.format(
                             name=basename,
                             type=sys.exc_info()[0],
