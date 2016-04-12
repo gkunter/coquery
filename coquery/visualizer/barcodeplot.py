@@ -91,4 +91,4 @@ class Visualizer(vis.BaseVisualizer):
 
         self.map_data(plot_facet)
         self.g.set_axis_labels(utf8(self.options["label_x_axis"]), utf8(self.options["label_y_axis"]))
-        self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
+        self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size(filters=[])))

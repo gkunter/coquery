@@ -776,6 +776,7 @@ class FrequencyQuery(TokenQuery):
         
         # Drop frequency column if it is already in the data frame (this is
         # needed for re-aggregation):
+        session = kwargs.get("session")
         
         if "statistics_frequency" in list(df.columns.values):
             df.drop("statistics_frequency", axis=1, inplace=True)
@@ -825,7 +826,7 @@ class FrequencyQuery(TokenQuery):
             result = cls.do_the_grouping(df, group_columns, aggr_dict)
 
         if "statistics_per_million_words" in options.cfg.selected_features:
-            corpus_size = corpus.get_corpus_size()
+            corpus_size = corpus.get_corpus_size(filters=session.filter_list)
             result["statistics_per_million_words"] = result["statistics_frequency"].apply(
                 lambda x: x / (corpus_size / 1000000))
 
@@ -1020,7 +1021,7 @@ class CollocationQuery(TokenQuery):
                 if rc_feature in [x for x, _ in lexicon_features]:
                     features.append("coq_{}".format(rc_feature))
                 
-            corpus_size = corpus.get_corpus_size()
+            corpus_size = corpus.get_corpus_size(filters=session.filter_list)
             query_freq = 0
             context_info = {}
 

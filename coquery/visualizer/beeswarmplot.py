@@ -74,7 +74,7 @@ class Visualizer(vis.BaseVisualizer):
         
         self.g.map_dataframe(plot_facet)
 
-        self.g.set(ylim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size()))
+        self.g.set(ylim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size(filters=[])))
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
         if not hasattr(sns, "swarmplot"):
             self.g.set(xticklabels=self._levels[-1])
