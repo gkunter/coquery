@@ -583,7 +583,7 @@ class Ui_MainWindow(object):
         self.radio_aggregate_uniques.setText(_translate("MainWindow", "Types", None))
         self.radio_aggregate_frequencies.setToolTip(_translate("MainWindow", "<html><head/><body><p><span style=\" font-weight:600;\">Show the frequency of each token.</span></p><p>\n"
 "The number of occurrences of each token matching the query string is counted. The \'Query results\' table shows one row for each token, with the number of occurrences in the column \'Frequency\' . </p></body></html>", None))
-        self.radio_aggregate_frequencies.setText(_translate("MainWindow", "Frequency", None))
+        self.radio_aggregate_frequencies.setText(_translate("MainWindow", "Quantify", None))
         self.radio_aggregate_contingency.setToolTip(_translate("MainWindow", "<html><head/><body><p><span style=\" font-weight:600;\">Show a contingency table of the last query.</span></p><p>The number of occurrences of the tokens matching the query string are counted and arranged in a contingency table. </p></body></html>", None))
         self.radio_aggregate_contingency.setText(_translate("MainWindow", "Contingency", None))
         self.radio_aggregate_collocations.setToolTip(_translate("MainWindow", "<html><head/><body><p><span style=\" font-weight:600;\">Show collocations.</span></p><p>For the tokens matching the query string, the left and right context as defined by the user is also queried for collocate words. The \'Query results\' table shows one row for each collocate word, together with several collocation statistics. </p></body></html>", None))

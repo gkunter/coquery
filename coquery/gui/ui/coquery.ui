@@ -619,7 +619,7 @@
 The number of occurrences of each token matching the query string is counted. The 'Query results' table shows one row for each token, with the number of occurrences in the column 'Frequency' . &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Frequency</string>
+               <string>Quantify</string>
               </property>
              </widget>
             </item>
