@@ -49,6 +49,7 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.label_func2.setText(str(self.ui.label_func2.text()).format("{}.{}".format(table, feature)))
         self.ui.label_func3.setText(str(self.ui.label_func3.text()).format("{}.{}".format(table, feature)))
         self.ui.label_func4.setText(str(self.ui.label_func4.text()).format("{}.{}".format(table, feature)))
+        self.ui.label_copy.setText(str(self.ui.label_copy.text()).format("{}.{}".format(table, feature)))
         
         try:
             self.resize(options.settings.value("functionapply_size"))
@@ -85,6 +86,9 @@ class FunctionDialog(QtGui.QDialog):
             elif dialog.ui.radio_regexp.isChecked():
                 label = "REGEXP('{}', {})".format(escaped, feature)
                 FUN = lambda x: func_regexp(x, value)
+            elif dialog.ui.radio_copy.isChecked():
+                label = "COPY({})".format(feature)
+                FUN = lambda x: x
             return label, FUN
         else:
             return None

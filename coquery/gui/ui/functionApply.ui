@@ -75,6 +75,54 @@
          <property name="horizontalSpacing">
           <number>16</number>
          </property>
+         <item row="2" column="0">
+          <widget class="QRadioButton" name="radio_count">
+           <property name="text">
+            <string>&amp;COUNT</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QLabel" name="label_func4">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Match '{}' with the parameter as a &lt;a href=&quot;https://docs.python.org/2/howto/regex.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;regular expression&lt;/span&gt;&lt;/a&gt;, and show the matching string.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="openExternalLinks">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QLabel" name="label_func3">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Show 'yes' if the parameter matches '{}' as a &lt;a href=&quot;https://docs.python.org/2/howto/regex.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;regular expression&lt;/span&gt;&lt;/a&gt;, otherwise 'no'</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="openExternalLinks">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
          <item row="3" column="1">
           <widget class="QLabel" name="label_func2">
            <property name="text">
@@ -101,6 +149,20 @@
            </property>
           </widget>
          </item>
+         <item row="6" column="0">
+          <widget class="QRadioButton" name="radio_regexp">
+           <property name="text">
+            <string>&amp;REGEXP</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QRadioButton" name="radio_match">
+           <property name="text">
+            <string>&amp;MATCH</string>
+           </property>
+          </widget>
+         </item>
          <item row="3" column="0">
           <widget class="QRadioButton" name="radio_length">
            <property name="text">
@@ -111,64 +173,19 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
-          <widget class="QRadioButton" name="radio_count">
-           <property name="text">
-            <string>&amp;COUNT</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="1">
-          <widget class="QLabel" name="label_func4">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Match '{}' with the parameter as a &lt;a href=&quot;https://docs.python.org/2/howto/regex.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;regular expression&lt;/span&gt;&lt;/a&gt;, and show the matching string.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
-           </property>
-           <property name="openExternalLinks">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0">
-          <widget class="QRadioButton" name="radio_regexp">
-           <property name="text">
-            <string>&amp;REGEXP</string>
-           </property>
-          </widget>
-         </item>
          <item row="4" column="0">
-          <widget class="QRadioButton" name="radio_match">
+          <widget class="QRadioButton" name="radio_copy">
            <property name="text">
-            <string>&amp;MATCH</string>
+            <string>COP&amp;Y</string>
            </property>
           </widget>
          </item>
          <item row="4" column="1">
-          <widget class="QLabel" name="label_func3">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
+          <widget class="QLabel" name="label_copy">
            <property name="text">
-            <string>Show 'yes' if the parameter matches '{}' as a &lt;a href=&quot;https://docs.python.org/2/howto/regex.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;regular expression&lt;/span&gt;&lt;/a&gt;, otherwise 'no'</string>
+            <string>Create a copy of '{}'. Copies are not considered corpus features when calculating the size of subcorpora.</string>
            </property>
            <property name="wordWrap">
-            <bool>true</bool>
-           </property>
-           <property name="openExternalLinks">
             <bool>true</bool>
            </property>
           </widget>
