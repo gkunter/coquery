@@ -284,7 +284,7 @@ class TokenQuery(object):
         return len(self.tokens)
 
     @staticmethod
-    def aggregate_data(df, resource, **kwargs):
+    def aggregate_data(df, corpus, **kwargs):
         """ Aggregate the data frame. """
         return df
     
@@ -695,8 +695,8 @@ class TokenQuery(object):
         return
  
     @classmethod
-    def aggregate_it(cls, df, resource, **kwargs):
-        agg = cls.aggregate_data(df, resource, **kwargs)
+    def aggregate_it(cls, df, corpus, **kwargs):
+        agg = cls.aggregate_data(df, corpus, **kwargs)
         #agg = cls.filter_data(agg, cls.filter_list)
         agg_cols = list(agg.columns.values)
         for col in list(agg_cols):
@@ -715,7 +715,7 @@ class DistinctQuery(TokenQuery):
     """
 
     @classmethod
-    def aggregate_data(cls, df, resource, **kwargs):
+    def aggregate_data(cls, df, corpus, **kwargs):
         vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and x in kwargs["session"].output_order and
                     options.cfg.column_visibility.get(x, True)]
         try:
@@ -756,7 +756,7 @@ class FrequencyQuery(TokenQuery):
         return gp.agg(aggr_dict).reset_index()
     
     @classmethod
-    def aggregate_data(cls, df, resource, **kwargs):
+    def aggregate_data(cls, df, corpus, **kwargs):
         """
         Aggregate the data frame by obtaining the row frequencies for each
         group specified by the visible data columns.
@@ -825,7 +825,7 @@ class FrequencyQuery(TokenQuery):
             result = cls.do_the_grouping(df, group_columns, aggr_dict)
 
         if "statistics_per_million_words" in options.cfg.selected_features:
-            corpus_size = resource.get_corpus_size()
+            corpus_size = corpus.get_corpus_size()
             result["statistics_per_million_words"] = result["statistics_frequency"].apply(
                 lambda x: x / (corpus_size / 1000000))
 
@@ -866,7 +866,7 @@ class ContingencyQuery(TokenQuery):
         session.output_order = list(session._old_output_order)
     
     @classmethod
-    def aggregate_data(cls, df, resource, **kwargs):
+    def aggregate_data(cls, df, corpus, **kwargs):
         """
         Parameters
         ----------
