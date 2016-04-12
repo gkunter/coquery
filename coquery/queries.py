@@ -69,6 +69,13 @@ class QueryFilter(object):
         self._resource = None
         self._parsed = False
         
+    def __str__(self):
+        # FIXME: this should rather be something like a canonical 
+        # representation of the filter, not the filter as it was entered by 
+        # the user. For instance, operators should be capitalized 
+        # automatically.
+        return self._text
+        
     @property
     def resource(self):
         return self._resource
@@ -998,6 +1005,7 @@ class CollocationQuery(TokenQuery):
 
     @classmethod
     def aggregate_data(cls, df, corpus, **kwargs):
+        session = kwargs.get("session")
         if options.cfg.context_mode != CONTEXT_NONE:
             count_left = collections.Counter()
             count_right = collections.Counter()
@@ -1057,7 +1065,8 @@ class CollocationQuery(TokenQuery):
             collocates = collocates.reset_index()
             collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
             collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
-            collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(corpus.get_frequency, engine=engine)
+            collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(
+                corpus.get_frequency, engine=engine, filters=session.filter_list)
             
             collocates["coq_conditional_probability_left"] = collocates.apply(
                 lambda x: cls.conditional_probability(
