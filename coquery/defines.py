@@ -75,6 +75,8 @@ COLUMN_NAMES = {
     "statistics_overall_entropy": "Overall entropy",
     "statistics_query_proportion": "Query proportion",
     "statistics_per_million_words": "Frequency (pmw)",
+    "statistics_subcorpus_size": "Subcorpus size",
+    "statistics_normalized": "Normalized frequency",
     "statistics_query_entropy": "Query entropy",
     "statistics_column_total": "ALL",
 

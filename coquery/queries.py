@@ -153,14 +153,18 @@ class QueryFilter(object):
         if not values:
             return error_value
         
-        # check for range:
-        collapsed_values = "".join(fields[2:])
-        if collapsed_values.count("-") == 1:
-            self.value_list = None
-            self.value_range = tuple(collapsed_values.split("-"))
-        else:
+        if self.operator.upper() in ("IS", "="):
             self.value_range = None
-            self.value_list = sorted([x.strip("(),").strip() for x in values])
+            self.value_list = [str(text).partition(self.operator)[-1].strip()]
+        else:
+            # check for range:
+            collapsed_values = "".join(fields[2:])
+            if collapsed_values.count("-") == 1:
+                self.value_list = None
+                self.value_range = tuple(collapsed_values.split("-"))
+            else:
+                self.value_range = None
+                self.value_list = sorted([x.strip("(),").strip() for x in values])
 
         if (self.value_range or len(self.value_list) > 1) and self.operator.lower() in ("is", "="):
             self.operator = "in"
@@ -285,8 +289,14 @@ class TokenQuery(object):
 
     @staticmethod
     def aggregate_data(df, corpus, **kwargs):
-        """ Aggregate the data frame. """
-        return df
+        """ 
+        Aggregate the data frame. 
+        
+        For a TokenQuery, aggregating means that any statistics column is
+        discarded.        
+        """
+        columns = [x for x in df.columns if not x.startswith("statistics_")]
+        return df[columns]
     
     @staticmethod
     def filter_data(df, filter_list):
@@ -532,7 +542,8 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-        if "statistics_query_entropy" in self.Session.output_order or "statistics_query_proportion" in self.Session.output_order:
+        if ("statistics_query_entropy" in options.cfg.selected_features or 
+            "statistics_query_proportion" in options.cfg.selected_features):
             columns = [x for x in df.columns if not x.startswith("coquery_invisible")]
             if not columns:
                 self.freqs = pd.DataFrame(
@@ -564,8 +575,6 @@ class TokenQuery(object):
                     self.entropy = 0
                 else:
                     self.entropy = -self.freqs.statistics_query_proportion.apply(lambda x: x * math.log(x, 2)).sum()
-
-
         
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
@@ -682,17 +691,25 @@ class TokenQuery(object):
         This is needed, for example, to add the frequency column in
         FrequencyQuery.
         """
-        return
+        for x in options.cfg.selected_features:
+            if x.startswith("statistics_") and x in session.output_order:
+                session.output_order.remove(x)
 
     @staticmethod
     def remove_output_columns(session):
-        """
-        Remove any column that was added by add_output_columns from the
-        current session's output_order list.
+        for x in options.cfg.selected_features:
+            if x.startswith("statistics_") and x not in session.output_order:
+                session.output_order.append(x)
+
+    #@staticmethod
+    #def remove_output_columns(session):
+        #"""
+        #Remove any column that was added by add_output_columns from the
+        #current session's output_order list.
         
-        This is needed when changing the aggregation mode.
-        """
-        return
+        #This is needed when changing the aggregation mode.
+        #"""
+        #return
  
     @classmethod
     def aggregate_it(cls, df, corpus, **kwargs):
@@ -740,15 +757,27 @@ class FrequencyQuery(TokenQuery):
     
     @staticmethod
     def add_output_columns(session):
-        if "statistics_frequency" not in session.output_order:
-            session.output_order.append("statistics_frequency")
+        for x in options.cfg.selected_features:
+            if x.startswith("statistics_"):
+                if not x.startswith("statistics_query"):
+                    session.output_order.append(x)
+        
+        #if "statistics_frequency" not in session.output_order:
+            #session.output_order.append("statistics_frequency")
 
     @staticmethod
     def remove_output_columns(session):
-        try:
-            session.output_order.remove("statistics_frequency")
-        except ValueError:
-            pass
+        for x in options.cfg.selected_features:
+            if x.startswith("statistics_"):
+                if not x.startswith("statistics_query"):
+                    try:
+                        session.output_order.remove(x)
+                    except ValueError:
+                        pass        
+        #try:
+            #session.output_order.remove("statistics_frequency")
+        #except ValueError:
+            #pass
         
     @staticmethod
     def do_the_grouping(df, group_columns, aggr_dict):
@@ -787,7 +816,7 @@ class FrequencyQuery(TokenQuery):
 
         columns = []
         for x in df.columns.values:
-            if x in kwargs["session"].output_order:
+            if x in session.output_order:
                 try:
                     n = int(x.rpartition("_")[-1])
                 except ValueError:
@@ -829,6 +858,22 @@ class FrequencyQuery(TokenQuery):
             corpus_size = corpus.get_corpus_size(filters=session.filter_list)
             result["statistics_per_million_words"] = result["statistics_frequency"].apply(
                 lambda x: x / (corpus_size / 1000000))
+
+        if "statistics_normalized" in options.cfg.selected_features or "statistics_subcorpus_size" in options.cfg.selected_features:
+            corpus_features = [x for x, _ in corpus.resource.get_corpus_features() if x in options.cfg.selected_features and 
+                               options.cfg.column_visibility.get("coq_{}_1".format(x), True)]
+            column_list = []
+            for col in result.columns:
+                match = re.match("coq_(.*)_1", col)
+                if match and match.group(1) in corpus_features:
+                    column_list.append(match.group(1))
+                    
+            result["statistics_subcorpus_size"] = result.apply(corpus.get_subcorpus_size, axis=1, columns=column_list, filters=session.filter_list)
+
+        if "statistics_normalized" in options.cfg.selected_features:
+            result["statistics_normalized"] = result.apply(
+                lambda x: x.statistics_frequency/x.statistics_subcorpus_size,
+                axis=1)
 
         result["statistics_overall_proportion"] = result.statistics_frequency.divide(result.statistics_frequency.sum())
         if len(result.index) == 1:
@@ -878,16 +923,16 @@ class ContingencyQuery(TokenQuery):
         -------
         result : DataFrame
         """
-        
+        session = kwargs["session"]
         if not len(df.index):
-            kwargs["session"].output_order += ["statistics_column_total"]
-            return pd.DataFrame(columns=kwargs["session"].output_order)
+            session.output_order += ["statistics_column_total"]
+            return pd.DataFrame(columns=session.output_order)
         
-        if hasattr(kwargs["session"], "_old_output_order"):
-            kwargs["session"].output_order = list(kwargs["session"]._old_output_order)
+        if hasattr(session, "_old_output_order"):
+            session.output_order = list(session._old_output_order)
 
         if options.cfg.main_window:
-            output_order = kwargs["session"].output_order
+            output_order = session.output_order
             tab = getattr(options.cfg.main_window, "table_model", None)
             if tab:
                 header = options.cfg.main_window.ui.data_preview.horizontalHeader()
@@ -898,10 +943,10 @@ class ContingencyQuery(TokenQuery):
                         logical_header.append(x)
                 if logical_header:
                     output_order = logical_header
-            kwargs["session"].output_order = output_order
+            session.output_order = output_order
 
         columns = []
-        for x in kwargs["session"].output_order:
+        for x in session.output_order:
             if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True):
                 columns.append(x)
 
@@ -913,13 +958,13 @@ class ContingencyQuery(TokenQuery):
         elif len(columns) > 1:
             col_column = columns[-1]
             result = pd.crosstab(row_list, df[col_column], margins=True).reset_index()
-            kwargs["session"].output_order.remove(col_column)
+            session.output_order.remove(col_column)
             new_columns = list(result.columns)
             for i in range(len(row_columns), len(new_columns) - 1):
                 col_label = "{}: {}".format(
-                    kwargs["session"].translate_header(col_column), new_columns[i])
+                    session.translate_header(col_column), new_columns[i])
                 new_columns[i] = col_label
-                kwargs["session"].output_order.append(col_label)
+                session.output_order.append(col_label)
             new_columns[-1] = "statistics_column_total"
             result.columns = new_columns  
             result
@@ -933,7 +978,7 @@ class ContingencyQuery(TokenQuery):
                 #result[x][len(result.index)-1] = "---"
             result[result.columns[0]][len(result.index)-1] = COLUMN_NAMES["statistics_column_total"]
 
-        kwargs["session"].output_order.append("statistics_column_total")
+        session.output_order.append("statistics_column_total")
         return result.fillna("")
 
 class StatisticsQuery(TokenQuery):
