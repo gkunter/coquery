@@ -28,7 +28,7 @@ from .defines import *
 from . import tokens
 from . import options
 from . import sqlhelper
-from . import queries
+from . import filters
 
 def collapse_words(word_list):
     def is_tag(s):
@@ -1451,7 +1451,7 @@ class CorpusClass(object):
                 match = re.match("coq_(.*)_1", column)
                 if match:
                     if match.group(1) in corpus_features:
-                        filt = queries.QueryFilter()
+                        filt = filters.QueryFilter()
                         filt.resource = self.resource
                         filt.text = "{} = {}".format(
                                                 getattr(self.resource, match.group(1)), 
@@ -1459,7 +1459,7 @@ class CorpusClass(object):
                         filter_list.append(filt)
         else:
             for column in columns:
-                filt = queries.QueryFilter()
+                filt = filters.QueryFilter()
                 filt.resource = self.resource
                 filt.text = "{} = {}".format(
                                         getattr(self.resource, column), 

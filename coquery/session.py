@@ -27,6 +27,7 @@ from .errors import *
 from .corpus import *
 from .defines import *
 from . import queries
+from . import filters
 from . import tokens
 
 class Session(object):
@@ -85,10 +86,10 @@ class Session(object):
         new_list = []
         if options.cfg.use_corpus_filters:
             for filt in options.cfg.filter_list:
-                if isinstance(filt, queries.QueryFilter):
+                if isinstance(filt, filters.QueryFilter):
                     new_list.append(filt)
                 else:
-                    new_filt = queries.QueryFilter()
+                    new_filt = filters.QueryFilter()
                     new_filt.resource = self.Resource
                     new_filt.text = filt
                     new_list.append(new_filt)
