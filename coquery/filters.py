@@ -8,6 +8,12 @@ Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along 
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import unicode_literals
+
+import logging
+
+from .defines import *
+
 
 class QueryFilter(object):
     """ Define a class that stores a query filter. 
@@ -205,3 +211,5 @@ class QueryFilter(object):
                 return n >= float(self.value_range[0]) and n <= float(self.value_range[1])
         except ValueError:
             return False
+
+logger = logging.getLogger(NAME)

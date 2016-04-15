@@ -20,6 +20,7 @@ import pandas as pd
 
 from coquery import options
 from coquery import queries
+from coquery import filters
 from coquery.errors import *
 from coquery.defines import *
 
@@ -562,7 +563,7 @@ class CoqTreeLinkItem(CoqTreeItem):
         
     def setText(self, column, text, *args):
         super(CoqTreeLinkItem, self).setText(column, text)
-        self.setToolTip(column, "External table: {}\nLinked by: {}".format(text, self.link.feature_name))
+        #self.setToolTip(column, "External table: {}\nLinked by: {}".format(text, self.link.feature_name))
 
 class CoqTreeFuncItem(CoqTreeItem):
     """
@@ -593,6 +594,15 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         """ Update the checkboxes of parent and child items whenever an
         item has been changed. """
         item.update_checkboxes(column)
+
+    def getItem(self, object_name):
+        """ Set the checkstate of the item that matches the object_name. If
+        the state is Checked, also expand the parent of the item. """
+
+        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
+            for child in [root.child(i) for i in range(root.childCount())]:
+                if child.objectName() == object_name:
+                    return child
 
     def setCheckState(self, object_name, state, column=0):
         """ Set the checkstate of the item that matches the object_name. If
@@ -1099,7 +1109,7 @@ class QueryFilterBox(CoqTagBox):
         """ 
         Add the tag to the tag cloud and the global filter list. 
         """
-        filt = queries.QueryFilter()
+        filt = filters.QueryFilter()
         try:
             filt.resource = self.resource
         except AttributeError:
