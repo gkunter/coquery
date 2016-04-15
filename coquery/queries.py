@@ -565,8 +565,8 @@ class FrequencyQuery(TokenQuery):
                 if not x.startswith("statistics_query"):
                     session.output_order.append(x)
         
-        #if "statistics_frequency" not in session.output_order:
-            #session.output_order.append("statistics_frequency")
+        if "statistics_frequency" not in session.output_order:
+            session.output_order.append("statistics_frequency")
 
     @staticmethod
     def remove_output_columns(session):
@@ -577,10 +577,10 @@ class FrequencyQuery(TokenQuery):
                         session.output_order.remove(x)
                     except ValueError:
                         pass        
-        #try:
-            #session.output_order.remove("statistics_frequency")
-        #except ValueError:
-            #pass
+        try:
+            session.output_order.remove("statistics_frequency")
+        except ValueError:
+            pass
         
     @staticmethod
     def do_the_grouping(df, group_columns, aggr_dict):
