@@ -499,11 +499,13 @@ class CoqueryApp(QtGui.QMainWindow):
         
         # set up hooks so that the statistics columns are only available when 
         # the frequency aggregation is active:        
-        self.ui.radio_aggregate_collocations.toggled.connect(self.toggle_frequency_columns)
-        self.ui.radio_aggregate_frequencies.toggled.connect(self.toggle_frequency_columns)
-        self.ui.radio_aggregate_none.toggled.connect(self.toggle_frequency_columns)
-        self.ui.radio_aggregate_uniques.toggled.connect(self.toggle_frequency_columns)
+        #self.ui.radio_aggregate_collocations.toggled.connect(self.toggle_frequency_columns)
+        #self.ui.radio_aggregate_frequencies.toggled.connect(self.toggle_frequency_columns)
+        #self.ui.radio_aggregate_none.toggled.connect(self.toggle_frequency_columns)
+        #self.ui.radio_aggregate_uniques.toggled.connect(self.toggle_frequency_columns)
+        #self.ui.radio_aggregate_contrasts.toggled.connect(self.toggle_frequency_columns)
 
+        # set up hooks for aggregating the result table
         self.ui.radio_aggregate_collocations.clicked.connect(
             lambda: self.reaggregate(
                 query_type=queries.CollocationQuery,
@@ -523,6 +525,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_aggregate_none.clicked.connect(
             lambda: self.reaggregate(
                 query_type=queries.TokenQuery,
+                recalculate=False))
+        self.ui.radio_aggregate_contrasts.clicked.connect(
+            lambda: self.reaggregate(
+                query_type=queries.ContrastQuery,
                 recalculate=False))
             
         self.corpusListUpdated.connect(self.check_corpus_widgets)
@@ -558,6 +564,15 @@ class CoqueryApp(QtGui.QMainWindow):
         token_width = 1
 
         if index != None:
+            if self.Session.query_type == queries.ContrastQuery:
+                from . import independencetestviewer
+                data = self.ui.data_preview.model().data(index, QtCore.Qt.UserRole)
+                viewer = independencetestviewer.IndependenceTestViewer(data)
+                viewer.show()
+                self.widget_list.append(viewer)
+                return
+            
+            
             model_index = index
             row = model_index.row()
             data = self.table_model.content.iloc[row]
@@ -627,20 +642,20 @@ class CoqueryApp(QtGui.QMainWindow):
 
         return tree
     
-    def toggle_frequency_columns(self):
-        return
-        for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
-            if root.objectName().startswith("statistics"):
-                for child in [root.child(i) for i in range(root.childCount())]:
-                    if self.ui.radio_aggregate_frequencies.isChecked():
-                        child.setDisabled(False)
-                        try:
-                            options.cfg.disabled_columns.remove(child.objectName())
-                        except KeyError:
-                            pass
-                    else:
-                        child.setDisabled(True)
-                        options.cfg.disabled_columns.add(child.objectName())
+    #def toggle_frequency_columns(self):
+        #return
+        #for root in [self.ui.options_tree.topLevelItem(i) for i in range(self.ui.options_tree.topLevelItemCount())]:
+            #if root.objectName().startswith("statistics"):
+                #for child in [root.child(i) for i in range(root.childCount())]:
+                    #if self.ui.radio_aggregate_frequencies.isChecked():
+                        #child.setDisabled(False)
+                        #try:
+                            #options.cfg.disabled_columns.remove(child.objectName())
+                        #except KeyError:
+                            #pass
+                    #else:
+                        #child.setDisabled(True)
+                        #options.cfg.disabled_columns.add(child.objectName())
     
     def finish_reaggregation(self):
         self.stop_progress_indicator()
@@ -2078,6 +2093,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.MODE = QUERY_MODE_CONTINGENCY                
             if self.ui.radio_aggregate_collocations.isChecked():
                 options.cfg.MODE = QUERY_MODE_COLLOCATIONS
+            if self.ui.radio_aggregate_contrasts.isChecked():
+                options.cfg.MODE = QUERY_MODE_CONTRASTS
             try:
                 if self.ui.radio_mode_statistics.isChecked():
                     options.cfg.MODE = QUERY_MODE_STATISTICS
@@ -2228,6 +2245,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.radio_aggregate_collocations.setChecked(True)
         elif options.cfg.MODE == QUERY_MODE_CONTINGENCY:
             self.ui.radio_aggregate_contingency.setChecked(True)
+        elif options.cfg.MODE == QUERY_MODE_CONTRASTS:
+            self.ui.radio_aggregate_contrasts.setChecked(True)
 
         self.ui.edit_file_name.setText(options.cfg.input_path)
         # either fill query string or query file input:
@@ -2271,7 +2290,7 @@ class CoqueryApp(QtGui.QMainWindow):
         except AttributeError:
             pass
         
-        self.toggle_frequency_columns()
+        #self.toggle_frequency_columns()
 
     #def select_table(self):
         #"""

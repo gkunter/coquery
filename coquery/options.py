@@ -1486,6 +1486,9 @@ _use_tgt = has_module("tgt")
 _use_docx = has_module("docx")
 _use_odfpy = has_module("odf")
 _use_bs4 = has_module("bs4")
+_use_scipy = has_module("scipy")
+
+_use_scipy = False
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:

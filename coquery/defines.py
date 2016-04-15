@@ -32,6 +32,7 @@ QUERY_MODE_DISTINCT = "DISTINCT"
 QUERY_MODE_STATISTICS = "STATS"
 QUERY_MODE_COLLOCATIONS = "COLLOCATE"
 QUERY_MODE_CONTINGENCY = "CONTINGENCY"
+QUERY_MODE_CONTRASTS = "CONTRAST"
 
 SORT_NONE = 0
 SORT_INC = 1
@@ -126,6 +127,10 @@ MODULE_INFORMATION = {
             "0.16",
             "Provides data structures to manage query result tables",
             "http://pandas.pydata.org/index.html"),
+    "SciPy": ("SciPy is open-source software for mathematics, science, and engineering",
+              "0.13.0",
+              "Offer tests like the log-likelihood test",
+              "https://www.scipy.org/scipylib/index.html"),
     "NLTK": ("The Natural Language Toolkit", 
              "3.0",
             "Lemmatization and tagging when building your own corpora", 

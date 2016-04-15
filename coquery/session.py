@@ -70,6 +70,8 @@ class Session(object):
             self.query_type = queries.CollocationQuery
         elif options.cfg.MODE == QUERY_MODE_CONTINGENCY:
             self.query_type = queries.ContingencyQuery
+        elif options.cfg.MODE == QUERY_MODE_CONTRASTS:
+            self.query_type = queries.ContrastQuery
         elif options.cfg.MODE == QUERY_MODE_STATISTICS:
             self.query_type = queries.StatisticsQuery
 
@@ -205,6 +207,9 @@ class Session(object):
             elif self.query_type == queries.ContingencyQuery and hasattr(self, "_cached_contingency_table"):
                 self.output_object = self._cached_contingency_table
                 return
+            elif self.query_type == queries.ContrastQuery and hasattr(self, "_cached_contrast_table"):
+                self.output_object = self._cached_contrast_table
+                return
 
         # Recalculate the output object for the current query type, excluding
         # invisible rows:
@@ -231,6 +236,9 @@ class Session(object):
             self._cached_collocation_table = self.output_object
         elif self.query_type == queries.ContingencyQuery:
             self._cached_contingency_table = self.output_object
+        elif self.query_type == queries.ContrastQuery:
+            self._cached_contrast_table = self.output_object            
+        print(self.output_object)
 
     def drop_cached_aggregates(self):
         try:
@@ -309,6 +317,10 @@ class Session(object):
                 return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
             else:
                 return "{}".format(COLUMN_NAMES[header])
+        
+        if header.startswith("statistics_g_test"):
+            label = header.partition("statistics_g_test_")[-1]
+            return "G²('{}', y)".format(label)
         
         # other features:
         if header in COLUMN_NAMES:

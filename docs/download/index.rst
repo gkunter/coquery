@@ -45,6 +45,9 @@ folder on your computer, e.g. the Applications folder.
 
     <p>Mac OS X disk image: <code>coquery-0.9.1-osx-el-capitan.dmg</code> <a href="coquery-0.9.1-osx-el-capitan.dmg" class="btn btn-primary btn-sm">Download</a></p>
 
+If the disk image does not work on your version of Mac OS X, you can follow 
+the installation instructions given below for Linux on your computer.
+    
 Linux
 -----
 
