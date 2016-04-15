@@ -46,6 +46,7 @@ import hashlib
 from collections import defaultdict
 
 from . import tokens
+from .link import Link
 from .unicode import utf8
 from .defines import *
 from .errors import *
@@ -194,6 +195,7 @@ class Options(object):
 
         self.args.filter_list = []
         self.args.stopword_list = []
+        self.args.table_links = defaultdict(list)
         self.args.use_stopwords = False
         self.args.use_corpus_filters = False
         
@@ -777,6 +779,15 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             pass
 
+                    elif section == "links":
+                        for _, val in config_file.items("links"):
+                            try:
+                                connection, _, link_text = val.partition(",")
+                            except ValueError:
+                                pass
+                            else:
+                                link = eval(link_text)
+                                self.args.table_links[connection].append(link)
                     elif section == "gui":
                         try:
                             stopwords = config_file.get("gui", "stopword_list")
@@ -958,7 +969,15 @@ def save_configuration():
             config.add_section("filter")
         for i, filt in enumerate(cfg.filter_list):
             config.set("filter", "filter{}".format(i+1), '"{}"'.format(filt))
-        
+    
+    if cfg.table_links:
+        if not "links" in config.sections():
+            config.add_section("links")
+        for i, link in enumerate(cfg.table_links[cfg.current_server]):
+            config.set("links", 
+                       "link{}".format(i+1), 
+                       '{},{}'.format(cfg.current_server, link))
+    
     if not "context" in config.sections():
         config.add_section("context")
     config.set("context", "mode", cfg.context_mode)

@@ -852,7 +852,10 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     leaf.setCheckState(0, QtCore.Qt.Unchecked)
                 leaf.update_checkboxes(0, expand=True)
-        
+
+        for link in options.cfg.table_links[options.cfg.current_server]:
+            self.add_table_link(link)
+
     def fill_combo_corpus(self):
         """ 
         Add the available corpus names to the corpus selection combo box. 
@@ -2107,7 +2110,8 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.external_links = self.get_external_links()
             options.cfg.selected_features = self.get_selected_features()
             options.cfg.selected_functions = self.get_functions()
-
+            print("options.cfg.selected_features", options.cfg.selected_features)
+            print("options.cfg.external_links", options.cfg.external_links)
             return True
 
     def get_selected_features(self):
@@ -2125,7 +2129,8 @@ class CoqueryApp(QtGui.QMainWindow):
             for child in [node.child(i) for i in range(node.childCount())]:
                 checked += traverse(child)
             if node.checkState(0) == QtCore.Qt.Checked and not node.isDisabled() and not node.objectName().endswith("_table"):
-                checked.append(node.objectName())
+                if node.objectName() != "":
+                    checked.append(node.objectName())
             return checked
 
         tree = self.ui.options_tree
@@ -2231,7 +2236,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.radio_query_string.setChecked(True)
         if options.cfg.input_path_provided:
             self.ui.radio_query_file.setChecked(True)
-            
+        
         for rc_feature in options.cfg.selected_features:
             self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.Checked)
         
@@ -2302,6 +2307,51 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.context_left_span.setDisabled(False)
             self.ui.context_right_span.setDisabled(False)
 
+    def add_table_link(self, link):
+        """
+        Adds the columns from the linked table to the output column tree.
+        """
+        if link.res_from == utf8(self.ui.combo_corpus.currentText()):
+            print(link)
+            item = self.ui.options_tree.getItem(link.rc_from)
+            
+            res_from, _, _, _ = options.cfg.current_resources[link.res_from]
+            ext_res, _, _, _ = options.cfg.current_resources[link.res_to]
+
+            _, _, tab, feat = ext_res.split_resource_feature(link.rc_to)
+            ext_table = "{}_table".format(tab)
+            
+            #link.key_feature = str(item.objectName())
+            #resource, _, _ = options.get_resource(utf8(self.ui.combo_corpus.currentText()))
+            #link._from = (resource.name, link.key_feature)
+            
+            tree = classes.CoqTreeLinkItem()
+            tree.setCheckState(0, QtCore.Qt.Unchecked)
+            tree.setLink(link)
+            tree.setText(0, "{}.{}.{}".format(
+                link.res_to,
+                getattr(ext_res, ext_table),
+                getattr(ext_res, link.rc_to)))
+
+            table = ext_res.get_table_dict()[tab]
+            # fill new tree with the features from the linked table (exclude
+            # the linking feature):
+            for rc_feature in [x for x in table if x != link.rc_to]:
+                print(rc_feature)
+                _, _, _, feature = ext_res.split_resource_feature(rc_feature)
+                # exclude special resource features
+                if feature not in ("id", "table") and not feature.endswith("_id"):
+                    new_item = classes.CoqTreeItem()
+                    new_item.setText(0, getattr(ext_res, rc_feature))
+                    new_item.rc_feature = rc_feature
+                    new_item.setObjectName("{}.{}".format(ext_res.db_name, rc_feature))
+                    new_item.setCheckState(0, QtCore.Qt.Unchecked)
+                    tree.addChild(new_item)
+
+            ## Insert newly created table as a child of the linked item:
+            item.addChild(tree)
+            item.setExpanded(True)
+            
     def add_link(self, item):
         """
         Link the selected output column to a column from an external table.
@@ -2319,44 +2369,21 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         from . import linkselect
         column = 0
-        link = linkselect.LinkSelect.display(
-            feature=str(item.text(0)),
-            corpus=str(self.ui.combo_corpus.currentText()),
-            corpus_omit=str(self.ui.combo_corpus.currentText()), 
+
+        current_corpus = utf8(self.ui.combo_corpus.currentText())
+        resource, _, _ = options.get_resource(current_corpus)
+
+        link = linkselect.LinkSelect.pick(
+            res_from=resource, 
+            rc_from=item.objectName(),
+            corpus_omit=[current_corpus],
             parent=self)
         
         if not link:
             return
         else:
-            link.key_feature = str(item.objectName())
-            resource, _, _ = options.get_resource(utf8(self.ui.combo_corpus.currentText()))
-            link._from = (resource.name, link.key_feature)
-            item.setExpanded(True)
-            
-            tree = classes.CoqTreeLinkItem()
-            tree.setLink(link)
-            tree.setText(column, "{}.{}.{}".format(link.resource, link.table_name, link.feature_name))
-            tree.setCheckState(column, QtCore.Qt.Unchecked)
-            tree.setObjectName("{}.{}_table".format(link.db_name, link.table))
-            
-            resource = options.cfg.current_resources[link.resource][0]
-            table = resource.get_table_dict()[link.table]
-
-            # fill new tree with the features from the linked table (exclude
-            # the linking feature):
-            for rc_feature in [x for x in table if x != link.rc_feature]:
-                _, _, _, feature = resource.split_resource_feature(rc_feature)
-                # exclude special resource features
-                if feature not in ("id", "table"):
-                    new_item = classes.CoqTreeItem()
-                    new_item.setText(0, getattr(resource, rc_feature))
-                    new_item.rc_feature = rc_feature
-                    new_item.setObjectName("{}.{}".format(link.db_name, rc_feature))
-                    new_item.setCheckState(column, QtCore.Qt.Unchecked)
-                    tree.addChild(new_item)
-
-            # Insert newly created table as a child of the linked item:
-            item.addChild(tree)
+            options.cfg.table_links[options.cfg.current_server].append(link)
+            self.add_table_link(link)
             
     def add_function(self, item):
         """

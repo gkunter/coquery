@@ -28,9 +28,11 @@ from .defines import *
 from . import tokens
 from . import options
 from . import sqlhelper
-from . import filters
+from .filters import QueryFilter
 
 def collapse_words(word_list):
+    """ Concatenate the words in the word list, taking clitics, punctuation
+    and some other stop words into account."""
     def is_tag(s):
         # there are some tags that should still be preceded by spaces. In 
         # paricular those that are normally used for typesetting, including
@@ -43,8 +45,6 @@ def collapse_words(word_list):
             return False
         return s.startswith("<") and s.endswith(">") and len(s) > 2
 
-    """ Concatenate the words in the word list, taking clitics, punctuation
-    and some other stop words into account."""
     contraction = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
     token_list = []
     punct = '!\'),-./:;?^_`}’”]'
@@ -274,6 +274,7 @@ class LexiconClass(object):
         track of tables that are already included in the join) and 
         table_list (which contains the join strings).
         """
+        # FIXME: treat features from linked tables like native features
         _, _, last_table, _ = self.resource.split_resource_feature(start_feature)
         _, _, end_table, _ = self.resource.split_resource_feature(end_feature)
 
@@ -451,7 +452,6 @@ class BaseResource(object):
     coquery_query_token = "Query token"
 
     statistics_table = "Quantifiers"
-    statistics_frequency = COLUMN_NAMES["statistics_frequency"]
     statistics_normalized = COLUMN_NAMES["statistics_normalized"]
     statistics_subcorpus_size = COLUMN_NAMES["statistics_subcorpus_size"]
     statistics_per_million_words = COLUMN_NAMES["statistics_per_million_words"]
@@ -1164,13 +1164,14 @@ class SQLResource(BaseResource):
 
         # linked columns
         for link, rc_feature in options.cfg.external_links:
-            if "{}.{}".format(link.db_name, rc_feature) not in options.cfg.selected_features:
-                logger.warn("{}.{}".format(link.db_name, rc_feature))
+            res, _, _ = options.get_resource(link.res_to)
+            if "{}.{}".format(res.db_name, rc_feature) not in options.cfg.selected_features:
+                logger.warn("{}.{}".format(res.db_name, rc_feature))
                 continue
             if rc_feature.startswith("func"):
                 continue
-            linked_feature = "{}${}".format(link.db_name, rc_feature)
-            if cls.is_lexical(link.key_feature):
+            linked_feature = "{}${}".format(res.db_name, rc_feature)
+            if cls.is_lexical(link.rc_from):
                 select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
             else:
                 select_list.append("coq_{}_1".format(linked_feature))
@@ -1451,7 +1452,7 @@ class CorpusClass(object):
                 match = re.match("coq_(.*)_1", column)
                 if match:
                     if match.group(1) in corpus_features:
-                        filt = filters.QueryFilter()
+                        filt = QueryFilter()
                         filt.resource = self.resource
                         filt.text = "{} = {}".format(
                                                 getattr(self.resource, match.group(1)), 
@@ -1459,7 +1460,7 @@ class CorpusClass(object):
                         filter_list.append(filt)
         else:
             for column in columns:
-                filt = filters.QueryFilter()
+                filt = QueryFilter()
                 filt.resource = self.resource
                 filt.text = "{} = {}".format(
                                         getattr(self.resource, column), 
@@ -1751,8 +1752,8 @@ class CorpusClass(object):
         for link, _ in options.cfg.external_links:
             if options.cfg.experimental:
                 print(link)
-            required_features.add(link._from[1])
-            required_features.add("{}.{}".format(*link._to))
+            required_features.add(link.rc_from)
+            required_features.add("{}.{}".format(link.res_to, link.rc_to))
         if options.cfg.experimental:
             print(4, required_features)
 
@@ -1786,6 +1787,8 @@ class CorpusClass(object):
                         getattr(self.resource, QUERY_ITEM_POS))
                 except AttributeError:
                     pass
+
+        print("required_features", required_features)
 
         for feat in list(required_features):
             _, _, tab, _ = self.resource.split_resource_feature(feat)
@@ -1866,9 +1869,10 @@ class CorpusClass(object):
                     '{} {} "{}"'.format(
                         getattr(self.resource, rc_feature), op, value_list[0]))
 
+        
         for link, _ in options.cfg.external_links:
-            if link.key_feature not in requested_features:
-                requested_features.append(link.key_feature)
+            if link.rc_from not in requested_features:
+                requested_features.append(link.rc_from)
 
         # make sure that the word_id is always included in the query:
         # FIXME: Why is this needed?
@@ -1935,16 +1939,10 @@ class CorpusClass(object):
         # get a list of all tables that are required to satisfy the 
         # feature request:
         
-        # FIXME: change to split_resource_feature
         required_tables = {}
         for rc_feature in requested_features:
-            rc_table = "{}_table".format(rc_feature.split("_")[0])
-
-            if rc_feature.startswith("func."):
-                rc_table = rc_table.split("func.")[-1]
-                function = True
-            else:
-                function = False
+            function, _, tab, _ = self.resource.split_resource_feature(rc_feature)
+            rc_table = "{}_table".format(tab)
 
             if rc_table in ["{}_table".format(x) for x in self.resource.special_table_list]:
                 continue
@@ -1952,11 +1950,12 @@ class CorpusClass(object):
             if rc_table not in required_tables:
                 tree = self.resource.get_table_structure(rc_table,  options.cfg.selected_features)
                 parent = tree["parent"]
-                table_id = "{}_id".format(rc_feature.split("func.")[-1].split("_")[0])
+                table_id = "{}_id".format(tab)
                 required_tables[rc_table] = tree
                 requested_features.append(table_id)
                 if parent:
-                    parent_id = "{}_{}".format(parent.split("_")[0], table_id)
+                    _, _, parent_tab, _ = self.resource.split_resource_feature(parent)
+                    parent_id = "{}_{}_id".format(parent_tab, tab)
                     requested_features.append(parent_id)
 
         join_strings = {}
@@ -1974,14 +1973,15 @@ class CorpusClass(object):
                 # get the link object for the requested external table:
                 for link, rc_feature in options.cfg.external_links:
                     # find the link for the current external table:
-                    res = options.get_resource(link._to[0])[0]
+                    #res = options.get_resource(link._to[0])[0]
+                    res = options.get_resource(link.res_to)[0]
                     _, _, tab, feat = res.split_resource_feature(rc_feature)
                     rc_feat = "{}_{}".format(tab, feat)
                     if res.db_name == ext_db_name:
                         # the feature string is the aliased column name that
                         # will be used as a field name in the main SELECT:
                         feature_name = "coq_{}${}_{}".format(
-                            link.db_name,
+                            res.db_name,
                             rc_feat,
                             number+1)
                         # the variable string provides the alias of the 
@@ -1993,28 +1993,16 @@ class CorpusClass(object):
                         # from within the subquery that is used in the ON
                         # clause of the table join:
                         linking_variable = "{} AS coq_{}${}_{}".format(
-                            getattr(res, link._to[1]),
-                            link.db_name, link._to[1], number+1)
+                            getattr(res, link.rc_to),
+                            res.db_name, link.rc_to, number+1)
                         
-                        ##variable_string = "{} AS {}".format(
-                            ##getattr(resource, rc_feature),
-                            ##feature_name)
-                        #variable_string = "{} AS {}".format(
-                            #getattr(resource, link._to[1]),
-                            #feature_name)
-                        #linking_variable = "{} AS coq_{}${}_{}".format(
-                            #link.feature_name, 
-                            #link.db_name, link.rc_feature, number +1)
-
-
-
                         column_list.append(variable_string)
                         column_list.append(linking_variable)
                         select_list.add(feature_name)
                 
                 # construct subquery that joins the external table:
                 columns = ", ".join(set(column_list))
-                alias = "coq_{}_{}".format(link.db_name, table).upper()
+                alias = "coq_{}_{}".format(res.db_name, table).upper()
                 
                 sql_template = """
                 INNER JOIN 
@@ -2474,17 +2462,18 @@ class CorpusClass(object):
 
         # add any external feature that is not a function:
         for link, rc_feature in options.cfg.external_links:
+            res, _, _ = options.get_resource(link.res_to)
             _, _, tab, feat = self.resource.split_resource_feature(rc_feature)
             rc_feat = "{}_{}".format(tab, feat)
-            if self.resource.is_lexical(link._from[1]):
+            if self.resource.is_lexical(link.rc_from):
                 for i in range(Query.Session.get_max_token_count()):
                     if options.cfg.align_quantified:
                         if i in positions_lexical_items:
-                            final_select.append("coq_{}${}_{}".format(link.db_name, rc_feat, i+1))
+                            final_select.append("coq_{}${}_{}".format(res.db_name, rc_feat, i+1))
                     else:
-                        final_select.append("coq_{}${}_{}".format(link.db_name, rc_feat, i+1))
+                        final_select.append("coq_{}${}_{}".format(res.db_name, rc_feat, i+1))
             else:
-                final_select.append("coq_{}${}_1".format(link.db_name, rc_feat))
+                final_select.append("coq_{}${}_1".format(res.db_name, rc_feat))
         if options.cfg.experimental:
             print(110, final_select)
 
