@@ -43,15 +43,17 @@ class AboutDialog(QtGui.QDialog):
 
         self.ui.modules.setText("Check optional modules")
         l = []
-        for name, flag in (("Seaborn", options._use_seaborn),
-                  ("PyMySQL", options._use_mysql),
-                  ("NLTK", options._use_nltk),
-                  ("tgt", options._use_tgt),
-                  ("chardet", options._use_chardet),
-                  ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options._use_pdfminer),
-                  ("python-docx", options._use_docx),
-                  ("odfpy", options._use_odfpy),
-                  ("BeautifulSoup", options._use_bs4)):
+        for name, flag in (
+                ("SciPy", options._use_scipy), 
+                ("Seaborn", options._use_seaborn),
+                ("PyMySQL", options._use_mysql),
+                ("NLTK", options._use_nltk),
+                ("tgt", options._use_tgt),
+                ("chardet", options._use_chardet),
+                ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options._use_pdfminer),
+                ("python-docx", options._use_docx),
+                ("odfpy", options._use_odfpy),
+                ("BeautifulSoup", options._use_bs4)):
             _, _, description, url = MODULE_INFORMATION[name]
             
             l.append("<tr><td><a href='{url}'>{name}</a></td><td>{description}</td><td>{available}</td></tr>".format(
