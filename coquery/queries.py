@@ -42,6 +42,9 @@ from . import corpus
 from . import tokens
 from . import options
 
+if options._use_scipy:
+    from scipy import stats
+
 class QueryFilter(object):
     """ Define a class that stores a query filter. 
     
@@ -286,6 +289,22 @@ class TokenQuery(object):
 
     def __len__(self):
         return len(self.tokens)
+
+    @staticmethod
+    def get_visible_columns(df, session, ignore_hidden=False):
+        """
+        Return a list with the column names that are currently visible.
+        """
+        if ignore_hidden:
+            return [x for x in list(df.columns.values) if (
+                not x.startswith("coquery_invisible") and 
+                x in session.output_order)]
+        else:
+            return [x for x in list(df.columns.values) if (
+                not x.startswith("coquery_invisible") and 
+                x in session.output_order and
+                options.cfg.column_visibility.get(x, True))]
+
 
     @staticmethod
     def aggregate_data(df, corpus, **kwargs):
@@ -733,8 +752,7 @@ class DistinctQuery(TokenQuery):
 
     @classmethod
     def aggregate_data(cls, df, corpus, **kwargs):
-        vis_cols = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible") and x in kwargs["session"].output_order and
-                    options.cfg.column_visibility.get(x, True)]
+        vis_cols = cls.get_visible_columns(df, kwargs["session"])
         try:
             df = df.drop_duplicates(subset=vis_cols)
         except ValueError:
@@ -813,6 +831,8 @@ class FrequencyQuery(TokenQuery):
             df.drop("statistics_overall_entropy", axis=1, inplace=True)
         if "statistics_overall_proportion" in list(df.columns.values):
             df.drop("statistics_overall_proportion", axis=1, inplace=True)
+        if "statistics_subcorpus_size" in list(df.columns.values):
+            df.drop("statistics_subcorpus_size", axis=1, inplace=True)
 
         columns = []
         for x in df.columns.values:
@@ -859,7 +879,9 @@ class FrequencyQuery(TokenQuery):
             result["statistics_per_million_words"] = result["statistics_frequency"].apply(
                 lambda x: x / (corpus_size / 1000000))
 
-        if "statistics_normalized" in options.cfg.selected_features or "statistics_subcorpus_size" in options.cfg.selected_features:
+        if ("statistics_normalized" in options.cfg.selected_features or
+            "statistics_subcorpus_size" in options.cfg.selected_features or
+            options.cfg.MODE == QUERY_MODE_CONTRASTS):
             corpus_features = [x for x, _ in corpus.resource.get_corpus_features() if x in options.cfg.selected_features and 
                                options.cfg.column_visibility.get("coq_{}_1".format(x), True)]
             column_list = []
@@ -889,6 +911,171 @@ class FrequencyQuery(TokenQuery):
             pass
 
         return result
+
+class ContrastQuery(FrequencyQuery):
+    """
+    ContrastQuery is a subclass of FrequencyQuery.
+    
+    In this subclass, :func:`aggregate_data` creates a square matrix with all 
+    occurring combinations of output columns in the result data frame as rows
+    columns. Each cell contains the log likelihood that the query frequency 
+    in the subcorpus that is defined by the row is statistically different 
+    from the token frequency in the subcorpus that is defined by the column.
+    
+    Calculations are based on http://ucrel.lancs.ac.uk/llwizard.html.
+    
+    Clicking on a contrast cell opens a dialog that gives further statistical 
+    details.
+    """
+
+    _ll_cache = {}
+
+    @classmethod
+    def collapse_columns(cls, df, session):
+        """
+        Return a list of strings. Each string contains the concatinated 
+        content of the feature cells in each row of the data frame.
+        """
+        # FIXME: columns should be processed in the order that they appear in
+        # the None results table view.
+        
+        vis_cols = cls.get_visible_columns(df, session)
+        return df.apply(lambda x: ":".join([x[col] for col in vis_cols]), axis=1).unique()
+
+    @staticmethod
+    def add_output_columns(session):
+        if not hasattr(session, "_old_output_order"):
+            session._old_output_order = list(session.output_order)
+        if hasattr(session, "_contrast_order"):
+            session.output_order = list(session._contrast_order)
+
+    @staticmethod
+    def remove_output_columns(session):
+        session._contrast_order = list(session.output_order)
+        session.output_order = list(session._old_output_order)
+
+    @staticmethod
+    def g_test(freq_1, freq_2, total_1, total_2):
+        """
+        This method calculates the G test statistic as described here:
+        http://ucrel.lancs.ac.uk/llwizard.html
+        
+        For a formal description of the G² test, see Agresti (2013: 76).
+        """
+        if (freq_1, freq_2, total_1, total_2) not in ContrastQuery._ll_cache:
+            exp1 = total_1 * (freq_1 + freq_2) / (total_1 + total_2)
+            exp2 = total_2 * (freq_1 + freq_2) / (total_1 + total_2)
+            
+            G = 2 * (
+                (freq_1 * math.log(freq_1 / exp1)) + 
+                (freq_2 * math.log(freq_2 / exp2)))
+
+            #obs = [ [freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
+            #exp = 
+            
+            #total_1 * (total_1 + freq_1)/(total_1 + total_2)
+            #total_2 * (total_1 + total_2)/(total_1 + total_2)
+
+            #not_1 = total_1 - freq_1
+            #not_2 = total_2 - freq_2
+
+
+
+#e11 = (freq_1 + freq_2)*total_1/(total_1 + total_2)
+#e21 = (freq_1 + freq_2)*total_2/(total_1 + total_2)
+#e12 = (not_1 + not_2) * total_1/(total_1 + total_2)         
+#e22 = (not_1 + not_2) * total_2/(total_1 + total_2)         
+
+#l11 = freq_1 * math.log(freq_1)
+#l21 = freq_2 * math.log(freq_2)
+#l12 = not_1 * math.log(not_1)
+#l22 = not_2 * math.log(not_2)
+
+#G2 = 2 * (
+    #sum(c(l11, l12, l21, l22, math.log(total_1))) - 
+    #sum(c((not_1 + not_2) * math.log(not_1 + not_2), 
+        #(freq_1 + freq_2) * math.log(freq_1 + freq_2),
+        #total_1 * log(total_1),
+        #total_2 * log(total_2))))
+
+#G2 = 2 * ( sum(l11, l12, l21, l22, log(total_1 + total_2 - freq_1 - freq_2))
+          #- sum((total_1 + total_2
+
+            ContrastQuery._ll_cache[(freq_1, freq_2, total_1, total_2)] = G
+        return ContrastQuery._ll_cache[(freq_1, freq_2, total_1, total_2)]        
+
+    @classmethod
+    def retrieve_loglikelihood(cls, *args, **kwargs):
+        label = kwargs["label"]
+        df = kwargs["df"]
+        row = args[0]
+        
+        freq_1 = row.statistics_frequency
+        total_1 = row.statistics_subcorpus_size
+        
+        freq_2 = df[df._row_id == label].statistics_frequency.values[0]
+        total_2 = df[df._row_id == label].statistics_subcorpus_size.values[0]
+
+        obs = [ [freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
+        if options._use_scipy:
+            g2, p_g2, _, _ = stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
+            return g2
+        else:
+            return cls.g_test(freq_1, freq_2, total_1, total_2)
+
+    @classmethod
+    def get_cell_content(cls, index, df, session):
+        """
+        Return that content for the indexed cell that is needed to handle 
+        a click on it for the current aggregation.
+        """
+        vis_col = cls.get_visible_columns(session.data_table, session, ignore_hidden=True)
+        print(index.column(), len(vis_col), index.row())
+        
+        #label = cls.collapse_columns(df, session)
+        #[index.column()]
+        row = df.iloc[index.row()]
+        label = row._row_id
+        column = df.iloc[index.column() - len(vis_col)]
+
+        freq_1 = row.statistics_frequency
+        total_1 = row.statistics_subcorpus_size
+        
+        freq_2 = column.statistics_frequency
+        total_2 = column.statistics_subcorpus_size
+
+        return {"freq_row": freq_1, "freq_col": freq_2, 
+                "total_row": total_1, "total_col": total_2}
+
+        try:
+            return df.iloc[index.row()]
+        except:
+            return None
+
+    @classmethod
+    def aggregate_data(cls, df, corpus, **kwargs):
+        """
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame to be aggregated
+            
+        Returns
+        -------
+        result : DataFrame
+        """
+        session = kwargs["session"]
+        if not len(df.index):
+            return pd.DataFrame(columns=session.output_order)
+        
+        labels = cls.collapse_columns(df, session)
+        freq = super(ContrastQuery, cls).aggregate_data(df, corpus, **kwargs)
+        vis_col = cls.get_visible_columns(df, session)
+        freq["_row_id"] = labels
+        session.output_order = session._old_output_order + ["statistics_g_test_{}".format(x) for x in labels]
+        for x in labels:
+            freq["statistics_g_test_{}".format(x)] = freq.apply(cls.retrieve_loglikelihood, axis=1, label=x, df=freq)
+        return freq
 
 class ContingencyQuery(TokenQuery):
     """ 
