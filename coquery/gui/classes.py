@@ -1228,6 +1228,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if column == "coq_context_left" or self.sort_columns.get(column, SORT_NONE) in set([SORT_REV_DEC, SORT_REV_INC]):
                 return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
             return int(QtCore.Qt.AlignLeft)|int(QtCore.Qt.AlignVCenter)
+        elif role == QtCore.Qt.UserRole:
+            # The UserRole is used when clicking on a cell in the results
+            # table. It is handled differently depending on the query type 
+            # that produced the table. 
+            session = options.cfg.main_window.Session
+            if session.query_type == queries.ContrastQuery:
+                return queries.ContrastQuery.get_cell_content(
+                    index, 
+                    session.output_object,
+                    session)
         return None
         
     def headerData(self, index, orientation, role):
