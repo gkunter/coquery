@@ -238,7 +238,6 @@ class Session(object):
             self._cached_contingency_table = self.output_object
         elif self.query_type == queries.ContrastQuery:
             self._cached_contrast_table = self.output_object            
-        print(self.output_object)
 
     def drop_cached_aggregates(self):
         try:
