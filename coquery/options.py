@@ -1488,8 +1488,6 @@ _use_odfpy = has_module("odf")
 _use_bs4 = has_module("bs4")
 _use_scipy = has_module("scipy")
 
-_use_scipy = False
-
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:
     if not has_module(mod):
