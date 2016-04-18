@@ -1563,7 +1563,7 @@ class CoqLikelihoodDelegate(CoqResultCellDelegate):
                 value = float(index.data(QtCore.Qt.DisplayRole))
             except ValueError:
                 value = 0
-            if value > 3.84:
+            if value > 3.841:
                 return QtGui.QColor("lightblue")
             else:
                 return self.bg_color
