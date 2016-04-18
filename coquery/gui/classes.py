@@ -1551,6 +1551,22 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
                 return super(CoqProbabilityDelegate, self).get_background(option, index)
         except ValueError:
             return super(CoqProbabilityDelegate, self).get_background(option, index)
+
+class CoqLikelihoodDelegate(CoqResultCellDelegate):
+    fill = True
+
+    def get_background(self, option, index):
+        if option.state & QtGui.QStyle.State_Selected:
+            return self._app.palette().color(QtGui.QPalette().Highlight)
+        else:
+            try:
+                value = float(index.data(QtCore.Qt.DisplayRole))
+            except ValueError:
+                value = 0
+            if value > 3.84:
+                return QtGui.QColor("lightblue")
+            else:
+                return self.bg_color
         
 class CoqFlowLayout(QtGui.QLayout):
     """ Define a QLayout with flowing widgets that reorder automatically. """
