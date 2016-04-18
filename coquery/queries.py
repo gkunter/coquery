@@ -742,13 +742,19 @@ class ContrastQuery(FrequencyQuery):
         # FIXME: columns should be processed in the order that they appear in
         # the None results table view.
         
-        vis_cols = cls.get_visible_columns(df, session)
+        vis_cols = [x for x in cls.get_visible_columns(df, session) if not x.startswith(tuple(session.Resource.special_table_list))]
         return df.apply(lambda x: ":".join([x[col] for col in vis_cols]), axis=1).unique()
 
     @staticmethod
     def add_output_columns(session):
         if not hasattr(session, "_old_output_order"):
             session._old_output_order = list(session.output_order)
+
+        #for x in options.cfg.selected_features:
+            #if x.startswith("statistics_"):
+                #if not x.startswith("statistics_query"):
+                    #session.output_order.append(x)
+
         if hasattr(session, "_contrast_order"):
             session.output_order = list(session._contrast_order)
 
@@ -820,35 +826,40 @@ class ContrastQuery(FrequencyQuery):
         total_2 = df[df._row_id == label].statistics_subcorpus_size.values[0]
 
         obs = [ [freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
-        if options._use_scipy:
-            g2, p_g2, _, _ = stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
-            return g2
-        else:
-            return cls.g_test(freq_1, freq_2, total_1, total_2)
-
+        try:
+            if options._use_scipy:
+                g2, p_g2, _, _ = stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
+                return g2
+            else:
+                return cls.g_test(freq_1, freq_2, total_1, total_2)
+        except ValueError:
+            print(label)
+            print(df)
+            print(obs)
+            return None
+        
     @classmethod
     def get_cell_content(cls, index, df, session):
         """
         Return that content for the indexed cell that is needed to handle 
         a click on it for the current aggregation.
         """
-        vis_col = cls.get_visible_columns(session.data_table, session, ignore_hidden=True)
-        print(index.column(), len(vis_col), index.row())
+        vis_col = cls.get_visible_columns(session.output_object, session, ignore_hidden=True)
         
-        #label = cls.collapse_columns(df, session)
-        #[index.column()]
         row = df.iloc[index.row()]
-        label = row._row_id
         column = df.iloc[index.column() - len(vis_col)]
 
         freq_1 = row.statistics_frequency
         total_1 = row.statistics_subcorpus_size
+        label_1 = row._row_id
         
         freq_2 = column.statistics_frequency
         total_2 = column.statistics_subcorpus_size
+        label_2 = column._row_id
 
         return {"freq_row": freq_1, "freq_col": freq_2, 
-                "total_row": total_1, "total_col": total_2}
+                "total_row": total_1, "total_col": total_2,
+                "label_row": label_1, "label_col": label_2}
 
         try:
             return df.iloc[index.row()]
@@ -875,7 +886,7 @@ class ContrastQuery(FrequencyQuery):
         freq = super(ContrastQuery, cls).aggregate_data(df, corpus, **kwargs)
         vis_col = cls.get_visible_columns(df, session)
         freq["_row_id"] = labels
-        session.output_order = session._old_output_order + ["statistics_g_test_{}".format(x) for x in labels]
+        session.output_order = session.output_order + ["statistics_g_test_{}".format(x) for x in labels]
         for x in labels:
             freq["statistics_g_test_{}".format(x)] = freq.apply(cls.retrieve_loglikelihood, axis=1, label=x, df=freq)
         return freq
