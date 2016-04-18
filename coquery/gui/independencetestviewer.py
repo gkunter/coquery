@@ -33,7 +33,7 @@ class IndependenceTestViewer(QtGui.QDialog):
             {filters}
             <p>
             <table border="0" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;" cellspacing="2" cellpadding="0">
-                <tr style="border-syle:solid; border-width: 1px 0px 1px 0px;">
+                <tr>
                     <td></td>
                     <td><p align="right" style="margin-right: 2em;"><span style=" font-weight:600;">{label_1}</span></p></td>
                     <td><p align="right" style="margin-right: 2em;"><span style=" font-weight:600;">{label_2}</span></p></td>
@@ -43,10 +43,15 @@ class IndependenceTestViewer(QtGui.QDialog):
                     <td><p align="right" style="margin-right: 2em;">{freq_1}</p></td>
                     <td><p align="right" style="margin-right: 2em;">{freq_2}</p></td>
                 </tr>
-                <tr style="border-syle:solid; border-width: 0px 0px 1px 0px;">
+                <tr>
                     <td><p align="right" style="margin-right: 2em;"><span style=" font-weight:600;">Subcorpus size</span></p></td>
                     <td><p align="right" style="margin-right: 2em;">{total_1}</p></td>
                     <td><p align="right" style="margin-right: 2em;">{total_2}</p></td>
+                </tr>
+                <tr>
+                    <td><p align="right" style="margin-right: 2em;"><span style=" font-weight:600;">Normalized frequency</span></p></td>
+                    <td><p align="right" style="margin-right: 2em;">{nfreq_1}&nbsp;%</p></td>
+                    <td><p align="right" style="margin-right: 2em;">{nfreq_2}&nbsp;%</p></td>
                 </tr>
             </table></p>
             <h2>Log-likelihood ratio test of independence</h2>
@@ -56,7 +61,7 @@ class IndependenceTestViewer(QtGui.QDialog):
             {yates}
             <h2>Effect size estimations</h2>
             <p><span style=" font-style:italic;">&phi;</span> = {phi}, indicating a {strength} effect size (see Cohen 1992, <a href='https://dx.doi.org/10.1037%2F0033-2909.112.1.155'>doi:10.1037/0033-2909.112.1.155)</a></p>
-            <p>Odds ratio <span style=" font-style:italic;">OR</span>= {odds_ratio}</p>
+            <p>Odds ratio <span style=" font-style:italic;">OR</span> = {odds_ratio} (95&nbsp;% confidence interval: {odds_ci_lower} to {odds_ci_upper}, <span style=" font-style:italic;">z</span> = {odds_z}, <span style=" font-style:italic;">p</span> {odds_op} {p_odds}). This means that the odds of encountering <code>{label_1}</code> are {odds_prose} times {odds_relation} than the odds of encountering <code>{label_2}</code>.</p>
         </body>
     """.strip()
 
@@ -71,6 +76,7 @@ class IndependenceTestViewer(QtGui.QDialog):
         \\hline
         \\textbf{{Frequency}}        & {freq_1}  & {freq_2} \\\\ 
         \\textbf{{Subcorpus size}}   & {total_1} & {total_2}  \\\\ 
+        \\textbf{{Normalized frequency}}   & {nfreq_1}~\\% & {nfreq_2}~\\%  \\\\ 
         \\hline
         \\end{{tabular}}
     \\end{{table}}
@@ -82,10 +88,17 @@ class IndependenceTestViewer(QtGui.QDialog):
     \\textbf{{Chi-square test of independence}}
     
     $\\chi^2 = {chi2}, p {chi2_op} {p_chi2}$
+
+    {yates}
+    \\textbf{{Effect size estimations}}
+    
+    $\\phi = {phi}$, indicating a {strength} effect size (see Cohen 1992, doi:10.1037/0033-2909.112.1.155)
+    
+    Odds ratio $OR = {odds_ratio}$, (95~\\% confidence interval: {odds_ci_lower} to {odds_ci_upper}, $z = {odds_z}, p {odds_op} {p_odds}$). This means that the odds of encountering \\texttt{{{label_1}}} are {odds_prose} times {odds_relation} than the odds of encountering \\texttt{{{label_2}}}.
     """
 
     def __init__(self, data=dict(), parent=None, icon=None):
-        def estimate_p(chi):
+        def estimate_p(val, chi=True):
             """
             Return an approximation of the p value for the parameter.
             
@@ -98,15 +111,26 @@ class IndependenceTestViewer(QtGui.QDialog):
                 "< 0.05"
                 "≥ 0.05"
             """
-            if chi > 10.83:
-                return "< 0.001"
-            elif chi > 6.63:
-                return "< 0.01"
-            elif chi > 3.84:
-                return "< 0.05"
+            if chi:
+                if val > 10.828:
+                    return "< 0.001"
+                elif val > 6.634:
+                    return "< 0.01"
+                elif val > 3.841:
+                    return "< 0.05"
+                else:
+                    return "≥ 0.05"
             else:
-                return "≥ 0.05"
-
+                val = abs(val)
+                if val > 3.290:
+                    return "< 0.001"
+                elif val > 2.575:
+                    return "< 0.01"
+                elif val > 1.960:
+                    return "< 0.05"
+                else:
+                    return "≥ 0.05"
+ 
         def estimate_strength(phi):
             if phi <= 0.1:
                 return "small"
@@ -142,6 +166,7 @@ class IndependenceTestViewer(QtGui.QDialog):
         else:
             g2 = ContrastQuery.g_test(freq_1, freq_2, total_1, total_2)
             g2_op, p_g2 = estimate_p(g2).split()
+            p_g2 = float(p_g2 )
 
             # calculate chi-square:
             total_freq = freq_1 + freq_2
@@ -157,8 +182,9 @@ class IndependenceTestViewer(QtGui.QDialog):
                 correct = 0.5
             else:
                 correct = 0
-            chisq = (np.vectorize(lambda x: x**2)(abs(obs - expected) - correct)/expected).sum()
-            chi2_op, p_chi2 = estimate_p(chisq).split()
+            chi2 = (np.vectorize(lambda x: x**2)(abs(obs - expected) - correct)/expected).sum()
+            chi2_op, p_chi2 = estimate_p(chi2).split()
+            p_chi2 = float(p_chi2)
         
         if options.cfg.main_window.Session.filter_list:
             filter_html = """
@@ -175,9 +201,39 @@ class IndependenceTestViewer(QtGui.QDialog):
             filter_html = ""
             filter_latex = ""
 
-        phi = math.sqrt(chi2/obs.sum())
-        odds_ratio = (freq_1/freq_2)/((total_1 - freq_1)/(total_2 - freq_2))
-
+        try:
+            phi = math.sqrt(chi2/obs.sum())
+        except:
+            phi = "(undefined)"
+            
+        # calculate odds ratio (with correction for empty cells):
+        if not freq_1 or not freq_2 or freq_1 == total_1 or freq_2 == total_2:
+            odds_ratio = (((freq_1 + 0.5) / (freq_2 + 0.5)) / 
+                          ((total_1 - freq_1 + 0.5)/(total_2 - freq_2 + 0.5)))
+            odds_se = math.sqrt(
+                1/(freq_1 + 0.5) + 
+                1/(freq_2 + 0.5) + 
+                1/(total_1 - freq_1 + 0.5) + 
+                1/(total_2 - freq_2 + 0.5))
+        else:
+            odds_ratio = ((freq_1/freq_2) / 
+                          ((total_1 - freq_1)/(total_2 - freq_2)))
+            odds_se = math.sqrt(
+                1/freq_1 + 
+                1/freq_2 + 
+                1/(total_1 - freq_1) + 
+                1/(total_2 - freq_2))
+        odds_ci_lower = math.exp(math.log(odds_ratio) - 1.96 * odds_se)
+        odds_ci_upper = math.exp(math.log(odds_ratio) + 1.96 * odds_se)
+        odds_z = math.log(odds_ratio) / odds_se
+        
+        if options._use_scipy:
+            p_odds = stats.norm.sf(abs(odds_z)) * 2
+            odds_op = "="
+        else:
+            odds_op, p_odds = estimate_p(odds_z, chi=False).split()
+            p_odds = float(p_odds)
+        
         str_flt = "{{:0.{digits}f}}".format(digits=options.cfg.digits)
         
         self._html = utf8(self.html_template.format(
@@ -186,20 +242,48 @@ class IndependenceTestViewer(QtGui.QDialog):
             label_1=label_1, label_2=label_2,
             freq_1=freq_1, freq_2=freq_2,
             total_1=total_1, total_2=total_2,
-            g2=str_flt.format(g2), p_g2=str_flt.format(p_g2), g2_op=g2_op,
-            chi2=str_flt.format(chi2), p_chi2=str_flt.format(p_chi2), chi2_op=chi2_op,
+            nfreq_1=str_flt.format(100*freq_1/total_1),
+            nfreq_2=str_flt.format(100*freq_2/total_2),
+            g2=str_flt.format(g2), 
+            p_g2=str_flt.format(p_g2), 
+            g2_op=g2_op.replace("<", "&lt;"),
+            chi2=str_flt.format(chi2), 
+            p_chi2=str_flt.format(p_chi2), 
+            chi2_op=chi2_op.replace("<", "&lt;"),
             phi=str_flt.format(phi), strength=estimate_strength(phi),
             odds_ratio=str_flt.format(odds_ratio),
+            odds_ci_lower=str_flt.format(odds_ci_lower),
+            odds_ci_upper=str_flt.format(odds_ci_upper),
+            odds_prose=str_flt.format(odds_ratio if odds_ratio > 1 else 1/odds_ratio),
+            odds_relation="higher" if odds_ratio > 1 else "lower",
+            odds_z=str_flt.format(odds_z), 
+            odds_op=odds_op.replace("<", "&lt;"),
+            p_odds=str_flt.format(p_odds),
             yates=yates))
-        
+ 
         self._latex = utf8(self.latex_template.format(
             corpus=utf8(options.cfg.main_window.ui.combo_corpus.currentText()),
-            filters=filter_latex,
+            filters=filter_html,
             label_1=label_1, label_2=label_2,
             freq_1=freq_1, freq_2=freq_2,
             total_1=total_1, total_2=total_2,
-            g2=str_flt.format(g2), p_g2=str_flt.format(p_g2), g2_op=g2_op,
-            chi2=str_flt.format(chi2), p_chi2=str_flt.format(p_chi2), chi2_op=chi2_op,
+            nfreq_1=str_flt.format(100*freq_1/total_1),
+            nfreq_2=str_flt.format(100*freq_2/total_2),
+            g2=str_flt.format(g2), 
+            p_g2=str_flt.format(p_g2), 
+            g2_op=g2_op,
+            chi2=str_flt.format(chi2), 
+            p_chi2=str_flt.format(p_chi2), 
+            chi2_op=chi2_op,
+            phi=str_flt.format(phi), strength=estimate_strength(phi),
+            odds_ratio=str_flt.format(odds_ratio),
+            odds_ci_lower=str_flt.format(odds_ci_lower),
+            odds_ci_upper=str_flt.format(odds_ci_upper),
+            odds_prose=str_flt.format(odds_ratio if odds_ratio > 1 else 1/odds_ratio),
+            odds_relation="higher" if odds_ratio > 1 else "lower",
+            odds_z=str_flt.format(odds_z), 
+            odds_op=odds_op,
+            p_odds=str_flt.format(p_odds),
             yates=yates))
 
         self.ui.textBrowser.setHtml(self._html)
