@@ -684,7 +684,7 @@ class FrequencyQuery(TokenQuery):
 
         if ("statistics_normalized" in options.cfg.selected_features or
             "statistics_subcorpus_size" in options.cfg.selected_features or
-            options.cfg.MODE == QUERY_MODE_CONTRASTS):
+            kwargs.get("contrasts")):
             corpus_features = [x for x, _ in corpus.resource.get_corpus_features() if x in options.cfg.selected_features and 
                                options.cfg.column_visibility.get("coq_{}_1".format(x), True)]
             column_list = []
@@ -883,7 +883,7 @@ class ContrastQuery(FrequencyQuery):
             return pd.DataFrame(columns=session.output_order)
         
         labels = cls.collapse_columns(df, session)
-        freq = super(ContrastQuery, cls).aggregate_data(df, corpus, **kwargs)
+        freq = super(ContrastQuery, cls).aggregate_data(df, corpus, contrasts=True, **kwargs)
         vis_col = cls.get_visible_columns(df, session)
         freq["_row_id"] = labels
         session.output_order = session.output_order + ["statistics_g_test_{}".format(x) for x in labels]
