@@ -566,12 +566,12 @@ class CoqueryApp(QtGui.QMainWindow):
         if index != None:
             if self.Session.query_type == queries.ContrastQuery:
                 from . import independencetestviewer
-                data = self.ui.data_preview.model().data(index, QtCore.Qt.UserRole)
-                viewer = independencetestviewer.IndependenceTestViewer(data)
-                viewer.show()
-                self.widget_list.append(viewer)
+                if self.ui.data_preview.model().data(index, QtCore.Qt.DisplayRole):
+                    data = self.ui.data_preview.model().data(index, QtCore.Qt.UserRole)
+                    viewer = independencetestviewer.IndependenceTestViewer(data, icon=options.cfg.icon)
+                    viewer.show()
+                    self.widget_list.append(viewer)
                 return
-            
             
             model_index = index
             row = model_index.row()
@@ -594,7 +594,8 @@ class CoqueryApp(QtGui.QMainWindow):
         origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
         
         viewer = contextviewer.ContextView(
-            self.Session.Corpus, int(token_id), int(origin_id), int(token_width))
+            self.Session.Corpus, int(token_id), int(origin_id), int(token_width), 
+            icon=options.cfg.icon)
         viewer.show()
         self.widget_list.append(viewer)
 
@@ -942,6 +943,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
             elif column in ("statistics_column_total"):
                 deleg = classes.CoqTotalDelegate(self.ui.data_preview)                
+            elif column.startswith("statistics_g_test"):
+                deleg = classes.CoqLikelihoodDelegate(self.ui.data_preview)
             else:
                 deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
             self.ui.data_preview.setItemDelegateForColumn(i, deleg)
@@ -1208,36 +1211,37 @@ class CoqueryApp(QtGui.QMainWindow):
         if not (utf8(item.objectName()).startswith("coquery") or 
                 utf8(item.objectName()).startswith("statistics") or
                 utf8(item.objectName()).endswith("_table")):
-            add_link = QtGui.QAction("&Link to external table", self)
+            add_link = QtGui.QAction("&Link an external table", self)
             add_function = QtGui.QAction("&Add a function", self)
-            remove_link = QtGui.QAction("&Remove link", self)
+            remove_link = QtGui.QAction("&Remove linked table", self)
             remove_function = QtGui.QAction("&Remove function", self)
             
             parent = item.parent()
 
-            if not item._func:
-                view_unique = QtGui.QAction("View &unique values", self)
-                view_unique.triggered.connect(lambda: self.show_unique_values(item))
-                menu.addAction(view_unique)
-                view_entries = QtGui.QAction("View all &values", self)
-                view_entries.triggered.connect(lambda: self.show_unique_values(item, uniques=False))
-                menu.addAction(view_entries)
-                view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
-                view_entries.setEnabled(options.cfg.gui.test_mysql_connection())
-                menu.addSeparator()
-
-                if item._link_by or (parent and parent._link_by):
-                    menu.addAction(remove_link)
-                    remove_link.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
+            if hasattr(item, "link"):
+                menu.addAction(remove_link)
+                remove_link.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
+            else:
+                if item._func:
+                    menu.addAction(remove_function)
+                    remove_function.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
                 else:
-                    menu.addAction(add_link)
-                    add_link.triggered.connect(lambda: self.ui.options_tree.addLink.emit(item))
-                menu.addAction(add_function)
-                add_function.triggered.connect(lambda: self.ui.options_tree.addFunction.emit(item))
+                    view_unique = QtGui.QAction("View &unique values", self)
+                    view_unique.triggered.connect(lambda: self.show_unique_values(item))
+                    menu.addAction(view_unique)
+                    view_entries = QtGui.QAction("View all &values", self)
+                    view_entries.triggered.connect(lambda: self.show_unique_values(item, uniques=False))
+                    menu.addAction(view_entries)
+                    view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
+                    view_entries.setEnabled(options.cfg.gui.test_mysql_connection())
 
-            if item._func:
-                menu.addAction(remove_function)
-                remove_function.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
+                    menu.addSeparator()
+                    if not hasattr(item.parent(), "link"):
+                        menu.addAction(add_link)
+                        add_link.triggered.connect(lambda: self.ui.options_tree.addLink.emit(item))
+                    menu.addAction(add_function)
+                    add_function.triggered.connect(lambda: self.ui.options_tree.addFunction.emit(item))
+
         else:
             if utf8(item.objectName()).endswith("_table"):
                 unavailable = QtGui.QAction(_translate("MainWindow", "No option available for tables.", None), self)
@@ -2331,7 +2335,6 @@ class CoqueryApp(QtGui.QMainWindow):
         Adds the columns from the linked table to the output column tree.
         """
         if link.res_from == utf8(self.ui.combo_corpus.currentText()):
-            print(link)
             item = self.ui.options_tree.getItem(link.rc_from)
             
             res_from, _, _, _ = options.cfg.current_resources[link.res_from]
@@ -2462,7 +2465,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.options_tree.takeTopLevelItem(self.ui.options_tree.indexOfTopLevelItem(item))
         else:
             item.parent().removeChild(item)
-
+        options.cfg.table_links[options.cfg.current_server].remove(item.link)
 
 #try:
     #_encoding = QtGui.QApplication.UnicodeUTF8
