@@ -23,7 +23,6 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-
 from coquery import queries
 from coquery import sqlhelper
 from coquery.session import *
@@ -35,7 +34,6 @@ from . import errorbox
 from . import contextviewer
 from .pyqt_compat import QtCore, QtGui, QtHelp
 from .ui import coqueryUi
-
 
 # add required paths:
 sys.path.append(options.cfg.base_path)
@@ -2359,7 +2357,6 @@ class CoqueryApp(QtGui.QMainWindow):
             # fill new tree with the features from the linked table (exclude
             # the linking feature):
             for rc_feature in [x for x in table if x != link.rc_to]:
-                print(rc_feature)
                 _, _, _, feature = ext_res.split_resource_feature(rc_feature)
                 # exclude special resource features
                 if feature not in ("id", "table") and not feature.endswith("_id"):
