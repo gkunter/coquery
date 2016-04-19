@@ -1577,10 +1577,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     continue
                 current = self.DB.get_field_type(table.name, column.name).strip()
                 if current.lower() != optimal.lower() and "text" not in optimal.lower().split()[0].strip():
-                    try:
-                        optimal = optimal.decode("utf-8")
-                    except AttributeError:
-                        pass
+                    optimal = utf8(optimal)
                     try:
                         self.DB.modify_field_type(table.name, column.name, optimal)
                     except Exception as e:
