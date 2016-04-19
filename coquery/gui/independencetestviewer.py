@@ -23,8 +23,6 @@ from .pyqt_compat import QtGui, QtCore
 from .ui.independenceTestViewerUi import Ui_IndependenceTestViewer
 
 import numpy as np
-if options._use_scipy:
-    from scipy import stats
 
 class IndependenceTestViewer(QtGui.QDialog):
     html_template = """
@@ -60,8 +58,8 @@ class IndependenceTestViewer(QtGui.QDialog):
             <p><span style=" font-style:italic;">χ</span><sup>2</sup> = {chi2}, <span style=" font-style:italic;">df</span> = 1, <span style=" font-style:italic;">p</span> {chi2_op} {p_chi2}</p>
             {yates}
             <h2>Effect size estimations</h2>
-            <p><span style=" font-style:italic;">&phi;</span> = {phi}, indicating a {strength} effect size (see Cohen 1992, <a href='https://dx.doi.org/10.1037%2F0033-2909.112.1.155'>doi:10.1037/0033-2909.112.1.155)</a></p>
-            <p>Odds ratio <span style=" font-style:italic;">OR</span> = {odds_ratio} (95&nbsp;% confidence interval: {odds_ci_lower} to {odds_ci_upper}, <span style=" font-style:italic;">z</span> = {odds_z}, <span style=" font-style:italic;">p</span> {odds_op} {p_odds}). This means that the odds of encountering <code>{label_1}</code> are {odds_prose} times {odds_relation} than the odds of encountering <code>{label_2}</code>.</p>
+            <p><span style=" font-style:italic;">&phi;</span> = {phi}, indicating a {strength} effect size (see Cohen 1992, <a href='https://dx.doi.org/10.1037%2F0033-2909.112.1.155'>doi:10.1037/0033-2909.112.1.155</a>)</p>
+            <p>Odds ratio <span style=" font-style:italic;">OR</span> = {odds_ratio} (95&nbsp;% confidence interval: {odds_ci_lower} to {odds_ci_upper}, <span style=" font-style:italic;">z</span> = {odds_z}, <span style=" font-style:italic;">p</span> {odds_op} {p_odds}). {odds_explain}</p>
         </body>
     """.strip()
 
@@ -154,7 +152,11 @@ class IndependenceTestViewer(QtGui.QDialog):
         yates = ""
         obs = np.array([ [freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]])
 
+        str_flt = "{{:0.{digits}f}}".format(digits=options.cfg.digits)
+
+
         if options._use_scipy:
+            from scipy import stats
             expected = stats.contingency.expected_freq(obs)
             if np.min(expected) < 5:
                 yates = "<p>(using Yates' correction for continuity)</p>"
@@ -234,7 +236,15 @@ class IndependenceTestViewer(QtGui.QDialog):
             odds_op, p_odds = estimate_p(odds_z, chi=False).split()
             p_odds = float(p_odds)
         
-        str_flt = "{{:0.{digits}f}}".format(digits=options.cfg.digits)
+        if p_odds < 0.05:
+            odds_explain = "This means that the odds of encountering <code>{label_1}</code> are {odds_prose} times {odds_relation} than the odds of encountering <code>{label_2}</code>.".format(
+                odds_prose=str_flt.format(odds_ratio if odds_ratio > 1 else 1/odds_ratio),
+                odds_relation="higher" if odds_ratio > 1 else "lower",
+                label_1=label_1, label_2=label_2
+                )
+        else:
+            odds_explain = "The high value of <span style=' font-style:italic;'>p</span> suggests that the odds of encountering <code>{label_1}</code> are not notably different from the odds of encountering <code>{label_2}</code>".format(
+                label_1=label_1, label_2=label_2)
         
         self._html = utf8(self.html_template.format(
             corpus=utf8(options.cfg.main_window.ui.combo_corpus.currentText()),
@@ -254,10 +264,9 @@ class IndependenceTestViewer(QtGui.QDialog):
             odds_ratio=str_flt.format(odds_ratio),
             odds_ci_lower=str_flt.format(odds_ci_lower),
             odds_ci_upper=str_flt.format(odds_ci_upper),
-            odds_prose=str_flt.format(odds_ratio if odds_ratio > 1 else 1/odds_ratio),
-            odds_relation="higher" if odds_ratio > 1 else "lower",
             odds_z=str_flt.format(odds_z), 
             odds_op=odds_op.replace("<", "&lt;"),
+            odds_explain=odds_explain,
             p_odds=str_flt.format(p_odds),
             yates=yates))
  
