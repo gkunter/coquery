@@ -2770,7 +2770,7 @@ class CorpusClass(object):
             format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word_table}.{word} AS COQ_WORD FROM {corpus} {joined_tables} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
             
         if origin_id:
-            format_string += " AND {corpus}.{source_id} = {current_source_id}"
+            format_string += " AND {corpus}.{source_id} = '{current_source_id}'"
     
         if hasattr(self.resource, "surface_feature"):
             word_feature = self.resource.surface_feature
@@ -2834,7 +2834,6 @@ class CorpusClass(object):
         if options.cfg.verbose:
             logger.info(S)
             print(S)
-
         df = pd.read_sql(S, self.resource.get_engine())
 
         try:
