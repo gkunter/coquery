@@ -42,9 +42,6 @@ from . import corpus
 from . import tokens
 from . import options
 
-if options._use_scipy:
-    from scipy import stats
-
 class TokenQuery(object):
     """ 
     This class manages the query string, and is responsible for the output 
@@ -181,6 +178,11 @@ class TokenQuery(object):
                         df = pd.DataFrame(columns=results.keys())
                     else:
                         df.columns = results.keys()
+                    #print(df.head().dtypes)
+                    #print(df.coq_corpus_endtime_1)
+                    #print(df.coq_corpus_endtime_1.convert_objects(convert_numeric=True))
+                    #print("<{}>".format(df.coq_corpus_endtime_1[1]))
+                    #print(df.head().dtypes)
                     results = None
 
                 df = self.insert_static_data(df)
@@ -742,7 +744,7 @@ class ContrastQuery(FrequencyQuery):
         # FIXME: columns should be processed in the order that they appear in
         # the None results table view.
         
-        vis_cols = [x for x in cls.get_visible_columns(df, session) if not x.startswith(tuple(session.Resource.special_table_list))]
+        vis_cols = [x for x in cls.get_visible_columns(df, session) if not x.startswith("statistics")]
         return df.apply(lambda x: ":".join([x[col] for col in vis_cols]), axis=1).unique()
 
     @staticmethod
@@ -815,6 +817,9 @@ class ContrastQuery(FrequencyQuery):
 
     @classmethod
     def retrieve_loglikelihood(cls, *args, **kwargs):
+        if options._use_scipy:
+            from scipy import stats
+
         label = kwargs["label"]
         df = kwargs["df"]
         row = args[0]
@@ -887,6 +892,7 @@ class ContrastQuery(FrequencyQuery):
         vis_col = cls.get_visible_columns(df, session)
         freq["_row_id"] = labels
         session.output_order = session.output_order + ["statistics_g_test_{}".format(x) for x in labels]
+
         for x in labels:
             freq["statistics_g_test_{}".format(x)] = freq.apply(cls.retrieve_loglikelihood, axis=1, label=x, df=freq)
         return freq
