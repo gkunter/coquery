@@ -17,12 +17,13 @@ import os
 import pandas as pd
 
 from coquery import options
+from coquery.unicode import utf8
 from . import classes
 from .pyqt_compat import QtCore, QtGui
 from .ui.contextViewerUi import Ui_ContextView
 
 class ContextView(QtGui.QWidget):
-    def __init__(self, corpus, token_id, source_id, token_width, parent=None):
+    def __init__(self, corpus, token_id, source_id, token_width, icon=None, parent=None):
         
         super(ContextView, self).__init__(parent)
         
@@ -34,13 +35,14 @@ class ContextView(QtGui.QWidget):
         self.ui = Ui_ContextView()
         self.ui.setupUi(self)
 
-        self.setWindowIcon(options.cfg.icon)
+        if icon:
+            self.setWindowIcon(icon)
 
         self.ui.slider_context_width.setTracking(True)
 
         # Add clickable header
         self.ui.button_ids = classes.CoqDetailBox("{} – Token ID {}".format(corpus.resource.name, token_id))
-        self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", str(not self.ui.button_ids.isExpanded())))
+        self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", utf8(not self.ui.button_ids.isExpanded())))
         self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
         self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
         
@@ -98,6 +100,7 @@ class ContextView(QtGui.QWidget):
         self.ui.source_name.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
         self.ui.form_information.setWidget(layout_row, QtGui.QFormLayout.LabelRole, self.ui.source_name)
         self.ui.source_content = QtGui.QLabel(self)
+        self.ui.source_content.setWordWrap(True)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -111,13 +114,13 @@ class ContextView(QtGui.QWidget):
             if content == None:
                 name = "<b>{}</b>".format(name)
             else:
-                name = str(name).strip()
+                name = utf8(name).strip()
                 if not name.endswith(":"):
                     name += ":"
             self.ui.source_name.setText(name)
             
         if content:
-            content = str(content).strip()
+            content = utf8(content).strip()
             if os.path.exists(content) or "://" in content:
                 content = "<a href={0}>{0}</a>".format(content)
                 self.ui.source_content.setOpenExternalLinks(True)
