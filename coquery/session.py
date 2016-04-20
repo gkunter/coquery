@@ -331,15 +331,18 @@ class Session(object):
 
         res_prefix = ""
         
-        # handle external columns:
-        if "$" in header:
-            db_name, header = header.split("$")
-            for x in options.cfg.current_resources:
-                resource, _, _, _ = options.cfg.current_resources[x]
-                if resource.db_name == db_name:
-                    res_prefix = "{}.".format(resource.name)
-                    break
-        else:
+        try:
+            # check if this is an external column:
+            potential_db, _, remains = header.partition("_")
+            rc_feature, _, number = remains.rpartition("_")
+            ext_res = options.get_resource_of_database(potential_db)
+            if hasattr(ext_res, rc_feature):
+                res_prefix = "{}.".format(ext_res.name)
+                resource = ext_res
+                header = remains
+            else:
+                raise ValueError
+        except:
             resource = self.Resource
             
         # special treatment of context columns:
