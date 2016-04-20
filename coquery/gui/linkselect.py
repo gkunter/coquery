@@ -18,7 +18,7 @@ from coquery import options
 from coquery.corpus import BaseResource
 from coquery.defines import *
 from coquery.unicode import utf8
-from coquery.link import Link
+from coquery.links import Link
 
 from .classes import CoqTreeItem
 from .pyqt_compat import QtCore, QtGui

@@ -46,7 +46,7 @@ import hashlib
 from collections import defaultdict
 
 from . import tokens
-from .link import Link
+from .links import Link
 from .unicode import utf8
 from .defines import *
 from .errors import *

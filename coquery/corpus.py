@@ -28,6 +28,7 @@ from .defines import *
 from . import tokens
 from . import options
 from . import sqlhelper
+from .links import get_by_hash
 from .filters import QueryFilter
 
 def collapse_words(word_list):
@@ -479,8 +480,8 @@ class BaseResource(object):
         --------
         tup : tuple
             A tuple consisting of a boolean specificing whether it is a 
-            function, the database name, the resource table name, and the 
-            feature name
+            function, the hashed of the link (or None), the resource table 
+            name, and the feature name
         """
         is_function = rc_feature.startswith("func.")
         if is_function:
@@ -488,18 +489,14 @@ class BaseResource(object):
         else:
             s = rc_feature
         if "." in s:
-            db_name, _, s= s.partition(".")
+            hashed, _, s= s.partition(".")
         else:
-            try:
-                db_name = cls.db_name
-            except AttributeError:
-                db_name = "db_unknown"
+            hashed = None
         table, _, feature = s.partition("_")
         if not table or not feature:
             raise ValueError("either no table or no feature: {}".format(rc_feature))
-        #rc_table = "{}_table".format(table)
         
-        return (is_function, db_name, table, feature)
+        return (is_function, hashed, table, feature)
 
     @classmethod
     def get_preferred_output_order(cls):
@@ -812,29 +809,15 @@ class BaseResource(object):
         resource : string
         """
 
-        func, db_name, table, feature = cls.split_resource_feature(rc_feature)
+        func, hashed, table, feature = cls.split_resource_feature(rc_feature)
 
         # Check if the feature has the same database as the current 
         # resource, i.e. check if the feature is NOT from a linked table:
-        if db_name == cls.db_name:
+        if hashed == None:
             return "{}_{}".format(table, feature)
         else:
             _, _, tab, feat = cls.split_resource_feature(link._from[1])
             return "{}_{}".format(tab, feat)
-            #for link, _ in options.cfg.external_links:
-                #if "{}_{}".format(tab, feat) == "{}_{}".format(table, feature):
-                    #return link._from[1]
-            
-        #if "." not in rc_feature:
-            #return rc_feature
-        #elif rc_feature.startswith("func.") and rc_feature.count(".") == 1:
-            #return rc_feature.rpartition("func.")[-1]
-        #else:
-            #raise RuntimeError("get_referent_feature: {}".format(rc_feature))
-            #prefix_stripped = rc_feature.rpartition("func.")[-1]
-            #external, internal = options.cfg.external_links[prefix_stripped]
-            #internal_table, internal_feature = internal.split(".")
-            #return internal_feature
 
     @classmethod
     def is_lexical(cls, rc_feature):
@@ -1170,7 +1153,7 @@ class SQLResource(BaseResource):
                 continue
             if rc_feature.startswith("func"):
                 continue
-            linked_feature = "{}${}".format(res.db_name, rc_feature)
+            linked_feature = "{}_{}".format(res.db_name, rc_feature)
             if cls.is_lexical(link.rc_from):
                 select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
             else:
@@ -1179,10 +1162,12 @@ class SQLResource(BaseResource):
         # functions:
         func_counter = Counter()
         for rc_feature in options.cfg.selected_features:
-            func, db, table, feature = cls.split_resource_feature(rc_feature)
+            func, hashed, table, feature = cls.split_resource_feature(rc_feature)
             if func:
-                if db != cls.db_name:
-                    resource = "{}_{}_{}".format(db, table, feature)
+                if hashed != None:
+                    link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
+                    res = options.get_resource(link.res_to)[0]
+                    resource = "{}_{}_{}".format(res.db_name, table, feature)
                 else:
                     resource = "{}_{}".format(table, feature)
 
@@ -1691,9 +1676,10 @@ class CorpusClass(object):
         the filter.
         """
         variable, rc_feature, table_name, op, value_list, _value_range = filt
-        _, db_name, tab, feat = self.resource.split_resource_feature(rc_feature)
-        if db_name != self.resource.db_name:
-            ext_resource = options.cfg.current_resources[db_name][0]
+        _, hashed, tab, feat = self.resource.split_resource_feature(rc_feature)
+        if hashed != None:
+            link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
+            ext_resource = options.get_resource(link.res_to)[0]
             db = ext_resource.db_name
             sql_field = "{}.{}.{}".format(
                 db, 
@@ -1722,13 +1708,14 @@ class CorpusClass(object):
         # add all features that are required because they are in the current 
         # selection:
         for rc_feature in options.cfg.selected_features:
-            func, db_name, table, feat = self.resource.split_resource_feature(rc_feature)
+            func, hashed, table, feat = self.resource.split_resource_feature(rc_feature)
             if func:
                 print("FUNCI")
             if table not in self.resource.special_table_list:
                 s = "{}_{}".format(table, feat)
-                if db_name != self.resource.db_name:
-                    res = options.get_resource_of_database(db_name)
+                if hashed != None:
+                    link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
+                    res = options.get_resource(link.res_to)[0]
                     required_features.add("{}.{}".format(res.name , s))
                 else:
                     required_features.add(s)
@@ -1759,8 +1746,8 @@ class CorpusClass(object):
 
         # add features required for functions:
         for res, _, _ in options.cfg.selected_functions:
-            func, db_name, table, feature = self.resource.split_resource_feature(res)
-            assert db_name == self.resource.db_name, "External functions currently not available"
+            func, hashed, table, feature = self.resource.split_resource_feature(res)
+            assert hashed == None, "External functions currently not available"
             assert func
             print("FNC", res, table, feature)
             required_features.add("{}_{}".format(table, feature))
@@ -1814,8 +1801,8 @@ class CorpusClass(object):
         table_set = set([])
 
         for rc_feature in feature_list:
-            _, db_name, table, feature = self.resource.split_resource_feature(rc_feature)
-            
+            _, hashed, table, feature = self.resource.split_resource_feature(rc_feature)
+            # FIXME: what about linked tables?
             self.lexicon.joined_tables = ["corpus"]
             self.lexicon.add_table_path("corpus_id", rc_feature)
             for tab in self.lexicon.joined_tables:
@@ -1964,10 +1951,11 @@ class CorpusClass(object):
         full_tree = self.resource.get_table_structure("corpus_table", requested_features)
         # create a list of the tables 
         select_list = set([])
+        print("--------", required_tables)
         for rc_table in required_tables:
-            func, ext_db_name, table, feature = self.resource.split_resource_feature(rc_table)
+            func, hashed, table, feature = self.resource.split_resource_feature(rc_table)
 
-            if ext_db_name != self.resource.db_name:
+            if hashed != None:
                 # handle linked tables
                 column_list = []
                 # get the link object for the requested external table:
@@ -1980,7 +1968,7 @@ class CorpusClass(object):
                     if res.db_name == ext_db_name:
                         # the feature string is the aliased column name that
                         # will be used as a field name in the main SELECT:
-                        feature_name = "coq_{}${}_{}".format(
+                        feature_name = "coq_{}_{}_{}".format(
                             res.db_name,
                             rc_feat,
                             number+1)
@@ -1992,7 +1980,7 @@ class CorpusClass(object):
                         # the linking variable is the aliased foreign key 
                         # from within the subquery that is used in the ON
                         # clause of the table join:
-                        linking_variable = "{} AS coq_{}${}_{}".format(
+                        linking_variable = "{} AS coq_{}_{}_{}".format(
                             getattr(res, link.rc_to),
                             res.db_name, link.rc_to, number+1)
                         
@@ -2009,7 +1997,7 @@ class CorpusClass(object):
                         (SELECT {columns}
                         FROM    {corpus}.{table})
                         AS      {alias}
-                ON      coq_{internal_feature}_{n} = coq_{corpus}${external_feature}_{n}
+                ON      coq_{internal_feature}_{n} = coq_{corpus}_{external_feature}_{n}
                 """
                 
                 S = sql_template.format(
@@ -2104,6 +2092,8 @@ class CorpusClass(object):
         # columns so that they can be used to retrieve the context:
         if number == 0 and options.cfg.token_origin_id:
             select_list.add("coq_{}_1".format(options.cfg.token_origin_id))
+
+        print(select_list)
 
         S = "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
         #print("get_token_query_string", S)
@@ -2226,7 +2216,7 @@ class CorpusClass(object):
             self.lexicon.joined_tables = ["corpus"]
 
             for x in [x for x in options.cfg.selected_features if x in lexicon_features]:
-                func, db_name, table, feature = self.resource.split_resource_feature(x)
+                _, _, table, _ = self.resource.split_resource_feature(x)
                 self.lexicon.joined_tables = ["corpus"]
                 self.lexicon.add_table_path("corpus_id", x)
                 table_features[table].append(x)
@@ -2469,11 +2459,11 @@ class CorpusClass(object):
                 for i in range(Query.Session.get_max_token_count()):
                     if options.cfg.align_quantified:
                         if i in positions_lexical_items:
-                            final_select.append("coq_{}${}_{}".format(res.db_name, rc_feat, i+1))
+                            final_select.append("coq_{}_{}_{}".format(res.db_name, rc_feat, i+1))
                     else:
-                        final_select.append("coq_{}${}_{}".format(res.db_name, rc_feat, i+1))
+                        final_select.append("coq_{}_{}_{}".format(res.db_name, rc_feat, i+1))
             else:
-                final_select.append("coq_{}${}_1".format(res.db_name, rc_feat))
+                final_select.append("coq_{}_{}_1".format(res.db_name, rc_feat))
         if options.cfg.experimental:
             print(110, final_select)
 
@@ -2494,7 +2484,7 @@ class CorpusClass(object):
                 break
             if any([x == rc_feature for x, _ in self.resource.get_lexicon_features()]):
                 break
-            db, _, table, _ = self.resource.split_resource_feature(rc_feature)
+            _, _, table, _ = self.resource.split_resource_feature(rc_feature)
             if table not in self.resource.special_table_list:
                 if "." not in rc_feature:
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
@@ -2503,12 +2493,15 @@ class CorpusClass(object):
 
         # add any resource feature that is required by a function:
         for res, fun, _ in options.cfg.selected_functions:
-            func, db_name, table, feature = self.resource.split_resource_feature(res)
+            func, hashed, table, feature = self.resource.split_resource_feature(res)
             assert func
             
             # function on field from external table?
-            if db_name != self.resource.db_name:
-                field_str = "coq_{db_name}${rc_feature}_{{N}}"
+            if hashed != none:
+                link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
+                res = options.get_resource(link.res_to)[0]
+                db_name = res.db_name
+                field_str = "coq_{db_name}_{rc_feature}_{{N}}"
             else:
                 field_str = "coq_{rc_feature}_{{N}}"
             
@@ -2608,7 +2601,7 @@ class CorpusClass(object):
             s = self.get_token_query_string(
                 tokens.COCAToken(token, self.lexicon), 
                 column_number)
-
+            print("\n", s, "\n")
             if i + 1 == referent_id:
                 token_query_list[i+1] = s                
             elif i + 1 < referent_id:
