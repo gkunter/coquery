@@ -284,7 +284,7 @@ class TokenQuery(object):
                 for y in range(length):
                     L.append("{}.{}".format(i + 1, y + 1))
         if n > len(L) - 1:
-            return n
+            return n + 1
         return L[n]
     
     def insert_context(self, df, connection):
