@@ -2129,8 +2129,6 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.external_links = self.get_external_links()
             options.cfg.selected_features = self.get_selected_features()
             options.cfg.selected_functions = self.get_functions()
-            print("options.cfg.selected_features", options.cfg.selected_features)
-            print("options.cfg.external_links", options.cfg.external_links)
             return True
 
     def get_selected_features(self):
@@ -2363,7 +2361,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     new_item = classes.CoqTreeItem()
                     new_item.setText(0, getattr(ext_res, rc_feature))
                     new_item.rc_feature = rc_feature
-                    new_item.setObjectName("{}.{}".format(ext_res.db_name, rc_feature))
+                    new_item.setObjectName("{}.{}".format(link.get_hash(), rc_feature))
                     new_item.setCheckState(0, QtCore.Qt.Unchecked)
                     tree.addChild(new_item)
 
