@@ -605,14 +605,29 @@ class CoqTreeWidget(QtGui.QTreeWidget):
                     return child
 
     def setCheckState(self, object_name, state, column=0):
-        """ Set the checkstate of the item that matches the object_name. If
-        the state is Checked, also expand the parent of the item. """
+        """ 
+        Recursively set the checkstate of the item that matches the
+        object_name. If the state is Checked, also expand the parent of
+        the item. """
+        
+        def _check_state(item, object_name, state, column=0):
+            if item.objectName() == object_name:
+                item.setCheckState(column, state)
+                if state == QtCore.Qt.Checked:
+                    item.parent().setExpanded(True)
+                self.update(item, column)
+            for child in [item.child(i) for i in
+                            range(item.childCount())]:
+                _check_state(child, object_name, state, column)
+        
         if type(state) != QtCore.Qt.CheckState:
             if state:
                 state = QtCore.Qt.Checked
             else:
                 state = QtCore.Qt.Unchecked
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
+        
+        for root in [self.topLevelItem(i) for i in
+                        range(self.topLevelItemCount())]:
             if root.objectName() == object_name:
                 try:
                     root.setChecked(column, state)
@@ -623,13 +638,10 @@ class CoqTreeWidget(QtGui.QTreeWidget):
                     # cause
                     pass
                 self.update(root, column)
-            for child in [root.child(i) for i in range(root.childCount())]:
-                if child.objectName() == object_name:
-                    child.setCheckState(column, state)
-                    if state == QtCore.Qt.Checked:
-                        root.setExpanded(True)
-                    self.update(child, column)
-                    return
+            
+            for child in [root.child(i) for i in
+                            range(root.childCount())]:
+                _check_state(child, object_name, state, column)
                 
     def mimeData(self, *args):
         """ Add the resource variable name to the MIME data (for drag and 
