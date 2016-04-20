@@ -38,6 +38,7 @@ import pandas as pd
 
 from .defines import *
 from .errors import *
+from .links import get_by_hash
 from . import corpus
 from . import tokens
 from . import options
@@ -485,9 +486,11 @@ class TokenQuery(object):
 
         func_counter = collections.Counter()
         for rc_feature, fun, _ in options.cfg.selected_functions:
-            _, db, table, feature = self.Resource.split_resource_feature(rc_feature)
-            if db != self.Resource.db_name:
-                resource = "{}_{}_{}".format(db, table, feature)
+            _, hashed, table, feature = self.Resource.split_resource_feature(rc_feature)
+            if hashed != None:
+                link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
+                res = options.get_resource(link.res_to)[0]
+                resource = "{}_{}_{}".format(res.db_name, table, feature)
             else:
                 resource = "{}_{}".format(table, feature)
             func_counter[resource] += 1

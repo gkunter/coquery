@@ -816,7 +816,8 @@ class BaseResource(object):
         if hashed == None:
             return "{}_{}".format(table, feature)
         else:
-            _, _, tab, feat = cls.split_resource_feature(link._from[1])
+            link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
+            _, _, tab, feat = cls.split_resource_feature(link.rc_from)
             return "{}_{}".format(tab, feat)
 
     @classmethod
@@ -1148,7 +1149,7 @@ class SQLResource(BaseResource):
         # linked columns
         for rc_feature in options.cfg.selected_features:
             func, hashed, table, feature = cls.split_resource_feature(rc_feature)
-            if hashed != None:
+            if hashed != None and not func:
                 link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
                 res = options.get_resource(link.res_to)[0]
                 linked_feature = "{}_{}_{}".format(res.db_name, table, feature)
@@ -1231,7 +1232,7 @@ class SQLResource(BaseResource):
 
         select_list.append("coquery_invisible_corpus_id")
         select_list.append("coquery_invisible_number_of_tokens")
-        return select_list
+        return list(set(select_list))
     
 class CorpusClass(object):
     
@@ -2451,33 +2452,23 @@ class CorpusClass(object):
         for res, fun, _ in options.cfg.selected_functions:
             func, hashed, table, feature = self.resource.split_resource_feature(res)
             assert func
-            
             # function on field from external table?
-            if hashed != none:
+            if hashed != None:
                 link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
                 res = options.get_resource(link.res_to)[0]
                 db_name = res.db_name
                 field_str = "coq_{db_name}_{rc_feature}_{{N}}"
             else:
+                db_name = None
                 field_str = "coq_{rc_feature}_{{N}}"
             
             rc_feature= "{}_{}".format(table, feature)
             label = field_str.format(db_name=db_name, rc_feature=rc_feature)
             
             if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
-                final_select += [label.format(N=x + 1) for x in range(Query.Session.get_max_token_count())]
+                final_select += [label.format(N=x+1) for x in range(Query.Session.get_max_token_count())]
             else:
                 final_select.append(label.format(N=1))
-
-            ## check if the function is applied to an external link:
-            #if res.count(".") > 1:
-                #rc_feature = "_".join(res.split(".")[1:])
-            #else:
-                #rc_feature = res.split(".")[-1]
-            #if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
-                #final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
-            #else:
-                #final_select.append("coq_{}_1".format(rc_feature))
 
         # add coquery_invisible_origin_id if a context is requested:
         if (options.cfg.context_mode != CONTEXT_NONE and 
