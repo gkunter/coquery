@@ -33,7 +33,7 @@ from . import classes
 from . import errorbox
 from . import contextviewer
 from .pyqt_compat import QtCore, QtGui, QtHelp
-from .ui import coqueryUi
+from .ui import coqueryUi, coqueryTinyUi
 
 # add required paths:
 sys.path.append(options.cfg.base_path)
@@ -112,7 +112,10 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.font = options.cfg.app.font()
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
 
-        self.ui = coqueryUi.Ui_MainWindow()
+        if size.height() < 748 or size.width() < 800 or options.cfg.experimental:
+            self.ui = coqueryTinyUi.Ui_MainWindow()
+        else:
+            self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
 
         self.setMenuBar(self.ui.menubar)
