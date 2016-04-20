@@ -24,26 +24,6 @@ from .classes import CoqTreeItem
 from .pyqt_compat import QtCore, QtGui
 from .ui.linkselectUi import Ui_LinkSelect
 
-#class Link(object):
-    #def __init__(self, tree_item, ignore_case=True, *args):
-        #self.resource = tree_item.parent().parent().objectName()
-        #resource = options.cfg.current_resources[self.resource][0] 
-
-        #self.rc_feature = tree_item.objectName()
-        #self.table = utf8(format(tree_item.parent().objectName()))
-        #self.db_name = resource.db_name
-        #self.case = ignore_case
-        
-        #self.table_name = getattr(resource, "{}_table".format(self.table))
-        #self.feature_name = getattr(resource, self.rc_feature)
-        #self.label = ".".join([self.resource, self.table_name, self.feature_name])
-        #self.item = tree_item
-        #self._to = (self.resource, self.rc_feature)
-        #self._from = ("", "")
-
-    #def __str__(self):
-        #return "Link({} --> {})".format(self._from, self._to)
-
 class LinkSelect(QtGui.QDialog):
     def __init__(self, res_from, rc_from, corpus_omit=[], parent=None):
         super(LinkSelect, self).__init__(parent)
@@ -131,47 +111,3 @@ class LinkSelect(QtGui.QDialog):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
-            
-        
-
-#class LinkSelect(QtGui.QDialog):
-    #def __init__(self, feature, corpus, corpus_omit = [], parent=None):
-        
-        #super(LinkSelect, self).__init__(parent)
-        #self.omit_tables = ["coquery", "statistics"]
-        #self.corpus_omit = corpus_omit
-        #self.ui = Ui_LinkSelect()
-        #self.ui.setupUi(self)
-        #self.ui.label.setText(str(self.ui.label.text()).format(
-            #resource_feature=feature, corpus=corpus))
-        #self.insert_data()
-        #self.ui.treeWidget.itemActivated.connect(self.selected)
-        #self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
-
-        #try:
-            #self.resize(options.settings.value("linkselect_size"))
-        #except TypeError:
-            #pass
-
-    #@staticmethod
-    #def display(feature, corpus, corpus_omit, parent=None):
-        #dialog = LinkSelect(feature, corpus, corpus_omit, parent=parent)        
-        #dialog.setVisible(True)
-        #result = dialog.exec_()
-        #if result == QtGui.QDialog.Accepted:
-            #selected = dialog.ui.treeWidget.selectedItems()[0]
-            #link = Link(selected, bool(dialog.ui.checkBox.checkState()))
-            #link._from = (corpus, feature, feature)
-            #return link
-        #else:
-            #return None
-        
-
-#def main():
-    #app = QtGui.QApplication(sys.argv)
-    #viewer = LinkSelect()
-    #viewer.exec_()
-    
-#if __name__ == "__main__":
-    #main()
-    
