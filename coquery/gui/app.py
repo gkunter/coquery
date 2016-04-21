@@ -2349,10 +2349,9 @@ class CoqueryApp(QtGui.QMainWindow):
             tree = classes.CoqTreeLinkItem()
             tree.setCheckState(0, QtCore.Qt.Unchecked)
             tree.setLink(link)
-            tree.setText(0, "{}.{}.{}".format(
+            tree.setText(0, "{}.{}".format(
                 link.res_to,
-                getattr(ext_res, ext_table),
-                getattr(ext_res, link.rc_to)))
+                getattr(ext_res, ext_table)))
 
             table = ext_res.get_table_dict()[tab]
             # fill new tree with the features from the linked table (exclude
