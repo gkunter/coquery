@@ -1193,6 +1193,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 self.createIndex(self.rowCount(), self.columnCount()))
 
     def is_visible(self, index):
+        session = options.cfg.main_window.Session
+        if options.cfg.experimental:
+            print(index.row()+1)
+            print(session.query_type)
+            print(session.row_visibility[session.query_type])
+            return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
+                    options.cfg.main_window.Session.row_visibility[options.cfg.main_window.Session.query_type][index.row()+1])
         return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
                 options.cfg.row_visibility[options.cfg.main_window.Session.query_type].get(self.content.index[index.row()], True))
     

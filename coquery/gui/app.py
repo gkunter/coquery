@@ -1590,6 +1590,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.table_model.rowVisibilityChanged.emit()
         self.table_model.layoutChanged.emit()
 
+        self.Session.row_visibility[self.Session.query_type].loc[selection] = state
+        
+
     def reset_colors(self, selection):
         """
         Reset the colors of the columns in the selection.

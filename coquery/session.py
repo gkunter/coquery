@@ -83,6 +83,12 @@ class Session(object):
         self.header_shown = False
         self.input_columns = []
 
+        # row_visibility stores for each query type a pandas Series object
+        # with the same index as the respective output object, and boolean
+        # values. If the value is False, the row in the output object is
+        # hidden, otherwise, it is visible.
+        self.row_visibility = defaultdict(pd.Series)
+        self.column_visibility = defaultdict(pd.Series)
 
         # verify filter list:
         new_list = []
@@ -168,23 +174,23 @@ class Session(object):
 
         return frequency_table
 
-    def mask_data(self):
-        """
-        Return a data frame that contains the currently visible rows and 
-        columns from the session's data table.
-        """
+    #def mask_data(self):
+        #"""
+        #Return a data frame that contains the currently visible rows and 
+        #columns from the session's data table.
+        #"""
         
-        print(options.cfg.row_visibility)
-        print(options.cfg.column_visibility)
-        print(self.query_type)
+        #print(options.cfg.row_visibility)
+        #print(options.cfg.column_visibility)
+        #print(self.query_type)
         
-        invisible_rows = options.cfg.row_visibility[self.query_type].keys()
-        visible_columns = [x for x in self.output_order if options.cfg.column_visibility[self.query_type].get(x, True)]
+        #invisible_rows = options.cfg.row_visibility[self.query_type].keys()
+        #visible_columns = [x for x in self.output_order if options.cfg.column_visibility[self.query_type].get(x, True)]
 
-        print(invisible_rows)
-        print(visible_columns)
+        #print(invisible_rows)
+        #print(visible_columns)
         
-        print(self.data_table[visible_columns].iloc[~self.data_table.index.isin(invisible_rows)])
+        #print(self.data_table[visible_columns].iloc[~self.data_table.index.isin(invisible_rows)])
         
 
     def aggregate_data(self, recalculate=True):
@@ -227,6 +233,10 @@ class Session(object):
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
+        self.row_visibility[self.query_type] = pd.Series(
+            data = [True] * len(self.output_object.index),
+            index = self.output_object.index)            
+
         # cache the output object for the current query type:
         if self.query_type == queries.FrequencyQuery:
             self._cached_frequency_table = self.output_object
@@ -237,7 +247,7 @@ class Session(object):
         elif self.query_type == queries.ContingencyQuery:
             self._cached_contingency_table = self.output_object
         elif self.query_type == queries.ContrastQuery:
-            self._cached_contrast_table = self.output_object            
+            self._cached_contrast_table = self.output_object
 
     def drop_cached_aggregates(self):
         try:
