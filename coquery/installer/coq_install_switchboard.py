@@ -249,7 +249,7 @@ class BuilderClass(BaseCorpusBuilder):
                     if self._interrupted:
                         return
                     self._file_id += 1
-                    match = re.search("sw(\d\d\d\d)([A|B])-ms98-a-word\.text", 
+                    match = re.match("sw(\d\d\d\d)([A|B])-ms98-a-word\.text", 
                                      member.name)
                     if match:
                         self._duration = 0
@@ -267,10 +267,10 @@ class BuilderClass(BaseCorpusBuilder):
 
     def _process_words_file(self, tar_file, member):
         logger.info("Processing file {}".format(member.name))
-        match = re.search("sw(\d\d\d\d)([A|B])-ms98-a-word\.text", member.name)        
+        match = re.match("sw(\d\d\d\d)([A|B])-ms98-a-word\.text", member.name)        
         conv_id = int(match.groups()[0])
         side = '"{}"'.format(match.groups()[1])
-        speaker_id = self._df_conv[(self._df_conv.ConvId == conv_id) & 
+        speaker_id = self._df_conv[(self._df_conv[self.source_id] == conv_id) & 
                                    (self._df_conv.Side == side)].SpeakerId.values[0]
         #source_id = self._df_conv.index[self._df_conv.ConvId == conv_id]
         source_id = 1
@@ -284,6 +284,7 @@ class BuilderClass(BaseCorpusBuilder):
                 source, start, end, label = [x.strip() for x in row.split()]
             except ValueError:
                 print(member.name, row)
+                print("---")
                 continue
             label = utf8(label)
             source = utf8(source)
