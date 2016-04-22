@@ -57,8 +57,6 @@ def collapse_words(word_list):
     last_token = ""
     for i, current_token in enumerate(context_list):
         if current_token:
-            if options.cfg.experimental:
-                print("<{}>".format(current_token))
             if '""""' in current_token:
                 current_token = '"'
         
@@ -2923,6 +2921,4 @@ class CorpusClass(object):
         s = collapse_words(context)
         s = s.replace("</p>", "</p>\n")
         s = s.replace("<br/>", "<br/>\n")
-        if options.cfg.experimental:
-            print(s)
         return s
