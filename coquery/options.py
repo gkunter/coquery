@@ -236,7 +236,6 @@ class Options(object):
         self.args.column_color = {}
         self.args.column_names = {}
         self.args.column_visibility = collections.defaultdict(dict)
-        self.args.row_visibility = collections.defaultdict(dict)
         self.args.row_color = {}
         # Set defaults for CSV files:
         self.args.query_column_number = 1
@@ -253,7 +252,7 @@ class Options(object):
         return self.args
         
     def setup_parser(self):
-        self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=(QUERY_MODE_TOKENS, QUERY_MODE_FREQUENCIES, QUERY_MODE_DISTINCT, QUERY_MODE_STATISTICS, QUERY_MODE_CONTINGENCY, QUERY_MODE_COLLOCATIONS), type=str, nargs="?")
+        self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=QUERY_MODES.keys(), type=str, nargs="?")
         if sys.version_info < (3, 0):
             l = [x.encode("utf-8") for x in self.corpus_argument_dict["choices"]]
             self.corpus_argument_dict["choices"] = l
@@ -475,6 +474,12 @@ class Options(object):
                 # command-line setting:
                 vars(self.args)[command_argument] = vars(args)[command_argument]
         
+        try:
+            self.args.MODE = QUERY_MODES[self.args.MODE]
+        except KeyError:
+            if self.args.MODE not in QUERY_MODES.values():
+                self.args.MODE = QUERY_MODE_TOKENS
+            
         # evaluate the shorthand options. If set, add the corresponding 
         # resource feature to the list of selected features
         try:
@@ -563,6 +568,7 @@ class Options(object):
             if genre_label:
                 for genre in Genres:
                     self.args.filter_list.append("{} = {}".format(genre_label,  genre))
+                    
         # Go through the table dictionary D, and add the resource features 
         # to the list of selected features if the corresponding choice 
         # parameter was set:
@@ -692,7 +698,7 @@ class Options(object):
                             mode = config_file.get("main", "query_mode")
                             self.args.MODE = mode
                         except (NoOptionError, ValueError):
-                            self.args.MODE = QUERY_MODE_DISTINCT
+                            self.args.MODE = QUERY_MODE_TOKENS
                         try:
                             last_query = config_file.get("main", "query_string")
                             self.args.query_list = decode_query_string(last_query)
