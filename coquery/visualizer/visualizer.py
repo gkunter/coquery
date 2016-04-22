@@ -293,27 +293,16 @@ class BaseVisualizer(QtCore.QObject):
        
         #options.cfg.main_window.Session.mask_data()
        
-       # 
+        # get visible rows::
         try:
             self._table = self._df[column_order]
         except TypeError:
-            if options.cfg.experimental:
-                self._table = options.cfg.main_window.Session.data_table[
-                    self.Session.row_visibility[self.Session.query_type]]
-            else:
-                self._table = options.cfg.main_window.Session.data_table.iloc[
-                        ~options.cfg.main_window.Session.data_table.index.isin(
-                            pd.Series(list(options.cfg.row_visibility[queries.TokenQuery].keys())))]
+            session = options.cfg.main_window.Session
+            self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
 
             self._table = self._table[column_order]
 
         self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
-        
-        # get list of visible rows:
-        #visible_rows = list(options.cfg.row_visibility.keys())
-        #self._row_order = ~self._table.index.isin(pd.Series(visible_rows) - 1)
-        #self._table = self._table[self._row_order]
-        
         
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
