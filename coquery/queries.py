@@ -1160,5 +1160,21 @@ class CollocationQuery(TokenQuery):
     @staticmethod
     def remove_output_columns(session):
         session.output_order = session._old_output_order
+
+def get_query_type(MODE):
+    if MODE == QUERY_MODE_TOKENS:
+        return TokenQuery
+    elif MODE == QUERY_MODE_FREQUENCIES:
+        return FrequencyQuery
+    elif MODE == QUERY_MODE_DISTINCT:
+        return DistinctQuery
+    elif MODE == QUERY_MODE_COLLOCATIONS:
+        return CollocationQuery
+    elif MODE == QUERY_MODE_CONTINGENCY:
+        return ContingencyQuery
+    elif MODE == QUERY_MODE_CONTRASTS:
+        return ContrastQuery
+    elif MODE == QUERY_MODE_STATISTICS:
+        return StatisticsQuery
         
 logger = logging.getLogger(NAME)
