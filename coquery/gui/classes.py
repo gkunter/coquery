@@ -1167,39 +1167,33 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # remember the current header:
         self.last_header = self.header
 
-    def reorder_data(self, new_order):
-        if "coquery_invisible_corpus_id" not in new_order:
-            new_order.append("coquery_invisible_corpus_id")
-        if "coquery_invisible_number_of_tokens" not in new_order:
-            new_order.append("coquery_invisible_number_of_tokens")
-        self.content = self.content.reindex(columns=new_order)
-        # notify the GUI that the whole data frame has changed:
-        self.dataChanged.emit(
-            self.createIndex(0, 0), 
-            self.createIndex(self.rowCount(), self.columnCount()))
-
     def set_data(self, data=None):
         """ Set the content of the table model to the given data, using a
         pandas DataFrame object. """
         self.content = data
         self.rownames = list(self.content.index.values)
+
+        if not hasattr(options.cfg.main_window, "Session"):
+            return
+
         # try to set the columns to the output order of the current session
-        try:
-            self.reorder_data(options.cfg.main_window.Session.output_order)
-        except AttributeError:
-            # even if that failed, emit a signal that the data has changed:
-            self.dataChanged.emit(
-                self.createIndex(0, 0), 
-                self.createIndex(self.rowCount(), self.columnCount()))
+        new_order = options.cfg.main_window.Session.output_order
+        if "coquery_invisible_corpus_id" not in new_order:
+            new_order.append("coquery_invisible_corpus_id")
+        if "coquery_invisible_number_of_tokens" not in new_order:
+            new_order.append("coquery_invisible_number_of_tokens")
+
+        self.content = self.content.reindex(columns=new_order)
+
+        # notify the GUI that the whole data frame has changed:
+        self.dataChanged.emit(
+            self.createIndex(0, 0), 
+            self.createIndex(self.rowCount(), self.columnCount()))
 
     def is_visible(self, index):
         session = options.cfg.main_window.Session
-        if options.cfg.experimental:
-            return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
-                session.row_visibility[session.query_type][self.content.index[index.row()]])
-        else:
-            return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
-                    options.cfg.row_visibility[options.cfg.main_window.Session.query_type].get(self.content.index[index.row()], True))
+        return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
+            session.row_visibility[session.query_type][self.content.index[index.row()]])
     
     def data(self, index, role):
         """ 
