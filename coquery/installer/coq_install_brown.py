@@ -160,7 +160,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_db_name():
-        return "brown"
+        return "coq_brown"
     
     @staticmethod
     def get_title():
