@@ -58,27 +58,12 @@ class Session(object):
 
         self.show_header = options.cfg.show_header
 
-        # select the query class depending on the value of options.cfg.MODE, i.e.
-        # which mode has been specified in the options:
-        if options.cfg.MODE == QUERY_MODE_TOKENS:
-            self.query_type = queries.TokenQuery
-        elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-            self.query_type = queries.FrequencyQuery
-        elif options.cfg.MODE == QUERY_MODE_DISTINCT:
-            self.query_type = queries.DistinctQuery
-        elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
-            self.query_type = queries.CollocationQuery
-        elif options.cfg.MODE == QUERY_MODE_CONTINGENCY:
-            self.query_type = queries.ContingencyQuery
-        elif options.cfg.MODE == QUERY_MODE_CONTRASTS:
-            self.query_type = queries.ContrastQuery
-        elif options.cfg.MODE == QUERY_MODE_STATISTICS:
-            self.query_type = queries.StatisticsQuery
+        self.query_type = queries.get_query_type(options.cfg.MODE)
 
         logger.info("Corpus: %s" % options.cfg.corpus)
         
         self.data_table = pd.DataFrame()
-        self.output_object = None
+        self.output_object = pd.DataFrame()
         self.output_order = []
         self.header_shown = False
         self.input_columns = []
@@ -141,6 +126,7 @@ class Session(object):
         self.filter_data()
 
         self.end_time = datetime.datetime.now()
+        self.reset_row_visibility(queries.TokenQuery, self.data_table)
 
         if not options.cfg.gui:
             self.aggregate_data()
@@ -216,18 +202,14 @@ class Session(object):
             elif self.query_type == queries.ContrastQuery and hasattr(self, "_cached_contrast_table"):
                 self.output_object = self._cached_contrast_table
                 return
-
         # Recalculate the output object for the current query type, excluding
         # invisible rows:
         if self.query_type == queries.TokenQuery:
+            if not queries.TokenQuery in self.row_visibility:
+                self.reset_row_visibility(queries.TokenQuery, self.data_table)
             tab = self.data_table
         else:
-            if options.cfg.experimental:
-                tab = tab[self.Session.row_visibility[self.Session.query_type]]
-            else:
-                tab = self.data_table.iloc[
-                        ~self.data_table.index.isin(
-                            pd.Series(list(options.cfg.row_visibility[queries.TokenQuery].keys())))]
+            tab = self.data_table[self.row_visibility[queries.TokenQuery]]
 
         self.output_object = self.query_type.aggregate_it(
             tab,
@@ -237,7 +219,7 @@ class Session(object):
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
         if not self.query_type in self.row_visibility:
-            self.reset_row_visibility()
+            self.reset_row_visibility(self.query_type)
 
         # cache the output object for the current query type:
         if self.query_type == queries.FrequencyQuery:
@@ -265,10 +247,11 @@ class Session(object):
         except AttributeError:
             pass
 
-    def reset_row_visibility(self):
-        self.row_visibility[self.query_type] = pd.Series(
-            data = [True] * len(self.output_object.index),
-            index = self.output_object.index)            
+    def reset_row_visibility(self, query_type, df=pd.DataFrame()):
+        if df.empty:
+            df = self.output_object
+        self.row_visibility[query_type] = pd.Series(
+            data=[True] * len(df.index), index=df.index)
 
     def filter_data(self, column="statistics_frequency"):
         """

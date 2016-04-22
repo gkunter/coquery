@@ -112,7 +112,7 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.font = options.cfg.app.font()
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
 
-        if size.height() < 748 or size.width() < 800 or options.cfg.experimental:
+        if size.width() < 800 or size.height() < 600:
             self.ui = coqueryTinyUi.Ui_MainWindow()
         else:
             self.ui = coqueryUi.Ui_MainWindow()
@@ -158,6 +158,8 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.options_tree = self.create_output_options_tree()
         self.ui.output_columns.addWidget(self.ui.options_tree)
+
+        self.ui.combo_summary.addItems(SUMMARY_MODES)
         
         if options.cfg.current_resources:
             # add available resources to corpus dropdown box:
@@ -429,9 +431,7 @@ class CoqueryApp(QtGui.QMainWindow):
             # Check if rows are selected
             if select.selectedRows():
                 # Add rows submenu
-                selection = []
-                for x in self.ui.data_preview.selectionModel().selectedRows():
-                    selection.append(self.table_model.content.index[x.row()])
+                selection = self.table_model.content.index[[x.row() for x in self.ui.data_preview.selectionModel().selectedRows()]]
                 
                 self.ui.menuRows = self.get_row_submenu(selection=selection)
                 self.ui.menu_Results.insertMenu(self.ui.menuNoRows, self.ui.menuRows)
@@ -498,41 +498,23 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_context_mode_string.toggled.connect(self.update_context_widgets)
         self.ui.radio_context_mode_columns.toggled.connect(self.update_context_widgets)
         
-        # set up hooks so that the statistics columns are only available when 
-        # the frequency aggregation is active:        
-        #self.ui.radio_aggregate_collocations.toggled.connect(self.toggle_frequency_columns)
-        #self.ui.radio_aggregate_frequencies.toggled.connect(self.toggle_frequency_columns)
-        #self.ui.radio_aggregate_none.toggled.connect(self.toggle_frequency_columns)
-        #self.ui.radio_aggregate_uniques.toggled.connect(self.toggle_frequency_columns)
-        #self.ui.radio_aggregate_contrasts.toggled.connect(self.toggle_frequency_columns)
-
-        # set up hooks for aggregating the result table
-        self.ui.radio_aggregate_collocations.clicked.connect(
-            lambda: self.reaggregate(
-                query_type=queries.CollocationQuery,
-                recalculate=False))
-        self.ui.radio_aggregate_frequencies.clicked.connect(
-            lambda: self.reaggregate(
-                query_type=queries.FrequencyQuery,
-                recalculate=False))
-        self.ui.radio_aggregate_contingency.clicked.connect(
-            lambda: self.reaggregate(
-                query_type=queries.ContingencyQuery,
-                recalculate=False))
-        self.ui.radio_aggregate_uniques.clicked.connect(
-            lambda: self.reaggregate(
-                query_type=queries.DistinctQuery,
-                recalculate=False))
-        self.ui.radio_aggregate_none.clicked.connect(
-            lambda: self.reaggregate(
-                query_type=queries.TokenQuery,
-                recalculate=False))
-        self.ui.radio_aggregate_contrasts.clicked.connect(
-            lambda: self.reaggregate(
-                query_type=queries.ContrastQuery,
-                recalculate=False))
+        # set up hooks for the summary widgets:
+        self.ui.radio_no_summary.clicked.connect(self.change_summary)
+        self.ui.radio_summary.clicked.connect(self.change_summary)
+        self.ui.combo_summary.currentIndexChanged.connect(self.change_summary)
             
         self.corpusListUpdated.connect(self.check_corpus_widgets)
+
+    def change_summary(self):
+        if self.ui.radio_no_summary.isChecked():
+            options.cfg.MODE = QUERY_MODE_TOKENS
+            self.ui.combo_summary.setDisabled(True)
+        else:
+            summary_type = self.ui.combo_summary.currentText()
+            options.cfg.MODE = summary_type
+            self.ui.combo_summary.setDisabled(False)
+        self.reaggregate(query_type=queries.get_query_type(options.cfg.MODE), 
+                         recalculate=False)
 
     def enable_corpus_widgets(self):
         self.ui.options_area.setEnabled(True)
@@ -678,6 +660,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.thread.taskFinished.connect(self.finish_reaggregation)
         self.thread.taskException.connect(self.exception_during_query)
 
+        # handle query-type specific columns:
         if query_type and query_type != self.Session.query_type:
             self.Session.query_type.remove_output_columns(self.Session)
             self.Session.query_type = query_type
@@ -922,7 +905,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if drop:
             # drop row colors and row visibility:
-            self.Session.reset_row_visibility()
+            self.Session.reset_row_visibility(self.Session.query_type)
             options.cfg.row_visibility = collections.defaultdict(dict)
             options.cfg.row_color = {}
         # set column widths:
@@ -1075,12 +1058,8 @@ class CoqueryApp(QtGui.QMainWindow):
             ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
             tab = self.table_model.content[ordered_headers]
 
-            if options.cfg.experimental:
-                tab = tab[self.Session.row_visibility[self.Session.query_type])]
-            else:
-                # exclude invisble rows:
-                tab = tab.iloc[~tab.index.isin(pd.Series(
-                    list(options.cfg.row_visibility[self.Session.query_type].keys())))]
+            # restrict to visible rows:
+            tab = tab[self.Session.row_visibility[self.Session.query_type]]
             
             # restrict to selection?
             if selection or clipboard:
@@ -1113,7 +1092,6 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             if not selection and not clipboard:
                 self.last_results_saved = True
-    
 
     def create_textgrids(self):
         if not options._use_tgt:
@@ -1138,15 +1116,11 @@ class CoqueryApp(QtGui.QMainWindow):
         ordered_headers.append("coquery_invisible_corpus_id")
         tab = self.table_model.content[ordered_headers]
 
-        if options.cfg.experimental:
-            tab = tab[self.Session.row_visibility[self.Session.query_type]]
-        else:
-            # exclude invisble rows:
-            tab = tab.iloc[~tab.index.isin(pd.Series(
-                options.cfg.row_visibility[self.Session.query_type].keys()))]
+        # restrict to visible rows:
+        tab = tab[self.Session.row_visibility[self.Session.query_type]]
             
         writer = TextgridWriter(tab, self.Session.Resource)
-        n = writer.write_grids(name)
+        n = writer.write_grids(name, ordered_headers)
         self.showMessage("Done writing {} text grids to {}.".format(n, name))
     
     def showMessage(self, S):
@@ -1389,7 +1363,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     menu.addAction(action)
         return menu
 
-    def get_row_submenu(self, selection=[], point=None):
+    def get_row_submenu(self, selection=pd.Series(), point=None):
         """
         Create a submenu for one or more rows.
         
@@ -1411,13 +1385,11 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         
         menu = QtGui.QMenu("Row options", self)
-
-        if not selection:
+        if len(selection) == 0:
             if point:
                 header = self.ui.data_preview.verticalHeader()
                 row = header.logicalIndexAt(point.y())
-                selection = [self.table_model.content.index[row]]
-
+                selection = self.table_model.content.index[[row]]
         length = len(selection)
         if length > 1:
             display_name = "{} rows selected".format(len(selection))
@@ -1432,57 +1404,32 @@ class CoqueryApp(QtGui.QMainWindow):
         menu.addAction(action)
         if length:
             menu.addSeparator()
-            if options.cfg.experimental:
-                # Check if any row is hidden
-                row_vis = self.Session.row_visibility[self.Session.query_type][selection]
-                if not row_vis.all():
-                    if length > 1:
-                        if ~row_vis.all():
-                            action = QtGui.QAction("&Show rows", self)
-                        else:
-                            action = QtGui.QAction("&Show hidden rows", self)
+            # Check if any row is hidden
+            row_vis = self.Session.row_visibility[self.Session.query_type][selection]
+            if not row_vis.all():
+                if length > 1:
+                    if ~row_vis.all():
+                        action = QtGui.QAction("&Show rows", self)
                     else:
-                        action = QtGui.QAction("&Show row", self)
-                    action.triggered.connect(lambda: self.set_row_visibility(selection, True))
-                    action.setIcon(self.get_icon("sign-maximize"))
-                    menu.addAction(action)
-                # Check if any row is visible
-                if row_vis.any():
-                    if length > 1:
-                        if row_vis.all():
-                            action = QtGui.QAction("&Hide rows", self)
-                        else:
-                            action = QtGui.QAction("&Hide visible rows", self)
+                        action = QtGui.QAction("&Show hidden rows", self)
+                else:
+                    action = QtGui.QAction("&Show row", self)
+                action.triggered.connect(lambda: self.set_row_visibility(selection, True))
+                action.setIcon(self.get_icon("sign-maximize"))
+                menu.addAction(action)
+            # Check if any row is visible
+            if row_vis.any():
+                if length > 1:
+                    if row_vis.all():
+                        action = QtGui.QAction("&Hide rows", self)
                     else:
-                        action = QtGui.QAction("&Hide row", self)
-                    action.triggered.connect(lambda: self.set_row_visibility(selection, False))
-                    action.setIcon(self.get_icon("sign-minimize"))
-                    menu.addAction(action)
-            else:
-                # Check if any row is hidden
-                if any([not options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
-                    if length > 1:
-                        if all([not options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
-                            action = QtGui.QAction("&Show rows", self)
-                        else:
-                            action = QtGui.QAction("&Show hidden rows", self)
-                    else:
-                        action = QtGui.QAction("&Show row", self)
-                    action.triggered.connect(lambda: self.set_row_visibility(selection, True))
-                    action.setIcon(self.get_icon("sign-maximize"))
-                    menu.addAction(action)
-                # Check if any row is visible
-                if any([options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
-                    if length > 1:
-                        if all([options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
-                            action = QtGui.QAction("&Hide rows", self)
-                        else:
-                            action = QtGui.QAction("&Hide visible rows", self)
-                    else:
-                        action = QtGui.QAction("&Hide row", self)
-                    action.triggered.connect(lambda: self.set_row_visibility(selection, False))
-                    action.setIcon(self.get_icon("sign-minimize"))
-                    menu.addAction(action)
+                        action = QtGui.QAction("&Hide visible rows", self)
+                else:
+                    action = QtGui.QAction("&Hide row", self)
+                action.triggered.connect(lambda: self.set_row_visibility(selection, False))
+                action.setIcon(self.get_icon("sign-minimize"))
+                menu.addAction(action)
+
             menu.addSeparator()
             
             # Check if any row has a custom color:
@@ -1515,8 +1462,8 @@ class CoqueryApp(QtGui.QMainWindow):
         selected, show a context menu for the row that has been clicked on.
         """
         selection = []
-        for x in self.ui.data_preview.selectionModel().selectedRows():
-            selection.append(self.table_model.content.index[x.row()])
+        
+        selection = self.table_model.content.index[[x.row() for x in self.ui.data_preview.selectionModel().selectedRows()]]
         
         header = self.ui.data_preview.verticalHeader()
         self.menu = self.get_row_submenu(selection=selection, point=point)
@@ -1609,19 +1556,7 @@ class CoqueryApp(QtGui.QMainWindow):
         state : bool
             True if the rows should be visible, or False to hide the rows
         """
-        
-        if options.cfg.experimental:
-            self.Session.row_visibility[self.Session.query_type][selection] = state
-        else:
-            if state:
-                for x in selection:
-                    try:
-                        options.cfg.row_visibility[self.Session.query_type].pop(np.int64(x))
-                    except KeyError:
-                        pass
-            else:
-                for x in selection:
-                    options.cfg.row_visibility[self.Session.query_type][np.int64(x)] = False 
+        self.Session.row_visibility[self.Session.query_type][selection] = state
 
         self.ui.data_preview.verticalHeader().geometriesChanged.emit()
         self.table_model.rowVisibilityChanged.emit()
@@ -2123,25 +2058,12 @@ class CoqueryApp(QtGui.QMainWindow):
         
         if options.cfg:
             options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
-        
-            # determine query mode:
-            if self.ui.radio_aggregate_uniques.isChecked():
-                options.cfg.MODE = QUERY_MODE_DISTINCT
-            if self.ui.radio_aggregate_none.isChecked():
+
+            if self.ui.radio_no_summary.isChecked():
                 options.cfg.MODE = QUERY_MODE_TOKENS
-            if self.ui.radio_aggregate_frequencies.isChecked():
-                options.cfg.MODE = QUERY_MODE_FREQUENCIES
-            if self.ui.radio_aggregate_contingency.isChecked():
-                options.cfg.MODE = QUERY_MODE_CONTINGENCY                
-            if self.ui.radio_aggregate_collocations.isChecked():
-                options.cfg.MODE = QUERY_MODE_COLLOCATIONS
-            if self.ui.radio_aggregate_contrasts.isChecked():
-                options.cfg.MODE = QUERY_MODE_CONTRASTS
-            try:
-                if self.ui.radio_mode_statistics.isChecked():
-                    options.cfg.MODE = QUERY_MODE_STATISTICS
-            except AttributeError:
-                pass
+            else:
+                summary_type = self.ui.combo_summary.currentText()
+                options.cfg.MODE = summary_type
                 
             # determine context mode:
             if self.ui.radio_context_none.isChecked():
@@ -2274,19 +2196,13 @@ class CoqueryApp(QtGui.QMainWindow):
         if index > -1:
             self.ui.combo_corpus.setCurrentIndex(index)
 
-        # set query mode:
-        if options.cfg.MODE == QUERY_MODE_DISTINCT:
-            self.ui.radio_aggregate_uniques.setChecked(True)
-        elif options.cfg.MODE == QUERY_MODE_FREQUENCIES:
-            self.ui.radio_aggregate_frequencies.setChecked(True)
-        elif options.cfg.MODE == QUERY_MODE_TOKENS:
-            self.ui.radio_aggregate_none.setChecked(True)
-        elif options.cfg.MODE == QUERY_MODE_COLLOCATIONS:
-            self.ui.radio_aggregate_collocations.setChecked(True)
-        elif options.cfg.MODE == QUERY_MODE_CONTINGENCY:
-            self.ui.radio_aggregate_contingency.setChecked(True)
-        elif options.cfg.MODE == QUERY_MODE_CONTRASTS:
-            self.ui.radio_aggregate_contrasts.setChecked(True)
+        if options.cfg.MODE == QUERY_MODE_TOKENS:
+            self.ui.radio_no_summary.setChecked(True)
+            self.ui.combo_summary.setDisabled(True)
+        else:
+            self.ui.radio_summary.setChecked(True)
+            self.ui.combo_summary.setCurrentIndex(SUMMARY_MODES.index(options.cfg.MODE))
+            self.ui.combo_summary.setDisabled(False)
 
         self.ui.edit_file_name.setText(options.cfg.input_path)
         # either fill query string or query file input:
