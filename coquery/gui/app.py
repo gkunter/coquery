@@ -922,9 +922,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if drop:
             # drop row colors and row visibility:
+            self.Session.reset_row_visibility()
             options.cfg.row_visibility = collections.defaultdict(dict)
             options.cfg.row_color = {}
-
         # set column widths:
         for i, column in enumerate(self.table_model.header):
             if column.lower() in options.cfg.column_width:
@@ -1075,9 +1075,12 @@ class CoqueryApp(QtGui.QMainWindow):
             ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
             tab = self.table_model.content[ordered_headers]
 
-            # exclude invisble rows:
-            tab = tab.iloc[~tab.index.isin(pd.Series(
-                list(options.cfg.row_visibility[self.Session.query_type].keys())))]
+            if options.cfg.experimental:
+                tab = tab[self.Session.row_visibility[self.Session.query_type])]
+            else:
+                # exclude invisble rows:
+                tab = tab.iloc[~tab.index.isin(pd.Series(
+                    list(options.cfg.row_visibility[self.Session.query_type].keys())))]
             
             # restrict to selection?
             if selection or clipboard:
@@ -1135,9 +1138,12 @@ class CoqueryApp(QtGui.QMainWindow):
         ordered_headers.append("coquery_invisible_corpus_id")
         tab = self.table_model.content[ordered_headers]
 
-        # exclude invisble rows:
-        tab = tab.iloc[~tab.index.isin(pd.Series(
-            options.cfg.row_visibility[self.Session.query_type].keys()))]
+        if options.cfg.experimental:
+            tab = tab[self.Session.row_visibility[self.Session.query_type]]
+        else:
+            # exclude invisble rows:
+            tab = tab.iloc[~tab.index.isin(pd.Series(
+                options.cfg.row_visibility[self.Session.query_type].keys()))]
             
         writer = TextgridWriter(tab, self.Session.Resource)
         n = writer.write_grids(name)
@@ -1424,33 +1430,59 @@ class CoqueryApp(QtGui.QMainWindow):
         label.setAlignment(QtCore.Qt.AlignCenter)
         action.setDefaultWidget(label)
         menu.addAction(action)
-        
         if length:
             menu.addSeparator()
-            # Check if any row is hidden
-            if any([not options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
-                if length > 1:
-                    if all([not options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
-                        action = QtGui.QAction("&Show rows", self)
+            if options.cfg.experimental:
+                # Check if any row is hidden
+                row_vis = self.Session.row_visibility[self.Session.query_type][selection]
+                if not row_vis.all():
+                    if length > 1:
+                        if ~row_vis.all():
+                            action = QtGui.QAction("&Show rows", self)
+                        else:
+                            action = QtGui.QAction("&Show hidden rows", self)
                     else:
-                        action = QtGui.QAction("&Show hidden rows", self)
-                else:
-                    action = QtGui.QAction("&Show row", self)
-                action.triggered.connect(lambda: self.set_row_visibility(selection, True))
-                action.setIcon(self.get_icon("sign-maximize"))
-                menu.addAction(action)
-            # Check if any row is visible
-            if any([options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
-                if length > 1:
-                    if all([options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
-                        action = QtGui.QAction("&Hide rows", self)
+                        action = QtGui.QAction("&Show row", self)
+                    action.triggered.connect(lambda: self.set_row_visibility(selection, True))
+                    action.setIcon(self.get_icon("sign-maximize"))
+                    menu.addAction(action)
+                # Check if any row is visible
+                if row_vis.any():
+                    if length > 1:
+                        if row_vis.all():
+                            action = QtGui.QAction("&Hide rows", self)
+                        else:
+                            action = QtGui.QAction("&Hide visible rows", self)
                     else:
-                        action = QtGui.QAction("&Hide visible rows", self)
-                else:
-                    action = QtGui.QAction("&Hide row", self)
-                action.triggered.connect(lambda: self.set_row_visibility(selection, False))
-                action.setIcon(self.get_icon("sign-minimize"))
-                menu.addAction(action)
+                        action = QtGui.QAction("&Hide row", self)
+                    action.triggered.connect(lambda: self.set_row_visibility(selection, False))
+                    action.setIcon(self.get_icon("sign-minimize"))
+                    menu.addAction(action)
+            else:
+                # Check if any row is hidden
+                if any([not options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
+                    if length > 1:
+                        if all([not options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
+                            action = QtGui.QAction("&Show rows", self)
+                        else:
+                            action = QtGui.QAction("&Show hidden rows", self)
+                    else:
+                        action = QtGui.QAction("&Show row", self)
+                    action.triggered.connect(lambda: self.set_row_visibility(selection, True))
+                    action.setIcon(self.get_icon("sign-maximize"))
+                    menu.addAction(action)
+                # Check if any row is visible
+                if any([options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
+                    if length > 1:
+                        if all([options.cfg.row_visibility[self.Session.query_type].get(x, True) for x in selection]):
+                            action = QtGui.QAction("&Hide rows", self)
+                        else:
+                            action = QtGui.QAction("&Hide visible rows", self)
+                    else:
+                        action = QtGui.QAction("&Hide row", self)
+                    action.triggered.connect(lambda: self.set_row_visibility(selection, False))
+                    action.setIcon(self.get_icon("sign-minimize"))
+                    menu.addAction(action)
             menu.addSeparator()
             
             # Check if any row has a custom color:
@@ -1577,21 +1609,23 @@ class CoqueryApp(QtGui.QMainWindow):
         state : bool
             True if the rows should be visible, or False to hide the rows
         """
-        if state:
-            for x in selection:
-                try:
-                    options.cfg.row_visibility[self.Session.query_type].pop(np.int64(x))
-                except KeyError:
-                    pass
+        
+        if options.cfg.experimental:
+            self.Session.row_visibility[self.Session.query_type][selection] = state
         else:
-            for x in selection:
-                options.cfg.row_visibility[self.Session.query_type][np.int64(x)] = False 
+            if state:
+                for x in selection:
+                    try:
+                        options.cfg.row_visibility[self.Session.query_type].pop(np.int64(x))
+                    except KeyError:
+                        pass
+            else:
+                for x in selection:
+                    options.cfg.row_visibility[self.Session.query_type][np.int64(x)] = False 
+
         self.ui.data_preview.verticalHeader().geometriesChanged.emit()
         self.table_model.rowVisibilityChanged.emit()
         self.table_model.layoutChanged.emit()
-
-        self.Session.row_visibility[self.Session.query_type].loc[selection] = state
-        
 
     def reset_colors(self, selection):
         """

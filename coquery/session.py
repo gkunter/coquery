@@ -87,7 +87,7 @@ class Session(object):
         # with the same index as the respective output object, and boolean
         # values. If the value is False, the row in the output object is
         # hidden, otherwise, it is visible.
-        self.row_visibility = defaultdict(pd.Series)
+        self.row_visibility = {}
         self.column_visibility = defaultdict(pd.Series)
 
         # verify filter list:
@@ -222,9 +222,12 @@ class Session(object):
         if self.query_type == queries.TokenQuery:
             tab = self.data_table
         else:
-            tab = self.data_table.iloc[
-                    ~self.data_table.index.isin(
-                        pd.Series(list(options.cfg.row_visibility[queries.TokenQuery].keys())))]
+            if options.cfg.experimental:
+                tab = tab[self.Session.row_visibility[self.Session.query_type]]
+            else:
+                tab = self.data_table.iloc[
+                        ~self.data_table.index.isin(
+                            pd.Series(list(options.cfg.row_visibility[queries.TokenQuery].keys())))]
 
         self.output_object = self.query_type.aggregate_it(
             tab,
@@ -233,9 +236,8 @@ class Session(object):
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
-        self.row_visibility[self.query_type] = pd.Series(
-            data = [True] * len(self.output_object.index),
-            index = self.output_object.index)            
+        if not self.query_type in self.row_visibility:
+            self.reset_row_visibility()
 
         # cache the output object for the current query type:
         if self.query_type == queries.FrequencyQuery:
@@ -262,6 +264,11 @@ class Session(object):
             del self._cached_unique_table
         except AttributeError:
             pass
+
+    def reset_row_visibility(self):
+        self.row_visibility[self.query_type] = pd.Series(
+            data = [True] * len(self.output_object.index),
+            index = self.output_object.index)            
 
     def filter_data(self, column="statistics_frequency"):
         """

@@ -297,9 +297,13 @@ class BaseVisualizer(QtCore.QObject):
         try:
             self._table = self._df[column_order]
         except TypeError:
-            self._table = options.cfg.main_window.Session.data_table.iloc[
-                    ~options.cfg.main_window.Session.data_table.index.isin(
-                        pd.Series(list(options.cfg.row_visibility[queries.TokenQuery].keys())))]
+            if options.cfg.experimental:
+                self._table = options.cfg.main_window.Session.data_table[
+                    self.Session.row_visibility[self.Session.query_type]]
+            else:
+                self._table = options.cfg.main_window.Session.data_table.iloc[
+                        ~options.cfg.main_window.Session.data_table.index.isin(
+                            pd.Series(list(options.cfg.row_visibility[queries.TokenQuery].keys())))]
 
             self._table = self._table[column_order]
 
