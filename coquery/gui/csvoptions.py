@@ -19,7 +19,9 @@ from .pyqt_compat import QtGui, QtCore
 from .ui.csvOptionsUi import Ui_FileOptions
 
 class MyTableModel(QtCore.QAbstractTableModel):
-
+    """
+    A table class for the content of a CSV file.
+    """
     def __init__(self, parent, df, skip, *args):
         super(MyTableModel, self).__init__(parent, *args)
         self.df = df
@@ -61,14 +63,17 @@ quote_chars = {
     "": "None"}
 
 class CSVOptions(QtGui.QDialog):
-    def __init__(self, filename, default=None, parent=None, icon=None):
+    def __init__(self, filename, default=None, parent=None, icon=None, ui=None):
         super(CSVOptions, self).__init__(parent)
         
         self.filename = filename
         
         self.file_content = None
         
-        self.ui = Ui_FileOptions()
+        if ui:
+            self.ui = ui()
+        else:
+            self.ui = Ui_FileOptions()
         self.ui.setupUi(self)
         
         for x in quote_chars:
@@ -86,7 +91,13 @@ class CSVOptions(QtGui.QDialog):
             self.ui.separate_char.setCurrentIndex(index)
         else:
             self.ui.separate_char.setEditText(sep)
+
+        if col == None:
+            self.ui.query_column.hide()
+            self.ui.label_query_column.hide()
+            col = 1
         self.ui.query_column.setValue(col)
+        
         self.ui.file_has_headers.setChecked(head)
         self.ui.ignore_lines.setValue(skip)
         
@@ -139,7 +150,11 @@ class CSVOptions(QtGui.QDialog):
     def split_file_content(self):
         quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
             str(self.ui.quote_char.currentText())]
-        header=0 if self.ui.file_has_headers.isChecked() else None
+        if self.ui.file_has_headers.isChecked():
+            header = 0
+        else:
+            header = None
+        header = 0 if self.ui.file_has_headers.isChecked() else None
         try:
             self.file_table = pd.read_table(
                 self.filename,
@@ -147,11 +162,15 @@ class CSVOptions(QtGui.QDialog):
                 sep=str(self.separator),
                 quoting=3 if not quote else 0,
                 quotechar=quote if quote else "#",
-                na_filter=False)
+                na_filter=False,
+                nrows=100,
+                error_bad_lines=False)
         except ValueError as e:
             exception = EmptyInputFileError(self.filename)
             QtGui.QMessageBox.critical(self.parent(), "Query file error", str(exception))
             raise exception
+        if header == None:
+            self.file_table.columns = ["X{}".format(x) for x in range(len(self.file_table.columns))]
             
     def update_content(self):
         self.split_file_content()
@@ -185,11 +204,3 @@ class CSVOptions(QtGui.QDialog):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
             
-def main():
-    app = QtGui.QApplication(sys.argv)
-    print(CSVOptions.getOptions("/home/kunibert/Dev/coquery/coquery/test.csv",
-                                default=(",", 1, True, 0, '"')))
-    
-if __name__ == "__main__":
-    main()
-    
