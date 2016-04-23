@@ -243,7 +243,7 @@ class IndependenceTestViewer(QtGui.QDialog):
                 label_1=label_1, label_2=label_2
                 )
         else:
-            odds_explain = "The high value of <span style=' font-style:italic;'>p</span> suggests that the odds of encountering <code>{label_1}</code> are not notably different from the odds of encountering <code>{label_2}</code>".format(
+            odds_explain = "The high value of <span style=' font-style:italic;'>p</span> suggests that the odds of encountering <code>{label_1}</code> are not notably different from the odds of encountering <code>{label_2}</code>.".format(
                 label_1=label_1, label_2=label_2)
         
         self._html = utf8(self.html_template.format(
