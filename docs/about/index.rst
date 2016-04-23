@@ -36,7 +36,7 @@ translators, and anybody who wishes to search and analyse a text corpus.
                     <li>Use string functions e.g. to test if a token contains a letter sequence</li>
                     <li>Use the same query syntax for all installed corpora</li>
                     <li>Automate queries by reading them from an input file</li>
-                    <li>Store your results as CSV files or <a href="http://www.praat.org">Praat</a> TextGrid files (if timing information is available)</li>
+                    <li>Store your results as CSV files or <a href="http://www.praat.org">Praat</a> TextGrid files (for time-annotated corpora)</li>
                 </ul>
             </div>
         </div>
@@ -45,8 +45,10 @@ translators, and anybody who wishes to search and analyse a text corpus.
             <div class="col-md-6">
                 <h2>Analysis</h2>
                 <ul>
-                    <li>Summarize the query results as frequency tables</li>
-                    <li>Calculate entropies and relative frequencies</li>
+                    <li>Summarize the query results as frequency or contingency tables</li>
+                    <li>Create a G-test matrix for query results to detect statistically significant differences</li>
+                    <li>Run statistical tests of independence, and estimate the effect sizes</li>
+                    <li>Calculate entropies and relative or normalized frequencies</li>
                     <li>Fetch collocations, and calculate association statistics like mutual information scores or conditional probabilities</li>
                 </ul>
             </div>

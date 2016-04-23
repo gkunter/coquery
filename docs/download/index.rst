@@ -88,14 +88,28 @@ the following optional Python packages to enable all features in Coquery.
 
 * `PyMySQL <https://github.com/PyMySQL/PyMySQL/>`_ 0.6.4 or later – A pure-Python MySQL client library (Connect to MySQL database servers)
 * `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_ 0.7 or later – A Python statistical data visualization library (Create visualizations of your query results)
-* `NLTK <http://www.nltk.org>`_ 3.0 or later – The Natural Language Toolkit (Lemmatization and tagging when building your own corpora)
-* `PDFMiner <http://euske.github.io/pdfminer/index.html>`_ – PDF parser and analyzer (for Python 2.7) (Build your own corpora from PDF documents)
-* `pdfminer3k <https://pypi.python.org/pypi/pdfminer3k>`_ 1.3 or later – PDF parser and analyzer (for Python 3.x) (Build your own corpora from PDF documents)
+* `SciPy <https://www.scipy.org/scipylib/index.html/>`_ 0.13.0 or later – Open-source software for mathematics, science, and engineering (Use more accurate statisticsal tests)
+* `TextGridTools <https://github.com/hbuschme/TextGridTools/>`_ 1.3.1 or later – Read, write, and manipulate Praat TextGrid files (save results from time-annotated corpora as `Praat TextGrids <http://www.praat.org>`_)
+
+The following command installs these modules:
+    
+    pip install pymysql scipy seaborn tgt
+
+Additionally, the following modules may be installed if you want to create
+new corpora from your own collection of files:
+    
+* `NLTK <http://www.nltk.org>`_ 3.0 or later – The Natural Language Toolkit (provides automatic lemmatization and part-of-speech tagging, English only)
+* `PDFMiner <http://euske.github.io/pdfminer/index.html>`_ – Support for PDF documents (for Python 2.7)
+* `pdfminer3k <https://pypi.python.org/pypi/pdfminer3k>`_ 1.3 or later – Support for PDF documents (for Python 3.x)
+* `python-docx <https://python-docx.readthedocs.org/en/latest/>`_ 0.3.0 or later – Support for Microsoft Word (.docx) files
+* `odfpy <https://github.com/eea/odfpy/>`_ 1.2.0 or later – Support for OpenDocument files (e.g. Open Office, Libre Office)
+* `BeautifulSoup <http://www.crummy.com/software/BeautifulSoup/>`_ 4.0 or later – Support for HTML documents
+* `chardet <https://github.com/chardet/chardet>`_ 2.0.0 or later – Automatical detection of character encodings in your text files
 
 The following command installs these modules using ``pip`` (for Python 2.7)::
 
-    pip install pymysql seaborn nltk pdfminer
+    pip install nltk pdfminer python-docx odfpy bs4 chardet
     
 The following command installs these modules using ``pip`` (for Python 3.x)::
 
-    pip install pymysql seaborn nltk pdfminer3k
+    pip install nltk pdfminer3k python-docx odfpy bs4 chardet
