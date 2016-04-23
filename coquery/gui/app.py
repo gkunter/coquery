@@ -1852,11 +1852,28 @@ class CoqueryApp(QtGui.QMainWindow):
         from coquery. installer import coq_install_generic
         from .corpusbuilder_interface import BuilderGui
 
-        builder = BuilderGui(coq_install_generic.BuilderClass, self)
+        builder = BuilderGui(coq_install_generic.BuilderClass, parent=self)
         try:
             result = builder.display()
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info())
+        if result:
+            options.set_current_server(options.cfg.current_server)
+        self.fill_combo_corpus()
+        self.change_corpus()
+        self.corpusListUpdated.emit()
+            
+    def build_corpus_from_table(self):
+        from coquery. installer import coq_install_generic_table
+        from .corpusbuilder_interface import BuilderGui
+        print(0)
+        builder = BuilderGui(coq_install_generic_table.BuilderClass, onefile=True, parent=self)
+        print(1)
+        try:
+            result = builder.display()
+        except Exception as e:
+            errorbox.ErrorBox.show(sys.exc_info())
+        print(2)
         if result:
             options.set_current_server(options.cfg.current_server)
         self.fill_combo_corpus()
@@ -1891,6 +1908,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
             self.corpus_manager.buildCorpus.connect(self.build_corpus)
+            self.corpus_manager.buildCorpusFromTable.connect(self.build_corpus_from_table)
             self.corpusListUpdated.connect(self.corpus_manager.update)
             
             try:
@@ -2307,6 +2325,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 getattr(ext_res, ext_table)))
 
             table = ext_res.get_table_dict()[tab]
+            table = sorted(table, key=lambda x: getattr(ext_res, x))
             # fill new tree with the features from the linked table (exclude
             # the linking feature):
             for rc_feature in [x for x in table if x != link.rc_to]:
