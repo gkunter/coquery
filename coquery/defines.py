@@ -203,6 +203,22 @@ except NameError:
     unicode = str
     long = int
 
+msg_adhoc_builder_texts = """
+<p>You can build a new corpus by storing the words from a selection of text 
+files in a database that can be queried by Coquery. Your installation of 
+Coquery will recognize the following text file formats (more file formats 
+may be available if you install one of the optional modules, see 
+<a href='http://www.coquery.org/download/index.html#optional-python-modules'>
+http://www.coquery.org/download</a>):</p>
+<p><ul>{list}</uk></p>
+<p>If the Natural Language Toolkit NLTK (<a href='http://www.nltk.org'>
+http://www.nltk.org</a>) is installed on your computer, you can use it to 
+automatically lemmatize and POS-tag your new corpus.</p>"""
+
+msg_adhoc_builder_table = """
+<p>You can build a new corpus by storing the rows from a table in a database 
+that can be queried by Coquery.</p>"""
+
 msg_token_dangling_open = """
 <p><b>Your query string <code style='color: #aa0000'>{str}</code> misses a 
 closing character.</b></p>
