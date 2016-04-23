@@ -490,22 +490,22 @@ class TokenQuery(object):
             if hashed != None:
                 link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
                 res = options.get_resource(link.res_to)[0]
-                resource = "{}_{}_{}".format(res.db_name, table, feature)
+                resource = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
             else:
-                resource = "{}_{}".format(table, feature)
+                resource = "coq_{}_{}".format(table, feature)
             func_counter[resource] += 1
             fc = func_counter[resource]
                         
             # handle functions added to lexicon features:
             if self.Resource.is_lexical(rc_feature):
                 for n in range(self.get_max_tokens()):
-                    new_name = "coq_func_{}_{}_{}".format(resource, fc, n + 1)
-                    col_name = "coq_{}_{}".format(resource, n + 1)
+                    new_name = "func_{}_{}_{}".format(resource, fc, n + 1)
+                    col_name = "{}_{}".format(resource, n + 1)
                     df[new_name] = df[col_name].apply(fun)
             # handle other functions:
             else:
-                new_name = "coq_func_{}_{}_1".format(resource, fc)
-                col_name = "coq_{}_1".format(resource)
+                new_name = "func_{}_{}_1".format(resource, fc)
+                col_name = "{}_1".format(resource)
                 df[new_name] = df[col_name].apply(fun)
         return df
 
