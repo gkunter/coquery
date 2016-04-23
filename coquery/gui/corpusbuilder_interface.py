@@ -47,12 +47,14 @@ class InstallerGui(QtGui.QDialog):
         self.logger = logging.getLogger(NAME)        
 
         self.state = None
+        self._onefile = False
         
         self.ui = Ui_CorpusInstaller()
         self.ui.setupUi(self)
         self.ui.label_pos_tagging.hide()
         self.ui.use_pos_tagging.hide()
         self.ui.progress_box.hide()
+        self.ui.button_options.hide()
         self.ui.button_input_path.clicked.connect(self.select_path)
         self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=True))
         self.ui.radio_complete.toggled.connect(self.changed_radio)
@@ -134,7 +136,8 @@ class InstallerGui(QtGui.QDialog):
             if not path:
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
                 return
-            if not os.path.isdir(path):
+            if ((self._onefile and not os.path.isfile(path)) or 
+                (not self._onefile and not os.path.isdir(path))):
                 self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
                 return            
@@ -272,7 +275,13 @@ class InstallerGui(QtGui.QDialog):
 
         self.installStarted.emit()
         self.accepted = True
-        if hasattr(self, "_nltk_tagging"):
+        
+        if self._onefile:
+            self.builder = self.builder_class(
+                gui=self, 
+                mapping=self._table_options[-2],
+                dtypes=self._table_options[-1])
+        elif hasattr(self, "_nltk_tagging"):
             pos = self.ui.use_pos_tagging.isChecked()
             self.builder = self.builder_class(pos=pos, gui=self)
         else:
@@ -284,15 +293,6 @@ class InstallerGui(QtGui.QDialog):
 
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
         self.ui.frame.setEnabled(False)
-
-        #try:
-            #self.do_install()
-        #except RuntimeError as e:
-            #errorbox.ErrorBox.show(sys.exc_info(), e, no_trace=True)
-        #except Exception as e:
-            #errorbox.ErrorBox.show(sys.exc_info(), e)
-        #else:
-            #self.finish_install()
 
         self.install_thread = classes.CoqThread(self.do_install, self)
         self.install_thread.setInterrupt(self.builder.interrupt)
@@ -345,7 +345,7 @@ class BuilderGui(InstallerGui):
     button_label = "&Build"
     window_title = "Corpus builder – Coquery"
 
-    def __init__(self, builder_class, parent=None):
+    def __init__(self, builder_class, onefile=False, parent=None):
         super(BuilderGui, self).__init__(builder_class, parent)
         self.ui.input_path.textChanged.disconnect()
 
@@ -355,15 +355,50 @@ class BuilderGui(InstallerGui):
         self._nltk_tokenize = False
         self._nltk_tagging = False
         self._testing = False
+        self._onefile = onefile
+        self._table_options = tuple()
 
-        self.ui.corpus_description.setText("<html><head/><body><p><span style='font-weight:600;'>Corpus builder</span></p><p>You have requested to create a new corpus from a selection of text files using the database connection '{}'. The corpus will afterwards be available for queries.</p></body></html>".format(options.cfg.current_server))
-        self.ui.label_5.setText("Build corpus from local text files and install corpus module (if you have a local database server)")
-        self.ui.label_8.setText("Path to text files:")
+        if self._onefile:
+            self.ui.corpus_description.setText("""
+                <p><span style='font-weight:600;'>Corpus builder</span></p>
+                <p>You have requested to create a new corpus from a single
+                file containing tabular data using the database connection 
+                '{}'.</p>
+                """.format(options.cfg.current_server))
+            self.ui.label_5.setText("Build corpus from data file and install corpus module")
+            self.ui.label_8.setText("File name:")
+            self.ui.label_pos_tagging.hide()
+            self.ui.use_pos_tagging.hide()
+            self.ui.widget_ngram.hide()
+            self.ui.button_options.show()
+            self.ui.use_pos_tagging.setChecked(False)
+            self.ui.check_ngram.setChecked(False)
+
+            # make all buttons the same size:
+            max_width = 0
+            for button in [self.ui.button_options, self.ui.button_input_path]:
+                max_width = max(max_width, button.sizeHint().width())
+            for button in [self.ui.button_options, self.ui.button_input_path]:
+                button.setMinimumWidth(max_width)
+
+            self.ui.button_options.clicked.connect(self.file_options)
+        else:
+            self.ui.corpus_description.setText("""
+                <p><span style='font-weight:600;'>Corpus builder</span></p>
+                <p>You have requested to create a new corpus from a selection 
+                of text files using the database connection '{}'.</p>
+                """.format(options.cfg.current_server))
+            self.ui.label_5.setText("Build corpus from local text files and install corpus module")
+            self.ui.label_8.setText("Path to text files:")
+        
         self.setWindowTitle(self.window_title)
+        
+        self.ui.issue_layout = QtGui.QVBoxLayout()
         
         self.ui.name_layout = QtGui.QHBoxLayout()
         self.ui.name_label = QtGui.QLabel("&Name of new corpus:")
         self.ui.issue_label = QtGui.QLabel("")
+        self.ui.issue_label.setStyleSheet("QLabel { color: red; }")
         self.ui.corpus_name = QtGui.QLineEdit()
         self.ui.corpus_name.setMaxLength(32)
         self.ui.corpus_name.setValidator(QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
@@ -372,37 +407,44 @@ class BuilderGui(InstallerGui):
 
         self.ui.name_layout.addWidget(self.ui.name_label)
         self.ui.name_layout.addWidget(self.ui.corpus_name)
-        self.ui.name_layout.addWidget(self.ui.issue_label)
         self.ui.name_layout.addItem(spacerItem)
-        self.ui.verticalLayout.insertLayout(1, self.ui.name_layout)
 
-        self.ui.label_pos_tagging.show()
-        self.ui.use_pos_tagging.show()
-        label_text = ["Use NLTK for part-of-speech tagging and lemmatization"]
+        self.ui.issue_layout.addWidget(self.ui.issue_label)
+        self.ui.issue_layout.addLayout(self.ui.name_layout)
 
-        try:
-            val = options.settings.value("corpusbuilder_nltk") == "True"
-            self.ui.use_pos_tagging.setChecked(val)
-        except TypeError:
-            pass
+        self.ui.verticalLayout.insertLayout(1, self.ui.issue_layout)
 
-        if not options._use_nltk:
-            label_text.append("(unavailble – NLTK is not installed)")
-            self.ui.label_pos_tagging.setEnabled(False)
-            self.ui.use_pos_tagging.setEnabled(False)
-            self.ui.use_pos_tagging.setChecked(False)
+        if not self._onefile:
+            self.ui.label_pos_tagging.show()
+            self.ui.use_pos_tagging.show()
+            label_text = ["Use NLTK for part-of-speech tagging and lemmatization"]
+
+            try:
+                val = options.settings.value("corpusbuilder_nltk") == "True"
+                self.ui.use_pos_tagging.setChecked(val)
+            except TypeError:
+                pass
+
+            if not options._use_nltk:
+                label_text.append("(unavailble – NLTK is not installed)")
+                self.ui.label_pos_tagging.setEnabled(False)
+                self.ui.use_pos_tagging.setEnabled(False)
+                self.ui.use_pos_tagging.setChecked(False)
+            else:
+                self.ui.use_pos_tagging.clicked.connect(self.pos_check)
+                size = QtGui.QCheckBox().sizeHint()
+                self.ui.icon_nltk_check = classes.CoqSpinner(size)
+                self.ui.layout_nltk.addWidget(self.ui.icon_nltk_check)
+                
+            self.ui.label_pos_tagging.setText(" ".join(label_text))
+
+        if self._onefile:
+            self.ui.input_path.setText(options.cfg.corpus_table_source_path)
         else:
-            self.ui.use_pos_tagging.clicked.connect(self.pos_check)
-            size = QtGui.QCheckBox().sizeHint()
-            self.ui.icon_nltk_check = classes.CoqSpinner(size)
-            self.ui.layout_nltk.addWidget(self.ui.icon_nltk_check)
-            
-        self.ui.label_pos_tagging.setText(" ".join(label_text))
-
-        if options.cfg.text_source_path != os.path.expanduser("~"):
-            self.ui.input_path.setText(options.cfg.text_source_path)
-        else:
-            self.ui.input_path.setText("")
+            if options.cfg.text_source_path != os.path.expanduser("~"):
+                self.ui.input_path.setText(options.cfg.text_source_path)
+            else:
+                self.ui.input_path.setText("")
             
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
         self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=False))
@@ -493,6 +535,23 @@ class BuilderGui(InstallerGui):
         self.ui.label_pos_tagging.setDisabled(False)
         self.ui.use_pos_tagging.setDisabled(False)
 
+    def file_options(self):
+        """ Get CSV file options for current query input file. """
+        from .corpustableoptions import CorpusTableOptions
+        if self._table_options:
+            sep, _, header, skip, quote, mapping, dtypes = self._table_options
+            default = (sep, None, header, skip, quote, mapping, dtypes)
+        else:
+            default = (options.cfg.input_separator,
+                        None,
+                        options.cfg.file_has_headers,
+                        options.cfg.skip_lines,
+                        options.cfg.quote_char, {}, {})
+        self._table_options = CorpusTableOptions.getOptions(
+            utf8(self.ui.input_path.text()), 
+            default, self, icon=options.cfg.icon)
+        self.validate_dialog()
+
     def closeEvent(self, event):
         options.settings.setValue("corpusbuilder_size", self.size())
         options.settings.setValue("corpusbuilder_nltk", str(self.ui.use_pos_tagging.isChecked()))
@@ -535,13 +594,32 @@ class BuilderGui(InstallerGui):
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("There is already another database that uses this name.")
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+        if self._onefile:
+            if not self._table_options:
+                word_specified = False
+            else:
+                word_specified = "word" in self._table_options[-2]
+            if not word_specified:
+                self.ui.issue_label.setText("You need to specify at least a Word column in the 'Corpus table options' dialog.")
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
     
     def select_path(self):
-        name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.text_source_path)
+        if self._onefile:
+            if not options.cfg.corpus_table_source_path:
+                path = os.path.expanduser("~")
+            else:
+                path = os.path.split(options.cfg.corpus_table_source_path)[0]
+            name = QtGui.QFileDialog.getOpenFileName(directory=path)
+        else:
+            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.text_source_path)
+
         if type(name) == tuple:
             name = name[0]
         if name:
-            options.cfg.text_source_path = name
+            if not self._onefile:
+                options.cfg.text_source_path = name
+            else:
+                options.cfg.corpus_table_source_path = name
             self.ui.input_path.setText(name)
 
     def install_exception(self):
@@ -573,4 +651,5 @@ class BuilderGui(InstallerGui):
         namespace.name = utf8(self.ui.corpus_name.text())
         namespace.use_nltk = self.ui.use_pos_tagging.checkState()
         namespace.db_name = "coq_{}".format(namespace.name).lower()
+        namespace.one_file = self._onefile
         return namespace

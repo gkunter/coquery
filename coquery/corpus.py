@@ -1150,11 +1150,11 @@ class SQLResource(BaseResource):
             if hashed != None and not func:
                 link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
                 res = options.get_resource(link.res_to)[0]
-                linked_feature = "{}_{}_{}".format(res.db_name, table, feature)
+                linked_feature = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
                 if cls.is_lexical(link.rc_from):
-                    select_list += ["coq_{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
+                    select_list += ["{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
                 else:
-                    select_list.append("coq_{}_1".format(linked_feature))
+                    select_list.append("{}_1".format(linked_feature))
     
         # functions:
         func_counter = Counter()
@@ -1164,17 +1164,17 @@ class SQLResource(BaseResource):
                 if hashed != None:
                     link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
                     res = options.get_resource(link.res_to)[0]
-                    resource = "{}_{}_{}".format(res.db_name, table, feature)
+                    resource = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
                 else:
-                    resource = "{}_{}".format(table, feature)
+                    resource = "coq_{}_{}".format(table, feature)
 
                 func_counter[resource] += 1
                 fc = func_counter[resource]
                 
                 if cls.is_lexical(rc_feature):
-                    select_list += ["coq_func_{}_{}_{}".format(resource, fc, x + 1) for x in range(max_token_count)]
+                    select_list += ["func_{}_{}_{}".format(resource, fc, x + 1) for x in range(max_token_count)]
                 else:
-                    select_list.append("coq_func_{}_{}_1".format(resource, fc))
+                    select_list.append("func_{}_{}_1".format(resource, fc))
 
         # if requested and possible, add contexts for each query match:
         if (options.cfg.context_mode != CONTEXT_NONE and 
@@ -1944,7 +1944,7 @@ class CorpusClass(object):
                 column_list = []
                 
                 # add linking variable:
-                column_list.append("{} AS coq_{}_{}_{}".format(
+                column_list.append("{} AS db_{}_coq_{}_{}".format(
                     getattr(ex_res, link.rc_to), 
                     ex_res.db_name, 
                     link.rc_to, 
@@ -1954,7 +1954,7 @@ class CorpusClass(object):
                 for rc_feature in required_tables[rc_table]:
                     _, _, tab, feat = ex_res.split_resource_feature(rc_feature)
                     rc_ext = "{}_{}".format(tab, feat)
-                    alias = "coq_{}_{}_{}".format(
+                    alias = "db_{}_coq_{}_{}".format(
                         ex_res.db_name, rc_ext, number+1)
                     column_list.append("{} AS {}".format(
                         getattr(ex_res, rc_ext), alias))
@@ -1962,14 +1962,14 @@ class CorpusClass(object):
                         
                 # construct subquery that joins the external table:
                 columns = ", ".join(set(column_list))
-                alias = "coq_{}_{}_{}".format(ex_res.db_name, table, hashed).upper()
+                alias = "db_{}_coq_{}_{}".format(ex_res.db_name, table, hashed).upper()
                 
                 sql_template = """
                 INNER JOIN 
                         (SELECT {columns}
                         FROM    {corpus}.{table})
                         AS      {alias}
-                ON      coq_{internal_feature}_{n} = {alias}.coq_{corpus}_{external_feature}_{n}
+                ON      coq_{internal_feature}_{n} = {alias}.db_{corpus}_coq_{external_feature}_{n}
                 """
                 
                 S = sql_template.format(
@@ -2420,11 +2420,11 @@ class CorpusClass(object):
                 for i in range(Query.Session.get_max_token_count()):
                     if options.cfg.align_quantified:
                         if i in positions_lexical_items:
-                            final_select.append("coq_{}_{}_{}".format(res.db_name, rc_feat, i+1))
+                            final_select.append("db_{}_coq_{}_{}".format(res.db_name, rc_feat, i+1))
                     else:
-                        final_select.append("coq_{}_{}_{}".format(res.db_name, rc_feat, i+1))
+                        final_select.append("db_{}_coq_{}_{}".format(res.db_name, rc_feat, i+1))
             else:
-                final_select.append("coq_{}_{}_1".format(res.db_name, rc_feat))
+                final_select.append("db_{}_coq_{}_1".format(res.db_name, rc_feat))
 
         # add the corpus features in the preferred order:
         # FIXME: Is this still necessary?
@@ -2455,7 +2455,7 @@ class CorpusClass(object):
                 link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
                 res = options.get_resource(link.res_to)[0]
                 db_name = res.db_name
-                field_str = "coq_{db_name}_{rc_feature}_{{N}}"
+                field_str = "db_{db_name}_coq_{rc_feature}_{{N}}"
             else:
                 db_name = None
                 field_str = "coq_{rc_feature}_{{N}}"
