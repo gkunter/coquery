@@ -45,6 +45,7 @@ class CoqAccordionEntry(QtGui.QWidget):
         self._stack = stack
         self._is_builder = False
         self._adhoc = False
+        self._build_from_table = False
         self._language = ""
         self._code = ""
         self._path = path
@@ -147,7 +148,10 @@ class CoqAccordionEntry(QtGui.QWidget):
             self.button_build = button_build
             self.button_build.setParent(entry_widget)
             entry_widget.header_layout.addWidget(self.button_build)
-            self.button_build.clicked.connect(lambda: self._stack.buildCorpus.emit(self))
+            if self._build_from_table:
+                self.button_build.clicked.connect(lambda: self._stack.buildCorpusFromTable.emit(self))
+            else:
+                self.button_build.clicked.connect(lambda: self._stack.buildCorpus.emit(self))
         else:
             if installed or not self._builtin:
                 self.button_remove = button_remove
@@ -288,7 +292,7 @@ class CorpusManager(QtGui.QDialog):
     removeCorpus = QtCore.Signal(object)
     installCorpus = QtCore.Signal(object)
     buildCorpus = QtCore.Signal(object)
-
+    buildCorpusFromTable = QtCore.Signal(object)
     def __init__(self, parent=None):
         super(CorpusManager, self).__init__(parent)
         self.ui = Ui_corpusManager()
@@ -412,7 +416,7 @@ class CorpusManager(QtGui.QDialog):
                     name = utf8(builder_class.get_name())
                     self.detail_box = classes.CoqDetailBox(name, entry, alternative=name)
 
-                    if basename != "coq_install_generic":
+                    if basename not in ("coq_install_generic_table", "coq_install_generic"):
                         entry._adhoc = hasattr(builder_class, "_is_adhoc")
                         entry._builtin = self.built_in(module_path)
                         entry.setName(name)
@@ -452,12 +456,31 @@ class CorpusManager(QtGui.QDialog):
                         count += 1
             
             if label == INSTALLER_ADHOC:
+                l = ["Plain Text"]
+                if options._use_pdfminer:
+                    l.append("PDF (Portable Document Format)")
+                if options._use_docx:
+                    l.append("DOCX (MS Office)")
+                if options._use_odfpy:
+                    l.append("ODT (Open Document Texts)")
+                if options._use_bs4:
+                    l.append("HTML")
                 entry = CoqAccordionEntry(stack=self)
                 entry._is_builder = True
-                entry.setTitle("Build a new corpus")
-                entry.setDescription("<p>You can build a new corpus by storing the words from a selection of text files in a database that can be queried by Coquery. If the Natural Language Toolkit NLTK (<a href='http://www.nltk.org'>http://www.nltk.org</a>) is installed on your computer, you can choose the new corpus to be automatically lemmatized and tagged  for their part of speech.</p>")
+                entry.setTitle("Build a new corpus from text files")
+                entry.setDescription(msg_adhoc_builder_texts.format(list="".join(["<li>{}</li>".format(x) for x in l])))
 
                 self.detail_box = classes.CoqDetailBox("Build new corpus...", entry)
+                entry.setup_buttons(False, self.detail_box)
+                self.ui.list_layout.addWidget(self.detail_box)
+                count += 1
+
+                entry = CoqAccordionEntry(stack=self)
+                entry._is_builder = True
+                entry._build_from_table = True
+                entry.setTitle("Build a new corpus from table file")
+                entry.setDescription(msg_adhoc_builder_table)
+                self.detail_box = classes.CoqDetailBox("Build new corpus from data table...", entry)
                 entry.setup_buttons(False, self.detail_box)
                 self.ui.list_layout.addWidget(self.detail_box)
                 count += 1
