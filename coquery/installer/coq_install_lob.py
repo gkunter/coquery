@@ -85,7 +85,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(self.file_table,
             [Identifier(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "ENUM({}) NOT NULL".format(
-                 ",".join(["'{}'".format(x) for x in expected_files])),
+                 ",".join(["'{}'".format(x) for x in expected_files]))),
              Column(self.file_path, "TINYTEXT NOT NULL")])
 
         self.create_table_description(self.source_table,
@@ -122,9 +122,9 @@ class BuilderClass(BaseCorpusBuilder):
         
     @staticmethod
     def get_description():
-        #return ["The Lancaster-Oslo/Bergen Corpus (often abbreviated as LOB Corpus) is a million-word collection of British English texts which was compiled in the 1970s in collaboration between the University of Lancaster, the University of Oslo, and the Norwegian Computing Centre for the Humanities, Bergen, to provide a British counterpart to the Brown Corpus compiled by Henry Kučera and W. Nelson Francis for American English in the 1960s.",
-            #"Its composition was designed to match the original Brown corpus in terms of its size and genres as closely as possible using documents published in the UK by British authors. Both corpora consist of 500 samples each comprising about 2000 words in 15 different genres. (Source: Wikipedia, <a href='https://en.wikipedia.org/wiki/Lancaster-Oslo-Bergen_Corpus'>Lancaster-Oslo-Bergen Corpus</a>)"]
-    
+        return ["The Lancaster-Oslo/Bergen Corpus (often abbreviated as LOB Corpus) is a million-word collection of British English texts which was compiled in the 1970s in collaboration between the University of Lancaster, the University of Oslo, and the Norwegian Computing Centre for the Humanities, Bergen, to provide a British counterpart to the Brown Corpus compiled by Henry Kučera and W. Nelson Francis for American English in the 1960s.",
+            "Its composition was designed to match the original Brown corpus in terms of its size and genres as closely as possible using documents published in the UK by British authors. Both corpora consist of 500 samples each comprising about 2000 words in 15 different genres. (Source: Wikipedia, <a href='https://en.wikipedia.org/wiki/Lancaster-Oslo-Bergen_Corpus'>Lancaster-Oslo-Bergen Corpus</a>)"]
+        
     @classmethod
     def get_file_list(cls, *args, **kwargs):
         """
