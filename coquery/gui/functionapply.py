@@ -15,24 +15,32 @@ from __future__ import unicode_literals
 import sys
 import re
 
+import numpy as np
+
 from coquery import options
 from .pyqt_compat import QtCore, QtGui
 from .ui.functionApplyUi import Ui_FunctionDialog
 
 def func_regexp(x, s):
     try:
-        start, end = re.search("({})".format(s), x).span()
-    except AttributeError:
-        return ""
-    else:
-        return x[start:end]
-
+        try:
+            start, end = re.search("({})".format(s), x).span()
+        except AttributeError:
+            return ""
+        else:
+            return x[start:end]
+    except:
+        return None
+    
 def func_match(x, s):
-    if re.search("{}".format(s), x):
-        return "yes"
-    else:
-        return "no"
-
+    try:
+        if re.search("{}".format(s), x):
+            return "yes"
+        else:
+            return "no"
+    except Exception:
+        return None
+    
 class FunctionDialog(QtGui.QDialog):
     def __init__(self, table, feature, parent=None):
         
@@ -76,16 +84,16 @@ class FunctionDialog(QtGui.QDialog):
 
             if dialog.ui.radio_count.isChecked():
                 label = "COUNT('{}', {})".format(escaped, feature)
-                FUN = lambda x: x.count(value)
+                FUN = lambda x: x.count(value) if x else np.NaN
             elif dialog.ui.radio_length.isChecked():
                 label = "LENGTH({})".format(feature)
-                FUN = lambda x: len(x)
+                FUN = lambda x: len(x) if x else np.NaN
             elif dialog.ui.radio_match.isChecked():
                 label = "MATCH('{}', {})".format(escaped, feature)
-                FUN = lambda x: func_match(x, value)
+                FUN = lambda x: func_match(x, value) if x else None
             elif dialog.ui.radio_regexp.isChecked():
                 label = "REGEXP('{}', {})".format(escaped, feature)
-                FUN = lambda x: func_regexp(x, value)
+                FUN = lambda x: func_regexp(x, value) if x else None
             elif dialog.ui.radio_copy.isChecked():
                 label = "COPY({})".format(feature)
                 FUN = lambda x: x
