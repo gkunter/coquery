@@ -210,6 +210,7 @@ class Options(object):
         self.args.textgrids_file_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.join(self.args.base_path, "texts", "alice")
         self.args.corpus_source_path = os.path.expanduser("~")
+        self.args.corpus_table_source_path = ""
         self.args.stopwords_file_path = os.path.expanduser("~")
         self.args.filter_file_path = os.path.expanduser("~")
 
@@ -841,6 +842,10 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.corpus_source_path = os.path.expanduser("~")
                         try:
+                            self.args.corpus_table_source_path = config_file.get("gui", "corpus_table_source_path")
+                        except (NoOptionError, ValueError):
+                            self.args.corpus_table_source_path = ""
+                        try:
                             self.args.text_source_path = config_file.get("gui", "text_source_path")
                         except (NoOptionError, ValueError):
                             self.args.text_source_path = os.path.expanduser("~")
@@ -1049,6 +1054,10 @@ def save_configuration():
             config.set("gui", "corpus_source_path", cfg.corpus_source_path)
         except AttributeError:
             config.set("gui", "corpus_source_path", os.path.expanduser("~"))
+        try:
+            config.set("gui", "corpus_table_source_path", cfg.corpus_table_source_path)
+        except AttributeError:
+            config.set("gui", "corpus_table_source_path", "")
         try:
             config.set("gui", "text_source_path", cfg.text_source_path)
         except AttributeError:
