@@ -1,0 +1,107 @@
+# -*- coding: utf-8 -*-
+"""
+corpustableoptions.py is part of Coquery.
+
+Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along 
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
+import sys
+import pandas as pd
+import numpy as np
+
+from coquery import options
+from coquery.errors import *
+from .pyqt_compat import QtGui, QtCore
+
+from .csvoptions import MyTableModel, quote_chars, CSVOptions
+from .ui.corpusTableOptionsUi import Ui_CorpusTableOptions
+
+class CorpusTableOptions(CSVOptions):
+    def __init__(self, filename, default=None, parent=None, icon=None):
+        print(default)
+        if default:
+            mapping = default[-2]
+            default = tuple(default[:-2])
+        else:
+            mapping = dict()
+        
+        print(default)
+        
+        super(CorpusTableOptions, self).__init__(filename, default, parent, 
+                                                 icon, ui=Ui_CorpusTableOptions)
+
+        self.ui.button_word.clicked.connect(lambda: self.map_query_item_type("word"))
+        self.ui.button_lemma.clicked.connect(lambda: self.map_query_item_type("lemma"))
+        self.ui.button_pos.clicked.connect(lambda: self.map_query_item_type("pos"))
+        self.ui.button_transcript.clicked.connect(lambda: self.map_query_item_type("transcript"))
+        self.ui.button_gloss.clicked.connect(lambda: self.map_query_item_type("gloss"))
+        
+        self._selected = 0
+        self.map = mapping
+        # make all widget rows the same height (for cosmetic reasons):
+
+        # make all buttons the same size:
+        max_height = 0
+        for name in [x for x in dir(self.ui) if x.startswith(("button", "label", "edit"))]:
+            widget = getattr(self.ui, name)
+            max_height = max(max_height, widget.sizeHint().height())
+        for name in [x for x in dir(self.ui) if x.startswith(("button", "label", "edit"))]:
+            widget = getattr(self.ui, name)
+            widget.setMinimumHeight(max_height)
+
+        for x in self.map:
+            getattr(self.ui, "edit_{}".format(x)).setText(self.map[x])
+
+        try:
+            self.resize(options.settings.value("corpustableoptions_size"))
+        except TypeError:
+            pass
+
+
+    def update_content(self):
+        super(CorpusTableOptions, self).update_content()
+        self.map = dict()
+        self.ui.edit_word.setText("")
+        self.ui.edit_lemma.setText("")
+        self.ui.edit_pos.setText("")
+        self.ui.edit_transcript.setText("")
+        self.ui.edit_gloss.setText("")
+
+    def closeEvent(self, event):
+        options.settings.setValue("corpustableoptions_size", self.size())
+        
+    def map_query_item_type(self, label):
+        column = self.ui.query_column.value() - 1
+        header = self.file_table.columns[column]
+        for key, value in list(self.map.items()):
+            if value == column:
+                line_edit = getattr(self.ui, "edit_{}".format(key))
+                line_edit.setText("")
+                self.map.pop(key)
+
+        self.map[label] = column
+        line_edit = getattr(self.ui, "edit_{}".format(label))
+        line_edit.setText(header)
+        
+    @staticmethod
+    def getOptions(path, default=None, parent=None, icon=None):
+        dialog = CorpusTableOptions(path, default, parent, icon)
+        result = dialog.exec_()
+        if result == QtGui.QDialog.Accepted:
+            quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
+                str(dialog.ui.quote_char.currentText())]
+            return (str(dialog.ui.separate_char.currentText()),
+                 None,
+                 dialog.ui.file_has_headers.isChecked(),
+                 dialog.ui.ignore_lines.value(),
+                 quote,
+                 dialog.map,
+                 dialog.file_table.dtypes)
+        else:
+            return tuple()
+        
+    
