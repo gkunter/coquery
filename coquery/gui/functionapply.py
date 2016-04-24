@@ -72,7 +72,7 @@ class FunctionDialog(QtGui.QDialog):
         options.settings.setValue("functionapply_size", self.size())
         
     @staticmethod
-    def display(table, feature, parent=None):
+    def display(table, feature, linked_feature=None, parent=None):
         
         dialog = FunctionDialog(table, feature, parent=parent)        
         dialog.setVisible(True)
@@ -83,20 +83,22 @@ class FunctionDialog(QtGui.QDialog):
             escaped = escaped.replace("'", "\\'")
 
             if dialog.ui.radio_count.isChecked():
-                label = "COUNT('{}', {})".format(escaped, feature)
+                frm_str = "COUNT('{param}', {feature}{{N}})"
                 FUN = lambda x: x.count(value) if x else np.NaN
             elif dialog.ui.radio_length.isChecked():
-                label = "LENGTH({})".format(feature)
+                frm_str = "LENGTH({feature}{{N}})"
                 FUN = lambda x: len(x) if x else np.NaN
             elif dialog.ui.radio_match.isChecked():
-                label = "MATCH('{}', {})".format(escaped, feature)
+                frm_str = "MATCH('{param}', {feature}{{N}})"
                 FUN = lambda x: func_match(x, value) if x else None
             elif dialog.ui.radio_regexp.isChecked():
-                label = "REGEXP('{}', {})".format(escaped, feature)
+                frm_str = "REGEXP('{param}', {feature}{{N}})"
                 FUN = lambda x: func_regexp(x, value) if x else None
             elif dialog.ui.radio_copy.isChecked():
-                label = "COPY({})".format(feature)
+                frm_str = "COPY({feature}{{N}})"
                 FUN = lambda x: x
+
+            label = frm_str.format(param=escaped, feature=feature)
             return label, FUN
         else:
             return None

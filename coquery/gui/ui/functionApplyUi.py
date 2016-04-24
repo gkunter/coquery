@@ -162,6 +162,11 @@ class Ui_FunctionDialog(object):
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.verticalLayout_2.addWidget(self.buttonBox)
+        self.label_func4.setBuddy(self.radio_regexp)
+        self.label_func3.setBuddy(self.radio_match)
+        self.label_func2.setBuddy(self.radio_length)
+        self.label_func1.setBuddy(self.radio_count)
+        self.label_copy.setBuddy(self.radio_copy)
 
         self.retranslateUi(FunctionDialog)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), FunctionDialog.accept)
