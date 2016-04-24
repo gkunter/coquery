@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-link.py is part of Coquery.
+links.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
@@ -11,6 +11,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import hashlib
+
+from .defines import *
 
 class Link(object):
     """
@@ -52,7 +54,34 @@ class Link(object):
         return "Link(res_from='{}', rc_from='{}', res_to='{}', rc_to='{}', join='{}', case={})".format(
             self.res_from, self.rc_from, self.res_to, self.rc_to, self.join_type, self.case)
 
-def get_by_hash(link_list, hash):
+def get_link_by_hash(link_list, hash):
     for link in link_list:
         if link.get_hash() == hash:
             return link
+
+def get_by_hash(hashed, link_list=None):
+    """
+    Return the link and the linked resource for the hash.
+    
+    Parameters
+    ----------
+    hashed : str 
+        A hash string that has been produced by the get_hash() method.
+    
+    link_list : list of Link objects
+        A list of links that is used to lookup the hash. If not provided,
+        the link list for the current server and resource is used.
+    
+    Returns
+    -------
+    tup : tuple
+        A tuple with the associated link as the first and the linked resource
+        as the second element.
+    """
+    from . import options
+    if not link_list:
+        link_list = options.cfg.table_links[options.cfg.current_server]
+    
+    link = get_link_by_hash(link_list, hashed)
+    res = options.get_resource(link.res_to)[0]
+    return (link, res)

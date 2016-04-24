@@ -814,8 +814,8 @@ class BaseResource(object):
         if hashed == None:
             return "{}_{}".format(table, feature)
         else:
-            link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-            _, _, tab, feat = cls.split_resource_feature(link.rc_from)
+            link, res = get_by_hash(hashed)
+            _, _, tab, feat = res.split_resource_feature(link.rc_from)
             return "{}_{}".format(tab, feat)
 
     @classmethod
@@ -1148,8 +1148,7 @@ class SQLResource(BaseResource):
         for rc_feature in options.cfg.selected_features:
             func, hashed, table, feature = cls.split_resource_feature(rc_feature)
             if hashed != None and not func:
-                link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-                res = options.get_resource(link.res_to)[0]
+                link, res = get_by_hash(hashed)
                 linked_feature = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
                 if cls.is_lexical(link.rc_from):
                     select_list += ["{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
@@ -1162,8 +1161,7 @@ class SQLResource(BaseResource):
             func, hashed, table, feature = cls.split_resource_feature(rc_feature)
             if func:
                 if hashed != None:
-                    link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-                    res = options.get_resource(link.res_to)[0]
+                    link, res = get_by_hash(hashed)
                     resource = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
                 else:
                     resource = "coq_{}_{}".format(table, feature)
@@ -1675,8 +1673,7 @@ class CorpusClass(object):
         variable, rc_feature, table_name, op, value_list, _value_range = filt
         _, hashed, tab, feat = self.resource.split_resource_feature(rc_feature)
         if hashed != None:
-            link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-            ext_resource = options.get_resource(link.res_to)[0]
+            link, ext_resource = get_by_hash(hashed)
             db = ext_resource.db_name
             sql_field = "{}.{}.{}".format(
                 db, 
@@ -1711,8 +1708,7 @@ class CorpusClass(object):
             if table not in self.resource.special_table_list:
                 s = "{}_{}".format(table, feat)
                 if hashed != None:
-                    link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-                    res = options.get_resource(link.res_to)[0]
+                    link, res = get_by_hash(hashed)
                     required_features.add("{}.{}".format(res.name , s))
                 else:
                     required_features.add(s)
@@ -1732,7 +1728,7 @@ class CorpusClass(object):
             required_features.add("{}.{}".format(link.res_to, link.rc_to))
 
         # add features required for functions:
-        for res, _, _ in options.cfg.selected_functions:
+        for res, _, _, _ in options.cfg.selected_functions:
             func, hashed, table, feature = self.resource.split_resource_feature(res)
             assert hashed == None, "External functions currently not available"
             assert func
@@ -1910,7 +1906,7 @@ class CorpusClass(object):
 
             if hashed != None:
                 required_tables["{}.{}_table".format(hashed, tab)].append(rc_feature)
-                link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
+                link, _ = get_by_hash(hashed)
                 if link.rc_from not in requested_features:
                     requested_features.append(link.rc_from)
             else:
@@ -1937,8 +1933,7 @@ class CorpusClass(object):
             func, hashed, table, feature = self.resource.split_resource_feature(rc_table)
 
             if hashed != None:
-                link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-                ex_res = options.get_resource(link.res_to)[0]
+                link, ex_res = get_by_hash(hashed)
                 linked_table = "{}_table".format(table)
 
                 column_list = []
@@ -2447,13 +2442,12 @@ class CorpusClass(object):
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
         # add any resource feature that is required by a function:
-        for res, fun, _ in options.cfg.selected_functions:
+        for res, fun, _, _, _ in options.cfg.selected_functions:
             func, hashed, table, feature = self.resource.split_resource_feature(res)
             assert func
             # function on field from external table?
             if hashed != None:
-                link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-                res = options.get_resource(link.res_to)[0]
+                link, res = get_by_hash(hashed)
                 db_name = res.db_name
                 field_str = "db_{db_name}_coq_{rc_feature}_{{N}}"
             else:

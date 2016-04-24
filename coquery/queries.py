@@ -485,11 +485,10 @@ class TokenQuery(object):
         lexicon_features = [x for x, _ in self.Resource.get_lexicon_features()]
 
         func_counter = collections.Counter()
-        for rc_feature, fun, _ in options.cfg.selected_functions:
+        for rc_feature, fun, _, _, _ in options.cfg.selected_functions:
             _, hashed, table, feature = self.Resource.split_resource_feature(rc_feature)
             if hashed != None:
-                link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-                res = options.get_resource(link.res_to)[0]
+                link, res = get_by_hash(hashed)
                 resource = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
             else:
                 resource = "coq_{}_{}".format(table, feature)

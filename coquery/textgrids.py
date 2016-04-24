@@ -91,8 +91,7 @@ class TextgridWriter(object):
             
             rc_feat = "{}_{}".format(tab, feature)
             if hashed != None:
-                link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-                res = options.get_resource(link.res_to)[0]
+                link, res = get_by_hash(hashed)
                 tier_name = "{}.{}_{}".format(res.db_name, link.rc_to)
             else:
                 tier_name = rc_feat
@@ -222,8 +221,7 @@ class TextgridWriter(object):
             for i, tier in enumerate(grid.tiers):
                 _, hashed, tab, feature = self.resource.split_resource_feature(tier.name)
                 if hashed != None:
-                    link = get_by_hash(options.cfg.table_links[options.cfg.current_server], hashed)
-                    res = options.get_resource(link.res_to)[0]
+                    link, res = get_by_hash(hashed)
                     tier_name = "{}.{}".format(
                         res.name, 
                         get_attr(res, "{}_{}".format(tab, feature)))
