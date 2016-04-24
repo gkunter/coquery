@@ -28,6 +28,7 @@ from coquery import sqlhelper
 from coquery.session import *
 from coquery.defines import *
 from coquery.unicode import utf8
+from coquery.links import get_by_hash
 
 from . import classes
 from . import errorbox
@@ -1247,9 +1248,13 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             rc_feature = rc_feature
         
-        _, db_name, table, feature = resource.split_resource_feature(rc_feature)
-        if not db_name:
+        _, hashed, table, feature = resource.split_resource_feature(rc_feature)
+        if hashed == None:
             db_name = resource.db_name
+        else:
+            _, ext_res = get_by_hash(hashed)
+            db_name = ext_res.db_name
+                
         uniqueviewer.UniqueViewer.show(
             "{}_{}".format(table, feature),
             db_name, uniques=uniques, parent=self)
@@ -2187,7 +2192,11 @@ class CoqueryApp(QtGui.QMainWindow):
             for child in [node.child(i) for i in range(node.childCount())]:
                 checked += traverse(child)
             if node.checkState(0) == QtCore.Qt.Checked and node._func:
-                checked.append((node.objectName(), node._func, str(node.text(0))))
+                checked.append((node.objectName(), 
+                                node._func, 
+                                True,
+                                node.full_label,
+                                str(node.text(0))))
             return checked
 
         tree = self.ui.options_tree
@@ -2400,10 +2409,19 @@ class CoqueryApp(QtGui.QMainWindow):
         from . import functionapply
         column = 0
         parent = item.parent()
+
+        _, hashed, tab, feat = self.resource.split_resource_feature(item.objectName())
+
+        if hashed != None:
+            _, res = get_by_hash(hashed)
+        else:
+            res = self.resource
+            
+        feature = getattr(res, "{}_{}".format(tab, feat))
         
         response = functionapply.FunctionDialog.display(
             table=str(parent.text(0)),
-            feature=str(item.text(0)), parent=self)
+            feature=feature, parent=self)
         
         if not response:
             return
@@ -2414,7 +2432,12 @@ class CoqueryApp(QtGui.QMainWindow):
             child_func.setObjectName("func.{}".format(item.objectName()))
             child_func.setFunction(func)
             child_func.rc_feature = item.objectName()
-            child_func.setText(column, label)
+            child_func.setText(column, label.format(N=""))
+            
+            if hashed != None:
+                child_func.full_label = "func.{}_{}_{}".format(res.db_name, tab, feat)
+            else:
+                child_func.full_label = "func.{}".format(item.objectName())
             child_func.setCheckState(column, QtCore.Qt.Checked)
 
             item.parent().addChild(child_func)

@@ -67,6 +67,7 @@ class Session(object):
         self.output_order = []
         self.header_shown = False
         self.input_columns = []
+        self._header_cache = {}
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
@@ -301,124 +302,161 @@ class Session(object):
         s : string
             The display name of the resource string
         """
+
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
         if not ignore_alias and header in options.cfg.column_names:
             return options.cfg.column_names[header]
         
-        # Retain the column header if the query string was from an input file
-        if header == "coquery_query_string" and options.cfg.query_label:
-            return options.cfg.query_label
-
-        # treat frequency columns:
-        if header == "statistics_frequency":
-            if options.cfg.query_label:
-                return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
-            else:
-                return "{}".format(COLUMN_NAMES[header])
-        
-        if header.startswith("statistics_g_test"):
-            label = header.partition("statistics_g_test_")[-1]
-            return "G²('{}', y)".format(label)
-        
-        # other features:
-        if header in COLUMN_NAMES:
-            return COLUMN_NAMES[header]
-        
-        # strip coq_ prefix:
-        if header.startswith("coq_"):
-            header = header.partition("coq_")[2]
-
-        res_prefix = ""
-        
+        if header in self._header_cache:
+            return self._header_cache[header]
         try:
-            # check if this is an external column:
-            potential_db, _, remains = header.partition("_")
-            rc_feature, _, number = remains.rpartition("_")
-            ext_res = options.get_resource_of_database(potential_db)
-            if hasattr(ext_res, rc_feature):
-                res_prefix = "{}.".format(ext_res.name)
-                resource = ext_res
-                header = remains
-            else:
-                raise ValueError
-        except:
-            resource = self.Resource
-            
-        # special treatment of context columns:
-        if header.startswith("context_lc"):
-            return "L{}".format(header.split("context_lc")[-1])
-        if header.startswith("context_rc"):
-            return "R{}".format(header.split("context_rc")[-1])
-        
-        rc_feature, _, number = header.rpartition("_")
-        
-        # If there is only one query token, number is set to "" so that no
-        # number suffix is added to the labels in this case:
-        if self.get_max_token_count() == 1:
-            number = ""
+            # Retain the column header if the query string was from an input file
+            if header == "coquery_query_string" and options.cfg.query_label:
+                raise RuntimeError(options.cfg.query_label)
 
-        # special treatment of query tokens:
-        if rc_feature == "coquery_query_token":
-            try:
-                number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
-                pass
-            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
-        
-        # special treatment of lexicon features:
-        if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
-            try:
-                number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
-                pass
-            return "{}{}{}".format(res_prefix, getattr(resource, str(rc_feature)), number)
+            if header.startswith("coquery_invisible"):
+                raise RuntimeError(header)
 
-        # treat any other feature that is provided by the corpus:
-        try:
-            return "{}{}".format(res_prefix, getattr(resource, str(rc_feature)))
-        except AttributeError:
-            pass
-
-        # treat linked columns:
-        if "." in rc_feature:
-            pass
-
-        # treat functions:
-        if rc_feature.startswith("func_"):
-            func_counter = collections.Counter()
-            for res, _, label in options.cfg.selected_functions:
-                res = res.rpartition(".")[-1]
-                func_counter[res] += 1
-                fc = func_counter[res]
-                
-                new_name = "func_{}_{}".format(res, fc)
-                if new_name == rc_feature:
-                    column_name = getattr(resource, res)
-                    function_label = label
-                    break
-            else:
-                if options.cfg.selected_functions:
-                    column_name = res
+            # treat frequency columns:
+            if header == "statistics_frequency":
+                if options.cfg.query_label:
+                    raise RuntimeError("{}({})".format(COLUMN_NAMES[header], options.cfg.query_label))
                 else:
-                    column_name = "UNKNOWN"
-                function_label = rc_feature
-            try:
-                number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
-                pass
-            return str(function_label).replace(column_name, "{}{}{}".format(
-                res_prefix, column_name, number))
+                    raise RuntimeError("{}".format(COLUMN_NAMES[header]))
+            
+            if header.startswith("statistics_g_test"):
+                label = header.partition("statistics_g_test_")[-1]
+                raise RuntimeError("G²('{}', y)".format(label))
+            
+            # other features:
+            if header in COLUMN_NAMES:
+                raise RuntimeError(COLUMN_NAMES[header])
+            
+            if header.startswith("func_"):
+                wrap = "FUNC({})"
+                match = re.match("func_(.*)_(\d+)_(\d+)$", header)
+                core = match.group(1)
+                function_number = int(match.group(2))
+                item_number = int(match.group(3))
+                #print(header, core, function_number, item_number)
+                if core.startswith("db_"):
+                    match2 = re.match("db_(.*)_coq_(.*)", core)
+                    resource = options.get_resource_of_database(match2.group(1))
+                    res_prefix = "{}.".format(resource.name)
+                else:
+                    match2 = re.match("coq_(.*)", core)
+                    res_prefix = ""
+                    resource = self.Resource
 
-        # other features:
-        if rc_feature in COLUMN_NAMES:
-            try:
-                number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
-                pass
-            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
+                if core.startswith("coq_"):
+                    core = core.rpartition("coq_")[-1]
+                _, hashed, tab, feat = self.Resource.split_resource_feature(core)
+                if hashed != None:
+                    res_hash = "{}.".format(hashed)
+                else:
+                    res_hash = ""
 
-        return header
+                lookup = "func.{}{}_{}".format(res_hash, tab, feat)
+                count = 1
+                for rc_feature, _, is_lexical, full_label, label in options.cfg.selected_functions:
+                    print(rc_feature, full_label)
+                    if rc_feature == lookup:
+                        if count == function_number:
+                            if is_lexical:
+                                raise RuntimeError(label.format(N=item_number))
+                            else:
+                                raise RuntimeError(label.format(N=""))
+                        count += 1
+                raise RuntimeError("FUNC")
+                #return "FUNC({})".format(self.translate_header(header))
+
+            ## treat functions:
+            #if is_function:
+                #func_counter = collections.Counter()
+                #for res, _, label in options.cfg.selected_functions:
+                    #res = res.rpartition(".")[-1]
+                    #func_counter[res] += 1
+                    #fc = func_counter[res]
+                    
+                    #new_name = "func_{}_{}".format(res, fc)
+                    #if new_name == rc_feature:
+                        #column_name = getattr(resource, res)
+                        #function_label = label
+                        #break
+                #else:
+                    #if options.cfg.selected_functions:
+                        #column_name = res
+                    #else:
+                        #column_name = "UNKNOWN"
+                    #function_label = rc_feature
+                #try:
+                    #number = self.quantified_number_labels[int(number) - 1]
+                #except ValueError:
+                    #pass
+                #return str(function_label).replace(column_name, "{}{}{}".format(
+                    #res_prefix, column_name, number))
+
+            
+            if header.startswith("db_"):
+                match = re.match("db_(.*)_coq_(.*)", header)
+                resource = options.get_resource_of_database(match.group(1))
+                res_prefix = "{}.".format(resource.name)
+                header = match.group(2)
+            else:
+                match = re.match("coq_(.*)", header)
+                header = match.group(1)
+                res_prefix = ""
+                resource = self.Resource
+                
+            # special treatment of context columns:
+            if header.startswith("context_lc"):
+                raise RuntimeError("L{}".format(header.split("context_lc")[-1]))
+            if header.startswith("context_rc"):
+                raise RuntimeError("R{}".format(header.split("context_rc")[-1]))
+            
+            rc_feature, _, number = header.rpartition("_")
+            
+            # If there is only one query token, number is set to "" so that no
+            # number suffix is added to the labels in this case:
+            if self.get_max_token_count() == 1:
+                number = ""
+
+            # special treatment of query tokens:
+            if rc_feature == "coquery_query_token":
+                try:
+                    number = self.quantified_number_labels[int(number) - 1]
+                except ValueError:
+                    pass
+                raise RuntimeError("{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number))
+            
+            # special treatment of lexicon features:
+            if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
+                try:
+                    number = self.quantified_number_labels[int(number) - 1]
+                except ValueError:
+                    pass
+                raise RuntimeError("{}{}{}".format(res_prefix, getattr(resource, str(rc_feature)), number))
+
+            # treat any other feature that is provided by the corpus:
+            try:
+                raise RuntimeError("{}{}".format(res_prefix, getattr(resource, str(rc_feature))))
+            except AttributeError:
+                pass
+
+            # other features:
+            if rc_feature in COLUMN_NAMES:
+                try:
+                    number = self.quantified_number_labels[int(number) - 1]
+                except ValueError:
+                    pass
+                raise RuntimeError("{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number))
+
+            raise RuntimeError(header)
+        except RuntimeError as e:
+            self._header_cache[header] = e.args[0]
+            
+        return self._header_cache[header]
 
 class StatisticsSession(Session):
     def __init__(self):

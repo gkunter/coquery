@@ -571,6 +571,7 @@ class CoqTreeFuncItem(CoqTreeItem):
     """
     def setFunction(self, func):
         self._func = func
+        self.full_label = ""
         
     def setText(self, column, label, *args):
         super(CoqTreeFuncItem, self).setText(column, label)
