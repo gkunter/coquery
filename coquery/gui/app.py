@@ -323,6 +323,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_connection_settings.triggered.connect(self.connection_settings)
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
+        self.ui.action_available_modules.triggered.connect(self.show_available_modules)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
         self.ui.action_help.triggered.connect(self.help)
         self.ui.action_view_log.triggered.connect(self.show_log)
@@ -2205,6 +2206,12 @@ class CoqueryApp(QtGui.QMainWindow):
         from . import about
         about = about.AboutDialog(parent=self)
         about.exec_()
+        
+    def show_available_modules(self):
+        from . import availablemodules
+        available = availablemodules.AvailableModulesDialog(parent=self)
+        available.show()
+        self.widget_list.append(available)
         
     def setGUIDefaults(self):
         """ Set up the gui values based on the values in options.cfg.* """

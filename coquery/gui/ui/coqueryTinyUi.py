@@ -358,7 +358,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_6.addWidget(self.splitter_2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 640, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 640, 24))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -514,6 +514,8 @@ class Ui_MainWindow(object):
         self.action_toggle_stopwords.setObjectName(_fromUtf8("action_toggle_stopwords"))
         self.action_create_textgrid = QtGui.QAction(MainWindow)
         self.action_create_textgrid.setObjectName(_fromUtf8("action_create_textgrid"))
+        self.action_available_modules = QtGui.QAction(MainWindow)
+        self.action_available_modules.setObjectName(_fromUtf8("action_available_modules"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -524,6 +526,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.action_quit)
         self.menuHilfe.addAction(self.action_help)
         self.menuHilfe.addSeparator()
+        self.menuHilfe.addAction(self.action_available_modules)
         self.menuHilfe.addAction(self.action_about_coquery)
         self.menuCorpus.addAction(self.action_manage_corpus)
         self.menuCorpus.addSeparator()
@@ -655,5 +658,6 @@ class Ui_MainWindow(object):
         self.action_toggle_filters.setText(_translate("MainWindow", "Use &filters", None))
         self.action_toggle_stopwords.setText(_translate("MainWindow", "Use stop&words", None))
         self.action_create_textgrid.setText(_translate("MainWindow", "Create te&xtgrid...", None))
+        self.action_available_modules.setText(_translate("MainWindow", "Available &modules", None))
 
 

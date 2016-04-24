@@ -706,7 +706,7 @@
      <x>0</x>
      <y>0</y>
      <width>640</width>
-     <height>23</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -728,6 +728,7 @@
     </property>
     <addaction name="action_help"/>
     <addaction name="separator"/>
+    <addaction name="action_available_modules"/>
     <addaction name="action_about_coquery"/>
    </widget>
    <widget class="QMenu" name="menuCorpus">
@@ -1144,6 +1145,11 @@
   <action name="action_create_textgrid">
    <property name="text">
     <string>Create te&amp;xtgrid...</string>
+   </property>
+  </action>
+  <action name="action_available_modules">
+   <property name="text">
+    <string>Available &amp;modules</string>
    </property>
   </action>
  </widget>
