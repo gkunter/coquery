@@ -15,9 +15,11 @@ from __future__ import absolute_import
 
 import warnings
 from collections import *
+
 try:
     import sqlalchemy
     import pandas as pd
+    import numpy as np
 except ImportError:
     # Missing dependencies are handled in check_system() from coquery.py,
     # so we can pass any ImportError here.
@@ -56,7 +58,7 @@ def collapse_words(word_list):
     open_quote["``"] = False
     last_token = ""
     for i, current_token in enumerate(context_list):
-        if current_token:
+        if current_token and not (isinstance(current_token, float) and np.isnan(current_token)):
             if '""""' in current_token:
                 current_token = '"'
         
@@ -1228,7 +1230,8 @@ class SQLResource(BaseResource):
 
         select_list.append("coquery_invisible_corpus_id")
         select_list.append("coquery_invisible_number_of_tokens")
-        return list(set(select_list))
+        assert sorted(list(set(select_list))) == sorted(select_list), "Duplicates in select_list: {}".format(select_list)
+        return select_list
     
 class CorpusClass(object):
     
