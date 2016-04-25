@@ -990,7 +990,6 @@ class CoqTagBox(QtGui.QWidget):
         col =options.cfg.app.palette().color(QtGui.QPalette.Light)
         color = "{ background-color: rgb(%s, %s, %s) ; }" % (col.red(), col.green(), col.blue())
         S = 'QScrollArea {}'.format(color)
-        print(S)
         self.scroll_content.setStyleSheet(S)
 
     def dragEnterEvent(self, e):
@@ -1192,9 +1191,14 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             self.createIndex(self.rowCount(), self.columnCount()))
 
     def is_visible(self, index):
-        session = options.cfg.main_window.Session
-        return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
-            session.row_visibility[session.query_type][self.content.index[index.row()]])
+        try:
+            session = options.cfg.main_window.Session
+            row_vis = session.row_visibility[session.query_type]
+            ix = self.content.index[index.row()]
+            return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
+                row_vis[ix])
+        except Exception:
+            return False
     
     def data(self, index, role):
         """ 
@@ -1243,8 +1247,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.TextAlignmentRole:
             column = self.header[index.column()]
             # integers and floats are always right-aligned:
-            if self.content[column].dtype in (np.float64, np.int64):
-                return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
+            try:
+                if self.content[column].dtype in (np.float64, np.int64):
+                    return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
+            except AttributeError:
+                print(self.header)
+                print(self.content[column].head())
+                raise RuntimeError
             # right-align the left context as well as columns with reverse 
             # sorting enabled:
             if column == "coq_context_left" or self.sort_columns.get(column, SORT_NONE) in set([SORT_REV_DEC, SORT_REV_INC]):
