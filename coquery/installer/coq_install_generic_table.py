@@ -36,7 +36,7 @@ class BuilderClass(BaseCorpusBuilder):
             else:
                 rc_feature = "corpus_x{}".format(i)
             if dtypes[i] == object:
-                dtype = "VARCHAR"
+                dtype = "VARCHAR(50)"
             elif dtypes[i] == np.float64:
                 dtype = "REAL"
             elif dtypes[i] == np.int64:
@@ -152,7 +152,6 @@ class BuilderClass(BaseCorpusBuilder):
     def build_load_files(self):
         df = pd.read_csv(self.arguments.path, low_memory=False, error_bad_lines=False)
         df[self.corpus_file_id] = 1
-        print(df.head())
         self.DB.load_dataframe(df, self.corpus_table, self.corpus_id)
 
     @classmethod
