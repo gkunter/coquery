@@ -84,16 +84,16 @@ class FunctionDialog(QtGui.QDialog):
 
             if dialog.ui.radio_count.isChecked():
                 frm_str = "COUNT('{param}', {feature}{{N}})"
-                FUN = lambda x: x.count(value) if x else np.NaN
+                FUN = lambda x: x.count(value) if x else 0
             elif dialog.ui.radio_length.isChecked():
                 frm_str = "LENGTH({feature}{{N}})"
-                FUN = lambda x: len(x) if x else np.NaN
+                FUN = lambda x: len(x) if x else 0
             elif dialog.ui.radio_match.isChecked():
                 frm_str = "MATCH('{param}', {feature}{{N}})"
-                FUN = lambda x: func_match(x, value) if x else None
+                FUN = lambda x: func_match(x, value) if x else "no"
             elif dialog.ui.radio_regexp.isChecked():
                 frm_str = "REGEXP('{param}', {feature}{{N}})"
-                FUN = lambda x: func_regexp(x, value) if x else None
+                FUN = lambda x: func_regexp(x, value) if x else ""
             elif dialog.ui.radio_copy.isChecked():
                 frm_str = "COPY({feature}{{N}})"
                 FUN = lambda x: x
