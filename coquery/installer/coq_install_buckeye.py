@@ -350,6 +350,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.map_query_item(QUERY_ITEM_TRANSCRIPT, "content_transcript")
         self.map_query_item(QUERY_ITEM_POS, "content_pos")
         self.map_query_item(QUERY_ITEM_WORD, "content_label")
+        self.map_query_item(QUERY_ITEM_LEMMA, "content_lemmatranscript")
 
     
     @staticmethod
