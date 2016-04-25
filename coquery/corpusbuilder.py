@@ -2113,6 +2113,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             source = input_file.readlines()
             
         if self.arguments.use_nltk:
+            import nltk
             is_tagged_label = "POS-tagged text corpus"
             try:
                 tagging_state = "Part-of-speech tags were assigned using <code>{}</code>, the recommended tagger from the Natural Language Toolkit (NLTK) version {}. NLTK used data from WordNet for lemmatization.".format(
@@ -2120,7 +2121,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     nltk.__version__)
             except:
                 tagging_state = "Part-of-speech tags were assigned using the default tagger from the Natural Language Toolkit (NLTK) version {}. NLTK used data from WordNet for lemmatization.".format(
-                    nltk._version__)
+                    nltk.__version__)
         else:
             is_tagged_label = "text corpus"
             tagging_state = "Part-of-speech tags are not available for this corpus."
