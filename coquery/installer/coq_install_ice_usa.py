@@ -747,11 +747,11 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_name():
-        return "ICE_NG"
+        return "ICE_US"
 
     @staticmethod
     def get_db_name():
-        return "ice_ng"
+        return "ice_us"
 
     @staticmethod
     def get_language():
@@ -759,20 +759,20 @@ class BuilderClass(BaseCorpusBuilder):
     
     @staticmethod
     def get_language_code():
-        return "en-NG"
+        return "en-US"
         
     @staticmethod
     def get_title():
-        return "International Corpus of English – Nigeria"
+        return "International Corpus of English – USA"
 
     @staticmethod
     def get_description():
         return [
-            "The International Corpus of English – Nigeria is a member of the ICE family of English corpora. It contains approximately 460.000 tokens of spoken Nigerian English, dating mostly from the first decade of the 21st century. Where known, the corpus provides speaker information (age, gender, ethnicity). The corpus also contains some textual meta information on the layout of the texts."]
+            "The International Corpus of English – USA is a member of the ICE family of English corpora. It contains approximately 460.000 tokens of spoken US-American English."]
 
     @staticmethod
     def get_license():
-        return "ICE Nigeria is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike license (<a href='https://creativecommons.org/licenses/by-nc-sa/3.0/'>CC BY-NC-SA 3.0</a> DE)."
+        return "ICE USA is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike license (<a href='https://creativecommons.org/licenses/by-nc-sa/3.0/'>CC BY-NC-SA 3.0</a> DE)."
         
     @staticmethod
     def get_references():
