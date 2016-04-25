@@ -236,7 +236,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.table_model = classes.CoqTableModel(self)
         self.table_model.dataChanged.connect(self.table_model.sort)
-        self.table_model.columnVisibilityChanged.connect(self.reaggregate)
+        self.table_model.columnVisibilityChanged.connect(lambda: self.reaggregate(recalculate=True))
         self.table_model.rowVisibilityChanged.connect(self.update_row_visibility)
 
         header = self.ui.data_preview.horizontalHeader()
@@ -503,18 +503,22 @@ class CoqueryApp(QtGui.QMainWindow):
         # set up hooks for the summary widgets:
         self.ui.radio_no_summary.clicked.connect(self.change_summary)
         self.ui.radio_summary.clicked.connect(self.change_summary)
-        self.ui.combo_summary.currentIndexChanged.connect(self.change_summary)
             
         self.corpusListUpdated.connect(self.check_corpus_widgets)
 
     def change_summary(self):
         if self.ui.radio_no_summary.isChecked():
             options.cfg.MODE = QUERY_MODE_TOKENS
-            self.ui.combo_summary.setDisabled(True)
+            try:
+                self.ui.combo_summary.currentIndexChanged.disconnect(self.change_summary)
+            except TypeError:
+                pass
         else:
             summary_type = self.ui.combo_summary.currentText()
+            self.ui.combo_summary.currentIndexChanged.connect(self.change_summary)
+        
             options.cfg.MODE = summary_type
-            self.ui.combo_summary.setDisabled(False)
+
         self.reaggregate(query_type=queries.get_query_type(options.cfg.MODE), 
                          recalculate=False)
 
@@ -667,6 +671,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.Session.query_type.remove_output_columns(self.Session)
             self.Session.query_type = query_type
             self.Session.query_type.add_output_columns(self.Session)
+        
         self.start_progress_indicator()
         self.thread.start()
 
@@ -1872,14 +1877,11 @@ class CoqueryApp(QtGui.QMainWindow):
     def build_corpus_from_table(self):
         from coquery. installer import coq_install_generic_table
         from .corpusbuilder_interface import BuilderGui
-        print(0)
         builder = BuilderGui(coq_install_generic_table.BuilderClass, onefile=True, parent=self)
-        print(1)
         try:
             result = builder.display()
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info())
-        print(2)
         if result:
             options.set_current_server(options.cfg.current_server)
         self.fill_combo_corpus()
@@ -2232,11 +2234,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if options.cfg.MODE == QUERY_MODE_TOKENS:
             self.ui.radio_no_summary.setChecked(True)
-            self.ui.combo_summary.setDisabled(True)
         else:
             self.ui.radio_summary.setChecked(True)
             self.ui.combo_summary.setCurrentIndex(SUMMARY_MODES.index(options.cfg.MODE))
-            self.ui.combo_summary.setDisabled(False)
+            self.ui.combo_summary.currentIndexChanged.connect(self.change_summary)
+                            
 
         self.ui.edit_file_name.setText(options.cfg.input_path)
         # either fill query string or query file input:
