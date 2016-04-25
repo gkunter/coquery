@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 import logging
 
 from .defines import *
-
+from . import options
 
 class QueryFilter(object):
     """ Define a class that stores a query filter. 
@@ -170,7 +170,7 @@ class QueryFilter(object):
         var, op, value_range, value_list = self.parse_filter(s)
         if not var:
             return False
-        variable_names = [name.lower() for  _, name in self.resource.get_corpus_features() + [("statistics_frequency", "freq")]]
+        variable_names = [name.lower() for  _, name in self.resource.get_corpus_features() + [("statistics_frequency", COLUMN_NAMES["statistics_frequency"])]]
         if var.lower() not in variable_names:
             return False
         if variable_names.count(var.lower()) > 1:
