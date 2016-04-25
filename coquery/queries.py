@@ -540,7 +540,6 @@ class TokenQuery(object):
     @classmethod
     def aggregate_it(cls, df, corpus, **kwargs):
         agg = cls.aggregate_data(df, corpus, **kwargs)
-        #agg = cls.filter_data(agg, cls.filter_list)
         agg_cols = list(agg.columns.values)
         for col in list(agg_cols):
             if col.startswith("coquery_invisible"):
@@ -582,9 +581,11 @@ class FrequencyQuery(TokenQuery):
     
     @staticmethod
     def add_output_columns(session):
-        for x in options.cfg.selected_features:
-            if x.startswith("statistics_"):
-                if not x.startswith("statistics_query"):
+        l1 = [x for x in options.cfg.selected_features if not x.startswith("statistics_")]
+        l2 = [x for x in options.cfg.selected_features if x.startswith("statistics_")]
+        for x in l1 + l2:
+            if x.startswith("statistics_") and not x.startswith("statistics_query"):
+                if x not in session.output_order:
                     session.output_order.append(x)
         
         if "statistics_frequency" not in session.output_order:
@@ -956,8 +957,10 @@ class ContingencyQuery(TokenQuery):
 
         columns = []
         for x in session.output_order:
-            if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True):
+            if not x.startswith(("coquery_invisible", "statistics_")) and options.cfg.column_visibility.get(x, True):
                 columns.append(x)
+
+        session.output_order = [x for x in session.output_order if not x.startswith("statistics_")]
 
         row_columns = columns[:-1]
         row_list = [df[x] for x in row_columns if x in df.columns]
@@ -967,7 +970,10 @@ class ContingencyQuery(TokenQuery):
         elif len(columns) > 1:
             col_column = columns[-1]
             result = pd.crosstab(row_list, df[col_column], margins=True).reset_index()
-            session.output_order.remove(col_column)
+            try:
+                session.output_order.remove(col_column)
+            except ValueError:
+                pass
             new_columns = list(result.columns)
             for i in range(len(row_columns), len(new_columns) - 1):
                 col_label = "{}: {}".format(
