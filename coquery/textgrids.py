@@ -14,10 +14,12 @@ from __future__ import unicode_literals
 import collections
 import warnings
 import os
+import logging
 
 import tgt
 
 from . import options
+from . import defines
 from .links import get_by_hash
 from .unicode import utf8
 
@@ -230,3 +232,5 @@ class TextgridWriter(object):
             filename, ext = os.path.splitext(os.path.basename(x))
             tgt.write_to_file(grid, os.path.join(path, "{}.TextGrid".format(filename)))
         return len(grids)
+    
+logger = logging.getLogger("Coquery")
