@@ -121,10 +121,11 @@ class Session(object):
             self.data_table = current_query.append_results(self.data_table)
             logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
 
-        self.data_table.index = range(1, len(self.data_table.index) + 1)
         #self.frequency_table = self.get_frequency_table()
         
         self.filter_data()
+
+        self.data_table.index = range(1, len(self.data_table.index) + 1)
 
         self.end_time = datetime.datetime.now()
         self.reset_row_visibility(queries.TokenQuery, self.data_table)
@@ -212,6 +213,8 @@ class Session(object):
         else:
             tab = self.data_table[self.row_visibility[queries.TokenQuery]]
 
+        old_index = tab.index
+
         self.output_object = self.query_type.aggregate_it(
             tab,
             self.Corpus, session=self)
@@ -219,7 +222,9 @@ class Session(object):
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
 
-        if not self.query_type in self.row_visibility:
+        if (not self.query_type in self.row_visibility or 
+            len(old_index) != len(self.output_object.index) or
+            not old_index.equals(self.output_object.index)):
             self.reset_row_visibility(self.query_type)
 
         # cache the output object for the current query type:
@@ -262,7 +267,7 @@ class Session(object):
             return 
         no_freq = True
         for filt in self.filter_list:
-            if filt.var == options.cfg.freq_label:
+            if filt.var == COLUMN_NAMES["statistics_frequency"]:
                 if not hasattr(self, "frequency_table"):
                     self.frequency_table = self.get_frequency_table()
                 try:
@@ -275,7 +280,7 @@ class Session(object):
         if no_freq:
             return
 
-        columns = [x for x in self.data_table.columns if not x.startswith("coquery_invisible") and x != column]
+        columns = [x for x in self.data_table.columns if not x.startswith(("statistics_", "coquery_invisible")) and x != column]
 
         self.data_table = pd.merge(self.data_table, self.frequency_table[columns], how="inner", copy=False, on=columns)
         
@@ -405,6 +410,8 @@ class Session(object):
                 header = match.group(2)
             else:
                 match = re.match("coq_(.*)", header)
+                if not match:
+                    raise RuntimeError(header)
                 header = match.group(1)
                 res_prefix = ""
                 resource = self.Resource
