@@ -21,7 +21,14 @@ from .csvoptions import MyTableModel, quote_chars, CSVOptions
 from .ui.namedTableOptionsUi import Ui_NamedTableOptions
 
 class NamedTableOptions(CSVOptions):
-    def __init__(self, filename, default=None, parent=None, icon=None):
+    def __init__(self, filename, , fields=[], default=None, parent=None, icon=None):
+        """
+        Parameters
+        ----------
+        filename : string
+        
+        fields : dictionary
+        """
         print(default)
         if default:
             mapping = default[-2]
@@ -43,6 +50,15 @@ class NamedTableOptions(CSVOptions):
         self._selected = 0
         self.map = mapping
         # make all widget rows the same height (for cosmetic reasons):
+        
+        for key, value in fields:
+            button_name = "button_{}".format(value.lower())
+            edit_name = "edit_{}".format(value.lower())
+            setattr(self.ui, button_name, QtGui.QPushButton(key))
+            setattr(self.ui, edit_name, QtGui.QLineEdit())
+            
+            getattr(self.ui, name).clicked.connect(lambda: self.map_query_item_type(value))
+        
 
         # make all buttons the same size:
         max_height = 0
