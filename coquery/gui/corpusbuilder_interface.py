@@ -527,6 +527,7 @@ class BuilderGui(InstallerGui):
         self.ui.label_pos_tagging.setText(self._label_text)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(self._old_button_state)
         if self.ui.use_pos_tagging.isChecked() and not pass_check():
+            self.nltk_exceptions.append("Lemmatization: {} Tokenization: {} Tagging: {}".format(self._nltk_lemmatize, self._nltk_tokenize, self._nltk_tagging))
             self.ui.use_pos_tagging.setChecked(False)
             from . import nltkdatafiles
             nltkdatafiles.NLTKDatafiles.ask(self.nltk_exceptions, parent=self)
@@ -537,7 +538,7 @@ class BuilderGui(InstallerGui):
 
     def file_options(self):
         """ Get CSV file options for current query input file. """
-        from .corpustableoptions import CorpusTableOptions
+        from .namedtableoptions import NamedTableOptions
         if self._table_options:
             sep, _, header, skip, quote, mapping, dtypes = self._table_options
             default = (sep, None, header, skip, quote, mapping, dtypes)
@@ -547,7 +548,7 @@ class BuilderGui(InstallerGui):
                         options.cfg.file_has_headers,
                         options.cfg.skip_lines,
                         options.cfg.quote_char, {}, {})
-        self._table_options = CorpusTableOptions.getOptions(
+        self._table_options = NamedTableOptions.getOptions(
             utf8(self.ui.input_path.text()), 
             default, self, icon=options.cfg.icon)
         self.validate_dialog()
