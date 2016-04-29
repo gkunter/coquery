@@ -16,6 +16,7 @@ from __future__ import absolute_import
 
 import math
 import re
+import decimal
 
 try:
     range = xrange
@@ -79,13 +80,16 @@ class TokenQuery(object):
             self._keys = row.keys()
             l = []
             for key, value in row.items():
-                if isinstance(value, str):
+                if isinstance(value, decimal.Decimal):
+                  l.append(float(value))  
+                elif isinstance(value, str):
                     s = string_map.get(value, None)
                     if s is None:
                         s = string_map[value] = value
                     l.append(s)
                 else:
                     l.append(value)
+            
             yield l
 
     def __len__(self):
@@ -179,11 +183,6 @@ class TokenQuery(object):
                         df = pd.DataFrame(columns=results.keys())
                     else:
                         df.columns = results.keys()
-                    #print(df.head().dtypes)
-                    #print(df.coq_corpus_endtime_1)
-                    #print(df.coq_corpus_endtime_1.convert_objects(convert_numeric=True))
-                    #print("<{}>".format(df.coq_corpus_endtime_1[1]))
-                    #print(df.head().dtypes)
                     results = None
 
                 df = self.insert_static_data(df)
