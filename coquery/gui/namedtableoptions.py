@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-corpustableoptions.py is part of Coquery.
+namedtableoptions.py is part of Coquery.
 
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
@@ -18,9 +18,9 @@ from coquery.errors import *
 from .pyqt_compat import QtGui, QtCore
 
 from .csvoptions import MyTableModel, quote_chars, CSVOptions
-from .ui.corpusTableOptionsUi import Ui_CorpusTableOptions
+from .ui.namedTableOptionsUi import Ui_NamedTableOptions
 
-class CorpusTableOptions(CSVOptions):
+class NamedTableOptions(CSVOptions):
     def __init__(self, filename, default=None, parent=None, icon=None):
         print(default)
         if default:
@@ -31,8 +31,8 @@ class CorpusTableOptions(CSVOptions):
         
         print(default)
         
-        super(CorpusTableOptions, self).__init__(filename, default, parent, 
-                                                 icon, ui=Ui_CorpusTableOptions)
+        super(NamedTableOptions, self).__init__(filename, default, parent, 
+                                                 icon, ui=Ui_NamedTableOptions)
 
         self.ui.button_word.clicked.connect(lambda: self.map_query_item_type("word"))
         self.ui.button_lemma.clicked.connect(lambda: self.map_query_item_type("lemma"))
@@ -57,13 +57,13 @@ class CorpusTableOptions(CSVOptions):
             getattr(self.ui, "edit_{}".format(x)).setText(self.map[x])
 
         try:
-            self.resize(options.settings.value("corpustableoptions_size"))
+            self.resize(options.settings.value("namedtableoptions_size"))
         except TypeError:
             pass
 
 
     def update_content(self):
-        super(CorpusTableOptions, self).update_content()
+        super(NamedTableOptions, self).update_content()
         self.map = dict()
         self.ui.edit_word.setText("")
         self.ui.edit_lemma.setText("")
@@ -72,7 +72,7 @@ class CorpusTableOptions(CSVOptions):
         self.ui.edit_gloss.setText("")
 
     def closeEvent(self, event):
-        options.settings.setValue("corpustableoptions_size", self.size())
+        options.settings.setValue("namedtableoptions_size", self.size())
         
     def map_query_item_type(self, label):
         column = self.ui.query_column.value() - 1
@@ -89,7 +89,7 @@ class CorpusTableOptions(CSVOptions):
         
     @staticmethod
     def getOptions(path, default=None, parent=None, icon=None):
-        dialog = CorpusTableOptions(path, default, parent, icon)
+        dialog = NamedTableOptions(path, default, parent, icon)
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[

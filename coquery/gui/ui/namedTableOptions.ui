@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>CorpusTableOptions</class>
- <widget class="QDialog" name="CorpusTableOptions">
+ <class>NamedTableOptions</class>
+ <widget class="QDialog" name="NamedTableOptions">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Corpus table options ~ Coquery</string>
+   <string>Table options ~ Coquery</string>
   </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
@@ -217,7 +217,7 @@
            <number>4</number>
           </property>
           <item>
-           <layout class="QGridLayout" name="gridLayout_2">
+           <layout class="QGridLayout" name="layout_name_buttons">
             <item row="0" column="0">
              <widget class="QPushButton" name="button_word">
               <property name="text">
@@ -361,7 +361,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>CorpusTableOptions</receiver>
+   <receiver>NamedTableOptions</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -377,7 +377,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>CorpusTableOptions</receiver>
+   <receiver>NamedTableOptions</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
