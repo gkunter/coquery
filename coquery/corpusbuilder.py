@@ -1571,10 +1571,20 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 return
 
             for column in table.columns:
-                try:
-                    optimal = self.DB.get_optimal_field_type(table.name, column.name).strip()
-                except TypeError:
-                    continue
+                # Links should get the same optimal data type as the linked 
+                # column:
+                if column.key:
+                    try:
+                        _table = self._new_tables[column._link]
+                        _column = _table.primary
+                        optimal = self.DB.get_optimal_field_type(_table.name, _column.name).strip()
+                    except TypeError:
+                        continue
+                else:
+                    try:
+                        optimal = self.DB.get_optimal_field_type(table.name, column.name).strip()
+                    except TypeError:
+                        continue
                 current = self.DB.get_field_type(table.name, column.name).strip()
                 if current.lower() != optimal.lower() and "text" not in optimal.lower().split()[0].strip():
                     optimal = utf8(optimal)
@@ -2067,8 +2077,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
                 if not self.interrupted:
                     current = progress_next(current)
-                    for stage in self.additional_stages and not self.interrupted:
-                        stage()
+                    for stage in self.additional_stages:
+                        if not self.interrupted:
+                            stage()
                     progress_done()
 
                 if self.arguments.o and not self.interrupted:
