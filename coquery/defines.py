@@ -281,8 +281,8 @@ msg_corpus_path_not_valid = """
 <p>{}</p>
 <p>If you choose to <b>ignore</b> that the corpus data path is invalid, 
 Coquery will start the corpus installation using this directiory. After the 
-installation, you mioght still be able to use the corpus, but it might be 
-incomplete.</p>
+installation, you may still be able to use the corpus, but it will be 
+incomplete, or in an unusuable state.</p>
 <p>If you choose to <b>discard</b> the invalid corpus data path, you can 
 enter the correct data path in the previous dialog, or cancel the corpus 
 installation altogether.</p>
