@@ -2857,10 +2857,8 @@ class CorpusClass(object):
                 tag = df_sub.loc[ix].COQ_TAG_TAG
                 attr = df_sub.loc[ix].COQ_ATTRIBUTE
                 if attr:
-                    try:
-                        attributes = dict([x.split("=") for x in attr.split(",")])
-                    except ValueError:
-                        attributes = dict([attr.split("=")])
+                    attr_list = [x.partition("=") for x in attr.split(",")]
+                    attributes = dict([(l, r) for l, _, r in attr_list])
                 else: 
                     attributes = {}
                 open_element = self.renderer_open_element(tag, attributes)
