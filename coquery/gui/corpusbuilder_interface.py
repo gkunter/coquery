@@ -120,6 +120,10 @@ class InstallerGui(QtGui.QDialog):
             self.resize(options.settings.value("corpusinstaller_size"))
         except TypeError:
             pass
+        
+        if not options.cfg.experimental:
+            self.ui.widget_ngram.hide()
+            self.ui.check_ngram.setChecked(False)
 
     def closeEvent(self, event):
         options.settings.setValue("corpusinstaller_size", self.size())
