@@ -122,9 +122,13 @@ class InstallerGui(QtGui.QDialog):
             pass
         
         if not options.cfg.experimental:
-            self.ui.widget_ngram.hide()
-            self.ui.check_ngram.setChecked(False)
-
+            try:
+                self.ui.widget_ngram.hide()
+                self.ui.check_ngram.setChecked(False)
+            except AttributeError:
+                # ignore exceptions raised if widgets do not exist
+                pass
+            
     def closeEvent(self, event):
         options.settings.setValue("corpusinstaller_size", self.size())
 
