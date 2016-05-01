@@ -6,7 +6,7 @@ import glob
 
 block_cipher = None
 
-coq_path = os.path.realpath(os.path.expanduser(os.path.join("~", "coquery", "coquery")))
+coq_path = os.path.realpath(os.path.join(os.getenv("HOMEPATH"), "coquery-0.9.2", "coquery"))
 python_path = os.path.split(sys.executable)[0]
 
 binaries = []
