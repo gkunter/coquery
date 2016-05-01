@@ -13,8 +13,7 @@ import os
 from imp import find_module
 
 from coquery.defines import VERSION as version
-
-with open("README.rst", "rb") as f:
+with open(os.path.join(os.path.split(os.path.realpath(__file__))[0], "README.rst"), "rb") as f:
     long_descr = f.read().decode("utf-8")
 
 DESCRIPTION = "Coquery: a free corpus query tool"

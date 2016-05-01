@@ -60,7 +60,7 @@ class Ui_NLTKDatafiles(object):
         self.verticalLayout_2.addWidget(self.frame)
         self.buttonBox = QtGui.QDialogButtonBox(NLTKDatafiles)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.No|QtGui.QDialogButtonBox.Yes)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.No|QtGui.QDialogButtonBox.Open|QtGui.QDialogButtonBox.Yes)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.verticalLayout_2.addWidget(self.buttonBox)
 
@@ -72,6 +72,6 @@ class Ui_NLTKDatafiles(object):
     def retranslateUi(self, NLTKDatafiles):
         NLTKDatafiles.setWindowTitle(_translate("NLTKDatafiles", "Missing NLTK data files – Coquery", None))
         self.label_2.setText(_translate("NLTKDatafiles", "<html><head/><body><p><span style=\" font-weight:600;\">The tagger or tokenizer are not available.</span></p><p>Missing NLTK components:</p></body></html>", None))
-        self.label.setText(_translate("NLTKDatafiles", "<html><head/><body><p>Do you want to install the missing NLTK components now?</p></body></html>", None))
+        self.label.setText(_translate("NLTKDatafiles", "<html><head/><body><p>Do you want to download and install the missing NLTK components?</p></body></html>", None))
 
 

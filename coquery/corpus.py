@@ -945,8 +945,8 @@ class SQLResource(BaseResource):
             df.sort(columns=list(df.columns)[:2], inplace=True)
         
         return df
-
-    def get_query_string(self, Query, token_list, self_joined=False):
+    
+    def get_query_string(self, Query, token_list):
         """
         Get a query string that can be used to retrieve the query matches.
 
@@ -959,9 +959,6 @@ class SQLResource(BaseResource):
             An TokenQuery instance that specifies the current query.
         token_list : list 
             A list of Tokens
-        self_joined : bool
-            True if the query is to be run on a table with static self-joins, 
-            or False if the query is to be run on several dynamic self-joins.
             
         Returns
         -------
@@ -969,10 +966,13 @@ class SQLResource(BaseResource):
             A string that can be executed by an SQL engine.
         """
         try:
-            if self_joined:
-                query_string = self.corpus.sql_string_query_self_joined(Query, token_list)
-            else:
-                query_string = self.corpus.sql_string_query(Query, token_list)
+            if hasattr(self, "corpusngram_table"):
+                print("--")
+                print(self.corpus.sql_string_query_lookup(Query, token_list))
+                print("--")
+            #else:
+                #query_string = self.corpus.sql_string_query(Query, token_list)
+            query_string = self.corpus.sql_string_query(Query, token_list)
         except WordNotInLexiconError:
             query_string = ""
             
@@ -1168,12 +1168,13 @@ class SQLResource(BaseResource):
     
 class CorpusClass(object):
     
+    _frequency_cache = {}
+    _corpus_size_cache = {}
+    _context_cache = {}
+    
     def __init__(self):
         self.lexicon = None
         self.resource = None
-        self._frequency_cache = {}
-        self._corpus_size_cache = {}
-        self._context_cache = {}
 
     def get_source_id(self, token_id):
         if not options.cfg.token_origin_id:
@@ -1328,7 +1329,7 @@ class CorpusClass(object):
             The number of tokens in the corpus, or in the filtered corpus.
         """
 
-        if (ignore_filters or not self.resource.filter_list) and hasattr(self.resource, "number_of_tokens"):
+        if (ignore_filters or not self.resource.filter_list) and getattr(self.resource, "number_of_tokens", None):
             return self.resource.number_of_tokens
         
         filter_list = self.resource.translate_filters(self.resource.filter_list)
@@ -1349,14 +1350,17 @@ class CorpusClass(object):
             self._corpus_size_cache[S] = df.values.ravel()[0]
         return self._corpus_size_cache[S]
 
-    def get_frequency(self, s, ignore_filters=False):
+    def get_frequency(self, s, ignore_filters=False, engine=False):
         """ Return a longint that gives the corpus frequency of the token,
         taking the filter list from self.resource.filter_list into account."""
-        if s in self._frequency_cache:
-            return self._frequency_cache[s]
-        
+
+        filter_list = self.resource.translate_filters(self.resource.filter_list)
+
         if s in ["%", "_"]:
             s = "\\" + s
+        
+        if (s, ignore_filters, tuple(filter_list)) in self._frequency_cache:
+            return self._frequency_cache[(s, ignore_filters, tuple(filter_list))]
         
         if not s:
             return 0
@@ -1379,7 +1383,6 @@ class CorpusClass(object):
             self.lexicon.table_list = []
             self.lexicon.joined_tables = []
 
-            filter_list = self.resource.translate_filters(self.resource.filter_list)
             filter_strings = ["{}.{} {} '{}'".format(
                 tab, col, op, val[0]) for col, _, tab, op, val, _ in filter_list]
                 
@@ -1393,12 +1396,19 @@ class CorpusClass(object):
             S = "SELECT COUNT(*) FROM {} WHERE {}".format(
                 from_str, " AND ".join(where_clauses + filter_strings))
 
-            df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+            if not engine:
+                tmp_engine = self.resource.get_engine()
+                df = pd.read_sql(S.replace("%", "%%"), tmp_engine)
+                tmp_engine.dispose()
+            else:
+                df = pd.read_sql(S.replace("%", "%%"), engine)
+                
             freq = df.values.ravel()[0]
-        self._frequency_cache[s] = freq
+
+        self._frequency_cache[(s, ignore_filters, tuple(filter_list))] = freq
         return freq
 
-    def get_whereclauses(self, token, WordTarget, PosTarget):
+    def get_whereclauses(self, token, WordTarget, PosTarget=None):
         if not token:
             return []
 
@@ -1414,18 +1424,9 @@ class CorpusClass(object):
             if spec_list and not hasattr(self.resource, label):
                 raise UnsupportedQueryItemError(item_type)
 
-        ##FIXME: This is a hard-coded special case for 'coca'. Ugh. Instead,
-        ##it should probably be a check against 'self_joined' or something
-        ##like that
-        #if self.resource.name == "COCA":
-            #L = set(self.lexicon.get_matching_wordids(token))
-            #if L:
-                #return ["{} IN ({})".format(
-                    #WordTarget, ", ".join(["{}".format(x) for x in L]))]
-
         # if only a class specification is given, this specification is
         # used as the where clause:
-        if token.class_specifiers and not (token.word_specifiers or token.lemma_specifiers or token.transcript_specifiers):
+        if PosTarget and token.class_specifiers and not (token.word_specifiers or token.lemma_specifiers or token.transcript_specifiers):
             L = self.lexicon.get_posid_list(token)
             if L: 
                 where_clauses.append("{} IN ({})".format(
@@ -1459,11 +1460,87 @@ class CorpusClass(object):
                         raise WordNotInLexiconError
         return where_clauses
     
-    def get_token_query_string(self, current_token, number, self_joined=False):
+    def get_token_query_order(self, token_list):
         """ 
-        Return a MySQL SELECT string that selects a table matching the 
-        current token, and which includes all columns that are requested, or 
-        which are required to join the tables. 
+        Return an order list in which the token queries should be executed. 
+        
+        Ideally, the order corresponds to the number of rows in the 
+        corpus that match the token query, from small to large. This 
+        increases query performance because it reduces the number of rows 
+        that need to be scanned once all tables have been joined.
+        
+        The optimal order would be in decreasing frequency order for the 
+        subcorpus specified by all source filters, but this is not 
+        implemented yet. It may turn out that determining the subcorpus 
+        frequency is too time-consuming after all. 
+        
+        Instead, the current implentation is a heuristic. It assumes that 
+        a longer token string is more specific, and should therefore have
+        precedence over a short token string. This may be true for normal
+        queries, but queries that contain an OR selection the heuristic is
+        probably suggesting suboptimal orders.
+        
+        The second criterion is the number of asterisks in the query string:
+        a query string containing a '*' should be joined later than a query 
+        string of the same length without '*'. 
+        
+        Parameters
+        ----------
+        token_list : list
+            A list of token tuples, the first element stating the position of 
+            the target output column, the second the token string
+            
+        Returns
+        -------
+        L : list
+            A list of tuples. The first element contains the token number, 
+            the second element contains the target output column
+        """
+        # FIXME: improve the heuristic.
+        
+        if len(token_list) == 1:
+            return [(1, 1)]
+        
+        def calc_weight(s):
+            """ 
+            Calculates the weight of the query string s 
+            """
+            # word wildcards are strongly penalized:
+            if s == "%":
+                w = -9999
+            else:
+                w = len(s) * 2
+            # character wildcards are penalized also, but take escaping 
+            # into account:
+            w = w - (s.count("_") - s.count("\\_"))
+            if s.strip().startswith("~"):
+                w = -w
+            return w
+        
+        sort_list = list(enumerate(token_list))
+        # first, sort in reverse length:
+        sort_list = sorted(sort_list, 
+                           key=lambda x: calc_weight(x[1][1]), reverse=True)
+        #return [x+1 for x, _ in sort_list]
+        if options.cfg.align_quantified:
+            L = []
+            last_number = 0
+            for x, (number, token) in sort_list:
+                if number != last_number:
+                    token_counter = number - 1
+                    last_number = number
+                else:
+                    token_counter += 1
+                L.append((x+1, token_counter + 1))
+            return L
+        else:
+            return [(x+1, x+1) for x, _ in sort_list]
+
+    def get_token_query_string(self, current_token, number):
+        """ 
+        Return a SQL SELECT string that selects a table matching the current 
+        token, and which includes all columns that are requested, or which 
+        are required to join the tables. 
         
         Parameters
         ----------
@@ -1471,13 +1548,11 @@ class CorpusClass(object):
             An instance of CorpusToken as a part of a query string.
         number : int
             The number of current_token in the query string (starting with 0)
-        self_joined : bool
-            True if a self-joined table is used, or False otherwise.
 
         Returns
         -------
         s : string
-            The partial MySQL string.
+            The partial SQL string.
         """
         # corpus variables will only be included in the token query string if 
         # this is the first query token.
@@ -1719,270 +1794,400 @@ class CorpusClass(object):
         if number == 0 and options.cfg.token_origin_id:
             select_list.add("coq_{}_1".format(options.cfg.token_origin_id))
 
-        return "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
-    
-    def get_token_query_order(self, token_list):
-        """ 
-        Return an order list in which the token queries should be executed. 
-        
-        Ideally, the order corresponds to the number of rows in the 
-        corpus that match the token query, from small to large. This 
-        increases query performance because it reduces the number of rows 
-        that need to be scanned once all tables have been joined.
-        
-        The optimal order would be in decreasing frequency order for the 
-        subcorpus specified by all source filters, but this is not 
-        implemented yet. It may turn out that determining the subcorpus 
-        frequency is too time-consuming after all. 
-        
-        Instead, the current implentation is a heuristic. It assumes that 
-        a longer token string is more specific, and should therefore have
-        precedence over a short token string. This may be true for normal
-        queries, but queries that contain an OR selection the heuristic is
-        probably suggesting suboptimal orders.
-        
-        The second criterion is the number of asterisks in the query string:
-        a query string containing a '*' should be joined later than a query 
-        string of the same length without '*'. 
-        
-        Parameters
-        ----------
-        token_list : list
-            A list of token tuples, the first element stating the position of 
-            the target output column, the second the token string
-            
-        Returns
-        -------
-        L : list
-            A list of tuples. The first element contains the token number, 
-            the second element contains the target output column
-        """
-        # FIXME: improve the heuristic.
-        
-        if len(token_list) == 1:
-            return [(1, 1)]
-        
-        def calc_weight(s):
-            """ 
-            Calculates the weight of the query string s 
-            """
-            # word wildcards are strongly penalized:
-            if s == "%":
-                w = -9999
-            else:
-                w = len(s) * 2
-            # character wildcards are penalized also, but take escaping 
-            # into account:
-            w = w - (s.count("_") - s.count("\\_"))
-            if s.strip().startswith("~"):
-                w = -w
-            return w
-        
-        sort_list = list(enumerate(token_list))
-        # first, sort in reverse length:
-        sort_list = sorted(sort_list, 
-                           key=lambda x: calc_weight(x[1][1]), reverse=True)
-        #return [x+1 for x, _ in sort_list]
-        if options.cfg.align_quantified:
-            L = []
-            last_number = 0
-            for x, (number, token) in sort_list:
-                if number != last_number:
-                    token_counter = number - 1
-                    last_number = number
-                else:
-                    token_counter += 1
-                L.append((x+1, token_counter + 1))
-            return L
-        else:
-            return [(x+1, x+1) for x, _ in sort_list]
-
-    def get_token_query_string_self_joined(self, token, number):
-        """
-        Return a MySQL SELECT string that queries one token in a query on an 
-        n-gram corpus table.
-        """
-        
-        # get a list of all tables that are required to satisfy the 
-        # feature request:
-        
-        corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
-        requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
-
-        requested_features.append("word_id")
-        
-        column_list = []
-        for rc_feature in requested_features:
-            column_list.append("{} AS coq_{}_{}".format(
-                getattr(self.resource, rc_feature),
-                rc_feature, number + 1))
-
-        where_clauses = self.get_whereclauses(
-            token, 
-            self.resource.corpus_word_id, 
-            None)
-
-        where_clauses = []
-        L = []
-        try:
-            word_label = self.resource.word_label
-        except AttributeError:
-            pass
-        else:
-            for word in token.word_specifiers:
-                current_token = tokens.COCAToken(word, self, replace=False, parse=False)
-                current_token.negated = token.negated
-                S = current_token.S
-                if S != "%":
-                    # take care of quotation marks:
-                    S = S.replace("'", "''")
-                    L.append("%s %s '%s'" % (word_label, self.resource.get_operator(current_token), S))
-        if L:
-            where_clauses.append("({})".format(" OR ".join(L)))
-
-        L = []
-        try:
-            lemma_label = self.resource.word_lemma
-        except AttributeError:
-            pass
-        else:
-            for lemma in token.lemma_specifiers:
-                current_token = tokens.COCAToken(lemma, self, replace=False, parse=False)
-                current_token.negated = token.negated
-                S = current_token.S
-                if S != "%":
-                    # take care of quotation marks:
-                    S = S.replace("'", "''")
-                    L.append("%s %s '%s'" % (lemma_label, self.resource.get_operator(current_token), S))
-        if L:
-            where_clauses.append("({})".format(" OR ".join(L)))
-            
-        L = []
-        try:
-            pos_label = self.resource.pos
-        except AttributeError:
-            pass
-        else:
-            for pos in token.class_specifiers:
-                current_token = tokens.COCAToken(pos, self, replace=False, parse=False)
-                current_token.negated = token.negated
-                S = current_token.S
-                # take care of quotation marks:
-                if S != "%":
-                    S = S.replace("'", "''")
-                    L.append("%s %s '%s'" % (pos_label, self.resource.get_operator(current_token), S))
-        if L:
-            where_clauses.append("({})".format(" OR ".join(L)))
-        
-        if where_clauses:
-            S = """
-            SELECT  {columns}
-            FROM    {lexicon}
-            WHERE   {constraints}
-            """.format(
-                columns=", ".join(column_list),
-                lexicon=self.resource.word_table,
-                constraints=" AND ".join(where_clauses))
-        else:
-            S = """
-            SELECT  {columns}
-            FROM    {lexicon}
-            """.format(
-                columns=", ".join(column_list),
-                lexicon=self.resource.word_table),
+        S = "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
+        #print("get_token_query_string", S)
         return S
+    
+    #def get_token_query_string_self_joined(self, token, number):
+        #"""
+        #Return a MySQL SELECT string that queries one token in a query on an 
+        #n-gram corpus table.
+        #"""
         
-    def sql_string_query_self_joined(self, Query, token_list):
+        ## get a list of all tables that are required to satisfy the 
+        ## feature request:
+        
+        #corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
+        #requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
+
+        #requested_features.append("word_id")
+        
+        #column_list = []
+        #for rc_feature in requested_features:
+            #column_list.append("{} AS coq_{}_{}".format(
+                #getattr(self.resource, rc_feature),
+                #rc_feature, number + 1))
+
+        #where_clauses = self.get_whereclauses(
+            #token, 
+            #self.resource.corpus_word_id, 
+            #None)
+
+        #where_clauses = []
+        #L = []
+        #try:
+            #word_label = self.resource.word_label
+        #except AttributeError:
+            #pass
+        #else:
+            #for word in token.word_specifiers:
+                #current_token = tokens.COCAToken(word, self, replace=False, parse=False)
+                #current_token.negated = token.negated
+                #S = current_token.S
+                #if S != "%":
+                    ## take care of quotation marks:
+                    #S = S.replace("'", "''")
+                    #L.append("%s %s '%s'" % (word_label, self.resource.get_operator(current_token), S))
+        #if L:
+            #where_clauses.append("({})".format(" OR ".join(L)))
+
+        #L = []
+        #try:
+            #lemma_label = self.resource.word_lemma
+        #except AttributeError:
+            #pass
+        #else:
+            #for lemma in token.lemma_specifiers:
+                #current_token = tokens.COCAToken(lemma, self, replace=False, parse=False)
+                #current_token.negated = token.negated
+                #S = current_token.S
+                #if S != "%":
+                    ## take care of quotation marks:
+                    #S = S.replace("'", "''")
+                    #L.append("%s %s '%s'" % (lemma_label, self.resource.get_operator(current_token), S))
+        #if L:
+            #where_clauses.append("({})".format(" OR ".join(L)))
+            
+        #L = []
+        #try:
+            #pos_label = self.resource.pos
+        #except AttributeError:
+            #pass
+        #else:
+            #for pos in token.class_specifiers:
+                #current_token = tokens.COCAToken(pos, self, replace=False, parse=False)
+                #current_token.negated = token.negated
+                #S = current_token.S
+                ## take care of quotation marks:
+                #if S != "%":
+                    #S = S.replace("'", "''")
+                    #L.append("%s %s '%s'" % (pos_label, self.resource.get_operator(current_token), S))
+        #if L:
+            #where_clauses.append("({})".format(" OR ".join(L)))
+        
+        #if where_clauses:
+            #S = """
+            #SELECT  {columns}
+            #FROM    {lexicon}
+            #WHERE   {constraints}
+            #""".format(
+                #columns=", ".join(column_list),
+                #lexicon=self.resource.word_table,
+                #constraints=" AND ".join(where_clauses))
+        #else:
+            #S = """
+            #SELECT  {columns}
+            #FROM    {lexicon}
+            #""".format(
+                #columns=", ".join(column_list),
+                #lexicon=self.resource.word_table),
+        #return S
+        
+    def sql_string_query_lookup(self, Query, token_list):
         """ 
         Return a string that is sufficient to run the query on the
         MySQL database. 
         """
 
-        token_query_list = {}
+        """
+            SELECT  coq_word_label_1,
+                    coq_word_label_2,
+                    CorpusNgram.ID AS coquery_invisible_corpus_id,
+                    Files.Filename AS coq_file_name_1
+            FROM    
+                CorpusNgram
+            INNER JOIN
+                (SELECT Word as coq_word_label_1,
+                        WordId
+                FROM    Lexicon) AS E1
+            ON E1.WordId = CorpusNgram.WordId0
+            INNER JOIN
+                (SELECT Word as coq_word_label_2,
+                        WordId
+                FROM    Lexicon) AS E2
+            ON E2.WordId = CorpusNgram.WordId1
+            
+            INNER JOIN
+                Files ON Files.FileId = CorpusNgram.FileId
+            WHERE
+                E1.WordId IN ('163', '708', '5') AND
+                E2.WordId IN ('2400', '2497', '2374');
+        """
 
-        corpus_features = [x for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
-        lexicon_features = [x for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+        def get_item_string(self):
+            """
+            Return a string containing the SELECT that is needed to fulfil
+            the lexicon feature selection. The string contains a format 
+            placeholder {N} that can be filled with the correct query item 
+            number. 
+            
+            The string is supposed to be used in an inner join with the 
+            CorpusNgram table, i.e.
+            
+            CorpusNgram
+            INNER JOIN (S) AS E{N} ON E{N}.WordId = CorpusNgram.WordId{N} 
+            
+            """
+
+        sql_template = """
+        SELECT  {fields}
+        FROM    {corpus_ngram}
+                {joined_tables}
+        WHERE   {where}
+        """
+
+        if hasattr(self.resource, "corpus_word_id"):
+            word_id_column = self.resource.corpus_word_id
+        elif hasattr(self.resource, "corpus_word"):
+            word_id_column = self.resource.corpus_id
+        else:
+            word_id_column = None
+
+        where_clauses = []
+
+        for i, tup in enumerate(token_list):
+            _, item = tup
+            where_clauses += self.get_whereclauses(
+                tokens.COCAToken(item, self.lexicon), 
+                "E{}.{}".format(i + 1, word_id_column))
+
+        
+        for x in [x for x, _ in self.resource.get_lexicon_features() if x in options.cfg.selected_features]:
+            pass
+
+        final_select = []
+        joined_tables = []
+
+        # Always add the corpus id to the output fields:
+        final_select.append("{}.{} AS coquery_invisible_corpus_id".format(
+            self.resource.corpusngram_table, self.resource.corpus_id))
+
+        query_string = sql_template.format(
+            fields=", ".join(set(final_select)),
+            corpus_ngram=self.resource.corpusngram_table,
+            joined_tables=joined_tables,
+            where=" AND ".join(where_clauses))
+
+        # add LIMIT clause if necessary:
+        if options.cfg.number_of_tokens:
+            query_string = "{} LIMIT {}".format(
+                query_string, options.cfg.number_of_tokens)
+
+        # if verbose, add some line breaks and tabs to the query string so
+        # that it is somewhat easier to read:
+        if options.cfg.verbose:
+            query_string = query_string.replace("INNER JOIN ", "\nINNER JOIN \n\t")
+            query_string = query_string.replace("SELECT ", "SELECT \n\t")
+            query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
+            query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
+        return query_string
+
+
+        #token_query_list = {}
+
+        #corpus_features = [x for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+        #lexicon_features = [x for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+        
+        #for i, tup in enumerate(token_list):
+            #number, token = tup
+            #s = self.get_token_query_string(tokens.COCAToken(token, self.lexicon), i)
+            #if s:
+                #join_string = "INNER JOIN ({s}) AS e{i}\nON coq_word_id_{i} = W{i}".format(
+                    #s = s, 
+                    #i=i+1)
+                #token_query_list[i+1] = join_string
+        #final_select = []
+
+        #requested_features = [x for x in options.cfg.selected_features]
+        #if options.cfg.context_left or options.cfg.context_right:
+            ## in order to make this not depend on a fixed database layout 
+            ## (here: 'source' and 'file' tables), we should check for any
+            ## table that corpus_table is linked to except for word_table
+            ## (and all child tables).            
+            #if options.cfg.token_origin_id:
+                #requested_features.append(options.cfg.token_origin_id.replace("corpus", "corpusngram"))
+                
+        #for rc_feature in requested_features:
+            #try:
+                #final_select.append(
+                    #"{} AS coq_{}_1".format(getattr(self.resource, "corpusngram_{}".format(rc_feature)), rc_feature))
+            #except AttributeError:
+                ## This means that the requested feature is not directly
+                ## stored in the n-gram table. This means that a table 
+                ## link is necessary.
+                #pass
+
+        ## FIXME:
+        ## Not working: 
+        ## - align_quantified
+        ## - linked tables
+
+        #for rc_feature in self.resource.get_preferred_output_order():
+            #if rc_feature in requested_features:
+                #if rc_feature in lexicon_features:
+                    #for i in range(Query.Session.get_max_token_count()):
+                        #if i < len(token_list):
+                            #final_select.append("coq_{}_{}".format(rc_feature, i+1))
+                        #else:
+                            #final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
+                #elif rc_feature in corpus_features:
+                    #pass
+                    ##final_select.append("coq_{}_1".format(rc_feature))
+
+        ##for rc_feature in options.cfg.selected_features:
+            ##select_feature = "coq_{}_1".format(rc_feature)
+            ##if rc_feature in corpus_features or rc_feature in lexicon_features:
+                ##final_select.append(select_feature)
+            ##else:
+                ##final_select.append("NULL AS {}".format(select_feature))
+
+        #final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.corpus_id))
+
+        ## Add filters:
+        ## FIXME: What happens if the filter does not apply to something
+        ## in the ngram table, but to a linked table?
+        #where_string_list = []
+        #for filt in self.resource.translate_filters(self.resource.filter_list):
+            #variable, rc_feature, table_name, op, value_list, _value_range = filt
+            #if op.upper() == "LIKE":
+                #if "*" not in value_list[0]:
+                    #value_list[0] = "*{}*".format(value_list[0])
+                #value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
+
+            #rc_table = "{}_table".format(rc_feature.partition("_")[0])
+            #s = '{} {} "{}"'.format(getattr(self.resource, rc_feature), op, value_list[0])
+            #where_string_list.append(s)
+        #return """
+        #SELECT  {}
+        #FROM    {}
+        #{}
+        #{}
+        #""".format(
+            #", ".join(final_select),
+            #self.resource.corpusngram_table,
+            #"\n".join(token_query_list.values()),
+            #"WHERE {}".format(" AND ".join(where_string_list)) if where_string_list else "",
+            #)
+
+
+    def get_select_columns(self, Query, token_list):
+        """
+        Get a list of aliased columns that is used in the query string.
+        """
+
+        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
+
+        positions_lexical_items = self.get_lexical_item_positions(token_list)
+
+        final_select = []        
+        for rc_feature in self.resource.get_preferred_output_order():
+            if rc_feature in options.cfg.selected_features:
+                if rc_feature in [x for x, _ in lexicon_features] or self.resource.is_tokenized(rc_feature):
+                    for i in range(Query.Session.get_max_token_count()):
+                        if options.cfg.align_quantified:
+                            last_offset = 0
+                            if i in positions_lexical_items:
+                                final_select.append("coq_{}_{}".format(rc_feature, i+1))
+                            else:
+                                final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
+                        else:
+                            if i < len(token_list):
+                                final_select.append("coq_{}_{}".format(rc_feature, i+1))
+                            else:
+                                final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
+
+        # add any external feature that is not a function:
+        for link, rc_feature in options.cfg.external_links:
+            #if link.startswith("func."):
+                #continue
+
+            if self.resource.is_lexical(link.key_feature):
+                for i in range(Query.Session.get_max_token_count()):
+                    if options.cfg.align_quantified:
+                        if i in positions_lexical_items:
+                            final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
+                    else:
+                        final_select.append("coq_{}${}_{}".format(link.db_name, rc_feature, i+1))
+            else:
+                final_select.append("coq_{}${}_1".format(link.db_name, rc_feature))
+
+        # add the corpus features in the preferred order:
+        # FIXME: Is this still necessary?
+        for rc_feature in self.resource.get_preferred_output_order():
+            if rc_feature in options.cfg.selected_features:
+                if rc_feature in [x for x, _ in corpus_features]:
+                    final_select.append("coq_{}_1".format(rc_feature))
+
+        # Add any feature that is selected that is neither a corpus feature,
+        # a lexicon feature nor a Coquery feature:
+        # FIXME: What does this do, then?
+        for rc_feature in options.cfg.selected_features:
+            if any([x == rc_feature for x, _ in self.resource.get_corpus_features()]):
+                break
+            if any([x == rc_feature for x, _ in self.resource.get_lexicon_features()]):
+                break
+            db, _, table, _ = self.resource.split_resource_feature(rc_feature)
+            if table not in self.resource.special_table_list:
+                if "." not in rc_feature:
+                    final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
+
+        # add any resource feature that is required by a function:
+        for res, fun, _ in options.cfg.selected_functions:
+            # check if the function is applied to an external link:
+            if res.count(".") > 1:
+                rc_feature = "_".join(res.split(".")[1:])
+            else:
+                rc_feature = res.split(".")[-1]
+            if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
+                final_select += ["coq_{}_{}".format(rc_feature, x + 1) for x in range(Query.Session.get_max_token_count())]
+            else:
+                final_select.append("coq_{}_1".format(rc_feature))
+
+        # add coquery_invisible_origin_id if a context is requested:
+        if (options.cfg.context_mode != CONTEXT_NONE and 
+            options.cfg.token_origin_id != None and
+            (options.cfg.context_left or options.cfg.context_right)):
+            final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
+
+        # Always add the corpus id to the output fields:
+        final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
+        return final_select
+
+    def get_lexical_item_positions(self, token_list):
+        """
+        Return a list of integers that indicate the positions of the items in
+        the token list. This list takes quantification into account so that
+        items following quantified icons can be aligned below each other.
+        """
+        last_offset = 0
+        token_counter = None
+        positions_lexical_items = []
         
         for i, tup in enumerate(token_list):
-            number, token = tup
-            s = self.get_token_query_string_self_joined(tokens.COCAToken(token, self.lexicon), i)
-            if s:
-                join_string = "INNER JOIN ({s}) AS e{i}\nON coq_word_id_{i} = W{i}".format(
-                    s = s, 
-                    i=i+1)
-                token_query_list[i+1] = join_string
-        final_select = []
+            offset, token = tup
 
-        requested_features = [x for x in options.cfg.selected_features]
-        if options.cfg.context_left or options.cfg.context_right:
-            # in order to make this not depend on a fixed database layout 
-            # (here: 'source' and 'file' tables), we should check for any
-            # table that corpus_table is linked to except for word_table
-            # (and all child tables).            
-            if options.cfg.token_origin_id:
-                requested_features.append(options.cfg.token_origin_id.replace("corpus", "corpus_denorm"))
-                
-        for rc_feature in requested_features:
-            try:
-                final_select.append(
-                    "{} AS coq_{}_1".format(getattr(self.resource, "corpus_denorm_{}".format(rc_feature)), rc_feature))
-            except AttributeError:
-                # This means that the requested feature is not directly
-                # stored in the n-gram table. This means that a table 
-                # link is necessary.
-                pass
+            if options.cfg.align_quantified:
+                if offset != last_offset:
+                    token_count = 0
+                    last_offset = offset
+                column_number = offset + token_count - 1
+                token_count += 1
+            else:
+                column_number = i
 
-        # FIXME:
-        # Not working: 
-        # - align_quantified
-        # - linked tables
-
-        for rc_feature in self.resource.get_preferred_output_order():
-            if rc_feature in requested_features:
-                if rc_feature in lexicon_features:
-                    for i in range(Query.Session.get_max_token_count()):
-                        if i < len(token_list):
-                            final_select.append("coq_{}_{}".format(rc_feature, i+1))
-                        else:
-                            final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
-                elif rc_feature in corpus_features:
-                    pass
-                    #final_select.append("coq_{}_1".format(rc_feature))
-
-        #for rc_feature in options.cfg.selected_features:
-            #select_feature = "coq_{}_1".format(rc_feature)
-            #if rc_feature in corpus_features or rc_feature in lexicon_features:
-                #final_select.append(select_feature)
-            #else:
-                #final_select.append("NULL AS {}".format(select_feature))
-
-        final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.corpus_denorm_id))
-
-        # Add filters:
-        # FIXME: What happens if the filter does not apply to something
-        # in the ngram table, but to a linked table?
-        where_string_list = []
-        for filt in self.resource.translate_filters(self.resource.filter_list):
-            variable, rc_feature, table_name, op, value_list, _value_range = filt
-            if op.upper() == "LIKE":
-                if "*" not in value_list[0]:
-                    value_list[0] = "*{}*".format(value_list[0])
-                value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
-
-            rc_table = "{}_table".format(rc_feature.partition("_")[0])
-            s = '{} {} "{}"'.format(getattr(self.resource, rc_feature), op, value_list[0])
-            where_string_list.append(s)
-        return """
-        SELECT  {}
-        FROM    {}
-        {}
-        {}
-        """.format(
-            ", ".join(final_select),
-            self.resource.corpus_denorm_table,
-            "\n".join(token_query_list.values()),
-            "WHERE {}".format(" AND ".join(where_string_list)) if where_string_list else "",
-            )
+            positions_lexical_items.append(column_number)
+        return positions_lexical_items
 
     def sql_string_query(self, Query, token_list):
         """ 
@@ -2006,9 +2211,6 @@ class CorpusClass(object):
         token_counter = None
         positions_lexical_items = []
         
-        # column_number
-        # sub_select_number
-        last_pffset = None
         for i, tup in enumerate(token_list):
             offset, token = tup
 
@@ -2052,6 +2254,7 @@ class CorpusClass(object):
         for referent_id, _ in order:
             query_string_part.append(token_query_list[referent_id])
 
+
         # change the order of the output column so that output columns 
         # showing the same lexicon feature for different tokens are grouped
         # together, followed by all corpus features.
@@ -2089,6 +2292,7 @@ class CorpusClass(object):
                 final_select.append("coq_{}${}_1".format(link.db_name, rc_feature))
 
         # add the corpus features in the preferred order:
+        # FIXME: Is this still necessary?
         for rc_feature in self.resource.get_preferred_output_order():
             if rc_feature in options.cfg.selected_features:
                 if rc_feature in [x for x, _ in corpus_features]:
@@ -2096,6 +2300,7 @@ class CorpusClass(object):
 
         # Add any feature that is selected that is neither a corpus feature,
         # a lexicon feature nor a Coquery feature:
+        # FIXME: What does this do, then?
         for rc_feature in options.cfg.selected_features:
             if any([x == rc_feature for x, _ in self.resource.get_corpus_features()]):
                 break
@@ -2124,13 +2329,17 @@ class CorpusClass(object):
             (options.cfg.context_left or options.cfg.context_right)):
             final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
 
-        # construct the query string from the token query parts:
-        query_string = " ".join(query_string_part)
-
         # Always add the corpus id to the output fields:
         final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
 
+        new_final_select = self.get_select_columns(Query, token_list)
+        assert set(final_select) == set(new_final_select), "{}\n{}".format(
+            set(final_select), set(new_final_select))
 
+        final_select = self.get_select_columns(Query, token_list)
+        
+        # construct the query string from the token query parts:
+        query_string = " ".join(query_string_part)
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(set(final_select)))
         
         # add LIMIT clause if necessary:

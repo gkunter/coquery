@@ -11,7 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-VERSION = "0.9.1"
+VERSION = "0.9.2"
 NAME = "Coquery"
 DATE = "2016"
 
@@ -61,7 +61,8 @@ COLUMN_NAMES = {
     "coq_collocate_frequency_left": "Left context frequency",
     "coq_collocate_frequency_right": "Right context frequency",
     "coq_mutual_information": "Mutual information",
-    "coq_conditional_probability": "Pcond",
+    "coq_conditional_probability_left": "Pc(left)",
+    "coq_conditional_probability_right": "Pc(right)",
 
     # Labels that are used in the Coquery special table:
     "coquery_query_token": "Query token",
@@ -117,7 +118,7 @@ MODULE_INFORMATION = {
             "Provides data structures to manage query result tables",
             "http://pandas.pydata.org/index.html"),
     "NLTK": ("The Natural Language Toolkit", 
-             "3.0",
+             "3.2.1",
             "Lemmatization and tagging when building your own corpora", 
             "http://www.nltk.org"),
     "PyMySQL": ("A pure-Python MySQL client library",
@@ -126,16 +127,32 @@ MODULE_INFORMATION = {
             "https://github.com/PyMySQL/PyMySQL/"),
     "PDFMiner": ("PDF parser and analyzer (for Python 2.7)",
             "",
-            "Build your own corpora from PDF documents",
+            "Build your own corpora from PDF files",
             "http://euske.github.io/pdfminer/index.html"),
     "pdfminer3k": ("PDF parser and analyzer (for Python 3.x)",
             "1.3",
-            "Build your own corpora from PDF documents",
+            "Build your own corpora from PDF files",
             "https://pypi.python.org/pypi/pdfminer3k"),
+    "python-docx": ("A Python library for creating and updating Microsoft Word (.docx) files",
+            "0.3.0",
+            "Build your own corpora from Microsoft Word (.docx) files",
+            "https://python-docx.readthedocs.org/en/latest/"),
+    "odfpy": ("API for OpenDocument in Python",
+            "1.2.0",
+            "Build your own corpora from OpenDocument Text (.odt) files",
+            "https://github.com/eea/odfpy"),
+    "BeautifulSoup": ("A Python library for pulling data out of HTML and XML files",
+            "4.0",
+            "Build your own corpora from HTML files",
+            "http://www.crummy.com/software/BeautifulSoup/"),
     "tgt": ("TextGridTools - read, write, and manipulate Praat TextGrid files",
             "1.3.1",
             "Create <a href='http://www.praat.org'>Praat TextGrid</a> files for corpus queries",
             "https://github.com/hbuschme/TextGridTools/"),
+    "chardet": ("The universal character encoding detector",
+            "2.0.0",
+            "Detect the encoding of your text files when building a corpus",
+            "https://github.com/chardet/chardet"),
     "Seaborn": ("A Python statistical data visualization library",
             "0.7",
             "Create visualizations of your query results",

@@ -49,8 +49,6 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_starttime = "Start"
     corpus_endtime = "End"
 
-    # Conversation data is contained in
-    # https://www.isip.piconepress.com/projects/switchboard/doc/statistics/ms98_speaker_stats.text    # https://www.isip.piconepress.com/projects/switchboard/doc/statistics/ms98_conv_stats.text
     speaker_table = "Speakers"
     speaker_id = "SpeakerId"
     speaker_label = "Speaker"
@@ -59,17 +57,21 @@ class BuilderClass(BaseCorpusBuilder):
     speaker_dialectarea = "DialectArea"
     speaker_education = "Education"
 
-    # Conversation data is contained in
-    # https://www.isip.piconepress.com/projects/switchboard/doc/statistics/ms98_conv_stats.text
     source_table = "Conversations"
     source_id = "ConversationId"
-    source_label = "Conversation" # this is the number used e.g. in the file names
+    # ConversationId is the number used e.g. in the file names
+    source_label = "Conversation" 
     source_topic = "Topic"
     source_difficulty = "Difficulty"
+    source_topicality = "Topicality"
+    source_naturalness = "Naturalness"
+    source_remarks = "Remarks"
 
-    expected_files = [
-        "call_con_tab.csv", "caller_tab.csv", "topic_tab.csv",
-        "switchboard_word_alignments.tar.gz"]
+    special_files = ["call_con_tab.csv", "caller_tab.csv", "topic_tab.csv", 
+                     "rating_tab.csv"]
+    expected_files = special_files + ["switchboard_word_alignments.tar.gz"]
+
+    _regexp = re.compile("sw(\d\d\d\d)([A|B])-ms98-a-word\.text")
 
     def __init__(self, gui=False, *args):
        # all corpus builders have to call the inherited __init__ function:
@@ -83,7 +85,7 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.file_table,
             [Identifier(self.file_id, "INT(3) UNSIGNED NOT NULL"),
-             Column(self.file_name, "VARCHAR(18) NOT NULL"),
+             Column(self.file_name, "VARCHAR(70) NOT NULL"),
              Column(self.file_duration, "REAL NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
 
@@ -99,7 +101,10 @@ class BuilderClass(BaseCorpusBuilder):
             [Identifier(self.source_id, "INT(3) UNSIGNED NOT NULL"),
              Column(self.source_label, "VARCHAR(4) NOT NULL"),
              Column(self.source_topic, "VARCHAR(28) NOT NULL"),
-             Column(self.source_difficulty, "ENUM('very easy','easy','medium','hard','very hard','???') NOT NULL")])
+             Column(self.source_difficulty, "INT(1) UNSIGNED"),
+             Column(self.source_topicality, "INT(1) UNSIGNED"),
+             Column(self.source_naturalness, "INT(1) UNSIGNED"),
+             Column(self.source_remarks, "VARCHAR(50)")])
 
         self.create_table_description(self.corpus_table,
             [Identifier(self.corpus_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
@@ -118,6 +123,8 @@ class BuilderClass(BaseCorpusBuilder):
         self._token_id = 0
         
         self.surface_feature = "word_uttered"
+        
+        self.add_building_stage(self._build_store_conversation_table)
 
     @staticmethod
     def get_name():
@@ -182,8 +189,9 @@ class BuilderClass(BaseCorpusBuilder):
         files with details on the speakers and the conversations. Please 
         download the following files:
         <ul>
-            <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/call_con_tab.csv'>call_con_tab.csv</a> – conversation details</li>
             <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/caller_tab.csv'>caller_tab.csv</a> – speaker information</li>
+            <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/call_con_tab.csv'>call_con_tab.csv</a> – conversation details</li>
+            <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/rating_tab.csv'>rating_tab.csv</a> – conversation ratings</li>
             <li><a href='https://catalog.ldc.upenn.edu/docs/LDC97S62/topic_tab.csv'>topic_tab.csv</a> – conversation topics</li>
         </ul></p>            
         <p>Transcriptions and word alignments are provided for free by the 
@@ -192,30 +200,49 @@ class BuilderClass(BaseCorpusBuilder):
             <li><a href='https://www.isip.piconepress.com/projects/switchboard/releases/switchboard_word_alignments.tar.gz'>switchboard_word_alignments.tar.gz</a> – Manually corrected word alignments</li></ul></p>
         """
 
-    def build_load_files(self):
-        super(BuilderClass, self).build_load_files()
-        
-        # try to merge conversation information
-        if hasattr(self, "_df_conv") and hasattr(self, "_df_topic"):
-            # Both call_con_tab.csv and topic_tab.csv have been read:
-            df = self._df_conv.merge(self._df_topic, on="ivi_no")
-            print(df.head())
-
-            df[self.source_label] = df[self.source_id].apply(str)
-            df = df[[self.source_id, self.source_label, self.source_topic]]
-            df[self.source_difficulty] = "NA"
-
-            df = df.drop_duplicates()
-            print(df.head())
-            self.DB.load_dataframe(df, self.source_table, None)
-            
+    @classmethod
+    def get_file_list(cls, *args, **kwargs):
+        """
+        Make sure that the files listed in the class variable 'special_files'
+        appear first in the actual file list. The order from that variable is
+        retained.
+        """
+        l = super(BuilderClass, cls).get_file_list(*args, **kwargs)
+        new_pos = 0
+        for i, x in enumerate(cls.special_files):
+            if x in l:
+                l.remove(x)
+                l.insert(new_pos, x)
+                new_pos += 1
+                
+        return l
 
     def process_file(self, filename):
         basename = os.path.basename(filename)
         if basename == "call_con_tab.csv":
             self._df_conv = pd.read_csv(filename, sep=", ",
-                names=[self.source_id, "Side", "SpeakerId", "PhoneNum", "Length", "ivi_no", "Remarks", "Active"])
+                names=[self.source_id, "Side", "SpeakerId", "PhoneNum", "Length", "ivi_no", "ConRemarks", "Active"])
             self._df_conv.ivi_no = self._df_conv.ivi_no.apply(str)
+            _idx = []
+            for x in range(len(self._df_conv) // 2):
+                _idx += [x + 1] * 2
+            self._df_conv["_index"] = _idx
+            self._df_source = self._df_conv
+
+        elif basename == "topic_tab.csv":
+            self._df_topic = pd.read_csv(filename,
+                names=[self.source_topic, "ivi_no", "prompt",
+                       "flg", "remarks", "prompt_cont"])
+            self._df_topic.ivi_no = self._df_topic.ivi_no.apply(str)
+
+        elif basename == "rating_tab.csv":
+            self._df_rating = pd.read_csv(filename,
+                names=[self.source_id, 
+                       self.source_difficulty,
+                       self.source_topicality,
+                       self.source_naturalness,
+                       "V1", "V2", "V3", "V4", "V5", "V6",
+                       self.source_remarks])
             
         elif basename == "caller_tab.csv":
             self._df_caller = pd.read_csv(filename,
@@ -235,25 +262,18 @@ class BuilderClass(BaseCorpusBuilder):
                  self.speaker_sex, self.speaker_birth,
                  self.speaker_dialectarea, self.speaker_education]]
             
-            self.DB.load_dataframe(self._df_caller, self.speaker_table, None)
-            
-        elif basename == "topic_tab.csv":
-            self._df_topic = pd.read_csv(filename,
-                names=[self.source_topic, "ivi_no", "prompt",
-                       "flg", "remarks", "prompt_cont"])
-            self._df_topic.ivi_no = self._df_topic.ivi_no.apply(str)
+            self.DB.load_dataframe(self._df_caller, self.speaker_table, None, if_exists="replace")
             
         elif basename == "switchboard_word_alignments.tar.gz":
             with tarfile.open(filename, "r:gz") as tar_file:
                 for member in tar_file.getmembers():
                     if self._interrupted:
                         return
-                    self._file_id += 1
-                    match = re.search("sw(\d\d\d\d)([A|B])-ms98-a-word\.text", 
-                                     member.name)
+                    match = self._regexp.match(os.path.basename(member.name))
                     if match:
+                        self._file_id += 1
                         self._duration = 0
-                        self._process_words_file(tar_file, member)
+                        self._process_words_file(tar_file, member, match)
                     
                         self._value_file_name = "{}/{}".format(basename, member.name)
                         self._value_file_path = os.path.split(filename)[0]
@@ -262,19 +282,44 @@ class BuilderClass(BaseCorpusBuilder):
                             self.file_id: self._file_id,
                             self.file_duration: self._duration,
                             self.file_path: self._value_file_path}
-                        self.table(self.file_table).add(d)
+                        x = self.table(self.file_table).add(d)
                         self.commit_data()
 
-    def _process_words_file(self, tar_file, member):
+
+    def _build_store_conversation_table(self):
+        #print(self._df_source.head())
+        #print(self._df_topic.head())
+        #print(self._df_rating.head())
+        if hasattr(self, "_df_source"):
+            if hasattr(self, "_df_topic"):
+                df = self._df_source.merge(self._df_topic, on="ivi_no")
+            else:
+                df = pd.DataFrame(self._df_source)
+            if hasattr(self, "_df_rating"):
+                df = df.merge(self._df_rating, on=self.source_id)
+                
+        df[self.source_label] = df[self.source_id].apply(str)
+        df = df[
+            [self.source_id, 
+             self.source_label, 
+             self.source_topic,
+             self.source_difficulty,
+             self.source_topicality,
+             self.source_naturalness,
+             self.source_remarks]]
+        df = df.drop_duplicates()
+        df[self.source_id] = range(1, len(df.index) + 1)
+        self.DB.load_dataframe(df, self.source_table, None, if_exists="replace")
+
+    def _process_words_file(self, tar_file, member, match):
         logger.info("Processing file {}".format(member.name))
-        match = re.search("sw(\d\d\d\d)([A|B])-ms98-a-word\.text", member.name)        
-        conv_id = int(match.groups()[0])
-        side = '"{}"'.format(match.groups()[1])
-        speaker_id = self._df_conv[(self._df_conv.ConvId == conv_id) & 
-                                   (self._df_conv.Side == side)].SpeakerId.values[0]
-        #source_id = self._df_conv.index[self._df_conv.ConvId == conv_id]
-        source_id = 1
-        
+              
+        conv_id = int(match.group(1))
+        side = '"{}"'.format(match.group(2))
+        row = self._df_conv[(self._df_conv[self.source_id] == conv_id) & (self._df_conv.Side == side)]
+        speaker_id = row.SpeakerId.values[0]
+        source_id = row["_index"].values[0]
+
         input_data = list(tar_file.extractfile(member))
 
         for row in input_data:
@@ -284,6 +329,7 @@ class BuilderClass(BaseCorpusBuilder):
                 source, start, end, label = [x.strip() for x in row.split()]
             except ValueError:
                 print(member.name, row)
+                print("---")
                 continue
             label = utf8(label)
             source = utf8(source)
@@ -301,32 +347,15 @@ class BuilderClass(BaseCorpusBuilder):
                  self.word_transcript: ""}
             self._word_id = self.table(self.word_table).get_or_insert(d)
             
-            d = {self.corpus_word_id: self._word_id,
-                 self.corpus_starttime: start,
-                 self.corpus_endtime: end,
-                 self.corpus_file_id: self._file_id,
-                 self.corpus_source_id: source_id,
-                 self.corpus_speaker_id: speaker_id}
+            d = {self.corpus_word_id: int(self._word_id),
+                 self.corpus_starttime: float(start),
+                 self.corpus_endtime: float(end),
+                 self.corpus_file_id: int(self._file_id),
+                 self.corpus_source_id: int(source_id),
+                 self.corpus_speaker_id: int(speaker_id)}
             self.add_token_to_corpus(d)
             self._duration = max(self._duration, float(end))
 
-        ## skeleton from Buckeye installer:
-        #file_name, _ = os.path.splitext(filename)
-        #words_file = "{}.words".format(file_name)
-        #input_data = speaker_zip.read(words_file)
-        #input_data = [utf8(x.strip()) for x in input_data.splitlines() if x.strip()]
-        
-        #segments = self._get_segments(speaker_zip, filename)
-        #last_row = None
-        #for row in input_data:
-            #continue
-
-            #self.add_token_to_corpus(
-                    #{self.corpus_word_id: self._token_id, 
-                     #self.corpus_speaker_id: self._speaker_id,
-                    #self.corpus_file_id: self._file_id + 1,
-                    #self.corpus_starttime: start_time,
-                    #self.corpus_endtime: end_time})
 
     def store_filename(self, file_name):
         # because of the zip file structure, the installer handles 

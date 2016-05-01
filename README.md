@@ -4,10 +4,10 @@ Coquery is a free corpus query tool for linguists, lexicographers,
 translators, and anybody who wishes to search and analyse text corpora.
 It is available for Windows, Linux, and Mac OS X computers.
 
-You can either build your own corpus from a collection of text files
-or PDF documents in a directory on your computer, or install a corpus 
-module for one of the supported corpora (the corpus data files are not
-provided by Coquery).
+You can either build your own corpus from a collection of text files (either 
+PDF, MS Word, OpenDocument, HTML, or plain text) in a directory on your 
+computer, or install a corpus module for one of the supported corpora (the 
+corpus data files are not provided by Coquery).
 
 ![Coquery: Main interface](http://www.coquery.org/_images/showcase.png)
 
@@ -19,8 +19,8 @@ Tutorials and documentation can be found on the Coquery website:
 An incomplete list of the things you can do with Coquery:
 
 ### Corpora
-* Use the corpus manager to install one of the supported corpora, or to 
-  build your own corpus
+* Use the corpus manager to install one of the supported corpora
+* Build your own corpus from PDF, HTML, .docx, .odt, or plain text files
 * Filter your query for example by year, genre, or speaker gender
 * Choose which corpus features will be included in your query results
 * View every token that matches your query within its context
@@ -31,6 +31,7 @@ An incomplete list of the things you can do with Coquery:
 * Use string functions e.g. to test if a token contains a letter sequence
 * Use the same query syntax for all installed corpora
 * Automate queries by reading them from an input file
+* Save query results from speech corpora as Praat TextGrids
 
 ### Analysis
 * Summarize the query results as frequency tables or contingency tables
@@ -60,6 +61,7 @@ Coquery already has installers for the following linguistic corpora and
 lexical databases:
 
 * [British National Corpus (BNC)](http://www.natcorp.ox.ac.uk/)
+* [Brown Corpus](https://archive.org/download/BrownCorpus/)
 * [Buckeye Corpus](http://buckeyecorpus.osu.edu/)
 * [CELEX Lexical Database (English)](https://catalog.ldc.upenn.edu/LDC96L14)
 * [Carnegie Mellon Pronunciation Dictionary (CMUdict)](http://www.speech.cs.cmu.edu/cgi-bin/cmudict)

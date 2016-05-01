@@ -154,13 +154,48 @@ If you want to query any character that has a special meaning in query
 items (for example the wildcard characters, the square brackets, the 
 quotation mark, or the slashes), you must precede it by the 'escape' 
 character ``\\`` (the backslash). For example, if you want to match 
-all 
+all occurrences of the asterisk character in a corpus, you have to use the 
+query string ``\\*``, because the unescaped asterisk ``*`` is interpreted as 
+a wildcard that matches any word.
 
 Quantified query items
 ----------------------
 
-Union query items
------------------
+The Coquery syntax allows query strings that match sequences of tokens in the 
+corpus that differ in the number of tokens. This is done by appending to a 
+query item, the range of occurrences that the query should match. The range is
+enclosed in curly brackets (similar to quantification in regular expressions).
+
+For example, the query string ``the [n*]{1,3} [v*]`` any sequence of one, two,
+or three nouns in the corpus that is preceded by the word *the* and followed 
+by a verb. In the current absence of a way that allows users to query phrasal 
+constituents in a corpus, this syntax can be used to construct queries that 
+approximate phrasal constructions. Many English noun phrases can be queried by 
+using the query string ``[DT]{0,1} [jj*|,]{0,6} [n*]{1,3} ~[n*]``: this matches 
+any sequence of words that starts either with one or no determiner, followed 
+by a group of up to six tokens that can either be adjectives or commas, 
+followed by a group of one, two, or three nouns, followed by a word that is 
+not a noun. 
+
+OR operator
+-----------
+
+The pipe symbol ``|`` acts as an OR operator. The OR operator is available for
+all query types. The results table will contain the union of the matching 
+tokens. For example, ``walk|walked|walks`` matches either *walk*, *walked*, 
+*walks*, but not *walking*. ``[walk|talk]`` in CELEX matches the tokens *walk*, *walking*, 
+*walks*, and *walked*, as well as the tokens *talk*, *talks*, *talking*, and
+*talked*.
+
+Query item lemmatization
+------------------------
+
+Any query item can be prefixed by the hash mark ``#``. This prefix indicates 
+that the matches of this query item will be lemmatized: instead of returning
+only the exact matching tokens, all other forms that share the corresponding
+lemma will be returned as well. For example, the query string ``#wrote`` will
+match all tokens of the lemma WRITE, i.e. *write*, *writes*, *writing*, 
+*wrote*, and *written*.
 
 Additional examples
 -------------------
@@ -185,5 +220,5 @@ or *defeat* in BYU-COCA. In contrast, Coquery matches this query
 string to all tokens that are tagged as verbs, and which are written as
 *=beat*. Most likely, no token will be matched.
 
-Coquery extends the BYU syntax by allowing for quantified query items.
+Coquery extends the BYU syntax by allowing for quantified query items. 
 Also, Transcription queries are not supported by the BYU syntax. 
