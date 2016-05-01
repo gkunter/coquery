@@ -1,7 +1,6 @@
 (development version, still unreleased)
 * add Module information dialog
 * add support for encoding detection when reading plain text files
-* allow query results from speech corpora to be saved as Praat TextGrids
 * allow to build 'corpora' from CSV files
 * show both left and right conditional probabilities in Collocations aggregation
 * add G2 test matrix
@@ -11,6 +10,7 @@
 0.9.2 1 May 2016
 * fix issue with NLTK module detection
 * add support for .docx, .odt, and HTML files when building a corpus
+* allow query results from speech corpora to be saved as Praat TextGrids
 * Brown installer: added
 * Buckeye installer: now use lemma transcripts for lemma query items
 * COHA installer: fix issue with file names
