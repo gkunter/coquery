@@ -27,7 +27,7 @@ import datetime
 
 try:
     from numba import jit
-except ImportError:
+except (ImportError, OSError):
     def jit(f):
         def inner(f, *args):
             return f(*args)
