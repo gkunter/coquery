@@ -270,9 +270,9 @@ def has_index(engine, table, column):
         True if the column has an index, or False otherwise.
     """
     with engine.connect() as connection:
-        if engine.Dialect.name == SQL_MYSQL:
+        if engine.name == SQL_MYSQL:
             return bool(connection.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table, index)))
-        elif engine.Dialect.name == SQL_SQLITE:
+        elif engine.name == SQL_SQLITE:
             return bool(len(connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
 
 def create_index(engine, table, index, variables, length=None):
@@ -325,9 +325,9 @@ def has_table(engine, table):
         True if the table exists, or False otherwise.
     """
     with engine.connect() as connection:
-        if engine.Dialect.name == SQL_MYSQL:
+        if engine.name == SQL_MYSQL:
             return bool(connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table = '{}'".format(self.db_name, table)))
-        elif engine.Dialect.name == SQL_SQLITE:
+        elif engine.name == SQL_SQLITE:
             S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table)
             return bool(connection.execute(S).fetchall())
 
@@ -353,7 +353,7 @@ def get_index_length(engine, table, column, coverage=0.95):
         None if the coverage cannot be reached.
     """
     
-    if engine.Dialect.name == SQL_SQLITE:
+    if engine.name == SQL_SQLITE:
         return None
     
     S = """

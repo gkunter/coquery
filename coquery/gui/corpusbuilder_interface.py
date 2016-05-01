@@ -122,7 +122,15 @@ class InstallerGui(QtGui.QDialog):
             self.resize(options.settings.value("corpusinstaller_size"))
         except TypeError:
             pass
-
+        
+        if not options.cfg.experimental:
+            try:
+                self.ui.widget_ngram.hide()
+                self.ui.check_ngram.setChecked(False)
+            except AttributeError:
+                # ignore exceptions raised if widgets do not exist
+                pass
+            
     def closeEvent(self, event):
         options.settings.setValue("corpusinstaller_size", self.size())
 
@@ -473,6 +481,7 @@ class BuilderGui(InstallerGui):
             self._testing = True
             self.test_thread = classes.CoqThread(self.test_nltk_core, parent=self)
             self.test_thread.taskFinished.connect(self.test_nltk_results)
+            self.test_thread.taskException.connect(self.test_nltk_exception)
             self._label_text = str(self.ui.label_pos_tagging.text())
             
             self.ui.icon_nltk_check.start()
@@ -483,6 +492,9 @@ class BuilderGui(InstallerGui):
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
             self.test_thread.start()
 
+    def test_nltk_exception(self):
+        errorbox.ErrorBox.show(self.exc_info, self, no_trace=True)
+
     def test_nltk_core(self):
         import nltk
         # test lemmatizer:
@@ -490,10 +502,15 @@ class BuilderGui(InstallerGui):
             nltk.stem.wordnet.WordNetLemmatizer().lemmatize("Test")
         except LookupError as e:
             s = str(e).replace("\n", "").strip("*")
+            print(s)
             match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
             if match:
                 self.nltk_exceptions.append(match.group(1))
             self._nltk_lemmatize = False
+        except Exception as e:
+            self.nltk_exceptions.append("An unexpected error occurred when testing the lemmatizer:\n{}".format(sys.exc_info()))
+            print(s)
+            raise e
         else:
             self._nltk_lemmatize = True
         # test tokenzie:
@@ -501,10 +518,15 @@ class BuilderGui(InstallerGui):
             nltk.sent_tokenize("test")
         except LookupError as e:
             s = str(e).replace("\n", "")
+            print(s)
             match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
             if match:
                 self.nltk_exceptions.append(match.group(1))
             self._nltk_tokenize = False
+        except Exception as e:
+            self.nltk_exceptions.append("An unexpected error occurred when testing the tokenizer:\n{}".format(sys.exc_info()))
+            print(s)
+            raise e
         else:
             self._nltk_tokenize = True
         # test tagging:
@@ -512,13 +534,18 @@ class BuilderGui(InstallerGui):
             nltk.pos_tag("test")
         except LookupError as e:
             s = str(e).replace("\n", "")
+            print(s)
             match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
             if match:
                 self.nltk_exceptions.append(match.group(1))
             self._nltk_tagging = False
+        except Exception as e:
+            self.nltk_exceptions.append("An unexpected error occurred when testing the POS tagger:\n{}".format(sys.exc_info()))
+            print(s)
+            raise e
         else:
             self._nltk_tagging = True
-    
+        
     def test_nltk_results(self):
         def pass_check():
             return self._nltk_lemmatize and self._nltk_tokenize and self._nltk_tagging

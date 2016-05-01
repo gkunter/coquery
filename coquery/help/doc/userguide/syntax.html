@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Coquery Documentation: Query syntax &mdash; Coquery 0.9.0 documentation</title>
+    <title>Coquery Documentation: Query syntax &mdash; Coquery 0.9.2 documentation</title>
     
     <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.9.0',
+        VERSION:     '0.9.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Coquery 0.9.0 documentation" href="../../index.html" />
+    <link rel="top" title="Coquery 0.9.2 documentation" href="../../index.html" />
     <link rel="up" title="Users manual" href="index.html" />
     <link rel="next" title="Output columns" href="columns.html" />
     <link rel="prev" title="Users manual" href="index.html" /> 
@@ -35,7 +35,7 @@
             <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../../index.html">Coquery 0.9.0 documentation</a></div>
+          href="../../index.html">Coquery 0.9.2 documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
           <a href="index.html" title="Users manual"
              accesskey="P">previous</a> |
@@ -185,13 +185,44 @@ with <em>n</em>. In the BNC, this matches the singular noun <em>walk</em>
 items (for example the wildcard characters, the square brackets, the
 quotation mark, or the slashes), you must precede it by the &#8216;escape&#8217;
 character <code class="docutils literal"><span class="pre">\\</span></code> (the backslash). For example, if you want to match
-all</p>
+all occurrences of the asterisk character in a corpus, you have to use the
+query string <code class="docutils literal"><span class="pre">\\*</span></code>, because the unescaped asterisk <code class="docutils literal"><span class="pre">*</span></code> is interpreted as
+a wildcard that matches any word.</p>
 </div>
 <div class="section" id="quantified-query-items">
 <h2>Quantified query items</h2>
+<p>The Coquery syntax allows query strings that match sequences of tokens in the
+corpus that differ in the number of tokens. This is done by appending to a
+query item, the range of occurrences that the query should match. The range is
+enclosed in curly brackets (similar to quantification in regular expressions).</p>
+<p>For example, the query string <code class="docutils literal"><span class="pre">the</span> <span class="pre">[n*]{1,3}</span> <span class="pre">[v*]</span></code> any sequence of one, two,
+or three nouns in the corpus that is preceded by the word <em>the</em> and followed
+by a verb. In the current absence of a way that allows users to query phrasal
+constituents in a corpus, this syntax can be used to construct queries that
+approximate phrasal constructions. Many English noun phrases can be queried by
+using the query string <code class="docutils literal"><span class="pre">[DT]{0,1}</span> <span class="pre">[jj*|,]{0,6}</span> <span class="pre">[n*]{1,3}</span> <span class="pre">~[n*]</span></code>: this matches
+any sequence of words that starts either with one or no determiner, followed
+by a group of up to six tokens that can either be adjectives or commas,
+followed by a group of one, two, or three nouns, followed by a word that is
+not a noun.</p>
 </div>
-<div class="section" id="union-query-items">
-<h2>Union query items</h2>
+<div class="section" id="or-operator">
+<h2>OR operator</h2>
+<p>The pipe symbol <code class="docutils literal"><span class="pre">|</span></code> acts as an OR operator. The OR operator is available for
+all query types. The results table will contain the union of the matching
+tokens. For example, <code class="docutils literal"><span class="pre">walk|walked|walks</span></code> matches either <em>walk</em>, <em>walked</em>,
+<em>walks</em>, but not <em>walking</em>. <code class="docutils literal"><span class="pre">[walk|talk]</span></code> in CELEX matches the tokens <em>walk</em>, <em>walking</em>,
+<em>walks</em>, and <em>walked</em>, as well as the tokens <em>talk</em>, <em>talks</em>, <em>talking</em>, and
+<em>talked</em>.</p>
+</div>
+<div class="section" id="query-item-lemmatization">
+<h2>Query item lemmatization</h2>
+<p>Any query item can be prefixed by the hash mark <code class="docutils literal"><span class="pre">#</span></code>. This prefix indicates
+that the matches of this query item will be lemmatized: instead of returning
+only the exact matching tokens, all other forms that share the corresponding
+lemma will be returned as well. For example, the query string <code class="docutils literal"><span class="pre">#wrote</span></code> will
+match all tokens of the lemma WRITE, i.e. <em>write</em>, <em>writes</em>, <em>writing</em>,
+<em>wrote</em>, and <em>written</em>.</p>
 </div>
 <div class="section" id="additional-examples">
 <h2>Additional examples</h2>

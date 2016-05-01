@@ -13,7 +13,7 @@
 Download
 ========
 
-The current version of Coquery is 0.9.1. This version is fully functional, and 
+The current version of Coquery is 0.9.2. This version is fully functional, and 
 is sufficiently stable for regular use. 
 
 There are a few bugs, problems, and unexpected behaviors, though. For a list 
@@ -32,7 +32,7 @@ menu.
 
 .. raw:: html
 
-    <p>Windows installer: <code>coquery-0.9.1-setup-win32.exe</code> <a href="coquery-0.9.1-setup-win32.exe" class="btn btn-primary btn-sm">Download</a></p>
+    <p>Windows installer: <code>coquery-0.9.2-setup-win32.exe</code> <a href="coquery-0.9.2-setup-win32.exe" class="btn btn-primary btn-sm">Download</a></p>
 
 Mac OS X
 --------
@@ -43,7 +43,7 @@ folder on your computer, e.g. the Applications folder.
 
 .. raw:: html
 
-    <p>Mac OS X disk image: <code>coquery-0.9.1-osx-el-capitan.dmg</code> <a href="coquery-0.9.1-osx-el-capitan.dmg" class="btn btn-primary btn-sm">Download</a></p>
+    <p>Mac OS X disk image: <code>coquery-0.9.2-osx-el-capitan.dmg</code> <a href="coquery-0.9.2-osx-el-capitan.dmg" class="btn btn-primary btn-sm">Download</a></p>
 
 If the disk image does not work on your version of Mac OS X, you can follow 
 the installation instructions given below for Linux on your computer.
@@ -98,7 +98,7 @@ The following command installs these modules:
 Additionally, the following modules may be installed if you want to create
 new corpora from your own collection of files:
     
-* `NLTK <http://www.nltk.org>`_ 3.0 or later – The Natural Language Toolkit (provides automatic lemmatization and part-of-speech tagging, English only)
+* `NLTK <http://www.nltk.org>`_ 3.2.1 or later – The Natural Language Toolkit (provides automatic lemmatization and part-of-speech tagging, English only)
 * `PDFMiner <http://euske.github.io/pdfminer/index.html>`_ – Support for PDF documents (for Python 2.7)
 * `pdfminer3k <https://pypi.python.org/pypi/pdfminer3k>`_ 1.3 or later – Support for PDF documents (for Python 3.x)
 * `python-docx <https://python-docx.readthedocs.org/en/latest/>`_ 0.3.0 or later – Support for Microsoft Word (.docx) files

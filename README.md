@@ -31,6 +31,7 @@ An incomplete list of the things you can do with Coquery:
 * Use string functions e.g. to test if a token contains a letter sequence
 * Use the same query syntax for all installed corpora
 * Automate queries by reading them from an input file
+* Save query results from speech corpora as Praat TextGrids
 
 ### Analysis
 * Summarize the query results as frequency tables or contingency tables

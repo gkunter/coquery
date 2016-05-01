@@ -11,7 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-VERSION = "0.9.1"
+VERSION = "0.9.2"
 NAME = "Coquery"
 DATE = "2016"
 
@@ -153,7 +153,7 @@ MODULE_INFORMATION = {
               "Offer tests like the log-likelihood test",
               "https://www.scipy.org/scipylib/index.html"),
     "NLTK": ("The Natural Language Toolkit", 
-             "3.0",
+             "3.2.1",
             "Lemmatization and tagging when building your own corpora", 
             "http://www.nltk.org"),
     "PyMySQL": ("A pure-Python MySQL client library",

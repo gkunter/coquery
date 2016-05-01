@@ -5,18 +5,25 @@
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
+
+# define coq_version "0.9.2"
+# define coq_path "C:\Users\Gero Kunter\coquery-0.9.2"
+# define coq_icon "artwork\icons\coquery.ico"
+
 AppId={{42204621-F37F-40C3-96E2-886FFF94D497}
 AppName=Coquery
-AppVersion=0.9.1
-;AppVerName=Coquery 0.9.1
+AppCopyright=Copyright (C) 2016 Gero Kunter
+AppVersion={#coq_version}
+AppVerName=Coquery {#coq_version}
+AppPublisher=Coquery maintainers
 AppPublisherURL=http://www.coquery.org
 AppSupportURL=http://www.coquery.org
 AppUpdatesURL=http://www.coquery.org
 DefaultDirName={pf}\Coquery
 DisableProgramGroupPage=yes
-LicenseFile=C:\Users\dadasd\coquery\make\gpl-3.0.txt
+LicenseFile={#coq_path}\make\gpl-3.0.txt
 OutputBaseFilename=setup
-SetupIconFile=C:\Users\dadasd\coquery\coquery\icons\artwork\logo.ico
+SetupIconFile={#coq_path}\coquery\icons\artwork\logo.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -24,16 +31,18 @@ SolidCompression=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; \
+  GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\dadasd\coquery\make\dist\coquery\coquery.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\dadasd\coquery\make\dist\coquery\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#coq_path}\make\dist\coquery\coquery.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#coq_path}\make\dist\coquery\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+Source: "{#coq_path}\coquery\\icons\artwork\logo.ico"; DestDir: "{app}"
 
 [Icons]
-Name: "{commonprograms}\Coquery"; Filename: "{app}\coquery.exe"
-Name: "{commondesktop}\Coquery"; Filename: "{app}\coquery.exe"; Tasks: desktopicon
+Name: "{commonprograms}\Coquery"; Filename: "{app}\logo.ico"
+Name: "{commondesktop}\Coquery"; Filename: "{app}\logo.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\coquery.exe"; Description: "{cm:LaunchProgram,Coquery}"; Flags: nowait postinstall skipifsilent
