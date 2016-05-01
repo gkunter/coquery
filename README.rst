@@ -41,6 +41,7 @@ Queries
    sequence
 -  Use the same query syntax for all installed corpora
 -  Automate queries by reading them from an input file
+-  Save query results from speech corpora as Praat TextGrids
 
 Analysis
 ~~~~~~~~
@@ -75,6 +76,7 @@ Coquery already has installers for the following linguistic corpora and
 lexical databases:
 
 -  `British National Corpus (BNC)`_
+-  `Brown Corpus`_
 -  `Buckeye Corpus`_
 -  `CELEX Lexical Database (English)`_
 -  `Carnegie Mellon Pronunciation Dictionary (CMUdict)`_
@@ -85,6 +87,7 @@ lexical databases:
 -  `Switchboard-1 Telephone Speech Corpus`_
 
 .. _British National Corpus (BNC): http://www.natcorp.ox.ac.uk/
+.. _Brown Corpus: https://archive.org/download/BrownCorpus/
 .. _Buckeye Corpus: http://buckeyecorpus.osu.edu/
 .. _CELEX Lexical Database (English): https://catalog.ldc.upenn.edu/LDC96L14
 .. _Carnegie Mellon Pronunciation Dictionary (CMUdict): http://www.speech.cs.cmu.edu/cgi-bin/cmudict

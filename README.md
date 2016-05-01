@@ -31,6 +31,7 @@ An incomplete list of the things you can do with Coquery:
 * Use string functions e.g. to test if a token contains a letter sequence
 * Use the same query syntax for all installed corpora
 * Automate queries by reading them from an input file
+* Save query results from speech corpora as Praat TextGrids
 
 ### Analysis
 * Summarize the query results as frequency tables or contingency tables
@@ -60,6 +61,7 @@ Coquery already has installers for the following linguistic corpora and
 lexical databases:
 
 * [British National Corpus (BNC)](http://www.natcorp.ox.ac.uk/)
+* [Brown Corpus](https://archive.org/download/BrownCorpus/)
 * [Buckeye Corpus](http://buckeyecorpus.osu.edu/)
 * [CELEX Lexical Database (English)](https://catalog.ldc.upenn.edu/LDC96L14)
 * [Carnegie Mellon Pronunciation Dictionary (CMUdict)](http://www.speech.cs.cmu.edu/cgi-bin/cmudict)
