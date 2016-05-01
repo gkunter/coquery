@@ -89,11 +89,12 @@ the following optional Python packages to enable all features in Coquery.
 * `PyMySQL <https://github.com/PyMySQL/PyMySQL/>`_ 0.6.4 or later – A pure-Python MySQL client library (Connect to MySQL database servers)
 * `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_ 0.7 or later – A Python statistical data visualization library (Create visualizations of your query results)
 * `SciPy <https://www.scipy.org/scipylib/index.html/>`_ 0.13.0 or later – Open-source software for mathematics, science, and engineering (Use more accurate statisticsal tests)
+* `TextGridTools <https://github.com/hbuschme/TextGridTools/>`_ 1.3.1 or later – Read, write, and manipulate Praat TextGrid files (save results from time-annotated corpora as `Praat TextGrids <http://www.praat.org>`_)
 
 The following command installs these modules:
     
-    pip install pymysql scipy seaborn 
-    
+    pip install pymysql scipy seaborn tgt
+
 Additionally, the following modules may be installed if you want to create
 new corpora from your own collection of files:
     
