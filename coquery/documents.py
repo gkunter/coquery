@@ -77,7 +77,7 @@ def detect_file_type(file_name, sample_length=1024):
     # Define magic numbers and headers:
     _pk_header = b"PK\x03\x04"
     _pdf_header = b"%PDF-"
-    _html_header = b".*<!DOCTYPE\s+html\s+.*>"
+    _html_header = b"\s*<!DOCTYPE\s+html\s*.*>"
     
     # get extension:
     _, ext = os.path.splitext(file_name)
@@ -85,7 +85,7 @@ def detect_file_type(file_name, sample_length=1024):
     # Read first 1024 bytes from file as a sample:
     with open(file_name, "rb") as fp:
         sample = fp.read(sample_length)
-
+        
     # try to detect file type based on the content of the sample (and,
     # where appropriate, the file extension):
     if sample[:len(_pdf_header)] == _pdf_header:
@@ -164,9 +164,20 @@ def html_to_str(path, encoding="utf-8"):
     if options._use_bs4:
         from bs4 import BeautifulSoup
 
-    text = plain_to_str(path)
-    soup = BeautifulSoup(text, "html.parser")
-    return soup.get_text()
+    def visible(element):
+        """
+        Filter from http://stackoverflow.com/a/1983219
+        """
+        if element.parent.name in ['style', 'script', '[document]', 'head', 'title']:
+            return False
+        elif re.match('<!--.*-->', str(element)):
+            return False
+        return True
+
+    s = plain_to_str(path)
+    soup = BeautifulSoup(s, "html.parser")
+    texts = soup.findAll(text=True)
+    return " ".join(list(filter(visible, texts)))
 
 def odt_to_str(path):
     if options._use_odfpy:
