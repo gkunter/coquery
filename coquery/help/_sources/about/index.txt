@@ -23,7 +23,7 @@ translators, and anybody who wishes to search and analyse a text corpus.
                 <h2>Corpora</h2>
                 <ul>
                     <li>Use the corpus manager to install one of the supported corpora
-                    <li>Build your own corpus from PDF, .docx, or plain text files</li>
+                    <li>Build your own corpus from PDF, MS Word, OpenDocument, HTML, or plain text files</li>
                     <li>Filter your query for example by year, genre, or speaker gender</li>
                     <li>Choose which corpus features will be included in your query results</li>
                     <li>View every token that matches your query within its context</li>
@@ -87,6 +87,7 @@ Coquery already has installers for the following linguistic corpora:
 
     <div class="list-group">
         <a class="list-group-item" href="http://www.natcorp.ox.ac.uk/">British National Corpus (BNC)</a>
+        <a class="list-group-item" href="https://archive.org/download/BrownCorpus">Brown Corpus</a>
         <a class="list-group-item" href="http://buckeyecorpus.osu.edu/">Buckeye Corpus</a>
         <a class="list-group-item" href="https://catalog.ldc.upenn.edu/LDC96L14">CELEX Lexical Database (English)</a>
         <a class="list-group-item" href="http://www.speech.cs.cmu.edu/cgi-bin/cmudict">Carnegie Mellon Pronunciation Dictionary (CMUdict)</a>

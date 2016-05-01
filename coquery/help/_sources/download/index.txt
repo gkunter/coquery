@@ -45,6 +45,9 @@ folder on your computer, e.g. the Applications folder.
 
     <p>Mac OS X disk image: <code>coquery-0.9.1-osx-el-capitan.dmg</code> <a href="coquery-0.9.1-osx-el-capitan.dmg" class="btn btn-primary btn-sm">Download</a></p>
 
+If the disk image does not work on your version of Mac OS X, you can follow 
+the installation instructions given below for Linux on your computer.
+
 Linux
 -----
 
@@ -85,7 +88,7 @@ the following optional Python packages to enable all features in Coquery.
 
 * `PyMySQL <https://github.com/PyMySQL/PyMySQL/>`_ 0.6.4 or later – A pure-Python MySQL client library (Connect to MySQL database servers)
 * `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_ 0.7 or later – A Python statistical data visualization library (Create visualizations of your query results)
-* `NLTK <http://www.nltk.org>`_ 3.0 or later – The Natural Language Toolkit (Lemmatization and tagging when building your own corpora)
+* `NLTK <http://www.nltk.org>`_ 3.2.1 or later – The Natural Language Toolkit (Lemmatization and tagging when building your own corpora)
 * `PDFMiner <http://euske.github.io/pdfminer/index.html>`_ – PDF parser and analyzer (for Python 2.7) (Build your own corpora from PDF documents)
 * `pdfminer3k <https://pypi.python.org/pypi/pdfminer3k>`_ 1.3 or later – PDF parser and analyzer (for Python 3.x) (Build your own corpora from PDF documents)
 

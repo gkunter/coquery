@@ -87,6 +87,7 @@ Coquery already has installers for the following linguistic corpora:
 
     <div class="list-group">
         <a class="list-group-item" href="http://www.natcorp.ox.ac.uk/">British National Corpus (BNC)</a>
+        <a class="list-group-item" href="https://archive.org/download/BrownCorpus">Brown Corpus</a>
         <a class="list-group-item" href="http://buckeyecorpus.osu.edu/">Buckeye Corpus</a>
         <a class="list-group-item" href="https://catalog.ldc.upenn.edu/LDC96L14">CELEX Lexical Database (English)</a>
         <a class="list-group-item" href="http://www.speech.cs.cmu.edu/cgi-bin/cmudict">Carnegie Mellon Pronunciation Dictionary (CMUdict)</a>
