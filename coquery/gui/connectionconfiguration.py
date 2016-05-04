@@ -178,7 +178,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         
         self.ui.radio_mysql.toggled.connect(self.toggle_engine)
         self.ui.radio_sqlite.toggled.connect(self.toggle_engine)
-        if not options._use_mysql:
+        if not options.use_mysql:
             self.ui.radio_mysql.setDisabled(True)
         self.toggle_engine()
         
@@ -269,7 +269,7 @@ class ConnectionConfiguration(QtGui.QDialog):
 
         d = self.get_values()
 
-        if d["type"] == SQL_MYSQL and not options._use_mysql:
+        if d["type"] == SQL_MYSQL and not options.use_mysql:
             return
 
         # enable either the Add or the Remove button, depending on whether
@@ -547,7 +547,7 @@ class ConnectionConfiguration(QtGui.QDialog):
             self.connected.emit()
             return True
 
-        if self.ui.radio_mysql.isChecked() and not options._use_mysql:
+        if self.ui.radio_mysql.isChecked() and not options.use_mysql:
             self.noConnection.emit(Exception("The Python package 'pymysql' is not installed on this system. MySQL connections are not available."))
             return
         

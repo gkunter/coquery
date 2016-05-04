@@ -104,7 +104,7 @@ def detect_file_type(file_name, sample_length=1024):
     return file_type
 
 def docx_to_str(path, encoding="utf-8"):
-    if options._use_docx:
+    if options.use_docx:
         from docx import Document
 
     document = Document(path)
@@ -112,7 +112,7 @@ def docx_to_str(path, encoding="utf-8"):
     return "\n".join(txt)
 
 def pdf_to_str(path, encoding="utf-8"):
-    if options._use_pdfminer:
+    if options.use_pdfminer:
         from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
         from pdfminer.converter import TextConverter
         from pdfminer.layout import LAParams
@@ -161,7 +161,7 @@ def pdf_to_str(path, encoding="utf-8"):
     return txt
 
 def html_to_str(path, encoding="utf-8"):
-    if options._use_bs4:
+    if options.use_bs4:
         from bs4 import BeautifulSoup
 
     def visible(element):
@@ -180,7 +180,7 @@ def html_to_str(path, encoding="utf-8"):
     return " ".join(list(filter(visible, texts)))
 
 def odt_to_str(path):
-    if options._use_odfpy:
+    if options.use_odfpy:
         from odf.opendocument import load
         from odf import text
         from odf.element import Text
@@ -192,7 +192,7 @@ def odt_to_str(path):
     return "\n".join(txt)
                     
 def plain_to_str(path):
-    if options._use_chardet:
+    if options.use_chardet:
         import chardet
         content = open(path, "rb").read()
         detection = chardet.detect(content)

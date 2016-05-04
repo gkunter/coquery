@@ -1101,7 +1101,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.last_results_saved = True
 
     def create_textgrids(self):
-        if not options._use_tgt:
+        if not options.use_tgt:
             errorbox.alert_missing_module("tgt", self)
             return
 

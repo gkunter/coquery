@@ -457,13 +457,13 @@ class CorpusManager(QtGui.QDialog):
             
             if label == INSTALLER_ADHOC:
                 l = ["Plain Text"]
-                if options._use_pdfminer:
+                if options.use_pdfminer:
                     l.append("PDF (Portable Document Format)")
-                if options._use_docx:
+                if options.use_docx:
                     l.append("DOCX (MS Office)")
-                if options._use_odfpy:
+                if options.use_odfpy:
                     l.append("ODT (Open Document Texts)")
-                if options._use_bs4:
+                if options.use_bs4:
                     l.append("HTML")
                 entry = CoqAccordionEntry(stack=self)
                 entry._is_builder = True

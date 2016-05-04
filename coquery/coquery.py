@@ -46,7 +46,7 @@ def set_logger(log_file_path):
 
 def check_system():
     if options.missing_modules:
-        if options._use_qt:
+        if options.use_qt:
             from .gui.pyqt_compat import QtGui
             app = QtGui.QApplication(sys.argv)
             QtGui.QMessageBox.critical(None,
@@ -63,7 +63,7 @@ def main():
     coquery_home = options.get_home_dir()
     logger = set_logger(os.path.join(coquery_home, "coquery.log"))
 
-    #if options._use_qt:
+    #if options.use_qt:
         #sys.path.append(os.path.join(sys.path[0], "gui"))
 
     start_time = time.time()
@@ -103,7 +103,7 @@ def main():
         logger.info(options.cfg.comment)
 
     # Run the Application GUI?
-    if options.cfg.gui and options._use_qt:
+    if options.cfg.gui and options.use_qt:
         from .gui.pyqt_compat import QtGui, QtCore
         from .gui.app import CoqueryApp
         from .gui.app import GuiHandler

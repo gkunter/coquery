@@ -144,7 +144,7 @@ class BuilderClass(BaseCorpusBuilder):
         file_type = detect_file_type(file_name)
 
         if file_type == FT_PDF:
-            if options._use_pdfminer:
+            if options.use_pdfminer:
                 try:
                     raw_text = pdf_to_str(file_name)
                 except (UnicodeDecodeError, TypeError) as e:
@@ -156,7 +156,7 @@ class BuilderClass(BaseCorpusBuilder):
                 return ""
 
         elif file_type == FT_DOCX:
-            if options._use_docx:
+            if options.use_docx:
                 try:
                     raw_text = docx_to_str(file_name)
                 except (Exception) as e:
@@ -168,7 +168,7 @@ class BuilderClass(BaseCorpusBuilder):
                 return ""
 
         elif file_type == FT_ODT:
-            if options._use_odfpy:
+            if options.use_odfpy:
                 try:
                     raw_text = odt_to_str(file_name)
                 except (Exception) as e:
@@ -180,7 +180,7 @@ class BuilderClass(BaseCorpusBuilder):
                 return ""
                 
         elif file_type == FT_HTML:
-            if options._use_bs4:
+            if options.use_bs4:
                 try:
                     raw_text = html_to_str(file_name)
                 except (Exception) as e:

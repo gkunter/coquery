@@ -587,7 +587,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
         self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
         self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
-        if options._use_nltk:
+        if options.use_nltk:
             self.parser.add_argument("--no-nltk", help="Do not use NLTK library for automatic part-of-speech tagging", action="store_false", dest="use_nltk")
         self.parser.add_argument("-l", help="load source files", action="store_true")
         self.parser.add_argument("-c", help="create database tables", action="store_true")
@@ -641,7 +641,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """ Check the command line arguments. Add defaults if necessary."""
         if not self._widget:
             self.arguments, unknown = self.parser.parse_known_args()
-            if not options._use_nltk:
+            if not options.use_nltk:
                 self.arguments.use_nltk = False
             if not self.arguments.db_name:
                 self.arguments.db_name = self.arguments.name

@@ -218,7 +218,7 @@ class Options(object):
         self.args.installer_path = os.path.join(self.args.base_path, "installer")
         
         self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
-        self.args._use_mysql = True
+        self.args.use_mysql = True
         
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
@@ -261,7 +261,7 @@ class Options(object):
         
         # If Qt is available, the GUI is used by default. The command line 
         # interface can be selected by using the --con option:
-        if _use_qt:
+        if use_qt:
             self.parser.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
         
         # General options:
@@ -343,7 +343,7 @@ class Options(object):
         # whether a GUI is requested. This parse doesn't raise an argument 
         # error.
         args, unknown = self.parser.parse_known_args()
-        if _use_qt:
+        if use_qt:
             self.args.gui = args.gui
         else:
             self.args.gui = False
@@ -1491,17 +1491,17 @@ def has_module(name):
         return pkgutil.find_loader(name) is not None
 
 _recent_python = sys.version_info < (2, 7)
-_use_nltk = has_module("nltk")
-_use_mysql = has_module("pymysql")
-_use_seaborn = has_module("seaborn")
-_use_pdfminer = has_module("pdfminer")
-_use_qt = has_module("PyQt4") or has_module("PySide")
-_use_chardet = has_module("chardet")
-_use_tgt = has_module("tgt")
-_use_docx = has_module("docx")
-_use_odfpy = has_module("odf")
-_use_bs4 = has_module("bs4")
-_use_scipy = has_module("scipy")
+use_nltk = has_module("nltk")
+use_mysql = has_module("pymysql")
+use_seaborn = has_module("seaborn")
+use_pdfminer = has_module("pdfminer")
+use_qt = has_module("PyQt4") or has_module("PySide")
+use_chardet = has_module("chardet")
+use_tgt = has_module("tgt")
+use_docx = has_module("docx")
+use_odfpy = has_module("odf")
+use_bs4 = has_module("bs4")
+use_scipy = has_module("scipy")
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:

@@ -155,7 +155,7 @@ class IndependenceTestViewer(QtGui.QDialog):
         str_flt = "{{:0.{digits}f}}".format(digits=options.cfg.digits)
 
 
-        if options._use_scipy:
+        if options.use_scipy:
             from scipy import stats
             expected = stats.contingency.expected_freq(obs)
             if np.min(expected) < 5:
@@ -229,7 +229,7 @@ class IndependenceTestViewer(QtGui.QDialog):
         odds_ci_upper = math.exp(math.log(odds_ratio) + 1.96 * odds_se)
         odds_z = math.log(odds_ratio) / odds_se
         
-        if options._use_scipy:
+        if options.use_scipy:
             p_odds = stats.norm.sf(abs(odds_z)) * 2
             odds_op = "="
         else:

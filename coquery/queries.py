@@ -819,7 +819,7 @@ class ContrastQuery(FrequencyQuery):
 
     @classmethod
     def retrieve_loglikelihood(cls, *args, **kwargs):
-        if options._use_scipy:
+        if options.use_scipy:
             from scipy import stats
 
         label = kwargs["label"]
@@ -834,7 +834,7 @@ class ContrastQuery(FrequencyQuery):
 
         obs = [ [freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
         try:
-            if options._use_scipy:
+            if options.use_scipy:
                 g2, p_g2, _, _ = stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
                 return g2
             else:

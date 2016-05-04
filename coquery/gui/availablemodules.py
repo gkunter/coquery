@@ -34,16 +34,16 @@ class AvailableModulesDialog(QtGui.QDialog):
         self.ui.table_modules.setHorizontalHeaderLabels(["Module", "Available", "Description"])
 
         modules = (
-                ("SciPy", options._use_scipy), 
-                ("Seaborn", options._use_seaborn),
-                ("PyMySQL", options._use_mysql),
-                ("NLTK", options._use_nltk),
-                ("tgt", options._use_tgt),
-                ("chardet", options._use_chardet),
-                ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options._use_pdfminer),
-                ("python-docx", options._use_docx),
-                ("odfpy", options._use_odfpy),
-                ("BeautifulSoup", options._use_bs4))
+                ("SciPy", options.use_scipy), 
+                ("Seaborn", options.use_seaborn),
+                ("PyMySQL", options.use_mysql),
+                ("NLTK", options.use_nltk),
+                ("tgt", options.use_tgt),
+                ("chardet", options.use_chardet),
+                ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options.use_pdfminer),
+                ("python-docx", options.use_docx),
+                ("odfpy", options.use_odfpy),
+                ("BeautifulSoup", options.use_bs4))
         
         self.ui.table_modules.setRowCount(len(modules))
         

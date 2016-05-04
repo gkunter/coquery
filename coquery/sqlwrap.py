@@ -21,7 +21,7 @@ from .defines import *
 from . import options
 from . import sqlhelper
 
-if options._use_mysql:
+if options.use_mysql:
     import pymysql
     import pymysql.cursors
 
@@ -29,7 +29,7 @@ class SqlDB (object):
     """ A wrapper for MySQL. """
     def __init__(self, Host, Port, Type, User, Password, db_name="", db_path="", encoding="utf8", connect_timeout=60, local_infile=0):
         
-        if Type == SQL_MYSQL and not options._use_mysql:
+        if Type == SQL_MYSQL and not options.use_mysql:
             raise DependencyError("pymysql", "https://github.com/PyMySQL/PyMySQL")
         
         self.db_type = Type
