@@ -26,6 +26,7 @@ from coquery.unicode import utf8
 
 from . import classes
 from . import errorbox
+from . import csvoptions
 from .pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 from .ui.corpusInstallerUi import Ui_CorpusInstaller
 
@@ -287,8 +288,8 @@ class InstallerGui(QtGui.QDialog):
         if self._onefile:
             self.builder = self.builder_class(
                 gui=self, 
-                mapping=self._table_options[-2],
-                dtypes=self._table_options[-1])
+                mapping=self._table_options.mapping,
+                dtypes=self._table_options.dtypes)
         elif hasattr(self, "_nltk_tagging"):
             pos = self.ui.use_pos_tagging.isChecked()
             self.builder = self.builder_class(pos=pos, gui=self)
@@ -364,8 +365,14 @@ class BuilderGui(InstallerGui):
         self._nltk_tagging = False
         self._testing = False
         self._onefile = onefile
-        self._table_options = tuple()
-
+        self._table_options = csvoptions.CSVOptions(
+            sep=options.cfg.input_separator,
+            header=options.cfg.file_has_headers,
+            quote_char=options.cfg.quote_char,
+            skip_lines=options.cfg.skip_lines,
+            encoding=options.cfg.input_encoding,
+            selected_column=None)
+        
         if self._onefile:
             self.ui.corpus_description.setText("""
                 <p><span style='font-weight:600;'>Corpus builder</span></p>
@@ -433,7 +440,7 @@ class BuilderGui(InstallerGui):
             except TypeError:
                 pass
 
-            if not options._use_nltk:
+            if not options.use_nltk:
                 label_text.append("(unavailble – NLTK is not installed)")
                 self.ui.label_pos_tagging.setEnabled(False)
                 self.ui.use_pos_tagging.setEnabled(False)
@@ -477,7 +484,7 @@ class BuilderGui(InstallerGui):
         self._nltk_tagging = False
         self.nltk_exceptions = []
 
-        if options._use_nltk:
+        if options.use_nltk:
             self._testing = True
             self.test_thread = classes.CoqThread(self.test_nltk_core, parent=self)
             self.test_thread.taskFinished.connect(self.test_nltk_results)
@@ -566,18 +573,13 @@ class BuilderGui(InstallerGui):
     def file_options(self):
         """ Get CSV file options for current query input file. """
         from .namedtableoptions import NamedTableOptions
-        if self._table_options:
-            sep, _, header, skip, quote, mapping, dtypes = self._table_options
-            default = (sep, None, header, skip, quote, mapping, dtypes)
-        else:
-            default = (options.cfg.input_separator,
-                        None,
-                        options.cfg.file_has_headers,
-                        options.cfg.skip_lines,
-                        options.cfg.quote_char, {}, {})
-        self._table_options = NamedTableOptions.getOptions(
-            utf8(self.ui.input_path.text()), 
-            default, self, icon=options.cfg.icon)
+
+        result = NamedTableOptions.getOptions(
+            utf8(self.ui.input_path.text()), [],
+            self._table_options, self, options.cfg.icon)
+        if result:
+            self._table_options = result
+
         self.validate_dialog()
 
     def closeEvent(self, event):
@@ -626,7 +628,7 @@ class BuilderGui(InstallerGui):
             if not self._table_options:
                 word_specified = False
             else:
-                word_specified = "word" in self._table_options[-2]
+                word_specified = "word" in self._table_options.mapping
             if not word_specified:
                 self.ui.issue_label.setText("You need to specify at least a Word column in the 'Corpus table options' dialog.")
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
