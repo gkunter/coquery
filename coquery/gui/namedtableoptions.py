@@ -17,11 +17,11 @@ from coquery import options
 from coquery.errors import *
 from .pyqt_compat import QtGui, QtCore
 
-from .csvoptions import MyTableModel, quote_chars, CSVOptions
+from .csvoptions import MyTableModel, quote_chars, CSVOptionDialog
 from .ui.namedTableOptionsUi import Ui_NamedTableOptions
 
-class NamedTableOptions(CSVOptions):
-    def __init__(self, filename, , fields=[], default=None, parent=None, icon=None):
+class NamedTableOptions(CSVOptionDialog):
+    def __init__(self, filename, fields=[], default=None, parent=None, icon=None):
         """
         Parameters
         ----------
@@ -30,14 +30,6 @@ class NamedTableOptions(CSVOptions):
         fields : dictionary
         """
         print(default)
-        if default:
-            mapping = default[-2]
-            default = tuple(default[:-2])
-        else:
-            mapping = dict()
-        
-        print(default)
-        
         super(NamedTableOptions, self).__init__(filename, default, parent, 
                                                  icon, ui=Ui_NamedTableOptions)
 
@@ -48,9 +40,9 @@ class NamedTableOptions(CSVOptions):
         self.ui.button_gloss.clicked.connect(lambda: self.map_query_item_type("gloss"))
         
         self._selected = 0
-        self.map = mapping
-        # make all widget rows the same height (for cosmetic reasons):
+        self.map = default.mapping
         
+        # make all widget rows the same height (for cosmetic reasons):
         for key, value in fields:
             button_name = "button_{}".format(value.lower())
             edit_name = "edit_{}".format(value.lower())
@@ -59,7 +51,6 @@ class NamedTableOptions(CSVOptions):
             
             getattr(self.ui, name).clicked.connect(lambda: self.map_query_item_type(value))
         
-
         # make all buttons the same size:
         max_height = 0
         for name in [x for x in dir(self.ui) if x.startswith(("button", "label", "edit"))]:
@@ -69,7 +60,7 @@ class NamedTableOptions(CSVOptions):
             widget = getattr(self.ui, name)
             widget.setMinimumHeight(max_height)
 
-        for x in self.map:
+        for x in default.mapping:
             getattr(self.ui, "edit_{}".format(x)).setText(self.map[x])
 
         try:
@@ -104,8 +95,8 @@ class NamedTableOptions(CSVOptions):
         line_edit.setText(header)
         
     @staticmethod
-    def getOptions(path, default=None, parent=None, icon=None):
-        dialog = NamedTableOptions(path, default, parent, icon)
+    def getOptions(path, fields=[], default=None, parent=None, icon=None):
+        dialog = NamedTableOptions(path, fields, default, parent, icon)
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
