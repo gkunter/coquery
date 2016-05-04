@@ -47,10 +47,13 @@
          <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
            <layout class="QGridLayout" name="gridLayout">
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_2">
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_query_column">
               <property name="text">
-               <string>Quote character:</string>
+               <string>Read &amp;queries from column number:</string>
+              </property>
+              <property name="buddy">
+               <cstring>query_column</cstring>
               </property>
              </widget>
             </item>
@@ -64,64 +67,18 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label">
-              <property name="text">
-               <string>File contains header:</string>
-              </property>
-             </widget>
-            </item>
             <item row="4" column="0">
              <widget class="QLabel" name="label_6">
               <property name="text">
-               <string>Text lines to ignore after header:</string>
+               <string>Text lines to &amp;ignore after header:</string>
+              </property>
+              <property name="buddy">
+               <cstring>ignore_lines</cstring>
               </property>
              </widget>
             </item>
             <item row="5" column="1">
              <widget class="QComboBox" name="quote_char"/>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_10">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Character that separates columns:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_query_column">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Read queries from column number:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QCheckBox" name="file_has_headers">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="layoutDirection">
-               <enum>Qt::RightToLeft</enum>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
             </item>
             <item row="1" column="1">
              <widget class="QSpinBox" name="query_column">
@@ -181,6 +138,71 @@
                </property>
               </item>
              </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>File contains &amp;header:</string>
+              </property>
+              <property name="buddy">
+               <cstring>file_has_headers</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_10">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Character that &amp;separates columns:</string>
+              </property>
+              <property name="buddy">
+               <cstring>separate_char</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QCheckBox" name="file_has_headers">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::RightToLeft</enum>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_2">
+              <property name="text">
+               <string>&amp;Quote character:</string>
+              </property>
+              <property name="buddy">
+               <cstring>quote_char</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>Character &amp;encoding:</string>
+              </property>
+              <property name="buddy">
+               <cstring>combo_encoding</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QComboBox" name="combo_encoding"/>
             </item>
            </layout>
           </item>
