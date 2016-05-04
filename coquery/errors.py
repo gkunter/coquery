@@ -59,7 +59,7 @@ class VisualizationNoDataError(NoTraceException):
     empty anymore.</p>
     """
 
-class VisualizationModuleError:
+class VisualizationModuleError(NoTraceException):
     def __init__(self, module, msg):
         self.error_message = """
         <p><b>Could not load module '{module}'</b></p>
