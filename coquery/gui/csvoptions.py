@@ -9,6 +9,11 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
+import codecs
 import sys
 import pandas as pd
 import numpy as np
@@ -17,6 +22,23 @@ from coquery import options
 from coquery.errors import *
 from .pyqt_compat import QtGui, QtCore
 from .ui.csvOptionsUi import Ui_FileOptions
+
+class CSVOptions(object):
+    def __init__(self, sep=",", header=True, quote_char='"', skip_lines=0, 
+                 encoding="utf-8", selected_column=None, mapping={}, dtypes=None):
+        self.sep = sep
+        self.header = header
+        self.quote_char = quote_char
+        self.skip_lines = skip_lines
+        self.encoding = encoding
+        self.selected_column = selected_column
+        self.mapping = mapping
+        self.dtypes = dtypes
+        
+    def __repr__(self):
+        return "CSVOptions(sep='{}', header={}, quote_char='{}', skip_lines={}, encoding='{}', selected_column={}, mapping={}, dtypes={})".format(
+            self.sep, self.header, self.quote_char.replace("'", "\'"), self.skip_lines, 
+            self.encoding, self.selected_column, self.mapping, self.dtypes)
 
 class MyTableModel(QtCore.QAbstractTableModel):
     """
@@ -62,9 +84,9 @@ quote_chars = {
     "'": "Single quote (')",
     "": "None"}
 
-class CSVOptions(QtGui.QDialog):
+class CSVOptionDialog(QtGui.QDialog):
     def __init__(self, filename, default=None, parent=None, icon=None, ui=None):
-        super(CSVOptions, self).__init__(parent)
+        super(CSVOptionDialog, self).__init__(parent)
         
         self.filename = filename
         
@@ -81,27 +103,30 @@ class CSVOptions(QtGui.QDialog):
         
         self.ui.query_column.setValue(1)
 
-        sep, col, head, skip, quotechar = default
-        if sep == "\t":
-            sep = "{tab}"
-        if sep == " ":
-            sep = "{space}"
-        index = self.ui.separate_char.findText(sep)
+        #sep, col, head, skip, quotechar = default
+        if default.sep == "\t":
+            default.sep = "{tab}"
+        if default.sep == " ":
+            default.sep = "{space}"
+        index = self.ui.separate_char.findText(default.sep)
         if index > -1:
             self.ui.separate_char.setCurrentIndex(index)
         else:
-            self.ui.separate_char.setEditText(sep)
+            self.ui.separate_char.setEditText(default.sep)
 
-        if col == None:
+        if default.selected_column == None:
             self.ui.query_column.hide()
             self.ui.label_query_column.hide()
-            col = 1
-        self.ui.query_column.setValue(col)
+            self.ui.query_column.setValue(1)
+        else:
+            self.ui.query_column.setValue(default.selected_column)
         
-        self.ui.file_has_headers.setChecked(head)
-        self.ui.ignore_lines.setValue(skip)
-        
-        index = self.ui.quote_char.findText(quote_chars[quotechar])
+        self.ui.file_has_headers.setChecked(default.header)
+        self.ui.ignore_lines.setValue(default.skip_lines)
+
+        self.ui.combo_encoding.addItems([x.replace("_", "-") for x in CHARACTER_ENCODINGS if x != "ascii"])
+
+        index = self.ui.quote_char.findText(quote_chars[default.quote_char])
         self.ui.quote_char.setCurrentIndex(index)
             
         self.ui.query_column.valueChanged.connect(self.set_query_column)
@@ -109,7 +134,10 @@ class CSVOptions(QtGui.QDialog):
         self.ui.separate_char.editTextChanged.connect(self.set_new_separator)
         self.ui.file_has_headers.stateChanged.connect(self.update_content)
         self.ui.quote_char.currentIndexChanged.connect(self.update_content)
+        self.ui.combo_encoding.currentIndexChanged.connect(self.update_content)
         self.ui.FilePreviewArea.clicked.connect(self.click_column)
+
+        self.set_encoding_selection(default.encoding)
 
         self.set_new_separator()
 
@@ -123,31 +151,54 @@ class CSVOptions(QtGui.QDialog):
         
     @staticmethod
     def getOptions(path, default=None, parent=None, icon=None):
-        dialog = CSVOptions(path, default, parent, icon)
+        dialog = CSVOptionDialog(filename=path, default=default, parent=parent, icon=icon)
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
-                str(dialog.ui.quote_char.currentText())]
-            return (str(dialog.ui.separate_char.currentText()),
-                 dialog.ui.query_column.value(),
-                 dialog.ui.file_has_headers.isChecked(),
-                 dialog.ui.ignore_lines.value(),
-                 quote)
+                utf8(dialog.ui.quote_char.currentText())]
+            
+            return CSVOptions(
+                sep=utf8(dialog.ui.separate_char.currentText()),
+                header=dialog.ui.file_has_headers.isChecked(),
+                skip_lines=dialog.ui.ignore_lines.value(),
+                encoding=utf8(dialog.ui.combo_encoding.currentText()),
+                quote_char=quote,
+                dtypes=dialog.file_table.dtypes)
         else:
             return None
         
     def accept(self):
-        super(CSVOptions, self).accept()
+        super(CSVOptionDialog, self).accept()
         
     def reject(self):
-        super(CSVOptions, self).reject()
+        super(CSVOptionDialog, self).reject()
 
     #def set_new_skip(self):
         #self.table_model.skip_lines = self.ui.ignore_lines.value()
         #self.ui.FilePreviewArea.reset()
         #self.set_query_column()
         
+    def set_encoding_selection(self, encoding):
+        """
+        Disconnect the encoding button box, set the new value, and reconnect. 
+        """
+        encoding = encoding.lower()
+        if encoding == "ascii":
+            encoding = "utf-8"
+        encoding = encoding.replace("iso-", "iso")
+        self.ui.combo_encoding.currentIndexChanged.disconnect()
+        index = self.ui.combo_encoding.findText(encoding)
+        self.ui.combo_encoding.setCurrentIndex(index)
+        self.ui.combo_encoding.currentIndexChanged.connect(self.update_content)
+        
     def split_file_content(self):
+        """
+        Split the content of the file on the basis of the current settings.
+        
+        This method also applies the character encoding setting. If there is 
+        an error with the current character setting, it tries to auto-detect 
+        a working encoding.
+        """
         quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
             str(self.ui.quote_char.currentText())]
         if self.ui.file_has_headers.isChecked():
@@ -155,6 +206,7 @@ class CSVOptions(QtGui.QDialog):
         else:
             header = None
         header = 0 if self.ui.file_has_headers.isChecked() else None
+        encoding = utf8(self.ui.combo_encoding.currentText())
         try:
             self.file_table = pd.read_table(
                 self.filename,
@@ -164,11 +216,73 @@ class CSVOptions(QtGui.QDialog):
                 quotechar=quote if quote else "#",
                 na_filter=False,
                 nrows=100,
-                error_bad_lines=False)
-        except ValueError as e:
-            exception = EmptyInputFileError(self.filename)
-            QtGui.QMessageBox.critical(self.parent(), "Query file error", str(exception))
-            raise exception
+                error_bad_lines=False,
+                encoding=encoding)
+        except (ValueError, pd.parser.CParserError) as e:
+            # this is most likely due to an encoding error. 
+
+            if not hasattr(self, "_last_encoding"):
+                # this happened the first time the file content was split.
+                # This is probably due to a wrong encoding setting, so we try
+                # to autodetect the encoding:
+
+                if options.use_chardet:
+                    # detect character encoding using chardet
+                    import chardet
+                    content = open(self.filename, "rb").read()
+                    detection = chardet.detect(content[:32000])
+                    encoding = detection["encoding"]
+                    file_buffer = StringIO(codecs.decode(content, encoding=encoding))
+                else:
+                    # dumb detection. First try utf-8, then latin-1.
+                    try:
+                        content = codecs.open(self.filename, "rb", encoding="utf-8").read()
+                        encoding = "utf-8"
+                    except UnicodeDecodeError:
+                        content = codecs.open(self.filename, "rb", encoding="latin-1").read()
+                        encoding = "latin-1"
+                    file_buffer = StringIO(content)
+                try:
+                    self.file_table = pd.read_table(
+                        self.filename,
+                        header=header,
+                        sep=str(self.separator),
+                        quoting=3 if not quote else 0,
+                        quotechar=quote if quote else "#",
+                        na_filter=False,
+                        nrows=100,
+                        error_bad_lines=False,
+                        encoding=encoding)
+                except (ValueError, pd.parser.CParserError) as e:
+                    # the table could still not be read. Raise an error.
+                    QtGui.QMessageBox.critical(
+                        self.parent(), "Query file error", 
+                        msg_csv_file_error.format(self.filename))
+                    raise e
+                else:
+                    # we have found a working encoding
+                    self.set_encoding_selection(encoding)
+                    
+            elif self._last_encoding != encoding:
+                # we should alert the user that they should use a different 
+                # encoding.
+                QtGui.QMessageBox.critical(
+                    self.parent(), "Query file error", 
+                    msg_csv_encoding_error.format(file=self.filename, 
+                                                  encoding=encoding))
+                # return to the last encoding, which was hopefully working:
+                self.set_encoding_selection(self._last_encoding)
+                encoding = self._last_encoding
+            else:
+                QtGui.QMessageBox.critical(
+                    self.parent(), "Query file error", 
+                    msg_csv_file_error.format(self.filename))
+                raise e
+            
+        # ascii encoding is always replaced by utf-8
+        if encoding == "ascii":
+            encoding = "utf-8"
+        self._last_encoding = encoding
         if header == None:
             self.file_table.columns = ["X{}".format(x) for x in range(len(self.file_table.columns))]
             
