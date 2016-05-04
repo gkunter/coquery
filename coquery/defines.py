@@ -425,6 +425,21 @@ msg_query_running = """
 <p><b>The last query is still running.</b></p>
 <p>If you interrupt it, the results that have been retrieved so far will be discarded.</p>
 <p>Do you really want to interrupt this query?</p>"""
+msg_csv_encoding_error = """
+<p><b>Illegal character encoding encountered.</b></p>
+<p>An error occurred while trying to open the file {file} with the character 
+encoding <code>{encoding}</code>. Choose a different encoding from the list.</p>
+"""
+msg_csv_file_error = """
+<p><b>The file could not be read.</b></p>
+<p>An error occurred while trying to open the file {}.</p>
+<p>Possible reasons include:
+<ul><li>The file is empty</li>
+<li>The file uses an unsupported character encoding</li>
+<li>The storage device has an error</li></ul></p>
+<p>Open the file in an editor to make sure that it is not empty. Save it using
+one of the supported character encodings. Unicode/UTF-8 is strongly recommended.</p>
+"""
 msg_filename_error = """
 <p><b>The file name is not valid.</b></p>
 <p>You have chosen to read the query strings from a file, but the query file 
@@ -478,3 +493,97 @@ Coquery, select <b>Manage corpora...</b> from the Corpus menu.</p>"""
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
 
+# this is a list of all character encodings understood by Python, straight 
+# from the 
+CHARACTER_ENCODINGS = ["ascii",
+    "big5",
+    "big5hkscs",
+    "cp037",
+    "cp424",
+    "cp437",
+    "cp500",
+    "cp720",
+    "cp737",
+    "cp775",
+    "cp850",
+    "cp852",
+    "cp855",
+    "cp856",
+    "cp857",
+    "cp858",
+    "cp860",
+    "cp861",
+    "cp862",
+    "cp863",
+    "cp864",
+    "cp865",
+    "cp866",
+    "cp869",
+    "cp874",
+    "cp875",
+    "cp932",
+    "cp949",
+    "cp950",
+    "cp1006",
+    "cp1026",
+    "cp1140",
+    "cp1250",
+    "cp1251",
+    "cp1252",
+    "cp1253",
+    "cp1254",
+    "cp1255",
+    "cp1256",
+    "cp1257",
+    "cp1258",
+    "euc_jp",
+    "euc_jis_2004",
+    "euc_jisx0213",
+    "euc_kr",
+    "gb2312",
+    "gbk",
+    "gb18030",
+    "hz",
+    "iso2022_jp",
+    "iso2022_jp_1",
+    "iso2022_jp_2",
+    "iso2022_jp_2004",
+    "iso2022_jp_3",
+    "iso2022_jp_ext",
+    "iso2022_kr",
+    "latin_1",
+    "iso8859_2",
+    "iso8859_3",
+    "iso8859_4",
+    "iso8859_5",
+    "iso8859_6",
+    "iso8859_7",
+    "iso8859_8",
+    "iso8859_9",
+    "iso8859_10",
+    "iso8859_13",
+    "iso8859_14",
+    "iso8859_15",
+    "iso8859_16",
+    "johab",
+    "koi8_r",
+    "koi8_u",
+    "mac_cyrillic",
+    "mac_greek",
+    "mac_iceland",
+    "mac_latin2",
+    "mac_roman",
+    "mac_turkish",
+    "ptcp154",
+    "shift_jis",
+    "shift_jis_2004",
+    "shift_jisx0213",
+    "utf_32",
+    "utf_32_be",
+    "utf_32_le",
+    "utf_16",
+    "utf_16_be",
+    "utf_16_le",
+    "utf_7",
+    "utf_8",
+    "utf_8_sig"]
