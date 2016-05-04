@@ -11,7 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-VERSION = "0.9.2"
+VERSION = "0.10.0dev"
 NAME = "Coquery"
 DATE = "2016"
 
