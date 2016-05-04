@@ -974,21 +974,27 @@ class CoqueryApp(QtGui.QMainWindow):
     def file_options(self):
         """ Get CSV file options for current query input file. """
         from . import csvoptions
-        results = csvoptions.CSVOptions.getOptions(
-            utf8(self.ui.edit_file_name.text()), 
-            (options.cfg.input_separator,
-             options.cfg.query_column_number,
-             options.cfg.file_has_headers,
-             options.cfg.skip_lines,
-             options.cfg.quote_char),
-            self, icon=options.cfg.icon)
+        
+        csv_options = csvoptions.CSVOptions(
+            sep=options.cfg.input_separator,
+            header=options.cfg.file_has_headers,
+            quote_char=options.cfg.quote_char,
+            skip_lines=options.cfg.skip_lines,
+            #encoding=options.cfg.input_encoding,
+            encoding="utf-16",
+            selected_column=options.cfg.query_column_number)
+        
+        results = csvoptions.CSVOptionDialog.getOptions(
+            utf8(self.ui.edit_file_name.text()),
+            csv_options, self, icon=options.cfg.icon)
         
         if results:
-            (options.cfg.input_separator,
-             options.cfg.query_column_number,
-             options.cfg.file_has_headers,
-             options.cfg.skip_lines,
-             options.cfg.quote_char) = results
+            options.cfg.input_separator = results.sep 
+            options.cfg.query_column_number = results.selected_column
+            options.cfg.file_has_headers = results.header
+            options.cfg.skip_lines = results.skip_lines
+            options.cfg.quote_char = results.quote_char
+            options.cfg.input_encoding = results.encoding
             
             if options.cfg.input_separator == "{tab}":
                 options.cfg.input_separator = "\t"
