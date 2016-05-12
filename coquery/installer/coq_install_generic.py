@@ -59,15 +59,15 @@ class BuilderClass(BaseCorpusBuilder):
         if pos:
             self.word_pos = "POS"
             self.create_table_description(self.word_table,
-                [Identifier(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-                Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
+                [Identifier(self.word_id, "INT UNSIGNED NOT NULL"),
+                Column(self.word_lemma, "VARCHAR(128) NOT NULL"),
                 Column(self.word_pos, "VARCHAR(12) NOT NULL"),
-                Column(self.word_label, "VARCHAR(40) NOT NULL")])
+                Column(self.word_label, "VARCHAR(128) NOT NULL")])
         else:
             self.create_table_description(self.word_table,
-                [Identifier(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-                Column(self.word_lemma, "VARCHAR(40) NOT NULL"),
-                Column(self.word_label, "VARCHAR(40) NOT NULL")])
+                [Identifier(self.word_id, "INT UNSIGNED NOT NULL"),
+                Column(self.word_lemma, "VARCHAR(128) NOT NULL"),
+                Column(self.word_label, "VARCHAR(128) NOT NULL")])
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
@@ -85,7 +85,7 @@ class BuilderClass(BaseCorpusBuilder):
         # A text value containing the path that points to this data file.
 
         self.create_table_description(self.file_table,
-            [Identifier(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
+            [Identifier(self.file_id, "INT UNSIGNED NOT NULL"),
             Column(self.file_name, "TINYTEXT NOT NULL"),
             Column(self.file_path, "TINYTEXT NOT NULL")])
 
@@ -104,7 +104,7 @@ class BuilderClass(BaseCorpusBuilder):
         # that contains this token.
         
         self.create_table_description(self.corpus_table,
-            [Identifier(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
+            [Identifier(self.corpus_id, "BIGINT UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table)])
 

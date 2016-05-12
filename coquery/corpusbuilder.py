@@ -232,7 +232,7 @@ class Column(object):
             A MySQL base data type.
 
         """
-        return self._data_type.split()[0].partition("(")[0]
+        return self._data_type.split()[0].partition("(")[0].upper()
     
     @data_type.setter
     def data_type(self, new_type):
@@ -443,7 +443,103 @@ class Table(object):
             if x.name == name:
                 return x
         return None
+
+    def suggest_data_type(self, name):
+        """
+        Return an SQL data type that may be optimal in terms of storage space.
+        
+        For INT types, the optimal data type is the smallest integer type that
+        is large enough to store the integer.
+        
+        For CHAR and TEXT types, the optimal data type is VARCHAR(max), where 
+        max is the maximum number of characters for the column.
+        
+        For DECIMAL, NUMERIC, FLOAT, DOUBLE, REAL types, the optimal type is 
+        not changed on MySQL, but changed to REAL on SQLite3.
+        
+        Parameters
+        ----------
+        name : string
+            The name of the column
             
+        Returns
+        -------
+        S : string
+            A string containing the suggested data type
+        """
+        
+        sql_int = [
+            (0, 255, "TINYINT UNSIGNED"),
+            (-128, 127, "TINYINT"),
+            (0, 65535, "SMALLINT UNSIGNED"),
+            (-32768, 32767, "SMALLINT"),
+            (0, 16777215, "MEDIUMINT UNSIGNED"),
+            (-8388608, 8388607, "MEDIUMINT"),
+            (0, 4294967295, "INT UNSIGNED"),
+            (-2147483648, 2147483647, "INT")]
+        
+        col = self.get_column(name)
+
+        # test if column contains NULL
+        S = "SELECT MAX({0} IS NULL) FROM {1}".format(col.name, self.name)
+        with self._DB.engine.connect() as connection:
+            has_null = connection.execute(S).fetchone()[0]
+        
+        # In an empty table, the previous check returns NULL. In this case,
+        # the original data type will be returned.
+        if has_null == None:
+            dt_type = col.data_type
+
+        # integer data types:
+        elif col.base_type.endswith("INT"):
+            S = "SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL".format(
+                col.name, self.name)
+            with self._DB.engine.connect() as connection:
+                v_min, v_max = connection.execute(S).fetchone()
+                
+            for dt_min, dt_max, dt_label in sql_int:
+                if v_min >= dt_min and v_max <= dt_max:
+                    dt_type = dt_label
+                    break
+            else:
+                if v_min >= 0:
+                    dt_type = "BIGINT UNSIGNED"
+                else:
+                    dt_type ="BIGINT"
+
+        # character data types:
+        elif col.base_type.endswith(("CHAR", "TEXT")):
+            S = "SELECT MAX(CHAR_LENGTH(RTRIM({0}))) FROM {1}".format(
+                col.name, self.name)
+            with self._DB.engine.connect() as connection:
+                max_len = connection.execute(S).fetchone()[0]
+            dt_type = "VARCHAR({})".format(max_len)
+            
+        # float and decimal data types:
+        elif col.base_type in ["DECIMAL", "NUMERIC", "FLOAT", "DOUBLE", "REAL"]:
+            if self._DB.db_type == SQL_SQLITE:
+                dt_type = "REAL"
+            else:
+                dt_type = col.base_type
+            
+            S = "SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL".format(
+                col.name, self.name)
+            with self._DB.engine.connect() as connection:
+                v_min, _ = connection.execute(S).fetchone()
+                
+            if v_min >= 0:
+                dt_type = "{} UNSIGNED".format(dt_type)
+
+        # all other data types:
+        else: 
+            dt_type = col.data_type
+
+        if has_null == 0:
+            dt_type = "{} NOT NULL".format(dt_type)
+
+        return dt_type
+
+        
     def get_create_string(self, db_type):
         """
         Generates the SQL command required to create the table.
@@ -614,7 +710,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         
         if not features_only:
             self.create_table_description(self.tag_table,
-                [Identifier(self.tag_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+                [Identifier(self.tag_id, "MEDIUMINT UNSIGNED NOT NULL"),
                 Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
                 Column(self.tag_label, "TINYTEXT NOT NULL"),
                 Link(self.tag_corpus_id, self.corpus_table),
@@ -1577,17 +1673,17 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     try:
                         _table = self._new_tables[column._link]
                         _column = _table.primary
-                        optimal = self.DB.get_optimal_field_type(_table.name, _column.name).strip()
+                        optimal = _table.suggest_data_type(_column.name)
                     except TypeError:
                         continue
                 else:
                     try:
-                        optimal = self.DB.get_optimal_field_type(table.name, column.name).strip()
+                        optimal = table.suggest_data_type(column.name)
                     except TypeError:
                         continue
                 current = self.DB.get_field_type(table.name, column.name).strip()
-                if current.lower() != optimal.lower() and "text" not in optimal.lower().split()[0].strip():
-                    optimal = utf8(optimal)
+                
+                if current.lower() != optimal.lower():
                     try:
                         self.DB.modify_field_type(table.name, column.name, optimal)
                     except Exception as e:
