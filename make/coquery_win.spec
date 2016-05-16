@@ -37,9 +37,14 @@ for file in glob.glob(os.path.join(coq_path, "installer", "coq_install_*.py")):
 for file in glob.glob(os.path.join(coq_path, 'visualizer', '*.py')):
 	l.append((file, "visualizer"))
 
+
+pslexer = os.path.join(python_path, "Lib", "site-packages", "pdfminer", "pslexer.py")
+l.append((pslexer, "pdfminer"))
+    
 a = Analysis([os.path.join('..', 'Coquery.py')],
              pathex=[coq_path,
                  os.path.join(coq_path, "visualizer"),
+                 os.path.join(coq_path, "pdfminer"),
                  os.path.join(coq_path, "installer")],
              binaries=binaries,
              datas=data + l,
