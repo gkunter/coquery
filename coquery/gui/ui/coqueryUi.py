@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created: Mon Mar  7 19:22:38 2016
-#      by: PyQt4 UI code generator 4.10.4
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -45,8 +44,8 @@ class Ui_MainWindow(object):
         self.options_area.setSizePolicy(sizePolicy)
         self.options_area.setObjectName(_fromUtf8("options_area"))
         self.horizontalLayout_7 = QtGui.QHBoxLayout(self.options_area)
-        self.horizontalLayout_7.setSpacing(12)
         self.horizontalLayout_7.setContentsMargins(0, 0, 0, 8)
+        self.horizontalLayout_7.setSpacing(12)
         self.horizontalLayout_7.setObjectName(_fromUtf8("horizontalLayout_7"))
         self.widget = QtGui.QWidget(self.options_area)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.MinimumExpanding)
@@ -56,8 +55,8 @@ class Ui_MainWindow(object):
         self.widget.setSizePolicy(sizePolicy)
         self.widget.setObjectName(_fromUtf8("widget"))
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.widget)
-        self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setMargin(0)
+        self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.box_corpus_select = QtGui.QGroupBox(self.widget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
@@ -257,9 +256,9 @@ class Ui_MainWindow(object):
         self.box_output_options = QtGui.QGroupBox(self.options_area)
         self.box_output_options.setObjectName(_fromUtf8("box_output_options"))
         self.output_columns = QtGui.QVBoxLayout(self.box_output_options)
-        self.output_columns.setSpacing(0)
         self.output_columns.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
         self.output_columns.setContentsMargins(8, -1, 8, 6)
+        self.output_columns.setSpacing(0)
         self.output_columns.setObjectName(_fromUtf8("output_columns"))
         self.horizontalLayout_7.addWidget(self.box_output_options)
         self.splitter = QtGui.QSplitter(self.splitter_2)
@@ -287,9 +286,9 @@ class Ui_MainWindow(object):
         self.layoutWidget = QtGui.QWidget(self.splitter)
         self.layoutWidget.setObjectName(_fromUtf8("layoutWidget"))
         self.verticalLayout_4 = QtGui.QVBoxLayout(self.layoutWidget)
-        self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
         self.verticalLayout_4.setContentsMargins(4, -1, -1, -1)
+        self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setObjectName(_fromUtf8("verticalLayout_4"))
         self.group_aggregation = QtGui.QGroupBox(self.layoutWidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
@@ -349,7 +348,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_6.addWidget(self.splitter_2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 805, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 805, 24))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -504,6 +503,8 @@ class Ui_MainWindow(object):
         self.action_toggle_stopwords.setObjectName(_fromUtf8("action_toggle_stopwords"))
         self.action_create_textgrid = QtGui.QAction(MainWindow)
         self.action_create_textgrid.setObjectName(_fromUtf8("action_create_textgrid"))
+        self.action_available_modules = QtGui.QAction(MainWindow)
+        self.action_available_modules.setObjectName(_fromUtf8("action_available_modules"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -514,6 +515,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.action_quit)
         self.menuHilfe.addAction(self.action_help)
         self.menuHilfe.addSeparator()
+        self.menuHilfe.addAction(self.action_available_modules)
         self.menuHilfe.addAction(self.action_about_coquery)
         self.menuCorpus.addAction(self.action_manage_corpus)
         self.menuCorpus.addSeparator()
@@ -654,3 +656,6 @@ class Ui_MainWindow(object):
         self.action_toggle_filters.setText(_translate("MainWindow", "Use &filters", None))
         self.action_toggle_stopwords.setText(_translate("MainWindow", "Use stop&words", None))
         self.action_create_textgrid.setText(_translate("MainWindow", "Create te&xtgrid...", None))
+        self.action_available_modules.setText(_translate("MainWindow", "Available &modules...", None))
+
+

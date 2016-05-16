@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_AboutDialog(object):
     def setupUi(self, AboutDialog):
         AboutDialog.setObjectName(_fromUtf8("AboutDialog"))
-        AboutDialog.resize(640, 480)
+        AboutDialog.resize(646, 480)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -57,15 +57,7 @@ class Ui_AboutDialog(object):
         self.label_description.setOpenExternalLinks(True)
         self.label_description.setObjectName(_fromUtf8("label_description"))
         self.verticalLayout.addWidget(self.label_description)
-        self.modules = CoqDetailBox(AboutDialog)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.MinimumExpanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.modules.sizePolicy().hasHeightForWidth())
-        self.modules.setSizePolicy(sizePolicy)
-        self.modules.setObjectName(_fromUtf8("modules"))
-        self.verticalLayout.addWidget(self.modules)
-        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        spacerItem = QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
 
         self.retranslateUi(AboutDialog)
@@ -73,7 +65,6 @@ class Ui_AboutDialog(object):
 
     def retranslateUi(self, AboutDialog):
         AboutDialog.setWindowTitle(_translate("AboutDialog", "About – Coquery", None))
-        self.label_description.setText(_translate("AboutDialog", "<html><head/><body><p>Coquery is a free corpus query tool.</p><p>Copyright (c) {date} Gero Kunter</p><p>Initial development supported by:<br/>Department of English, Heinrich-Heine Universität Düsseldorf</p><p>Website: <a href=\"http://www.coquery.org\"><span style=\" text-decoration: underline; color:#0057ae;\">http://www.coquery.org</span></a> – Twitter: <a href=\"https://twitter.com/hashtag/coquery?f=tweets\"><span style=\" text-decoration: underline; color:#0057ae;\">#Coquery</span></a></p><p>Coquery is free software released under the terms of the <a href=\"http://coquery.org/license.html\"><span style=\" text-decoration: underline; color:#0057ae;\">GNU General Public License (version 3)</span></a>. </p><p><br/></p></body></html>", None))
+        self.label_description.setText(_translate("AboutDialog", "<html><head/><body><p>Coquery is a free corpus query tool.</p><p>Copyright (c) {date} Gero Kunter</p><p>Initial development supported by:<br/>Department of English, Heinrich-Heine Universität Düsseldorf</p><p>Website: <a href=\"http://www.coquery.org\"><span style=\" text-decoration: underline; color:#0057ae;\">http://www.coquery.org</span></a> – Twitter: <a href=\"https://twitter.com/hashtag/coquery?f=tweets\"><span style=\" text-decoration: underline; color:#0057ae;\">#Coquery</span></a></p><p>Coquery is free software released under the terms of the <a href=\"http://coquery.org/license.html\"><span style=\" text-decoration: underline; color:#0057ae;\">GNU General Public License (version 3)</span></a>.</p></body></html>", None))
 
-from ..classes import CoqDetailBox
 

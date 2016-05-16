@@ -300,6 +300,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_build_corpus.setIcon(self.get_icon("sign-add"))
         self.ui.action_manage_corpus.setIcon(self.get_icon("database_2"))
         self.ui.action_corpus_documentation.setIcon(self.get_icon("sign-info"))
+        self.ui.action_available_modules.triggered.connect(self.show_available_modules)
         self.ui.action_statistics.setIcon(self.get_icon("monitor"))
         self.ui.action_quit.setIcon(self.get_icon("sign-error"))
         self.ui.action_view_log.setIcon(self.get_icon("calendar-clock"))
@@ -2200,6 +2201,12 @@ class CoqueryApp(QtGui.QMainWindow):
         from . import about
         about = about.AboutDialog(parent=self)
         about.exec_()
+
+    def show_available_modules(self):
+        from . import availablemodules
+        available = availablemodules.AvailableModulesDialog(parent=self)
+        available.show()
+        self.widget_list.append(available)
         
     def setGUIDefaults(self):
         """ Set up the gui values based on the values in options.cfg.* """

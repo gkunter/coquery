@@ -40,30 +40,6 @@ class AboutDialog(QtGui.QDialog):
 
         s = utf8(self.ui.label_description.text())
         self.ui.label_description.setText(s.format(version=VERSION, date=DATE))
-
-        self.ui.modules.setText("Check optional modules")
-        l = []
-        for name, flag in (("Seaborn", options._use_seaborn),
-                  ("PyMySQL", options._use_mysql),
-                  ("NLTK", options._use_nltk),
-                  ("tgt", options._use_tgt),
-                  ("chardet", options._use_chardet),
-                  ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options._use_pdfminer),
-                  ("python-docx", options._use_docx),
-                  ("odfpy", options._use_odfpy),
-                  ("BeautifulSoup", options._use_bs4)):
-            _, _, description, url = MODULE_INFORMATION[name]
-            
-            l.append("<tr><td><a href='{url}'>{name}</a></td><td>{description}</td><td>{available}</td></tr>".format(
-                url=url, name=name, description=description, available=has(flag)))
-        self.ui.available_label = QtGui.QLabel("<table cellspacing='3'>{}</table>".format("".join(l)))
-        
-        self.ui.notes_scroll = QtGui.QScrollArea()                                                                                      
-        self.ui.notes_scroll.setWidgetResizable(True)
-        self.ui.notes_scroll.setWidget(self.ui.available_label)        
-
-        self.ui.modules.replaceBox(self.ui.notes_scroll)
-        self.ui.verticalLayout.insertWidget(2, self.ui.modules)
         
     @staticmethod
     def view(parent=None):
