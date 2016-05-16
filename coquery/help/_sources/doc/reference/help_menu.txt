@@ -3,8 +3,14 @@
 Help menu
 +++++++++
 
+Note that on Mac OS X, the "About" entry appears not in the "Help" menu, but
+in the Coquery application menu.
+
 Help
 ~~~~
 
-About
-~~~~~
+Available modules
+-----------------
+
+About Coquery
+~~~~~--------
