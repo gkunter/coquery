@@ -229,6 +229,8 @@ class Options(object):
         self.args.external_links = {}
         #self.args.external_links = defaultdict(list)
         self.args.selected_functions = []
+
+        self.args.query_cache_size = 500 * 1024 * 1024
         
         self.args.context_left = 0
         self.args.context_right = 0
@@ -238,6 +240,7 @@ class Options(object):
         self.args.column_names = {}
         self.args.column_visibility = collections.defaultdict(dict)
         self.args.row_color = {}
+
         # Set defaults for CSV files:
         self.args.query_column_number = 1
         self.args.skip_lines = 0
@@ -255,7 +258,7 @@ class Options(object):
     def setup_parser(self):
         self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=QUERY_MODES.keys(), type=str, nargs="?")
         if sys.version_info < (3, 0):
-            l = [x.encode("utf-8") for x in self.corpus_argument_dict["choices"]]
+            l = [utf8(x) for x in self.corpus_argument_dict["choices"]]
             self.corpus_argument_dict["choices"] = l
         self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
         
@@ -270,6 +273,7 @@ class Options(object):
         group.add_argument("-i", "--inputfile", help="read query strings from INPUTFILE", type=str, dest="input_path")
         group.add_argument("-q", "--query", help="use QUERY for search, ignoring any INPUTFILE", dest="query_list")
         self.parser.add_argument("-F", "--filter", help="use FILTER to query only a selection of texts", type=str, default="", dest="source_filter")
+        self.parser.add_argument("--connection", help="use dabase connection named CURRENT_SERVER", type=str, dest="current_server")
 
         # File options:
         group = self.parser.add_argument_group("File options")
