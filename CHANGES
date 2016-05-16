@@ -1,11 +1,17 @@
 (development version, still unreleased)
-* add Module information dialog
 * add support for encoding detection when reading plain text files
 * allow to build 'corpora' from CSV files
 * show both left and right conditional probabilities in Collocations aggregation
 * add G2 test matrix
 * add test statistics (log-likelihood test, chi-square test) and effects 
   sizes (phi coefficient, odds ratio)
+* add persistent external links
+
+0.9.3 20 May 2016
+* fix Windows desktop icon
+* fix issue with building corpora from PDF files
+* add support for really small resolutions
+* add Module information dialog
 
 0.9.2 1 May 2016
 * fix issue with NLTK module detection
