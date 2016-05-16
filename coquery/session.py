@@ -60,8 +60,9 @@ class Session(object):
 
         self.query_type = queries.get_query_type(options.cfg.MODE)
 
-        logger.info("Corpus: %s" % options.cfg.corpus)
-        
+        logger.info("Corpus '{}' on connection '{}'".format(
+            self.Resource.name, options.cfg.current_server))
+
         self.data_table = pd.DataFrame()
         self.output_object = pd.DataFrame()
         self.output_order = []
@@ -112,6 +113,7 @@ class Session(object):
         
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
+
         for current_query in self.query_list:
             if not self.quantified_number_labels:
                 self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
