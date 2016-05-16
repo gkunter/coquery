@@ -289,6 +289,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
 
+    def keyPressEvent(self, e):
+        """
+        Add handler for key press events.
+        """
+        super(CoqueryApp, self).keyPressEvent(e)
+
     def statusBar(self):
         if hasattr(self.ui, "statusbar"):
             return self.ui.statusbar
