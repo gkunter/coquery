@@ -1032,25 +1032,28 @@ class SQLResource(BaseResource):
             else:
                 L = []
                 for i in word_id:
-                    if i not in self._word_cache:
-                        if not self._get_orth_str:
-                            if hasattr(self, "surface_feature"):
-                                word_feature = self.surface_feature
-                            else:
-                                word_feature = getattr(self, QUERY_ITEM_WORD)
-                            _, _, table, feature = self.split_resource_feature(word_feature)
+                    if not i:
+                        L.append(DEFAULT_MISSING_VALUE)
+                    else:
+                        if i not in self._word_cache:
+                            if not self._get_orth_str:
+                                if hasattr(self, "surface_feature"):
+                                    word_feature = self.surface_feature
+                                else:
+                                    word_feature = getattr(self, QUERY_ITEM_WORD)
+                                _, _, table, feature = self.split_resource_feature(word_feature)
 
-                            self.lexicon.joined_tables = []
-                            self.lexicon.table_list = [self.word_table]
-                            self.lexicon.add_table_path("word_id", word_feature)
-                            
-                            self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
-                                getattr(self, word_feature),
-                                " ".join(self.lexicon.table_list),
-                                self.word_table,
-                                self.word_id)
-                        self._word_cache[i], = db_connection.execute(self._get_orth_str.format(i)).fetchone()
-                    L.append(self._word_cache[i])
+                                self.lexicon.joined_tables = []
+                                self.lexicon.table_list = [self.word_table]
+                                self.lexicon.add_table_path("word_id", word_feature)
+                                
+                                self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
+                                    getattr(self, word_feature),
+                                    " ".join(self.lexicon.table_list),
+                                    self.word_table,
+                                    self.word_id)
+                            self._word_cache[i], = db_connection.execute(self._get_orth_str.format(i)).fetchone()
+                        L.append(self._word_cache[i])
                 return L
 
         if options.cfg.context_sentence:
@@ -2159,6 +2162,22 @@ class CorpusClass(object):
         Return a string that is sufficient to run the query on the
         MySQL database. 
         """
+        
+        sql_master = """
+        SELECT  {fields}
+        FROM    {aliased_corpus}
+                {table_joins}
+        """
+        
+        final_select = self.get_select_columns(Query, token_list)
+
+        query_string = sql_master.format(
+            fields="""
+                 , """.join(final_select)
+            )
+        
+        return query_string
+        
         def sql_string_join_lexical():
             """
             Return a string containing the inline views required to fulfil
