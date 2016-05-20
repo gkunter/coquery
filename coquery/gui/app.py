@@ -1896,6 +1896,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.corpus_manager.buildCorpus.connect(self.build_corpus)
             self.corpusListUpdated.connect(self.corpus_manager.update)
             
+            #self.corpus_manager.check_orphans()
+            
             try:
                 result = self.corpus_manager.exec_()
             except Exception as e:
