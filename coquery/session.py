@@ -101,7 +101,7 @@ class Session(object):
             maximum = max(maximum, query.get_max_tokens())
         return maximum
 
-    def run_queries(self):
+    def run_queries(self, to_file=False):
         """ 
         Run each query in the query list, and append the results to the 
         output object. Afterwards, apply all filters, and aggregate the data.
@@ -132,7 +132,7 @@ class Session(object):
         self.end_time = datetime.datetime.now()
         self.reset_row_visibility(queries.TokenQuery, self.data_table)
 
-        if not options.cfg.gui:
+        if not options.cfg.gui or to_file:
             self.aggregate_data()
             if not options.cfg.output_path:
                 output_file = sys.stdout

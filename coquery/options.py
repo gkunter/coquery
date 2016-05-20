@@ -206,6 +206,7 @@ class Options(object):
 
         self.args.query_file_path = os.path.expanduser("~")
         self.args.results_file_path = os.path.expanduser("~")
+        self.args.output_file_path = os.path.expanduser("~")
         self.args.uniques_file_path = os.path.expanduser("~")
         self.args.textgrids_file_path = os.path.expanduser("~")
         self.args.text_source_path = os.path.join(self.args.base_path, "texts", "alice")
@@ -349,9 +350,10 @@ class Options(object):
         args, unknown = self.parser.parse_known_args()
         if use_qt:
             self.args.gui = args.gui
+            self.args.to_file = False
         else:
             self.args.gui = False
-            
+            self.args.to_file = True
         self.read_configuration()
         self.setup_default_connection()
         try:
@@ -830,6 +832,10 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.results_file_path = os.path.expanduser("~")
                         try:
+                            self.args.output_file_path = config_file.get("gui", "output_file_path")
+                        except (NoOptionError, ValueError):
+                            self.args.output_file_path = os.path.expanduser("~")
+                        try:
                             self.args.stopwords_file_path = config_file.get("gui", "stopwords_file_path")
                         except (NoOptionError, ValueError):
                             self.args.stopwords_file_path = os.path.expanduser("~")
@@ -1038,6 +1044,10 @@ def save_configuration():
             config.set("gui", "results_file_path", cfg.results_file_path)
         except AttributeError:
             config.set("gui", "results_file_path", os.path.expanduser("~"))
+        try:
+            config.set("gui", "output_file_path", cfg.output_file_path)
+        except AttributeError:
+            config.set("gui", "output_file_path", os.path.expanduser("~"))
         try:
             config.set("gui", "textgrids_file_path", cfg.textgrids_file_path)
         except AttributeError:

@@ -1167,20 +1167,25 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.status_progress.setRange(0, 1)
         self.ui.status_progress.hide()
         
-    def finalize_query(self):
+    def finalize_query(self, to_file=False):
         self.query_thread = None
-        self.showMessage("Preparing results table...")
-        self.Session = self.new_session
-        del self.new_session
-        self.reaggregate()
-        self.set_query_button()
-        self.stop_progress_indicator()
-        
-        if isinstance(self.Session, StatisticsSession):
-            self.ui.group_aggregation.setEnabled(False)
+        if to_file:
+            self.showMessage("Query results written to {}.".format(options.cfg.output_path))
+            self.set_query_button()
+            self.stop_progress_indicator()
         else:
-            self.ui.group_aggregation.setEnabled(True)
-        
+            self.showMessage("Preparing results table...")
+            self.Session = self.new_session
+            del self.new_session
+            self.reaggregate()
+            self.set_query_button()
+            self.stop_progress_indicator()
+            
+            if isinstance(self.Session, StatisticsSession):
+                self.ui.group_aggregation.setEnabled(False)
+            else:
+                self.ui.group_aggregation.setEnabled(True)
+            
         # Create an alert in the system taskbar to indicate that the query has 
         # completed:
         options.cfg.app.alert(self, 0)
@@ -1679,6 +1684,21 @@ class CoqueryApp(QtGui.QMainWindow):
             self.stop_progress_indicator()
         
     def run_query(self):
+        shift_pressed = options.cfg.app.keyboardModifiers() & QtCore.Qt.ShiftModifier
+        options.cfg.to_file = shift_pressed
+        if options.cfg.to_file:
+            caption = "Choose output file... – Coquery"
+            name = QtGui.QFileDialog.getSaveFileName(
+                caption=caption,
+                directory=options.cfg.output_file_path,
+                filter="CSV files (*.csv)")
+            if type(name) == tuple:
+                name = name[0]
+            if not name:
+                return
+            options.cfg.output_file_path = name
+            options.cfg.output_path = name
+            
         self.getGuiValues()
         self.showMessage("Preparing query...")
         try:
@@ -1704,10 +1724,13 @@ class CoqueryApp(QtGui.QMainWindow):
             errorbox.ErrorBox.show(sys.exc_info(), e)
         else:
             self.set_stop_button()
-            self.showMessage("Running query...")
+            if not options.cfg.to_file:
+                self.showMessage("Running query...")
+            else:
+                self.showMessage("Writing query to file {}...".format(options.cfg.output_path))
             self.start_progress_indicator()
-            self.query_thread = classes.CoqThread(self.new_session.run_queries, parent=self)
-            self.query_thread.taskFinished.connect(self.finalize_query)
+            self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
+            self.query_thread.taskFinished.connect(lambda: self.finalize_query(options.cfg.to_file))
             self.query_thread.taskException.connect(self.exception_during_query)
             self.query_thread.start()
 
@@ -2478,7 +2501,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.options_tree.takeTopLevelItem(self.ui.options_tree.indexOfTopLevelItem(item))
         else:
             item.parent().removeChild(item)
-        options.cfg.table_links[options.cfg.current_server].remove(item.link)
+        if hasattr(item, link):
+            options.cfg.table_links[options.cfg.current_server].remove(item.link)
 
 #try:
     #_encoding = QtGui.QApplication.UnicodeUTF8
