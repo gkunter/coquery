@@ -1032,30 +1032,33 @@ class SQLResource(BaseResource):
             else:
                 L = []
                 for i in word_id:
-                    if not i:
-                        L.append(DEFAULT_MISSING_VALUE)
-                    else:
-                        if i not in self._word_cache:
-                            if not self._get_orth_str:
-                                if hasattr(self, "surface_feature"):
-                                    word_feature = self.surface_feature
-                                else:
-                                    word_feature = getattr(self, QUERY_ITEM_WORD)
-                                _, _, table, feature = self.split_resource_feature(word_feature)
+                    if i not in self._word_cache:
+                        if not self._get_orth_str:
+                            if hasattr(self, "surface_feature"):
+                                word_feature = self.surface_feature
+                            else:
+                                word_feature = getattr(self, QUERY_ITEM_WORD)
+                            _, _, table, feature = self.split_resource_feature(word_feature)
 
-                                self.lexicon.joined_tables = []
-                                self.lexicon.table_list = [self.word_table]
-                                self.lexicon.add_table_path("word_id", word_feature)
-                                
-                                self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
-                                    getattr(self, word_feature),
-                                    " ".join(self.lexicon.table_list),
-                                    self.word_table,
-                                    self.word_id)
+                            self.lexicon.joined_tables = []
+                            self.lexicon.table_list = [self.word_table]
+                            self.lexicon.add_table_path("word_id", word_feature)
+                            
+                            self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
+                                getattr(self, word_feature),
+                                " ".join(self.lexicon.table_list),
+                                self.word_table,
+                                self.word_id)
+                        try:
                             self._word_cache[i], = db_connection.execute(self._get_orth_str.format(i)).fetchone()
-                        L.append(self._word_cache[i])
+                        except TypeError as e:
+                            print(e)
+                            print(i)
+                            print(self._get_orth_str.format(i))
+                            self._word_cache[i] = DEFAULT_MISSING_VALUE
+                    L.append(self._word_cache[i])
                 return L
-
+                
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
 
@@ -1721,7 +1724,7 @@ class CorpusClass(object):
                 
         # if a GUI is used, include source features so the entries in the
         # result table can be made clickable to show the context:
-        if options.cfg.gui or options.cfg.context_left or options.cfg.context_right:
+        if (options.cfg.gui and not options.cfg.to_file) or options.cfg.context_left or options.cfg.context_right:
             if options.cfg.token_origin_id:
                 required_features.add(options.cfg.token_origin_id)
 
@@ -1817,7 +1820,7 @@ class CorpusClass(object):
             
             # if a GUI is used, include source features so the entries in the
             # result table can be made clickable to show the context:
-            if options.cfg.gui or options.cfg.context_left or options.cfg.context_right:
+            if (options.cfg.gui and not options.cfg.to_file) or options.cfg.context_left or options.cfg.context_right:
                 if options.cfg.token_origin_id:
                     requested_features.append(options.cfg.token_origin_id)
         else:
@@ -2059,7 +2062,7 @@ class CorpusClass(object):
         # corpus origin resource (which is either the source id or the file
         # id) to the selected columns, but only for the first query item, 
         # and only if the gui is used:
-        if options.cfg.gui and number == 0 and options.cfg.token_origin_id:
+        if (options.cfg.gui and not options.cfg.to_file) and number == 0 and options.cfg.token_origin_id:
             select_list.add("coq_{}_1".format(options.cfg.token_origin_id))
 
         S = "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
@@ -2164,22 +2167,7 @@ class CorpusClass(object):
         Return a string that is sufficient to run the query on the
         MySQL database. 
         """
-        
-        sql_master = """
-        SELECT  {fields}
-        FROM    {aliased_corpus}
-                {table_joins}
-        """
-        
-        final_select = self.get_select_columns(Query, token_list)
 
-        query_string = sql_master.format(
-            fields="""
-                 , """.join(final_select)
-            )
-        
-        return query_string
-        
         def sql_string_join_lexical():
             """
             Return a string containing the inline views required to fulfil
@@ -2237,6 +2225,61 @@ class CorpusClass(object):
 
             return "\n".join(s_set)
 
+        # For a query string 'the [n*2]', this is the query string this method
+        # should produce (in COCA):
+        
+        # SELECT  e1.Word AS coq_word_label_1, 
+        #         e2.Word AS coq_word_label_2, 
+        #         Genre AS coq_corpus_source_1
+        # FROM    CorpusNgram 
+        # INNER JOIN 
+        #         Sources 
+        # ON      CorpusNgram.SourceId = Sources.SourceId 
+        # INNER JOIN
+        #         Lexicon AS e1
+        # ON      CorpusNgram.WordId1 = e1.WordId
+        # INNER JOIN
+        #         Lexicon AS e2
+        # ON      CorpusNgram.WordId2 = e2.WordId
+        # WHERE   e1.Word = 'the' AND e2.POS LIKE 'n%2'
+
+        sql_master = """
+        SELECT  {fields}
+        FROM    {corpus}
+                {table_join}
+        WHERE   {where_string}
+        """
+
+        
+        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features()]
+        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features()]
+
+        # determine how words are stored: either directly as a string in a
+        # word column, or as keys to a word table:
+        if hasattr(self.resource, "corpus_word_id"):
+            word_id_column = self.resource.corpus_word_id
+        elif hasattr(self.resource, "corpus_word"):
+            word_id_column = self.resource.corpus_id
+
+        corpus_fields = ["{id} AS coq_corpus_id_1".format(
+            tab=self.resource.corpusngram_table, 
+            id=self.resource.corpus_id)]
+
+        for i in range(len(token_list)):
+            corpus_fields.append("{col}{i} AS coq_corpus_word_id_{i}".format(
+                tab=self.resource.corpusngram_table, 
+                col=word_id_column, 
+                i=i+1))
+            
+        if options.cfg.token_origin_id:
+            corpus_fields.append("{} AS coq_{}_1".format(
+                getattr(self.resource, options.cfg.token_origin_id),
+                options.cfg.token_origin_id))
+
+
+        #### OLD:
+        
+        
         corpus_features = [(x, y) for x, y in self.resource.get_corpus_features()]
         lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features()]
 
