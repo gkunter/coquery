@@ -2068,9 +2068,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
         - the corpus installer in case of adhoc corpora
         """
         if self.arguments.c:
-            #try:
-                #sqlhelper.drop_database(options.cfg.current_server, self.arguments.db_name)
-            #except:
+            try:
+                sqlhelper.drop_database(options.cfg.current_server, self.arguments.db_name)
+            except:
                 pass
 
         path = self.get_module_path(self.arguments.name)
@@ -2162,15 +2162,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     self.commit_data()
                     progress_done()
 
-                try:
-                    if self.arguments.lookup_ngram and not self.interrupted:
-                        current = progress_next(current)
-                        self.build_lookup_ngram()
-                        progress_done()
-                except Exception as e:
-                    logger.error("Error building ngram lookup: {}".format(e))
-                    print(e)
-
                 if not self.interrupted:
                     current = progress_next(current)
                     for stage in self.additional_stages:
@@ -2182,6 +2173,15 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     current = progress_next(current)
                     self.build_optimize()
                     progress_done()
+
+                try:
+                    if self.arguments.lookup_ngram and not self.interrupted:
+                        current = progress_next(current)
+                        self.build_lookup_ngram()
+                        progress_done()
+                except Exception as e:
+                    logger.error("Error building ngram lookup: {}".format(e))
+                    print(e)
 
                 if self.arguments.i and not self.interrupted:
                     current = progress_next(current)
