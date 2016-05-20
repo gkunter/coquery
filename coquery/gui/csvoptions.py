@@ -159,6 +159,7 @@ class CSVOptionDialog(QtGui.QDialog):
             
             return CSVOptions(
                 sep=utf8(dialog.ui.separate_char.currentText()),
+                selected_column=dialog.ui.query_column.value(),
                 header=dialog.ui.file_has_headers.isChecked(),
                 skip_lines=dialog.ui.ignore_lines.value(),
                 encoding=utf8(dialog.ui.combo_encoding.currentText()),
