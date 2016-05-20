@@ -27,6 +27,7 @@ from coquery.unicode import utf8
 from . import classes
 from .pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 from .ui.corpusManagerUi import Ui_corpusManager
+from . import orphanageddatabases
 
 class CoqAccordionEntry(QtGui.QWidget):
     """ Define a QWidget that can be used as an entry in a accordion list."""
@@ -487,7 +488,13 @@ class CorpusManager(QtGui.QDialog):
     def closeEvent(self, event):
         options.settings.setValue("corpusmanager_size", self.size())
         options.set_current_server(options.cfg.current_server)
-                    
+
+    def check_orphans(self):
+        dialog = orphanageddatabases.OrphanagedDatabasesDialog()
+        dialog.exec_()
+
+        
+    
 def main():
     app = QtGui.QApplication(sys.argv)
     installer_list = CorpusManager.display("../installer", lambda x: x, lambda x: x)
