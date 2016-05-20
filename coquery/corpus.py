@@ -2010,7 +2010,7 @@ class CorpusClass(object):
                         name)
                     column_list.add(variable_string)
                     select_list.add(name)
-                
+                    
                 columns = ", ".join(column_list)
                 where_string = ""
                 if rc_table in rc_where_constraints:
@@ -2055,9 +2055,11 @@ class CorpusClass(object):
         if not select_list:
             return ""
         
-        # add the variable storing the source_id or file_id to the selected
-        # columns so that they can be used to retrieve the context:
-        if number == 0 and options.cfg.token_origin_id:
+        # in order to make the context viewer work in the gui, add the 
+        # corpus origin resource (which is either the source id or the file
+        # id) to the selected columns, but only for the first query item, 
+        # and only if the gui is used:
+        if options.cfg.gui and number == 0 and options.cfg.token_origin_id:
             select_list.add("coq_{}_1".format(options.cfg.token_origin_id))
 
         S = "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))

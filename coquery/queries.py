@@ -49,6 +49,10 @@ class TokenQuery(object):
     This class manages the query string, and is responsible for the output 
     of the query results. 
     """
+    
+    _query_cache = {}
+    _allow_cache = False
+    
     def __init__(self, S, Session):
         self.query_list = tokens.preprocess_query(S)
         self.query_string = S
@@ -135,6 +139,7 @@ class TokenQuery(object):
         the quantified queries if quantified tokens are used. The results are 
         stored in self.results_frame.
         """
+                
         self.results_frame = pd.DataFrame()
         
         self._max_number_of_tokens = 0
@@ -158,32 +163,40 @@ class TokenQuery(object):
             query_string = self.Resource.get_query_string(self, self._sub_query)
             
             with self.Resource.get_engine().connect() as connection:
-                if not query_string:
-                    df = pd.DataFrame()
+                if self._allow_cache and (self.Resource, type(self), self.query_string) in self._query_cache:
+                    df = self._query_cache[self.Resource, type(self), self.query_string]
                 else:
-                    if options.cfg.verbose:
-                        logger.info(query_string)
-                    
-                    # SQLite: attach external databases
-                    if self.Resource.db_type == SQL_SQLITE:
-                        for db_name in self.Resource.attach_list:
-                            path = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
-                            S = "ATTACH DATABASE '{}' AS {}".format(path, db_name)
-                            connection.execute(S)
-
-                    try:
-                        results = connection.execution_options(stream_results=True).execute(query_string.replace("%", "%%"))
-                    except Exception as e:
-                        connection.close()
-                        print(query_string)
-                        print(e)
-                        raise e
-                    df = pd.DataFrame(self.string_folder(results))
-                    if not len(df.index):
-                        df = pd.DataFrame(columns=results.keys())
+                    if not query_string:
+                        df = pd.DataFrame()
                     else:
-                        df.columns = results.keys()
-                    results = None
+                        if options.cfg.verbose:
+                            logger.info(query_string)
+
+                        # SQLite: attach external databases
+                        if self.Resource.db_type == SQL_SQLITE:
+                            for db_name in self.Resource.attach_list:
+                                path = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
+                                S = "ATTACH DATABASE '{}' AS {}".format(path, db_name)
+                                connection.execute(S)
+
+                        try:
+                            results = connection.execution_options(stream_results=True).execute(query_string.replace("%", "%%"))
+                        except Exception as e:
+                            connection.close()
+                            print(query_string)
+                            print(e)
+                            raise e
+                        df = pd.DataFrame(self.string_folder(results))
+                        if not len(df.index):
+                            df = pd.DataFrame(columns=results.keys())
+                        else:
+                            df.columns = results.keys()
+                        results = None
+
+                    # use a query cache for SQLite3 connections:
+                    if (self.Resource.db_type == SQL_SQLITE and 
+                        sys.getsizeof(self._allow_cache) + sys.getsizeof(df) < options.cfg.query_cache_size):
+                        self._query_cache[self.Resource, type(self), self.query_string] = df
 
                 df = self.insert_static_data(df)
                 df = self.insert_context(df, connection)
@@ -578,6 +591,8 @@ class FrequencyQuery(TokenQuery):
     of the groups as a frequency value.
     """
     
+    #_allow_cache = True
+    
     @staticmethod
     def add_output_columns(session):
         l1 = [x for x in options.cfg.selected_features if not x.startswith("statistics_")]
@@ -704,11 +719,14 @@ class FrequencyQuery(TokenQuery):
                 lambda x: x.statistics_frequency/x.statistics_subcorpus_size,
                 axis=1)
 
-        result["statistics_overall_proportion"] = result.statistics_frequency.divide(result.statistics_frequency.sum())
-        if len(result.index) == 1:
-            result["statistics_overall_entropy"] = 0
-        else:
-            result["statistics_overall_entropy"] = -result.statistics_overall_proportion.apply(lambda x: x * math.log(x, 2)).sum()
+        if ("statistics_overall_entropy" in options.cfg.selected_features or 
+            "statistics_overall_entropy" in options.cfg.selected_features):
+            result["statistics_overall_proportion"] = result.statistics_frequency.divide(result.statistics_frequency.sum())
+            if "statistics_overall_entropy" in options.cfg.selected_features:
+                if len(result.index) == 1:
+                    result["statistics_overall_entropy"] = 0
+                else:
+                    result["statistics_overall_entropy"] = -result.statistics_overall_proportion.apply(lambda x: x * math.log(x, 2)).sum()
 
         # entries with no corpus_id are the result of empty frequency 
         # queries. Their frequency is set to zero:
