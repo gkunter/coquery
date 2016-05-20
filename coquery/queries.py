@@ -139,7 +139,6 @@ class TokenQuery(object):
         the quantified queries if quantified tokens are used. The results are 
         stored in self.results_frame.
         """
-                
         self.results_frame = pd.DataFrame()
         
         self._max_number_of_tokens = 0
@@ -340,7 +339,12 @@ class TokenQuery(object):
         else:
             word_feature = getattr(self.Session.Resource, QUERY_ITEM_WORD)
         
-        df = df.apply(insert_columns, axis=1)        
+        # from http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.apply.html
+        # "In the current implementation apply calls func twice on the first 
+        # column/row to decide whether it can take a fast or slow code path. 
+        # This can lead to unexpected behavior if func has side-effects, as 
+        # they will take effect twice for the first column/row.
+        df = df.apply(insert_columns, axis=1)
         
         if options.cfg.context_mode == CONTEXT_KWIC:
             left_columns = ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
