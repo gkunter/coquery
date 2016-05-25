@@ -59,6 +59,7 @@ class CoqThread(QtCore.QThread):
     def run(self):
         self.taskStarted.emit()
         self.exiting = False
+        result = None
         try:
             if options.cfg.profile:
                 import cProfile
@@ -76,6 +77,7 @@ class CoqThread(QtCore.QThread):
                 self.parent().exc_info = sys.exc_info()
                 self.parent().exception = e
             self.taskException.emit(e)
+            print(e)
         self.taskFinished.emit()
         return result
 
