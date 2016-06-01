@@ -1114,10 +1114,16 @@ class CollocationQuery(TokenQuery):
             # method doesn't know about the maximum token number in this query.
             # Somehow, get_max_tokens() needs to be passed to this method to 
             # effect something like max_tokens = cls.get_max_tokens(cls)
+
             max_tokens = 1 + left_span + right_span
             right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
-            left_context_span = df[fix_col + left_cols]
-            right_context_span = df[fix_col + right_cols]
+            
+            node_cols = [x for x in df.columns if x.startswith("coq_word_label")]
+            node_cols = []
+
+            left_context_span = df[fix_col + left_cols + node_cols]
+            right_context_span = df[fix_col + right_cols + node_cols]
+
             if not options.cfg.output_case_sensitive:
                 if options.cfg.output_to_lower:
                     for column in left_cols:
@@ -1130,8 +1136,8 @@ class CollocationQuery(TokenQuery):
                     for column in right_cols:
                         right_context_span[column] = right_context_span[column].apply(lambda x: x.upper())
 
-            left = left_context_span[left_cols].stack().value_counts()
-            right = right_context_span[right_cols].stack().value_counts()
+            left = left_context_span[left_cols + node_cols].stack().value_counts()
+            right = right_context_span[right_cols + node_cols].stack().value_counts()
 
             all_words = set(list(left.index) + list(right.index))
         else:
@@ -1142,6 +1148,7 @@ class CollocationQuery(TokenQuery):
             
             left = left.reindex(all_words).fillna(0).astype(int)
             right = right.reindex(all_words).fillna(0).astype(int)
+            #node = node.reindex(all_words).fillna(0).astype(int)
             
             collocates = pd.concat([left, right], axis=1)
             collocates = collocates.reset_index()

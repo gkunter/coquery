@@ -82,6 +82,7 @@ COLUMN_NAMES = {
     "coq_collocate_frequency": "Collocate frequency",
     "coq_collocate_frequency_left": "Left context frequency",
     "coq_collocate_frequency_right": "Right context frequency",
+    "coq_collocate_node": "Node",
     "coq_mutual_information": "Mutual information",
     "coq_conditional_probability_left": "Pc(left)",
     "coq_conditional_probability_right": "Pc(right)",
