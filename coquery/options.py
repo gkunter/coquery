@@ -477,14 +477,6 @@ class Options(object):
                           ["file_name", "file_label", "corpus_file"],
                           "show the name of the file containing each token")
             
-            #if hasattr("corpus_starttime", resource):
-                
-                #if "time_label" in dir(resource):
-                    #s = "--{} {}".format(resource.time_table, resource.time_label)
-                #else:
-                    #s = "--{} {}".format(resource.corpus_table, resource.corpus_time)
-                #group.add_argument("--time", help="show the time code for each token, equivalent to: {}".format(s), action="store_true", dest="show_time")
-
         self.parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
         
         # reparse the arguments, this time with options that allow feature
