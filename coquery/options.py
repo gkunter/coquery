@@ -258,11 +258,7 @@ class Options(object):
         
     def setup_parser(self):
         self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=QUERY_MODES.keys(), type=str, nargs="?")
-        if sys.version_info < (3, 0):
-            l = [utf8(x) for x in self.corpus_argument_dict["choices"]]
-            self.corpus_argument_dict["choices"] = l
-        self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
-        
+
         # If Qt is available, the GUI is used by default. The command line 
         # interface can be selected by using the --con option:
         if use_qt:
@@ -273,7 +269,7 @@ class Options(object):
         group = self.parser.add_mutually_exclusive_group()
         group.add_argument("-i", "--inputfile", help="read query strings from INPUTFILE", type=str, dest="input_path")
         group.add_argument("-q", "--query", help="use QUERY for search, ignoring any INPUTFILE", dest="query_list")
-        self.parser.add_argument("-F", "--filter", help="use FILTER to query only a selection of texts", type=str, default="", dest="source_filter")
+        self.parser.add_argument("-f", "--filter", help="use FILTER to query only a selection of texts", type=str, default="", dest="source_filter")
         self.parser.add_argument("--connection", help="use dabase connection named CURRENT_SERVER", type=str, dest="current_server")
 
         # File options:
@@ -290,9 +286,7 @@ class Options(object):
 
         # Debug options:
         group = self.parser.add_argument_group("Debug options")
-        #group.add_argument("-d", "--dry-run", help="dry run (do not query, just log the query strings)", action="store_true")
         group.add_argument("-v", "--verbose", help="produce a verbose output", action="store_true", dest="verbose")
-        #group.add_argument("-V", "--super-verbose", help="be super-verbose (i.e. log function calls)", action="store_true")
         group.add_argument("-E", "--explain", help="explain mySQL queries in log file", action="store_true", dest="explain_queries")
         group.add_argument("--benchmark", help="benchmarking of Coquery", action="store_true")
         group.add_argument("--profile", help="deterministic profiling of Coquery", action="store_true")
@@ -305,7 +299,6 @@ class Options(object):
         group.add_argument("-C", "--output_case", help="be case-sensitive in the output (default: ignore case)", action="store_true", dest="output_case_sensitive")
         group.add_argument("--query_case", help="be case-sensitive when querying (default: ignore case)", action="store_true", dest="query_case_sensitive")
         group.add_argument("--one_by_one", help="retrieve results from server one by one (somewhat slower, but uses less memory)", action="store_true", dest="server_side")
-        #group.add_argument("-L", "--lemmatize-tokens", help="treat all tokens in query as lemma searches (default: be COCA-compatible and only do lemma searches if explicitly specified in query string)", action="store_true")
         group.add_argument("-r", "--regexp", help="use regular expressions", action="store_true", dest="regexp")
 
         # Output options:
@@ -319,10 +312,8 @@ class Options(object):
         group.add_argument("--digits", help="set the number of digits after the period", dest="digits", default=3, type=int)
 
         group.add_argument("--number_of_tokens", help="output up to NUMBER different tokens (default: all tokens)", default=0, type=int, dest="number_of_tokens", metavar="NUMBER")
-        #group.add_argument("-u", "--unique-id", help="include the token id for the first token matching the output", action="store_true", dest="show_id")
         group.add_argument("-Q", "--show_query", help="include query string in the output", action="store_true", dest="show_query")
-        group.add_argument("-P", "--show_parameters", help="include the parameter string in the output", action="store_true", dest="show_parameters")
-        group.add_argument("-f", "--show_filter", help="include the filter strings in the output", action="store_true", dest="show_filter")
+        group.add_argument("--show_filter", help="include the filter strings in the output", action="store_true", dest="show_filter")
         group.add_argument("--freq-label", help="use this label in the heading line of the output (default: Freq)", default="Freq", type=str, dest="freq_label")
         group.add_argument("--no_align", help="Control if quantified token columns are aligned. If not set (the default), the columns in the result table are aligned so that row cells belonging to the same query token are placed in the same column. If set, this alignment is disabled. In that case, row cells are padded to the right.", action="store_false", dest="align_quantified")
 
@@ -337,11 +328,31 @@ class Options(object):
         is used, both a corpus and a query mode have to be specified, and 
         only the database settings from the configuration file are used.
         """
-        self.corpus_argument_dict = {
-            "help": "specify the corpus to use", 
-            "choices": [utf8(x) for x in get_available_resources(DEFAULT_CONFIGURATION).keys()], 
-            "type": type(str(""))}
-
+        
+        def add_shorthand(group, d, shorthand, resource_list, description):
+            """
+            Add the suitable shorthand from the resource list to the group.
+            """
+            for rc_feature in resource_list:
+                if rc_feature.startswith("query_item_"):
+                    # special treatment of query item mappings:
+                    try:
+                        d[shorthand] = getattr(resource, rc_feature)
+                    except AttributeError:
+                        continue    
+                    else:
+                        break
+                elif hasattr(resource, rc_feature):
+                    d[shorthand] = rc_feature
+                    break
+            if shorthand in d:
+                _, _, tab, _ = resource.split_resource_feature(d[shorthand])
+                table = getattr(resource, "{}_table".format(tab))
+                feature = getattr(resource, d[shorthand])
+                group.add_argument(shorthand, 
+                    help="{}, equivalent to '-{} {}'".format(description, table, feature),
+                    action="store_true")
+                          
         self.setup_parser()
         
         # Do a first argument parse to get the corpus to be used, and 
@@ -354,8 +365,32 @@ class Options(object):
         else:
             self.args.gui = False
             self.args.to_file = True
+        
+        match = re.search("--connection\s+(.+)", self.args.parameter_string)
+        if match:
+            self.args.current_server = match.group(1)
+        else:
+            self.args.current_server = None
+
         self.read_configuration()
         self.setup_default_connection()
+
+        # create a dictionary that contains the corpora available for the 
+        # current connection:
+        self.corpus_argument_dict = {
+            "help": "specify the corpus to use", 
+            "choices": [utf8(x) for x in get_available_resources(self.args.current_server).keys()], 
+            "type": type(str(""))}
+        
+        if sys.version_info < (3, 0):
+            l = [utf8(x) for x in self.corpus_argument_dict["choices"]]
+            self.corpus_argument_dict["choices"] = l
+        self.corpus_argument_dict["choices"] = sorted(self.corpus_argument_dict["choices"])
+
+        # add the corpus names as possible values for the argument parser:
+        self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
+        args, unknown = self.parser.parse_known_args()
+        
         try:
             if args.corpus:
                 self.args.corpus = args.corpus
@@ -363,13 +398,14 @@ class Options(object):
                 self.args.corpus = ""
         except AttributeError:
             self.args.corpus = ""
+
+            
         self.args.corpus = utf8(self.args.corpus)
         # if no corpus is selected and no GUI is requested, display the help
         # and exit.
         if not self.args.corpus and not (self.args.gui):
             self.parser.print_help()
             sys.exit(1)
-        
         D = {}
         
         if self.args.corpus:
@@ -395,61 +431,59 @@ class Options(object):
                     group.add_argument("-@", "--use-pos-diacritics", help="use undocumented characters '@' and '%%' in queries using part-of-speech tags (default: be COCA-compatible and ignore these characters in part-of-speech tags)", action="store_true", dest="ignore_pos_chars")
             except KeyError:
                 pass
-
+        
         if D:
             # add choice arguments for the available table columns:
             for rc_table in D.keys():
-                table = type(resource).__getattribute__(resource, str(rc_table))
+                table = getattr(resource, utf8(rc_table))
                 if len(D[rc_table]) > 1:
                     D[rc_table].add(("ALL", None))
                     group_help = "These options specify which data columns from the table '{0}' will be included in the output. You can either repeat the option for every column that you wish to add, or you can use --{0} ALL if you wish to include all columns from the table in the output.".format(table)
-                    group_name = "Output options for table '{0}'".format(table)
+                    group_name = "Output options for table '{}'".format(table)
                 else:
-                    group_name = "Output option for table '{0}'".format(table)
+                    group_name = "Output option for table '{}'".format(table)
                     group_help = "This option will include the data column '{1}' from the table '{0}' in the output.".format(table, list(D[rc_table])[0][0])
                 group = self.parser.add_argument_group(group_name, group_help)
                 group.add_argument("--{}".format(table), choices=sorted([x for x, _ in D[rc_table]]), dest=rc_table, action="append")
 
             # add output column shorthand options
-            group=self.parser.add_argument_group("Output column shorthands", "These options are shorthand forms that select some commonly used output columns. The equivalent shows the corresponding longer output option.")
-            if "word_label" in dir(resource) or "corpus_word" in dir(resource):
-                if "word_label" in dir(resource):
-                    s = "--{} {}".format(resource.word_table, resource.word_label)
-                else:
-                    s = "--{} {}".format(resource.corpus_table, resource.corpus_word)
-                group.add_argument("-O", help="show orthographic forms of each token, equivalent to: {}".format(s), action="store_true", dest="show_orth")
-            if "pos_label" in dir(resource) or "word_pos" in dir(resource):
-                if "pos_label" in dir(resource):
-                    s = "--{} {}".format(resource.pos_table, resource.pos_label)
-                else:
-                    s = "--{} {}".format(resource.word_table, resource.word_pos)
-                group.add_argument("-p", help="show the part-of-speech tag of each token, equivalent to: {}".format(s), action="store_true", dest="show_pos")
-            if "lemma_label" in dir(resource) or "word_lemma" in dir(resource):
-                if "lemma_label" in dir(resource):
-                    s = "--{} {}".format(resource.lemma_table, resource.lemma_label)
-                else:
-                    s = "--{} {}".format(resource.word_table, resource.word_lemma)
-                group.add_argument("-l", help="show the lemma of each token, equivalent to: {}".format(s), action="store_true", dest="show_lemma")
-            if "transcript_label" in dir(resource) or "word_transcript" in dir(resource):
-                if "transcript_label" in dir(resource):
-                    s = "--{} {}".format(resource.transcript_table, resource.transcript_label)
-                else:
-                    s = "--{} {}".format(resource.word_table, resource.word_transcript)
-                group.add_argument("--phon", help="show the phonological transcription of each token, equivalent to: {}".format(s), action="store_true", dest="show_phon")
-            if "file_label" in dir(resource) or "corpus_file" in dir(resource):
-                if "file_label" in dir(resource):
-                    s = "--{} {}".format(resource.file_table, resource.file_label)
-                else:
-                    s = "--{} {}".format(resource.corpus_table, resource.corpus_file)
-                group.add_argument("--filename", help="show the name of the file containing each token, equivalent to: {}".format(s), action="store_true", dest="show_filename")
-            if "time_label" in dir(resource) or "corpus_time" in dir(resource):
-                if "time_label" in dir(resource):
-                    s = "--{} {}".format(resource.time_table, resource.time_label)
-                else:
-                    s = "--{} {}".format(resource.corpus_table, resource.corpus_time)
-                group.add_argument("--time", help="show the time code for each token, equivalent to: {}".format(s), action="store_true", dest="show_time")
+            group = self.parser.add_argument_group("Output column shorthands", "These options are shorthand forms that select some commonly used output columns. The equivalent shows the corresponding longer output option.")
+               
+            shorthands = {}            
 
-        #group.add_argument("-u", "--unique-id", help="include the token id for the first token matching the output", action="store_true", dest="show_id")
+            add_shorthand(group, shorthands, "-U", ["corpus_id"], "show the corpus ID of each token") 
+            
+            add_shorthand(group, shorthands, "-O", 
+                          ["query_item_word", "word_label", "corpus_word"],
+                          "show the orthographic form of each token")
+
+            add_shorthand(group, shorthands, "-L", 
+                          ["query_item_lemma", "lemma_label", "word_lemma", "corpus_lemma"],
+                          "show the lemma of each token")
+
+            add_shorthand(group, shorthands, "-P", 
+                          ["query_item_pos", "pos_label", "word_pos", "corpus_pos"],
+                          "show the part-of-speech tag of each token")
+            
+            add_shorthand(group, shorthands, "-T", 
+                          ["query_item_transcript", "transcript_label", "word_transcript", "corpus_transcript"],
+                          "show the transcription of each token")
+            
+            add_shorthand(group, shorthands, "-G", 
+                          ["query_item_gloss", "gloss_label", "word_gloss", "corpus_gloss"],
+                          "show the gloss of each token")
+            
+            add_shorthand(group, shorthands, "-F", 
+                          ["file_name", "file_label", "corpus_file"],
+                          "show the name of the file containing each token")
+            
+            #if hasattr("corpus_starttime", resource):
+                
+                #if "time_label" in dir(resource):
+                    #s = "--{} {}".format(resource.time_table, resource.time_label)
+                #else:
+                    #s = "--{} {}".format(resource.corpus_table, resource.corpus_time)
+                #group.add_argument("--time", help="show the time code for each token, equivalent to: {}".format(s), action="store_true", dest="show_time")
 
         self.parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
         
@@ -458,7 +492,7 @@ class Options(object):
         args, unknown = self.parser.parse_known_args()
         if unknown:
             self.parser.print_help()
-            raise UnknownArgumentError(unknown)
+            sys.exit(1)
         if args.help:
             self.parser.print_help()
             sys.exit(0)
@@ -489,55 +523,10 @@ class Options(object):
             
         # evaluate the shorthand options. If set, add the corresponding 
         # resource feature to the list of selected features
-        try:
-            if self.args.show_orth:
-                if "word_table" in dir(resource):
-                    self.args.selected_features.append("word_label")
-                else:
-                    self.args.selected_feature.append("corpus_word")
-        except AttributeError:
-            pass
-        try:
-            if self.args.show_pos:
-                if "pos_table" in dir(resource):
-                    self.args.selected_features.append("pos_label")
-                else:
-                    self.args.selected_features.append("word_pos")
-        except AttributeError:
-            pass
-        try:
-            if self.args.show_lemma:
-                if "lemma_table" in dir(resource):
-                    self.args.selected_features.append("lemma_label")
-                else:
-                    self.args.selected_features.append("word_lemma")
-        except AttributeError:
-            pass
-        try:
-            if self.args.show_phon:
-                if "transcript_table" in dir(resource):
-                    self.args.selected_features.append("transcript_label")
-                else:
-                    self.args.selected_features.append("word_transcript")
-        except AttributeError:
-            pass
-        try:
-            if self.args.show_filename:
-                if "file_table" in dir(resource):
-                    self.args.selected_features.append("file_label")
-                else:
-                    self.args.selected_features.append("corpus_file")
-        except AttributeError:
-            pass
-        try:
-            if self.args.show_time:
-                if "time_table" in dir(resource):
-                    self.args.selected_features.append("time_label")
-                else:
-                    self.args.selected_features.append("corpus_time")
-        except AttributeError:
-            pass
-        
+        for key in shorthands:
+            if vars(self.args)[key.strip("-")]:
+                self.args.selected_features.append(shorthands[key])
+            
         try:
             if self.args.show_query:
                 self.args.selected_features.append("coquery_query_string")
@@ -682,11 +671,12 @@ class Options(object):
                         pass
 
                 try:
-                    self.args.current_server = config_file.get("sql", "active_configuration")
-                    if self.args.current_server in self.args.server_configuration:
-                        self.args.current_resources = get_available_resources(self.args.current_server)
-                    else:
-                        raise ValueError
+                    if self.args.current_server == None:
+                        self.args.current_server = config_file.get("sql", "active_configuration")
+                        if self.args.current_server in self.args.server_configuration:
+                            self.args.current_resources = get_available_resources(self.args.current_server)
+                        else:
+                            raise ValueError
                 except (NoOptionError, ValueError):
                     self.args.current_server = "Default"
                     self.args.current_resources = get_available_resources(self.args.current_server)
