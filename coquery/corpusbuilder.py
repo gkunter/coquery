@@ -477,7 +477,12 @@ class Table(object):
             (-8388608, 8388607, "MEDIUMINT"),
             (0, 4294967295, "INT UNSIGNED"),
             (-2147483648, 2147483647, "INT")]
-        
+
+        if self._DB.db_type == SQL_SQLITE:
+            func_length = "length"
+        elif self._db.db_type == SQL_MYSQL:
+            func_length = "CHAR_LENGTH"
+
         col = self.get_column(name)
 
         # test if column contains NULL
@@ -509,8 +514,8 @@ class Table(object):
 
         # character data types:
         elif col.base_type.endswith(("CHAR", "TEXT")):
-            S = "SELECT MAX(CHAR_LENGTH(RTRIM({0}))) FROM {1}".format(
-                col.name, self.name)
+            S = "SELECT MAX({2}(RTRIM({0}))) FROM {1}".format(
+                col.name, self.name, func_length)
             with self._DB.engine.connect() as connection:
                 max_len = connection.execute(S).fetchone()[0]
             dt_type = "VARCHAR({})".format(max_len)
