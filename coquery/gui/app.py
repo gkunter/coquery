@@ -1994,8 +1994,14 @@ class CoqueryApp(QtGui.QMainWindow):
         
     def settings(self):
         from . import settings
+        old_context_font = options.cfg.context_font
         settings.Settings.manage(options.cfg, self)
         self.ui.data_preview.setFont(options.cfg.table_font)
+
+        if options.cfg.context_font != old_context_font:
+            for widget in self.widget_list:
+                if isinstance(widget, contextviewer.ContextView):
+                    widget.update_context()
 
     def change_current_server(self):
         name = self.ui.combo_config.currentText()

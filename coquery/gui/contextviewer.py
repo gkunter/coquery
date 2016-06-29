@@ -149,9 +149,50 @@ class ContextView(QtGui.QWidget):
                 self.token_width,
                 self.ui.slider_context_width.value(), self)
             font = options.cfg.context_font
-            line_height = 'line-height: {}px'.format(font.pointSize() * 1.5)
-            font_str = 'font: {}px "{}"'.format(font.pointSize(), font.family())
-            s = "<div style='{}; {}'>{}</div>".format(font_str, line_height, context)
+            
+            if int(font.style()) == int(QtGui.QFont.StyleItalic):
+                style = "italic"
+            elif int(font.style()) == int(QtGui.QFont.StyleOblique):
+                style = "oblique"
+            else:
+                style = "normal"
+                
+            if font.stretch() == int(QtGui.QFont.UltraCondensed):
+                stretch = "ultra-condensed"
+            elif font.stretch() == int(QtGui.QFont.ExtraCondensed):
+                stretch = "extra-condensed"
+            elif font.stretch() == int(QtGui.QFont.Condensed):
+                stretch = "condensed"
+            elif font.stretch() == int(QtGui.QFont.SemiCondensed):
+                stretch = "semi-condensed"
+            elif font.stretch() == int(QtGui.QFont.Unstretched):
+                stretch = "normal"
+            elif font.stretch() == int(QtGui.QFont.SemiExpanded):
+                stretch = "semi-expanded"
+            elif font.stretch() == int(QtGui.QFont.Expanded):
+                stretch = "expanded"
+            elif font.stretch() == int(QtGui.QFont.ExtraExpanded):
+                stretch = "extra-expanded"
+            elif font.stretch() == int(QtGui.QFont.UltraExpanded):
+                stretch = "ultra-expanded"
+
+            weight = int(font.weight()) * 10
+            
+            styles = []
+            
+            styles.append('line-height: {}px'.format(font.pointSize() * 1.5))
+            styles.append('font: {}px "{}"'.format(font.pointSize(), font.family()))
+            styles.append("font-style: {}".format(style))
+            styles.append("font-weight: {}".format(weight))
+            styles.append("font-strech: {}".format(stretch))
+
+            if font.underline():
+                context = "<u>{}</u>".format(context)
+            if font.strikeOut():
+                context = "<s>{}</s>".format(context)
+
+            s = "<div style='{}'>{}</div>".format("; ".join(styles), context)
+
             self.ui.context_area.setText(s)
         
     def keyPressEvent(self, e):
