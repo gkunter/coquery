@@ -15,6 +15,7 @@ import os
 import logging
 import warnings
 import sqlalchemy
+import pandas as pd
 
 from .errors import *
 from .defines import *
@@ -255,7 +256,7 @@ class SqlDB (object):
             cursor = con.cursor()
         cursor.execute(S)
         return cursor
-
+    
     def load_dataframe(self, df, table_name, index_label, if_exists="append"):
         """
         Load the table with content from the dataframe.
@@ -278,9 +279,61 @@ class SqlDB (object):
         """
         df.to_sql(table_name, self.engine, if_exists=if_exists, index=bool(index_label), index_label=index_label)
 
-    def load_infile(self, file_name, table_name, arguments):
-        sql_template = "LOAD DATA LOCAL INFILE '{}' INTO TABLE {} {}"
-        S = sql_template.format(file_name, table_name, arguments)
+    def load_infile(self, 
+                    file_name, 
+                    table_name, 
+                    target, 
+                    sep=None, 
+                    skip=0, 
+                    quoting=None,
+                    term=None):
+        """
+        Bulk-load a text file into a table.
+        
+        Parameters
+        ----------
+        file_name : string
+            The name of the text file to load
+        table_name : string
+            The name of the table to load into
+        target : tuple
+            A tuples containing the column names to read into
+        sep : character 
+            The character that delimits the columns in the text file
+        skip : int 
+            The number of lines to skip from the beginning of the file
+        term : character 
+            The character that terminates lines in the text file
+        """
+        
+        print(target)
+        df = pd.read_csv(file_name, 
+                             sep=sep, 
+                             names=target,
+                             quoting=quoting,
+                             header=skip, engine="python")
+        print(df.head())
+        self.load_dataframe(df, table_name, None)
+        return
+        
+        
+        arguments = ""
+        if self.db_type == SQL_MYSQL:
+            arg_list = []
+            if sep != None:
+                arg_list.append("COLUMNS TERMINATED BY '{}'".format(sep))
+            if term != None:
+                arg_list.append("LINES TERMINATED BY '{}'".format(sep))
+            if skip != None:
+                arg_list.append("IGNORE {} LINES".format(sep))
+            arguments = " ".join(arg_list)
+            sql_template = "LOAD DATA LOCAL INFILE '{file}' INTO TABLE {table} {args} ({tup})"
+        elif self.db_type == SQL_SQLITE:
+            if sep != None:
+                self.connection.execution_options(autocommit=True).execute('.separator "{}"'.format(sep))
+            sql_template = '.import {file} {table}'
+        S = sql_template.format(file=file_name, table=table_name, args=arguments, tup=",".join(target))
+        print(S)
         self.connection.execution_options(autocommit=True).execute(S)
 
     def get_field_type(self, table_name, column_name):
@@ -318,8 +371,7 @@ class SqlDB (object):
             S = "PRAGMA table_info({})".format(table_name)
             results = self.connection.execute(S)
             for row in results:
-                result = dict(zip("cid", "name", "type", "notnull", "dflt_value", "pk"),
-                              row)
+                result = dict(zip(("cid", "name", "type", "notnull", "dflt_value", "pk"), row))
                 column = result["name"]
                 data_type = result["type"]
                 not_null = result["notnull"]
