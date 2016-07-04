@@ -119,7 +119,7 @@ class BuilderClass(BaseCorpusBuilder):
              Link(self.source_subgenre_id, self.subgenre_table),
              Column(self.source_label, "VARCHAR(177) NOT NULL"),
              Column(self.source_title, "VARCHAR(255) NOT NULL")])
-            
+
         self.create_table_description(self.corpus_table,
             [Identifier(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
@@ -210,7 +210,7 @@ class BuilderClass(BaseCorpusBuilder):
             self._widget.progressSet.emit(len(files), "")
 
         for count, file_name in enumerate(files):
-            
+            print(file_name)
             if self._widget:
                 self._widget.labelSet.emit("Reading '{}' (file %v out of %m)".format(os.path.basename(file_name)))
             logger.info("Reading {}".format(file_name))
@@ -254,24 +254,47 @@ class BuilderClass(BaseCorpusBuilder):
                         temp_file.write("\n".join([x.strip() for x in content]))
                     temp_file.close()
 
-                    # set the right arguments for the special files:
-                    if base_name in self.special_files:
-                        # ignore the first two lines from the first chunk
-                        # since they contain the column headings:
-                        if i == 0:
-                            arguments = "LINES TERMINATED BY '\\n' IGNORE 2 LINES"
-                        else:
-                            arguments = "LINES TERMINATED BY '\\n'"
+                    skip = None
+                    if (base_name in self.special_files and base_name != "Sub-genre codes.txt" and i == 0):
+                        skip = 2
+
+                    ## set the right arguments for the special files:
+                    #if base_name in self.special_files:
+                        ## ignore the first two lines from the first chunk
+                        ## since they contain the column headings:
+                        #if i == 0:
+                            #skip = 2
+                        #else:
+                            #skip = None
+                    #else:
+                        #table = self.corpus_table
+                        #arguments = "LINES TERMINATED BY '\\n' ({}, {}, {}) ".format(
+                            #self.corpus_source_id,
+                            #self.corpus_id,
+                            #self.corpus_word_id)
+
+                    term = "\\n"
+                    
+                    if base_name == "Sub-genre codes.txt":
+                        target = self.subgenre_id, self.subgenre_label
+                    elif base_name == "lexicon.txt":
+                        target = self.word_id, self.word_label, self.word_lemma, self.word_pos
+                    elif base_name == "coca-sources.txt":
+                        target = self.source_id, self.source_year, self.source_genre, self.source_subgenre_id, self.source_label, self.source_title
                     else:
-                        table = self.corpus_table
-                        arguments = "LINES TERMINATED BY '\\n' ({}, {}, {}) ".format(
-                            self.corpus_source_id,
-                            self.corpus_id,
-                            self.corpus_word_id)
+                        target = self.corpus_source_id, self.corpus_id, self.corpus_word_id
+                        
+                    self.DB.load_infile(temp_file.name, 
+                                        table, 
+                                        skip=skip,
+                                        term=term, 
+                                        quoting=3,
+                                        target=target)
+
 
                     # load the temporary file containing a chunk from the big 
                     # file into the matching table name:
-                    self.DB.load_infile(temp_file.name, table, arguments)
+                    #self.DB.load_infile(temp_file.name, table, arguments)
                     os.remove(temp_file.name)
                     
 
