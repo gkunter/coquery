@@ -207,7 +207,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     def add_token(self, token_string, token_pos=None):
         # get lemma string:
-        if token_string in string.punctuation:
+        if all(x in string.punctuation for x in token_string):
             token_pos = "PUNCT"
             lemma = token_string
         else:
