@@ -125,7 +125,11 @@ class BuilderClass(BaseCorpusBuilder):
     expected_files = special_files + []
     
     def __init__(self, gui=False, *args):
-       # all corpus builders have to call the inherited __init__ function:
+        """
+        Initialize the corpus builder.
+        """
+
+        # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui, *args)
 
         for _ch in CATEGORY_NUMBERS:

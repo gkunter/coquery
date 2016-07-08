@@ -74,7 +74,7 @@ class BuilderClass(BaseCorpusBuilder):
     _regexp = re.compile("sw(\d\d\d\d)([A|B])-ms98-a-word\.text")
 
     def __init__(self, gui=False, *args):
-       # all corpus builders have to call the inherited __init__ function:
+        # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui, *args)
 
         self.create_table_description(self.word_table,
