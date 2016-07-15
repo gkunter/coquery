@@ -17,10 +17,10 @@ from coquery import options
 from coquery.errors import *
 from .pyqt_compat import QtGui, QtCore
 
-from .csvoptions import MyTableModel, quote_chars, CSVOptionDialog
+from .csvoptions import MyTableModel, quote_chars, CSVOptionDialog, CSVOptions
 from .ui.namedTableOptionsUi import Ui_NamedTableOptions
 
-class NamedTableOptions(CSVOptionDialog):
+class NamedTableOptionsDialog(CSVOptionDialog):
     def __init__(self, filename, fields=[], default=None, parent=None, icon=None):
         """
         Parameters
@@ -30,7 +30,7 @@ class NamedTableOptions(CSVOptionDialog):
         fields : dictionary
         """
         print(default)
-        super(NamedTableOptions, self).__init__(filename, default, parent, 
+        super(NamedTableOptionsDialog, self).__init__(filename, default, parent, 
                                                  icon, ui=Ui_NamedTableOptions)
 
         self.ui.button_word.clicked.connect(lambda: self.map_query_item_type("word"))
@@ -70,7 +70,7 @@ class NamedTableOptions(CSVOptionDialog):
 
 
     def update_content(self):
-        super(NamedTableOptions, self).update_content()
+        super(NamedTableOptionsDialog, self).update_content()
         self.map = dict()
         self.ui.edit_word.setText("")
         self.ui.edit_lemma.setText("")
@@ -96,19 +96,23 @@ class NamedTableOptions(CSVOptionDialog):
         
     @staticmethod
     def getOptions(path, fields=[], default=None, parent=None, icon=None):
-        dialog = NamedTableOptions(path, fields, default, parent, icon)
+        dialog = NamedTableOptionsDialog(path, fields, default, parent, icon)
         result = dialog.exec_()
+        print(result)
         if result == QtGui.QDialog.Accepted:
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
                 str(dialog.ui.quote_char.currentText())]
-            return (str(dialog.ui.separate_char.currentText()),
-                 None,
-                 dialog.ui.file_has_headers.isChecked(),
-                 dialog.ui.ignore_lines.value(),
-                 quote,
-                 dialog.map,
-                 dialog.file_table.dtypes)
+
+            return CSVOptions(
+                sep=utf8(dialog.ui.separate_char.currentText()),
+                selected_column=dialog.ui.query_column.value(),
+                header=dialog.ui.file_has_headers.isChecked(),
+                skip_lines=dialog.ui.ignore_lines.value(),
+                encoding=utf8(dialog.ui.combo_encoding.currentText()),
+                quote_char=quote,
+                mapping=dialog.map,
+                dtypes=dialog.file_table.dtypes)
         else:
-            return tuple()
+            return None
         
     
