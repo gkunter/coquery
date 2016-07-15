@@ -480,7 +480,7 @@ class Table(object):
 
         if self._DB.db_type == SQL_SQLITE:
             func_length = "length"
-        elif self._db.db_type == SQL_MYSQL:
+        elif self._DB.db_type == SQL_MYSQL:
             func_length = "CHAR_LENGTH"
 
         col = self.get_column(name)
