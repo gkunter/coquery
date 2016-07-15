@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'logfile.ui'
+# Form implementation generated from reading ui file 'coquery/gui/ui/logfile.ui'
 #
-# Created: Mon Mar  7 10:05:51 2016
-#      by: PyQt4 UI code generator 4.10.4
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -28,8 +27,8 @@ class Ui_logfileDialog(object):
         logfileDialog.setObjectName(_fromUtf8("logfileDialog"))
         logfileDialog.resize(640, 480)
         self.verticalLayout = QtGui.QVBoxLayout(logfileDialog)
-        self.verticalLayout.setSpacing(10)
         self.verticalLayout.setMargin(0)
+        self.verticalLayout.setSpacing(10)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.scrollArea = QtGui.QScrollArea(logfileDialog)
         self.scrollArea.setFrameShape(QtGui.QFrame.NoFrame)
@@ -41,6 +40,28 @@ class Ui_logfileDialog(object):
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setMargin(0)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
+        self.horizontalLayout = QtGui.QHBoxLayout()
+        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
+        self.label = QtGui.QLabel(self.scrollAreaWidgetContents)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
+        self.label.setObjectName(_fromUtf8("label"))
+        self.horizontalLayout.addWidget(self.label)
+        self.check_errors = QtGui.QCheckBox(self.scrollAreaWidgetContents)
+        self.check_errors.setObjectName(_fromUtf8("check_errors"))
+        self.horizontalLayout.addWidget(self.check_errors)
+        self.check_warnings = QtGui.QCheckBox(self.scrollAreaWidgetContents)
+        self.check_warnings.setObjectName(_fromUtf8("check_warnings"))
+        self.horizontalLayout.addWidget(self.check_warnings)
+        self.check_info = QtGui.QCheckBox(self.scrollAreaWidgetContents)
+        self.check_info.setObjectName(_fromUtf8("check_info"))
+        self.horizontalLayout.addWidget(self.check_info)
+        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem)
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
         self.log_table = QtGui.QTableView(self.scrollAreaWidgetContents)
         self.log_table.setHorizontalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
         self.log_table.setObjectName(_fromUtf8("log_table"))
@@ -55,5 +76,9 @@ class Ui_logfileDialog(object):
 
     def retranslateUi(self, logfileDialog):
         logfileDialog.setWindowTitle(_translate("logfileDialog", "Log file – Coquery", None))
+        self.label.setText(_translate("logfileDialog", "Select messages:", None))
+        self.check_errors.setText(_translate("logfileDialog", "&Errors", None))
+        self.check_warnings.setText(_translate("logfileDialog", "&Warnings", None))
+        self.check_info.setText(_translate("logfileDialog", "&Info", None))
 
 

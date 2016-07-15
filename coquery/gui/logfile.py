@@ -18,6 +18,8 @@ from . import classes
 from .pyqt_compat import QtCore, QtGui
 from .ui.logfileUi import Ui_logfileDialog
 
+button_map = {"ERROR": "check_errors", "WARNING": "check_warnings", "INFO": "check_info"}
+
 class LogfileViewer(QtGui.QDialog):
     def __init__(self, parent=None):
         
@@ -33,7 +35,11 @@ class LogfileViewer(QtGui.QDialog):
         self.log_proxy.setSourceModel(self.log_table)
         self.log_proxy.sortCaseSensitivity = False
         self.ui.log_table.setModel(self.log_proxy)
-        
+
+        for x in button_map:
+            getattr(self.ui, button_map[x]).setChecked(x in options.cfg.show_log_messages)
+            getattr(self.ui, button_map[x]).stateChanged.connect(self.changeFilters)
+
         #self.ui.log_table.horizontalHeader().setStretchLastSection(True)        
         #self.log_table.setVisible(False)
         self.ui.log_table.resizeColumnsToContents()
@@ -43,6 +49,13 @@ class LogfileViewer(QtGui.QDialog):
             self.resize(options.settings.value("logfile_size"))
         except TypeError:
             pass
+
+    def changeFilters(self):
+        options.cfg.show_log_messages = []
+        for filt, checkbox in button_map.items():
+            if getattr(self.ui, checkbox).isChecked():
+                options.cfg.show_log_messages.append(filt)
+        self.log_proxy.updateFilter()
 
     def closeEvent(self, event):
         options.settings.setValue("logfile_size", self.size())

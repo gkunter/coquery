@@ -192,6 +192,10 @@ class Options(object):
         self.args.current_resources = None
         self.args.main_window = None
         self.args.first_run = False
+        self.args.number_of_tokens = 0
+        self.args.last_number_of_tokens = 0
+        
+        self.args.show_log_messages = ["ERROR", "WARNING", "INFO"]
 
         self.args.filter_list = []
         self.args.stopword_list = []
@@ -861,6 +865,10 @@ class Options(object):
                             self.args.height = config_file.getint("gui", "height")
                         except (NoOptionError, ValueError):
                             self.args.height = None
+                        try:
+                            self.args.show_log_messages = [x.strip() for x in config_file.get("gui", "show_log_messages").split(",") if x]
+                        except (NoOptionError, ValueError):
+                            pass
 
                         context_dict = {}
                         # get column defaults:
@@ -1068,6 +1076,11 @@ def save_configuration():
             config.set("gui", "save_query_string", cfg.save_query_string)
         except AttributeError:
             config.set("gui", "save_query_string", True)
+            
+        if cfg.show_log_messages:
+            config.set("gui", "show_log_messages", ",".join(cfg.show_log_messages))
+        else:
+            config.set("gui", "show_log_messages", None)
 
     with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)

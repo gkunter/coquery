@@ -713,6 +713,20 @@ class LogProxyModel(QtGui.QSortFilterProxyModel):
     Define a QSortFilterProxyModel that manages access to the logging 
     messages.
     """
+    
+    def __init__(self, *args, **kwargs):
+        super(LogProxyModel, self).__init__(*args, **kwargs)
+        self.updateFilter()
+    
+    def updateFilter(self):
+        if not options.cfg.show_log_messages:
+            S = "---"
+        else:
+            S = "|".join(options.cfg.show_log_messages)
+        regexp = QtCore.QRegExp(S, QtCore.Qt.CaseInsensitive, QtCore.QRegExp.RegExp)
+        self.setFilterRegExp(regexp)
+        self.setFilterKeyColumn(2)
+    
     def headerData(self, index, orientation, role):
         if orientation == QtCore.Qt.Vertical:
             return
