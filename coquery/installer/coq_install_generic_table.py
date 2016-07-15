@@ -13,6 +13,13 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 import string
 import re
+import warnings
+
+# ensure Python 2.7 compatibility
+try:
+    import StringIO as io
+except ImportError:
+    import io as io
 
 import numpy as np
 
@@ -36,7 +43,15 @@ class BuilderClass(BaseCorpusBuilder):
             else:
                 rc_feature = "corpus_x{}".format(i)
             if dtypes[i] == object:
-                dtype = "VARCHAR(50)"
+                # It would be nice to be able to determine the maximum length 
+                # if string data columns from the data frame, like so:
+                #
+                # max_length = df[i].map(len).max()
+                #
+                # But at this stage, the data frame is not available yet, so 
+                # we have to use a fixed maximum string length:
+                max_length = 128
+                dtype = "VARCHAR({})".format(max_length)
             elif dtypes[i] == np.float64:
                 dtype = "REAL"
             elif dtypes[i] == np.int64:
@@ -150,7 +165,23 @@ class BuilderClass(BaseCorpusBuilder):
              self.corpus_file_id: self._file_id})
 
     def build_load_files(self):
-        df = pd.read_csv(self.arguments.path, low_memory=False, error_bad_lines=False)
+        old_stderr = sys.stderr
+        err = io.StringIO()
+        sys.stderr = err
+        try:
+            df = pd.read_csv(self.arguments.path, low_memory=False, error_bad_lines=False)
+        finally:
+            sys.stderr = old_stderr
+            
+        try:
+            warn_string = eval(err.getvalue()).decode("utf-8")
+        except:
+            warn_string = err.getvalue()
+        for x in warn_string.split("\n"):
+            print(x)
+            if x:
+                logger.warn("File {} – {}".format(self.arguments.path, x))
+        
         df[self.corpus_file_id] = 1
         self.DB.load_dataframe(df, self.corpus_table, self.corpus_id)
 
