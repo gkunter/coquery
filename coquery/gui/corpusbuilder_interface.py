@@ -572,9 +572,9 @@ class BuilderGui(InstallerGui):
 
     def file_options(self):
         """ Get CSV file options for current query input file. """
-        from .namedtableoptions import NamedTableOptions
+        from .namedtableoptions import NamedTableOptionsDialog
 
-        result = NamedTableOptions.getOptions(
+        result = NamedTableOptionsDialog.getOptions(
             utf8(self.ui.input_path.text()), [],
             self._table_options, self, options.cfg.icon)
         if result:
