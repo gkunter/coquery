@@ -251,7 +251,7 @@ class BuilderClass(BaseCorpusBuilder):
             [Identifier(self.segment_id, "INT(12) UNSIGNED NOT NULL", unique=False),
              Column(self.segment_starttime, "REAL NOT NULL"),
              Column(self.segment_endtime, "REAL NOT NULL"),
-             Column(self.segment_label, "VARCHAR(2) NOT NULL")])
+             Column(self.segment_label, "VARCHAR(128) NOT NULL")])
         
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
