@@ -81,6 +81,9 @@ class FunctionDialog(QtGui.QDialog):
             value = dialog.ui.edit_function_value.text()
             escaped = str(value).replace("\\", "\\\\")
             escaped = escaped.replace("'", "\\'")
+            escaped = escaped.replace("{", "{{")
+            escaped = escaped.replace("}", "}}")
+                                              
 
             if dialog.ui.radio_count.isChecked():
                 frm_str = "COUNT('{param}', {feature}{{N}})"
