@@ -168,6 +168,12 @@ class Settings(QtGui.QDialog):
             self.ui.check_save_query_file.setChecked(bool(self._options.save_query_file))
         except AttributeError:
             pass
+        try:
+            self.ui.spin_maximum_tokens.setValue(int(self._options.last_number_of_tokens))
+            if self._options.number_of_tokens:
+                self.ui.check_limit.check_limit_tokens.setChecked(True)
+        except AttributeError:
+            pass
         
     def change_options(self):
         self._options.output_case_sensitive = bool(self.ui.radio_output_case_leave.isChecked())
@@ -183,6 +189,9 @@ class Settings(QtGui.QDialog):
         self._options.save_query_string = bool(self.ui.check_save_query_string.isChecked())
         self._options.digits = int(self.ui.spin_digits.value())
         self._options.custom_installer_path = str(self.ui.edit_installer_path.text())        
+        if self.ui.check_limit_tokens.isChecked():
+            self._options.number_of_tokens = int(self.ui.spin_maximum_tokens)
+        self._options.last_number_of_tokens = int(self.ui.spin_maximum_tokens)
         self._options.table_font = self._table_font
         self._options.figure_font = self._figure_font
         self._options.context_font = self._context_font
