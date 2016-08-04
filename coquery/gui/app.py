@@ -1726,8 +1726,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.set_stop_button()
             if not options.cfg.to_file:
                 self.showMessage("Running query...")
-            else:
-                self.showMessage("Writing query to file {}...".format(options.cfg.output_path))
+            #else:
+                #self.showMessage("Writing query to file {}...".format(options.cfg.output_path))
             self.start_progress_indicator()
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
             self.query_thread.taskFinished.connect(lambda: self.finalize_query(options.cfg.to_file))

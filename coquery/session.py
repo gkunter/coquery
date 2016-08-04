@@ -114,11 +114,19 @@ class Session(object):
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
 
-        for current_query in self.query_list:
+        number_of_queries = len(self.query_list)
+
+        for i, current_query in enumerate(self.query_list):
+            if options.cfg.gui and number_of_queries > 1:
+                options.cfg.main_window.showMessage("Running query ({} of {})...".format(
+                    i+1, number_of_queries))
             if not self.quantified_number_labels:
                 self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
             start_time = time.time()
-            logger.info("Start query: '{}'".format(current_query.query_string))
+            if number_of_queries > 1:
+                logger.info("Start query ({} of {}): '{}'".format(i+1, number_of_queries, current_query.query_string))
+            else:
+                logger.info("Start query: '{}'".format(current_query.query_string))
             current_query.run()
             self.data_table = current_query.append_results(self.data_table)
             logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
@@ -156,6 +164,7 @@ class Session(object):
                 encoding="utf-8",
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
+            output_file.flush()
 
     def get_frequency_table(self):
         frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, session=self)
@@ -309,7 +318,6 @@ class Session(object):
         s : string
             The display name of the resource string
         """
-
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
         if not ignore_alias and header in options.cfg.column_names:
@@ -317,6 +325,10 @@ class Session(object):
         
         if header in self._header_cache:
             return self._header_cache[header]
+        
+        # FIXME:
+        # this is an ugly hack: a RuntimeError is raised if the header could
+        # be translated!
         try:
             # Retain the column header if the query string was from an input file
             if header == "coquery_query_string" and options.cfg.query_label:
@@ -340,8 +352,8 @@ class Session(object):
             if header in COLUMN_NAMES:
                 raise RuntimeError(COLUMN_NAMES[header])
             
+            # deal with function headers:
             if header.startswith("func_"):
-                wrap = "FUNC({})"
                 match = re.match("func_(.*)_(\d+)_(\d+)$", header)
                 core = match.group(1)
                 function_number = int(match.group(2))
@@ -367,11 +379,14 @@ class Session(object):
                 lookup = "func.{}{}_{}".format(res_hash, tab, feat)
                 count = 1
                 for rc_feature, _, is_lexical, full_label, label in options.cfg.selected_functions:
-                    print(rc_feature, full_label)
                     if rc_feature == lookup:
                         if count == function_number:
                             if is_lexical:
-                                raise RuntimeError(label.format(N=item_number))
+                                try:
+                                    raise RuntimeError(label.format(N=item_number))
+                                except:
+                                    raise RuntimeError(label)
+                                    
                             else:
                                 raise RuntimeError(label.format(N=""))
                         count += 1
