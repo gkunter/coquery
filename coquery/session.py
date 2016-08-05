@@ -29,6 +29,7 @@ from .defines import *
 from . import queries
 from . import filters
 from . import tokens
+from . import dataengine
 
 class Session(object):
     def __init__(self):
@@ -60,6 +61,8 @@ class Session(object):
 
         self.query_type = queries.get_query_type(options.cfg.MODE)
 
+        options.cfg.current_engine = dataengine.get_engine(options.cfg.MODE)
+
         logger.info("Corpus '{}' on connection '{}'".format(
             self.Resource.name, options.cfg.current_server))
 
@@ -69,6 +72,7 @@ class Session(object):
         self.header_shown = False
         self.input_columns = []
         self._header_cache = {}
+        self._engine_cache = {}
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
@@ -190,31 +194,25 @@ class Session(object):
         #print(visible_columns)
         
         #print(self.data_table[visible_columns].iloc[~self.data_table.index.isin(invisible_rows)])
-        
 
     def aggregate_data(self, recalculate=True):
         """
         Apply the aggegate function from the current query type to the 
         data table produced in this session.
         """
+        
+        engine_type = options.cfg.current_engine
+        
         # if no explicit recalculation is requested, try to use a cached 
         # output object for the current query type:
         if not recalculate:
-            if self.query_type == queries.FrequencyQuery and hasattr(self, "_cached_frequency_table"):
-                self.output_object = self._cached_frequency_table
+            if engine_type in self._engine_cache:
+                print("using cached output for engine {}".format(engine_type.name))
+                self.output_object = self._engine_cache[engine_type]
                 return
-            elif self.query_type == queries.DistinctQuery and hasattr(self, "_cached_unique_table"):
-                self.output_object = self._cached_unique_table
-                return
-            elif self.query_type == queries.CollocationQuery and hasattr(self, "_cached_collocation_table"):
-                self.output_object = self._cached_collocation_table
-                return
-            elif self.query_type == queries.ContingencyQuery and hasattr(self, "_cached_contingency_table"):
-                self.output_object = self._cached_contingency_table
-                return
-            elif self.query_type == queries.ContrastQuery and hasattr(self, "_cached_contrast_table"):
-                self.output_object = self._cached_contrast_table
-                return
+
+        engine = engine_type(self)
+
         # Recalculate the output object for the current query type, excluding
         # invisible rows:
         if self.query_type == queries.TokenQuery:
@@ -226,9 +224,7 @@ class Session(object):
 
         old_index = tab.index
 
-        self.output_object = self.query_type.aggregate_it(
-            tab,
-            self.Corpus, session=self)
+        self.output_object = engine.apply(engine.mutate(self.data_table))
 
         self.output_object.fillna("", inplace=True)
         self.output_object.index = range(1, len(self.output_object.index) + 1)
@@ -238,31 +234,10 @@ class Session(object):
             not old_index.equals(self.output_object.index)):
             self.reset_row_visibility(self.query_type)
 
-        # cache the output object for the current query type:
-        if self.query_type == queries.FrequencyQuery:
-            self._cached_frequency_table = self.output_object
-        elif self.query_type == queries.DistinctQuery:
-            self._cached_unique_table = self.output_object
-        elif self.query_type == queries.CollocationQuery:
-            self._cached_collocation_table = self.output_object
-        elif self.query_type == queries.ContingencyQuery:
-            self._cached_contingency_table = self.output_object
-        elif self.query_type == queries.ContrastQuery:
-            self._cached_contrast_table = self.output_object
+        self._engine_cache[engine] = self.output_object
 
     def drop_cached_aggregates(self):
-        try:
-            del self._cached_collocation_table
-        except AttributeError:
-            pass
-        try:
-            del self._cached_frequency_table
-        except AttributeError:
-            pass
-        try:
-            del self._cached_unique_table
-        except AttributeError:
-            pass
+        self._engine_cache = {}
 
     def reset_row_visibility(self, query_type, df=pd.DataFrame()):
         if df.empty:
@@ -271,6 +246,7 @@ class Session(object):
             data=[True] * len(df.index), index=df.index)
 
     def filter_data(self, column="statistics_frequency"):
+        return
         """
         Apply the frequency filters to the output object.
         """

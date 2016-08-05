@@ -216,7 +216,7 @@ class TokenQuery(object):
 
                         except AttributeError:
                             pass
-            df = self.apply_functions(df)
+            #df = self.apply_functions(df)
             if not df.empty:
                 if self.results_frame.empty:
                     self.results_frame = df
@@ -465,64 +465,64 @@ class TokenQuery(object):
                     df[df_col] = self.input_frame[input_col][0]
         return df
 
-    def apply_functions(self, df):
-        """
-        Applies the selected functions to the data frame.
+    #def apply_functions(self, df):
+        #"""
+        #Applies the selected functions to the data frame.
         
-        This method applies the functions that were selected as output 
-        columns to the associated column from the data frame. The result of 
-        each function is added as a new column to the data frame. The name 
-        of this column takes the form
+        #This method applies the functions that were selected as output 
+        #columns to the associated column from the data frame. The result of 
+        #each function is added as a new column to the data frame. The name 
+        #of this column takes the form
         
-        coq_func_{resource}_{n},
+        #coq_func_{resource}_{n},
         
-        where 'resource' is the resource feature on which the function was 
-        applied, and 'n' is the count of that function. For example, the 
-        results from the first function that was applied on the resource 
-        feature 'word_label' is stored in the column 'coq_func_word_label_1',
-        the second function on that feature in 'coq_func_word_label_2', and
-        so on. 
+        #where 'resource' is the resource feature on which the function was 
+        #applied, and 'n' is the count of that function. For example, the 
+        #results from the first function that was applied on the resource 
+        #feature 'word_label' is stored in the column 'coq_func_word_label_1',
+        #the second function on that feature in 'coq_func_word_label_2', and
+        #so on. 
         
-        Parameters
-        ----------
-        df : DataFrame
-            The data frame on which the selected function will be applied.
+        #Parameters
+        #----------
+        #df : DataFrame
+            #The data frame on which the selected function will be applied.
         
-        Returns
-        -------
-        df : DataFrame
-            The data frame with new columns for each function.
-        """
+        #Returns
+        #-------
+        #df : DataFrame
+            #The data frame with new columns for each function.
+        #"""
         
-        # If the data frame is empty, no function can be applied anyway:
-        if df.empty:
-            return df
+        ## If the data frame is empty, no function can be applied anyway:
+        #if df.empty:
+            #return df
 
-        lexicon_features = [x for x, _ in self.Resource.get_lexicon_features()]
+        #lexicon_features = [x for x, _ in self.Resource.get_lexicon_features()]
 
-        func_counter = collections.Counter()
-        for rc_feature, fun, _, _, _ in options.cfg.selected_functions:
-            _, hashed, table, feature = self.Resource.split_resource_feature(rc_feature)
-            if hashed != None:
-                link, res = get_by_hash(hashed)
-                resource = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
-            else:
-                resource = "coq_{}_{}".format(table, feature)
-            func_counter[resource] += 1
-            fc = func_counter[resource]
+        #func_counter = collections.Counter()
+        #for rc_feature, fun, _, _, _ in options.cfg.selected_functions:
+            #_, hashed, table, feature = self.Resource.split_resource_feature(rc_feature)
+            #if hashed != None:
+                #link, res = get_by_hash(hashed)
+                #resource = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
+            #else:
+                #resource = "coq_{}_{}".format(table, feature)
+            #func_counter[resource] += 1
+            #fc = func_counter[resource]
                         
-            # handle functions added to lexicon features:
-            if self.Resource.is_lexical(rc_feature):
-                for n in range(self.get_max_tokens()):
-                    new_name = "func_{}_{}_{}".format(resource, fc, n + 1)
-                    col_name = "{}_{}".format(resource, n + 1)
-                    df[new_name] = df[col_name].apply(fun)
-            # handle other functions:
-            else:
-                new_name = "func_{}_{}_1".format(resource, fc)
-                col_name = "{}_1".format(resource)
-                df[new_name] = df[col_name].apply(fun)
-        return df
+            ## handle functions added to lexicon features:
+            #if self.Resource.is_lexical(rc_feature):
+                #for n in range(self.get_max_tokens()):
+                    #new_name = "func_{}_{}_{}".format(resource, fc, n + 1)
+                    #col_name = "{}_{}".format(resource, n + 1)
+                    #df[new_name] = df[col_name].apply(fun)
+            ## handle other functions:
+            #else:
+                #new_name = "func_{}_{}_1".format(resource, fc)
+                #col_name = "{}_1".format(resource)
+                #df[new_name] = df[col_name].apply(fun)
+        #return df
 
     @staticmethod
     def add_output_columns(session):
@@ -650,7 +650,7 @@ class FrequencyQuery(TokenQuery):
         # Drop frequency column if it is already in the data frame (this is
         # needed for re-aggregation):
         session = kwargs.get("session")
-        
+
         if "statistics_frequency" in list(df.columns.values):
             df.drop("statistics_frequency", axis=1, inplace=True)
         if "statistics_overall_entropy" in list(df.columns.values):

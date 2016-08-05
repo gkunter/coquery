@@ -24,6 +24,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 from coquery import queries
+from coquery import dataengine
 from coquery import sqlhelper
 from coquery.session import *
 from coquery.defines import *
@@ -525,6 +526,8 @@ class CoqueryApp(QtGui.QMainWindow):
         
             options.cfg.MODE = summary_type
 
+        
+        options.cfg.current_engine = dataengine.get_engine(options.cfg.MODE)
         self.reaggregate(query_type=queries.get_query_type(options.cfg.MODE), 
                          recalculate=False)
 
