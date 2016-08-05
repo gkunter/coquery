@@ -1403,7 +1403,7 @@ class CorpusClass(object):
         
         filter_list = self.resource.translate_filters(filters)
         if filter_list:
-            filter_strings = ["{}.{} {} '{}'".format(tab, col, op, val[0]) for col, _, tab, op, val, _ in filter_list]
+            filter_strings = ["{}.{} {} '{}'".format(tab, col, op, val[0].replace("'", "''")) for col, _, tab, op, val, _ in filter_list]
             self.lexicon.table_list = []
             self.lexicon.joined_tables = []
             for column, corpus_feature, table, operator, value_list, val_range in filter_list:
@@ -1445,7 +1445,7 @@ class CorpusClass(object):
                         filt.resource = self.resource
                         filt.text = "{} = {}".format(
                                                 getattr(self.resource, match.group(1)), 
-                                                row[column])
+                                                row[column].replace("'", "''"))
                         filter_list.append(filt)
         else:
             for column in columns:
