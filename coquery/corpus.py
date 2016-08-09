@@ -453,13 +453,21 @@ class BaseResource(object):
     coquery_query_token = "Query token"
 
     statistics_table = "Quantifiers"
+    statistics_frequency = COLUMN_NAMES["statistics_frequency"]
     statistics_normalized = COLUMN_NAMES["statistics_normalized"]
+    statistics_corpus_size = COLUMN_NAMES["statistics_corpus_size"]
     statistics_subcorpus_size = COLUMN_NAMES["statistics_subcorpus_size"]
     statistics_per_million_words = COLUMN_NAMES["statistics_per_million_words"]
-    statistics_overall_proportion = COLUMN_NAMES["statistics_overall_proportion"]
-    statistics_overall_entropy = COLUMN_NAMES["statistics_overall_entropy"]
+    statistics_proportion = COLUMN_NAMES["statistics_proportion"]
+    statistics_entropy = COLUMN_NAMES["statistics_entropy"]
+    statistics_types = COLUMN_NAMES["statistics_types"]
+    statistics_tokens = COLUMN_NAMES["statistics_tokens"]
+    statistics_ttr = COLUMN_NAMES["statistics_ttr"]
     statistics_query_proportion = COLUMN_NAMES["statistics_query_proportion"]
     statistics_query_entropy = COLUMN_NAMES["statistics_query_entropy"]
+    statistics_query_types = COLUMN_NAMES["statistics_query_types"]
+    statistics_query_tokens = COLUMN_NAMES["statistics_query_tokens"]
+    statistics_query_ttr = COLUMN_NAMES["statistics_query_ttr"]
 
     special_table_list = ["coquery", "statistics", "tag"]
 

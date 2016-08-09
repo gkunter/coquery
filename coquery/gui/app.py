@@ -24,7 +24,6 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 from coquery import queries
-from coquery import dataengine
 from coquery import sqlhelper
 from coquery.session import *
 from coquery.defines import *
@@ -508,26 +507,23 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_context_mode_columns.toggled.connect(self.update_context_widgets)
         
         # set up hooks for the summary widgets:
-        self.ui.radio_no_summary.clicked.connect(self.change_summary)
-        self.ui.radio_summary.clicked.connect(self.change_summary)
+        self.ui.radio_no_summary.clicked.connect(self.change_managing)
+        self.ui.radio_summary.clicked.connect(self.change_managing)
             
         self.corpusListUpdated.connect(self.check_corpus_widgets)
 
-    def change_summary(self):
+    def change_managing_type(self):
+        if self.ui.radio_summary.isChecked():
+            options.cfg.MODE = self.ui.combo_summary.currentText()
+            self.reaggregate(query_type=queries.get_query_type(options.cfg.MODE), 
+                            recalculate=False)
+
+    def change_managing(self):
         if self.ui.radio_no_summary.isChecked():
             options.cfg.MODE = QUERY_MODE_TOKENS
-            try:
-                self.ui.combo_summary.currentIndexChanged.disconnect(self.change_summary)
-            except TypeError:
-                pass
         else:
-            summary_type = self.ui.combo_summary.currentText()
-            self.ui.combo_summary.currentIndexChanged.connect(self.change_summary)
-        
-            options.cfg.MODE = summary_type
+            options.cfg.MODE = self.ui.combo_summary.currentText()
 
-        
-        options.cfg.current_engine = dataengine.get_engine(options.cfg.MODE)
         self.reaggregate(query_type=queries.get_query_type(options.cfg.MODE), 
                          recalculate=False)
 
@@ -681,7 +677,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.Session.query_type = query_type
             self.Session.query_type.add_output_columns(self.Session)
         
-        self.start_progress_indicator()
+        if not self.Session.has_cached_data():
+            self.start_progress_indicator()
         self.thread.start()
 
     @staticmethod
@@ -933,13 +930,14 @@ class CoqueryApp(QtGui.QMainWindow):
         header = self.ui.data_preview.horizontalHeader()
         for i in range(header.count()):
             column = self.table_model.header[header.logicalIndex(i)]
-            if column in (
-                "coq_conditional_probability_left", 
-                "coq_conditional_probability_right",  
-                "statistics_overall_proportion", 
-                "statistics_query_proportion",
-                "statistics_normalized",
-                "coq_statistics_uniquenessratio"):
+            if (column in (
+                    "coq_conditional_probability_left", 
+                    "coq_conditional_probability_right",  
+                    "statistics_overall_proportion", 
+                    "statistics_query_proportion",
+                    "statistics_normalized",
+                    "coq_statistics_uniquenessratio") or 
+                 column.startswith(("func_FREQ_NORM", "func_PROPORTION"))):
                 deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
             elif column in ("statistics_column_total"):
                 deleg = classes.CoqTotalDelegate(self.ui.data_preview)                
@@ -1192,6 +1190,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # Create an alert in the system taskbar to indicate that the query has 
         # completed:
         options.cfg.app.alert(self, 0)
+        logger.info("Done")
         
     def get_output_column_menu(self, point=None, selection=[]):
         if point:
@@ -2281,7 +2280,7 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.radio_summary.setChecked(True)
             self.ui.combo_summary.setCurrentIndex(SUMMARY_MODES.index(options.cfg.MODE))
-            self.ui.combo_summary.currentIndexChanged.connect(self.change_summary)
+            self.ui.combo_summary.currentIndexChanged.connect(self.change_managing_type)
                             
 
         self.ui.edit_file_name.setText(options.cfg.input_path)

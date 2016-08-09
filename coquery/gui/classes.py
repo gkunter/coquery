@@ -1193,7 +1193,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             return
 
         # try to set the columns to the output order of the current session
-        new_order = options.cfg.main_window.Session.output_order
+        manager = options.get_manager(options.cfg.MODE, options.cfg.main_window.Session.Resource.name)
+        new_order = options.cfg.main_window.Session.output_order + manager.get_additional_columns()
         if "coquery_invisible_corpus_id" not in new_order:
             new_order.append("coquery_invisible_corpus_id")
         if "coquery_invisible_number_of_tokens" not in new_order:
@@ -1207,6 +1208,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             self.createIndex(self.rowCount(), self.columnCount()))
 
     def is_visible(self, index):
+        return True
+    
         try:
             session = options.cfg.main_window.Session
             row_vis = session.row_visibility[session.query_type]
@@ -1234,7 +1237,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
             if self.is_visible(index):
                 value = self.content.iloc[index.row()][self.header[index.column()]] 
-                
                 if role == QtCore.Qt.ToolTipRole:
                     if isinstance(value, (float, np.float64)):
                         return "<div>{}</div>".format(escape(("{:.%if}" % options.cfg.digits).format(value)))
@@ -1264,9 +1266,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             column = self.header[index.column()]
             # integers and floats are always right-aligned:
             try:
-                if self.content[column].dtype in (np.float64, np.int64):
+                assert isinstance(self.content[column], pd.Series)
+                if self.content[column].dtype in (int, float):
                     return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
-            except AttributeError:
+            except (AttributeError, TypeError, AssertionError):
                 print(self.header)
                 print(self.content[column].head())
                 raise RuntimeError

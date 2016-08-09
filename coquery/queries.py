@@ -383,39 +383,6 @@ class TokenQuery(object):
         df : DataFrame
             The data frame containing also the static data.
         """
-        if ("statistics_query_entropy" in options.cfg.selected_features or 
-            "statistics_query_proportion" in options.cfg.selected_features):
-            columns = [x for x in df.columns if not x.startswith("coquery_invisible")]
-            if not columns:
-                self.freqs = pd.DataFrame(
-                    {"statistics_frequency": [len(df.index)],
-                     "statistics_query_proportion": [1]})
-                self.entropy = 0
-            else:
-                # get a frequency table for the current data frame:
-                if options.cfg.output_case_sensitive:
-                    self.freqs = df.groupby(columns).count().reset_index()
-                else:
-                    df2 = df
-                    for column in df2.columns:
-                        word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
-                        lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
-                        if ((word_column and word_column in column) or 
-                            (lemma_column and lemma_column in column)) and df2[column].dtype == object:
-                            if options.cfg.output_to_lower:
-                                df2[column] = df2[column].str.lower()
-                            else:
-                                df2[column] = df2[column].str.upper()
-                    self.freqs = df2.groupby(columns).count().reset_index()
-                columns.append("statistics_frequency")
-                self.freqs.columns = columns
-                columns.remove("statistics_frequency")
-                # calculate the propabilities of the different results:
-                self.freqs["statistics_query_proportion"] = self.freqs.statistics_frequency.divide(len(df.index))
-                if len(self.freqs.index) == 1:
-                    self.entropy = 0
-                else:
-                    self.entropy = -self.freqs.statistics_query_proportion.apply(lambda x: x * math.log(x, 2)).sum()
         
         for column in self.Session.output_order:
             if column == "coquery_invisible_number_of_tokens":
@@ -447,13 +414,6 @@ class TokenQuery(object):
                     df[column] = L[n-1]
                 except IndexError:
                     df[column] = ""
-            elif column == "statistics_query_entropy":
-                df[column] = self.entropy
-            elif column == "statistics_query_proportion":
-                try:
-                    df = pd.merge(df, self.freqs, on=columns)
-                except ValueError:
-                    df[column] = self.freqs[column]
             else:
                 # add column labels for the columns in the input file:
                 if all([x == None for x in self.input_frame.columns]):
@@ -583,163 +543,6 @@ class DistinctQuery(TokenQuery):
         df = df.reset_index(drop=True)
         return df
 
-class FrequencyQuery(TokenQuery):
-    """ 
-    FrequencyQuery is a subclass of TokenQuery.
-    
-    In this subclass, :func:`aggregate_data` creates an aggregrate table of
-    the data frame containing the query results. The results are grouped by 
-    all columns that are currently visible. The invisible coulmns are sampled 
-    so that each aggregate row contains the first value from each aggregate 
-    group. The aggregate table contains an additional column with the lengths
-    of the groups as a frequency value.
-    """
-    
-    #_allow_cache = True
-    
-    @staticmethod
-    def add_output_columns(session):
-        l1 = [x for x in options.cfg.selected_features if not x.startswith("statistics_")]
-        l2 = [x for x in options.cfg.selected_features if x.startswith("statistics_")]
-        for x in l1 + l2:
-            if x.startswith("statistics_") and not x.startswith("statistics_query"):
-                if x not in session.output_order:
-                    session.output_order.append(x)
-        
-        if "statistics_frequency" not in session.output_order:
-            session.output_order.append("statistics_frequency")
-
-    @staticmethod
-    def remove_output_columns(session):
-        for x in options.cfg.selected_features:
-            if x.startswith("statistics_"):
-                if not x.startswith("statistics_query"):
-                    try:
-                        session.output_order.remove(x)
-                    except ValueError:
-                        pass        
-        try:
-            session.output_order.remove("statistics_frequency")
-        except ValueError:
-            pass
-        
-    @staticmethod
-    def do_the_grouping(df, group_columns, aggr_dict):
-        gp = df.fillna("").groupby(group_columns, sort=False)
-        return gp.agg(aggr_dict).reset_index()
-    
-    @classmethod
-    def aggregate_data(cls, df, corpus, **kwargs):
-        """
-        Aggregate the data frame by obtaining the row frequencies for each
-        group specified by the visible data columns.
-        
-        Parameters
-        ----------
-        df : DataFrame
-            The data frame to be aggregated
-            
-        Returns
-        -------
-        df : DataFrame
-            A new data frame that contains in the column coq_frequency the
-            row frequencies of the aggregated groups.
-        """
-        # get a list of grouping and sampling columns:
-        
-        # Drop frequency column if it is already in the data frame (this is
-        # needed for re-aggregation):
-        session = kwargs.get("session")
-
-        if "statistics_frequency" in list(df.columns.values):
-            df.drop("statistics_frequency", axis=1, inplace=True)
-        if "statistics_overall_entropy" in list(df.columns.values):
-            df.drop("statistics_overall_entropy", axis=1, inplace=True)
-        if "statistics_overall_proportion" in list(df.columns.values):
-            df.drop("statistics_overall_proportion", axis=1, inplace=True)
-        if "statistics_subcorpus_size" in list(df.columns.values):
-            df.drop("statistics_subcorpus_size", axis=1, inplace=True)
-
-        columns = []
-        for x in df.columns.values:
-            if x in session.output_order:
-                try:
-                    n = int(x.rpartition("_")[-1])
-                except ValueError:
-                    columns.append(x)
-                else:
-                    columns.append(x)
-
-        # Group by those columns which are neither intrinsically invisible 
-        # nor currently hidden:
-        group_columns = [x for x in columns if not x.startswith("coquery_invisible") and options.cfg.column_visibility.get(x, True)]
-        sample_columns = [x for x in columns if x not in group_columns]
-        # Add a frequency column:
-        df["statistics_frequency"] = 0
-        
-        if len(df.index) == 0:
-            result = pd.DataFrame({"statistics_frequency": [0]})
-        elif len(group_columns) == 0:
-            # if no grouping variables are selected, simply return the first
-            # row of the data frame together with the total length of the 
-            # data frame as the frequency:
-            freq = len(df.index)
-            df = df.iloc[[0]]
-            result = df 
-            result["statistics_frequency"] = freq
-        else:
-            # create a dictionary that contains the aggregate functions for
-            # the different columns. For the sampling columns, this function
-            # simply returns the first entry in the column, and for the 
-            # frequency column, the function returns the length of the 
-            # column:
-            aggr_dict = {"statistics_frequency": len}
-            aggr_dict.update(
-                {col: lambda x: x.iloc[0] for col in sample_columns})
-            # group the data frame by the group columns, apply the aggregate
-            # functions to each group, and return the aggregated data frame:
-            result = cls.do_the_grouping(df, group_columns, aggr_dict)
-
-        if "statistics_per_million_words" in options.cfg.selected_features:
-            corpus_size = corpus.get_corpus_size(filters=session.filter_list)
-            result["statistics_per_million_words"] = result["statistics_frequency"].apply(
-                lambda x: x / (corpus_size / 1000000))
-
-        if ("statistics_normalized" in options.cfg.selected_features or
-            "statistics_subcorpus_size" in options.cfg.selected_features or
-            kwargs.get("contrasts")):
-            corpus_features = [x for x, _ in corpus.resource.get_corpus_features() if x in options.cfg.selected_features and 
-                               options.cfg.column_visibility.get("coq_{}_1".format(x), True)]
-            column_list = []
-            for col in result.columns:
-                match = re.match("coq_(.*)_1", col)
-                if match and match.group(1) in corpus_features:
-                    column_list.append(match.group(1))
-                    
-            result["statistics_subcorpus_size"] = result.apply(corpus.get_subcorpus_size, axis=1, columns=column_list, filters=session.filter_list)
-
-        if "statistics_normalized" in options.cfg.selected_features:
-            result["statistics_normalized"] = result.apply(
-                lambda x: x.statistics_frequency/x.statistics_subcorpus_size,
-                axis=1)
-
-        if ("statistics_overall_entropy" in options.cfg.selected_features or 
-            "statistics_overall_entropy" in options.cfg.selected_features):
-            result["statistics_overall_proportion"] = result.statistics_frequency.divide(result.statistics_frequency.sum())
-            if "statistics_overall_entropy" in options.cfg.selected_features:
-                if len(result.index) == 1:
-                    result["statistics_overall_entropy"] = 0
-                else:
-                    result["statistics_overall_entropy"] = -result.statistics_overall_proportion.apply(lambda x: x * math.log(x, 2)).sum()
-
-        # entries with no corpus_id are the result of empty frequency 
-        # queries. Their frequency is set to zero:
-        try:
-            result.statistics_frequency[result.coquery_invisible_corpus_id == ""] = 0
-        except (TypeError, AttributeError):
-            pass
-
-        return result
 
 class ContrastQuery(FrequencyQuery):
     """
@@ -1195,13 +998,7 @@ class CollocationQuery(TokenQuery):
         session.output_order = session._old_output_order
 
 def get_query_type(MODE):
-    if MODE == QUERY_MODE_TOKENS:
-        return TokenQuery
-    elif MODE == QUERY_MODE_FREQUENCIES:
-        return FrequencyQuery
-    elif MODE == QUERY_MODE_DISTINCT:
-        return DistinctQuery
-    elif MODE == QUERY_MODE_COLLOCATIONS:
+    if MODE == QUERY_MODE_COLLOCATIONS:
         return CollocationQuery
     elif MODE == QUERY_MODE_CONTINGENCY:
         return ContingencyQuery
@@ -1209,5 +1006,7 @@ def get_query_type(MODE):
         return ContrastQuery
     elif MODE == QUERY_MODE_STATISTICS:
         return StatisticsQuery
+    else:
+        return TokenQuery
         
 logger = logging.getLogger(NAME)

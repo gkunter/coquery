@@ -28,7 +28,7 @@ QUERY_ITEM_GLOSS = "query_item_gloss"
 
 QUERY_MODE_TOKENS = "Tokens"
 QUERY_MODE_FREQUENCIES = "Frequency list"
-QUERY_MODE_DISTINCT = "Unique rows"
+QUERY_MODE_DISTINCT = "Collapse"
 QUERY_MODE_STATISTICS = "Statistics"
 QUERY_MODE_COLLOCATIONS = "Collocations"
 QUERY_MODE_CONTINGENCY = "Contingency table"
@@ -93,14 +93,21 @@ COLUMN_NAMES = {
     "coquery_query_string": "Query string",
 
     # Labels that are used in the Statistics special table:
+    "statistics_proportion": "Proportion",
+    "statistics_entropy": "Entropy",
     "statistics_frequency": "Frequency", 
-    "statistics_overall_proportion": "Overall proportion",
-    "statistics_overall_entropy": "Overall entropy",
-    "statistics_query_proportion": "Query proportion",
-    "statistics_per_million_words": "Frequency (pmw)",
-    "statistics_subcorpus_size": "Subcorpus size",
-    "statistics_normalized": "Normalized frequency",
-    "statistics_query_entropy": "Query entropy",
+    "statistics_corpus_size": "Corpus size: Total",
+    "statistics_subcorpus_size": "Corpus size: Subcorpus",
+    "statistics_per_million_words": "Frequency: p.m.w.",
+    "statistics_normalized": "Frequency: Normalized",
+    "statistics_tokens": "Number of tokens",
+    "statistics_types": "Number of types",
+    "statistics_ttr": "Type-token ratio",
+    "statistics_query_entropy": "Query: Entropy",
+    "statistics_query_tokens": "Query: Number of tokens",
+    "statistics_query_types": "Query: Number of types",
+    "statistics_query_proportion": "Query: Proportion",
+    "statistics_query_ttr": "Query: Type-token ratio",
     "statistics_column_total": "ALL",
 
     # Labels that are used when displaying the corpus statistics:

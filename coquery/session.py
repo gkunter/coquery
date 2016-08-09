@@ -29,7 +29,6 @@ from .defines import *
 from . import queries
 from . import filters
 from . import tokens
-from . import dataengine
 
 class Session(object):
     def __init__(self):
@@ -60,8 +59,6 @@ class Session(object):
         self.show_header = options.cfg.show_header
 
         self.query_type = queries.get_query_type(options.cfg.MODE)
-
-        options.cfg.current_engine = dataengine.get_engine(options.cfg.MODE)
 
         logger.info("Corpus '{}' on connection '{}'".format(
             self.Resource.name, options.cfg.current_server))
@@ -141,7 +138,6 @@ class Session(object):
 
         self.data_table.index = range(1, len(self.data_table.index) + 1)
 
-        self.end_time = datetime.datetime.now()
         self.reset_row_visibility(queries.TokenQuery, self.data_table)
 
         if not options.cfg.gui or to_file:
@@ -169,6 +165,7 @@ class Session(object):
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
             output_file.flush()
+        self.end_time = datetime.datetime.now()
 
     def get_frequency_table(self):
         frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, session=self)
@@ -195,46 +192,53 @@ class Session(object):
         
         #print(self.data_table[visible_columns].iloc[~self.data_table.index.isin(invisible_rows)])
 
+    def has_cached_data(self):
+        manager = options.get_manager(options.cfg.MODE, self.Resource.name)
+        return (self, manager) in self._engine_cache
+
     def aggregate_data(self, recalculate=True):
         """
         Apply the aggegate function from the current query type to the 
         data table produced in this session.
         """
-        
-        engine_type = options.cfg.current_engine
+
+        manager = options.get_manager(options.cfg.MODE, self.Resource.name)
         
         # if no explicit recalculation is requested, try to use a cached 
         # output object for the current query type:
         if not recalculate:
-            if engine_type in self._engine_cache:
-                print("using cached output for engine {}".format(engine_type.name))
-                self.output_object = self._engine_cache[engine_type]
+            if self.has_cached_data():
+                print("using cached output for manager {}".format(manager.name))
+                self.output_object = self._engine_cache[(self, manager)]
                 return
 
-        engine = engine_type(self)
+        ## Recalculate the output object for the current query type, excluding
+        ## invisible rows:
+        #if self.query_type == queries.TokenQuery:
+            #if not queries.TokenQuery in self.row_visibility:
+                #self.reset_row_visibility(queries.TokenQuery, self.data_table)
+            #tab = self.data_table
+        #else:
+            #tab = self.data_table[self.row_visibility[queries.TokenQuery]]
 
-        # Recalculate the output object for the current query type, excluding
-        # invisible rows:
-        if self.query_type == queries.TokenQuery:
-            if not queries.TokenQuery in self.row_visibility:
-                self.reset_row_visibility(queries.TokenQuery, self.data_table)
-            tab = self.data_table
-        else:
-            tab = self.data_table[self.row_visibility[queries.TokenQuery]]
+        #old_index = tab.index
 
-        old_index = tab.index
+        self.reset_row_visibility(queries.get_query_type(options.cfg.MODE))
+        
+        self.data_table.index = range(len(self.data_table))
+        
+        df = manager.mutate(self.data_table, self)
+        print("--- grouping ---")
+        df = manager.mutate_groups(df, self)
+        print(df.head())
+        self.output_object = manager.summarize(df)
 
-        self.output_object = engine.apply(engine.mutate(self.data_table))
+        #if (not self.query_type in self.row_visibility or 
+            #len(old_index) != len(self.output_object.index) or
+            #not old_index.equals(self.output_object.index)):
+            #self.reset_row_visibility(self.query_type)
 
-        self.output_object.fillna("", inplace=True)
-        self.output_object.index = range(1, len(self.output_object.index) + 1)
-
-        if (not self.query_type in self.row_visibility or 
-            len(old_index) != len(self.output_object.index) or
-            not old_index.equals(self.output_object.index)):
-            self.reset_row_visibility(self.query_type)
-
-        self._engine_cache[engine] = self.output_object
+        self._engine_cache[(self, manager)] = self.output_object
 
     def drop_cached_aggregates(self):
         self._engine_cache = {}
@@ -330,6 +334,11 @@ class Session(object):
             
             # deal with function headers:
             if header.startswith("func_"):
+                manager = options.get_manager(options.cfg.MODE, self.Resource.name)
+                fun = manager.get_function(header)
+                raise RuntimeError(fun.get_label(session=self))
+                
+                raise RuntimeError("FUNC")
                 match = re.match("func_(.*)_(\d+)_(\d+)$", header)
                 core = match.group(1)
                 function_number = int(match.group(2))

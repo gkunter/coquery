@@ -50,6 +50,7 @@ from .links import Link
 from .unicode import utf8
 from .defines import *
 from .errors import *
+from . import managers
 
 # Define a HelpFormatter class that works with Unicode corpus names both in 
 # Python 2.7 and Python 3.x:
@@ -245,6 +246,8 @@ class Options(object):
         self.args.column_names = {}
         self.args.column_visibility = collections.defaultdict(dict)
         self.args.row_color = {}
+
+        self.args.managers = collections.defaultdict(dict)
 
         # Set defaults for CSV files:
         self.args.query_column_number = 1
@@ -891,7 +894,7 @@ class Options(object):
                                         pass
         else:
             self.args.first_run = True
-
+            
 cfg = None
 
 class UnicodeConfigParser(RawConfigParser):
@@ -1339,6 +1342,22 @@ def get_available_resources(configuration):
             except (AttributeError, ImportError) as e:
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
+
+def get_manager(manager, resource):
+    """
+    Returns a data manager 
+    """
+    if manager in cfg.managers[resource]:
+        current_manager = cfg.managers[resource][manager]
+    else:
+        if manager == QUERY_MODE_FREQUENCIES:
+            current_manager = managers.Frequency()
+        elif manager == QUERY_MODE_DISTINCT:
+            current_manager = managers.Distinct()
+        else:
+            current_manager = managers.Manager()
+        cfg.managers[resource][manager] = current_manager
+    return current_manager
 
 def get_resource(name, connection= None):
     """
