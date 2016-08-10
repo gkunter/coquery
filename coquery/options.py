@@ -1360,7 +1360,7 @@ def get_manager(manager, resource):
         current_manager = cfg.managers[resource][manager]
     else:
         if manager == QUERY_MODE_FREQUENCIES:
-            current_manager = managers.Frequency()
+            current_manager = managers.Distinct()
         elif manager == QUERY_MODE_DISTINCT:
             current_manager = managers.Distinct()
         else:
