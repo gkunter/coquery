@@ -227,11 +227,14 @@ class Session(object):
         
         self.data_table.index = range(len(self.data_table))
         
-        df = manager.mutate(self.data_table, self)
-        print("--- grouping ---")
+        df = self.data_table
+        
+        df = manager.mutate(df, self)
         df = manager.mutate_groups(df, self)
-        print(df.head())
-        self.output_object = manager.summarize(df)
+        df = manager.arrange(df, self)
+        df = manager.summarize(df)
+        
+        self.output_object = df
 
         #if (not self.query_type in self.row_visibility or 
             #len(old_index) != len(self.output_object.index) or

@@ -65,11 +65,10 @@ class Manager(object):
     def get_group_functions(self, df, session):
         vis_cols = Function.get_visible_columns(df)
         groups = []
-        for x in options.cfg.group_columns:
-            if x.startswith("coquery_"):
-                groups.append(x)
-            else:
-                groups.append("coq_{}_1".format(x))
+        for rc_feature in options.cfg.group_columns:
+            groups += session.Resource.format_resource_feature(rc_feature,
+                        session.get_max_token_count())
+                    
         if not groups:
             return []
         l = []
@@ -118,6 +117,19 @@ class Manager(object):
 
         return df
     
+    def arrange(self, df, session):
+        group_functions = self.get_group_functions(df, session)
+        columns = []
+        for fun in group_functions:
+            columns += fun.group
+        columns = list(set(columns))
+        try:
+            # pandas <= 0.16.2:
+            return df.sort(columns=columns, axis="index")
+        except AttributeError:
+            # pandas >= 0.17.0
+            return df.sort_values(by=columns, axis="index")
+    
     def summarize(self, df):
         return df
 
@@ -133,15 +145,4 @@ class Manager(object):
 class Distinct(Manager):
     name = "DISTINCT"
     summarize = Manager.distinct
-
-class Frequency(Distinct):
-    name = "FREQUENCY"
-    
-    #def get_manager_functions(self, df, session):
-        #l = super(Frequency, self).get_manager_functions(df, session)
-        #vis_cols = self.get_visible_columns(df)
-        #fun = Freq(columns=vis_cols)
-        #fun.set_label(COLUMN_NAMES["statistics_frequency"])
-        #l.append(fun)
-        #return l
-        
+           
