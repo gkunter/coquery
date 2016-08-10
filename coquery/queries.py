@@ -544,9 +544,9 @@ class DistinctQuery(TokenQuery):
         return df
 
 
-class ContrastQuery(FrequencyQuery):
+class ContrastQuery(TokenQuery):
     """
-    ContrastQuery is a subclass of FrequencyQuery.
+    ContrastQuery is a subclass of TokenQuery.
     
     In this subclass, :func:`aggregate_data` creates a square matrix with all 
     occurring combinations of output columns in the result data frame as rows
