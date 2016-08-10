@@ -797,6 +797,11 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.stopword_list = []                            
                         try:
+                            group = config_file.get("gui", "group_columns")
+                            self.args.group_columns = group.split(",")
+                        except (NoOptionError, ValueError):
+                            self.args.group_columns = []
+                        try:
                             self.args.ask_on_quit = bool(config_file.getboolean("gui", "ask_on_quit"))
                         except (NoOptionError, ValueError):
                             self.args.ask_on_quit = True
@@ -1029,6 +1034,10 @@ def save_configuration():
         except AttributeError:
             config.set("gui", "save_query_file", True)
 
+        try:
+            config.set("gui", "group_columns", ",".join(cfg.group_columns))
+        except (NoOptionError, ValueError):
+            pass
         try:
             config.set("gui", "query_file_path", cfg.query_file_path)
         except AttributeError:
