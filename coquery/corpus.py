@@ -472,6 +472,48 @@ class BaseResource(object):
     special_table_list = ["coquery", "statistics", "tag"]
 
     render_token_style = "background: lightyellow"
+    
+    @classmethod
+    def format_resource_feature(cls, rc_feature, N):
+        """
+        Return a list of formatted feature labels as they occur in the query
+        table as headers.
+        
+        All labels start with the prefix 'coq_' and end with a number. For 
+        lexicon features, the numbers range from 1 to N. For other features, 
+        the number is always 1.
+        
+        Special resource features, i.e. those that belong to one of the tables
+        in the 'special_table_list' class attribute, are returned as they are.
+        
+        Parameters
+        ----------
+        rc_feature : str 
+            The name of the resource feature
+        N : int 
+            The maximum number of query items
+            
+        Returns:
+        --------
+        l : list
+            A list of header labels. 
+        """
+        # special case for "coquery_query_token", which receives numbers like
+        # a query item resource:
+        if rc_feature == "coquery_query_token": 
+            return ["coquery_query_token_{}".format(x + 1) for x in range(N)]
+
+        # handle resources from one of the special tables:
+        if rc_feature.startswith(tuple(cls.special_table_list)):
+            return [rc_feature]
+        
+        # handle lexicon features:
+        lexicon_features = [x for x, _ in cls.get_lexicon_features()]
+        if rc_feature in lexicon_features or cls.is_tokenized(rc_feature):
+            return ["coq_{}_{}".format(rc_feature, x+1) for x in range(N)]
+        # handle remaining features
+        else:
+            return ["coq_{}_1".format(rc_feature)]
 
     @classmethod
     def split_resource_feature(cls, rc_feature):
@@ -1145,20 +1187,7 @@ class SQLResource(BaseResource):
         # then, add an appropriately aliased name for each selected feature:
         #for rc_feature in options.cfg.selected_features:
         for rc_feature in ordered_selected_features:
-            if rc_feature in lexicon_features or cls.is_tokenized(rc_feature):
-                select_list += ["coq_{}_{}".format(rc_feature, x+1) for x in range(max_token_count)]
-            elif rc_feature in corpus_features:
-                select_list.append("coq_{}_1".format(rc_feature))
-            
-            # Special case 'Coquery' table:
-            elif rc_feature.startswith("coquery_"):
-                if rc_feature == "coquery_query_token": 
-                    select_list += ["coquery_query_token_{}".format(x + 1) for x in range(max_token_count)]
-                else:
-                    select_list.append(rc_feature)
-            # Special case from 'Statistics' table:
-            elif rc_feature in ["statistics_query_entropy", "statistics_query_proportion"]:
-                select_list.append(rc_feature)
+            select_list += cls.format_resource_feature(rc_feature, max_token_count)
 
         # linked columns
         for rc_feature in options.cfg.selected_features:
@@ -1721,7 +1750,7 @@ class CorpusClass(object):
         for rc_feature in options.cfg.selected_features:
             func, hashed, table, feat = self.resource.split_resource_feature(rc_feature)
             if func:
-                print("FUNCI")
+                print("FUNC")
             if table not in self.resource.special_table_list:
                 s = "{}_{}".format(table, feat)
                 if hashed != None:
@@ -1752,7 +1781,6 @@ class CorpusClass(object):
             print("FNC", res, table, feature)
             required_features.add("{}_{}".format(table, feature))
         
-
         # make sure that the word_id is always included in the query:
         # FIXME: Why is this needed?
         required_features.add("corpus_word_id")
@@ -1909,6 +1937,10 @@ class CorpusClass(object):
                     rc_where_constraints["{}_table".format(table)].add(s)
                 else:
                     rc_where_constraints["corpus_table"].add(s)
+
+        for col in options.cfg.group_columns:
+            if col not in requested_features:
+                requested_features.append(col)        
 
         # get a list of all tables that are required to satisfy the 
         # feature request:
@@ -2464,11 +2496,13 @@ class CorpusClass(object):
 
         positions_lexical_items = self.get_lexical_item_positions(token_list)
 
+        max_token_count = Query.Session.get_max_token_count()
+
         final_select = []        
         for rc_feature in self.resource.get_preferred_output_order():
             if rc_feature in options.cfg.selected_features:
                 if rc_feature in [x for x, _ in lexicon_features] or self.resource.is_tokenized(rc_feature):
-                    for i in range(Query.Session.get_max_token_count()):
+                    for i in range(max_token_count):
                         if options.cfg.align_quantified:
                             last_offset = 0
                             if i in positions_lexical_items:
@@ -2487,7 +2521,7 @@ class CorpusClass(object):
             _, _, tab, feat = self.resource.split_resource_feature(rc_feature)
             rc_feat = "{}_{}".format(tab, feat)
             if self.resource.is_lexical(link.rc_from):
-                for i in range(Query.Session.get_max_token_count()):
+                for i in range(max_token_count):
                     if options.cfg.align_quantified:
                         if i in positions_lexical_items:
                             final_select.append("db_{}_coq_{}_{}".format(res.db_name, rc_feat, i+1))
@@ -2536,6 +2570,26 @@ class CorpusClass(object):
                 final_select += [label.format(N=x+1) for x in range(Query.Session.get_max_token_count())]
             else:
                 final_select.append(label.format(N=1))
+
+        for rc_feature in options.cfg.group_columns:
+            L = self.resource.format_resource_feature(rc_feature, max_token_count)
+            for col in L:
+                try:
+                    num = int(col.rpartition("_")[-1]) - 1
+                except ValueError:
+                    # this happens if the column label does not end in a 
+                    # number, e.g. for fields from the special tables.
+                    continue
+                if options.cfg.align_quantified:
+                    if num in positions_lexical_items:
+                        final_select.append(col)
+                    else:
+                        final_select.append("NULL AS {}".format(col))
+                else:
+                    if num < len(token_list):
+                        final_select.append(col)
+                    else:
+                        final_select.append("NULL AS {}".format(col))
 
         # add coquery_invisible_origin_id if a context is requested:
         if (options.cfg.context_mode != CONTEXT_NONE and 
@@ -2654,7 +2708,6 @@ class CorpusClass(object):
             query_string = query_string.replace("SELECT ", "SELECT \n\t")
             query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
-
         return query_string
 
     def sql_string_get_sentence_wordid(self,  source_id):
