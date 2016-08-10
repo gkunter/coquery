@@ -912,6 +912,52 @@ class CoqTextTag(QtGui.QFrame):
         or False otherwise. """
         return True
     
+class CoqListWidget(QtGui.QListWidget):
+    def __init__(self, *args, **kwargs):
+        super(CoqListWidget, self).__init__(*args, **kwargs)
+        self.columns = []
+    
+    def dropEvent(self, e):
+        self.add_resource(e.mimeData().text())
+        e.acceptProposedAction()
+        
+    def clear(self):
+        for _ in range(self.count()):
+            self.takeItem(0)
+        self.columns = []
+    
+    def find_resource(self, rc_feature):
+        for i, (_, x) in enumerate(self.columns):
+            if x == rc_feature:
+                return i
+        return None
+    
+    def get_item(self, rc_feature):
+        for i, (item, x) in enumerate(self.columns):
+            if x == rc_feature:
+                return item
+        return None
+    
+    def add_resource(self, rc_feature):
+        if self.get_item(rc_feature) != None:
+            return
+        label = getattr(options.cfg.main_window.resource, rc_feature)
+        new_item = QtGui.QListWidgetItem(label)
+        self.columns.append((new_item, rc_feature))
+        self.addItem(new_item)
+    
+    def remove_item(self, item):
+        i = self.row(item)
+        _, rc_feature = self.columns[i]
+        self.takeItem(i)
+        self.remove_resource(rc_feature)
+            
+    def remove_resource(self, rc_feature):
+        i = self.find_resource(rc_feature)
+        if i != None:
+            item, _ = self.columns.pop(i)
+            self.takeItem(self.row(item))
+    
 class CoqTagEdit(QtGui.QLineEdit):
     """ Define a QLineEdit class that is used to enter query filters. """
     

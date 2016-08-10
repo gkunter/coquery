@@ -217,6 +217,15 @@ class CoqueryApp(QtGui.QMainWindow):
         self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
         self.ui.edit_file_name.setCompleter(self.path_completer)
 
+        # set up group columns
+        self.ui.button_add_group.setDisabled(True)
+        self.ui.button_remove_group.setDisabled(True)
+        self.ui.list_group_columns.setDragEnabled(True)
+        self.ui.list_group_columns.setDragDropMode(QtGui.QAbstractItemView.DragDrop)
+        self.ui.list_group_columns.viewport().setAcceptDrops(True)
+        self.ui.list_group_columns.setDropIndicatorShown(True)
+
+
         self.setup_hooks()
         self.setup_menu_actions()
         self.setup_icons()
@@ -506,11 +515,30 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_context_mode_string.toggled.connect(self.update_context_widgets)
         self.ui.radio_context_mode_columns.toggled.connect(self.update_context_widgets)
         
+        # set up hooks for the group column list:
+        self.ui.button_add_group.clicked.connect(self.add_group_column)
+        self.ui.button_remove_group.clicked.connect(self.remove_group_column)
+        self.ui.list_group_columns.itemActivated.connect(lambda: self.ui.button_remove_group.setDisabled(False))
+        self.ui.options_tree.itemActivated.connect(lambda: self.ui.button_add_group.setDisabled(False))
+        
+        
         # set up hooks for the summary widgets:
         self.ui.radio_no_summary.clicked.connect(self.change_managing)
         self.ui.radio_summary.clicked.connect(self.change_managing)
             
         self.corpusListUpdated.connect(self.check_corpus_widgets)
+
+    def add_group_column(self):
+        selected = self.ui.options_tree.selectedItems()
+        for item in selected:
+            self.ui.list_group_columns.add_resource(item.objectName())
+    
+    def remove_group_column(self):
+        selection = self.ui.list_group_columns.selectedItems()
+        for item in selection:
+            self.ui.list_group_columns.remove_item(item)
+        if not self.ui.list_group_columns.selectedItems():
+            self.ui.button_remove_group.setDisabled(True)
 
     def change_managing_type(self):
         if self.ui.radio_summary.isChecked():
@@ -868,6 +896,10 @@ class CoqueryApp(QtGui.QMainWindow):
 
         for link in options.cfg.table_links[options.cfg.current_server]:
             self.add_table_link(link)
+
+        for _, group_column in self.ui.list_group_columns.columns:
+            if not hasattr(self.resource, group_column):
+                self.ui.list_group_columns.remove_resource(group_column)
 
     def fill_combo_corpus(self):
         """ 
@@ -2160,6 +2192,7 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.external_links = self.get_external_links()
             options.cfg.selected_features = self.get_selected_features()
             options.cfg.selected_functions = self.get_functions()
+            options.cfg.group_columns = [x for _, x in self.ui.list_group_columns.columns]
             return True
 
     def get_selected_features(self):
@@ -2324,6 +2357,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.data_preview.setModel(self.table_model)
         except AttributeError:
             pass
+        
+        for x in options.cfg.group_columns:
+            self.ui.list_group_columns.add_resource(x)
         
         #self.toggle_frequency_columns()
 
