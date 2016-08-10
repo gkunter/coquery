@@ -218,17 +218,22 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.edit_file_name.setCompleter(self.path_completer)
 
         # set up group columns
-        self.ui.button_add_group.setDisabled(True)
         self.ui.button_remove_group.setDisabled(True)
-        self.ui.list_group_columns.setDragEnabled(True)
-        self.ui.list_group_columns.setDragDropMode(QtGui.QAbstractItemView.DragDrop)
+        self.ui.button_group_up.setDisabled(True)
+        self.ui.button_group_down.setDisabled(True)
+        #self.ui.list_group_columns.setDragEnabled(True)
+        #self.ui.list_group_columns.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
         self.ui.list_group_columns.viewport().setAcceptDrops(True)
-        self.ui.list_group_columns.setDropIndicatorShown(True)
-
+        self.ui.list_group_columns.setDropIndicatorShown(False)
 
         self.setup_hooks()
         self.setup_menu_actions()
         self.setup_icons()
+
+        width = max(
+            self.ui.horizontalLayout_2.sizeHint().width(),
+            self.ui.formLayout.sizeHint().width())
+        self.ui.list_group_columns.setMaximumSize(QtCore.QSize(width, 16777215))
         
         self.change_corpus()
 
@@ -237,9 +242,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setEnabled(False)
         self.ui.menuAnalyse.setEnabled(False)
 
-        # set splitter stretches:
+        # set horizontal splitter: left: full stretch, right: no stretch
         self.ui.splitter.setStretchFactor(0, 1)
         self.ui.splitter.setStretchFactor(1, 0)
+        # set vertical splitter: top: no stretch, bottom: full stretch
         self.ui.splitter_2.setStretchFactor(0, 0)
         self.ui.splitter_2.setStretchFactor(1, 1)
 
@@ -265,7 +271,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setSortingEnabled(False)
 
         self.ui.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectionBehavior(QtGui.QAbstractItemView.SelectRows|QtGui.QAbstractItemView.SelectColumns))
-
 
         self.ui.status_message = QtGui.QLabel("{} {}".format(NAME, VERSION))
 
@@ -324,6 +329,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_save_selection.setIcon(self.get_icon("floppy"))
         self.ui.button_browse_file.setIcon(self.get_icon("folder"))
         self.ui.button_file_options.setIcon(self.get_icon("table"))
+        self.ui.button_remove_group.setIcon(self.get_icon("sign-delete"))
+        self.ui.button_group_up.setIcon(self.get_icon("sign-up"))
+        self.ui.button_group_down.setIcon(self.get_icon("sign-down"))
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
@@ -516,11 +524,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_context_mode_columns.toggled.connect(self.update_context_widgets)
         
         # set up hooks for the group column list:
-        self.ui.button_add_group.clicked.connect(self.add_group_column)
         self.ui.button_remove_group.clicked.connect(self.remove_group_column)
-        self.ui.list_group_columns.itemActivated.connect(lambda: self.ui.button_remove_group.setDisabled(False))
-        self.ui.options_tree.itemActivated.connect(lambda: self.ui.button_add_group.setDisabled(False))
-        
+        self.ui.button_group_up.clicked.connect(lambda: self.move_group_column(direction="up"))
+        self.ui.button_group_down.clicked.connect(lambda: self.move_group_column(direction="down"))
+        self.ui.list_group_columns.itemActivated.connect(self.activate_group_column_buttons)
         
         # set up hooks for the summary widgets:
         self.ui.radio_no_summary.clicked.connect(self.change_managing)
@@ -528,17 +535,58 @@ class CoqueryApp(QtGui.QMainWindow):
             
         self.corpusListUpdated.connect(self.check_corpus_widgets)
 
-    def add_group_column(self):
-        selected = self.ui.options_tree.selectedItems()
-        for item in selected:
-            self.ui.list_group_columns.add_resource(item.objectName())
+    def activate_group_column_buttons(self):
+        selected = self.ui.list_group_columns.selectedItems()
+        self.ui.button_remove_group.setEnabled(selected != [])
+        try:
+            pos_first = self.ui.list_group_columns.row(selected[0])
+            pos_last = self.ui.list_group_columns.row(selected[-1])
+        except IndexError:
+            pos_first = 0
+            pos_last = len(self.ui.list_group_columns.columns)
+        self.ui.button_group_up.setEnabled(pos_first > 0)
+        self.ui.button_group_down.setEnabled(pos_last < len(self.ui.list_group_columns.columns)-1)
+
+    def move_group_column(self, direction, rc_feature=None):
+        if rc_feature:
+            selected = [self.ui.list_group_columns.get_item(rc_feature)]
+        else:
+            selected = self.ui.list_group_columns.selectedItems()
+            
+        pos_first = self.ui.list_group_columns.row(selected[0])
+        pos_last = self.ui.list_group_columns.row(selected[-1])
+        
+        if direction == "up":
+            start = pos_first - 1
+        else:
+            start = pos_first + 1
+            
+        features = [self.ui.list_group_columns.get_feature(x) for x in selected]
+        
+        for i, rc_feature in enumerate(features):
+            self.ui.list_group_columns.remove_resource(rc_feature)
+            self.ui.list_group_columns.insert_resource(start + i, rc_feature)
+
+        self.activate_group_column_buttons()
+
+    def add_group_column(self, rc_feature=None):
+        if rc_feature:
+            selected = [rc_feature]
+        else:
+            selected = [x.objectName() for x in self.ui.options_tree.selectedItems()]
+        for col in selected:
+            self.ui.list_group_columns.add_resource(col)
+        self.activate_group_column_buttons()
     
-    def remove_group_column(self):
-        selection = self.ui.list_group_columns.selectedItems()
-        for item in selection:
+    def remove_group_column(self, rc_feature=None):
+        if rc_feature:
+            selected = [self.ui.list_group_columns.get_item(rc_feature)]
+        else:
+            selected = self.ui.list_group_columns.selectedItems()
+        for item in selected:
             self.ui.list_group_columns.remove_item(item)
-        if not self.ui.list_group_columns.selectedItems():
-            self.ui.button_remove_group.setDisabled(True)
+
+        self.activate_group_column_buttons()
 
     def change_managing_type(self):
         if self.ui.radio_summary.isChecked():
@@ -655,6 +703,8 @@ class CoqueryApp(QtGui.QMainWindow):
         
         tree.addLink.connect(self.add_link)
         tree.addFunction.connect(self.add_function)
+        tree.addGroup.connect(self.add_group_column)
+        tree.removeGroup.connect(self.remove_group_column)
         tree.removeItem.connect(self.remove_item)
         
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
@@ -1247,13 +1297,16 @@ class CoqueryApp(QtGui.QMainWindow):
         
         # no options are shown for entries from the special tables and for 
         # linked tables (but for columns from linked tables)
-        if not (utf8(item.objectName()).startswith("coquery") or 
-                utf8(item.objectName()).startswith("statistics") or
-                utf8(item.objectName()).endswith("_table")):
+        if not (item.objectName().startswith("statistics") or
+                item.objectName().endswith("_table")):
             add_link = QtGui.QAction("&Link an external table", self)
             add_function = QtGui.QAction("&Add a function", self)
+            add_grouping = QtGui.QAction("Add to &group columns", self)
             remove_link = QtGui.QAction("&Remove linked table", self)
             remove_function = QtGui.QAction("&Remove function", self)
+            remove_grouping = QtGui.QAction("Remove from &group columns", self)
+            view_entries = QtGui.QAction("View all &values", self)
+            view_unique = QtGui.QAction("View &unique values", self)
             
             parent = item.parent()
 
@@ -1265,22 +1318,31 @@ class CoqueryApp(QtGui.QMainWindow):
                     menu.addAction(remove_function)
                     remove_function.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
                 else:
-                    view_unique = QtGui.QAction("View &unique values", self)
-                    view_unique.triggered.connect(lambda: self.show_unique_values(item))
-                    menu.addAction(view_unique)
-                    view_entries = QtGui.QAction("View all &values", self)
-                    view_entries.triggered.connect(lambda: self.show_unique_values(item, uniques=False))
-                    menu.addAction(view_entries)
-                    view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
-                    view_entries.setEnabled(options.cfg.gui.test_mysql_connection())
+                    
+                    if not item.objectName().startswith("coquery"):
+                        menu.addAction(view_unique)
+                        menu.addAction(view_entries)
+                        view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
+                        view_entries.setEnabled(options.cfg.gui.test_mysql_connection())
+                        view_unique.triggered.connect(lambda: self.show_unique_values(item))
+                        view_entries.triggered.connect(lambda: self.show_unique_values(item, uniques=False))
 
                     menu.addSeparator()
-                    if not hasattr(item.parent(), "link"):
-                        menu.addAction(add_link)
-                        add_link.triggered.connect(lambda: self.ui.options_tree.addLink.emit(item))
+
+                    if not item.objectName().startswith("coquery"):
+                        if not hasattr(item.parent(), "link"):
+                            menu.addAction(add_link)
+                            add_link.triggered.connect(lambda: self.ui.options_tree.addLink.emit(item))
+
                     menu.addAction(add_function)
                     add_function.triggered.connect(lambda: self.ui.options_tree.addFunction.emit(item))
-
+                    
+                    if self.ui.list_group_columns.find_resource(item.objectName()) != None:
+                        menu.addAction(remove_grouping)
+                        remove_grouping.triggered.connect(lambda: self.ui.options_tree.removeGroup.emit(item.objectName()))
+                    else:
+                        menu.addAction(add_grouping)
+                        add_grouping.triggered.connect(lambda: self.ui.options_tree.addGroup.emit(item.objectName()))
         else:
             if utf8(item.objectName()).endswith("_table"):
                 unavailable = QtGui.QAction(_translate("MainWindow", "No option available for tables.", None), self)
@@ -1288,6 +1350,7 @@ class CoqueryApp(QtGui.QMainWindow):
                  unavailable = QtGui.QAction(_translate("MainWindow", "No option available for special columns.", None), self)
             unavailable.setDisabled(True)
             menu.addAction(unavailable)      
+            
             
         # if point is set, the menu was called as a context menu: 
         if point:
@@ -2358,10 +2421,11 @@ class CoqueryApp(QtGui.QMainWindow):
         except AttributeError:
             pass
         
-        for x in options.cfg.group_columns:
-            self.ui.list_group_columns.add_resource(x)
+        for col in [x for x in options.cfg.group_columns if x]:
+            self.ui.list_group_columns.add_resource(col)
+
+        self.activate_group_column_buttons()
         
-        #self.toggle_frequency_columns()
 
     #def select_table(self):
         #"""

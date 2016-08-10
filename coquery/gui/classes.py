@@ -23,6 +23,7 @@ from coquery import queries
 from coquery import filters
 from coquery.errors import *
 from coquery.defines import *
+from coquery.unicode import utf8
 
 from .pyqt_compat import QtCore, QtGui, frameShadow, frameShape
 from . import errorbox
@@ -490,7 +491,7 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
 
     def objectName(self):
         """ Retrieve resource variable name from object name. """
-        return self._objectName
+        return utf8(self._objectName)
 
     def check_children(self, column=0):
         """ 
@@ -585,6 +586,8 @@ class CoqTreeWidget(QtGui.QTreeWidget):
     """
     addLink = QtCore.Signal(CoqTreeItem)
     addFunction = QtCore.Signal(CoqTreeItem)
+    addGroup = QtCore.Signal(str)
+    removeGroup = QtCore.Signal(str)
     removeItem = QtCore.Signal(CoqTreeItem)
     
     def __init__(self, *args):
@@ -933,9 +936,15 @@ class CoqListWidget(QtGui.QListWidget):
         return None
     
     def get_item(self, rc_feature):
-        for i, (item, x) in enumerate(self.columns):
+        for item, x in self.columns:
             if x == rc_feature:
                 return item
+        return None
+    
+    def get_feature(self, item):
+        for x, rc_feature in self.columns:
+            if x == item:
+                return rc_feature
         return None
     
     def add_resource(self, rc_feature):
@@ -945,6 +954,18 @@ class CoqListWidget(QtGui.QListWidget):
         new_item = QtGui.QListWidgetItem(label)
         self.columns.append((new_item, rc_feature))
         self.addItem(new_item)
+        self.setCurrentItem(new_item)
+        self.itemActivated.emit(new_item)
+        
+    def insert_resource(self, i, rc_feature):
+        if self.get_item(rc_feature) != None:
+            return
+        label = getattr(options.cfg.main_window.resource, rc_feature)
+        new_item = QtGui.QListWidgetItem(label)
+        self.columns.insert(i, (new_item, rc_feature))
+        self.insertItem(i, new_item)
+        self.setCurrentItem(new_item)
+        self.itemActivated.emit(new_item)
     
     def remove_item(self, item):
         i = self.row(item)

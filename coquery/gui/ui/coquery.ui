@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>600</height>
+    <height>739</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -588,7 +588,7 @@
                 <item>
                  <widget class="QLabel" name="label_2">
                   <property name="text">
-                   <string>Show summar&amp;y</string>
+                   <string>Summarize results:</string>
                   </property>
                   <property name="alignment">
                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -624,6 +624,12 @@
               </item>
               <item row="2" column="0">
                <widget class="QRadioButton" name="radio_summary">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
                  <string/>
                 </property>
@@ -636,32 +642,54 @@
             </item>
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_9">
+              <property name="sizeConstraint">
+               <enum>QLayout::SetMinimumSize</enum>
+              </property>
               <item>
-               <widget class="QLabel" name="label_3">
-                <property name="text">
-                 <string>&amp;Group columns:</string>
-                </property>
-                <property name="buddy">
-                 <cstring>list_group_columns</cstring>
-                </property>
-               </widget>
+               <layout class="QHBoxLayout" name="horizontalLayout_3">
+                <item>
+                 <widget class="QLabel" name="label_3">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="text">
+                   <string>&amp;Group columns:</string>
+                  </property>
+                  <property name="buddy">
+                   <cstring>list_group_columns</cstring>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item>
                <widget class="CoqListWidget" name="list_group_columns">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>200</width>
+                  <height>16777215</height>
+                 </size>
                 </property>
                </widget>
               </item>
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_2">
+                <property name="sizeConstraint">
+                 <enum>QLayout::SetMinimumSize</enum>
+                </property>
                 <item>
-                 <widget class="QPushButton" name="button_add_group">
+                 <widget class="QPushButton" name="button_remove_group">
                   <property name="text">
-                   <string>Add</string>
+                   <string>Remove</string>
                   </property>
                  </widget>
                 </item>
@@ -672,16 +700,23 @@
                   </property>
                   <property name="sizeHint" stdset="0">
                    <size>
-                    <width>40</width>
+                    <width>0</width>
                     <height>20</height>
                    </size>
                   </property>
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="button_remove_group">
+                 <widget class="QToolButton" name="button_group_up">
                   <property name="text">
-                   <string>Remove</string>
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QToolButton" name="button_group_down">
+                  <property name="text">
+                   <string/>
                   </property>
                  </widget>
                 </item>
@@ -721,7 +756,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>24</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
