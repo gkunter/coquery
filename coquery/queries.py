@@ -384,7 +384,7 @@ class TokenQuery(object):
             The data frame containing also the static data.
         """
         
-        for column in self.Session.output_order:
+        for column in self.Session.output_order + options.cfg.group_columns:
             if column == "coquery_invisible_number_of_tokens":
                 df[column] = self._current_number_of_tokens
             if column == "coquery_query_string":
