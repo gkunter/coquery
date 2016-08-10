@@ -64,17 +64,25 @@ class Manager(object):
     
     def get_group_functions(self, df, session):
         vis_cols = Function.get_visible_columns(df)
+        groups = []
+        for x in options.cfg.group_columns:
+            if x.startswith("coquery_"):
+                groups.append(x)
+            else:
+                groups.append("coq_{}_1".format(x))
+        if not groups:
+            return []
         l = []
         if "statistics_query_proportion" in options.cfg.selected_features:
-            l.append(Proportion(columns=vis_cols, group=["coquery_query_string"]))
+            l.append(Proportion(columns=vis_cols, group=groups))
         if "statistics_query_entropy" in options.cfg.selected_features:
-            l.append(Entropy(columns=vis_cols, group=["coquery_query_string"]))
+            l.append(Entropy(columns=vis_cols, group=groups))
         if "statistics_query_tokens" in  options.cfg.selected_features:
-            l.append(Tokens(group=["coquery_query_string"]))
+            l.append(Tokens(group=groups))
         if "statistics_query_types" in  options.cfg.selected_features:
-            l.append(Types(columns=vis_cols, group=["coquery_query_string"]))
+            l.append(Types(columns=vis_cols, group=groups))
         if "statistics_query_ttr" in  options.cfg.selected_features:
-            l.append(TypeTokenRatio(columns=vis_cols, group=["coquery_query_string"]))
+            l.append(TypeTokenRatio(columns=vis_cols, group=groups))
         return l
     
     @staticmethod
@@ -92,14 +100,15 @@ class Manager(object):
                 df = Manager._apply_function(df, fun)
             else:
                 val = grouped.apply(lambda d: fun.evaluate(d))
-                val = val.reset_index(drop=True)
+                val.index = val.index.labels[-1]
                 df[fun.get_id()] = val
 
         df.fillna("", inplace=True)
         return df
     
     def mutate(self, df, session):
-        self.functions = session.get_functions()
+        self.functions = []
+        #self.functions = session.get_functions()
         self.functions += self.get_manager_functions(df, session)
         
         for fun in self.functions:
