@@ -252,7 +252,7 @@ class Freq(Function):
         return val
 
 class FreqPMW(Freq):
-    _name = "FREQEUNCY_PMW"
+    _name = "FREQUENCY_PMW"
     words = 1000000
 
     def __init__(self, session, columns=[], *args, **kwargs):
@@ -346,9 +346,8 @@ class TypeTokenRatio(Types):
     def evaluate(self, df):
         val = super(TypeTokenRatio, self).evaluate(df)
         fun = Tokens(group=self.group).evaluate(df)
-        
-        return val/fun
-        
+        return (pd.DataFrame({"types": val, "tokens": fun}, index=df.index)
+                    .apply(lambda row: row.types / row.tokens, axis="columns"))
 
 class CorpusSize(Function):
     _name = "CORPUSSIZE"
