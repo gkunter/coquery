@@ -463,11 +463,11 @@ class BaseResource(object):
     statistics_types = COLUMN_NAMES["statistics_types"]
     statistics_tokens = COLUMN_NAMES["statistics_tokens"]
     statistics_ttr = COLUMN_NAMES["statistics_ttr"]
-    statistics_query_proportion = COLUMN_NAMES["statistics_query_proportion"]
-    statistics_query_entropy = COLUMN_NAMES["statistics_query_entropy"]
-    statistics_query_types = COLUMN_NAMES["statistics_query_types"]
-    statistics_query_tokens = COLUMN_NAMES["statistics_query_tokens"]
-    statistics_query_ttr = COLUMN_NAMES["statistics_query_ttr"]
+    statistics_group_proportion = COLUMN_NAMES["statistics_group_proportion"]
+    statistics_group_entropy = COLUMN_NAMES["statistics_group_entropy"]
+    statistics_group_types = COLUMN_NAMES["statistics_group_types"]
+    statistics_group_tokens = COLUMN_NAMES["statistics_group_tokens"]
+    statistics_group_ttr = COLUMN_NAMES["statistics_group_ttr"]
 
     special_table_list = ["coquery", "statistics", "tag"]
 
