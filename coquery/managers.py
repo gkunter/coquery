@@ -18,12 +18,19 @@ from . import options
 class Group(object):
     pass
 
+class Sorter(object):
+    def __init__(self, column, ascending=True, reverse=False, position=0):
+        self.column = column
+        self.ascending = ascending
+        self.reverse = reverse
+        self.position = position
+
 class Manager(object):
     name = "RESULTS"
     
     def __init__(self):
         self.functions = []
-        pass
+        self.sorters = []
     
     def get_additional_columns(self):
         return [x.get_id() for x in self.functions]
@@ -72,15 +79,15 @@ class Manager(object):
         if not groups:
             return []
         l = []
-        if "statistics_query_proportion" in options.cfg.selected_features:
+        if "statistics_group_proportion" in options.cfg.selected_features:
             l.append(Proportion(columns=vis_cols, group=groups))
-        if "statistics_query_entropy" in options.cfg.selected_features:
+        if "statistics_group_entropy" in options.cfg.selected_features:
             l.append(Entropy(columns=vis_cols, group=groups))
-        if "statistics_query_tokens" in  options.cfg.selected_features:
+        if "statistics_group_tokens" in  options.cfg.selected_features:
             l.append(Tokens(group=groups))
-        if "statistics_query_types" in  options.cfg.selected_features:
+        if "statistics_group_types" in  options.cfg.selected_features:
             l.append(Types(columns=vis_cols, group=groups))
-        if "statistics_query_ttr" in  options.cfg.selected_features:
+        if "statistics_group_ttr" in  options.cfg.selected_features:
             l.append(TypeTokenRatio(columns=vis_cols, group=groups))
         return l
     
@@ -117,18 +124,54 @@ class Manager(object):
 
         return df
     
-    def arrange(self, df, session):
-        group_functions = self.get_group_functions(df, session)
-        columns = []
-        for fun in group_functions:
-            columns += fun.group
-        columns = list(set(columns))
+    def remove_sorter(self, column):
+        self.sorters.remove(self.get_sorter(column))
+        for i, x in enumerate(self.sorters):
+            x.position = i
+        
+    def add_sorter(self, column, ascending=True, reverse=False):
+        if self.get_sorter(column):
+            self.remove_sorter(column)
+        self.sorters.append(Sorter(column, ascending, reverse, len(self.sorters)))
+    
+    def get_sorter(self, column):
+        for x in self.sorters:
+            if x.column == column:
+                return x
+        return None
+    
+    def arrange(self, df):
+        original_columns = df.columns
+        if self.sorters:
+            # gather sorting information:
+            directions = []
+            columns = []
+            for sorter in self.sorters:
+                directions.append(sorter.ascending)
+                if sorter.reverse:
+                    target = "{}_rev".format(sorter.column)
+                    df[target] = (df[sorter.column].apply(lambda x: x[::-1]))
+                else:
+                    target = sorter.column
+                columns.append(target)
+        else:
+            # no sorters specified, use group columns as sorters
+            columns = options.cfg.group_columns
+            directions = [True] * len(columns)
+
+        if not columns:
+            return df
+        
         try:
             # pandas <= 0.16.2:
-            return df.sort(columns=columns, axis="index")
+            return df.sort(columns=columns, 
+                            ascending=directions,
+                            axis="index")[original_columns]
         except AttributeError:
             # pandas >= 0.17.0
-            return df.sort_values(by=columns, axis="index")
+            return df.sort_values(by=columns, 
+                                    ascending=directions,
+                                    axis="index")[original_columns]
     
     def summarize(self, df):
         return df
