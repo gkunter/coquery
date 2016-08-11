@@ -1429,7 +1429,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def do_sort(self):
         """ Sort the content data frame by taking all sorting columns and 
         their settings into account. """
-
         session = options.cfg.main_window.Session
         manager = options.get_manager(options.cfg.MODE, session.Resource.name)
         self.content = manager.arrange(self.content)
@@ -1445,7 +1444,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         options.cfg.main_window.start_progress_indicator()
         self_sort_thread = CoqThread(self.do_sort, self)
         self_sort_thread.taskFinished.connect(self.sort_finished)
-        self_sort_thread.taskException.connect(self.exception_during_sort)
         self_sort_thread.start()
         
     def sort_finished(self):
@@ -1458,11 +1456,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 QtGui.QItemSelectionModel.Rows)
 
         self.layoutChanged.emit()
-
-    def exception_during_sort(self):
-        options.cfg.main_window.stop_progress_indicator()
-        options.cfg.main_window.showMessage("Error during sorting.")
-        errorbox.ErrorBox.show(self.exc_info, self.exception)
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     fill = False
