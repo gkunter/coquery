@@ -1360,11 +1360,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def headerData(self, index, orientation, role):
         """ Return the header at the given index, taking the sorting settings
         into account. """
+
+        session = options.cfg.main_window.Session
         
         # Return row names?
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
-                if options.cfg.main_window.Session.query_type == queries.ContingencyQuery and index == len(self.rownames) - 1:
+                if session.query_type == queries.ContingencyQuery and index == len(self.rownames) - 1:
                     return None
                 else:
                     return str(self.rownames[index])
@@ -1379,21 +1381,17 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if column.startswith("coquery_invisible"):
                 return None
 
-            display_name = options.cfg.main_window.Session.translate_header(column)
-            # Return normal header if not a sort column:
-            if column not in self.sort_columns:
-                return display_name
-            
+            display_name = session.translate_header(column)
             tag_list = []
             # Add sorting order number if more than one sorting columns have
             # been selected:
-            if len(self.sort_columns) > 1:
-                sorting_position = list(self.sort_columns.keys()).index(column)
-                tag_list.append("{}".format(sorting_position + 1))
-            
-            # Add a "rev" tag if reverse sorting is requested for the column
-            if self.sort_columns[column] in [SORT_REV_DEC, SORT_REV_INC]:
-                tag_list.append("rev")
+            manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+            sorter = manager.get_sorter(column)
+            if sorter:
+                if len(manager.sorters) > 1:
+                    tag_list.append("{}".format(sorter.position + 1))
+                if sorter.reverse:
+                    tag_list.append("rev")
             
             return "{}{}".format(
                     display_name, 
@@ -1404,15 +1402,17 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             # no decorator for hidden columns:
             if not options.cfg.column_visibility.get(column, True):
                 return None
-            if column not in self.sort_columns:
-                return
-            # add arrows as sorting direction indicators if necessary:
-            if self.sort_columns[column] in [SORT_DEC, SORT_REV_DEC]:
-                return options.cfg.main_window.get_icon("sign-up")
-            elif self.sort_columns[column] in [SORT_INC, SORT_REV_INC]:
-                return options.cfg.main_window.get_icon("sign-down")
-            else:
+            manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+            sorter = manager.get_sorter(column)
+            try:
+                # add arrows as sorting direction indicators if necessary:
+                if not sorter.ascending:
+                    return options.cfg.main_window.get_icon("sign-up")
+                else:
+                    return options.cfg.main_window.get_icon("sign-down")
+            except AttributeError:
                 return None
+            
         return None
 
     def rowCount(self, parent=None):
@@ -1429,57 +1429,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def do_sort(self):
         """ Sort the content data frame by taking all sorting columns and 
         their settings into account. """
-        
-        sort_order = []
-        del_columns = []
-        directions = []
-        # go through all sort columns:
-        for col in list(self.sort_columns.keys()):
-            if not options.cfg.column_visibility.get(col, True):
-                continue
-            if not col in self.content.columns.values:
-                self.sort_columns.pop(col)
-                continue
-            # add a temporary column if reverse sorting is requested:
-            if self.sort_columns[col] in set([SORT_REV_DEC, SORT_REV_INC]):
-                name = "{}_rev".format(col)
-                del_columns.append(name)
-                self.content[name] = self.content[col].apply(lambda x: x[::-1])
-            else:
-                name = col
-            # add the sorting direction
-            directions.append(self.sort_columns[col] in set([SORT_INC, SORT_REV_INC]))
-            sort_order.append(name)
-         
-        # remember and remove the row containing column totals if the current
-        # aggregation is a contingency table:
-        if options.cfg.main_window.Session.query_type == queries.ContingencyQuery:
-            column_totals = self.content.iloc[len(self.content.index)-1]
-            self.content = self.content.iloc[0:len(self.content.index)-1]
-            
-        if sort_order:
-            # sort the data frame. Note that pandas 0.17.0 changed the 
-            # API for sorting, so we need to catch that:
-            try:
-                # pandas <= 0.16.2:
-                self.content.sort(
-                    columns=sort_order, ascending=directions,
-                    axis="index", inplace=True)
-            except AttributeError:
-                # pandas >= 0.17.0
-                self.content.sort_values(
-                    by=sort_order, ascending=directions,
-                    axis="index", inplace=True)
-        # Reinsert the row containing the column totals:
-        if options.cfg.main_window.Session.query_type == queries.ContingencyQuery:
-            self.content = self.content.append(column_totals).reset_index(drop=True)
-        
-            # remove all temporary columns:
-        self.content.drop(labels=del_columns, axis="columns", inplace=True)
 
+        session = options.cfg.main_window.Session
+        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        self.content = manager.arrange(self.content)
             
     def sort(self, *args):
-        if not self.sort_columns:
+        session = options.cfg.main_window.Session
+        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+
+        if not manager.sorters:
             return
         self.layoutAboutToBeChanged.emit()
 

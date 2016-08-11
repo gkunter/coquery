@@ -1410,7 +1410,11 @@ class CoqueryApp(QtGui.QMainWindow):
             if column not in selection:
                 selection = [column]
 
-        display_name = "<br/>".join([options.cfg.main_window.Session.translate_header(x) for x in selection])
+        session = options.cfg.main_window.Session
+        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        sorter = manager.get_sorter(column)
+
+        display_name = "<br/>".join([session.translate_header(x) for x in selection])
 
         action = QtGui.QWidgetAction(self)
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
@@ -1454,38 +1458,44 @@ class CoqueryApp(QtGui.QMainWindow):
             menu.addAction(action)
             
             menu.addSeparator()
+
             if len(selection) == 1:
                 column = selection[0]
                 group = QtGui.QActionGroup(self, exclusive=True)
-                action = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
-                action.triggered.connect(lambda: self.change_sorting_order(column, SORT_NONE))
-                if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_NONE:
-                    action.setChecked(True)
-                menu.addAction(action)
                 
-                action = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
-                action.triggered.connect(lambda: self.change_sorting_order(column, SORT_INC))
-                if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_INC:
-                    action.setChecked(True)
-                menu.addAction(action)
-                action = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
-                action.triggered.connect(lambda: self.change_sorting_order(column, SORT_DEC))
-                if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_DEC:
-                    action.setChecked(True)
-                menu.addAction(action)
-                                        
-                if self.table_model.content[[column]].dtypes[0] == "object":
-                    action = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
-                    action.triggered.connect(lambda: self.change_sorting_order(column, SORT_REV_INC))
-                    if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_REV_INC:
-                        action.setChecked(True)
+                sort_none = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
+                sort_asc = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
+                sort_desc = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
 
-                    menu.addAction(action)
-                    action = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
-                    action.triggered.connect(lambda: self.change_sorting_order(column, SORT_REV_DEC))
-                    if self.table_model.sort_columns.get(column, SORT_NONE) == SORT_REV_DEC:
-                        action.setChecked(True)
-                    menu.addAction(action)
+                sort_none.triggered.connect(lambda: self.change_sorting_order(column, None))
+                sort_asc.triggered.connect(lambda: self.change_sorting_order(column, ascending=True))
+                sort_desc.triggered.connect(lambda: self.change_sorting_order(column, ascending=False))
+
+                menu.addAction(sort_none)
+                menu.addAction(sort_asc)
+                menu.addAction(sort_desc)
+                
+                if self.table_model.content[[column]].dtypes[0] == "object":
+                    sort_asc_rev = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
+                    sort_desc_rev = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
+                    sort_asc_rev.triggered.connect(lambda: self.change_sorting_order(column, ascending=True, reverse=True))
+                    sort_desc_rev.triggered.connect(lambda: self.change_sorting_order(column, ascending=True, reverse=True))
+                    menu.addAction(sort_asc_rev)
+                    menu.addAction(sort_desc_rev)
+
+                try:
+                    if sorter.ascending:
+                        if sorter.reverse:
+                            sort_asc_rev.setChecked(True)
+                        else:
+                            sort_asc.setChecked(True)
+                    else:
+                        if sorter.reverse:
+                            sort_desc_rev.setChecked(True)
+                        else:
+                            sort_desc.setChecked(True)
+                except AttributeError:
+                    sort_none.setChecked(True)
         return menu
 
     def get_row_submenu(self, selection=pd.Series(), point=None):
@@ -1646,7 +1656,7 @@ class CoqueryApp(QtGui.QMainWindow):
         necessary.
         """
         # Resort the data if this is a sorting column:
-        self.table_model.sort(0, QtCore.Qt.AscendingOrder)
+        self.table_model.sort()
         self.table_model.layoutChanged.emit()
         self.table_model.columnVisibilityChanged.emit()
         self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
@@ -1732,16 +1742,14 @@ class CoqueryApp(QtGui.QMainWindow):
             for x in selection:
                 options.cfg.row_color[np.int64(x)] = col.name()
         
-    def change_sorting_order(self, column, mode):
-        if mode == SORT_NONE:
-            self.table_model.sort_columns.pop(column)
+    def change_sorting_order(self, column, ascending, reverse):
+        manager = options.get_manager(options.cfg.MODE, 
+                                      options.cfg.main_window.Session.Resource.name)
+        if ascending == None:
+            manager.remove_sorter(column)
         else:
-            self.table_model.sort_columns[column] = mode
-        self.table_model.sort(0, QtCore.Qt.AscendingOrder)
-        # make sure that the table is updated if there are no sort columns
-        # left anymore:
-        if not self.table_model.sort_columns:
-            self.table_model.layoutChanged.emit()
+            manager.add_sorter(column, ascending, reverse)
+        self.table_model.sort()
 
     def set_query_button(self):
         """ Set the action button to start queries. """

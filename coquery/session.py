@@ -231,7 +231,7 @@ class Session(object):
         
         df = manager.mutate(df, self)
         df = manager.mutate_groups(df, self)
-        df = manager.arrange(df, self)
+        df = manager.arrange(df)
         df = manager.summarize(df)
         
         self.output_object = df
