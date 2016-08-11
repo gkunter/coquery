@@ -109,10 +109,15 @@ class TokenQuery(object):
                 not x.startswith("coquery_invisible") and 
                 x in session.output_order)]
         else:
+        # FIXME: use manager for column visibility
             return [x for x in list(df.columns.values) if (
                 not x.startswith("coquery_invisible") and 
-                x in session.output_order and
-                options.cfg.column_visibility.get(x, True))]
+                x in session.output_order)]
+
+            #return [x for x in list(df.columns.values) if (
+                #not x.startswith("coquery_invisible") and 
+                #x in session.output_order and
+                #options.cfg.column_visibility.get(x, True))]
 
 
     @staticmethod
@@ -524,26 +529,6 @@ class TokenQuery(object):
         agg = agg[agg_cols]
         return agg
 
-class DistinctQuery(TokenQuery):
-    """ 
-    DistinctQuery is a subclass of TokenQuery. 
-    
-    This subclass reimplements :func:`aggregate_data` so that duplicate rows 
-    are removed.
-    """
-
-    @classmethod
-    def aggregate_data(cls, df, corpus, **kwargs):
-        vis_cols = cls.get_visible_columns(df, kwargs["session"])
-        try:
-            df = df.drop_duplicates(subset=vis_cols)
-        except ValueError:
-            # ValueError is raised if df is empty
-            pass
-        df = df.reset_index(drop=True)
-        return df
-
-
 class ContrastQuery(TokenQuery):
     """
     ContrastQuery is a subclass of TokenQuery.
@@ -571,6 +556,7 @@ class ContrastQuery(TokenQuery):
         # FIXME: columns should be processed in the order that they appear in
         # the None results table view.
         
+        # FIXME: use manager for column visibility
         vis_cols = [x for x in cls.get_visible_columns(df, session) if not x.startswith("statistics")]
         return df.apply(lambda x: ":".join([x[col] for col in vis_cols]), axis=1).unique()
 
@@ -676,6 +662,7 @@ class ContrastQuery(TokenQuery):
         Return that content for the indexed cell that is needed to handle 
         a click on it for the current aggregation.
         """
+        # FIXME: use manager for column visibility
         vis_col = cls.get_visible_columns(session.output_object, session, ignore_hidden=True)
         
         row = df.iloc[index.row()]
@@ -716,6 +703,7 @@ class ContrastQuery(TokenQuery):
         
         labels = cls.collapse_columns(df, session)
         freq = super(ContrastQuery, cls).aggregate_data(df, corpus, contrasts=True, **kwargs)
+        # FIXME: use manager for column visibility
         vis_col = cls.get_visible_columns(df, session)
         freq["_row_id"] = labels
         session.output_order = session.output_order + ["statistics_g_test_{}".format(x) for x in labels]
@@ -781,7 +769,8 @@ class ContingencyQuery(TokenQuery):
 
         columns = []
         for x in session.output_order:
-            if not x.startswith(("coquery_invisible", "statistics_")) and options.cfg.column_visibility.get(x, True):
+            # FIXME: use manager for column visibility
+            if not x.startswith(("coquery_invisible", "statistics_")):
                 columns.append(x)
 
         session.output_order = [x for x in session.output_order if not x.startswith("statistics_")]

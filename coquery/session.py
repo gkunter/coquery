@@ -76,7 +76,6 @@ class Session(object):
         # values. If the value is False, the row in the output object is
         # hidden, otherwise, it is visible.
         self.row_visibility = {}
-        self.column_visibility = defaultdict(pd.Series)
 
         # verify filter list:
         new_list = []
@@ -224,17 +223,9 @@ class Session(object):
         #old_index = tab.index
 
         self.reset_row_visibility(queries.get_query_type(options.cfg.MODE))
-        
+
         self.data_table.index = range(len(self.data_table))
-        
-        df = self.data_table
-        
-        df = manager.mutate(df, self)
-        df = manager.mutate_groups(df, self)
-        df = manager.arrange(df)
-        df = manager.summarize(df)
-        
-        self.output_object = df
+        self.output_object = manager.process(self.data_table, self)
 
         #if (not self.query_type in self.row_visibility or 
             #len(old_index) != len(self.output_object.index) or

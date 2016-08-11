@@ -1157,7 +1157,8 @@ class CoqueryApp(QtGui.QMainWindow):
         try:
             header = self.ui.data_preview.horizontalHeader()
             ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
-            ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
+            # FIXME: use manager instead
+            #ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
             tab = self.table_model.content[ordered_headers]
 
             # restrict to visible rows:
@@ -1214,7 +1215,8 @@ class CoqueryApp(QtGui.QMainWindow):
 
         header = self.ui.data_preview.horizontalHeader()
         ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
-        ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
+        # FIXME: use manager instead
+        #ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
         ordered_headers.append("coquery_invisible_corpus_id")
         tab = self.table_model.content[ordered_headers]
 
@@ -1428,20 +1430,20 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             suffix = ""
 
-        if not all([options.cfg.column_visibility.get(x, True) for x in selection]):
+        if not all([x not in manager.hidden_columns for x in selection]):
             action = QtGui.QAction("&Show column{}".format(suffix), self)
             action.triggered.connect(lambda: self.show_columns(selection))
             action.setIcon(self.get_icon("sign-maximize"))
             menu.addAction(action)
 
-        if not all([not options.cfg.column_visibility.get(x, True) for x in selection]):
+        if not all([x in manager.hidden_columns for x in selection]):
             action = QtGui.QAction("&Hide column{}".format(suffix), self)
             action.triggered.connect(lambda: self.hide_columns(selection))
             action.setIcon(self.get_icon("sign-minimize"))
             menu.addAction(action)
 
         # Only show additional options if all columns are visible:
-        if all([options.cfg.column_visibility.get(x, True) for x in selection]):
+        if all([x not in manager.hidden_columns for x in selection]):
         
             if len(selection) == 1:
                 action = QtGui.QAction("&Rename column...", self)
@@ -1630,8 +1632,10 @@ class CoqueryApp(QtGui.QMainWindow):
         selection : list
             A list of column names.
         """
+        manager = options.get_manager(options.cfg.MODE, 
+                                      options.cfg.main_window.Session.Resource.name)
         for column in selection:
-            options.cfg.column_visibility[column] = False
+            manager.hide_column(column)
         self.update_columns()
 
     def show_columns(self, selection):
@@ -1643,8 +1647,10 @@ class CoqueryApp(QtGui.QMainWindow):
         selection : list
             A list of column names.
         """
+        manager = options.get_manager(options.cfg.MODE, 
+                                      options.cfg.main_window.Session.Resource.name)
         for column in selection:
-            options.cfg.column_visibility[column] = True
+            manager.show_column(column)
         self.update_columns()
 
     def update_columns(self):
@@ -1656,7 +1662,10 @@ class CoqueryApp(QtGui.QMainWindow):
         necessary.
         """
         # Resort the data if this is a sorting column:
-        self.table_model.sort()
+        session = options.cfg.main_window.Session
+        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        
+        self.table_model.content = manager.process(self.table_model.content, session)
         self.table_model.layoutChanged.emit()
         self.table_model.columnVisibilityChanged.emit()
         self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
@@ -1667,17 +1676,6 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         self.Session.drop_cached_aggregates()
         self.reaggregate()
-
-    def toggle_visibility(self, column):
-        """ 
-        Show again a hidden column, or hide a visible column.
-        
-        Parameters
-        ----------
-        column : column index
-        """
-        options.cfg.column_visibility[column] = not options.cfg.column_visibility.get(column, True)
-        self.update_columns()
 
     def set_row_visibility(self, selection, state):
         """ 
@@ -1742,7 +1740,7 @@ class CoqueryApp(QtGui.QMainWindow):
             for x in selection:
                 options.cfg.row_color[np.int64(x)] = col.name()
         
-    def change_sorting_order(self, column, ascending, reverse):
+    def change_sorting_order(self, column, ascending, reverse=False):
         manager = options.get_manager(options.cfg.MODE, 
                                       options.cfg.main_window.Session.Resource.name)
         if ascending == None:

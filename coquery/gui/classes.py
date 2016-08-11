@@ -1275,15 +1275,18 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             self.createIndex(self.rowCount(), self.columnCount()))
 
     def is_visible(self, index):
-        return True
-    
         try:
             session = options.cfg.main_window.Session
+            manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+            return not self.header[index.column()] in manager.hidden_columns
+
             row_vis = session.row_visibility[session.query_type]
             ix = self.content.index[index.row()]
-            return (options.cfg.column_visibility.get(self.header[index.column()], True) and 
+            
+            return (not manager.is_hidden_column(col) and 
                 row_vis[ix])
-        except Exception:
+        except Exception as e:
+            print(e)
             return False
     
     def data(self, index, role):
@@ -1297,13 +1300,17 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         
         if not index.isValid():
             return None
+
+        session = options.cfg.main_window.Session
+        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        col = self.header[index.column()]
         
         # DisplayRole: return the content of the cell in the data frame:
         # ToolTipRole: also returns the cell content, but in a form suitable
         # for QHTML:
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
-            if self.is_visible(index):
-                value = self.content.iloc[index.row()][self.header[index.column()]] 
+            if not col in manager.hidden_columns:
+                value = self.content.iloc[index.row()][col] 
                 if role == QtCore.Qt.ToolTipRole:
                     if isinstance(value, (float, np.float64)):
                         return "<div>{}</div>".format(escape(("{:.%if}" % options.cfg.digits).format(value)))
@@ -1313,7 +1320,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                     if isinstance(value, (float, np.float64)):
                         return ("{:.%if}" % options.cfg.digits).format(value)
                     else:
-                        if options.cfg.main_window.Session.query_type == queries.ContingencyQuery:
+                        if session.query_type == queries.ContingencyQuery:
                             if isinstance(value, str):
                                 if index.row() > 0:
                                     if value == self.content.iloc[index.row() -1][self.header[index.column()]]:
@@ -1349,7 +1356,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             # The UserRole is used when clicking on a cell in the results
             # table. It is handled differently depending on the query type 
             # that produced the table. 
-            session = options.cfg.main_window.Session
             if session.query_type == queries.ContrastQuery:
                 return queries.ContrastQuery.get_cell_content(
                     index, 
@@ -1400,9 +1406,11 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # Get header decoration (i.e. the sorting arrows)?
         elif role == QtCore.Qt.DecorationRole:
             # no decorator for hidden columns:
-            if not options.cfg.column_visibility.get(column, True):
-                return None
             manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+
+            if column in manager.hidden_columns:
+                return None
+
             sorter = manager.get_sorter(column)
             try:
                 # add arrows as sorting direction indicators if necessary:
@@ -1434,13 +1442,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.content = manager.arrange(self.content)
             
     def sort(self, *args):
-        session = options.cfg.main_window.Session
-        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
-
-        if not manager.sorters:
-            return
         self.layoutAboutToBeChanged.emit()
-
         options.cfg.main_window.start_progress_indicator()
         self_sort_thread = CoqThread(self.do_sort, self)
         self_sort_thread.taskFinished.connect(self.sort_finished)

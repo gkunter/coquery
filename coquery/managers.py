@@ -31,6 +31,24 @@ class Manager(object):
     def __init__(self):
         self.functions = []
         self.sorters = []
+        self.hidden_columns = set([])
+
+    def get_visible_columns(self, df):
+        """
+        Return a list with the column names that are currently visible.
+        """
+        return [x for x in list(df.columns.values) if (
+            not x.startswith("coquery_invisible") and 
+            not x in self.hidden_columns)]
+        
+    def hide_column(self, column):
+        self.hidden_columns.add(column)
+        
+    def show_column(self, column):
+        self.hidden_columns.remove(column)
+        
+    def is_hidden_column(self, column):
+        return column in self.hidden_columns
     
     def get_additional_columns(self):
         return [x.get_id() for x in self.functions]
@@ -46,7 +64,7 @@ class Manager(object):
         will be executed after user functions.
         """
         l = []
-        vis_cols = Function.get_visible_columns(df)
+        vis_cols = self.get_visible_columns(df)
         if "statistics_frequency" in options.cfg.selected_features:
             l.append(Freq(columns=vis_cols))
         if "statistics_corpus_size" in options.cfg.selected_features:
@@ -70,7 +88,7 @@ class Manager(object):
         return l
     
     def get_group_functions(self, df, session):
-        vis_cols = Function.get_visible_columns(df)
+        vis_cols = self.get_visible_columns(df)
         groups = []
         for rc_feature in options.cfg.group_columns:
             groups += session.Resource.format_resource_feature(rc_feature,
@@ -177,14 +195,21 @@ class Manager(object):
         return df
 
     def distinct(self, df):
-        vis_cols = Function.get_visible_columns(df)
+        vis_cols = self.get_visible_columns(df)
         try:
             df = df.drop_duplicates(subset=vis_cols)
         except ValueError:
             # ValueError is raised if df is empty
             pass
         return df.reset_index(drop=True)
-    
+
+    def process(self, df, session):
+        df = self.mutate(df, session)
+        df = self.mutate_groups(df, session)
+        df = self.arrange(df)
+        df = self.summarize(df)
+        return df
+
 class Distinct(Manager):
     name = "DISTINCT"
     summarize = Manager.distinct

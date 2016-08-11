@@ -1473,7 +1473,7 @@ class CorpusClass(object):
         """
         filter_list = []
         if columns == None:
-            corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features and options.cfg.column_visibility.get("coq_{}_1".format(x), True)]
+            corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
             for column in row.index:
                 match = re.match("coq_(.*)_1", column)
                 if match:

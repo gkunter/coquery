@@ -80,13 +80,6 @@ class Function(object):
         if aggr:
             self.select = function_map[aggr]
 
-    @staticmethod
-    def get_visible_columns(df):
-        """
-        Return a list with the column names that are currently visible.
-        """
-        return [x for x in list(df.columns.values) if not x.startswith("coquery_invisible")]
-        
     def get_hash(self):
         l = []
         for x in sorted(dir(self)):
@@ -289,7 +282,7 @@ class FreqNorm(Freq):
             return pd.Series([])
             
         fun = SubcorpusSize(session=self.session, 
-                            columns=[x for x in Function.get_visible_columns(df) if not x.startswith("func")],
+                            columns=self.columns,
                             group=self.group)
         subsize = fun.evaluate(df)
 

@@ -276,18 +276,21 @@ class BaseVisualizer(QtCore.QObject):
         view_columns = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
         
         view_columns = [x for x in view_columns if x in options.cfg.main_window.Session.data_table.columns]
-        
+
+        session = options.cfg.main_window.Session
+        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+
         if self._plot_frequency:
-            view_columns = [x for x in view_columns if options.cfg.column_visibility.get(x, True)]
+            view_columns = [x for x in view_columns if x not in manager.hidden_columns]
         else:
-            view_columns = [x for x in view_columns if options.cfg.column_visibility.get(x, True) and not x.startswith("statistics")]
+            view_columns = [x for x in view_columns if x not in manager.hidden_columns and not x.startswith("statistics")]
         
         column_order = view_columns
 
         column_order.append("coquery_invisible_corpus_id")
 
         try:
-            self._time_columns = options.cfg.main_window.Session.Corpus.resource.time_features
+            self._time_columns = session.Corpus.resource.time_features
         except NameError:
             self._time_columns = []
        
@@ -297,12 +300,11 @@ class BaseVisualizer(QtCore.QObject):
         try:
             self._table = self._df[column_order]
         except TypeError:
-            session = options.cfg.main_window.Session
             self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
 
             self._table = self._table[column_order]
 
-        self._table.columns = [options.cfg.main_window.Session.translate_header(x) for x in self._table.columns]
+        self._table.columns = [session.translate_header(x) for x in self._table.columns]
         
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
