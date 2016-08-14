@@ -173,24 +173,6 @@ class Session(object):
 
         return frequency_table
 
-    #def mask_data(self):
-        #"""
-        #Return a data frame that contains the currently visible rows and 
-        #columns from the session's data table.
-        #"""
-        
-        #print(options.cfg.row_visibility)
-        #print(options.cfg.column_visibility)
-        #print(self.query_type)
-        
-        #invisible_rows = options.cfg.row_visibility[self.query_type].keys()
-        #visible_columns = [x for x in self.output_order if options.cfg.column_visibility[self.query_type].get(x, True)]
-
-        #print(invisible_rows)
-        #print(visible_columns)
-        
-        #print(self.data_table[visible_columns].iloc[~self.data_table.index.isin(invisible_rows)])
-
     def has_cached_data(self):
         manager = options.get_manager(options.cfg.MODE, self.Resource.name)
         return (self, manager) in self._engine_cache
@@ -211,27 +193,11 @@ class Session(object):
                 self.output_object = self._engine_cache[(self, manager)]
                 return
 
-        ## Recalculate the output object for the current query type, excluding
-        ## invisible rows:
-        #if self.query_type == queries.TokenQuery:
-            #if not queries.TokenQuery in self.row_visibility:
-                #self.reset_row_visibility(queries.TokenQuery, self.data_table)
-            #tab = self.data_table
-        #else:
-            #tab = self.data_table[self.row_visibility[queries.TokenQuery]]
-
-        #old_index = tab.index
-
         self.reset_row_visibility(queries.get_query_type(options.cfg.MODE))
 
         self.data_table.index = range(len(self.data_table))
         self.output_object = manager.process(self.data_table, self)
-
-        #if (not self.query_type in self.row_visibility or 
-            #len(old_index) != len(self.output_object.index) or
-            #not old_index.equals(self.output_object.index)):
-            #self.reset_row_visibility(self.query_type)
-
+        
         self._engine_cache[(self, manager)] = self.output_object
 
     def drop_cached_aggregates(self):
