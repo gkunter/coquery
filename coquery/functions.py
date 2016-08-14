@@ -92,6 +92,11 @@ class Function(object):
             return self.label
         else:
             if self.group:
+                return "{}({})".format(self._name, ",".join([session.translate_header(x) for x in self.group]))
+            else:
+                return self._name
+                
+            if self.group:
                 return "{}({},group={})".format(
                     self._name, 
                     ",".join([session.translate_header(x) for x in self.columns]),
@@ -314,8 +319,8 @@ class Entropy(Proportion):
         _df = df[self.columns]
         _df["COQ_PROP"] = super(Entropy, self).evaluate(df)
         _df = _df.drop_duplicates()
-        if len(df) == 1:
-            entropy = 0
+        if len(_df) == 1:
+            entropy = 0.0
         else:
             entropy = -sum(_df["COQ_PROP"].apply(lambda p: p * np.log2(p)))
         return pd.Series([entropy] * len(df), index=df.index)
