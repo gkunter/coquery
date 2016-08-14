@@ -188,6 +188,7 @@ class Settings(QtGui.QDialog):
         self._options.save_query_file = bool(self.ui.check_save_query_file.isChecked())
         self._options.save_query_string = bool(self.ui.check_save_query_string.isChecked())
         self._options.digits = int(self.ui.spin_digits.value())
+        self._options.float_format = "{:.%if}" % self._options.digits
         self._options.custom_installer_path = str(self.ui.edit_installer_path.text())        
         if self.ui.check_limit_tokens.isChecked():
             self._options.number_of_tokens = int(self.ui.spin_maximum_tokens)

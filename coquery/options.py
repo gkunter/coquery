@@ -607,6 +607,8 @@ class Options(object):
         if self.args.context_span:
             self.args.context_left = self.args.context_span
             self.args.context_right = self.args.context_span
+
+        self.args.float_format = "{:.%if}" % self.args.digits
             
         # make sure that a command query consisting of one string is still
         # stored as a list:

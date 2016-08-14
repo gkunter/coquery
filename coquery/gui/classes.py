@@ -1254,7 +1254,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         """ Set the content of the table model to the given data, using a
         pandas DataFrame object. """
         self.content = data
-        self.rownames = list(self.content.index.values)
+        self.rownames = list(self.content.index.values + 1)
 
         if not hasattr(options.cfg.main_window, "Session"):
             return
@@ -1298,9 +1298,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         handled by the delegate CoqResultCellDelegate().
         """
         
-        if not index.isValid():
-            return None
-
         session = options.cfg.main_window.Session
         manager = options.get_manager(options.cfg.MODE, session.Resource.name)
         col = self.header[index.column()]
@@ -1308,31 +1305,32 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # DisplayRole: return the content of the cell in the data frame:
         # ToolTipRole: also returns the cell content, but in a form suitable
         # for QHTML:
-        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
+        if role == QtCore.Qt.DisplayRole:
             if not col in manager.hidden_columns:
                 value = self.content.iloc[index.row()][col] 
-                if role == QtCore.Qt.ToolTipRole:
-                    if isinstance(value, (float, np.float64)):
-                        return "<div>{}</div>".format(escape(("{:.%if}" % options.cfg.digits).format(value)))
-                    else:
-                        return "<div>{}</div>".format(escape(str(value)))
+                if isinstance(value, float):
+                    return options.cfg.float_format.format(value)
                 else:
-                    if isinstance(value, (float, np.float64)):
-                        return ("{:.%if}" % options.cfg.digits).format(value)
-                    else:
-                        if session.query_type == queries.ContingencyQuery:
-                            if isinstance(value, str):
-                                if index.row() > 0:
-                                    if value == self.content.iloc[index.row() -1][self.header[index.column()]]:
-                                        if index.column() > 0:
-                                            if self.content.iloc[index.row()][index.column() - 1] == self.content.iloc[index.row() - 1][index.column() - 1]: 
-                                                return ""
-                                        else:
-                                            return ""
-                        try:
-                            return str(value)
-                        except UnicodeEncodeError:
-                            return unicode(value)
+                    #if session.query_type == queries.ContingencyQuery:
+                        #if isinstance(value, str):
+                            #if index.row() > 0:
+                                #if value == self.content.iloc[index.row() -1][self.header[index.column()]]:
+                                    #if index.column() > 0:
+                                        #if self.content.iloc[index.row()][index.column() - 1] == self.content.iloc[index.row() - 1][index.column() - 1]: 
+                                            #return ""
+                                    #else:
+                                        #return ""
+                    return str(value)
+            else:
+                return "[hidden]"
+        # ToolTipRole: return the content as a tooltip:
+        elif role == QtCore.Qt.ToolTipRole:
+            if not col in manager.hidden_columns:
+                value = self.content.iloc[index.row()][col] 
+                if isinstance(value, float):
+                    return "<div>{}</div>".format(escape(options.cfg.float_format.format(value)))
+                else:
+                    return "<div>{}</div>".format(escape(str(value)))
             else:
                 return "[hidden]"
         # TextAlignmentRole: return the alignment of the column:
