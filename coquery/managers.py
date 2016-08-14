@@ -158,12 +158,12 @@ class Manager(object):
                 return x
         return None
     
-    def arrange(self, df):
+    def arrange(self, df, session):
         original_columns = df.columns
+        columns = []
         if self.sorters:
             # gather sorting information:
             directions = []
-            columns = []
             for sorter in self.sorters:
                 directions.append(sorter.ascending)
                 if sorter.reverse:
@@ -174,7 +174,9 @@ class Manager(object):
                 columns.append(target)
         else:
             # no sorters specified, use group columns as sorters
-            columns = options.cfg.group_columns
+            for column in options.cfg.group_columns:
+                columns += session.Resource.format_resource_feature(column,
+                    session.get_max_token_count())
             directions = [True] * len(columns)
 
         if not columns:
@@ -206,7 +208,7 @@ class Manager(object):
     def process(self, df, session):
         df = self.mutate(df, session)
         df = self.mutate_groups(df, session)
-        df = self.arrange(df)
+        df = self.arrange(df, session)
         df = self.summarize(df)
         return df
 
