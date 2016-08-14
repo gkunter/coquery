@@ -1439,7 +1439,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         their settings into account. """
         session = options.cfg.main_window.Session
         manager = options.get_manager(options.cfg.MODE, session.Resource.name)
-        self.content = manager.arrange(self.content)
+        self.content = manager.arrange(self.content, session)
             
     def sort(self, *args):
         self.layoutAboutToBeChanged.emit()

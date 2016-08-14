@@ -568,6 +568,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.list_group_columns.insert_resource(start + i, rc_feature)
 
         self.activate_group_column_buttons()
+        self.update_columns()
 
     def add_group_column(self, rc_feature=None):
         if rc_feature:
@@ -577,6 +578,7 @@ class CoqueryApp(QtGui.QMainWindow):
         for col in selected:
             self.ui.list_group_columns.add_resource(col)
         self.activate_group_column_buttons()
+        self.update_columns()
     
     def remove_group_column(self, rc_feature=None):
         if rc_feature:
@@ -587,6 +589,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.list_group_columns.remove_item(item)
 
         self.activate_group_column_buttons()
+        self.update_columns()
 
     def change_managing_type(self):
         if self.ui.radio_summary.isChecked():
