@@ -246,7 +246,7 @@ class Options(object):
         self.args.column_names = {}
         self.args.row_color = {}
 
-        self.args.managers = collections.defaultdict(dict)
+        self.args.managers = {}
 
         # Set defaults for CSV files:
         self.args.query_column_number = 1
@@ -635,8 +635,10 @@ class Options(object):
         if os.path.exists(self.cfg.config_path):
             logger.info("Using configuration file %s" % self.cfg.config_path)
             config_file = ConfigParser()
-            config_file.read(self.cfg.config_path)
-            
+            try:
+                config_file.read(self.cfg.config_path)
+            except (IOError, TypeError):
+                warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
             if "sql" in config_file.sections():
                 server_configuration = defaultdict(dict)
 
@@ -880,28 +882,22 @@ class Options(object):
                             pass
 
                         context_dict = {}
-                        # get column defaults:
-                        for name, value in config_file.items("gui"):
-                            if name.startswith("column_"):
-                                col = name.partition("_")[2]
-                                column, _, attribute = col.rpartition("_")
-                                if not column.startswith("coquery_invisible"):
-                                    try:
-                                        if attribute == "color":
-                                            if "column_color" not in vars(self.args):
-                                                self.args.column_color = {}
-                                            self.args.column_color[column] = value
-                                        elif attribute == "width":
-                                            if "column_width" not in vars(self.args):
-                                                self.args.column_width = {}
-                                            if int(value):
-                                                self.args.column_width[column] = int(value)
-                                    except ValueError:
-                                        pass
         else:
             self.args.first_run = True
+
+        # Use QSettings?
+        if settings:
+            for x in settings.allKeys():
+                if x.startswith("column_width_"):
+                    _, _, column = x.partition("column_width_")
+                    self.args.column_width[column] = settings.value(x, int)
+                elif x.startswith("column_color_"):
+                    _, _, column = x.partition("column_color_")
+                    self.args.column_color[column] = settings.value(x)
+                    
             
 cfg = None
+settings = None
 
 class UnicodeConfigParser(RawConfigParser):
     """
@@ -1006,6 +1002,12 @@ def save_configuration():
         config.set("context", "words_right", cfg.context_right)
 
     if cfg.gui:
+        for x in cfg.column_width:
+            if not x.startswith("coquery_invisible") and cfg.column_width[x] and x:
+                settings.setValue("column_width_{}".format(x), cfg.column_width[x])
+        for x in cfg.column_color:
+            settings.setValue("column_color_{}".format(x), cfg.column_color[x])
+
         if not "gui" in config.sections():
             config.add_section("gui")
 
@@ -1014,16 +1016,6 @@ def save_configuration():
                        encode_query_string("\n".join(cfg.stopword_list)))
         config.set("gui", "use_stopwords", cfg.use_stopwords)
         config.set("gui", "use_corpus_filters", cfg.use_corpus_filters)        
-
-        for x in cfg.column_width:
-            if not x.startswith("coquery_invisible") and cfg.column_width[x]:
-                config.set("gui", 
-                        "column_{}_width".format(x.replace(" ", "_").replace(":", "_")), 
-                        cfg.column_width[x])
-        for x in cfg.column_color:
-            config.set("gui", 
-                       "column_{}_color".format(x), 
-                       cfg.column_color[x])
 
         try:
             config.set("gui", "ask_on_quit", cfg.ask_on_quit)
@@ -1125,10 +1117,21 @@ def get_con_configuration():
 
 def process_options():
     global cfg
+    global settings
+
+    try:
+        from .gui.pyqt_compat import QtCore
+        settings = QtCore.QSettings(
+                    os.path.join(get_home_dir(), "coquery.ini"),
+                    QtCore.QSettings.IniFormat)
+    except IOError:
+        settings = None
+
     options = Options()
     cfg = options.cfg
     options.get_options()
 
+        
 def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
     """
     Read the Python code from path, and validate that it contains only 
@@ -1353,21 +1356,28 @@ def get_available_resources(configuration):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
 
+def manager_factory(manager):
+    if manager == QUERY_MODE_FREQUENCIES:
+        return managers.Distinct()
+    elif manager == QUERY_MODE_DISTINCT:
+        return managers.Distinct()
+    elif manager == QUERY_MODE_CONTINGENCY:
+        return managers.Contingency()
+    else:
+        return managers.Manager()
+
 def get_manager(manager, resource):
     """
     Returns a data manager 
     """
-    if manager in cfg.managers[resource]:
-        current_manager = cfg.managers[resource][manager]
-    else:
-        if manager == QUERY_MODE_FREQUENCIES:
-            current_manager = managers.Distinct()
-        elif manager == QUERY_MODE_DISTINCT:
-            current_manager = managers.Distinct()
-        else:
-            current_manager = managers.Manager()
-        cfg.managers[resource][manager] = current_manager
-    return current_manager
+    try:
+        return cfg.managers[resource][manager]
+    except KeyError:
+        if resource not in cfg.managers:
+            cfg.managers[resource] = {}
+        cfg.managers[resource][manager] = manager_factory(manager)
+    finally:
+        return cfg.managers[resource][manager]
 
 def get_resource(name, connection= None):
     """
