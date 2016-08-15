@@ -101,6 +101,13 @@ class Session(object):
             maximum = max(maximum, query.get_max_tokens())
         return maximum
 
+    def start_timer(self):
+        self.start_time = datetime.datetime.now()
+        self.end_time = None
+
+    def stop_timer(self):
+        self.end_time = datetime.datetime.now()
+
     def run_queries(self, to_file=False):
         """ 
         Run each query in the query list, and append the results to the 
@@ -108,8 +115,7 @@ class Session(object):
         If Coquery is run as a console program, write the aggregated data to 
         a file (or the standard output).
         """
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
+        self.start_timer()
         
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
@@ -164,7 +170,6 @@ class Session(object):
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
             output_file.flush()
-        self.end_time = datetime.datetime.now()
 
     def get_frequency_table(self):
         frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, session=self)
@@ -189,7 +194,6 @@ class Session(object):
         # output object for the current query type:
         if not recalculate:
             if self.has_cached_data():
-                print("using cached output for manager {}".format(manager.name))
                 self.output_object = self._engine_cache[(self, manager)]
                 return
 
@@ -197,7 +201,7 @@ class Session(object):
 
         self.data_table.index = range(len(self.data_table))
         self.output_object = manager.process(self.data_table, self)
-        
+
         self._engine_cache[(self, manager)] = self.output_object
 
     def drop_cached_aggregates(self):
@@ -295,75 +299,16 @@ class Session(object):
             # deal with function headers:
             if header.startswith("func_"):
                 manager = options.get_manager(options.cfg.MODE, self.Resource.name)
-                fun = manager.get_function(header)
-                raise RuntimeError(fun.get_label(session=self))
-                
-                raise RuntimeError("FUNC")
-                match = re.match("func_(.*)_(\d+)_(\d+)$", header)
-                core = match.group(1)
-                function_number = int(match.group(2))
-                item_number = int(match.group(3))
-                #print(header, core, function_number, item_number)
-                if core.startswith("db_"):
-                    match2 = re.match("db_(.*)_coq_(.*)", core)
-                    resource = options.get_resource_of_database(match2.group(1))
-                    res_prefix = "{}.".format(resource.name)
+                match = re.search("(.*)\((.*)\)", header)
+                if match:
+                    s = match.group(1)
+                    fun = manager.get_function(s)
+                    raise RuntimeError("{}({})".format(
+                                                    fun.get_label(session=self),
+                                                    match.group(2)))
                 else:
-                    match2 = re.match("coq_(.*)", core)
-                    res_prefix = ""
-                    resource = self.Resource
-
-                if core.startswith("coq_"):
-                    core = core.rpartition("coq_")[-1]
-                _, hashed, tab, feat = self.Resource.split_resource_feature(core)
-                if hashed != None:
-                    res_hash = "{}.".format(hashed)
-                else:
-                    res_hash = ""
-
-                lookup = "func.{}{}_{}".format(res_hash, tab, feat)
-                count = 1
-                for rc_feature, _, is_lexical, full_label, label in options.cfg.selected_functions:
-                    if rc_feature == lookup:
-                        if count == function_number:
-                            if is_lexical:
-                                try:
-                                    raise RuntimeError(label.format(N=item_number))
-                                except:
-                                    raise RuntimeError(label)
-                                    
-                            else:
-                                raise RuntimeError(label.format(N=""))
-                        count += 1
-                raise RuntimeError("FUNC")
-                #return "FUNC({})".format(self.translate_header(header))
-
-            ## treat functions:
-            #if is_function:
-                #func_counter = collections.Counter()
-                #for res, _, label in options.cfg.selected_functions:
-                    #res = res.rpartition(".")[-1]
-                    #func_counter[res] += 1
-                    #fc = func_counter[res]
-                    
-                    #new_name = "func_{}_{}".format(res, fc)
-                    #if new_name == rc_feature:
-                        #column_name = getattr(resource, res)
-                        #function_label = label
-                        #break
-                #else:
-                    #if options.cfg.selected_functions:
-                        #column_name = res
-                    #else:
-                        #column_name = "UNKNOWN"
-                    #function_label = rc_feature
-                #try:
-                    #number = self.quantified_number_labels[int(number) - 1]
-                #except ValueError:
-                    #pass
-                #return str(function_label).replace(column_name, "{}{}{}".format(
-                    #res_prefix, column_name, number))
-
+                    fun = manager.get_function(header)
+                    raise RuntimeError(fun.get_label(session=self))
             
             if header.startswith("db_"):
                 match = re.match("db_(.*)_coq_(.*)", header)
