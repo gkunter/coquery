@@ -64,7 +64,7 @@ function_map = {
 class Function(object):
     _name = "id"
 
-    def __init__(self, columns=[], label=None, sweep=False, aggr=None, group=[]):
+    def __init__(self, columns=[], label=None, alias=None, sweep=False, aggr=None, group=[]):
         """
         Parameters
         ----------
@@ -76,6 +76,7 @@ class Function(object):
         self.sweep = sweep
         self.label = None
         self.group = group
+        self.alias = alias
         
         if aggr:
             self.select = function_map[aggr]
@@ -125,7 +126,10 @@ class Function(object):
         return col
     
     def get_id(self):
-        return "func_{}_{}".format(self._name, self.get_hash())
+        if self.alias:
+            return self.alias
+        else:
+            return "func_{}_{}".format(self._name, self.get_hash())
     
     def find_function(self, df, fun):
         fun_id = fun.get_id()
