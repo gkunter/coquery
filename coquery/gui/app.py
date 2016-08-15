@@ -131,9 +131,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.column_color = {}
         
         options.cfg.main_window = self
-        options.settings = QtCore.QSettings(
-            os.path.join(options.get_home_dir(), "coquery.ini"),
-             QtCore.QSettings.IniFormat, self)
 
         try:
             self.restoreGeometry(options.settings.value("main_geometry"))
@@ -602,7 +599,6 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.MODE = QUERY_MODE_TOKENS
         else:
             options.cfg.MODE = self.ui.combo_summary.currentText()
-
         self.reaggregate(query_type=queries.get_query_type(options.cfg.MODE), 
                          recalculate=False)
 
@@ -760,6 +756,8 @@ class CoqueryApp(QtGui.QMainWindow):
         
         if not self.Session.has_cached_data():
             self.start_progress_indicator()
+        
+        self.Session.start_timer()
         self.thread.start()
 
     @staticmethod
@@ -787,8 +785,10 @@ class CoqueryApp(QtGui.QMainWindow):
         return icon
 
     def show_query_status(self):
-        if not hasattr(self.Session, "end_time"):
-            self.Session.end_time = datetime.datetime.now()
+        if not hasattr(self.Session, "start_time"):
+            self.Session.start_time = datetime.datetime.now()
+        self.Session.stop_timer()
+
         try:
             diff = (self.Session.end_time - self.Session.start_time)
         except TypeError:
@@ -802,7 +802,7 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
 
-        self.showMessage("Tokens: {:<8}   Data rows: {:<8}   Duration of last query: {:<10}".format(
+        self.showMessage("Number of matches: {:<8}   Unique matches: {:<8}   Duration of last operation: {:<10}".format(
             self.unfiltered_tokens, 
             len(self.table_model.content.index),
             duration_str))
@@ -1008,8 +1008,9 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.row_color = {}
         # set column widths:
         for i, column in enumerate(self.table_model.header):
-            if column.lower() in options.cfg.column_width:
-                self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower().replace(" ", "_").replace(":", "_")])
+            if column in options.cfg.column_width:
+                self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column])
+                #self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower().replace(" ", "_").replace(":", "_")])
         
         #set delegates:
         header = self.ui.data_preview.horizontalHeader()
@@ -1039,7 +1040,7 @@ class CoqueryApp(QtGui.QMainWindow):
             del self._old_row_delegate
 
         # set row delegate for ALL row of Contingency aggregates:
-        if self.Session.query_type == queries.ContingencyQuery:
+        if options.cfg.MODE == QUERY_MODE_CONTINGENCY:
             row = len(self.table_model.content.index) - 1
             self._old_row_delegate = (row, self.ui.data_preview.itemDelegateForRow(row))
             self.ui.data_preview.setItemDelegateForRow(row, classes.CoqTotalDelegate(self.ui.data_preview))
