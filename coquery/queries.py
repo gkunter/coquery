@@ -712,103 +712,6 @@ class ContrastQuery(TokenQuery):
             freq["statistics_g_test_{}".format(x)] = freq.apply(cls.retrieve_loglikelihood, axis=1, label=x, df=freq)
         return freq
 
-class ContingencyQuery(TokenQuery):
-    """ 
-    ContingencyQuery is a subclass of TokenQuery.
-    
-    In this subclass, :func:`aggregate_data` creates an aggregrate table of
-    the data frame containing the query results. The results are grouped so
-    that a contingency table is produced.
-    """
-
-    @staticmethod
-    def add_output_columns(session):
-        if not hasattr(session, "_old_output_order"):
-            session._old_output_order = list(session.output_order)
-        if hasattr(session, "_contingency_order"):
-            session.output_order = list(session._contingency_order)
-
-    @staticmethod
-    def remove_output_columns(session):
-        session._contingency_order = list(session.output_order)
-        session.output_order = list(session._old_output_order)
-    
-    @classmethod
-    def aggregate_data(cls, df, corpus, **kwargs):
-        """
-        Parameters
-        ----------
-        df : DataFrame
-            The data frame to be aggregated
-            
-        Returns
-        -------
-        result : DataFrame
-        """
-        session = kwargs["session"]
-        if not len(df.index):
-            session.output_order += ["statistics_column_total"]
-            return pd.DataFrame(columns=session.output_order)
-        
-        if hasattr(session, "_old_output_order"):
-            session.output_order = list(session._old_output_order)
-
-        if options.cfg.main_window:
-            output_order = session.output_order
-            tab = getattr(options.cfg.main_window, "table_model", None)
-            if tab:
-                header = options.cfg.main_window.ui.data_preview.horizontalHeader()
-                logical_header = [tab.header[header.logicalIndex(i)] for i in range(header.count())]
-                logical_header = [x for x in logical_header if x.startswith("coq")]
-                for x in output_order:
-                    if x not in logical_header:
-                        logical_header.append(x)
-                if logical_header:
-                    output_order = logical_header
-            session.output_order = output_order
-
-        columns = []
-        for x in session.output_order:
-            # FIXME: use manager for column visibility
-            if not x.startswith(("coquery_invisible", "statistics_")):
-                columns.append(x)
-
-        session.output_order = [x for x in session.output_order if not x.startswith("statistics_")]
-
-        row_columns = columns[:-1]
-        row_list = [df[x] for x in row_columns if x in df.columns]
-
-        if len(columns) == 0:
-            result = pd.DataFrame({"statistics_column_total": [len(df.index)]})
-        elif len(columns) > 1:
-            col_column = columns[-1]
-            result = pd.crosstab(row_list, df[col_column], margins=True).reset_index()
-            try:
-                session.output_order.remove(col_column)
-            except ValueError:
-                pass
-            new_columns = list(result.columns)
-            for i in range(len(row_columns), len(new_columns) - 1):
-                col_label = "{}: {}".format(
-                    session.translate_header(col_column), new_columns[i])
-                new_columns[i] = col_label
-                session.output_order.append(col_label)
-            new_columns[-1] = "statistics_column_total"
-            result.columns = new_columns  
-            result
-        else:
-            col_column = ""
-            result = pd.crosstab(df[columns[0]], columns=[], margins=True).reset_index()
-            result.columns = [columns[0], "statistics_column_total"]
-
-        if len(columns):
-            #for x in columns[:-1]:
-                #result[x][len(result.index)-1] = "---"
-            result[result.columns[0]][len(result.index)-1] = COLUMN_NAMES["statistics_column_total"]
-
-        session.output_order.append("statistics_column_total")
-        return result.fillna("")
-
 class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session)
@@ -989,8 +892,6 @@ class CollocationQuery(TokenQuery):
 def get_query_type(MODE):
     if MODE == QUERY_MODE_COLLOCATIONS:
         return CollocationQuery
-    elif MODE == QUERY_MODE_CONTINGENCY:
-        return ContingencyQuery
     elif MODE == QUERY_MODE_CONTRASTS:
         return ContrastQuery
     elif MODE == QUERY_MODE_STATISTICS:
