@@ -1254,20 +1254,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         """ Set the content of the table model to the given data, using a
         pandas DataFrame object. """
         self.content = data
-        self.rownames = list(self.content.index.values + 1)
-
-        if not hasattr(options.cfg.main_window, "Session"):
-            return
-
-        # try to set the columns to the output order of the current session
-        manager = options.get_manager(options.cfg.MODE, options.cfg.main_window.Session.Resource.name)
-        new_order = options.cfg.main_window.Session.output_order + manager.get_additional_columns()
-        if "coquery_invisible_corpus_id" not in new_order:
-            new_order.append("coquery_invisible_corpus_id")
-        if "coquery_invisible_number_of_tokens" not in new_order:
-            new_order.append("coquery_invisible_number_of_tokens")
-
-        self.content = self.content.reindex(columns=new_order)
+        self.rownames = [x+1 if np.isreal(x) else x for x in self.content.index.values]
 
         # notify the GUI that the whole data frame has changed:
         self.dataChanged.emit(
@@ -1370,10 +1357,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # Return row names?
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
-                if session.query_type == queries.ContingencyQuery and index == len(self.rownames) - 1:
-                    return None
-                else:
-                    return str(self.rownames[index])
+                return str(self.rownames[index])
             else:
                 return None
 
