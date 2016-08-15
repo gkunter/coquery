@@ -267,13 +267,16 @@ def get_error_repr(exc_info):
     trace_string = ""
     Indent = ""
     Text = ""
-    for FileName, LineNo, FunctionName, Text in Trace:
-        ModuleName = os.path.split(FileName) [1]
-        trace_string += "%s %s, line %s: %s\n" % (Indent, ModuleName, LineNo, FunctionName)
-        Indent += "  "
-    file_location = "{}, line {}".format(FileName, LineNo)
-    if Text:
-        trace_string += "%s> %s\n" % (Indent[:-1], Text)
+    for file_name, line_no, func_name, text in Trace:
+        path, module_name = os.path.split(file_name)
+        # only print exceptions from Coquery files:
+        if path.startswith(sys.path[0]):
+            trace_string += "{} {}, line {}: {}\n".format(
+                Indent, module_name, line_no, func_name.replace("<", "&lt;"))
+            Indent += "  "
+    file_location = "{}, line {}".format(file_name, line_no)
+    if text:
+        trace_string += "%s> %s\n" % (Indent[:-1], text)
     return (exc_type, exc_obj, trace_string, file_location)
 
 def print_exception(exc):
