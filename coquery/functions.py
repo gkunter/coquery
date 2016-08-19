@@ -24,7 +24,9 @@ try:
 except ImportError:
     _query_engine ="python"
 
+from . import options
 from coquery.defines import *
+from coquery.general import *
 
 try:
     _iqr = stats.iqr
@@ -45,9 +47,10 @@ def _save_last(x):
     except IndexError:
         return None
 
-function_map = {
+combine_map = {
     "all": all,
     "any": any,
+    "none": lambda x: not any(x),
     "sum": sum,
     "max": max,
     "min": min,
@@ -59,12 +62,32 @@ function_map = {
     "first": _save_first,
     "last": _save_last,
     "random": lambda x: np.random.choice(x),
+    "join": lambda x, y: y.join(x),
     }
+
+bool_combine = ["all", "any", "none"]
+seq_combine = ["first", "last", "random", "mode", "max", "min"]
+num_combine = ["sum", "mean", "sd", "median", "IQR"]
+no_combine = []
+
+str_combine = seq_combine + bool_combine
+num_combine = num_combine + seq_combine
+all_combine = num_combine + seq_combine + bool_combine
+
+#############################################################################
+## Base function
+#############################################################################
 
 class Function(object):
     _name = "id"
+    parameters = 0
+    default_aggr = "first"
+    allow_null = False
+    combine_modes = all_combine
+    no_column_labels = False
+    single_column = True
 
-    def __init__(self, columns=[], label=None, alias=None, sweep=False, aggr=None, group=[]):
+    def __init__(self, columns=[], value=None, label=None, alias=None, sweep=False, aggr=None, group=[]):
         """
         Parameters
         ----------
@@ -74,12 +97,22 @@ class Function(object):
         """
         self.columns = columns
         self.sweep = sweep
-        self.label = None
         self.group = group
         self.alias = alias
-        
-        if aggr:
-            self.select = function_map[aggr]
+        self.value = value
+        self.label = label
+        if aggr != None:
+            self.aggr = aggr
+        else:
+            self.aggr = self.default_aggr
+        self.select = combine_map[self.aggr]
+
+    @classmethod
+    def get_name(cls):
+        if cls._name in COLUMN_NAMES:
+            return COLUMN_NAMES[cls._name]
+        else:
+            return cls._name
 
     def get_hash(self):
         l = []
@@ -92,18 +125,29 @@ class Function(object):
         if self.label:
             return self.label
         else:
+            if self.no_column_labels:
+                return self.get_name()
+            
             if self.group:
-                return "{}({})".format(self._name, ",".join([session.translate_header(x) for x in self.group]))
+                return "{}({})".format(
+                    self.get_name(), 
+                    ",".join([session.translate_header(x) for x in self.group]))
             else:
-                return self._name
+                return "{}({},\"{}\")".format(
+                    self.get_name(), 
+                    ",".join([session.translate_header(x) for x in self.columns]),
+                    self.aggr)
                 
             if self.group:
                 return "{}({},group={})".format(
-                    self._name, 
+                    self.get_name(), 
                     ",".join([session.translate_header(x) for x in self.columns]),
                     ",".join([session.translate_header(x) for x in self.group]))
             else:
-                return "{}({})".format(self._name, ",".join([session.translate_header(x) for x in self.columns]))
+                return "{}({},\"{}\")".format(
+                    self.get_name(), 
+                    ",".join([session.translate_header(x) for x in self.columns]),
+                    self.aggr)
     
     def set_label(self, label):
         self.label = label
@@ -129,7 +173,7 @@ class Function(object):
         if self.alias:
             return self.alias
         else:
-            return "func_{}_{}".format(self._name, self.get_hash())
+            return "func_{}_{}".format(self.get_name(), self.get_hash())
     
     def find_function(self, df, fun):
         fun_id = fun.get_id()
@@ -138,7 +182,7 @@ class Function(object):
                 return col
         return None            
     
-    def evaluate(self, df):
+    def evaluate(self, df, *args, **kwargs):
         val = (df[self.columns].apply(self._func)
                           .apply(self.select, axis="columns"))
 
@@ -147,47 +191,61 @@ class Function(object):
         
         return val
 
-    def select(self, row):
-        return row[0]
-    
-class StringLength(Function):
-    _name = "STRING_LENGTH"
+#############################################################################
+## String functions
+#############################################################################
+
+class StringFunction(Function):
+    combine_modes = str_combine
+    pass
+
+class StringLength(StringFunction):
+    _name = "LENGTH"
+    combine_modes = num_combine
     
     def _func(self, cols):
-        return cols.apply(len)
+        return cols.apply(lambda x: len(str(x)))
     
-class StringCount(Function):
-    _name = "STRING_COUNT"
+class StringCount(StringFunction):
+    _name = "COUNT"
+    parameters = 1
+    combine_modes = num_combine
     
     def __init__(self, value, columns=[], *args, **kwargs):
-        super(Count, self).__init__(columns, *args, **kwargs)
-        self.value = value
+        super(StringCount, self).__init__(columns=columns, value=value, *args, **kwargs)
     
     def _func(self, col):
-        return col.apply(lambda x: x.count(self.value))
+        return col.apply(lambda x: str(x).count(self.value))
     
-class StringChain(Function):
-    _name = "STRING_CHAIN"
+class StringChain(StringFunction):
+    _name = "CHAIN"
+    parameters = 1
+    allow_null = True
+    combine_modes = ["join"]
     
     def __init__(self, value, columns=[], *args, **kwargs):
-        super(Chain, self).__init__(columns, *args, **kwargs)
-        self.value = "{}".format(value)
+        super(StringChain, self).__init__(columns, value=value, *args, **kwargs)
+        self.select = self._select
     
-    def select(self, row):
-        return self.value.join(row)
+    def _select(self, row):
+        return self.value.join([str(x) for x in row])
 
-class StringMatch(Function):
-    _name = "STRING_MATCH"
+class StringMatch(StringFunction):
+    _name = "MATCH"
+    parameters = 1
+    combine_modes = str_combine
     
-    def __init__(self, regex, columns=[], *args, **kwargs):
-        super(Match, self).__init__(columns, *args, **kwargs)
-        self.re = re.compile(regex)
+    def __init__(self, value, columns=[], *args, **kwargs):
+        super(StringMatch, self).__init__(columns, *args, **kwargs)
+        self.re = re.compile(value)
     
     def _func(self, col):
         return col.apply(lambda x: self.re.search(str(x)) != None)
 
 class StringExtract(StringMatch):
-    _name = "STRING_EXTRACT"
+    _name = "EXTRACT"
+    parameters = 1
+    combine_modes = str_combine
     
     def _func(self, col):
         def _match(s):
@@ -199,15 +257,20 @@ class StringExtract(StringMatch):
 
         return col.apply(lambda x: _match(x))
 
+####################
+## Numeric functions
+####################
+
 class Calc(Function):
     _name = "CALC"
+    combine_modes = num_combine
     
     def __init__(self, sign, value=None, columns=[], *args, **kwargs):
         super(Calc, self).__init__(columns, *args, **kwargs)
         self.sign = sign
         self.value = value
         
-    def evaluate(self, df):
+    def evaluate(self, df, *args, **kwargs):
         def _calc(val1, val2):
             if self.sign == "+":
                 val1 = val1 + val2
@@ -226,10 +289,17 @@ class Calc(Function):
             val = _calc(val, self.value)
         return val
 
+#############################################################################
+## Frequency functions
+#############################################################################
+
 class Freq(Function):
-    _name = "FREQUENCY"
+    _name = "statistics_frequency"
+    combine_modes = no_combine
+    no_column_labels = True
+    default_aggr = "sum"
     
-    def evaluate(self, df):
+    def evaluate(self, df, *args, **kwargs):
         # do not calculate the frequencies again if the data frame already 
         # contains an identical frequency column:
         fun = Freq(columns=self.columns, group=self.group)
@@ -261,8 +331,8 @@ class FreqPMW(Freq):
         super(FreqPMW, self).__init__(columns, *args, **kwargs)
         self.session = session
     
-    def evaluate(self, df):
-        val = super(FreqPMW, self).evaluate(df)
+    def evaluate(self, df, *args, **kwargs):
+        val = super(FreqPMW, self).evaluate(df, *args, **kwargs)
         if len(val) > 0:
             corpus_size = self.session.Corpus.get_corpus_size(filters=self.session.filter_list)
         val = val.apply(lambda x: x / (corpus_size / self.words))
@@ -284,8 +354,8 @@ class FreqNorm(Freq):
         super(FreqNorm, self).__init__(columns, *args, **kwargs)
         self.session = session
 
-    def evaluate(self, df):
-        val = super(FreqNorm, self).evaluate(df)
+    def evaluate(self, df, *args, **kwargs):
+        val = super(FreqNorm, self).evaluate(df, *args, **kwargs)
 
         if len(val) == 0:
             return pd.Series([])
@@ -293,7 +363,7 @@ class FreqNorm(Freq):
         fun = SubcorpusSize(session=self.session, 
                             columns=self.columns,
                             group=self.group)
-        subsize = fun.evaluate(df)
+        subsize = fun.evaluate(df, *args, **kwargs)
 
         d = pd.concat([val, subsize], axis=1)
         d.columns = ["val", "subsize"]
@@ -301,17 +371,22 @@ class FreqNorm(Freq):
         val.index = df.index
         return val
 
+#############################################################################
+## Distributional functions
+#############################################################################
+
 class Proportion(Freq):
     _name = "PROPORTION"
+    no_column_labels = True
     
-    def evaluate(self, df):
+    def evaluate(self, df, *args, **kwargs):
         fun = Proportion(columns=self.columns, group=self.group)
         if self.find_function(df, fun):
             print(self._name, "using df.Proportion()")
             return df[fun.get_id()]
         else:
             print(self._name, "calculating df.Proportion()")
-        val = super(Proportion, self).evaluate(df)
+        val = super(Proportion, self).evaluate(df, *args, **kwargs)
         val = val.apply(lambda x: x / len(df))
         val.index = df.index
         return val
@@ -319,9 +394,9 @@ class Proportion(Freq):
 class Entropy(Proportion):
     _name = "ENTROPY"
     
-    def evaluate(self, df):
+    def evaluate(self, df, *args, **kwargs):
         _df = df[self.columns]
-        _df["COQ_PROP"] = super(Entropy, self).evaluate(df)
+        _df["COQ_PROP"] = super(Entropy, self).evaluate(df, *args, **kwargs)
         _df = _df.drop_duplicates()
         if len(_df) == 1:
             entropy = 0.0
@@ -331,41 +406,51 @@ class Entropy(Proportion):
 
 class Tokens(Function):
     _name = "TOKENS"
+    no_column_labels = True
     
-    def evaluate(self, df):
+    def evaluate(self, df, *args, **kwargs):
         return pd.Series([len(df)] * len(df), index=df.index)
 
 class Types(Function):
     _name = "TYPES"
+    no_column_labels = True
     
-    def evaluate(self, df):
+    def evaluate(self, df, *args, **kwargs):
         length = len(df[self.columns].drop_duplicates())
         return pd.Series([length] * len(df), index=df.index)
 
 class TypeTokenRatio(Types):
     _name = "TYPETOKENRATIO"
+    no_column_labels = True
     
-    def evaluate(self, df):
-        val = super(TypeTokenRatio, self).evaluate(df)
-        fun = Tokens(group=self.group).evaluate(df)
+    def evaluate(self, df, *args, **kwargs):
+        val = super(TypeTokenRatio, self).evaluate(df, *args, **kwargs)
+        fun = Tokens(group=self.group).evaluate(df, *args, **kwargs)
         return (pd.DataFrame({"types": val, "tokens": fun}, index=df.index)
                     .apply(lambda row: row.types / row.tokens, axis="columns"))
 
+#############################################################################
+## Corpus functions
+#############################################################################
+
 class CorpusSize(Function):
     _name = "CORPUSSIZE"
+    combine_modes = no_combine
+    no_column_labels = True
 
     def __init__(self, session, columns=[], *args, **kwargs):
         super(CorpusSize, self).__init__(columns, *args, **kwargs)
         self.session = session
     
-    def evaluate(self, df):
+    def evaluate(self, df, *args, **kwargs):
         corpus_size = self.session.Corpus.get_corpus_size(filters=self.session.filter_list)
         return pd.Series([corpus_size] * len(df), index=df.index)
 
 class SubcorpusSize(CorpusSize):
     _name = "SUBCORPUSSIZE"
+    no_column_labels = True
 
-    def evaluate(self, df):
+    def evaluate(self, df, *args, **kwargs):
         fun = SubcorpusSize(session=self.session, columns=self.columns, group=self.group)
         if self.find_function(df, fun):
             print(self._name, "using df.SubcorpusSize()")
@@ -383,3 +468,50 @@ class SubcorpusSize(CorpusSize):
 
         return val
 
+#############################################################################
+## Context functions
+#############################################################################
+
+class ContextColumns(Function):
+    _name = "CONTEXT_COLUMN"
+    single_column = False
+
+    def __init__(self, session, *args):
+        super(ContextColumns, self).__init__(*args)
+        self.session = session
+        self.left_cols = ["coq_context_lc{}".format(i+1) for i in range(options.cfg.context_left)][::-1]
+        self.right_cols = ["coq_context_rc{}".format(i+1) for i in range(options.cfg.context_right)]
+
+    def evaluate(self, df, connection, *args, **kwargs):
+        left, target, right = self.session.Resource.get_context(
+            df["coquery_invisible_corpus_id"], 
+            df["coquery_invisible_origin_id"],
+            df["coquery_invisible_number_of_tokens"], True, connection)
+        return pd.Series(
+            data=left + right, 
+            index=self.left_cols + self.right_cols)
+
+class ContextKWIC(ContextColumns):
+    _name = "CONTEXT_KWIC"
+    
+    def evaluate(self, df, *args, **kwargs):
+        row = super(ContextKWIC, self).evaluate(df, *args, **kwargs)
+        return pd.Series(
+            data=[collapse_words(row[self.left_cols]), collapse_words(row[self.right_cols])], 
+            index=[["coq_context_left", "coq_context_right"]])
+
+class ContextString(ContextColumns):
+    _name = "CONTEXT_STRING"
+    
+    def __init__(self, session, *args):
+        super(ContextString, self).__init__(session, *args)
+        self.word_feature = getattr(self.session.Resource, QUERY_ITEM_WORD)
+
+    def evaluate(self, df, connection, *args, **kwargs):
+        left, target, right = self.session.Resource.get_context(
+            df["coquery_invisible_corpus_id"], 
+            df["coquery_invisible_origin_id"],
+            df["coquery_invisible_number_of_tokens"], True, connection)
+        return pd.Series(
+            data=[collapse_words(list(pd.Series(left + [x.upper() for x in target] + right)))],
+            index=["coq_context_string"])
