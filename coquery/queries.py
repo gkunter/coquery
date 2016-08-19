@@ -203,7 +203,6 @@ class TokenQuery(object):
                         self._query_cache[self.Resource, type(self), self.query_string] = df
 
                 df = self.insert_static_data(df)
-                df = self.insert_context(df, connection)
                 connection.close()
                 self.add_output_columns(self.Session)
 
@@ -304,72 +303,6 @@ class TokenQuery(object):
             return n + 1
         return L[n]
     
-    def insert_context(self, df, connection):
-        def insert_kwic(row):
-            row["coq_context_left"] = corpus.collapse_words(row[left_columns])
-            row["coq_context_right"] = corpus.collapse_words(row[right_columns])
-            return row
-
-        def insert_string(row):
-            row["coq_context_string"] = corpus.collapse_words(
-                list(row[left_columns]) + 
-                [x.upper() if hasattr(x, "upper") else x for x in list(row[target_columns])] + 
-                list(row[right_columns]))
-            return row
-        
-        def insert_columns(row):
-            left, target, right = self.Session.Resource.get_context(
-                row["coquery_invisible_corpus_id"], 
-                row["coquery_invisible_origin_id"],
-                self._current_number_of_tokens, True, connection)
-            for i in range(len(left)):
-                row["coq_context_lc{}".format(len(left) - i)] = left[i]
-            for i in range(len(right)):
-                row["coq_context_rc{}".format(i + 1)] = right[i]
-            if options.cfg.context_mode == CONTEXT_STRING:
-                if word_feature not in options.cfg.selected_features:
-                    for i in range(len(target)):
-                        row["coq_context_t{}".format(i + 1)] = target[i]
-
-            return row
-
-        if not options.cfg.token_origin_id:
-            return df
-        if options.cfg.context_mode == CONTEXT_NONE:
-            return df
-        if not (options.cfg.context_left or options.cfg.context_right):
-            return df
-        if not hasattr(self.Session.Resource, QUERY_ITEM_WORD):
-            return df
-        else:
-            word_feature = getattr(self.Session.Resource, QUERY_ITEM_WORD)
-        
-        # from http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.apply.html
-        # "In the current implementation apply calls func twice on the first 
-        # column/row to decide whether it can take a fast or slow code path. 
-        # This can lead to unexpected behavior if func has side-effects, as 
-        # they will take effect twice for the first column/row.
-        df = df.apply(insert_columns, axis=1)
-        
-        if options.cfg.context_mode == CONTEXT_KWIC:
-            left_columns = ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
-            right_columns = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
-            df = df.apply(insert_kwic, axis=1)
-
-        elif options.cfg.context_mode == CONTEXT_STRING:
-            left_columns = ["coq_context_lc{}".format(options.cfg.context_left - x) for x in range(options.cfg.context_left)]
-            right_columns = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
-            #if word_feature in options.cfg.selected_features:
-                #target_columns = ["coq_{}_{}".format(word_feature, x + 1) for x in range(self._current_number_of_tokens)]
-            #else:
-                #target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._current_number_of_tokens)]
-            if word_feature in options.cfg.selected_features:
-                target_columns = ["coq_{}_{}".format(word_feature, x + 1) for x in range(self._max_number_of_tokens)]
-            else:
-                target_columns = ["coq_context_t{}".format(x + 1) for x in range(self._max_number_of_tokens)]
-            df = df.apply(insert_string, axis=1)
-        return df
-    
     def insert_static_data(self, df):
         """ 
         Insert columns that are constant for each query result in the query.
@@ -429,65 +362,6 @@ class TokenQuery(object):
                 for df_col, input_col in input_columns:
                     df[df_col] = self.input_frame[input_col][0]
         return df
-
-    #def apply_functions(self, df):
-        #"""
-        #Applies the selected functions to the data frame.
-        
-        #This method applies the functions that were selected as output 
-        #columns to the associated column from the data frame. The result of 
-        #each function is added as a new column to the data frame. The name 
-        #of this column takes the form
-        
-        #coq_func_{resource}_{n},
-        
-        #where 'resource' is the resource feature on which the function was 
-        #applied, and 'n' is the count of that function. For example, the 
-        #results from the first function that was applied on the resource 
-        #feature 'word_label' is stored in the column 'coq_func_word_label_1',
-        #the second function on that feature in 'coq_func_word_label_2', and
-        #so on. 
-        
-        #Parameters
-        #----------
-        #df : DataFrame
-            #The data frame on which the selected function will be applied.
-        
-        #Returns
-        #-------
-        #df : DataFrame
-            #The data frame with new columns for each function.
-        #"""
-        
-        ## If the data frame is empty, no function can be applied anyway:
-        #if df.empty:
-            #return df
-
-        #lexicon_features = [x for x, _ in self.Resource.get_lexicon_features()]
-
-        #func_counter = collections.Counter()
-        #for rc_feature, fun, _, _, _ in options.cfg.selected_functions:
-            #_, hashed, table, feature = self.Resource.split_resource_feature(rc_feature)
-            #if hashed != None:
-                #link, res = get_by_hash(hashed)
-                #resource = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
-            #else:
-                #resource = "coq_{}_{}".format(table, feature)
-            #func_counter[resource] += 1
-            #fc = func_counter[resource]
-                        
-            ## handle functions added to lexicon features:
-            #if self.Resource.is_lexical(rc_feature):
-                #for n in range(self.get_max_tokens()):
-                    #new_name = "func_{}_{}_{}".format(resource, fc, n + 1)
-                    #col_name = "{}_{}".format(resource, n + 1)
-                    #df[new_name] = df[col_name].apply(fun)
-            ## handle other functions:
-            #else:
-                #new_name = "func_{}_{}_1".format(resource, fc)
-                #col_name = "{}_1".format(resource)
-                #df[new_name] = df[col_name].apply(fun)
-        #return df
 
     @staticmethod
     def add_output_columns(session):
