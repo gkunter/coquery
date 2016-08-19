@@ -12,57 +12,123 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-import sys
-import re
-
-import numpy as np
-
 from coquery import options
+from coquery import functions
 from .pyqt_compat import QtCore, QtGui
-from .ui.functionApplyUi import Ui_FunctionDialog
+from .ui.addFunctionUi import Ui_FunctionsDialog
 
-def func_regexp(x, s):
-    try:
-        try:
-            start, end = re.search("({})".format(s), x).span()
-        except AttributeError:
-            return ""
-        else:
-            return x[start:end]
-    except:
-        return None
-    
-def func_match(x, s):
-    try:
-        if re.search("{}".format(s), x):
-            return "yes"
-        else:
-            return "no"
-    except Exception:
-        return None
-    
 class FunctionDialog(QtGui.QDialog):
-    def __init__(self, table, feature, parent=None):
-        
+    def __init__(self, table, feature, columns=[], func=None, parent=None):
         super(FunctionDialog, self).__init__(parent)
-        self.ui = Ui_FunctionDialog()
+        self.ui = Ui_FunctionsDialog()
         self.ui.setupUi(self)
-        try:
-            table = str(table)
-        except:
-            table = "Linked table"
-        self.ui.label_description.setText(str(self.ui.label_description.text()).format(str(table), str(feature)))
-
-        self.ui.label_func1.setText(str(self.ui.label_func1.text()).format("{}.{}".format(table, feature)))
-        self.ui.label_func2.setText(str(self.ui.label_func2.text()).format("{}.{}".format(table, feature)))
-        self.ui.label_func3.setText(str(self.ui.label_func3.text()).format("{}.{}".format(table, feature)))
-        self.ui.label_func4.setText(str(self.ui.label_func4.text()).format("{}.{}".format(table, feature)))
-        self.ui.label_copy.setText(str(self.ui.label_copy.text()).format("{}.{}".format(table, feature)))
+        self.function_list = self.fill_list()
+        self.ui.list_functions.setCurrentRow(0)
+        self.columns = columns
+        self._auto_label = True
+        self.ui.list_functions.currentItemChanged.connect(lambda: self.check_gui())
+        self.ui.edit_function_value.textChanged.connect(lambda: self.check_gui())
+        self.ui.edit_label.textEdited.connect(self.check_label)
         
+        if func:
+            self.select_function(func)
+        
+        self.set_header(self.columns)
+        self.check_gui()
+        self.ui.list_functions.setFocus(1)
+                
         try:
             self.resize(options.settings.value("functionapply_size"))
         except TypeError:
             pass
+
+    def set_header(self, columns):
+        session = options.cfg.main_window.Session
+        self.ui.label_description.setText(
+            self.ui.label_description.text().format(
+                ", ".join([session.translate_header(x) for x in columns])))
+
+    def select_function(self, func):
+        self.columns = func.columns
+        try:
+            row = self.function_list.index(type(func))
+            self.ui.list_functions.setCurrentRow(row)
+        except ValueError:
+            pass
+        self.ui.edit_function_value.setText(func.value)
+        try:
+            ix = func.combine_modes.index(func.aggr)
+            self.ui.combo_combine.setCurrentIndex(ix)
+        except ValueError:
+            pass
+        if func.label:
+            self.ui.edit_label.setText(func.label)
+            self._auto_label = False
+            
+    def fill_list(self):
+        l = self.ui.list_functions
+        func_list = []
+        for attr in [getattr(functions, x) for x in functions.__dict__]:
+            try:
+                if (issubclass(attr, functions.StringFunction) and 
+                    attr != functions.StringFunction):
+                    func_list.append(attr)
+            except TypeError:
+                pass
+        func_list= sorted(func_list, key=lambda x: x.get_name())
+        for x in func_list:
+            l.insertItem(
+                l.count(), 
+                QtGui.QListWidgetItem("{} – {}".format(x.get_name(), "no description")))
+        return func_list
+
+    def check_label(self):
+        s = str(self.ui.edit_label.text())
+        if self._auto_label:
+            self._auto_label = False
+        elif not s:
+            self._auto_label = True
+
+    def check_gui(self, func=None, only_label=False):
+        func = self.function_list[self.ui.list_functions.currentRow()]
+        if not only_label:
+            if len(self.columns) == 1:
+                self.ui.box_combine.setDisabled(True)
+                self.ui.label_remark.show()
+            else:
+                self.ui.label_remark.hide()
+            
+            current_combine = str(self.ui.combo_combine.currentText())
+            self.ui.combo_combine.clear()
+            for x in func.combine_modes:
+                self.ui.combo_combine.addItem(x)
+            if current_combine in func.combine_modes:
+                self.ui.combo_combine.setCurrentIndex(func.combine_modes.index(current_combine))
+            else:
+                self.ui.combo_combine.setCurrentIndex(0)
+            
+            if func.parameters == 0:
+                self.ui.parameter_box.setDisabled(True)
+                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
+            else:
+                self.ui.parameter_box.setEnabled(True)
+                if (str(self.ui.edit_function_value.text()) == "" and not func.allow_null):
+                    self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+                else:
+                    self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
+                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+
+            self.ui.list_functions.item(self.ui.list_functions.currentRow()).setSelected(True)
+
+        tmp_func = func(
+            columns = self.columns,
+            value = str(self.ui.edit_function_value),
+            aggr = str(self.ui.combo_combine.currentText()))
+        
+        if self._auto_label:
+            self.ui.edit_label.setText(tmp_func.get_label(session=options.cfg.main_window.Session))
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
@@ -70,48 +136,37 @@ class FunctionDialog(QtGui.QDialog):
 
     def closeEvent(self, *args):
         options.settings.setValue("functionapply_size", self.size())
-        
-    @staticmethod
-    def display(table, feature, linked_feature=None, parent=None):
-        
-        dialog = FunctionDialog(table, feature, parent=parent)        
-        dialog.setVisible(True)
-        result = dialog.exec_()
+
+    def exec_(self):
+        result = super(FunctionDialog, self).exec_()
         if result == QtGui.QDialog.Accepted:
-            value = dialog.ui.edit_function_value.text()
+
+            value = self.ui.edit_function_value.text()
             escaped = str(value).replace("\\", "\\\\")
             escaped = escaped.replace("'", "\\'")
             escaped = escaped.replace("{", "{{")
             escaped = escaped.replace("}", "}}")
-                                              
-
-            if dialog.ui.radio_count.isChecked():
-                frm_str = "COUNT('{param}', {feature}{{N}})"
-                FUN = lambda x: x.count(value) if x else 0
-            elif dialog.ui.radio_length.isChecked():
-                frm_str = "LENGTH({feature}{{N}})"
-                FUN = lambda x: len(x) if x else 0
-            elif dialog.ui.radio_match.isChecked():
-                frm_str = "MATCH('{param}', {feature}{{N}})"
-                FUN = lambda x: func_match(x, value) if x else "no"
-            elif dialog.ui.radio_regexp.isChecked():
-                frm_str = "REGEXP('{param}', {feature}{{N}})"
-                FUN = lambda x: func_regexp(x, value) if x else ""
-            elif dialog.ui.radio_copy.isChecked():
-                frm_str = "COPY({feature}{{N}})"
-                FUN = lambda x: x
-
-            label = frm_str.format(param=escaped, feature=feature)
-            return label, FUN
+            
+            aggr = str(self.ui.combo_combine.currentText())
+            if self._auto_label:
+                label = None
+            else:
+                label = str(self.ui.edit_label.text())
+            func = self.function_list[self.ui.list_functions.currentRow()]
+            return (func, escaped, aggr, label)
         else:
             return None
 
-def main():
-    app = QtGui.QApplication(sys.argv)
-    viewer = FunctionDialog("Word", "Transcript")
-    viewer.exec_()
-    
-    
-if __name__ == "__main__":
-    main()
-    
+    @staticmethod
+    def set_function(columns, parent=None):
+        dialog = FunctionDialog("", "", columns=columns, parent=parent)
+        dialog.setVisible(True)
+        
+        return dialog.exec_()
+        
+    @staticmethod
+    def edit_function(func, parent=None):
+        dialog = FunctionDialog("", "", func=func, parent=parent)
+        dialog.setVisible(True)
+        
+        return dialog.exec_()
