@@ -27,72 +27,12 @@ except ImportError:
 
 from .errors import *
 from .defines import *
+from .general import *
 from . import tokens
 from . import options
 from . import sqlhelper
 from .links import get_by_hash
 from .filters import QueryFilter
-
-def collapse_words(word_list):
-    """ Concatenate the words in the word list, taking clitics, punctuation
-    and some other stop words into account."""
-    def is_tag(s):
-        # there are some tags that should still be preceded by spaces. In 
-        # paricular those that are normally used for typesetting, including
-        # <span>, but excluding <sup> and <sub>, because these are frequently
-        # used in formula:
-        
-        if s.startswith("<span") or s.startswith("</span"):
-            return False
-        if s in set(["</b>", "<b>", "</i>", "<i>", "</u>", "<u>", "</s>", "<s>", "<em>", "</em>"]):
-            return False
-        return s.startswith("<") and s.endswith(">") and len(s) > 2
-
-    contraction = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
-    token_list = []
-    punct = '!\'),-./:;?^_`}’”]'
-    context_list = [x.strip() if hasattr(x, "strip") else x for x in word_list]
-    open_quote = {}
-    open_quote ['"'] = False
-    open_quote ["'"] = False
-    open_quote["``"] = False
-    last_token = ""
-    for i, current_token in enumerate(context_list):
-        if current_token and not (isinstance(current_token, float) and np.isnan(current_token)):
-            if '""""' in current_token:
-                current_token = '"'
-        
-            # stupid list of exceptions in which the current_token should NOT
-            # be preceded by a space:
-            no_space = False
-            if all([x in punct for x in current_token]):
-                no_space = True        
-            if current_token in contraction:
-                no_space = True            
-            if last_token in '({[‘“':
-                no_space = True            
-            if is_tag(last_token):
-                no_space = True        
-            if is_tag(current_token):
-                no_space = True
-            if last_token.endswith("/"):
-                no_space = True
-
-            if current_token == "``":
-                no_space = False
-                open_quote["``"] = True
-            if current_token == "''":
-                open_quote["``"] = False
-                no_space = True
-            if last_token == "``":
-                no_space = True
-
-            if not no_space:
-                token_list.append(" ")
-            
-            token_list.append(current_token)
-            last_token = current_token
-    return "".join(token_list)
 
 #class ResFeature(str):
     #""" Define a feature class that acts like a string, but has some class
@@ -966,8 +906,10 @@ class SQLResource(BaseResource):
             options.cfg.token_origin_id = None
             
     @classmethod
-    def get_engine(cls):
-        return sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, cls.db_name))
+    def get_engine(cls, *args, **kwargs):
+        return sqlalchemy.create_engine(
+            sqlhelper.sql_url(options.cfg.current_server, cls.db_name),
+            *args, **kwargs)
 
     def get_statistics(self):
         stats = []
@@ -2551,7 +2493,7 @@ class CorpusClass(object):
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
         # add any resource feature that is required by a function:
-        for res, fun, _, _, _ in options.cfg.selected_functions:
+        for res, _, _, _, _ in options.cfg.selected_functions:
             func, hashed, table, feature = self.resource.split_resource_feature(res)
             assert func
             # function on field from external table?
@@ -2591,11 +2533,11 @@ class CorpusClass(object):
                     else:
                         final_select.append("NULL AS {}".format(col))
 
-        # add coquery_invisible_origin_id if a context is requested:
-        if (options.cfg.context_mode != CONTEXT_NONE and 
-            options.cfg.token_origin_id != None and
-            (options.cfg.context_left or options.cfg.context_right)):
-            final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
+        ## add coquery_invisible_origin_id if a context is requested:
+        #if (options.cfg.context_mode != CONTEXT_NONE and 
+            #options.cfg.token_origin_id != None and
+            #(options.cfg.context_left or options.cfg.context_right)):
+        final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
 
         # Always add the corpus id to the output fields:
         final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
