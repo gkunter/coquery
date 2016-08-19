@@ -178,7 +178,6 @@ class Options(object):
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False, formatter_class=CoqHelpFormatter)
 
         self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
-        self.args.disabled_columns = set([])
         self.args.version = self.version
         self.args.query_label = ""
         self.args.input_path = ""
@@ -809,6 +808,10 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.ask_on_quit = True
                         try:
+                            self.args.word_wrap = config_file.getboolean("gui", "word_wrap")
+                        except (NoOptionError, ValueError):
+                            self.args.word_wrap = False
+                        try:
                             self.args.save_query_string = config_file.getboolean("gui", "save_query_string")
                         except (NoOptionError, ValueError):
                             self.args.save_query_string = True
@@ -1021,7 +1024,10 @@ def save_configuration():
             config.set("gui", "ask_on_quit", cfg.ask_on_quit)
         except AttributeError:
             config.set("gui", "ask_on_quit", True)
-            
+        try:
+            config.set("gui", "word_wrap", bool(cfg.word_wrap))
+        except AttributeError:
+            config.set("gui", "word_wrap", False)
         try:
             config.set("gui", "save_query_file", cfg.save_query_file)
         except AttributeError:
@@ -1358,11 +1364,13 @@ def get_available_resources(configuration):
 
 def manager_factory(manager):
     if manager == QUERY_MODE_FREQUENCIES:
-        return managers.Distinct()
+        return managers.FrequencyList()
     elif manager == QUERY_MODE_DISTINCT:
         return managers.Distinct()
     elif manager == QUERY_MODE_CONTINGENCY:
-        return managers.Contingency()
+        return managers.ContingencyTable()
+    elif manager == QUERY_MODE_COLLOCATIONS:
+        return managers.Collocations()
     else:
         return managers.Manager()
 
