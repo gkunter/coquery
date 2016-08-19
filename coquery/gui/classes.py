@@ -30,6 +30,9 @@ from . import errorbox
 
 from xml.sax.saxutils import escape
 
+_left_align = int(QtCore.Qt.AlignLeft)|int(QtCore.Qt.AlignVCenter)
+_right_align = int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
+
 class CoqThread(QtCore.QThread):
     taskStarted = QtCore.Signal()
     taskFinished = QtCore.Signal()
@@ -82,6 +85,31 @@ class CoqThread(QtCore.QThread):
         self.taskFinished.emit()
         return result
 
+class CoqHorizontalHeader(QtGui.QHeaderView):
+    sectionFinallyResized = QtCore.Signal(int, int, int)
+    
+    def __init__(self, *args, **kwargs):
+        super(CoqHorizontalHeader, self).__init__(*args, **kwargs)
+        self.button_pressed = False
+        self._resizing = False
+        self.sectionResized.connect(self.alert_resize)
+        
+    def alert_resize(self, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+        self._resizing = True
+        
+    def mouseReleaseEvent(self, e):
+        super(CoqHorizontalHeader, self).mouseReleaseEvent(e)
+        if self._resizing:
+            self.sectionFinallyResized.emit(*self._args, **self._kwargs)
+            self._resizing = False
+        self.button_pressed = False
+        
+    def mousePressEvent(self, e):
+        super(CoqHorizontalHeader, self).mousePressEvent(e)
+        self.button_pressed = True
+        
 class CoqHelpBrowser(QtGui.QTextBrowser):
     def __init__(self, help_engine, *args, **kwargs):
         self.help_engine = help_engine
@@ -916,12 +944,15 @@ class CoqTextTag(QtGui.QFrame):
         return True
     
 class CoqListWidget(QtGui.QListWidget):
+    itemDropped = QtCore.Signal(QtGui.QListWidgetItem)
+    
     def __init__(self, *args, **kwargs):
         super(CoqListWidget, self).__init__(*args, **kwargs)
         self.columns = []
     
     def dropEvent(self, e):
-        self.add_resource(e.mimeData().text())
+        new_item = self.add_resource(e.mimeData().text())
+        self.itemDropped.emit(new_item)
         e.acceptProposedAction()
         
     def clear(self):
@@ -956,6 +987,7 @@ class CoqListWidget(QtGui.QListWidget):
         self.addItem(new_item)
         self.setCurrentItem(new_item)
         self.itemActivated.emit(new_item)
+        return new_item
         
     def insert_resource(self, i, rc_feature):
         if self.get_item(rc_feature) != None:
@@ -1225,52 +1257,55 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     pandas DataFrame object. It provides the required methods so that they 
     can be shown in the results view. """
 
-    columnVisibilityChanged = QtCore.Signal()
-    rowVisibilityChanged = QtCore.Signal()
-    
-    def __init__(self, parent, *args):
+    def __init__(self, df=pd.DataFrame(), session=None, parent=None, *args):
         super(CoqTableModel, self).__init__(parent, *args)
-        self.last_header = None
-
-        # sort_columns is an OrderedDict that stores the sorting information
-        # for the table. The keys of sort_columns are the feature names of
-        # the sorting columns. The associated values are the sorting modes.
-        self.sort_columns = collections.OrderedDict()
-        
-        self.header = []
-        self.set_data(pd.DataFrame())
         self._parent = parent
+
+        self.rownames = [x+1 if np.isreal(x) else x for x in df.index.values]
+        self.content = df[[x for x in df.columns if not x.startswith("coquery_invisible")]]
+        self.invisible_content = df[[x for x in df.columns if x.startswith("coquery_invisible")]]
+        self.header = self.content.columns
+        self._session = session
+        self._manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        self._align = []
+        self._dtypes = []
+        self._hidden_columns = []
+
+        self.rownames = [str(i+1) if isinstance(x, (np.integer, int)) else str(x) for i, x in enumerate(df.index)]
+
+        # prepare look-up lists that speed up data retrieval:
+        for i, col in enumerate(self.header):
+            # remember hidden columns:
+            if col in self._manager.hidden_columns:
+                self._hidden.append(i)
+
+            # remember dtype of columns:
+            self._dtypes.append(df.dtypes[col])
+
+            sorter = self._manager.get_sorter(col)
+
+            # set alignment:
+            if sorter and sorter.reverse:
+                # right-align columns with reverse sorting:
+                self._align.append(_right_align)
+            elif df.dtypes[col] in (int, float):
+                # always right-align numeric columns:                
+                self._align.append(_right_align)
+            elif col == "coq_context_left":
+                # right-align the left context column:
+                self._align.append(_right_align)
+            else:
+                # otherwise, left-align:
+                self._align.append(_left_align)
         
-    def set_header(self, header = None): 
-        self.header = [x for x in self.content.columns.values if not x.startswith("coquery_invisible") and not x in options.cfg.disabled_columns]
-        for i, x in enumerate(self.header):
-            self.setHeaderData(i, QtCore.Qt.Horizontal, x, QtCore.Qt.DecorationRole)
-        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, len(self.header))
-        
-        # remember the current header:
-        self.last_header = self.header
-
-    def set_data(self, data=None):
-        """ Set the content of the table model to the given data, using a
-        pandas DataFrame object. """
-        self.content = data
-        self.rownames = [x+1 if np.isreal(x) else x for x in self.content.index.values]
-
-        # notify the GUI that the whole data frame has changed:
-        self.dataChanged.emit(
-            self.createIndex(0, 0), 
-            self.createIndex(self.rowCount(), self.columnCount()))
-
     def is_visible(self, index):
         try:
-            session = options.cfg.main_window.Session
-            manager = options.get_manager(options.cfg.MODE, session.Resource.name)
-            return not self.header[index.column()] in manager.hidden_columns
+            return index.column() not in self._hidden_columns
 
-            row_vis = session.row_visibility[session.query_type]
+            row_vis = self._session.row_visibility[session.query_type]
             ix = self.content.index[index.row()]
             
-            return (not manager.is_hidden_column(col) and 
+            return (not self._manager.is_hidden_column(col) and 
                 row_vis[ix])
         except Exception as e:
             print(e)
@@ -1285,79 +1320,55 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         handled by the delegate CoqResultCellDelegate().
         """
         
-        session = options.cfg.main_window.Session
-        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
-        col = self.header[index.column()]
-        
         # DisplayRole: return the content of the cell in the data frame:
         # ToolTipRole: also returns the cell content, but in a form suitable
         # for QHTML:
         if role == QtCore.Qt.DisplayRole:
-            if not col in manager.hidden_columns:
-                value = self.content.iloc[index.row()][col] 
-                if isinstance(value, float):
-                    return options.cfg.float_format.format(value)
+            ix = index.column()
+            if not ix in self._hidden_columns:
+                if self._dtypes[ix] == float:
+                    return options.cfg.float_format.format(self.content.values[index.row()][ix])
                 else:
-                    #if session.query_type == queries.ContingencyQuery:
-                        #if isinstance(value, str):
-                            #if index.row() > 0:
-                                #if value == self.content.iloc[index.row() -1][self.header[index.column()]]:
-                                    #if index.column() > 0:
-                                        #if self.content.iloc[index.row()][index.column() - 1] == self.content.iloc[index.row() - 1][index.column() - 1]: 
-                                            #return ""
-                                    #else:
-                                        #return ""
-                    return str(value)
+                    return self.content.values[index.row()][ix] 
             else:
                 return "[hidden]"
+
         # ToolTipRole: return the content as a tooltip:
         elif role == QtCore.Qt.ToolTipRole:
-            if not col in manager.hidden_columns:
-                value = self.content.iloc[index.row()][col] 
-                if isinstance(value, float):
-                    return "<div>{}</div>".format(escape(options.cfg.float_format.format(value)))
+            ix = index.column()
+            col = self.header[ix]
+            
+            if not ix in self._hidden_columns:
+                if self._dtypes[ix] == float:
+                    return "<div>{}</div>".format(escape(options.cfg.float_format.format(self.content.values[index.row()][ix] )))
                 else:
-                    return "<div>{}</div>".format(escape(str(value)))
+                    return "<div>{}</div>".format(escape(self.content.values[index.row()][ix]))
             else:
                 return "[hidden]"
+            
         # TextAlignmentRole: return the alignment of the column:
         elif role == QtCore.Qt.TextAlignmentRole:
-            column = self.header[index.column()]
-            # integers and floats are always right-aligned:
-            try:
-                assert isinstance(self.content[column], pd.Series)
-                if self.content[column].dtype in (int, float):
-                    return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
-            except (AttributeError, TypeError, AssertionError):
-                print(self.header)
-                print(self.content[column].head())
-                raise RuntimeError
-            # right-align the left context as well as columns with reverse 
-            # sorting enabled:
-            if column == "coq_context_left" or self.sort_columns.get(column, SORT_NONE) in set([SORT_REV_DEC, SORT_REV_INC]):
-                return int(QtCore.Qt.AlignRight)|int(QtCore.Qt.AlignVCenter)
-            return int(QtCore.Qt.AlignLeft)|int(QtCore.Qt.AlignVCenter)
-        elif role == QtCore.Qt.UserRole:
-            # The UserRole is used when clicking on a cell in the results
-            # table. It is handled differently depending on the query type 
-            # that produced the table. 
-            if session.query_type == queries.ContrastQuery:
-                return queries.ContrastQuery.get_cell_content(
-                    index, 
-                    session.output_object,
-                    session)
+            return self._align[index.column()]
+
+        #elif role == QtCore.Qt.UserRole:
+            ## The UserRole is used when clicking on a cell in the results
+            ## table. It is handled differently depending on the query type 
+            ## that produced the table. 
+            #if session.query_type == queries.ContrastQuery:
+                #return queries.ContrastQuery.get_cell_content(
+                    #index, 
+                    #session.output_object,
+                    #session)
         return None
         
     def headerData(self, index, orientation, role):
         """ Return the header at the given index, taking the sorting settings
         into account. """
 
-        session = options.cfg.main_window.Session
-        
         # Return row names?
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
-                return str(self.rownames[index])
+                return self.rownames[index]
             else:
                 return None
 
@@ -1365,18 +1376,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         column = self.header[index]
 
         if role == QtCore.Qt.DisplayRole:
-            # do not return a header string for invisible columns:
-            if column.startswith("coquery_invisible"):
-                return None
-
-            display_name = session.translate_header(column)
+            display_name = self._session.translate_header(column)
             tag_list = []
             # Add sorting order number if more than one sorting columns have
             # been selected:
-            manager = options.get_manager(options.cfg.MODE, session.Resource.name)
-            sorter = manager.get_sorter(column)
+            sorter = self._manager.get_sorter(column)
             if sorter:
-                if len(manager.sorters) > 1:
+                if len(self._manager.sorters) > 1:
                     tag_list.append("{}".format(sorter.position + 1))
                 if sorter.reverse:
                     tag_list.append("rev")
@@ -1388,12 +1394,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # Get header decoration (i.e. the sorting arrows)?
         elif role == QtCore.Qt.DecorationRole:
             # no decorator for hidden columns:
-            manager = options.get_manager(options.cfg.MODE, session.Resource.name)
-
-            if column in manager.hidden_columns:
+            if column in self._manager.hidden_columns:
                 return None
 
-            sorter = manager.get_sorter(column)
+            sorter = self._manager.get_sorter(column)
             try:
                 # add arrows as sorting direction indicators if necessary:
                 if not sorter.ascending:
@@ -1404,43 +1408,15 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 return None
             
         return None
-
+    
     def rowCount(self, parent=None):
         """ Return the number of rows. """
-        try:
-            return len(self.content.index)
-        except AttributeError:
-            return 0
+        return len(self.content)
         
     def columnCount(self, parent=None):
-        """ Return the number of columns, ignoring all invisible columns. """
-        return len([x for x in self.header if not x.startswith("coquery_invisible")])
+        """ Return the number of columns. """
+        return self.content.columns.size
         
-    def do_sort(self):
-        """ Sort the content data frame by taking all sorting columns and 
-        their settings into account. """
-        session = options.cfg.main_window.Session
-        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
-        self.content = manager.arrange(self.content, session)
-            
-    def sort(self, *args):
-        self.layoutAboutToBeChanged.emit()
-        options.cfg.main_window.start_progress_indicator()
-        self_sort_thread = CoqThread(self.do_sort, self)
-        self_sort_thread.taskFinished.connect(self.sort_finished)
-        self_sort_thread.start()
-        
-    def sort_finished(self):
-        # Stop the progress indicator:
-        options.cfg.main_window.stop_progress_indicator()
-
-        for x in self._parent.ui.data_preview.selectionModel().selectedRows():
-            self._parent.ui.data_preview.selectionModel().select(x, 
-                QtGui.QItemSelectionModel.Deselect|   
-                QtGui.QItemSelectionModel.Rows)
-
-        self.layoutChanged.emit()
-
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     fill = False
 
@@ -1467,14 +1443,12 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         else:
             if self._table.is_visible(index):            
                 try:
-                    col = options.cfg.row_color[self._table.content.index[index.row()]]
-                    return QtGui.QColor(col)
+                    return QtGui.QColor(options.cfg.row_color[self._table.content.index[index.row()]])
                 except KeyError:
                     pass
                 # return column color if specified:
                 try:
-                    col = options.cfg.column_color[self._table.header[index.column()]]
-                    return QtGui.QColor(col)
+                    return QtGui.QColor(options.cfg.column_color[self._table.header[index.column()]])
                 except KeyError:
                     # return default color
                     return self.fg_color
@@ -1487,14 +1461,13 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             return self._app.palette().color(QtGui.QPalette().Highlight)
         else:
             if not self.bg_color:
-                col = self.standard_bg[self._table.is_visible(index)][index.row() & 1]
-                return col
+                return self.standard_bg[self._table.is_visible(index)][index.row() & 1]
             else:
                 return self.bg_color
 
-    def sizeHint(self, option, index):
-        rect = options.cfg.metrics.boundingRect(unicode(index.data(QtCore.Qt.DisplayRole)))
-        return rect.adjusted(0, 0, 15, 0).size()
+    #def sizeHint(self, option, index):
+        #rect = options.cfg.metrics.boundingRect(index.data(QtCore.Qt.DisplayRole))
+        #return rect.adjusted(0, 0, 15, 0).size()
     
     def paint(self, painter, option, index):
         """
@@ -1504,18 +1477,17 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         from the table's :func:`data` method, using the DecorationRole role.
         On mouse-over, the cell is rendered like a clickable link.
         """
-        content = unicode(index.data(QtCore.Qt.DisplayRole))
+        content = index.data(QtCore.Qt.DisplayRole)
         if not content and not self.fill:
             return
         painter.save()
 
-        align = index.data(QtCore.Qt.TextAlignmentRole)
-        
         # show content as a link on mouse-over:
         if option.state & QtGui.QStyle.State_MouseOver:
             font = painter.font()
             font.setUnderline(True)
             painter.setFont(font)
+            
         fg = self.get_foreground(option, index)
         bg = self.get_background(option, index)
         if bg:
@@ -1525,11 +1497,18 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             
         if fg:
             painter.setPen(QtGui.QPen(fg))
+
         try:
-            if align & QtCore.Qt.AlignLeft:
-                painter.drawText(option.rect.adjusted(2, 0, 2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
+            if index.data(QtCore.Qt.TextAlignmentRole) == _left_align:
+                painter.drawText(
+                    option.rect.adjusted(2, 0, 2, 0), 
+                    _left_align | options.cfg.word_wrap,                    
+                    content)
             else:
-                painter.drawText(option.rect.adjusted(-2, 0, -2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
+                painter.drawText(
+                    option.rect.adjusted(-2, 0, -2, 0), 
+                    _right_align | options.cfg.word_wrap,
+                    content)
         finally:
             painter.restore()
 
@@ -1577,23 +1556,30 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
         if fg: 
             painter.setPen(QtGui.QPen(fg))
+            
         try:
-            if align & QtCore.Qt.AlignLeft:
-                painter.drawText(option.rect.adjusted(2, 0, 2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
+            if index.data(QtCore.Qt.TextAlignmentRole) == _left_align:
+                painter.drawText(
+                    option.rect.adjusted(2, 0, 2, 0), 
+                    _left_align | int(QtCore.Qt.TextWordWrap), 
+                    content)
             else:
-                painter.drawText(option.rect.adjusted(-2, 0, -2, 0), index.data(QtCore.Qt.TextAlignmentRole), content)
+                painter.drawText(
+                    option.rect.adjusted(-2, 0, -2, 0), 
+                    _right_align | int(QtCore.Qt.TextWordWrap), 
+                    content)
         finally:
             painter.restore()
 
-    def get_background(self, option, index):
-        try:
-            value = float(index.data(QtCore.Qt.DisplayRole))
-            if  value > 1:
-                return QtGui.QColor("lightyellow")
-            else:
-                return super(CoqProbabilityDelegate, self).get_background(option, index)
-        except ValueError:
-            return super(CoqProbabilityDelegate, self).get_background(option, index)
+    #def get_background(self, option, index):
+        #try:
+            #value = float(index.data(QtCore.Qt.DisplayRole))
+            #if  value > 1:
+                #return QtGui.QColor("lightyellow")
+            #else:
+                #return super(CoqProbabilityDelegate, self).get_background(option, index)
+        #except ValueError:
+            #return super(CoqProbabilityDelegate, self).get_background(option, index)
 
 class CoqLikelihoodDelegate(CoqResultCellDelegate):
     fill = True
