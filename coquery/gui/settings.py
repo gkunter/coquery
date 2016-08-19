@@ -125,10 +125,6 @@ class Settings(QtGui.QDialog):
         except AttributeError:
             pass
         #try:
-            #self.ui.check_reaggregate_data.setChecked(bool(self._options.reaggregate_data))
-        #except AttributeError:
-            #pass
-        #try:
             #self.ui.check_server_side.setChecked(bool(self._options.server_side))
         #except AttributeError:
             #pass
@@ -142,6 +138,10 @@ class Settings(QtGui.QDialog):
             #pass
         try:
             self.ui.check_align_quantified.setChecked(bool(self._options.align_quantified))
+        except AttributeError:
+            pass
+        try:
+            self.ui.check_word_wrap.setChecked(bool(self._options.word_wrap))
         except AttributeError:
             pass
         try:
@@ -170,7 +170,7 @@ class Settings(QtGui.QDialog):
             pass
         try:
             self.ui.spin_maximum_tokens.setValue(int(self._options.last_number_of_tokens))
-            if self._options.number_of_tokens:
+            if self._options.number_of_tokens > 0:
                 self.ui.check_limit.check_limit_tokens.setChecked(True)
         except AttributeError:
             pass
@@ -179,20 +179,22 @@ class Settings(QtGui.QDialog):
         self._options.output_case_sensitive = bool(self.ui.radio_output_case_leave.isChecked())
         self._options.output_to_lower = bool(self.ui.radio_output_case_lower.isChecked())
         self._options.query_case_sensitive = not bool(self.ui.check_ignore_case_query.isChecked())
-        #self._options.reaggregate_data = bool(self.ui.check_reaggregate_data.isChecked())
         #self._options.server_side= bool(self.ui.check_server_side.isChecked())
         #self._options.ignore_punctuation = bool(self.ui.check_ignore_punctuation.isChecked())
         #self._options.experimental = bool(self.ui.check_experimental.isChecked())
-        self._options.align_quantified = bool(self.ui.check_align_quantified.isChecked())
         self._options.ask_on_quit = bool(self.ui.check_ask_on_quit.isChecked())
         self._options.save_query_file = bool(self.ui.check_save_query_file.isChecked())
         self._options.save_query_string = bool(self.ui.check_save_query_string.isChecked())
         self._options.digits = int(self.ui.spin_digits.value())
+        self._options.align_quantified = bool(self.ui.check_align_quantified.isChecked())
+        self._options.word_wrap = [0, QtCore.Qt.TextWordWrap][bool(self.ui.check_word_wrap.isChecked())]
         self._options.float_format = "{:.%if}" % self._options.digits
         self._options.custom_installer_path = str(self.ui.edit_installer_path.text())        
         if self.ui.check_limit_tokens.isChecked():
-            self._options.number_of_tokens = int(self.ui.spin_maximum_tokens)
-        self._options.last_number_of_tokens = int(self.ui.spin_maximum_tokens)
+            self._options.number_of_tokens = int(self.ui.spin_maximum_tokens.value())
+        else:
+            self._options.number_of_tokens = 0
+        self._options.last_number_of_tokens = int(self.ui.spin_maximum_tokens.value())
         self._options.table_font = self._table_font
         self._options.figure_font = self._figure_font
         self._options.context_font = self._context_font
