@@ -63,13 +63,17 @@ class Session(object):
         logger.info("Corpus '{}' on connection '{}'".format(
             self.Resource.name, options.cfg.current_server))
 
+        self.db_engine = sqlalchemy.create_engine(
+            sqlhelper.sql_url(options.cfg.current_server, self.Resource.db_name))
+        self.db_connection = self.db_engine.connect()
+
         self.data_table = pd.DataFrame()
         self.output_object = pd.DataFrame()
         self.output_order = []
         self.header_shown = False
         self.input_columns = []
         self._header_cache = {}
-        self._engine_cache = {}
+        self._manager_cache = {}
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
@@ -180,32 +184,30 @@ class Session(object):
 
     def has_cached_data(self):
         manager = options.get_manager(options.cfg.MODE, self.Resource.name)
-        return (self, manager) in self._engine_cache
+        return (self, manager) in self._manager_cache
 
     def aggregate_data(self, recalculate=True):
         """
-        Apply the aggegate function from the current query type to the 
-        data table produced in this session.
+        Use the current manager to process the data table. If requested, use 
+        a cached table (e.g. for sorting when no recalculation is needed).
         """
-
         manager = options.get_manager(options.cfg.MODE, self.Resource.name)
         
         # if no explicit recalculation is requested, try to use a cached 
-        # output object for the current query type:
-        if not recalculate:
-            if self.has_cached_data():
-                self.output_object = self._engine_cache[(self, manager)]
-                return
+        # output object:
+        if not recalculate and self.has_cached_data():
+            df = self._manager_cache[(self, manager)]
+        else:
+            df = self.data_table
+            df.index = range(len(df))
+            recalculate = True
 
-        self.reset_row_visibility(queries.get_query_type(options.cfg.MODE))
-
-        self.data_table.index = range(len(self.data_table))
-        self.output_object = manager.process(self.data_table, self)
-
-        self._engine_cache[(self, manager)] = self.output_object
+        self.output_object = manager.process(df, self, recalculate)
+        
+        #self._manager_cache[(self, manager)] = self.output_object
 
     def drop_cached_aggregates(self):
-        self._engine_cache = {}
+        self._manager_cache = {}
 
     def reset_row_visibility(self, query_type, df=pd.DataFrame()):
         if df.empty:
