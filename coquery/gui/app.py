@@ -303,14 +303,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
         
-        #self.ui.table_view = QtGui.QTableView()
-        #self.ui.table_view.setTextElideMode(QtCore.Qt.ElideMiddle)
-        #self.ui.table_view.setHorizontalScrollMode(self.ui.table_view.ScrollPerPixel)
-        #self.model = classes.CoqTableModel(None)
-
-        #self.ui.verticalLayout_4.addWidget(self.ui.table_view)
-        
-
     def keyPressEvent(self, e):
         """
         Add handler for key press events.
@@ -1086,10 +1078,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.table_model = classes.CoqTableModel(self.Session.output_object, session=self.Session)
         self.ui.data_preview.setModel(self.table_model)
         self.ui.data_preview.resizeRowsToContents()
-
-        #self.model = classes.MyModel(self.Session.output_object)
-        #self.ui.table_view.setModel(self.model)
-            
 
         if drop:
             # drop row colors and row visibility:
