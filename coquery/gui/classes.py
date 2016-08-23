@@ -953,9 +953,10 @@ class CoqListWidget(QtGui.QListWidget):
     
     def dropEvent(self, e):
         new_item = self.add_resource(e.mimeData().text())
-        self.itemDropped.emit(new_item)
-        e.acceptProposedAction()
-        
+        if new_item is not None:
+            self.itemDropped.emit(new_item)
+            e.acceptProposedAction()
+            
     def clear(self):
         for _ in range(self.count()):
             self.takeItem(0)
@@ -980,7 +981,7 @@ class CoqListWidget(QtGui.QListWidget):
         return None
     
     def add_resource(self, rc_feature):
-        if self.get_item(rc_feature) != None:
+        if self.get_item(rc_feature) is not None:
             return
         label = getattr(options.cfg.main_window.resource, rc_feature)
         new_item = QtGui.QListWidgetItem(label)
@@ -991,7 +992,7 @@ class CoqListWidget(QtGui.QListWidget):
         return new_item
         
     def insert_resource(self, i, rc_feature):
-        if self.get_item(rc_feature) != None:
+        if self.get_item(rc_feature) is not None:
             return
         label = getattr(options.cfg.main_window.resource, rc_feature)
         new_item = QtGui.QListWidgetItem(label)
