@@ -245,21 +245,19 @@ class Visualizer(vis.BaseVisualizer):
                 #self.add_rectangles(df, ax, stacked=True)
                 #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
             else:
+                ax = plt.gca()
                 fun = func(columns=self._groupby, session=options.cfg.main_window.Session)
-                data["COQ_FUNC"] = fun.evaluate(data)
-                df = data[self._groupby + ["COQ_FUNC"]]
+                df = data.assign(COQ_FUNC=lambda d: fun.evaluate(d))
+                df = df[self._groupby + ["COQ_FUNC"]].drop_duplicates().fillna(0)
 
-                #df = data[self._groupby + ["COQ_FUNC"]].drop_duplicates()
-                
-                kwargs = {"x": df.COQ_FUNC,
-                          "y": df[self._groupby[0]],
+                kwargs = {"x": "COQ_FUNC",
+                          "y": self._groupby[0],
                           "order": self._levels[0],
                           "palette": self.options["color_palette_values"],
                           "data": df}
                 
                 try:
-                    kwargs.update({"hue": df[self._groupby[1]],
-                                   "hue_order": self._levels[1]})
+                    kwargs.update({"hue": df[self._groupby[1]], "hue_order": self._levels[1]})
                 except IndexError:
                     # use only one grouping variable
                     pass
