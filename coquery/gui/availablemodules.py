@@ -34,9 +34,10 @@ class AvailableModulesDialog(QtGui.QDialog):
         self.ui.table_modules.setHorizontalHeaderLabels(["Module", "Available", "Description"])
 
         modules = (
+                ("cachetools", options.use_cachetools),
+                ("PyMySQL", options.use_mysql),
                 ("SciPy", options.use_scipy), 
                 ("Seaborn", options.use_seaborn),
-                ("PyMySQL", options.use_mysql),
                 ("NLTK", options.use_nltk),
                 ("tgt", options.use_tgt),
                 ("chardet", options.use_chardet),

@@ -51,6 +51,7 @@ from .unicode import utf8
 from .defines import *
 from .errors import *
 from . import managers
+from . import cache
 
 # Define a HelpFormatter class that works with Unicode corpus names both in 
 # Python 2.7 and Python 3.x:
@@ -185,6 +186,7 @@ class Options(object):
         self.args.ask_on_quit = True
         self.args.save_query_string = True
         self.args.save_query_file = True
+        self.args.select_radio_query_file = False
         self.args.reaggregate_data = True
         self.args.server_side = True
         self.args.server_configuration = dict()
@@ -197,6 +199,7 @@ class Options(object):
         
         self.args.show_log_messages = ["ERROR", "WARNING", "INFO"]
 
+        self.args.query_list = []
         self.args.filter_list = []
         self.args.stopword_list = []
         self.args.table_links = defaultdict(list)
@@ -221,6 +224,7 @@ class Options(object):
 
         self.args.connections_path = os.path.join(self.args.coquery_home, "connections")
         self.args.installer_path = os.path.join(self.args.base_path, "installer")
+        self.args.cache_path = os.path.join(self.args.coquery_home, "cache")
         
         self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
         self.args.use_mysql = True
@@ -235,7 +239,9 @@ class Options(object):
         #self.args.external_links = defaultdict(list)
         self.args.selected_functions = []
 
+        # default query cache size to 500 MB:
         self.args.query_cache_size = 500 * 1024 * 1024
+        self.args.use_cache = use_cachetools
         
         self.args.context_left = 0
         self.args.context_right = 0
@@ -726,6 +732,16 @@ class Options(object):
                             self.args.custom_installer_path = config_file.get("main", "custom_installer_path")
                         except NoOptionError:
                             pass
+                        try:
+                            self.args.query_cache_size = config_file.getint("main", "query_cache_size")
+                        except NoOptionError:
+                            pass
+                        
+                        if use_cachetools:
+                            try:
+                                self.args.use_cache = config_file.getboolean("main", "use_cache")
+                            except NoOptionError:
+                                pass
                         
                         try:
                             self.args.input_path = config_file.get("main", "csv_file")
@@ -793,6 +809,10 @@ class Options(object):
                                 link = eval(link_text)
                                 self.args.table_links[connection].append(link)
                     elif section == "gui":
+                        try:
+                            self.args.select_radio_query_file = bool(config_file.getboolean("gui", "select_radio_query_file"))
+                        except (NoOptionError, ValueError):
+                            self.args.select_radio_query_file = False
                         try:
                             stopwords = config_file.get("gui", "stopword_list")
                             self.args.stopword_list = decode_query_string(stopwords).split("\n")
@@ -868,9 +888,9 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.use_stopwords = False                        
                         try:
-                            self.args.reaggregate_data = config_file.getboolean("gui", "reaggregate_data")
-                        except NoOptionError:
-                            self.args.reaggregate_data = True
+                            self.args.number_of_tokens = config_file.getint("gui", "number_of_tokens")
+                        except (NoOptionError, ValueError):
+                            self.args.number_of_tokens = 0
                         try:
                             self.args.width = config_file.getint("gui", "width")
                         except (NoOptionError, ValueError):
@@ -957,6 +977,8 @@ def save_configuration():
         pass
     if cfg.xkcd != None:
         config.set("main", "xkcd", cfg.xkcd)
+    config.set("main", "query_cache_size", cfg.query_cache_size)
+    config.set("main", "use_cache", bool(cfg.use_cache))
     
     if cfg.custom_installer_path:
         config.set("main", "custom_installer_path", cfg.custom_installer_path)
@@ -1021,6 +1043,10 @@ def save_configuration():
         config.set("gui", "use_corpus_filters", cfg.use_corpus_filters)        
 
         try:
+            config.set("gui", "select_radio_query_file", cfg.select_radio_query_file)
+        except AttributeError:
+            config.set("gui", "select_radio_query_file", False)
+        try:
             config.set("gui", "ask_on_quit", cfg.ask_on_quit)
         except AttributeError:
             config.set("gui", "ask_on_quit", True)
@@ -1077,11 +1103,10 @@ def save_configuration():
             config.set("gui", "text_source_path", cfg.text_source_path)
         except AttributeError:
             config.set("gui", "text_source_path", os.path.expanduser("~"))
-
         try:
-            config.set("gui", "reaggregate_data", cfg.reaggregate_data)
+            config.set("gui", "number_of_tokens", cfg.number_of_tokens)
         except AttributeError:
-            config.set("gui", "reaggregate_data", True)
+            config.set("gui", "number_of_tokens", 0)
 
         try:
             config.set("gui", "save_query_string", cfg.save_query_string)
@@ -1136,7 +1161,7 @@ def process_options():
     options = Options()
     cfg = options.cfg
     options.get_options()
-
+    cfg.query_cache = cache.CoqQueryCache()
         
 def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
     """
@@ -1558,6 +1583,7 @@ use_docx = has_module("docx")
 use_odfpy = has_module("odf")
 use_bs4 = has_module("bs4")
 use_scipy = has_module("scipy")
+use_cachetools = has_module("cachetools")
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:

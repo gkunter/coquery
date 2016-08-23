@@ -25,9 +25,17 @@ class Settings(QtGui.QDialog):
         #self.ui.check_experimental.setEnabled(False)
         self.ui.edit_visualizer_path.setEnabled(False)
         self.ui.button_visualizer_path.setEnabled(False)
+    
+        if not options.cfg.use_cache:
+            self.ui.edit_cache_path.setEnabled(False)
+            self.ui.button_cache_path.setEnabled(False)
         
         self.ui.button_installer_path.clicked.connect(self.select_installer_path)                                        
         self.ui.button_visualizer_path.clicked.connect(self.select_visualizer_path)                                        
+        self.ui.button_cache_path.clicked.connect(self.select_cache_path)
+        self.ui.button_clear_cache.clicked.connect(self.cache_button_clicked)
+
+        self.setup_cache_button()
 
         self._table_font = self._options.table_font
         self._figure_font = self._options.figure_font
@@ -48,11 +56,33 @@ class Settings(QtGui.QDialog):
         self.ui.button_reset_context.clicked.connect(lambda: self.reset_font(self.ui.label_sample_context))
         
         self.set_ui_options()
+        
         try:
             self.resize(options.settings.value("settings_size"))
         except TypeError:
             pass
 
+    def cache_button_clicked(self):
+        if options.cfg.use_cache:
+            if not options.cfg.query_cache.has_backup():
+                options.cfg.query_cache.clear()
+            else:
+                options.cfg.query_cache.restore()
+
+        self.setup_cache_button()
+
+    def setup_cache_button(self):
+        self.ui.button_clear_cache.setText("Clear cache")
+        self.ui.button_clear_cache.setEnabled(True)
+        icon = self._options.main_window.get_icon("sign-delete")
+        if options.cfg.use_cache:
+            if options.cfg.query_cache.has_backup():
+                self.ui.button_clear_cache.setText("Restore cache")
+                icon = self._options.main_window.get_icon("trashcan-full")
+            else:
+                self.ui.button_clear_cache.setEnabled(options.cfg.query_cache.size() > 0)
+        self.ui.button_clear_cache.setIcon(icon)
+        
     def closeEvent(self, event):
         options.settings.setValue("settings_size", self.size())
         
@@ -91,7 +121,9 @@ class Settings(QtGui.QDialog):
         label.setText(new_font.family())
         
     def select_installer_path(self):
-        name = QtGui.QFileDialog.getExistingDirectory(options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+        name = QtGui.QFileDialog.getExistingDirectory(
+            directory=self.ui.edit_installer_path.text(),
+            options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -99,12 +131,24 @@ class Settings(QtGui.QDialog):
             self.ui.edit_installer_path.setText(name)
         
     def select_visualizer_path(self):
-        name = QtGui.QFileDialog.getExistingDirectory(options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+        name = QtGui.QFileDialog.getExistingDirectory(
+            directory=self.ui.edit_visualizer_path.text(),
+            options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
         if type(name) == tuple:
             name = name[0]
         if name:
             self._options.visualizer_path = name
             self.ui.edit_visualizer_path.setText(name)
+
+    def select_cache_path(self):
+        name = QtGui.QFileDialog.getExistingDirectory(
+            directory=self.ui.edit_cache_path.text(),
+            options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            self._options.cache_path = name
+            self.ui.edit_cache_path.setText(name)
 
     def set_ui_options(self):
         try:
@@ -157,6 +201,10 @@ class Settings(QtGui.QDialog):
         except AttributeError:
             pass
         try:
+            self.ui.edit_cache_path.setText(self._options.cache_path)
+        except AttributeError:
+            pass
+        try:
             self.ui.check_ask_on_quit.setChecked(bool(self._options.ask_on_quit))
         except AttributeError:
             pass
@@ -168,33 +216,65 @@ class Settings(QtGui.QDialog):
             self.ui.check_save_query_file.setChecked(bool(self._options.save_query_file))
         except AttributeError:
             pass
+
+
+        if not options.use_cachetools:
+            self.ui.widget_cache.setDisabled()
+        else:
+            self.ui.spin_cache_size.setValue(int(self._options.query_cache_size // (1024 * 1024)))
+            self.ui.check_use_cache.setChecked(self._options.use_cache)
+            self.ui.progress_used.setValue(options.cfg.query_cache.size() // (1024*1024))
+            self.ui.progress_used.setMaximum(self.ui.spin_cache_size.value())
         try:
-            self.ui.spin_maximum_tokens.setValue(int(self._options.last_number_of_tokens))
             if self._options.number_of_tokens > 0:
-                self.ui.check_limit.check_limit_tokens.setChecked(True)
+                self.ui.spin_maximum_tokens.setValue(int(self._options.number_of_tokens))
+                self.ui.check_limit_tokens.setChecked(True)
+            else:
+                self.ui.spin_maximum_tokens.setValue(int(self._options.last_number_of_tokens))
         except AttributeError:
             pass
         
     def change_options(self):
         self._options.output_case_sensitive = bool(self.ui.radio_output_case_leave.isChecked())
         self._options.output_to_lower = bool(self.ui.radio_output_case_lower.isChecked())
+
+        # Query options
         self._options.query_case_sensitive = not bool(self.ui.check_ignore_case_query.isChecked())
-        #self._options.server_side= bool(self.ui.check_server_side.isChecked())
-        #self._options.ignore_punctuation = bool(self.ui.check_ignore_punctuation.isChecked())
-        #self._options.experimental = bool(self.ui.check_experimental.isChecked())
-        self._options.ask_on_quit = bool(self.ui.check_ask_on_quit.isChecked())
-        self._options.save_query_file = bool(self.ui.check_save_query_file.isChecked())
-        self._options.save_query_string = bool(self.ui.check_save_query_string.isChecked())
-        self._options.digits = int(self.ui.spin_digits.value())
-        self._options.align_quantified = bool(self.ui.check_align_quantified.isChecked())
-        self._options.word_wrap = [0, QtCore.Qt.TextWordWrap][bool(self.ui.check_word_wrap.isChecked())]
-        self._options.float_format = "{:.%if}" % self._options.digits
-        self._options.custom_installer_path = str(self.ui.edit_installer_path.text())        
+        self._options.use_cache = bool(self.ui.check_use_cache.isChecked())
+        self._options.last_cache_size = int(self.ui.spin_cache_size.value())
+        if self._options.use_cache:
+            if self._options.query_cache_size != self._options.last_cache_size:
+                self._options.query_cache_size = self._options.last_cache_size * 1024 * 1024
+                self._options.query_cache.resize(self._options.query_cache_size)
+            new_cache_path = str(self.ui.edit_cache_path.text())
+            print(new_cache_path)
+            print(self._options.cache_path)
+            if new_cache_path != self._options.cache_path:
+                try:
+                    self._options.query_cache.move(new_cache_path)
+                except Exception as e:
+                    print(e)
+                    raise e
+                else:
+                    self._options.cache_path = new_cache_path
+                    
         if self.ui.check_limit_tokens.isChecked():
             self._options.number_of_tokens = int(self.ui.spin_maximum_tokens.value())
         else:
             self._options.number_of_tokens = 0
         self._options.last_number_of_tokens = int(self.ui.spin_maximum_tokens.value())
+
+        # Quitting options
+        self._options.ask_on_quit = bool(self.ui.check_ask_on_quit.isChecked())
+        self._options.save_query_file = bool(self.ui.check_save_query_file.isChecked())
+        self._options.save_query_string = bool(self.ui.check_save_query_string.isChecked())
+
+        self._options.digits = int(self.ui.spin_digits.value())
+        self._options.align_quantified = bool(self.ui.check_align_quantified.isChecked())
+        self._options.word_wrap = [0, QtCore.Qt.TextWordWrap][bool(self.ui.check_word_wrap.isChecked())]
+        self._options.float_format = "{:.%if}" % self._options.digits
+        self._options.custom_installer_path = str(self.ui.edit_installer_path.text())        
+        self._options.custom_installer_path = str(self.ui.edit_installer_path.text())        
         self._options.table_font = self._table_font
         self._options.figure_font = self._figure_font
         self._options.context_font = self._context_font
