@@ -177,7 +177,6 @@ class VisualizerDialog(QtGui.QWidget):
         
         self.combo_function = QtGui.QComboBox()
         self.label_function = QtGui.QLabel("Choose display:")
-        self.combo_function.currentIndexChanged.connect(self.update_plot)
         
         self.toolbar = None
         self.canvas = None
@@ -362,13 +361,12 @@ class VisualizerDialog(QtGui.QWidget):
         self.visualizer = visualizer_class(model, view, parent=None, **kwargs)
         self._function_list = self.visualizer.function_list
         self.combo_function.addItems([fnc.get_name() for fnc in self._function_list])
-        
+        self.combo_function.currentIndexChanged.connect(self.update_plot)
         if not self.visualizer._table.empty:
             self.setVisible(True)
             self.connect_signals()
             options.cfg.main_window.widget_list.append(self)
             self.add_matplot()
-            
             self.thread = classes.CoqThread(self.visualizer.draw, 
                                             func=self.visualizer.default_func,
                                             parent=self)
