@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(800, 739)
+        MainWindow.resize(800, 754)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.verticalLayout_6 = QtGui.QVBoxLayout(self.centralwidget)
@@ -268,7 +268,7 @@ class Ui_MainWindow(object):
         self.splitter.setOpaqueResize(True)
         self.splitter.setHandleWidth(4)
         self.splitter.setObjectName(_fromUtf8("splitter"))
-        self.data_preview = QtGui.QTableView(self.splitter)
+        self.data_preview = CoqTableView(self.splitter)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -385,7 +385,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_6.addWidget(self.splitter_2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 24))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -692,5 +692,5 @@ class Ui_MainWindow(object):
         self.action_create_textgrid.setText(_translate("MainWindow", "Create te&xtgrid...", None))
         self.action_available_modules.setText(_translate("MainWindow", "Available &modules...", None))
 
-from ..classes import CoqListWidget
+from ..classes import CoqListWidget, CoqTableView
 
