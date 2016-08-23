@@ -24,6 +24,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 from coquery import queries
+from coquery import managers
 from coquery import sqlhelper
 from coquery.session import *
 from coquery.defines import *
@@ -1520,7 +1521,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 selection = [column]
 
         session = options.cfg.main_window.Session
-        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         sorter = manager.get_sorter(selection[0])
 
         display_name = "<br/>".join([session.translate_header(x) for x in selection])
@@ -1756,7 +1757,7 @@ class CoqueryApp(QtGui.QMainWindow):
         selection : list
             A list of column names.
         """
-        manager = options.get_manager(options.cfg.MODE, 
+        manager = managers.get_manager(options.cfg.MODE, 
                                       options.cfg.main_window.Session.Resource.name)
         for column in selection:
             manager.hide_column(column)
@@ -1771,7 +1772,7 @@ class CoqueryApp(QtGui.QMainWindow):
         selection : list
             A list of column names.
         """
-        manager = options.get_manager(options.cfg.MODE, 
+        manager = managers.get_manager(options.cfg.MODE, 
                                       options.cfg.main_window.Session.Resource.name)
         for column in selection:
             manager.show_column(column)
@@ -1862,7 +1863,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.row_color[np.int64(x)] = col.name()
         
     def change_sorting_order(self, column, ascending, reverse=False):
-        manager = options.get_manager(options.cfg.MODE, 
+        manager = managers.get_manager(options.cfg.MODE, 
                                       options.cfg.main_window.Session.Resource.name)
         if ascending is None:
             manager.remove_sorter(column)
@@ -2362,7 +2363,7 @@ class CoqueryApp(QtGui.QMainWindow):
             if self.ui.radio_no_summary.isChecked():
                 options.cfg.MODE = QUERY_MODE_TOKENS
             else:
-                summary_type = self.ui.combo_summary.currentText()
+                summary_type = str(self.ui.combo_summary.currentText())
                 options.cfg.MODE = summary_type
 
             self.get_context_values()
@@ -2660,14 +2661,14 @@ class CoqueryApp(QtGui.QMainWindow):
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             session = options.cfg.main_window.Session
-            manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+            manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
             manager.add_column_function(fun)
             self.update_columns()
 
     def edit_function(self, column):
         from . import functionapply
         session = options.cfg.main_window.Session
-        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         func = manager.get_function(column)
         response = functionapply.FunctionDialog.edit_function(func, parent=self)
         if response:
@@ -2678,7 +2679,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def remove_functions(self, columns):
         session = options.cfg.main_window.Session
-        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         for col in columns:
             func = manager.get_function(col)
             manager.remove_column_function(func)

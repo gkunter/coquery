@@ -21,6 +21,7 @@ import pandas as pd
 from coquery import options
 from coquery import queries
 from coquery import filters
+from coquery import managers
 from coquery.errors import *
 from coquery.defines import *
 from coquery.unicode import utf8
@@ -1302,7 +1303,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.invisible_content = df[[x for x in df.columns if x.startswith("coquery_invisible")]]
         self.header = self.content.columns
         self._session = session
-        self._manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        self._manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         self._align = []
         self._dtypes = []
         self._hidden_columns = []

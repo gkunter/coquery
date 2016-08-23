@@ -414,3 +414,30 @@ class ContingencyTable(FrequencyList):
                 piv[x] = piv[x].astype(df.dtypes[name])
 
         return piv
+
+def manager_factory(manager):
+    if manager == QUERY_MODE_FREQUENCIES:
+        return FrequencyList()
+    elif manager == QUERY_MODE_DISTINCT:
+        return Distinct()
+    elif manager == QUERY_MODE_CONTINGENCY:
+        return ContingencyTable()
+    elif manager == QUERY_MODE_COLLOCATIONS:
+        return Collocations()
+    else:
+        return Manager()
+
+def get_manager(manager, resource):
+    """
+    Returns a data manager 
+    """
+    try:
+        return options.cfg.managers[resource][manager]
+    except KeyError:
+        if resource not in options.cfg.managers:
+            options.cfg.managers[resource] = {}
+        new_manager = manager_factory(manager)
+        options.cfg.managers[resource][manager] = new_manager
+    finally:
+        return options.cfg.managers[resource][manager]
+

@@ -28,6 +28,7 @@ from .corpus import *
 from .defines import *
 from . import queries
 from . import filters
+from . import managers
 from . import tokens
 
 class Session(object):
@@ -158,7 +159,7 @@ class Session(object):
         self.quantified_number_labels = []
 
         number_of_queries = len(self.query_list)
-        manager = options.get_manager(options.cfg.MODE, self.Resource.name)
+        manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
 
         for i, current_query in enumerate(self.query_list):
             if options.cfg.gui and number_of_queries > 1:
@@ -221,7 +222,7 @@ class Session(object):
         return frequency_table
 
     def has_cached_data(self):
-        manager = options.get_manager(options.cfg.MODE, self.Resource.name)
+        manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
         return (self, manager) in self._manager_cache
 
     def aggregate_data(self, recalculate=True):
@@ -229,7 +230,7 @@ class Session(object):
         Use the current manager to process the data table. If requested, use 
         a cached table (e.g. for sorting when no recalculation is needed).
         """
-        manager = options.get_manager(options.cfg.MODE, self.Resource.name)
+        manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
         
         # if no explicit recalculation is requested, try to use a cached 
         # output object:
@@ -339,7 +340,7 @@ class Session(object):
             
             # deal with function headers:
             if header.startswith("func_"):
-                manager = options.get_manager(options.cfg.MODE, self.Resource.name)
+                manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
                 match = re.search("(.*)\((.*)\)", header)
                 if match:
                     s = match.group(1)

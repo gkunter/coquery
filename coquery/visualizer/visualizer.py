@@ -24,6 +24,7 @@ import seaborn as sns
 from coquery.gui.pyqt_compat import QtCore, QtGui
 from coquery import options
 from coquery import queries
+from coquery import managers
 from coquery.defines import *
 from coquery.errors import *
 from coquery.unicode import utf8
@@ -279,7 +280,7 @@ class BaseVisualizer(QtCore.QObject):
         view_columns = [x for x in view_columns if x in options.cfg.main_window.Session.data_table.columns]
 
         session = options.cfg.main_window.Session
-        manager = options.get_manager(options.cfg.MODE, session.Resource.name)
+        manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
 
         if self._plot_frequency:
             view_columns = [x for x in view_columns if x not in manager.hidden_columns]

@@ -24,8 +24,8 @@ except ImportError:
     _query_engine ="python"
 
 from . import options
-from coquery.defines import *
-from coquery.general import *
+from .defines import *
+from .general import *
 
 try:
     _iqr = stats.iqr

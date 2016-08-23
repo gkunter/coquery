@@ -50,7 +50,6 @@ from .links import Link
 from .unicode import utf8
 from .defines import *
 from .errors import *
-from . import managers
 
 try:
     from . import cache
@@ -914,7 +913,7 @@ class Options(object):
 
         # Use QSettings?
         if settings:
-            for x in settings.allKeys():
+            for x in [str(x) for x in settings.allKeys()]:
                 if x.startswith("column_width_"):
                     _, _, column = x.partition("column_width_")
                     self.args.column_width[column] = settings.value(x, int)
@@ -1391,31 +1390,6 @@ def get_available_resources(configuration):
             except (AttributeError, ImportError) as e:
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
-
-def manager_factory(manager):
-    if manager == QUERY_MODE_FREQUENCIES:
-        return managers.FrequencyList()
-    elif manager == QUERY_MODE_DISTINCT:
-        return managers.Distinct()
-    elif manager == QUERY_MODE_CONTINGENCY:
-        return managers.ContingencyTable()
-    elif manager == QUERY_MODE_COLLOCATIONS:
-        return managers.Collocations()
-    else:
-        return managers.Manager()
-
-def get_manager(manager, resource):
-    """
-    Returns a data manager 
-    """
-    try:
-        return cfg.managers[resource][manager]
-    except KeyError:
-        if resource not in cfg.managers:
-            cfg.managers[resource] = {}
-        cfg.managers[resource][manager] = manager_factory(manager)
-    finally:
-        return cfg.managers[resource][manager]
 
 def get_resource(name, connection= None):
     """

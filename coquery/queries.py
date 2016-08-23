@@ -44,6 +44,7 @@ from .links import get_by_hash
 from . import corpus
 from . import tokens
 from . import options
+from . import managers
 
 class TokenQuery(object):
     """ 
@@ -142,7 +143,7 @@ class TokenQuery(object):
         the quantified queries if quantified tokens are used. The results are 
         stored in self.results_frame.
         """
-        manager_hash = options.get_manager(options.cfg.MODE, self.Resource.name).get_hash()
+        manager_hash = managers.get_manager(options.cfg.MODE, self.Resource.name).get_hash()
         self.results_frame = pd.DataFrame()
         
         self._max_number_of_tokens = 0
