@@ -11,28 +11,28 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
+import hashlib
+
 from .defines import *
 from .functions import *
+from .general import CoqObject
 from . import options
 
-class Group(object):
-    pass
-
-class Sorter(object):
+class Sorter(CoqObject):
     def __init__(self, column, ascending=True, reverse=False, position=0):
         self.column = column
         self.ascending = ascending
         self.reverse = reverse
         self.position = position
 
-class Manager(object):
+class Manager(CoqObject):
     name = "RESULTS"
     
     def __init__(self):
-        self.functions = []
+        self._functions = []
+        self._column_functions = []
         self.sorters = []
         self.hidden_columns = set([])
-        self.column_functions = []
         self._columns = []
 
     def get_visible_columns(self, df, session, hidden=False):
@@ -45,7 +45,7 @@ class Manager(object):
             l = [x for x in list(df.columns.values) if (
                     not x.startswith("coquery_invisible") and 
                     not x in self.hidden_columns)]
-        
+
         resource_order = session.Resource.get_preferred_output_order()
         for x in resource_order[::-1]:
             lex_list = [y for y in l if x in y]
@@ -72,29 +72,26 @@ class Manager(object):
         """
         return self._columns
     
-    def get_additional_columns(self):
-        return [x.get_id() for x in self.functions]
-    
     def get_function(self, id):
-        for fun in self.functions:
+        for fun in self._functions:
             if fun.get_id() == id:
                 return fun 
     
     def add_column_function(self, fun):
-        self.column_functions.append(fun)
+        self._column_functions.append(fun)
         
     def remove_column_function(self, fun):
-        self.column_functions.remove(fun)
+        self._column_functions.remove(fun)
         
-        for x in self.column_functions:
+        for x in self._column_functions:
             if fun.get_id() in x.columns:
                 self.remove_column_function(x)
     
     def replace_column_function(self, old, new):
-        ix = self.column_functions.index(old)
-        self.column_functions[ix] = new
+        ix = self._column_functions.index(old)
+        self._column_functions[ix] = new
     
-    def get_manager_functions(self, df, session):
+    def _get_main_functions(self, df, session):
         """
         Returns a list of functions that are provided by this manager. They
         will be executed after user functions.
@@ -131,7 +128,7 @@ class Manager(object):
             
         return l
     
-    def get_group_functions(self, df, session):
+    def _get_group_functions(self, df, session):
         vis_cols = self.get_visible_columns(df, session)
         groups = []
         for rc_feature in options.cfg.group_columns:
@@ -153,6 +150,9 @@ class Manager(object):
             l.append(TypeTokenRatio(columns=vis_cols, group=groups))
         return l
     
+    def _get_summary_functions(self, df, session):
+        return []
+    
     @staticmethod
     def _apply_function(df, fun, connection):
         if fun.single_column:
@@ -163,13 +163,10 @@ class Manager(object):
             return pd.concat([df, new_df], axis=1)
     
     def mutate_groups(self, df, session, connection):
-        group_functions = self.get_group_functions(df, session)
-        self.functions += group_functions
-        
-        for fun in group_functions:
+        for fun in self._group_functions:
             grouped = df.groupby(fun.group)
             if len(grouped.groups) == 1:
-                df = Manager._apply_function(df, fun, connection)
+                df = self._apply_function(df, fun, connection)
             else:
                 if fun.single_column:
                     val = grouped.apply(lambda d: fun.evaluate(d))
@@ -181,26 +178,13 @@ class Manager(object):
 
         return df
     
-    def transform(self, df, session):
-        """
-        Transform the data frame into a shape that is required by the data 
-        manager.
-        """
-        return df
-    
     def mutate(self, df, session, connection):
         """
         Modify the transformed data frame by applying all needed functions.
         """
-        
-        self.functions = []
-        #self.functions = session.get_functions()
-        self.functions += self.get_manager_functions(df, session)
-        self.functions += self.column_functions
-        
-        for fun in self.functions:
+        for fun in self._main_functions:
             df = Manager._apply_function(df, fun, connection)
-
+        
         return df
     
     def remove_sorter(self, column):
@@ -220,6 +204,9 @@ class Manager(object):
         return None
     
     def arrange(self, df, session):
+        if len(df) == 0:
+            return df
+        
         original_columns = df.columns
         columns = []
         directions = []
@@ -250,19 +237,27 @@ class Manager(object):
             if not col and not columns[i].endswith("_rev"):
                 directions.pop(i)
                 columns.pop(i)
-        # always sort by coquery_invisible_corpus_id if there is no other
-        # sorter:
-        if len(columns) == 0:
-            columns = ["coquery_invisible_corpus_id"]
-            directions = [True]
-
+                
         if COLUMN_NAMES["statistics_column_total"] in df.index:
             # make sure that the row containing the totals is the last row:
             df_data = df[df.index != COLUMN_NAMES["statistics_column_total"]]
             df_totals = df[df.index == COLUMN_NAMES["statistics_column_total"]]
         else:
             df_data = df
-        
+
+        # always sort by coquery_invisible_corpus_id if there is no other
+        # sorter -- but not if the session covered multiple queries.
+        if len(columns) == 0:
+            if len(session.query_list) == 1:
+                columns = ["coquery_invisible_corpus_id"]
+                directions = [True]
+            else:
+                if COLUMN_NAMES["statistics_column_total"] in df.index:
+                    # return sorted data frame plus a potentially totals row:
+                    return pd.concat([df_data, df_totals])
+                else:
+                    return df_data
+
         # sort the data frame (excluding a totals row) with backward 
         # compatibility:
         try:
@@ -277,11 +272,15 @@ class Manager(object):
                                     axis="index")[original_columns]
         if COLUMN_NAMES["statistics_column_total"] in df.index:
             # return sorted data frame plus a potentially totals row:
-            return pd.concat([df_data, df_totals])
+            df = pd.concat([df_data, df_totals])
         else:
-            return df_data
+            df = df_data
+        df = df.reset_index(drop=True)
+        return df
         
-    def summarize(self, df, session):
+    def summarize(self, df, session, connection):
+        for fun in self._column_functions + self._summary_functions:
+            df = Manager._apply_function(df, fun, connection)
         return df
 
     def distinct(self, df, session):
@@ -308,41 +307,39 @@ class Manager(object):
         engine = session.Resource.get_engine()
         with engine.connect() as connection:
             if recalculate:
-                df = self.transform(df, session)
+                df = df[[x for x in df.columns if not x.startswith("func_")]]
+                self._main_functions = self._get_main_functions(df, session)
                 df = self.mutate(df, session, connection)
                 df = self.filter(df, session)
+                self._group_functions = self._get_group_functions(df, session)
                 df = self.mutate_groups(df, session, connection)
                 df = self.filter_groups(df, session)
             df = self.arrange(df, session)
-            df = self.summarize(df, session)
+            
+            self._summary_functions = self._get_summary_functions(df, session)
+            df = self.summarize(df, session, connection)
             df = self.select(df, session)
             df = df.fillna("")
-        
+
+        self._functions = (self._main_functions + self._group_functions +
+                           self._column_functions + self._summary_functions)
         return df
     
 class Distinct(Manager):
     name = "DISTINCT"
-    summarize = Manager.distinct
+    
+    def summarize(self, df, session, connection):
+        df = super(Distinct, self).summarize(df, session, connection)
+        return self.distinct(df, session)
 
 class FrequencyList(Distinct):
     name = "FREQUENCY"
     
-    def get_manager_functions(self, df, session):
-        l = super(FrequencyList, self).get_manager_functions(df, session)
-        no_freq = True
-        for func in l:
-            if isinstance(func, Freq):
-                no_freq = False
-                break
-        if no_freq:
-            l.insert(0, Freq(columns=self.get_visible_columns(df, session)))
-        return l
-
+    def _get_summary_functions(self, df, session):
+        return [Freq(columns=self.get_visible_columns(df, session))]
+    
 class ContingencyTable(FrequencyList):
     name = "CONTINGENCY"
-    
-    def summarize(self, df, session):
-        return df
     
     def select(self, df, session):
         l = list(super(ContingencyTable, self).select(df, session).columns)
