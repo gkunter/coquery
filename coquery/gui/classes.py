@@ -1252,6 +1252,42 @@ class QueryFilterBox(CoqTagBox):
             super(QueryFilterBox, self).addTag(filt.text)
             options.cfg.filter_list.append(filt)
 
+class CoqTableView(QtGui.QTableView):
+    resizeRow = QtCore.Signal(int, int)
+    
+    def __init__(self, *args, **kwargs):
+        super(CoqTableView, self).__init__(*args, **kwargs)
+        self.resizeRow.connect(self.setRowHeight)
+
+    def setWordWrap(self, wrap, *args, **kwargs):
+        super(CoqTableView, self).setWordWrap(wrap, *args, **kwargs)
+        self._wrap_flag = int(QtCore.Qt.TextWordWrap) if bool(wrap) else 0
+    
+    def resizeRowsToContents(self, *args, **kwargs):
+        def set_height(n, row):
+            # determine the maximum required height for this row by 
+            # checking the height of each cell
+            height = 0
+            for col in row.index:
+                height = max(height, 
+                             metric.boundingRect(rects[col], self._wrap_flag,
+                                          str(row[col])).height())
+            self.resizeRow.emit(n, height)
+
+        df = self.model().content
+        metric = self.fontMetrics()
+        # create a dictionary of QRect, each as wide as a column in the 
+        # table
+        rects = dict([
+            (df.columns[i], QtCore.QRect(0, 0, self.columnWidth(i) - 2, 99999)) for i in range(self.horizontalHeader().count())])
+
+        df.apply(lambda x: set_height(np.where(df.index == x.name)[0], x), axis="columns")
+
+    def resizeColumnsToContents(self, *args, **kwargs):
+        self.setVisible(False)
+        super(CoqTableView, self).resizeColumnsToContents(*args, **kwargs)
+        self.setVisible(True)
+
 class CoqTableModel(QtCore.QAbstractTableModel):
     """ Define a QAbstractTableModel class that stores the query results in a 
     pandas DataFrame object. It provides the required methods so that they 
@@ -1502,13 +1538,13 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             if index.data(QtCore.Qt.TextAlignmentRole) == _left_align:
                 painter.drawText(
                     option.rect.adjusted(2, 0, 2, 0), 
-                    _left_align | options.cfg.word_wrap,                    
-                    content)
+                    _left_align | int(options.cfg.word_wrap),
+                    content if isinstance(content, str) else str(content))
             else:
                 painter.drawText(
                     option.rect.adjusted(-2, 0, -2, 0), 
-                    _right_align | options.cfg.word_wrap,
-                    content)
+                    _right_align | int(options.cfg.word_wrap),
+                    content if isinstance(content, str) else str(content))
         finally:
             painter.restore()
 
