@@ -312,14 +312,16 @@ class Freq(Function):
         
         d = {self.columns[0]: "count"}
         d.update({x: "first" for x in [x for x in df.columns.values if x not in self.columns and not x.startswith("coquery_invisible")]})
-        return df.merge( (df.groupby(self.columns)
+        val = df.merge( (df.groupby(self.columns)
                             .agg(d)
                             .rename(columns={self.columns[0]: self.get_id()})
                             .reset_index()), 
                          on=self.columns, how="left")[self.get_id()]
+        val.index = df.index
+        return val
 
 class FreqPMW(Freq):
-    _name = "FREQUENCY_PMW"
+    _name = "statistics_per_million_words"
     words = 1000000
 
     def __init__(self, session, columns=[], *args, **kwargs):
@@ -335,7 +337,7 @@ class FreqPMW(Freq):
         return val
     
 class FreqPTW(FreqPMW):
-    _name = "FREQUENCY_PTW"
+    _name = "statistics_per_thousand_words"
     words = 1000
 
 class FreqNorm(Freq):
@@ -343,7 +345,7 @@ class FreqNorm(Freq):
     This function returns the normalized frequency, i.e. the number of 
     occurrences relative to the current subcorpus size.
     """
-    _name = "FREQ_NORM"
+    _name = "statistics_normalized"
     
     def __init__(self, session, columns=[], *args, **kwargs):
         super(FreqNorm, self).__init__(columns, *args, **kwargs)
