@@ -520,7 +520,6 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.connect_context_widgets()
 
-        
         # set up hooks for the group column list:
         self.ui.button_remove_group.clicked.connect(self.remove_group_column)
         self.ui.button_group_up.clicked.connect(lambda: self.move_group_column(direction="up"))
@@ -715,7 +714,8 @@ class CoqueryApp(QtGui.QMainWindow):
 
         #self.ui.data_preview.setTextElideMode(QtCore.Qt.ElideMiddle)
         #self.ui.data_preview.setHorizontalScrollMode(self.ui.data_preview.ScrollPerPixel)
-        self.ui.data_preview.resizeRowsToContents()
+        if options.cfg.word_wrap:
+            self.resize_rows()
 
     def result_cell_clicked(self, index=None, token_id=None):
         """
@@ -803,10 +803,14 @@ class CoqueryApp(QtGui.QMainWindow):
 
         return tree
     
-    def finish_reaggregation(self):
+    def finalize_reaggregation(self):
         self.display_results(drop=False)
         self.stop_progress_indicator()
         self.show_query_status()
+        self.resize_rows()
+        
+    def run_reaggregation(self, recalculate):
+        self.Session.aggregate_data(recalculate)
         
     def reaggregate(self,recalculate=True):
         """
@@ -817,10 +821,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if not self.Session:
             return
+        
+        self.showMessage("Managing data...")
         self.unfiltered_tokens = len(self.Session.data_table.index)
-        self.thread = classes.CoqThread(lambda: self.Session.aggregate_data(recalculate), parent=self)
-        self.thread.taskFinished.connect(self.finish_reaggregation)
-        self.thread.taskException.connect(self.exception_during_query)
+        self.thread = classes.CoqThread(lambda: self.run_reaggregation(recalculate), parent=self)
+        self.thread.taskFinished.connect(self.finalize_reaggregation)
 
         if not self.Session.has_cached_data():
             self.start_progress_indicator()
@@ -1061,6 +1066,10 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.check_corpus_widgets()
             
+    def resize_rows(self):
+        self.resize_thread = classes.CoqThread(self.ui.data_preview.resizeRowsToContents, parent=self)
+        self.resize_thread.start()
+    
     def display_results(self, drop=True):
         self.ui.data_preview.setEnabled(True)
         self.ui.data_preview.setFont(options.cfg.table_font)
@@ -1077,8 +1086,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.table_model = classes.CoqTableModel(self.Session.output_object, session=self.Session)
         self.ui.data_preview.setModel(self.table_model)
-        self.ui.data_preview.resizeRowsToContents()
-
+        
         if drop:
             # drop row colors and row visibility:
             self.Session.reset_row_visibility(self.Session.query_type)
@@ -1342,7 +1350,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.set_query_button()
             self.stop_progress_indicator()
         else:
-            self.showMessage("Preparing results table...")
             self.Session = self.new_session
             del self.new_session
             self.reaggregate()
@@ -2185,7 +2192,8 @@ class CoqueryApp(QtGui.QMainWindow):
         settings.Settings.manage(options.cfg, self)
         if options.cfg.word_wrap != last_wrap:
             self.ui.data_preview.setWordWrap(options.cfg.word_wrap)
-            self.ui.data_preview.resizeRowsToContents()
+            self.resize_rows()
+
         self.ui.data_preview.setFont(options.cfg.table_font)
 
         if options.cfg.context_font != old_context_font:
