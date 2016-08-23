@@ -27,7 +27,7 @@ from coquery.functions import *
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
     
-    function_list = [Freq, FreqPMW, FreqNorm]
+    function_list = [Freq, FreqPMW, FreqNorm, Proportion, Percent]
     default_func = Freq
 
     def __init__(self, *args, **kwargs):
@@ -196,57 +196,50 @@ class Visualizer(vis.BaseVisualizer):
             if self.stacked:
                 ax=plt.gca()
                 if len(self._groupby) == 2:
-                    # seperate stacked bars for each grouping
-                    # variable
-                    self.ct = pd.crosstab(data[self._groupby[0]], data[self._groupby[-1]])
-                    df = pd.DataFrame(self.ct)
-                    df = df.reindex_axis(self._levels[1], axis=1).fillna(0)
+                    data["COQ_FUNC"] = fun.evaluate(data)
                     
+                    df = (data.pivot_table(index=self._groupby[0],
+                                          columns=[self._groupby[-1]],
+                                          values="COQ_FUNC")
+                              .reset_index()
+                              .fillna(0))
+                    
+                    # supply empty factor levels
+                    for x in self._levels[-1]:
+                        if x not in df.columns:
+                            df[x] = 0
+                            
                     if self.percentage:
-                        df = df[self._levels[-1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
+                        df[self._levels[-1]] = df[self._levels[-1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
                     else:
-                        df = df[self._levels[-1]].cumsum(axis=1)
-                        
-                    df = df.reindex_axis(self._levels[0], axis=0).fillna(0)
-                    df = df.reset_index()
-                    
-                    #fun = func(columns=self._groupby, session=options.cfg.main_window.Session)
-                    #data["COQ_FUNC"] = fun.evaluate(data)
-                    #df = data[self._groupby + ["COQ_FUNC"]]
-                    #df = df.drop_duplicates().reset_index(drop=True)
-                    
-                    order = df.columns
-                    print(df.to_dict())
+                        df[self._levels[-1]] = df[self._levels[-1]].cumsum(axis=1)
+
                     ax=plt.gca()
-                    for i, stack in enumerate(order[::-1]):
+                    for i, stack in enumerate(self._levels[-1][::-1]):
                         tmp = sns.barplot(
                             x=stack,
                             y=self._groupby[0],
-                            data = df, 
+                            data=df, 
                             color=self.options["color_palette_values"][::-1][i], 
                             ax=plt.gca())
                 else:
                     # one stacked bar (so, this is basically a spine chart)
                     #self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
-                    fun = func(columns=self._groupby, 
-                               session=options.cfg.main_window.Session)
                     data["COQ_FUNC"] = fun.evaluate(data)
                     df = data[self._groupby + ["COQ_FUNC"]].drop_duplicates()
                     df["COQ_FUNC"] = df["COQ_FUNC"].cumsum()
 
-                    if len(self._groupby) == 1:
-                        for n, i in enumerate(df.index[::-1]):
-                            tmp = sns.barplot(
-                                x=df.ix[i].COQ_FUNC,
-                                data=df.ix[i],
-                                color=self.options["color_palette_values"][::-1][n], 
-                                ax=plt.gca())
+                    for n, i in enumerate(df.index[::-1]):
+                        tmp = sns.barplot(
+                            x="COQ_FUNC",
+                            data=df.ix[i],
+                            color=self.options["color_palette_values"][::-1][n], 
+                            ax=plt.gca())
 
                 #self.add_rectangles(df, ax, stacked=True)
                 #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
             else:
                 ax = plt.gca()
-                fun = func(columns=self._groupby, session=options.cfg.main_window.Session)
                 df = data.assign(COQ_FUNC=lambda d: fun.evaluate(d))
                 df = df[self._groupby + ["COQ_FUNC"]].drop_duplicates().fillna(0)
 
@@ -274,7 +267,10 @@ class Visualizer(vis.BaseVisualizer):
         sns.despine(self.g.fig,
                     left=False, right=False, top=False, bottom=False)
 
+        fun = func(columns=self._groupby, session=options.cfg.main_window.Session)
+
         self.map_data(plot_facet)
+        self.options["label_x_axis"] = fun.get_label(session=options.cfg.main_window.Session) 
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
 
         if self.percentage:
