@@ -22,9 +22,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from coquery.gui.pyqt_compat import QtCore
+from coquery.functions import *
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
+    
+    function_list = [Freq, FreqPMW, FreqNorm]
+    default_func = Freq
 
     def __init__(self, *args, **kwargs):
         try:
@@ -186,7 +190,7 @@ class Visualizer(vis.BaseVisualizer):
                             self._rectangles[ax] = collections.defaultdict(dict)
                         self._rectangles[ax][i][key] = val
 
-    def draw(self):
+    def draw(self, func=None):
         """ Plot bar charts. """
         def plot_facet(data, color):
             if self.stacked:
@@ -204,8 +208,15 @@ class Visualizer(vis.BaseVisualizer):
                         df = df[self._levels[-1]].cumsum(axis=1)
                         
                     df = df.reindex_axis(self._levels[0], axis=0).fillna(0)
-                    order = df.columns
                     df = df.reset_index()
+                    
+                    #fun = func(columns=self._groupby, session=options.cfg.main_window.Session)
+                    #data["COQ_FUNC"] = fun.evaluate(data)
+                    #df = data[self._groupby + ["COQ_FUNC"]]
+                    #df = df.drop_duplicates().reset_index(drop=True)
+                    
+                    order = df.columns
+                    print(df.to_dict())
                     ax=plt.gca()
                     for i, stack in enumerate(order[::-1]):
                         tmp = sns.barplot(
@@ -216,53 +227,49 @@ class Visualizer(vis.BaseVisualizer):
                             ax=plt.gca())
                 else:
                     # one stacked bar (so, this is basically a spine chart)
-                    self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
-                    df = pd.DataFrame(self.ct)
-                    df = df.transpose()
-                    if self.percentage:
-                        df = df.apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
-                    else:
-                        df = df.cumsum(axis=1)
-                    order = df.columns
-                    for i, stack in enumerate(order[::-1]):
-                        tmp = sns.barplot(
-                            x=stack,
-                            data = df[self._levels[-1]], 
-                            color=self.options["color_palette_values"][::-1][i], 
-                            ax=plt.gca())
-                self.add_rectangles(df, ax, stacked=True)
-                ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
-            else:
-                if len(self._groupby) == 2:
-                    self.ct = pd.crosstab(data[self._groupby[0]], data[self._groupby[-1]])
-                    df = pd.DataFrame(self.ct)
-                    df = df.reindex_axis(self._levels[1], axis=1).fillna(0)
-                    df = df[self._levels[-1]]
-                    df = df.reindex_axis(self._levels[0], axis=0).fillna(0)
-                    order = df.columns
-                    df = df.reset_index()
-                    
-                    ax = sns.countplot(
-                        y=data[self._groupby[0]],
-                        order=self._levels[0],
-                        hue=data[self._groupby[1]],
-                        hue_order=self._levels[1],
-                        palette=self.options["color_palette_values"],
-                        data=data)
-                else:
-                    # Don't use the 'hue' argument if there is only a single 
-                    # grouping factor:
-                    self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
-                    df = pd.DataFrame(self.ct)
-                    df = df.transpose()
+                    #self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
+                    fun = func(columns=self._groupby, 
+                               session=options.cfg.main_window.Session)
+                    data["COQ_FUNC"] = fun.evaluate(data)
+                    df = data[self._groupby + ["COQ_FUNC"]].drop_duplicates()
+                    df["COQ_FUNC"] = df["COQ_FUNC"].cumsum()
 
-                    ax = sns.countplot(
-                        y=data[self._groupby[0]],
-                        order=self._levels[0],
-                        palette=self.options["color_palette_values"],
-                        data=data)
-                self.add_rectangles(df, ax, stacked=False)
-                ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
+                    if len(self._groupby) == 1:
+                        for n, i in enumerate(df.index[::-1]):
+                            tmp = sns.barplot(
+                                x=df.ix[i].COQ_FUNC,
+                                data=df.ix[i],
+                                color=self.options["color_palette_values"][::-1][n], 
+                                ax=plt.gca())
+
+                #self.add_rectangles(df, ax, stacked=True)
+                #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
+            else:
+                fun = func(columns=self._groupby, session=options.cfg.main_window.Session)
+                data["COQ_FUNC"] = fun.evaluate(data)
+                df = data[self._groupby + ["COQ_FUNC"]]
+
+                #df = data[self._groupby + ["COQ_FUNC"]].drop_duplicates()
+                
+                kwargs = {"x": df.COQ_FUNC,
+                          "y": df[self._groupby[0]],
+                          "order": self._levels[0],
+                          "palette": self.options["color_palette_values"],
+                          "data": df}
+                
+                try:
+                    kwargs.update({"hue": df[self._groupby[1]],
+                                   "hue_order": self._levels[1]})
+                except IndexError:
+                    # use only one grouping variable
+                    pass
+                
+                ax = sns.barplot(**kwargs)
+
+                # FIXME: reimplement mouse-over
+                #self.add_rectangles(df, ax, stacked=False)
+                #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
+
         if self.percentage:
             self._levels[-1] = sorted(self._levels[-1])
                 
@@ -284,4 +291,7 @@ class Visualizer(vis.BaseVisualizer):
                 self.add_legend(self._levels[0], loc="lower right")
         elif len(self._groupby) == 2:
             # Otherwise, only show a legend if there are grouped bars
-            self.add_legend(loc="lower right")
+            try:
+                self.add_legend(self._levels[1], loc="lower right")
+            except IndexError:
+                pass

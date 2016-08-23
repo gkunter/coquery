@@ -175,6 +175,10 @@ class VisualizerDialog(QtGui.QWidget):
         self.spinner_label = QtGui.QLabel("Bandwidth: ")
         self.spinner.valueChanged.connect(self.update_plot)
         
+        self.combo_function = QtGui.QComboBox()
+        self.label_function = QtGui.QLabel("Choose display:")
+        self.combo_function.currentIndexChanged.connect(self.update_plot)
+        
         self.toolbar = None
         self.canvas = None
         
@@ -186,14 +190,6 @@ class VisualizerDialog(QtGui.QWidget):
     def closeEvent(self, event):
         options.settings.setValue("visualizer_size", self.size())
         self.close()
-
-    def add_visualizer(self, visualizer):
-        """ Add a Visualizer instance to the visualization dialog. Also, 
-        add a matplotlib canvas and a matplotlib navigation toolbar to the 
-        dialog. """
-        self.visualizer = visualizer
-        self.connect_signals()
-        options.cfg.main_window.widget_list.append(self)
 
     def update_plot(self):
         """ 
@@ -216,12 +212,17 @@ class VisualizerDialog(QtGui.QWidget):
         else:
             self.visualizer.update_data()
 
+        if self._function_list:
+            func = self._function_list[self.combo_function.currentIndex()]
+        else:
+            func = self.default_func
+
         self.visualizer.setup_figure()
         
         self.remove_matplot()
         self.add_matplot()
             
-        self.visualizer.draw()
+        self.visualizer.draw(func=func)
 
         self.visualizer.g.fig.tight_layout()
         self.visualizer.adjust_axes()
@@ -244,6 +245,8 @@ class VisualizerDialog(QtGui.QWidget):
 
         if not self.toolbar:
             self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
+            self.toolbar.addWidget(self.label_function)
+            self.toolbar.addWidget(self.combo_function)
             if options.cfg.experimental:
                 self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
             if self.smooth:
@@ -357,13 +360,18 @@ class VisualizerDialog(QtGui.QWidget):
         view given in 'view'. """
         self.smooth = kwargs.get("smooth", False)
         self.visualizer = visualizer_class(model, view, parent=None, **kwargs)
+        self._function_list = self.visualizer.function_list
+        self.combo_function.addItems([fnc.get_name() for fnc in self._function_list])
+        
         if not self.visualizer._table.empty:
             self.setVisible(True)
             self.connect_signals()
             options.cfg.main_window.widget_list.append(self)
             self.add_matplot()
             
-            self.thread = classes.CoqThread(self.visualizer.draw, parent=self)
+            self.thread = classes.CoqThread(self.visualizer.draw, 
+                                            func=self.visualizer.default_func,
+                                            parent=self)
             self.thread.taskStarted.connect(self.startplot)
             self.thread.taskFinished.connect(self.finishplot)
             self.thread.taskException.connect(self.plotexception)
