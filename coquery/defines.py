@@ -94,6 +94,7 @@ COLUMN_NAMES = {
 
     # Labels that are used in the Statistics special table:
     "statistics_proportion": "Proportion",
+    "statistics_percent": "Percentage",
     "statistics_entropy": "Entropy",
     "statistics_frequency": "Frequency", 
     "statistics_corpus_size": "Corpus size: Total",
