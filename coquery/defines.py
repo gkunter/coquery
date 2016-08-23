@@ -199,7 +199,11 @@ MODULE_INFORMATION = {
     "Seaborn": ("A Python statistical data visualization library",
             "0.7",
             "Create visualizations of your query results",
-            "http://stanford.edu/~mwaskom/software/seaborn/")}
+            "http://stanford.edu/~mwaskom/software/seaborn/"),
+    "cachetools": ("cachetools — Extensible memoizing collections and decorators",
+            "1.1.6",
+            "Remember query results to speed up queries",
+            "https://github.com/tkem/cachetools")}
 
 
 

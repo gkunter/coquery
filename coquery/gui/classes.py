@@ -1313,7 +1313,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         for i, col in enumerate(self.header):
             # remember hidden columns:
             if col in self._manager.hidden_columns:
-                self._hidden.append(i)
+                self._hidden_columns.append(i)
 
             # remember dtype of columns:
             self._dtypes.append(df.dtypes[col])
@@ -1377,6 +1377,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if not ix in self._hidden_columns:
                 if self._dtypes[ix] == float:
                     return "<div>{}</div>".format(escape(options.cfg.float_format.format(self.content.values[index.row()][ix] )))
+                elif self._dtypes[ix] == int:
+                    return "<div>{}</div>".format(self.content.values[index.row()][ix])
                 else:
                     return "<div>{}</div>".format(escape(self.content.values[index.row()][ix]))
             else:
@@ -1514,7 +1516,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         On mouse-over, the cell is rendered like a clickable link.
         """
         content = index.data(QtCore.Qt.DisplayRole)
-        if not content and not self.fill:
+        if content == "" and not self.fill:
             return
         painter.save()
 
@@ -1538,12 +1540,12 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             if index.data(QtCore.Qt.TextAlignmentRole) == _left_align:
                 painter.drawText(
                     option.rect.adjusted(2, 0, 2, 0), 
-                    _left_align | int(options.cfg.word_wrap),
+                    _left_align | options.cfg.word_wrap,                    
                     content if isinstance(content, str) else str(content))
             else:
                 painter.drawText(
                     option.rect.adjusted(-2, 0, -2, 0), 
-                    _right_align | int(options.cfg.word_wrap),
+                    _right_align | options.cfg.word_wrap,
                     content if isinstance(content, str) else str(content))
         finally:
             painter.restore()
@@ -1598,12 +1600,12 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
                 painter.drawText(
                     option.rect.adjusted(2, 0, 2, 0), 
                     _left_align | int(QtCore.Qt.TextWordWrap), 
-                    content)
+                    content if isinstance(content, str) else str(content))
             else:
                 painter.drawText(
                     option.rect.adjusted(-2, 0, -2, 0), 
                     _right_align | int(QtCore.Qt.TextWordWrap), 
-                    content)
+                    content if isinstance(content, str) else str(content))
         finally:
             painter.restore()
 

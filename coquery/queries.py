@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import math
 import re
 import decimal
+import hashlib
 
 try:
     range = xrange
@@ -49,9 +50,6 @@ class TokenQuery(object):
     This class manages the query string, and is responsible for the output 
     of the query results. 
     """
-    
-    _query_cache = {}
-    _allow_cache = False
     
     def __init__(self, S, Session):
         self.query_list = tokens.preprocess_query(S)
@@ -144,6 +142,7 @@ class TokenQuery(object):
         the quantified queries if quantified tokens are used. The results are 
         stored in self.results_frame.
         """
+        manager_hash = options.get_manager(options.cfg.MODE, self.Resource.name).get_hash()
         self.results_frame = pd.DataFrame()
         
         self._max_number_of_tokens = 0
@@ -165,11 +164,16 @@ class TokenQuery(object):
             # This SQLAlchemy optimization including the string folder 
             # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
             query_string = self.Resource.get_query_string(self, self._sub_query)
+            md5 = hashlib.md5("".join(sorted(query_string)).encode()).hexdigest()
             
             with self.Resource.get_engine().connect() as connection:
-                if self._allow_cache and (self.Resource, type(self), self.query_string) in self._query_cache:
-                    df = self._query_cache[self.Resource, type(self), self.query_string]
-                else:
+                df = None
+                if options.cfg.use_cache:
+                    try:
+                        df = options.cfg.query_cache.get((self.Resource.name, manager_hash, md5))
+                    except KeyError:
+                        pass
+                if df is None:
                     if not query_string:
                         df = pd.DataFrame()
                     else:
@@ -197,19 +201,16 @@ class TokenQuery(object):
                             df.columns = results.keys()
                         results = None
 
-                    # use a query cache for SQLite3 connections:
-                    if (self.Resource.db_type == SQL_SQLITE and 
-                        sys.getsizeof(self._allow_cache) + sys.getsizeof(df) < options.cfg.query_cache_size):
-                        self._query_cache[self.Resource, type(self), self.query_string] = df
+                        if options.cfg.use_cache:
+                            options.cfg.query_cache.add((self.Resource.name, manager_hash, md5), df)
 
                 df = self.insert_static_data(df)
                 connection.close()
-                self.add_output_columns(self.Session)
 
             if not options.cfg.output_case_sensitive and len(df.index) > 0:
+                word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
+                lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
                 for x in df.columns:
-                    word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
-                    lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
                     if ((word_column and word_column in x) or 
                         (lemma_column and lemma_column in x)):
                         try:
@@ -220,30 +221,12 @@ class TokenQuery(object):
 
                         except AttributeError:
                             pass
-            #df = self.apply_functions(df)
+
             if not df.empty:
                 if self.results_frame.empty:
                     self.results_frame = df
                 else:
                     self.results_frame = self.results_frame.append(df)
-
-    def append_results(self, df):
-        """
-        Append the last results to the data frame.
-        
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            The data frame to which the last query results will be added.
-            
-        Returns
-        -------
-        df : pandas.DataFrame
-        """
-        if df.empty:
-            return self.results_frame
-        else:
-            return df.append(self.results_frame)
 
     def get_max_tokens(self):
         """
@@ -354,7 +337,7 @@ class TokenQuery(object):
                     df[column] = ""
             else:
                 # add column labels for the columns in the input file:
-                if all([x == None for x in self.input_frame.columns]):
+                if all([x is None for x in self.input_frame.columns]):
                     # no header in input file, so use X1, X2, ..., Xn:
                     input_columns = [("coq_X{}".format(x), x) for x in range(len(self.input_frame.columns))]
                 else:

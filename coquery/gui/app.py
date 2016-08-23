@@ -87,6 +87,7 @@ class CoqueryApp(QtGui.QMainWindow):
     corpusListUpdated = QtCore.Signal()
     columnVisibilityChanged = QtCore.Signal()
     rowVisibilityChanged = QtCore.Signal()
+    updateMultiProgress = QtCore.Signal(int)
 
     def __init__(self, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -278,12 +279,23 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.status_progress = QtGui.QProgressBar()
         self.ui.status_progress.hide()
+        
+        self.ui.multi_progress_widget = QtGui.QWidget()
+        self.ui.multi_progress_layout = QtGui.QHBoxLayout(self.ui.multi_progress_widget)
+        self.ui.multi_query_progress = QtGui.QProgressBar()
+        self.ui.multi_query_progress.setFormat("Running query... (%v of %m)")
+        self.ui.multi_status_progress = QtGui.QProgressBar()
+        self.ui.multi_progress_layout.addWidget(self.ui.multi_query_progress)
+        self.ui.multi_progress_layout.addWidget(self.ui.multi_status_progress)
+        self.ui.multi_progress_widget.hide()
+        self.updateMultiProgress.connect(self.ui.multi_query_progress.setValue)
 
         widget = QtGui.QWidget()
         layout = QtGui.QHBoxLayout(widget)
         layout.setContentsMargins(4, 0, 0, 0)
         layout.addWidget(self.ui.status_message)
         layout.addWidget(self.ui.status_progress)
+        layout.addWidget(self.ui.multi_progress_widget)
         layout.addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum))        
         layout.addWidget(QtGui.QLabel(_translate("MainWindow", "Connection: ", None)))
         layout.addWidget(self.ui.combo_config)
@@ -388,7 +400,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def show_file_menu(self):
         # leave if the results table is empty:
-        if len(self.table_model.content) == 0:
+        if not self.ui.data_preview.isEnabled() or (self.table_model.content) == 0:
             # disable the result-related menu entries:
             self.ui.action_save_selection.setDisabled(True)
             self.ui.action_save_results.setDisabled(True)
@@ -533,7 +545,9 @@ class CoqueryApp(QtGui.QMainWindow):
             
         self.corpusListUpdated.connect(self.check_corpus_widgets)
         self.columnVisibilityChanged.connect(lambda: self.reaggregate(recalculate=True))
-        self.rowVisibilityChanged.connect(self.update_row_visibility)
+
+        ## FIXME: reimplement row visibility
+        #self.rowVisibilityChanged.connect(self.update_row_visibility)
 
     def connect_context_widgets(self):
         self.ui.radio_context_none.toggled.connect(self.change_context)
@@ -635,9 +649,9 @@ class CoqueryApp(QtGui.QMainWindow):
         elif mode == CONTEXT_NONE:
             self.ui.radio_context_none.setChecked(True)
             
-        if left_span != None:
+        if left_span is not None:
             self.ui.context_left_span.setValue(left_span)
-        if right_span != None:
+        if right_span is not None:
             self.ui.context_right_span.setValue(right_span)
 
         if self.ui.radio_context_none.isChecked():
@@ -723,7 +737,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         token_width = 1
 
-        if index != None:
+        if index is not None:
             if self.Session.query_type == queries.ContrastQuery:
                 from . import independencetestviewer
                 if self.ui.data_preview.model().data(index, QtCore.Qt.DisplayRole):
@@ -880,10 +894,10 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             col = "#7f0000"
 
-        if self.unfiltered_tokens == options.cfg.number_of_tokens and self.unfiltered_tokens != 0:
-            s = "<font color='{col}'>Matches limited to: {lim:<8}</font> Unique matches: {uniq:<8} Duration of last operation: {dur}"
-        else:
-            s= "Number of matches: {num:<8} Unique matches: {uniq:<8} Duration of last operation: {dur}"
+        s = "Number of matches: {num:<8} Unique matches: {uniq:<8} Duration of last operation: {dur}"
+
+        if options.cfg.number_of_tokens and self.unfiltered_tokens != 0:
+            s = "<font color='{{col}}'>Note: </font> Match limit ({{lim:<8}}) enabled. {s}".format(s=s)
 
         self.showMessage(s.format(
             num=self.unfiltered_tokens, 
@@ -1086,11 +1100,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.table_model = classes.CoqTableModel(self.Session.output_object, session=self.Session)
         self.ui.data_preview.setModel(self.table_model)
-        
+
         if drop:
             # drop row colors and row visibility:
-            self.Session.reset_row_visibility(self.Session.query_type)
-            options.cfg.row_visibility = collections.defaultdict(dict)
+
+            ## FIXME: reimplement row visibility
+            #self.Session.reset_row_visibility(self.Session.query_type)
+            #options.cfg.row_visibility = collections.defaultdict(dict)
             options.cfg.row_color = {}
         # set column widths:
         for i, column in enumerate(self.table_model.header):
@@ -1198,7 +1214,7 @@ class CoqueryApp(QtGui.QMainWindow):
         from . import stopwords 
         old_list = options.cfg.stopword_list
         result = stopwords.Stopwords.manage(options.cfg.stopword_list, options.cfg.icon)
-        if result != None:
+        if result is not None:
             options.cfg.stopword_list = result
         self.set_stopword_button()
         # activate the filter switch if the filter list was empty before, but 
@@ -1221,7 +1237,7 @@ class CoqueryApp(QtGui.QMainWindow):
         from . import filterviewer
         old_list = options.cfg.filter_list
         result = filterviewer.Filters.manage(options.cfg.filter_list, options.cfg.icon)
-        if result != None:
+        if result is not None:
             options.cfg.filter_list = result
         self.set_filter_button()
         
@@ -1252,8 +1268,9 @@ class CoqueryApp(QtGui.QMainWindow):
             #ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
             tab = self.table_model.content[ordered_headers]
 
-            # restrict to visible rows:
-            tab = tab[self.Session.row_visibility[self.Session.query_type]]
+            ## restrict to visible rows:
+            # FIXME: reimplement row visibility
+            #tab = tab[self.Session.row_visibility[self.Session.query_type]]
             
             # restrict to selection?
             if selection or clipboard:
@@ -1311,8 +1328,9 @@ class CoqueryApp(QtGui.QMainWindow):
         ordered_headers.append("coquery_invisible_corpus_id")
         tab = self.table_model.content[ordered_headers]
 
-        # restrict to visible rows:
-        tab = tab[self.Session.row_visibility[self.Session.query_type]]
+        ## restrict to visible rows:
+        # FIXME: reimplement row visibility
+        #tab = tab[self.Session.row_visibility[self.Session.query_type]]
             
         writer = TextgridWriter(tab, self.Session.Resource)
         n = writer.write_grids(name, ordered_headers)
@@ -1333,15 +1351,24 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_query_button()
         self.stop_progress_indicator()
         
-    def start_progress_indicator(self):
+    def start_progress_indicator(self, n=None):
         """ Show the progress indicator, and make it move. """
-        self.ui.status_progress.setRange(0, 0)
-        self.ui.status_progress.show()
+        if n is None:
+            self.ui.status_progress.setRange(0, 0)
+            self.ui.status_progress.show()
+        else:
+            self.ui.multi_query_progress.setMaximum(n)
+            self.ui.multi_status_progress.setRange(0, 0)
+            self.ui.multi_progress_widget.show()
+            
+        self._multi_progress = n
         
     def stop_progress_indicator(self):
         """ Stop the progress indicator from moving, and hide it as well. """
         self.ui.status_progress.setRange(0, 1)
         self.ui.status_progress.hide()
+        self.ui.multi_status_progress.setRange(0, 1)
+        self.ui.multi_progress_widget.hide()
         
     def finalize_query(self, to_file=False):
         self.query_thread = None
@@ -1419,7 +1446,7 @@ class CoqueryApp(QtGui.QMainWindow):
                         menu.addAction(add_link)
                         add_link.triggered.connect(lambda: self.ui.options_tree.addLink.emit(item))
 
-                if self.ui.list_group_columns.find_resource(item.objectName()) != None:
+                if self.ui.list_group_columns.find_resource(item.objectName()) is not None:
                     menu.addAction(remove_grouping)
                     remove_grouping.triggered.connect(lambda: self.ui.options_tree.removeGroup.emit(item.objectName()))
                 else:
@@ -1450,7 +1477,7 @@ class CoqueryApp(QtGui.QMainWindow):
             rc_feature = rc_feature
         
         _, hashed, table, feature = resource.split_resource_feature(rc_feature)
-        if hashed == None:
+        if hashed is None:
             db_name = resource.db_name
         else:
             _, ext_res = get_by_hash(hashed)
@@ -1636,31 +1663,33 @@ class CoqueryApp(QtGui.QMainWindow):
         menu.addAction(action)
         if length:
             menu.addSeparator()
-            # Check if any row is hidden
-            row_vis = self.Session.row_visibility[self.Session.query_type][selection]
-            if not row_vis.all():
-                if length > 1:
-                    if ~row_vis.all():
-                        action = QtGui.QAction("&Show rows", self)
-                    else:
-                        action = QtGui.QAction("&Show hidden rows", self)
-                else:
-                    action = QtGui.QAction("&Show row", self)
-                action.triggered.connect(lambda: self.set_row_visibility(selection, True))
-                action.setIcon(self.get_icon("sign-maximize"))
-                menu.addAction(action)
-            # Check if any row is visible
-            if row_vis.any():
-                if length > 1:
-                    if row_vis.all():
-                        action = QtGui.QAction("&Hide rows", self)
-                    else:
-                        action = QtGui.QAction("&Hide visible rows", self)
-                else:
-                    action = QtGui.QAction("&Hide row", self)
-                action.triggered.connect(lambda: self.set_row_visibility(selection, False))
-                action.setIcon(self.get_icon("sign-minimize"))
-                menu.addAction(action)
+
+            ## FIXME: reimplement row visibility
+            ## Check if any row is hidden
+            #row_vis = self.Session.row_visibility[self.Session.query_type][selection]
+            #if not row_vis.all():
+                #if length > 1:
+                    #if ~row_vis.all():
+                        #action = QtGui.QAction("&Show rows", self)
+                    #else:
+                        #action = QtGui.QAction("&Show hidden rows", self)
+                #else:
+                    #action = QtGui.QAction("&Show row", self)
+                #action.triggered.connect(lambda: self.set_row_visibility(selection, True))
+                #action.setIcon(self.get_icon("sign-maximize"))
+                #menu.addAction(action)
+            ## Check if any row is visible
+            #if row_vis.any():
+                #if length > 1:
+                    #if row_vis.all():
+                        #action = QtGui.QAction("&Hide rows", self)
+                    #else:
+                        #action = QtGui.QAction("&Hide visible rows", self)
+                #else:
+                    #action = QtGui.QAction("&Hide row", self)
+                #action.triggered.connect(lambda: self.set_row_visibility(selection, False))
+                #action.setIcon(self.get_icon("sign-minimize"))
+                #menu.addAction(action)
 
             menu.addSeparator()
             
@@ -1760,30 +1789,32 @@ class CoqueryApp(QtGui.QMainWindow):
         self.columnVisibilityChanged.emit()
         self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
 
-    def update_row_visibility(self):
-        """
-        Update the aggregations if row visibility has changed.
-        """
-        self.Session.drop_cached_aggregates()
-        self.reaggregate()
+    ## FIXME: reimplement row visibility
+    #def update_row_visibility(self):
+        #"""
+        #Update the aggregations if row visibility has changed.
+        #"""
+        #self.Session.drop_cached_aggregates()
+        #self.reaggregate()
 
-    def set_row_visibility(self, selection, state):
-        """ 
-        Set the visibility of the selected rows.
+    ## FIXME: reimplement row visibility
+    #def set_row_visibility(self, selection, state):
+        #""" 
+        #Set the visibility of the selected rows.
         
-        Parameters
-        ----------
-        selection : list
-            A list of row indices
+        #Parameters
+        #----------
+        #selection : list
+            #A list of row indices
         
-        state : bool
-            True if the rows should be visible, or False to hide the rows
-        """
-        self.Session.row_visibility[self.Session.query_type][selection] = state
+        #state : bool
+            #True if the rows should be visible, or False to hide the rows
+        #"""
+        #self.Session.row_visibility[self.Session.query_type][selection] = state
 
-        self.ui.data_preview.verticalHeader().geometriesChanged.emit()
-        self.table_model.rowVisibilityChanged.emit()
-        self.table_model.layoutChanged.emit()
+        #self.ui.data_preview.verticalHeader().geometriesChanged.emit()
+        #self.table_model.rowVisibilityChanged.emit()
+        #self.table_model.layoutChanged.emit()
 
     def reset_colors(self, selection):
         """
@@ -1833,7 +1864,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def change_sorting_order(self, column, ascending, reverse=False):
         manager = options.get_manager(options.cfg.MODE, 
                                       options.cfg.main_window.Session.Resource.name)
-        if ascending == None:
+        if ascending is None:
             manager.remove_sorter(column)
         else:
             manager.add_sorter(column, ascending, reverse)
@@ -1918,10 +1949,14 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.set_stop_button()
             if not options.cfg.to_file:
-                self.showMessage("Running query...")
-            #else:
-                #self.showMessage("Writing query to file {}...".format(options.cfg.output_path))
-            self.start_progress_indicator()
+                if len(self.new_session.query_list) == 1:
+                    self.showMessage("Running query...")
+                else:
+                    self.showMessage("")
+            else:
+                self.showMessage("Writing to file...")
+
+            self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
             self.query_thread.taskFinished.connect(lambda: self.finalize_query(options.cfg.to_file))
             self.query_thread.taskException.connect(self.exception_during_query)
@@ -2339,6 +2374,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     options.cfg.query_list = [utf8(self.ui.edit_query_string.toPlainText())]
             options.cfg.input_path = utf8(self.ui.edit_file_name.text())
+            options.cfg.select_radio_query_file = bool(self.ui.radio_query_file.isChecked())
 
             options.cfg.external_links = self.get_external_links()
             options.cfg.selected_features = self.get_selected_features()
@@ -2473,12 +2509,10 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.combo_summary.currentIndexChanged.connect(self.change_managing_type)
 
         self.ui.edit_file_name.setText(options.cfg.input_path)
-        # either fill query string or query file input:
-        if options.cfg.query_list:
-            self.ui.edit_query_string.setText("\n".join(options.cfg.query_list))
-            self.ui.radio_query_string.setChecked(True)
-        if options.cfg.input_path_provided:
-            self.ui.radio_query_file.setChecked(True)
+        self.ui.edit_query_string.setText("\n".join(options.cfg.query_list))
+
+        self.ui.radio_query_string.setChecked(not options.cfg.select_radio_query_file)
+        self.ui.radio_query_file.setChecked(options.cfg.select_radio_query_file)
         
         for rc_feature in options.cfg.selected_features:
             self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.Checked)
@@ -2638,7 +2672,7 @@ class CoqueryApp(QtGui.QMainWindow):
         response = functionapply.FunctionDialog.edit_function(func, parent=self)
         if response:
             fun_type, value, aggr, label = response
-            new_fun = fun_type(columns=func.columns, value=value, aggr=aggr, label=label)
+            new_func = fun_type(columns=func.columns, value=value, aggr=aggr, label=label)
             manager.replace_column_function(func, new_func)
             self.update_columns()
 
@@ -2671,7 +2705,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         _, hashed, tab, feat = self.resource.split_resource_feature(item.objectName())
 
-        if hashed != None:
+        if hashed is not None:
             _, res = get_by_hash(hashed)
         else:
             res = self.resource
@@ -2693,7 +2727,7 @@ class CoqueryApp(QtGui.QMainWindow):
             child_func.rc_feature = item.objectName()
             child_func.setText(column, label.format(N=""))
             
-            if hashed != None:
+            if hashed is not None:
                 child_func.full_label = "func.{}_{}_{}".format(res.db_name, tab, feat)
             else:
                 child_func.full_label = "func.{}".format(item.objectName())

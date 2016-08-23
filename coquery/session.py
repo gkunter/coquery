@@ -74,12 +74,15 @@ class Session(object):
         self.input_columns = []
         self._header_cache = {}
         self._manager_cache = {}
+        self._first_saved_dataframe = True
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
         # values. If the value is False, the row in the output object is
         # hidden, otherwise, it is visible.
-        self.row_visibility = {}
+        
+        ## FIXME: reimplement row visibility
+        #self.row_visibility = {}
 
         # verify filter list:
         new_list = []
@@ -112,6 +115,36 @@ class Session(object):
     def stop_timer(self):
         self.end_time = datetime.datetime.now()
 
+    def save_dataframe(self, df, append=False):
+        if not options.cfg.output_path:
+            output_file = sys.stdout
+        else:
+            if append and not self._first_saved_dataframe:
+                file_mode = "a"
+            else:
+                file_mode = "w"
+            
+            output_file = codecs.open(
+                options.cfg.output_path, 
+                file_mode, 
+                encoding=options.cfg.output_encoding)
+
+        columns = [x for x in df.columns.values if not x.startswith("coquery_invisible")]
+        if self._first_saved_dataframe:
+            header = [self.translate_header(x) for x in columns]
+        else:
+            header = False
+
+        df[columns].to_csv(
+            output_file,
+            header=header,
+            sep=options.cfg.output_separator,
+            encoding="utf-8",
+            float_format = "%.{}f".format(options.cfg.digits),
+            index=False)
+        output_file.flush()
+        self._first_saved_dataframe = False
+
     def run_queries(self, to_file=False):
         """ 
         Run each query in the query list, and append the results to the 
@@ -125,11 +158,11 @@ class Session(object):
         self.quantified_number_labels = []
 
         number_of_queries = len(self.query_list)
+        manager = options.get_manager(options.cfg.MODE, self.Resource.name)
 
         for i, current_query in enumerate(self.query_list):
             if options.cfg.gui and number_of_queries > 1:
-                options.cfg.main_window.showMessage("Running query ({} of {})...".format(
-                    i+1, number_of_queries))
+                options.cfg.main_window.updateMultiProgress.emit(i+1)
             if not self.quantified_number_labels:
                 self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
             start_time = time.time()
@@ -138,18 +171,23 @@ class Session(object):
             else:
                 logger.info("Start query: '{}'".format(current_query.query_string))
             current_query.run()
-            self.data_table = current_query.append_results(self.data_table)
+            
+            if not to_file:
+                self.data_table = pd.concat([self.data_table, current_query.results_frame])
+            else:
+                self.save_dataframe(manager.process(current_query.results_frame, self, True),
+                                    append=True)
+                
             logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
 
-        #self.frequency_table = self.get_frequency_table()
-        
         self.filter_data()
 
         self.data_table.index = range(1, len(self.data_table.index) + 1)
 
-        self.reset_row_visibility(queries.TokenQuery, self.data_table)
+        ## FIXME: reimplement row visibility
+        #self.reset_row_visibility(queries.TokenQuery, self.data_table)
 
-        if not options.cfg.gui or to_file:
+        if not options.cfg.gui:
             self.aggregate_data()
             if not options.cfg.output_path:
                 output_file = sys.stdout
@@ -209,11 +247,12 @@ class Session(object):
     def drop_cached_aggregates(self):
         self._manager_cache = {}
 
-    def reset_row_visibility(self, query_type, df=pd.DataFrame()):
-        if df.empty:
-            df = self.output_object
-        self.row_visibility[query_type] = pd.Series(
-            data=[True] * len(df.index), index=df.index)
+    ## FIXME: reimplement row visibility
+    #def reset_row_visibility(self, query_type, df=pd.DataFrame()):
+        #if df.empty:
+            #df = self.output_object
+        #self.row_visibility[query_type] = pd.Series(
+            #data=[True] * len(df.index), index=df.index)
 
     def filter_data(self, column="statistics_frequency"):
         return
@@ -310,6 +349,8 @@ class Session(object):
                                                     match.group(2)))
                 else:
                     fun = manager.get_function(header)
+                    if fun == None:
+                        raise RuntimeError(header)
                     raise RuntimeError(fun.get_label(session=self))
             
             if header.startswith("db_"):

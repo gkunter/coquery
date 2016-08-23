@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 from __future__ import division
 
 import re
-import hashlib
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -34,7 +33,7 @@ except (AttributeError):
     _iqr = lambda x: np.subtract(*np.percentile(x, [75, 25]))
 
 def _save_first(x):
-    l = [y for y in x if y]
+    l = [y for y in x if y != None]
     try:
         return l[0]
     except IndexError:
@@ -78,7 +77,7 @@ all_combine = num_combine + seq_combine + bool_combine
 ## Base function
 #############################################################################
 
-class Function(object):
+class Function(CoqObject):
     _name = "id"
     parameters = 0
     default_aggr = "first"
@@ -87,7 +86,7 @@ class Function(object):
     no_column_labels = False
     single_column = True
 
-    def __init__(self, columns=[], value=None, label=None, alias=None, sweep=False, aggr=None, group=[]):
+    def __init__(self, columns=[], value=None, label=None, alias=None, sweep=False, aggr=None, group=[], **kwargs):
         """
         Parameters
         ----------
@@ -114,13 +113,6 @@ class Function(object):
         else:
             return cls._name
 
-    def get_hash(self):
-        l = []
-        for x in sorted(dir(self)):
-            if not x.startswith("_") and not hasattr(getattr(self, x), "__call__"):
-                l.append(str(getattr(self, x)))
-        return hashlib.md5(u"".join(l).encode()).hexdigest()
-    
     def get_label(self, session):
         if self.label:
             return self.label
@@ -183,9 +175,8 @@ class Function(object):
         return None            
     
     def evaluate(self, df, *args, **kwargs):
-        val = (df[self.columns].apply(self._func)
-                          .apply(self.select, axis="columns"))
-
+        val = df[self.columns].apply(self._func)
+        val = val.apply(self.select, axis="columns")
         assert isinstance(val, pd.Series)
         assert len(val) == len(df)
         
@@ -240,7 +231,7 @@ class StringMatch(StringFunction):
         self.re = re.compile(value)
     
     def _func(self, col):
-        return col.apply(lambda x: self.re.search(str(x)) != None)
+        return col.apply(lambda x: bool(self.re.search(str(x))))
 
 class StringExtract(StringMatch):
     _name = "EXTRACT"
@@ -304,24 +295,28 @@ class Freq(Function):
         # contains an identical frequency column:
         fun = Freq(columns=self.columns, group=self.group)
         if self.find_function(df, fun):
-            print(self._name, "using df.Freq()")
+            if options.cfg.verbose:
+                print(self._name, "using df.Freq()")
             return df[fun.get_id()]
         else:
-            print(self._name, "calculating df.Freq()")
+            if options.cfg.verbose:
+                print(self._name, "calculating df.Freq()")
             
         if len(df) == 0:
-            return pd.Series()
+            return pd.Series(index=df.index)
         if len(self.columns) == 0:
-            return pd.Series(dict(zip(range(1, len(df)+1), [len(df)] * len(df))))
+            # if the function is applied over no columns (e.g. because all 
+            # columns are hidden), the function returns a Series containing 
+            # simply the length of the data frame:
+            return pd.Series([len(df)] * len(df), index = df.index)
         
         d = {self.columns[0]: "count"}
         d.update({x: "first" for x in [x for x in df.columns.values if x not in self.columns and not x.startswith("coquery_invisible")]})
-        val = df.merge((df.groupby(self.columns)
-                          .agg(d)
-                          .rename(columns={self.columns[0]: self.get_id()})
-                          .reset_index()),
-                        on=self.columns, how="left")[self.get_id()]
-        return val
+        return df.merge( (df.groupby(self.columns)
+                            .agg(d)
+                            .rename(columns={self.columns[0]: self.get_id()})
+                            .reset_index()), 
+                         on=self.columns, how="left")[self.get_id()]
 
 class FreqPMW(Freq):
     _name = "FREQUENCY_PMW"
@@ -358,7 +353,7 @@ class FreqNorm(Freq):
         val = super(FreqNorm, self).evaluate(df, *args, **kwargs)
 
         if len(val) == 0:
-            return pd.Series([])
+            return pd.Series([], index=df.index)
             
         fun = SubcorpusSize(session=self.session, 
                             columns=self.columns,
@@ -379,13 +374,18 @@ class Proportion(Freq):
     _name = "PROPORTION"
     no_column_labels = True
     
+    def __init__(self, *args, **kwargs):
+        super(Proportion, self).__init__(*args, **kwargs)
+    
     def evaluate(self, df, *args, **kwargs):
         fun = Proportion(columns=self.columns, group=self.group)
         if self.find_function(df, fun):
-            print(self._name, "using df.Proportion()")
+            if options.cfg.verbose:
+                print(self._name, "using df.Proportion()")
             return df[fun.get_id()]
         else:
-            print(self._name, "calculating df.Proportion()")
+            if options.cfg.verbose:
+                print(self._name, "calculating df.Proportion()")
         val = super(Proportion, self).evaluate(df, *args, **kwargs)
         val = val.apply(lambda x: x / len(df))
         val.index = df.index
@@ -453,10 +453,12 @@ class SubcorpusSize(CorpusSize):
     def evaluate(self, df, *args, **kwargs):
         fun = SubcorpusSize(session=self.session, columns=self.columns, group=self.group)
         if self.find_function(df, fun):
-            print(self._name, "using df.SubcorpusSize()")
+            if options.cfg.verbose:
+                print(self._name, "using df.SubcorpusSize()")
             return df[fun.get_id()]
         else:
-            print(self._name, "calculating df.SubcorpusSize()")
+            if options.cfg.verbose:
+                print(self._name, "calculating df.SubcorpusSize()")
         
         corpus_features = [x for x, _ in self.session.Resource.get_corpus_features()]
         column_list = [x for x in corpus_features if "coq_{}_1".format(x) in self.columns]

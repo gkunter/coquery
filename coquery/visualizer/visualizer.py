@@ -42,6 +42,7 @@ class BaseVisualizer(QtCore.QObject):
     by :func:`VisualizerDialog.Plot`. 
     """
     _plot_frequency = False
+    default_func = None
 
     def __init__(self, data_model, data_view, parent = None):
         super(BaseVisualizer, self).__init__(parent=parent)
@@ -221,7 +222,7 @@ class BaseVisualizer(QtCore.QObject):
             ncols = int(n / nrows) + 1
             return (nrows, ncols)
         
-    def draw(self):
+    def draw(self, func=None):
         """ Do the visualization."""
         pass
 
@@ -300,9 +301,9 @@ class BaseVisualizer(QtCore.QObject):
         try:
             self._table = self._df[column_order]
         except TypeError:
-            self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
-
-            self._table = self._table[column_order]
+            # FIXME: reimplement row visibility
+            #self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
+            self._table = session.data_table[column_order]
 
         self._table.columns = [session.translate_header(x) for x in self._table.columns]
         

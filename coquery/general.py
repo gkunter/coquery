@@ -11,6 +11,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
+import hashlib
+
 contraction = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
 punct = '!\'),-./:;?^_`}’”]'
 
@@ -73,3 +75,22 @@ def collapse_words(word_list):
             last_token = current_token
     return "".join(token_list)
 
+class CoqObject(object):
+    """
+    This class is a subclass of the default Python ``object`` class. It adds 
+    the method ``get_hash()``, which returns a hash based on the current 
+    instance attributes.
+    """
+    
+    def get_hash(self):
+        l = []
+        for x in sorted(dir(self)):
+            if not x.startswith("_") and not hasattr(getattr(self, x), "__call__"):
+                attr = getattr(self, x)
+                # special handling of containers:
+                if isinstance(attr, (set, dict, list, tuple)):
+                    l.append(str([x.get_hash() if isinstance(x, CoqObject) else str(x) for x in attr]))
+                else:
+                    l.append(str(attr))
+        return hashlib.md5(u"".join(l).encode()).hexdigest()
+    
