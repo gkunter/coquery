@@ -162,7 +162,8 @@ def main():
             logger.error("Execution interrupted, exiting.")
         logger.info("--- Done (after %.3f seconds) ---" % (time.time() - start_time))
 
-    options.cfg.query_cache.save()
+    if options.cfg.use_cache:
+        options.cfg.query_cache.save()
         
 if __name__ == "__main__":
     for x in sys.argv[1:]:

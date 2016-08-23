@@ -217,9 +217,10 @@ class Settings(QtGui.QDialog):
         except AttributeError:
             pass
 
-
         if not options.use_cachetools:
-            self.ui.widget_cache.setDisabled()
+            self.ui.widget_cache.setDisabled(True)
+            self.ui.progress_used.hide()
+            self.ui.label_10.hide()
         else:
             self.ui.spin_cache_size.setValue(int(self._options.query_cache_size // (1024 * 1024)))
             self.ui.check_use_cache.setChecked(self._options.use_cache)

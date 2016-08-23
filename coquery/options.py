@@ -51,8 +51,12 @@ from .unicode import utf8
 from .defines import *
 from .errors import *
 from . import managers
-from . import cache
 
+try:
+    from . import cache
+except ImportError:
+    use_cachetools = False
+    
 # Define a HelpFormatter class that works with Unicode corpus names both in 
 # Python 2.7 and Python 3.x:
 if sys.version_info < (3, 0):
@@ -1161,7 +1165,8 @@ def process_options():
     options = Options()
     cfg = options.cfg
     options.get_options()
-    cfg.query_cache = cache.CoqQueryCache()
+    if use_cachetools:
+        cfg.query_cache = cache.CoqQueryCache()
         
 def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
     """
