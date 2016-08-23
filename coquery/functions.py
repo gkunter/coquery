@@ -373,7 +373,7 @@ class FreqNorm(Freq):
 #############################################################################
 
 class Proportion(Freq):
-    _name = "PROPORTION"
+    _name = "statistics_proportion"
     no_column_labels = True
     
     def __init__(self, *args, **kwargs):
@@ -392,6 +392,12 @@ class Proportion(Freq):
         val = val.apply(lambda x: x / len(df))
         val.index = df.index
         return val
+
+class Percent(Proportion):
+    _name = "statistics_percent"
+    
+    def evaluate(self, *args, **kwargs):
+        return 100 * super(Percent, self).evaluate(*args, **kwargs)
         
 class Entropy(Proportion):
     _name = "ENTROPY"
