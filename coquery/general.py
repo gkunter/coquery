@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 import hashlib
 
+from .unicode import utf8
+
 contraction = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
 punct = '!\'),-./:;?^_`}’”]'
 
@@ -73,7 +75,7 @@ def collapse_words(word_list):
             
             token_list.append(current_token)
             last_token = current_token
-    return "".join(token_list)
+    return utf8("").join(token_list)
 
 class CoqObject(object):
     """
