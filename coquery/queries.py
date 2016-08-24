@@ -195,7 +195,7 @@ class TokenQuery(object):
                             print(query_string)
                             print(e)
                             raise e
-                        df = pd.DataFrame(self.string_folder(results), results.keys())
+                        df = pd.DataFrame(self.string_folder(results), columns=results.keys())
                         if len(df) == 0:
                             df = pd.DataFrame(columns=results.keys())
                         results = None
