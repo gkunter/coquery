@@ -17,6 +17,7 @@ import logging
 import collections
 import numpy as np
 import pandas as pd
+import decimal
 
 from coquery import options
 from coquery import queries
@@ -82,7 +83,7 @@ class CoqThread(QtCore.QThread):
                 self.parent().exc_info = sys.exc_info()
                 self.parent().exception = e
             self.taskException.emit(e)
-            print(e)
+            print("CoqThread.run():", e)
         self.taskFinished.emit()
         return result
 
@@ -568,7 +569,7 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
             # do not propagate a partially checked state
             return
         
-        if str(self._objectName).endswith("_table") and check_state:
+        if utf8(self._objectName).endswith("_table") and check_state:
             self.setExpanded(True)
         
         # propagate check state to children:
@@ -690,7 +691,7 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
             for child in [root.child(i) for i in range(root.childCount())]:
                 if child.checkState(column) == QtCore.Qt.Checked:
-                    check_list.append(str(child._objectName))
+                    check_list.append(utf8(child._objectName))
         return check_list
 
 class LogTableModel(QtCore.QAbstractTableModel):
@@ -1039,7 +1040,7 @@ class CoqTagBox(QtGui.QWidget):
             label = label + ":"
         self._label = label
         self.setupUi()
-        self.edit_tag.returnPressed.connect(lambda: self.addTag(str(self.edit_tag.text())))
+        self.edit_tag.returnPressed.connect(lambda: self.addTag(utf8(self.edit_tag.text())))
         self.edit_tag.textEdited.connect(self.editTagText)
         # self._tagList stores the 
         self._tagList = []
@@ -1138,7 +1139,7 @@ class CoqTagBox(QtGui.QWidget):
     def addTag(self, s):
         """ Add the current text as a query filter. """
         if not s:
-            s = str(self.edit_tag.text())
+            s = utf8(self.edit_tag.text())
         tag = self._tagType(self)
 
         tag.setContent(s)
@@ -1172,7 +1173,7 @@ class CoqTagBox(QtGui.QWidget):
             True if there is a tag that contains the string as a label, or 
             False otherwise.        
         """
-        for tag_label in [str(self.cloud_area.itemAt(x).widget().text()) for x in range(self.cloud_area.count())]:
+        for tag_label in [utf8(self.cloud_area.itemAt(x).widget().text()) for x in range(self.cloud_area.count())]:
             if s == tag_label:
                 return True
         return False
@@ -1231,7 +1232,7 @@ class QueryFilterBox(CoqTagBox):
         Remove the tag from the tag cloud as well as the filter from the 
         global filter list. 
         """
-        options.cfg.filter_list = [x for x in options.cfg.filter_list if x.text != str(tag.text())]
+        options.cfg.filter_list = [x for x in options.cfg.filter_list if x.text != utf8(tag.text())]
         super(QueryFilterBox, self).destroyTag(tag)
     
     def addTag(self, *args):
@@ -1247,7 +1248,7 @@ class QueryFilterBox(CoqTagBox):
             if args:
                 filt.text = args[0]
             else:
-                filt.text = str(self.edit_tag.text())
+                filt.text = utf8(self.edit_tag.text())
         except InvalidFilterError:
             self.edit_tag.setStyleSheet('CoqTagEdit { border-radius: 5px; font: condensed;background-color: rgb(255, 255, 192); }')
         else:
@@ -1273,7 +1274,7 @@ class CoqTableView(QtGui.QTableView):
             for col in row.index:
                 height = max(height, 
                              metric.boundingRect(rects[col], self._wrap_flag,
-                                          str(row[col])).height())
+                                          utf8(row[col])).height())
             self.resizeRow.emit(n, height)
 
         df = self.model().content
@@ -1299,6 +1300,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         super(CoqTableModel, self).__init__(parent, *args)
         self._parent = parent
 
+        df = pd.DataFrame(self.string_folder(df))
+
         self.rownames = [x+1 if np.isreal(x) else x for x in df.index.values]
         self.content = df[[x for x in df.columns if not x.startswith("coquery_invisible")]]
         self.invisible_content = df[[x for x in df.columns if x.startswith("coquery_invisible")]]
@@ -1309,7 +1312,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self._dtypes = []
         self._hidden_columns = []
 
-        self.rownames = [str(i+1) if isinstance(x, (np.integer, int)) else str(x) for i, x in enumerate(df.index)]
+        self.rownames = [utf8(i+1) if isinstance(x, (np.integer, int)) else utf8(x) for i, x in enumerate(df.index)]
 
         # prepare look-up lists that speed up data retrieval:
         for i, col in enumerate(self.header):
@@ -1346,7 +1349,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             return (not self._manager.is_hidden_column(col) and 
                 row_vis[ix])
         except Exception as e:
-            print(e)
+            print("is_visible():", e)
             return False
     
     def data(self, index, role):
@@ -1456,7 +1459,34 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent=None):
         """ Return the number of columns. """
         return self.content.columns.size
+
+    def string_folder(self, df):
+        """
+        Yield the rows from the results with all string values folded.
+
+        This folder is used in yield_query_results, and helps to reduce the
+        amount of memory consumed by the query results data frames. It does 
+        so by keeping a map of string values so that each occurrence of a 
+        string in the query result is mapped to the identical string object,
+        and not to a new string object with the same content. 
         
+        This string folder is based on:
+        http://www.mobify.com/blog/sqlalchemy-memory-magic/
+        """
+        string_map = {}
+        
+        def _lookup(value):
+            try:
+                return string_map[value]
+            except KeyError:
+                string_map[value] = utf8(value)
+                return string_map[value]
+            
+        for col in df.columns:
+            if df.dtypes[col] == object:
+                df[col] = df[col].apply(_lookup)
+        return df
+                    
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     fill = False
 
