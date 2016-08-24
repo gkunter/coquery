@@ -212,13 +212,13 @@ class CoqueryApp(QtGui.QMainWindow):
         #self.ui.filter_box.edit_tag.setCompleter(self.completer)
 
         # use a file system model for the file name auto-completer::
-        self.dirModel = QtGui.QFileSystemModel()
+        self.dirModel = QtGui.QFileSystemModel(parent=self)
         # make sure that the model is updated on changes to the file system:
         self.dirModel.setRootPath(QtCore.QDir.currentPath())
         self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
 
         # set auto-completer for the input file edit:
-        self.path_completer = QtGui.QCompleter()
+        self.path_completer = QtGui.QCompleter(parent=self)
         self.path_completer.setModel(self.dirModel)
         self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
         self.ui.edit_file_name.setCompleter(self.path_completer)
