@@ -194,27 +194,31 @@ class Visualizer(vis.BaseVisualizer):
         """ Plot bar charts. """
         def plot_facet(data, color):
             if self.stacked:
-                ax=plt.gca()
+                ax = plt.gca()
+
                 if len(self._groupby) == 2:
                     data["COQ_FUNC"] = fun.evaluate(data)
                     
-                    df = (data.pivot_table(index=self._groupby[0],
+                    df = data.pivot_table(index=self._groupby[0],
                                           columns=[self._groupby[-1]],
-                                          values="COQ_FUNC")
-                              .reset_index()
-                              .fillna(0))
-                    
+                                          values="COQ_FUNC",
+                                          fill_value=0,
+                                          dropna=False)
+                    df = df.reset_index().fillna(0)
+                    for x in self._levels[0]:
+                        if x not in df[self._groupby[0]].values:
+                            row = pd.Series(index=df.columns)
+                            row[self._groupby[0]] = x
+                            df = df.append(row.fillna(0), ignore_index=True)
                     # supply empty factor levels
                     for x in self._levels[-1]:
                         if x not in df.columns:
                             df[x] = 0
-                            
                     if self.percentage:
                         df[self._levels[-1]] = df[self._levels[-1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
                     else:
                         df[self._levels[-1]] = df[self._levels[-1]].cumsum(axis=1)
 
-                    ax=plt.gca()
                     for i, stack in enumerate(self._levels[-1][::-1]):
                         tmp = sns.barplot(
                             x=stack,
@@ -232,10 +236,11 @@ class Visualizer(vis.BaseVisualizer):
                     for n, i in enumerate(df.index[::-1]):
                         tmp = sns.barplot(
                             x="COQ_FUNC",
-                            data=df.ix[i],
+                            data=df.iloc[i],
                             color=self.options["color_palette_values"][::-1][n], 
                             ax=plt.gca())
 
+                # FIXME: reimplement mouse-over
                 #self.add_rectangles(df, ax, stacked=True)
                 #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
             else:
