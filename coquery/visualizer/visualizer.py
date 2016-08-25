@@ -318,7 +318,7 @@ class BaseVisualizer(QtCore.QObject):
         else:
             self._groupby = []
 
-        self._levels = [[utf8(y) for y in pd.unique(self._table[x].ravel())] for x in self._groupby]
+        self._levels = [sorted([utf8(y) for y in pd.unique(self._table[x].ravel())]) for x in self._groupby]
 
 
         if len(self._factor_columns) > self.dimensionality:
