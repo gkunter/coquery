@@ -393,17 +393,19 @@ class BaseResource(object):
     coquery_query_token = "Query token"
 
     statistics_table = "Quantifiers"
+
     statistics_frequency = COLUMN_NAMES["statistics_frequency"]
     statistics_normalized = COLUMN_NAMES["statistics_normalized"]
-    statistics_corpus_size = COLUMN_NAMES["statistics_corpus_size"]
-    statistics_subcorpus_size = COLUMN_NAMES["statistics_subcorpus_size"]
+    statistics_per_thousand_words = COLUMN_NAMES["statistics_per_thousand_words"]
     statistics_per_million_words = COLUMN_NAMES["statistics_per_million_words"]
     statistics_proportion = COLUMN_NAMES["statistics_proportion"]
+    statistics_percent = COLUMN_NAMES["statistics_percent"]
     statistics_entropy = COLUMN_NAMES["statistics_entropy"]
     statistics_types = COLUMN_NAMES["statistics_types"]
     statistics_tokens = COLUMN_NAMES["statistics_tokens"]
     statistics_ttr = COLUMN_NAMES["statistics_ttr"]
     statistics_group_proportion = COLUMN_NAMES["statistics_group_proportion"]
+    statistics_group_percent = COLUMN_NAMES["statistics_group_percent"]
     statistics_group_entropy = COLUMN_NAMES["statistics_group_entropy"]
     statistics_group_types = COLUMN_NAMES["statistics_group_types"]
     statistics_group_tokens = COLUMN_NAMES["statistics_group_tokens"]
