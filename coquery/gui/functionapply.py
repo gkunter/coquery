@@ -18,11 +18,11 @@ from .pyqt_compat import QtCore, QtGui
 from .ui.addFunctionUi import Ui_FunctionsDialog
 
 class FunctionDialog(QtGui.QDialog):
-    def __init__(self, table, feature, columns=[], func=None, parent=None):
+    def __init__(self, table, feature, columns=[], function_class=functions.StringFunction, func=None, parent=None):
         super(FunctionDialog, self).__init__(parent)
         self.ui = Ui_FunctionsDialog()
         self.ui.setupUi(self)
-        self.function_list = self.fill_list()
+        self.function_list = self.fill_list(function_class)
         self.ui.list_functions.setCurrentRow(0)
         self.columns = columns
         self._auto_label = True
@@ -65,13 +65,12 @@ class FunctionDialog(QtGui.QDialog):
             self.ui.edit_label.setText(func.label)
             self._auto_label = False
             
-    def fill_list(self):
+    def fill_list(self, function_class):
         l = self.ui.list_functions
         func_list = []
         for attr in [getattr(functions, x) for x in functions.__dict__]:
             try:
-                if (issubclass(attr, functions.StringFunction) and 
-                    attr != functions.StringFunction):
+                if (issubclass(attr, function_class) and attr != function_class):
                     func_list.append(attr)
             except TypeError:
                 pass
@@ -121,11 +120,15 @@ class FunctionDialog(QtGui.QDialog):
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
 
             self.ui.list_functions.item(self.ui.list_functions.currentRow()).setSelected(True)
-
+    
+        aggr = str(self.ui.combo_combine.currentText())
+        if aggr == "":
+            aggr = func.default_aggr
+            
         tmp_func = func(
             columns = self.columns,
             value = str(self.ui.edit_function_value),
-            aggr = str(self.ui.combo_combine.currentText()))
+            aggr = aggr)
         
         if self._auto_label:
             self.ui.edit_label.setText(tmp_func.get_label(session=options.cfg.main_window.Session))
@@ -147,19 +150,22 @@ class FunctionDialog(QtGui.QDialog):
             escaped = escaped.replace("{", "{{")
             escaped = escaped.replace("}", "}}")
             
-            aggr = str(self.ui.combo_combine.currentText())
             if self._auto_label:
                 label = None
             else:
                 label = str(self.ui.edit_label.text())
             func = self.function_list[self.ui.list_functions.currentRow()]
+            aggr = str(self.ui.combo_combine.currentText())
+            if aggr == "":
+                aggr = func.default_aggr
+
             return (func, escaped, aggr, label)
         else:
             return None
 
     @staticmethod
-    def set_function(columns, parent=None):
-        dialog = FunctionDialog("", "", columns=columns, parent=parent)
+    def set_function(columns, function_class=None, parent=None):
+        dialog = FunctionDialog("", "", columns=columns, function_class=function_class, parent=parent)
         dialog.setVisible(True)
         
         return dialog.exec_()
