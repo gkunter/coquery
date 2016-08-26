@@ -1379,7 +1379,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if not ix in self._hidden_columns:
                 if self._dtypes[ix] == float:
                     return "<div>{}</div>".format(escape(options.cfg.float_format.format(self.content.values[index.row()][ix] )))
-                elif self._dtypes[ix] == int:
+                elif self._dtypes[ix] in (int, bool):
                     return "<div>{}</div>".format(self.content.values[index.row()][ix])
                 else:
                     return "<div>{}</div>".format(escape(self.content.values[index.row()][ix]))
