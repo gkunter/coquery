@@ -106,6 +106,17 @@ class CoqHorizontalHeader(QtGui.QHeaderView):
         if self._resizing:
             self.sectionFinallyResized.emit(*self._args, **self._kwargs)
             self._resizing = False
+        else:
+            ix = self.logicalIndexAt(e.pos())
+            select = self.parent().selectionModel()
+            model = self.model()
+            top = model.index(0, ix, QtCore.QModelIndex())
+            bottom = model.index(0, ix, QtCore.QModelIndex())
+            selection = QtGui.QItemSelection(top, bottom)
+            select.select(selection, 
+                                QtGui.QItemSelectionModel.Toggle | 
+                                QtGui.QItemSelectionModel.Columns)
+
         self.button_pressed = False
         
     def mousePressEvent(self, e):
@@ -964,12 +975,14 @@ class CoqListWidget(QtGui.QListWidget):
         self.columns = []
     
     def find_resource(self, rc_feature):
+        rc_feature = utf8(rc_feature)
         for i, (_, x) in enumerate(self.columns):
             if x == rc_feature:
                 return i
         return None
     
     def get_item(self, rc_feature):
+        rc_feature = utf8(rc_feature)
         for item, x in self.columns:
             if x == rc_feature:
                 return item
@@ -982,6 +995,7 @@ class CoqListWidget(QtGui.QListWidget):
         return None
     
     def add_resource(self, rc_feature):
+        rc_feature = utf8(rc_feature)
         if self.get_item(rc_feature) is not None:
             return
         label = getattr(options.cfg.main_window.resource, rc_feature)
@@ -993,6 +1007,7 @@ class CoqListWidget(QtGui.QListWidget):
         return new_item
         
     def insert_resource(self, i, rc_feature):
+        rc_feature = utf8(rc_feature)
         if self.get_item(rc_feature) is not None:
             return
         label = getattr(options.cfg.main_window.resource, rc_feature)
@@ -1009,6 +1024,7 @@ class CoqListWidget(QtGui.QListWidget):
         self.remove_resource(rc_feature)
             
     def remove_resource(self, rc_feature):
+        rc_feature = utf8(rc_feature)
         i = self.find_resource(rc_feature)
         if i != None:
             item, _ = self.columns.pop(i)
@@ -1591,6 +1607,11 @@ class CoqTotalDelegate(CoqResultCellDelegate):
         self.bg_color = self._app.palette().color(QtGui.QPalette.Button)
 
 class CoqProbabilityDelegate(CoqResultCellDelegate):
+    max_value = 1
+    prefix = ""
+    suffix = ""
+    format_str = "{}{}{}"
+    
     def paint(self, painter, option, index):
         """
         Paint the results cell.
@@ -1599,17 +1620,18 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         from the table's :func:`data` method, using the DecorationRole role.
         On mouse-over, the cell is rendered like a clickable link.
         """
-        content = unicode(index.data(QtCore.Qt.DisplayRole))
-        if not content:
-            return
         painter.save()
 
         align = index.data(QtCore.Qt.TextAlignmentRole)
         try:
             value = float(index.data(QtCore.Qt.DisplayRole))
         except ValueError:
-            value = None
+            print(1, value)
+            painter.restore()
+            return 
         
+        content = self.format_str.format(self.prefix, value, self.suffix)
+
         # show content as a link on mouse-over:
         if option.state & QtGui.QStyle.State_MouseOver:
             font = painter.font()
@@ -1620,9 +1642,9 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         if bg:
             if option.state & QtGui.QStyle.State_Selected:
                 painter.fillRect(option.rect, bg)
-            elif value:
+            elif value != 0:
                 rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
-                rect.setWidth(int(option.rect.width() * min(1, value)))
+                rect.setWidth(int(option.rect.width() * min(self.max_value, value)/self.max_value))
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
         if fg: 
             painter.setPen(QtGui.QPen(fg))
@@ -1632,12 +1654,12 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
                 painter.drawText(
                     option.rect.adjusted(2, 0, 2, 0), 
                     _left_align | int(QtCore.Qt.TextWordWrap), 
-                    content if isinstance(content, str) else str(content))
+                    content)
             else:
                 painter.drawText(
                     option.rect.adjusted(-2, 0, -2, 0), 
                     _right_align | int(QtCore.Qt.TextWordWrap), 
-                    content if isinstance(content, str) else str(content))
+                    content)
         finally:
             painter.restore()
 
@@ -1650,6 +1672,11 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
                 #return super(CoqProbabilityDelegate, self).get_background(option, index)
         #except ValueError:
             #return super(CoqProbabilityDelegate, self).get_background(option, index)
+
+class CoqPercentDelegate(CoqProbabilityDelegate):
+    max_value = 100
+    format_str = "{}{:3.1f}{}"
+    suffix = "%"
 
 class CoqLikelihoodDelegate(CoqResultCellDelegate):
     fill = True
