@@ -120,15 +120,19 @@ class Function(CoqObject):
             if self.group:
                 return "{}({})".format(
                     self.get_name(), 
-                    ",".join([session.translate_header(x) for x in self.group]))
+                    "+".join([session.translate_header(x) for x in self.group]))
             if self.no_column_labels:
                 return self.get_name()
             else:
-                return "{}({},\"{}\")".format(
-                    self.get_name(), 
-                    ",".join([session.translate_header(x) for x in self.columns]),
-                    self.aggr)
+                args = []
+                args.append(",".join([session.translate_header(x) for x in self.columns]))
+                if self.value:
+                    args.append('"{}"'.format(self.value))
+                if len(self.columns) > 1:
+                    args.append(self.aggr)
                 
+                return "{}({})".format(self.get_name(), ", ".join(args))
+                    
             if self.group:
                 return "{}({},group={})".format(
                     self.get_name(), 
@@ -180,6 +184,10 @@ class Function(CoqObject):
         assert len(val) == len(df)
         
         return val
+    
+    @classmethod
+    def validate_input(cls, value):
+        return bool(value) or cls.allow_null
 
 #############################################################################
 ## String functions
@@ -227,10 +235,20 @@ class StringMatch(StringFunction):
     
     def __init__(self, value, columns=[], *args, **kwargs):
         super(StringMatch, self).__init__(columns, *args, **kwargs)
+        self.value = value
         self.re = re.compile(value)
     
     def _func(self, col):
         return col.apply(lambda x: bool(self.re.search(str(x))))
+    
+    @classmethod
+    def validate_input(cls, value):
+        try:
+            re.compile(value)
+        except Exception: 
+            return False
+        else:
+            return True
 
 class StringExtract(StringMatch):
     _name = "EXTRACT"

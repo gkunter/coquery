@@ -112,7 +112,7 @@ class FunctionDialog(QtGui.QDialog):
                 self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
             else:
                 self.ui.parameter_box.setEnabled(True)
-                if (str(self.ui.edit_function_value.text()) == "" and not func.allow_null):
+                if not func.validate_input(self.ui.edit_function_value.text()):
                     self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
                 else:
