@@ -109,6 +109,7 @@ COLUMN_NAMES = {
     "statistics_group_tokens": "Group: Number of matches",
     "statistics_group_types": "Group: Number of unique matches",
     "statistics_group_proportion": "Group: Proportion",
+    "statistics_group_percent": "Group: Percent",
     "statistics_group_ttr": "Group: Type-token ratio",
     "statistics_column_total": "ALL",
 
