@@ -276,19 +276,22 @@ class BaseVisualizer(QtCore.QObject):
 
         header = self._view.horizontalHeader()
         view_columns = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
-        
-        view_columns = [x for x in view_columns if x in options.cfg.main_window.Session.data_table.columns]
+        print(0, options.cfg.main_window.Session.output_object.columns)
+        view_columns = [x for x in view_columns if x in options.cfg.main_window.Session.output_object.columns]
 
         session = options.cfg.main_window.Session
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
 
-        if self._plot_frequency:
-            view_columns = [x for x in view_columns if x not in manager.hidden_columns]
-        else:
-            view_columns = [x for x in view_columns if x not in manager.hidden_columns and not x.startswith("statistics")]
+        #if self._plot_frequency:
+            #view_columns = [x for x in view_columns if x not in manager.hidden_columns]
+        #else:
+            #view_columns = [x for x in view_columns if x not in manager.hidden_columns and not x.startswith("statistics")]
+        print(1, view_columns)
+
+        view_columns = [x for x in view_columns if x not in manager.hidden_columns]
         
         column_order = view_columns
-
+        print(2, view_columns)
         column_order.append("coquery_invisible_corpus_id")
 
         try:
@@ -297,16 +300,17 @@ class BaseVisualizer(QtCore.QObject):
             self._time_columns = []
        
         #options.cfg.main_window.Session.mask_data()
-       
         # get visible rows::
         try:
             self._table = self._df[column_order]
         except TypeError:
             # FIXME: reimplement row visibility
             #self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
-            self._table = session.data_table[column_order]
-
+            self._table = session.output_object[column_order]
+        
         self._table.columns = [session.translate_header(x) for x in self._table.columns]
+        print(column_order)
+        print(self._table.head())
         
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
