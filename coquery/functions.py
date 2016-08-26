@@ -117,13 +117,12 @@ class Function(CoqObject):
         if self.label:
             return self.label
         else:
-            if self.no_column_labels:
-                return self.get_name()
-            
             if self.group:
                 return "{}({})".format(
                     self.get_name(), 
                     ",".join([session.translate_header(x) for x in self.group]))
+            if self.no_column_labels:
+                return self.get_name()
             else:
                 return "{}({},\"{}\")".format(
                     self.get_name(), 
@@ -256,7 +255,7 @@ class Calc(Function):
     _name = "CALC"
     combine_modes = num_combine
     
-    def __init__(self, sign, value=None, columns=[], *args, **kwargs):
+    def __init__(self, sign=None, value=None, columns=[], *args, **kwargs):
         super(Calc, self).__init__(columns, *args, **kwargs)
         self.sign = sign
         self.value = value
