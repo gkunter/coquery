@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 from coquery import queries
 from coquery import managers
+from coquery import functions
 from coquery import sqlhelper
 from coquery.session import *
 from coquery.defines import *
@@ -123,12 +124,13 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
         
-        self.ui.data_preview.setHorizontalHeader(
-            classes.CoqHorizontalHeader(QtCore.Qt.Horizontal))
+        self.ui.data_preview.setHorizontalHeader(classes.CoqHorizontalHeader(QtCore.Qt.Horizontal))
 
         self.setMenuBar(self.ui.menubar)
         
         self.setup_app()
+        self.ui.data_preview.horizontalHeader().setSelectionBehavior(QtGui.QAbstractItemView.SelectColumns)
+        self.ui.data_preview.horizontalHeader().setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
         # the dictionaries column_width and column_color store default
         # attributes of the columns by display name. This means that problems
@@ -270,7 +272,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
         self.ui.data_preview.horizontalHeader().setMovable(True)
-        self.ui.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectionBehavior(QtGui.QAbstractItemView.SelectRows|QtGui.QAbstractItemView.SelectColumns))
+        self.ui.data_preview.setSelectionBehavior(self.ui.data_preview.SelectItems)
+        self.ui.data_preview.setSelectionMode(self.ui.data_preview.ExtendedSelection)
+
         options.cfg.word_wrap = [0, int(QtCore.Qt.TextWordWrap)][bool(getattr(options.cfg, "word_wrap", False))]
         self.ui.data_preview.setWordWrap(options.cfg.word_wrap)
 
@@ -540,6 +544,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.list_group_columns.itemActivated.connect(self.activate_group_column_buttons)
         self.ui.list_group_columns.itemDropped.connect(lambda x: self.add_group_column(item=x))
         
+        self.ui.button_add_function.clicked.connect(lambda: self.add_function(summary=True))
+        self.ui.button_add_group_function.clicked.connect(lambda: self.add_function(group=True))
+        
         # set up hooks for the summary widgets:
         self.ui.radio_no_summary.clicked.connect(self.change_managing)
         self.ui.radio_summary.clicked.connect(self.change_managing)
@@ -805,7 +812,6 @@ class CoqueryApp(QtGui.QMainWindow):
         tree.customContextMenuRequested.connect(self.get_output_column_menu)        
         
         tree.addLink.connect(self.add_link)
-        tree.addFunction.connect(self.add_function)
         tree.addGroup.connect(self.add_group_column)
         tree.removeGroup.connect(self.remove_group_column)
         tree.removeItem.connect(self.remove_item)
@@ -1120,15 +1126,24 @@ class CoqueryApp(QtGui.QMainWindow):
         header = self.ui.data_preview.horizontalHeader()
         for i in range(header.count()):
             column = self.table_model.header[header.logicalIndex(i)]
-            if (column in (
-                    "coq_conditional_probability_left", 
-                    "coq_conditional_probability_right",  
-                    "statistics_overall_proportion", 
-                    "statistics_query_proportion",
-                    "statistics_normalized",
-                    "coq_statistics_uniquenessratio") or 
-                 column.startswith(("func_FREQ_NORM", "func_PROPORTION"))):
+            if column.startswith("func_"):
+                manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+                fun = manager.get_function(column)
+                try:
+                    retranslate = dict(zip(COLUMN_NAMES.values(), COLUMN_NAMES.keys()))[fun.get_name()]
+                except KeyError:
+                    pass
+                else:
+                    column = retranslate
+            if column in ("statistics_proportion", 
+                      "statistics_normalized", "statistics_ttr",
+                      "statistics_group_proportion", "statistics_group_ttr",
+                      "coq_conditional_probability_left", 
+                      "coq_conditional_probability_right",  
+                      "coq_statistics_uniquenessratio"):
                 deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
+            elif column in ("statistics_percent", "statistics_group_percent"):
+                deleg = classes.CoqPercentDelegate(self.ui.data_preview)
             elif column in ("statistics_column_total"):
                 deleg = classes.CoqTotalDelegate(self.ui.data_preview)                
             elif column.startswith("statistics_g_test"):
@@ -1570,7 +1585,7 @@ class CoqueryApp(QtGui.QMainWindow):
             menu.addSeparator()
             
             action = QtGui.QAction("&Add function...", self)
-            action.triggered.connect(lambda: self.add_function_to_columns(selection))
+            action.triggered.connect(lambda: self.add_function(selection))
             menu.addAction(action)
             
             if all([x.startswith("func_") for x in selection]):
@@ -2649,11 +2664,16 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.table_links[options.cfg.current_server].append(link)
             self.add_table_link(link)
             
-    def add_function_to_columns(self, columns):
+    def add_function(self, columns=[], summary=False, group=False):
         from . import functionapply
 
+        if group or summary:
+            function_class = functions.Function
+        else:
+            function_class = functions.StringFunction
+
         response = functionapply.FunctionDialog.set_function(
-            columns=columns, parent=self)
+            columns=columns, function_class=function_class, parent=self)
 
         if not response:
             return
@@ -2661,8 +2681,18 @@ class CoqueryApp(QtGui.QMainWindow):
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             session = options.cfg.main_window.Session
-            manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
-            manager.add_column_function(fun)
+            if session is not None:
+                manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+                print(session.Resource.name)
+            else:
+                manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
+                print(utf8(self.ui.combo_corpus.currentText()))
+            
+            if not (group or summary):
+                manager.add_column_function(fun)
+            else:
+                manager._gf.append(fun)
+                # manager.add_summary_function(fun)
             self.update_columns()
 
     def edit_function(self, column):
@@ -2685,58 +2715,6 @@ class CoqueryApp(QtGui.QMainWindow):
             manager.remove_column_function(func)
         self.update_columns()
             
-
-    def add_function(self, item):
-        """
-        Add an output column that applies a function to the selected item.
-        
-        This method opens a dialog that allows to choose a function that 
-        may be applied to the selected item. This function is added as an
-        additional output column to the list of output columns.
-        
-        Parameters
-        ----------
-        item : CoqTreeItem
-            An entry in the output column list
-        """
-
-        from . import functionapply
-        column = 0
-        parent = item.parent()
-
-        _, hashed, tab, feat = self.resource.split_resource_feature(item.objectName())
-
-        if hashed is not None:
-            _, res = get_by_hash(hashed)
-        else:
-            res = self.resource
-            
-        feature = getattr(res, "{}_{}".format(tab, feat))
-        
-        response = functionapply.FunctionDialog.display(
-            table=str(parent.text(0)),
-            feature=feature, rc_feature = item.objectName(), parent=self)
-        
-        if not response:
-            return
-        else:
-            label, func = response
-            
-            child_func = classes.CoqTreeFuncItem()
-            child_func.setObjectName("func.{}".format(item.objectName()))
-            child_func.setFunction(func)
-            child_func.rc_feature = item.objectName()
-            child_func.setText(column, label.format(N=""))
-            
-            if hashed is not None:
-                child_func.full_label = "func.{}_{}_{}".format(res.db_name, tab, feat)
-            else:
-                child_func.full_label = "func.{}".format(item.objectName())
-            child_func.setCheckState(column, QtCore.Qt.Checked)
-
-            item.parent().addChild(child_func)
-            item.parent().setExpanded(True)
-
     def remove_item(self, item):
         """
         Remove either a link or a function from the list of output columns.        
