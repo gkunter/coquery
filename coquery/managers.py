@@ -34,6 +34,8 @@ class Manager(CoqObject):
         self.sorters = []
         self.hidden_columns = set([])
         self._columns = []
+        self._gf = []
+
 
     def get_visible_columns(self, df, session, hidden=False):
         """
@@ -106,6 +108,8 @@ class Manager(CoqObject):
             l.append(FreqPMW(session=session, columns=vis_cols))
         if "statistics_proportion" in options.cfg.selected_features:
             l.append(Proportion(columns=vis_cols))
+        if "statistics_percent" in options.cfg.selected_features:
+            l.append(Percent(columns=vis_cols))
         if "statistics_corpus_size" in options.cfg.selected_features:
             l.append(CorpusSize(session=session))
         if "statistics_subcorpus_size" in options.cfg.selected_features:
@@ -130,7 +134,7 @@ class Manager(CoqObject):
     
     def _get_group_functions(self, df, session):
         vis_cols = self.get_visible_columns(df, session)
-        groups = []
+        groups = self._gf
         for rc_feature in options.cfg.group_columns:
             groups += session.Resource.format_resource_feature(rc_feature,
                         session.get_max_token_count())
@@ -140,6 +144,8 @@ class Manager(CoqObject):
         l = []
         if "statistics_group_proportion" in options.cfg.selected_features:
             l.append(Proportion(columns=vis_cols, group=groups))
+        if "statistics_group_percent" in options.cfg.selected_features:
+            l.append(Percent(columns=vis_cols, group=groups))
         if "statistics_group_entropy" in options.cfg.selected_features:
             l.append(Entropy(columns=vis_cols, group=groups))
         if "statistics_group_tokens" in  options.cfg.selected_features:
