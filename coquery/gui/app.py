@@ -2697,7 +2697,7 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.Tokens, functions.Types, 
                          functions.TypeTokenRatio,
                          functions.CorpusSize, functions.SubcorpusSize]
-                checked = manager._summaries
+                checked = manager._summary_functions
                          
             kwargs = {
                 "function_types": types,
@@ -2717,7 +2717,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if group:
             manager._gf = response
         elif summary:
-            manager._summaries = response
+            manager._summary_functions = response
         else:
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
