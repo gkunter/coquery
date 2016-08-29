@@ -392,26 +392,7 @@ class BaseResource(object):
     coquery_current_time = "Current time"
     coquery_query_token = "Query token"
 
-    statistics_table = "Quantifiers"
-
-    statistics_frequency = COLUMN_NAMES["statistics_frequency"]
-    statistics_normalized = COLUMN_NAMES["statistics_normalized"]
-    statistics_per_thousand_words = COLUMN_NAMES["statistics_per_thousand_words"]
-    statistics_per_million_words = COLUMN_NAMES["statistics_per_million_words"]
-    statistics_proportion = COLUMN_NAMES["statistics_proportion"]
-    statistics_percent = COLUMN_NAMES["statistics_percent"]
-    statistics_entropy = COLUMN_NAMES["statistics_entropy"]
-    statistics_types = COLUMN_NAMES["statistics_types"]
-    statistics_tokens = COLUMN_NAMES["statistics_tokens"]
-    statistics_ttr = COLUMN_NAMES["statistics_ttr"]
-    statistics_group_proportion = COLUMN_NAMES["statistics_group_proportion"]
-    statistics_group_percent = COLUMN_NAMES["statistics_group_percent"]
-    statistics_group_entropy = COLUMN_NAMES["statistics_group_entropy"]
-    statistics_group_types = COLUMN_NAMES["statistics_group_types"]
-    statistics_group_tokens = COLUMN_NAMES["statistics_group_tokens"]
-    statistics_group_ttr = COLUMN_NAMES["statistics_group_ttr"]
-
-    special_table_list = ["coquery", "statistics", "tag"]
+    special_table_list = ["coquery", "tag"]
 
     render_token_style = "background: lightyellow"
     
@@ -918,7 +899,7 @@ class SQLResource(BaseResource):
         # determine table size for all columns
         table_sizes = {}
         engine = self.get_engine()
-        for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table") and not x.startswith("statistics_") and not x.startswith("tag_")]:
+        for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table") and not x.startswith("tag_")]:
             table = getattr(self, rc_table)
             S = "SELECT COUNT(*) FROM {}".format(table)
             df = pd.read_sql(S, engine)
