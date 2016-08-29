@@ -55,18 +55,20 @@
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Label:</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="edit_label"/>
-        </item>
-       </layout>
+       <widget class="QWidget" name="widget_label" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Label:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="edit_label"/>
+         </item>
+        </layout>
+       </widget>
       </item>
       <item>
        <widget class="QListWidget" name="list_functions">
