@@ -35,7 +35,9 @@ class Manager(CoqObject):
         self.hidden_columns = set([])
         self._columns = []
         self._gf = []
-
+        self._summary_functions = []
+        self._group_filters = []
+        self._filters = []
 
     def get_visible_columns(self, df, session, hidden=False):
         """
@@ -100,64 +102,38 @@ class Manager(CoqObject):
         """
         l = []
         vis_cols = self.get_visible_columns(df, session)
-        if "statistics_frequency" in options.cfg.selected_features:
-            l.append(Freq(columns=vis_cols))
-        if "statistics_normalized" in options.cfg.selected_features:
-            l.append(FreqNorm(session=session, columns=vis_cols))
-        if "statistics_per_million_words" in options.cfg.selected_features:
-            l.append(FreqPMW(session=session, columns=vis_cols))
-        if "statistics_proportion" in options.cfg.selected_features:
-            l.append(Proportion(columns=vis_cols))
-        if "statistics_percent" in options.cfg.selected_features:
-            l.append(Percent(columns=vis_cols))
-        if "statistics_corpus_size" in options.cfg.selected_features:
-            l.append(CorpusSize(session=session))
-        if "statistics_subcorpus_size" in options.cfg.selected_features:
-            l.append(SubcorpusSize(session=session, columns=vis_cols))
-        if "statistics_entropy" in options.cfg.selected_features:
-            l.append(Entropy(columns=vis_cols))
-        if "statistics_tokens" in  options.cfg.selected_features:
-            l.append(Tokens())
-        if "statistics_types" in  options.cfg.selected_features:
-            l.append(Types(columns=vis_cols))
-        if "statistics_ttr" in  options.cfg.selected_features:
-            l.append(TypeTokenRatio(columns=vis_cols))
-            
+
+        for func_type in self._summary_functions:
+            l.append(func_type(columns=vis_cols, session=session))
+
         if options.cfg.context_mode == CONTEXT_COLUMNS:
             l.append(ContextColumns(session=session))
         elif options.cfg.context_mode == CONTEXT_KWIC:
             l.append(ContextKWIC(session=session))
         elif options.cfg.context_mode == CONTEXT_STRING:
             l.append(ContextString(session=session))
-            
+
+        print(l)
         return l
     
     def _get_group_functions(self, df, session):
-        vis_cols = self.get_visible_columns(df, session)
-        groups = self._gf
+        vis_cols = self.get_visible_columns(df, session, hidden=True)
+        vis_cols = [x for x in vis_cols if not x.startswith("coquery_invisible")]
+        groups = []
         for rc_feature in options.cfg.group_columns:
             groups += session.Resource.format_resource_feature(rc_feature,
                         session.get_max_token_count())
                     
         if not groups:
             return []
+
         l = []
-        if "statistics_group_proportion" in options.cfg.selected_features:
-            l.append(Proportion(columns=vis_cols, group=groups))
-        if "statistics_group_percent" in options.cfg.selected_features:
-            l.append(Percent(columns=vis_cols, group=groups))
-        if "statistics_group_entropy" in options.cfg.selected_features:
-            l.append(Entropy(columns=vis_cols, group=groups))
-        if "statistics_group_tokens" in  options.cfg.selected_features:
-            l.append(Tokens(group=groups))
-        if "statistics_group_types" in  options.cfg.selected_features:
-            l.append(Types(columns=vis_cols, group=groups))
-        if "statistics_group_ttr" in  options.cfg.selected_features:
-            l.append(TypeTokenRatio(columns=vis_cols, group=groups))
+        for func_type in self._gf:
+            l.append(func_type(columns=vis_cols, group=groups))
         return l
     
     def _get_summary_functions(self, df, session):
-        return []
+        return self._summary_functions
     
     @staticmethod
     def _apply_function(df, fun, connection):
@@ -299,6 +275,11 @@ class Manager(CoqObject):
         return df.reset_index(drop=True)
 
     def filter(self, df, session):
+        for filt in self._filters:
+            try:
+                df = df.query(filt)
+            except Exception:
+                pass
         return df
     
     def filter_groups(self, df, session):
@@ -316,7 +297,6 @@ class Manager(CoqObject):
                 df = df[[x for x in df.columns if not x.startswith("func_")]]
                 self._main_functions = self._get_main_functions(df, session)
                 df = self.mutate(df, session, connection)
-                df = self.filter(df, session)
                 self._group_functions = self._get_group_functions(df, session)
                 df = self.mutate_groups(df, session, connection)
                 df = self.filter_groups(df, session)
@@ -324,6 +304,7 @@ class Manager(CoqObject):
             
             self._summary_functions = self._get_summary_functions(df, session)
             df = self.summarize(df, session, connection)
+            df = self.filter(df, session)
             df = self.select(df, session)
             df = df.fillna("")
 
@@ -342,7 +323,7 @@ class FrequencyList(Distinct):
     name = "FREQUENCY"
     
     def _get_summary_functions(self, df, session):
-        return [Freq(columns=self.get_visible_columns(df, session))]
+        return self._summary_functions + [Freq(columns=self.get_visible_columns(df, session))]
     
 class ContingencyTable(FrequencyList):
     name = "CONTINGENCY"
@@ -354,7 +335,7 @@ class ContingencyTable(FrequencyList):
                 l.append(col)
         return df[l]
 
-    def mutate(self, df, session):
+    def mutate(self, df, session, connection):
         def _get_column_label(row):
             col_label = session.translate_header(row[0])
             if row[1] == "All":
