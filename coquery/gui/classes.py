@@ -84,6 +84,7 @@ class CoqThread(QtCore.QThread):
                 self.parent().exception = e
             self.taskException.emit(e)
             print("CoqThread.run():", e)
+            raise e
         self.taskFinished.emit()
         return result
 
@@ -334,6 +335,218 @@ class CoqSwitch(QtGui.QWidget):
         self._on = False
         self._update()
 
+class CoqExclusiveGroup(object):
+    def __init__(self, l):
+        self._widget_list = [x for x in l if hasattr(x, "toggled")]
+        _checked = None
+        self._maxwidth = 0
+        for element in self._widget_list:
+            self._maxwidth = max(self._maxwidth, element.sizeHint().width())
+            if _checked != None:
+                if element.isChecked():
+                    element.setChecked(False)
+            else:
+                _checked = element.isChecked()
+
+        for element in self._widget_list:
+            element.setMaximumWidth(self._maxwidth)
+            element.setMinimumWidth(self._maxwidth)
+            element.toggled.connect(lambda x: self.toggle_group(x))
+        
+    def toggle_group(self, widget):
+        if widget.isChecked():
+            for element in [x for x in self._widget_list if x != widget]:
+                if element.isChecked():
+                    element.setChecked(False)
+
+class CoqGroupBox(QtGui.QGroupBox):
+    """
+    """
+
+    style_opened = """
+        CoqGroupBox {{
+            background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 {button_button}, stop: 1 {button_midlight});
+            border: 1px solid gray;
+            border-radius: 2px;
+            border-style: inset;
+            margin-top: {header_size};
+        }}
+
+        CoqGroupBox::title {{
+            background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 {button_midlight}, stop: 1 {button_button});
+            border-top: 1px;
+            border-left: 1px;
+            border-right: 1px;
+            border-bottom: 0px;
+            border-radius: 5px;
+            border-color: {button_mid};
+            border-style: inset;
+
+            subcontrol-origin: margin;
+            subcontrol-position: top left; /* position at the top center */
+            padding: 0 {pad_right}px 0 0;
+            margin-top: 0px;
+            margin-left: 0px;
+            margin-bottom: 2px;
+        }}
+        
+        CoqGroupBox::indicator {{
+            width: {icon_size}px;
+            height: {icon_size}px;
+        }}
+
+        CoqGroupBox::indicator:unchecked {{
+            image: url({path}/{sign_down});
+        }}
+        
+        CoqGroupBox::indicator:checked {{
+            image: url({path}/{sign_up});
+        }}"""
+        
+    style_closed = """
+        CoqGroupBox {{
+            border: 0px solid gray;
+            border-radius: 0px;
+            margin-top: 0px; 
+            margin-left: 0px;
+            margin-right: 0px;
+            margin-bottom: 4px;
+        }}
+
+        CoqGroupBox::title {{
+            background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 {button_button}, stop: 1 {button_midlight});
+            border-top: 1px;
+            border-left: 1px;
+            border-right: 1px;
+            border-bottom: 1px;
+            border-radius: 5px;
+            border-color: {button_mid};
+            border-style: outset;
+
+            subcontrol-origin: margin;
+            subcontrol-position: top left; /* position at the top center */
+            padding: 0 {pad_right}px 0 0;
+            margin-top: 1px;
+        }}
+        
+        CoqGroupBox::indicator {{
+            width: {icon_size}px;
+            height: {icon_size}px;
+        }}
+
+        CoqGroupBox::indicator:unchecked {{
+            image: url({path}/{sign_down});
+        }}
+        
+        CoqGroupBox::indicator:checked {{
+            image: url({path}/{sign_up});
+        }}"""
+
+    toggled = QtCore.Signal(QtGui.QWidget)
+    
+    def __init__(self, *args, **kwargs):
+        super(CoqGroupBox, self).__init__(*args, **kwargs)
+        self._text = None
+        self._alternative = None
+        self.clicked.connect(self.setChecked)
+        self.setStyleSheet(self.style_opened)
+
+    def setTitle(self, text, *args, **kwargs):
+        super(CoqGroupBox, self).setTitle(text, *args, **kwargs)
+        self._text = text
+        if self._alternative is "":
+            self._alternative = text
+        
+    def setAlternativeTitle(self, text):
+        self._alternative = text
+        
+    def title(self):
+        return self._text
+    
+    def alternativeTitle(self):
+        return self._alternative
+
+    def _hide_content(self, element=None):
+        if element == None:
+            element = self.layout()
+        if element == None:
+            return
+        if element.isWidgetType():
+            element.hide()
+        else:
+            for x in element.children():
+                self._show_content(x)
+            for i in range(element.count()):
+                item = element.itemAt(i)
+                if isinstance(item, QtGui.QWidgetItem):
+                    self._hide_content(item.widget())
+                else:
+                    self._hide_content(item)
+
+    def _show_content(self, element=None):
+        if element == None:
+            element = self.layout()
+        if element == None:
+            return
+        if element.isWidgetType():
+            element.show()
+        else:
+            for x in element.children():
+                self._show_content(x)
+            for i in range(element.count()):
+                item = element.itemAt(i)
+                if isinstance(item, QtGui.QWidgetItem):
+                    self._show_content(item.widget())
+                else:
+                    self._show_content(item)
+
+    def sizeHint(self, *args, **kwargs):
+        x = super(CoqGroupBox, self).sizeHint(*args, **kwargs)
+        try:
+            x.setWidth(self._width)
+        except AttributeError:
+            pass
+        return x
+
+    def size(self, *args, **kwargs):
+        x = super(CoqGroupBox, self).size(*args, **kwargs)
+        return x
+
+    def setChecked(self, checked):
+        super(CoqGroupBox, self).setChecked(checked)
+        title_width = self.fontMetrics().width(self._text)
+
+        if checked == True:
+            s = self.style_opened
+            self._show_content()
+        else:
+            s = self.style_closed
+            self._hide_content()
+
+        icon_size = QtGui.QPushButton().sizeHint().height() - 6
+        header_size = icon_size + 1
+        pad = 10
+        s = s.format(path=os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG"),
+                    sign_up="sign-minimize.png", 
+                    sign_down="sign-maximize.png",
+                    icon_size=icon_size, header_size=header_size,
+                    pad_right=pad,
+                    button_light=options.cfg.app.palette().color(QtGui.QPalette.Light).name(),
+                    button_midlight=options.cfg.app.palette().color(QtGui.QPalette.Midlight).name(),
+                    button_button=options.cfg.app.palette().color(QtGui.QPalette.Button).name(),
+                    button_mid=options.cfg.app.palette().color(QtGui.QPalette.Mid).name(),
+                    button_dark=options.cfg.app.palette().color(QtGui.QPalette.Dark).name(),
+                    box_light=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
+                    box_dark=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
+                    focus=options.cfg.app.palette().color(QtGui.QPalette.Highlight).name(),
+                    
+                    )
+        self.setStyleSheet(s)
+        self.toggled.emit(self)
+        
 class CoqDetailBox(QtGui.QWidget):
     """
     Define a QLayout class that has the QPushButton 'header' as a clickable 
@@ -516,19 +729,16 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         text = utf8(text)
         if self.parent():
             parent = self.parent().objectName()
-        feature = unicode(self.objectName())
+        feature = utf8(self.objectName())
         if feature.endswith("_table"):
-            self.setToolTip(column, "Table: {}".format(text))
-        elif feature.startswith("coquery_") or feature.startswith("frequency_"):
-            self.setToolTip(column, "Special column:\n{}".format(text))
-        else:
-            self.setToolTip(column, "Data column:\n{}".format(text))
+            self.setToolTip(column, "Corpus table: {}".format(text))
+        self.setToolTip(column, "Corpus field:\n{}".format(text))
 
         super(CoqTreeItem, self).setText(column, text)
 
     def setObjectName(self, name):
         """ Store resource variable name as object name. """
-        self._objectName = unicode(name)
+        self._objectName = utf8(name)
 
     def objectName(self):
         """ Retrieve resource variable name from object name. """
@@ -608,17 +818,6 @@ class CoqTreeLinkItem(CoqTreeItem):
     def setText(self, column, text, *args):
         super(CoqTreeLinkItem, self).setText(column, text)
         #self.setToolTip(column, "External table: {}\nLinked by: {}".format(text, self.link.feature_name))
-
-class CoqTreeFuncItem(CoqTreeItem):
-    """
-    Define a CoqTreeItem class that represents a function column.
-    """
-    def setFunction(self, func):
-        self._func = func
-        self.full_label = ""
-        
-    def setText(self, column, label, *args):
-        super(CoqTreeFuncItem, self).setText(column, label)
 
 class CoqTreeWidget(QtGui.QTreeWidget):
     """
@@ -1047,6 +1246,21 @@ class CoqTagEdit(QtGui.QLineEdit):
         if self.filter_examples:
             self.setPlaceholderText("e.g. {}".format(random.sample(self.filter_examples, 1)[0]))
 
+class CoqTagContainer(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(CoqTagContainer, self).__init__(parent)
+        self.layout = CoqFlowLayout(spacing=5)                                                                 
+        self.setLayout(self.layout)
+        # make this widget take up all available space:
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+
+    def add(self, item):
+        self.layout.addWidget(item)
+
 class CoqTagBox(QtGui.QWidget):
     """ Defines a QWidget class that contains and manages filter tags. """
     
@@ -1121,7 +1335,7 @@ class CoqTagBox(QtGui.QWidget):
 
         self.setAcceptDrops(True)
 
-        col =options.cfg.app.palette().color(QtGui.QPalette.Light)
+        col = options.cfg.app.palette().color(QtGui.QPalette.Light)
         color = "{ background-color: rgb(%s, %s, %s) ; }" % (col.red(), col.green(), col.blue())
         S = 'QScrollArea {}'.format(color)
         self.scroll_content.setStyleSheet(S)
@@ -1237,7 +1451,6 @@ class CoqTagBox(QtGui.QWidget):
     def editTagText(self, s):
         """ Set the current background to default. """
         self.edit_tag.setStyleSheet("CoqTagEdit { border-radius: 5px; font: condensed; }")
-
 
 class QueryFilterBox(CoqTagBox):
     """
