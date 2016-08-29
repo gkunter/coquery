@@ -301,7 +301,10 @@ class Calc(Function):
 ## Frequency functions
 #############################################################################
 
-class Freq(Function):
+class BaseFreq(Function):
+    _name = "virtual"
+
+class Freq(BaseFreq):
     _name = "statistics_frequency"
     combine_modes = no_combine
     no_column_labels = True
@@ -389,7 +392,10 @@ class FreqNorm(Freq):
 ## Distributional functions
 #############################################################################
 
-class Proportion(Freq):
+class BaseProportion(Freq):
+    _name = "virtual"
+
+class Proportion(BaseProportion):
     _name = "statistics_proportion"
     no_column_labels = True
     
@@ -417,7 +423,7 @@ class Percent(Proportion):
         return 100 * super(Percent, self).evaluate(*args, **kwargs)
         
 class Entropy(Proportion):
-    _name = "ENTROPY"
+    _name = "statistics_entropy"
     
     def evaluate(self, df, *args, **kwargs):
         _df = df[self.columns]
@@ -430,14 +436,14 @@ class Entropy(Proportion):
         return pd.Series([entropy] * len(df), index=df.index)
 
 class Tokens(Function):
-    _name = "TOKENS"
+    _name = "statistics_tokens"
     no_column_labels = True
     
     def evaluate(self, df, *args, **kwargs):
         return pd.Series([len(df)] * len(df), index=df.index)
 
 class Types(Function):
-    _name = "TYPES"
+    _name = "statistics_types"
     no_column_labels = True
     
     def evaluate(self, df, *args, **kwargs):
@@ -445,7 +451,7 @@ class Types(Function):
         return pd.Series([length] * len(df), index=df.index)
 
 class TypeTokenRatio(Types):
-    _name = "TYPETOKENRATIO"
+    _name = "statistics_ttr"
     no_column_labels = True
     
     def evaluate(self, df, *args, **kwargs):
@@ -459,7 +465,7 @@ class TypeTokenRatio(Types):
 #############################################################################
 
 class CorpusSize(Function):
-    _name = "CORPUSSIZE"
+    _name = "statistics_corpus_size"
     combine_modes = no_combine
     no_column_labels = True
 
@@ -472,7 +478,7 @@ class CorpusSize(Function):
         return pd.Series([corpus_size] * len(df), index=df.index)
 
 class SubcorpusSize(CorpusSize):
-    _name = "SUBCORPUSSIZE"
+    _name = "statistics_subcorpus_size"
     no_column_labels = True
 
     def evaluate(self, df, *args, **kwargs):
