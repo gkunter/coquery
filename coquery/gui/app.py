@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 from coquery import queries
 from coquery import managers
+from coquery import functions
 from coquery import sqlhelper
 from coquery.session import *
 from coquery.defines import *
@@ -122,10 +123,7 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
-        
-        self.ui.data_preview.setHorizontalHeader(
-            classes.CoqHorizontalHeader(QtCore.Qt.Horizontal))
-
+        self.ui.data_preview.setHorizontalHeader(classes.CoqHorizontalHeader(QtCore.Qt.Horizontal))
         self.setMenuBar(self.ui.menubar)
         
         self.setup_app()
@@ -142,10 +140,6 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.main_window = self
 
         try:
-            self.restoreGeometry(options.settings.value("main_geometry"))
-        except TypeError:
-            pass
-        try:
             self.restoreState(options.settings.value("main_state"))
         except TypeError:
             pass
@@ -159,6 +153,13 @@ class CoqueryApp(QtGui.QMainWindow):
             import ctypes
             CoqId = 'Coquery.Coquery.{}'.format(VERSION)
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)        
+
+        try:
+            self.restoreGeometry(options.settings.value("main_geometry"))
+        except TypeError:
+            self.ui.centralwidget.adjustSize()
+            self.adjustSize()
+
         
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -177,22 +178,14 @@ class CoqueryApp(QtGui.QMainWindow):
         if index > -1:
             self.ui.combo_corpus.setCurrentIndex(index)
         
-        # chamge the default query string edit to the sublassed edit class:
-        self.ui.layout_query.removeWidget(self.ui.edit_query_string)
-        self.ui.edit_query_string.close()        
-        edit_query_string = classes.CoqTextEdit(self)
-        edit_query_string.setObjectName("edit_query_string")
-        self.ui.layout_query.addWidget(edit_query_string, 0, 1, 1, 2)
-        self.ui.edit_query_string = edit_query_string
-        
         # fix alignment of radio buttons:
         self.ui.layout_query.setAlignment(self.ui.radio_query_string, QtCore.Qt.AlignTop)
         self.ui.layout_query.setAlignment(self.ui.radio_query_file, QtCore.Qt.AlignTop)
-        
-        self.ui.verticalLayout_3.setAlignment(self.ui.box_corpus_select, QtCore.Qt.AlignTop)
-        self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
-        self.ui.verticalLayout_3.setAlignment(self.ui.box_context_mode, QtCore.Qt.AlignTop)
 
+        self.ui.layout_summary.setAlignment(self.ui.radio_no_summary, QtCore.Qt.AlignTop)
+        self.ui.layout_summary.setAlignment(self.ui.radio_summary, QtCore.Qt.AlignTop)
+
+        
         self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords)
         self.ui.stopword_layout.addWidget(self.ui.stopword_switch)
         self.ui.stopword_switch.toggled.connect(self.toggle_stopword_switch)
@@ -236,11 +229,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.setup_menu_actions()
         self.setup_icons()
 
-        width = max(
-            self.ui.horizontalLayout_2.sizeHint().width(),
-            self.ui.formLayout.sizeHint().width())
-        self.ui.list_group_columns.setMaximumSize(QtCore.QSize(width, 16777215))
-        
         self.change_corpus()
 
         self.set_query_button()
@@ -248,12 +236,15 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.setEnabled(False)
         self.ui.menuAnalyse.setEnabled(False)
 
-        # set horizontal splitter: left: full stretch, right: no stretch
-        self.ui.splitter.setStretchFactor(0, 1)
-        self.ui.splitter.setStretchFactor(1, 0)
-        # set vertical splitter: top: no stretch, bottom: full stretch
-        self.ui.splitter_2.setStretchFactor(0, 0)
-        self.ui.splitter_2.setStretchFactor(1, 1)
+        ## set horizontal splitter: left: full stretch, right: no stretch
+        #self.ui.splitter.setStretchFactor(0, 1)
+        #self.ui.splitter.setStretchFactor(1, 0)
+        ## set vertical splitter: top: no stretch, bottom: full stretch
+        #self.ui.splitter_2.setStretchFactor(0, 0)
+        #self.ui.splitter_2.setStretchFactor(1, 1)
+        self.ui.splitter.setStretchFactor(0, 0)
+        self.ui.splitter.setStretchFactor(1, 1)
+
 
         header = self.ui.data_preview.horizontalHeader()
         header.sectionFinallyResized.connect(self.result_column_resize)
@@ -270,7 +261,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
         self.ui.data_preview.horizontalHeader().setMovable(True)
-        self.ui.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectionBehavior(QtGui.QAbstractItemView.SelectRows|QtGui.QAbstractItemView.SelectColumns))
+        self.ui.data_preview.horizontalHeader().setSelectionBehavior(QtGui.QAbstractItemView.SelectColumns)
+        self.ui.data_preview.horizontalHeader().setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+
+        self.ui.data_preview.setSelectionBehavior(self.ui.data_preview.SelectItems)
+        self.ui.data_preview.setSelectionMode(self.ui.data_preview.ExtendedSelection)
+
+
         options.cfg.word_wrap = [0, int(QtCore.Qt.TextWordWrap)][bool(getattr(options.cfg, "word_wrap", False))]
         self.ui.data_preview.setWordWrap(options.cfg.word_wrap)
 
@@ -281,29 +278,21 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.status_progress = QtGui.QProgressBar()
         self.ui.status_progress.hide()
         
-        self.ui.multi_progress_widget = QtGui.QWidget()
-        self.ui.multi_progress_layout = QtGui.QHBoxLayout(self.ui.multi_progress_widget)
         self.ui.multi_query_progress = QtGui.QProgressBar()
         self.ui.multi_query_progress.setFormat("Running query... (%v of %m)")
-        self.ui.multi_status_progress = QtGui.QProgressBar()
-        self.ui.multi_progress_layout.addWidget(self.ui.multi_query_progress)
-        self.ui.multi_progress_layout.addWidget(self.ui.multi_status_progress)
-        self.ui.multi_progress_widget.hide()
+        self.ui.multi_query_progress.hide()
         self.updateMultiProgress.connect(self.ui.multi_query_progress.setValue)
 
-        widget = QtGui.QWidget()
-        layout = QtGui.QHBoxLayout(widget)
-        layout.setContentsMargins(4, 0, 0, 0)
-        layout.addWidget(self.ui.status_message)
-        layout.addWidget(self.ui.status_progress)
-        layout.addWidget(self.ui.multi_progress_widget)
-        layout.addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum))        
-        layout.addWidget(QtGui.QLabel(_translate("MainWindow", "Connection: ", None)))
-        layout.addWidget(self.ui.combo_config)
-
-        self.statusBar().layout().setContentsMargins(0, 0, 0, 0)
-        self.statusBar().setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
-        self.statusBar().addWidget(widget, 1)
+        self.statusBar().layout().setContentsMargins(0, 0, 4, 0)
+        self.statusBar().setMinimumHeight(QtGui.QProgressBar().sizeHint().height())
+        self.statusBar().setMaximumHeight(QtGui.QProgressBar().sizeHint().height())
+        self.statusBar().setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.statusBar().layout().addWidget(self.ui.status_message, 1)
+        self.statusBar().layout().addWidget(self.ui.status_progress, 1)
+        self.statusBar().layout().addWidget(self.ui.multi_query_progress, 1)
+        self.statusBar().layout().addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))        
+        self.statusBar().layout().addWidget(QtGui.QLabel(_translate("MainWindow", "Connection: ", None)))
+        self.statusBar().layout().addWidget(self.ui.combo_config)
 
         self.change_mysql_configuration(options.cfg.current_server)
         self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
@@ -312,7 +301,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if not state:
             self.disable_corpus_widgets()
         
-        self.connection_timer = QtCore.QTimer()
+        self.connection_timer = QtCore.QTimer(self)
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
         
@@ -539,6 +528,18 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_group_down.clicked.connect(lambda: self.move_group_column(direction="down"))
         self.ui.list_group_columns.itemActivated.connect(self.activate_group_column_buttons)
         self.ui.list_group_columns.itemDropped.connect(lambda x: self.add_group_column(item=x))
+        
+        self.ui.button_add_summary_function.clicked.connect(lambda: self.add_function(summary=True))
+        self.ui.button_add_group_function.clicked.connect(lambda: self.add_function(group=True))
+        
+        group = [self.ui.group_context, self.ui.group_groups, self.ui.group_manager]
+        self.ui.exclusive_group_functions = classes.CoqExclusiveGroup(group)
+        for element in group:
+            element.setChecked(False)
+        self.ui.group_manager.setChecked(True)
+        
+        self.ui.list_group_columns.setMinimumHeight(QtGui.QLabel().sizeHint().height() * 5)
+        self.ui.list_group_columns.setMaximumHeight(QtGui.QLabel().sizeHint().height() * 5)
         
         # set up hooks for the summary widgets:
         self.ui.radio_no_summary.clicked.connect(self.change_managing)
@@ -775,11 +776,12 @@ class CoqueryApp(QtGui.QMainWindow):
     def verify_file_name(self):
         file_name = str(self.ui.edit_file_name.text())
         if not os.path.isfile(file_name):
-            self.ui.edit_file_name.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
+            self.ui.edit_file_name.setStyleSheet("QLineEdit { background-color: rgb(255, 255, 192) }")
             self.ui.button_file_options.setEnabled(False)
             return False
         else:
-            self.ui.edit_file_name.setStyleSheet('QLineEdit { background-color: white } ')
+            self.ui.edit_file_name.setStyleSheet("QLineEdit {{ background-color: {} }} ".format(
+                options.cfg.app.palette().color(QtGui.QPalette.Base).name()))
             self.ui.button_file_options.setEnabled(True)
             return True
 
@@ -805,7 +807,6 @@ class CoqueryApp(QtGui.QMainWindow):
         tree.customContextMenuRequested.connect(self.get_output_column_menu)        
         
         tree.addLink.connect(self.add_link)
-        tree.addFunction.connect(self.add_function)
         tree.addGroup.connect(self.add_group_column)
         tree.removeGroup.connect(self.remove_group_column)
         tree.removeItem.connect(self.remove_item)
@@ -823,11 +824,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.stop_progress_indicator()
         self.show_query_status()
         self.resize_rows()
+        print("reaggregation: done")
         
     def run_reaggregation(self, recalculate):
         self.Session.aggregate_data(recalculate)
         
-    def reaggregate(self,recalculate=True):
+    def reaggregate(self, recalculate=True):
         """
         Reaggregate the current data table when changing the visibility of
         the table columns.
@@ -840,12 +842,14 @@ class CoqueryApp(QtGui.QMainWindow):
         self.showMessage("Managing data...")
         self.unfiltered_tokens = len(self.Session.data_table.index)
         self.thread = classes.CoqThread(lambda: self.run_reaggregation(recalculate), parent=self)
+        self.thread.taskException.connect(self.exception_during_query)
         self.thread.taskFinished.connect(self.finalize_reaggregation)
 
         if not self.Session.has_cached_data():
             self.start_progress_indicator()
         
         self.Session.start_timer()
+        print("reaggregate")
         self.thread.start()
 
     @staticmethod
@@ -1081,8 +1085,16 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.check_corpus_widgets()
             
+    def finalize_resize(self):
+        print("resize: done")
+            
     def resize_rows(self):
+        if not options.cfg.word_wrap:
+            return
         self.resize_thread = classes.CoqThread(self.ui.data_preview.resizeRowsToContents, parent=self)
+        self.resize_thread.taskFinished.connect(self.finalize_resize)
+        self.resize_thread.taskException.connect(self.exception_during_query)
+        print("resize: start")
         self.resize_thread.start()
     
     def display_results(self, drop=True):
@@ -1120,15 +1132,24 @@ class CoqueryApp(QtGui.QMainWindow):
         header = self.ui.data_preview.horizontalHeader()
         for i in range(header.count()):
             column = self.table_model.header[header.logicalIndex(i)]
-            if (column in (
-                    "coq_conditional_probability_left", 
-                    "coq_conditional_probability_right",  
-                    "statistics_overall_proportion", 
-                    "statistics_query_proportion",
-                    "statistics_normalized",
-                    "coq_statistics_uniquenessratio") or 
-                 column.startswith(("func_FREQ_NORM", "func_PROPORTION"))):
+            if column.startswith("func_"):
+                manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+                fun = manager.get_function(column)
+                try:
+                    retranslate = dict(zip(COLUMN_NAMES.values(), COLUMN_NAMES.keys()))[fun.get_name()]
+                except (KeyError, AttributeError):
+                    pass
+                else:
+                    column = retranslate
+            if column in ("statistics_proportion", 
+                      "statistics_normalized", "statistics_ttr",
+                      "statistics_group_proportion", "statistics_group_ttr",
+                      "coq_conditional_probability_left", 
+                      "coq_conditional_probability_right",  
+                      "coq_statistics_uniquenessratio"):
                 deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
+            elif column in ("statistics_percent", "statistics_group_percent"):
+                deleg = classes.CoqPercentDelegate(self.ui.data_preview)
             elif column in ("statistics_column_total"):
                 deleg = classes.CoqTotalDelegate(self.ui.data_preview)                
             elif column.startswith("statistics_g_test"):
@@ -1357,10 +1378,11 @@ class CoqueryApp(QtGui.QMainWindow):
         if n is None:
             self.ui.status_progress.setRange(0, 0)
             self.ui.status_progress.show()
+            self.ui.multi_query_progress.hide()
         else:
             self.ui.multi_query_progress.setMaximum(n)
-            self.ui.multi_status_progress.setRange(0, 0)
-            self.ui.multi_progress_widget.show()
+            self.ui.multi_query_progress.setRange(0, 0)
+            self.ui.multi_query_progress.show()
             
         self._multi_progress = n
         
@@ -1368,8 +1390,8 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Stop the progress indicator from moving, and hide it as well. """
         self.ui.status_progress.setRange(0, 1)
         self.ui.status_progress.hide()
-        self.ui.multi_status_progress.setRange(0, 1)
-        self.ui.multi_progress_widget.hide()
+        self.ui.multi_query_progress.setRange(0, 1)
+        self.ui.multi_query_progress.hide()
         
     def finalize_query(self, to_file=False):
         self.query_thread = None
@@ -1385,14 +1407,15 @@ class CoqueryApp(QtGui.QMainWindow):
             self.stop_progress_indicator()
             
             if isinstance(self.Session, StatisticsSession):
-                self.ui.group_aggregation.setEnabled(False)
+                self.ui.group_manager.setEnabled(False)
             else:
-                self.ui.group_aggregation.setEnabled(True)
+                self.ui.group_manager.setEnabled(True)
             
         # Create an alert in the system taskbar to indicate that the query has 
         # completed:
         options.cfg.app.alert(self, 0)
         logger.info("Done")
+        print("run_query: done")
         
     def get_output_column_menu(self, point=None, selection=[]):
         if point:
@@ -1570,7 +1593,7 @@ class CoqueryApp(QtGui.QMainWindow):
             menu.addSeparator()
             
             action = QtGui.QAction("&Add function...", self)
-            action.triggered.connect(lambda: self.add_function_to_columns(selection))
+            action.triggered.connect(lambda: self.add_function(selection))
             menu.addAction(action)
             
             if all([x.startswith("func_") for x in selection]):
@@ -1961,6 +1984,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
             self.query_thread.taskFinished.connect(lambda: self.finalize_query(options.cfg.to_file))
             self.query_thread.taskException.connect(self.exception_during_query)
+            print("run_queries: start")
             self.query_thread.start()
 
     def run_statistics(self):
@@ -2649,20 +2673,57 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.table_links[options.cfg.current_server].append(link)
             self.add_table_link(link)
             
-    def add_function_to_columns(self, columns):
+    def add_function(self, columns=[], summary=False, group=False):
         from . import functionapply
 
+        session = options.cfg.main_window.Session
+        if session is not None:
+            manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+        else:
+            manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
+
+        if group or summary:
+            if group:
+                types = [functions.Entropy, functions.Percent, 
+                         functions.Proportion, functions.Tokens, 
+                         functions.Types, functions.TypeTokenRatio]
+                checked = manager._gf
+  
+            else:
+                types = [functions.Entropy, 
+                         functions.Freq, functions.FreqNorm,
+                         functions.FreqPTW, functions.FreqPMW,
+                         functions.Percent, functions.Proportion, 
+                         functions.Tokens, functions.Types, 
+                         functions.TypeTokenRatio,
+                         functions.CorpusSize, functions.SubcorpusSize]
+                checked = manager._summary_functions
+                         
+            kwargs = {
+                "function_types": types,
+                "max_parameters": 0,
+                "checkable": True,
+                "checked": checked,
+                "edit_label": False}
+        else:
+            kwargs = {"function_class": functions.StringFunction}
+
         response = functionapply.FunctionDialog.set_function(
-            columns=columns, parent=self)
+            columns=columns, **kwargs, parent=self)
 
         if not response:
             return
+
+        if group:
+            manager._gf = response
+        elif summary:
+            manager._summary_functions = response
         else:
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
-            session = options.cfg.main_window.Session
-            manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
             manager.add_column_function(fun)
+
+        if hasattr(self, "table_model"):
             self.update_columns()
 
     def edit_function(self, column):
@@ -2685,58 +2746,6 @@ class CoqueryApp(QtGui.QMainWindow):
             manager.remove_column_function(func)
         self.update_columns()
             
-
-    def add_function(self, item):
-        """
-        Add an output column that applies a function to the selected item.
-        
-        This method opens a dialog that allows to choose a function that 
-        may be applied to the selected item. This function is added as an
-        additional output column to the list of output columns.
-        
-        Parameters
-        ----------
-        item : CoqTreeItem
-            An entry in the output column list
-        """
-
-        from . import functionapply
-        column = 0
-        parent = item.parent()
-
-        _, hashed, tab, feat = self.resource.split_resource_feature(item.objectName())
-
-        if hashed is not None:
-            _, res = get_by_hash(hashed)
-        else:
-            res = self.resource
-            
-        feature = getattr(res, "{}_{}".format(tab, feat))
-        
-        response = functionapply.FunctionDialog.display(
-            table=str(parent.text(0)),
-            feature=feature, rc_feature = item.objectName(), parent=self)
-        
-        if not response:
-            return
-        else:
-            label, func = response
-            
-            child_func = classes.CoqTreeFuncItem()
-            child_func.setObjectName("func.{}".format(item.objectName()))
-            child_func.setFunction(func)
-            child_func.rc_feature = item.objectName()
-            child_func.setText(column, label.format(N=""))
-            
-            if hashed is not None:
-                child_func.full_label = "func.{}_{}_{}".format(res.db_name, tab, feat)
-            else:
-                child_func.full_label = "func.{}".format(item.objectName())
-            child_func.setCheckState(column, QtCore.Qt.Checked)
-
-            item.parent().addChild(child_func)
-            item.parent().setExpanded(True)
-
     def remove_item(self, item):
         """
         Remove either a link or a function from the list of output columns.        

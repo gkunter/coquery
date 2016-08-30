@@ -109,6 +109,7 @@ COLUMN_NAMES = {
     "statistics_group_tokens": "Group: Number of matches",
     "statistics_group_types": "Group: Number of unique matches",
     "statistics_group_proportion": "Group: Proportion",
+    "statistics_group_percent": "Group: Percent",
     "statistics_group_ttr": "Group: Type-token ratio",
     "statistics_column_total": "ALL",
 
@@ -119,8 +120,21 @@ COLUMN_NAMES = {
     "coq_statistics_uniques": "Uniques",
     "coq_statistics_uniquenessratio": "Uniqueness ratio",
     "coq_statistics_averagefrequency": "Average frequency",
-
         }
+
+FUNCTION_DESC = {
+    "statistics_corpus_size": "Size of the corpus in words",
+    "statistics_subcorpus_size": "Size of the subcorpus in words",
+    "statistics_entropy": "Calculate Shannon's entropy",
+    "statistics_frequency": "Count the frequency of each match",
+    "statistics_normalized": "Count the frequency of each match, normalized by corpus size in words",
+    "statistics_per_thousand_words": "Calculate the average frequency of each match per thousand words",
+    "statistics_per_million_words": "Calculate the average frequency of each match per million words",
+    "statistics_proportion": "Calculate the proportion for each match",
+    "statistics_percent": "Calculate the percentage for each match",
+    "statistics_tokens": "Count the number of tokens",
+    "statistics_types": "Count the number of types",
+    "statistics_ttr": "Calculate the type-token ratio"}
 
 PREFERRED_ORDER = ["corpus_word", "word_label", 
                    "corpus_pos", "word_pos", "pos_label", 

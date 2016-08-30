@@ -17,7 +17,6 @@ import logging
 import collections
 import numpy as np
 import pandas as pd
-import datetime
 
 from coquery import options
 from coquery import queries
@@ -83,7 +82,8 @@ class CoqThread(QtCore.QThread):
                 self.parent().exc_info = sys.exc_info()
                 self.parent().exception = e
             self.taskException.emit(e)
-            print(e)
+            print("CoqThread.run():", e)
+            raise e
         self.taskFinished.emit()
         return result
 
@@ -106,6 +106,17 @@ class CoqHorizontalHeader(QtGui.QHeaderView):
         if self._resizing:
             self.sectionFinallyResized.emit(*self._args, **self._kwargs)
             self._resizing = False
+        else:
+            ix = self.logicalIndexAt(e.pos())
+            select = self.parent().selectionModel()
+            model = self.model()
+            top = model.index(0, ix, QtCore.QModelIndex())
+            bottom = model.index(0, ix, QtCore.QModelIndex())
+            selection = QtGui.QItemSelection(top, bottom)
+            select.select(selection, 
+                                QtGui.QItemSelectionModel.Toggle | 
+                                QtGui.QItemSelectionModel.Columns)
+
         self.button_pressed = False
         
     def mousePressEvent(self, e):
@@ -323,6 +334,218 @@ class CoqSwitch(QtGui.QWidget):
         self._on = False
         self._update()
 
+class CoqExclusiveGroup(object):
+    def __init__(self, l):
+        self._widget_list = [x for x in l if hasattr(x, "toggled")]
+        _checked = None
+        self._maxwidth = 0
+        for element in self._widget_list:
+            self._maxwidth = max(self._maxwidth, element.sizeHint().width())
+            if _checked != None:
+                if element.isChecked():
+                    element.setChecked(False)
+            else:
+                _checked = element.isChecked()
+
+        for element in self._widget_list:
+            element.setMaximumWidth(self._maxwidth)
+            element.setMinimumWidth(self._maxwidth)
+            element.toggled.connect(lambda x: self.toggle_group(x))
+        
+    def toggle_group(self, widget):
+        if widget.isChecked():
+            for element in [x for x in self._widget_list if x != widget]:
+                if element.isChecked():
+                    element.setChecked(False)
+
+class CoqGroupBox(QtGui.QGroupBox):
+    """
+    """
+
+    style_opened = """
+        CoqGroupBox {{
+            background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 {button_button}, stop: 1 {button_midlight});
+            border: 1px solid gray;
+            border-radius: 2px;
+            border-style: inset;
+            margin-top: {header_size};
+        }}
+
+        CoqGroupBox::title {{
+            background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 {button_midlight}, stop: 1 {button_button});
+            border-top: 1px;
+            border-left: 1px;
+            border-right: 1px;
+            border-bottom: 0px;
+            border-radius: 5px;
+            border-color: {button_mid};
+            border-style: inset;
+
+            subcontrol-origin: margin;
+            subcontrol-position: top left; /* position at the top center */
+            padding: 0 {pad_right}px 0 0;
+            margin-top: 0px;
+            margin-left: 0px;
+            margin-bottom: 2px;
+        }}
+        
+        CoqGroupBox::indicator {{
+            width: {icon_size}px;
+            height: {icon_size}px;
+        }}
+
+        CoqGroupBox::indicator:unchecked {{
+            image: url({path}/{sign_down});
+        }}
+        
+        CoqGroupBox::indicator:checked {{
+            image: url({path}/{sign_up});
+        }}"""
+        
+    style_closed = """
+        CoqGroupBox {{
+            border: 0px solid gray;
+            border-radius: 0px;
+            margin-top: 0px; 
+            margin-left: 0px;
+            margin-right: 0px;
+            margin-bottom: 4px;
+        }}
+
+        CoqGroupBox::title {{
+            background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 {button_button}, stop: 1 {button_midlight});
+            border-top: 1px;
+            border-left: 1px;
+            border-right: 1px;
+            border-bottom: 1px;
+            border-radius: 5px;
+            border-color: {button_mid};
+            border-style: outset;
+
+            subcontrol-origin: margin;
+            subcontrol-position: top left; /* position at the top center */
+            padding: 0 {pad_right}px 0 0;
+            margin-top: 1px;
+        }}
+        
+        CoqGroupBox::indicator {{
+            width: {icon_size}px;
+            height: {icon_size}px;
+        }}
+
+        CoqGroupBox::indicator:unchecked {{
+            image: url({path}/{sign_down});
+        }}
+        
+        CoqGroupBox::indicator:checked {{
+            image: url({path}/{sign_up});
+        }}"""
+
+    toggled = QtCore.Signal(QtGui.QWidget)
+    
+    def __init__(self, *args, **kwargs):
+        super(CoqGroupBox, self).__init__(*args, **kwargs)
+        self._text = None
+        self._alternative = None
+        self.clicked.connect(self.setChecked)
+        self.setStyleSheet(self.style_opened)
+
+    def setTitle(self, text, *args, **kwargs):
+        super(CoqGroupBox, self).setTitle(text, *args, **kwargs)
+        self._text = text
+        if self._alternative is "":
+            self._alternative = text
+        
+    def setAlternativeTitle(self, text):
+        self._alternative = text
+        
+    def title(self):
+        return self._text
+    
+    def alternativeTitle(self):
+        return self._alternative
+
+    def _hide_content(self, element=None):
+        if element == None:
+            element = self.layout()
+        if element == None:
+            return
+        if element.isWidgetType():
+            element.hide()
+        else:
+            for x in element.children():
+                self._show_content(x)
+            for i in range(element.count()):
+                item = element.itemAt(i)
+                if isinstance(item, QtGui.QWidgetItem):
+                    self._hide_content(item.widget())
+                else:
+                    self._hide_content(item)
+
+    def _show_content(self, element=None):
+        if element == None:
+            element = self.layout()
+        if element == None:
+            return
+        if element.isWidgetType():
+            element.show()
+        else:
+            for x in element.children():
+                self._show_content(x)
+            for i in range(element.count()):
+                item = element.itemAt(i)
+                if isinstance(item, QtGui.QWidgetItem):
+                    self._show_content(item.widget())
+                else:
+                    self._show_content(item)
+
+    def sizeHint(self, *args, **kwargs):
+        x = super(CoqGroupBox, self).sizeHint(*args, **kwargs)
+        try:
+            x.setWidth(self._width)
+        except AttributeError:
+            pass
+        return x
+
+    def size(self, *args, **kwargs):
+        x = super(CoqGroupBox, self).size(*args, **kwargs)
+        return x
+
+    def setChecked(self, checked):
+        super(CoqGroupBox, self).setChecked(checked)
+        title_width = self.fontMetrics().width(self._text)
+
+        if checked == True:
+            s = self.style_opened
+            self._show_content()
+        else:
+            s = self.style_closed
+            self._hide_content()
+
+        icon_size = QtGui.QPushButton().sizeHint().height() - 6
+        header_size = icon_size + 1
+        pad = 10
+        s = s.format(path=os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG"),
+                    sign_up="sign-minimize.png", 
+                    sign_down="sign-maximize.png",
+                    icon_size=icon_size, header_size=header_size,
+                    pad_right=pad,
+                    button_light=options.cfg.app.palette().color(QtGui.QPalette.Light).name(),
+                    button_midlight=options.cfg.app.palette().color(QtGui.QPalette.Midlight).name(),
+                    button_button=options.cfg.app.palette().color(QtGui.QPalette.Button).name(),
+                    button_mid=options.cfg.app.palette().color(QtGui.QPalette.Mid).name(),
+                    button_dark=options.cfg.app.palette().color(QtGui.QPalette.Dark).name(),
+                    box_light=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
+                    box_dark=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
+                    focus=options.cfg.app.palette().color(QtGui.QPalette.Highlight).name(),
+                    
+                    )
+        self.setStyleSheet(s)
+        self.toggled.emit(self)
+        
 class CoqDetailBox(QtGui.QWidget):
     """
     Define a QLayout class that has the QPushButton 'header' as a clickable 
@@ -505,19 +728,16 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
         text = utf8(text)
         if self.parent():
             parent = self.parent().objectName()
-        feature = unicode(self.objectName())
+        feature = utf8(self.objectName())
         if feature.endswith("_table"):
-            self.setToolTip(column, "Table: {}".format(text))
-        elif feature.startswith("coquery_") or feature.startswith("frequency_"):
-            self.setToolTip(column, "Special column:\n{}".format(text))
-        else:
-            self.setToolTip(column, "Data column:\n{}".format(text))
+            self.setToolTip(column, "Corpus table: {}".format(text))
+        self.setToolTip(column, "Corpus field:\n{}".format(text))
 
         super(CoqTreeItem, self).setText(column, text)
 
     def setObjectName(self, name):
         """ Store resource variable name as object name. """
-        self._objectName = unicode(name)
+        self._objectName = utf8(name)
 
     def objectName(self):
         """ Retrieve resource variable name from object name. """
@@ -569,7 +789,7 @@ class CoqTreeItem(QtGui.QTreeWidgetItem):
             # do not propagate a partially checked state
             return
         
-        if str(self._objectName).endswith("_table") and check_state:
+        if utf8(self._objectName).endswith("_table") and check_state:
             self.setExpanded(True)
         
         # propagate check state to children:
@@ -597,17 +817,6 @@ class CoqTreeLinkItem(CoqTreeItem):
     def setText(self, column, text, *args):
         super(CoqTreeLinkItem, self).setText(column, text)
         #self.setToolTip(column, "External table: {}\nLinked by: {}".format(text, self.link.feature_name))
-
-class CoqTreeFuncItem(CoqTreeItem):
-    """
-    Define a CoqTreeItem class that represents a function column.
-    """
-    def setFunction(self, func):
-        self._func = func
-        self.full_label = ""
-        
-    def setText(self, column, label, *args):
-        super(CoqTreeFuncItem, self).setText(column, label)
 
 class CoqTreeWidget(QtGui.QTreeWidget):
     """
@@ -691,7 +900,7 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
             for child in [root.child(i) for i in range(root.childCount())]:
                 if child.checkState(column) == QtCore.Qt.Checked:
-                    check_list.append(str(child._objectName))
+                    check_list.append(utf8(child._objectName))
         return check_list
 
 class LogTableModel(QtCore.QAbstractTableModel):
@@ -964,12 +1173,14 @@ class CoqListWidget(QtGui.QListWidget):
         self.columns = []
     
     def find_resource(self, rc_feature):
+        rc_feature = utf8(rc_feature)
         for i, (_, x) in enumerate(self.columns):
             if x == rc_feature:
                 return i
         return None
     
     def get_item(self, rc_feature):
+        rc_feature = utf8(rc_feature)
         for item, x in self.columns:
             if x == rc_feature:
                 return item
@@ -982,6 +1193,7 @@ class CoqListWidget(QtGui.QListWidget):
         return None
     
     def add_resource(self, rc_feature):
+        rc_feature = utf8(rc_feature)
         if self.get_item(rc_feature) is not None:
             return
         label = getattr(options.cfg.main_window.resource, rc_feature)
@@ -993,6 +1205,7 @@ class CoqListWidget(QtGui.QListWidget):
         return new_item
         
     def insert_resource(self, i, rc_feature):
+        rc_feature = utf8(rc_feature)
         if self.get_item(rc_feature) is not None:
             return
         label = getattr(options.cfg.main_window.resource, rc_feature)
@@ -1009,6 +1222,7 @@ class CoqListWidget(QtGui.QListWidget):
         self.remove_resource(rc_feature)
             
     def remove_resource(self, rc_feature):
+        rc_feature = utf8(rc_feature)
         i = self.find_resource(rc_feature)
         if i != None:
             item, _ = self.columns.pop(i)
@@ -1031,6 +1245,21 @@ class CoqTagEdit(QtGui.QLineEdit):
         if self.filter_examples:
             self.setPlaceholderText("e.g. {}".format(random.sample(self.filter_examples, 1)[0]))
 
+class CoqTagContainer(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(CoqTagContainer, self).__init__(parent)
+        self.layout = CoqFlowLayout(spacing=5)                                                                 
+        self.setLayout(self.layout)
+        # make this widget take up all available space:
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+
+    def add(self, item):
+        self.layout.addWidget(item)
+
 class CoqTagBox(QtGui.QWidget):
     """ Defines a QWidget class that contains and manages filter tags. """
     
@@ -1040,7 +1269,7 @@ class CoqTagBox(QtGui.QWidget):
             label = label + ":"
         self._label = label
         self.setupUi()
-        self.edit_tag.returnPressed.connect(lambda: self.addTag(str(self.edit_tag.text())))
+        self.edit_tag.returnPressed.connect(lambda: self.addTag(utf8(self.edit_tag.text())))
         self.edit_tag.textEdited.connect(self.editTagText)
         # self._tagList stores the 
         self._tagList = []
@@ -1105,7 +1334,7 @@ class CoqTagBox(QtGui.QWidget):
 
         self.setAcceptDrops(True)
 
-        col =options.cfg.app.palette().color(QtGui.QPalette.Light)
+        col = options.cfg.app.palette().color(QtGui.QPalette.Light)
         color = "{ background-color: rgb(%s, %s, %s) ; }" % (col.red(), col.green(), col.blue())
         S = 'QScrollArea {}'.format(color)
         self.scroll_content.setStyleSheet(S)
@@ -1139,7 +1368,7 @@ class CoqTagBox(QtGui.QWidget):
     def addTag(self, s):
         """ Add the current text as a query filter. """
         if not s:
-            s = str(self.edit_tag.text())
+            s = utf8(self.edit_tag.text())
         tag = self._tagType(self)
 
         tag.setContent(s)
@@ -1173,7 +1402,7 @@ class CoqTagBox(QtGui.QWidget):
             True if there is a tag that contains the string as a label, or 
             False otherwise.        
         """
-        for tag_label in [str(self.cloud_area.itemAt(x).widget().text()) for x in range(self.cloud_area.count())]:
+        for tag_label in [utf8(self.cloud_area.itemAt(x).widget().text()) for x in range(self.cloud_area.count())]:
             if s == tag_label:
                 return True
         return False
@@ -1222,7 +1451,6 @@ class CoqTagBox(QtGui.QWidget):
         """ Set the current background to default. """
         self.edit_tag.setStyleSheet("CoqTagEdit { border-radius: 5px; font: condensed; }")
 
-
 class QueryFilterBox(CoqTagBox):
     """
     Define a CoqTagBox that manages query filters.
@@ -1232,7 +1460,7 @@ class QueryFilterBox(CoqTagBox):
         Remove the tag from the tag cloud as well as the filter from the 
         global filter list. 
         """
-        options.cfg.filter_list = [x for x in options.cfg.filter_list if x.text != str(tag.text())]
+        options.cfg.filter_list = [x for x in options.cfg.filter_list if x.text != utf8(tag.text())]
         super(QueryFilterBox, self).destroyTag(tag)
     
     def addTag(self, *args):
@@ -1248,7 +1476,7 @@ class QueryFilterBox(CoqTagBox):
             if args:
                 filt.text = args[0]
             else:
-                filt.text = str(self.edit_tag.text())
+                filt.text = utf8(self.edit_tag.text())
         except InvalidFilterError:
             self.edit_tag.setStyleSheet('CoqTagEdit { border-radius: 5px; font: condensed;background-color: rgb(255, 255, 192); }')
         else:
@@ -1306,6 +1534,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         super(CoqTableModel, self).__init__(parent, *args)
         self._parent = parent
 
+        df = pd.DataFrame(self.string_folder(df))
+
         self.rownames = [x+1 if np.isreal(x) else x for x in df.index.values]
         self.content = df[[x for x in df.columns if not x.startswith("coquery_invisible")]]
         self.invisible_content = df[[x for x in df.columns if x.startswith("coquery_invisible")]]
@@ -1316,7 +1546,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self._dtypes = []
         self._hidden_columns = []
 
-        self.rownames = [str(i+1) if isinstance(x, (np.integer, int)) else str(x) for i, x in enumerate(df.index)]
+        self.rownames = [utf8(i+1) if isinstance(x, (np.integer, int)) else utf8(x) for i, x in enumerate(df.index)]
 
         # prepare look-up lists that speed up data retrieval:
         for i, col in enumerate(self.header):
@@ -1353,7 +1583,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             return (not self._manager.is_hidden_column(col) and 
                 row_vis[ix])
         except Exception as e:
-            print(e)
+            print("is_visible():", e)
             return False
     
     def data(self, index, role):
@@ -1463,7 +1693,34 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent=None):
         """ Return the number of columns. """
         return self.content.columns.size
+
+    def string_folder(self, df):
+        """
+        Yield the rows from the results with all string values folded.
+
+        This folder is used in yield_query_results, and helps to reduce the
+        amount of memory consumed by the query results data frames. It does 
+        so by keeping a map of string values so that each occurrence of a 
+        string in the query result is mapped to the identical string object,
+        and not to a new string object with the same content. 
         
+        This string folder is based on:
+        http://www.mobify.com/blog/sqlalchemy-memory-magic/
+        """
+        string_map = {}
+        
+        def _lookup(value):
+            try:
+                return string_map[value]
+            except KeyError:
+                string_map[value] = utf8(value)
+                return string_map[value]
+            
+        for col in df.columns:
+            if df.dtypes[col] == object:
+                df[col] = df[col].apply(_lookup)
+        return df
+                    
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     fill = False
 
@@ -1568,6 +1825,11 @@ class CoqTotalDelegate(CoqResultCellDelegate):
         self.bg_color = self._app.palette().color(QtGui.QPalette.Button)
 
 class CoqProbabilityDelegate(CoqResultCellDelegate):
+    max_value = 1
+    prefix = ""
+    suffix = ""
+    format_str = "{}{}{}"
+    
     def paint(self, painter, option, index):
         """
         Paint the results cell.
@@ -1576,17 +1838,18 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         from the table's :func:`data` method, using the DecorationRole role.
         On mouse-over, the cell is rendered like a clickable link.
         """
-        content = unicode(index.data(QtCore.Qt.DisplayRole))
-        if not content:
-            return
         painter.save()
 
         align = index.data(QtCore.Qt.TextAlignmentRole)
         try:
             value = float(index.data(QtCore.Qt.DisplayRole))
         except ValueError:
-            value = None
+            print(1, value)
+            painter.restore()
+            return 
         
+        content = self.format_str.format(self.prefix, value, self.suffix)
+
         # show content as a link on mouse-over:
         if option.state & QtGui.QStyle.State_MouseOver:
             font = painter.font()
@@ -1597,9 +1860,9 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         if bg:
             if option.state & QtGui.QStyle.State_Selected:
                 painter.fillRect(option.rect, bg)
-            elif value:
+            elif value != 0:
                 rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
-                rect.setWidth(int(option.rect.width() * min(1, value)))
+                rect.setWidth(int(option.rect.width() * min(self.max_value, value)/self.max_value))
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
         if fg: 
             painter.setPen(QtGui.QPen(fg))
@@ -1609,12 +1872,12 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
                 painter.drawText(
                     option.rect.adjusted(2, 0, 2, 0), 
                     _left_align | int(QtCore.Qt.TextWordWrap), 
-                    content if isinstance(content, str) else str(content))
+                    content)
             else:
                 painter.drawText(
                     option.rect.adjusted(-2, 0, -2, 0), 
                     _right_align | int(QtCore.Qt.TextWordWrap), 
-                    content if isinstance(content, str) else str(content))
+                    content)
         finally:
             painter.restore()
 
@@ -1627,6 +1890,11 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
                 #return super(CoqProbabilityDelegate, self).get_background(option, index)
         #except ValueError:
             #return super(CoqProbabilityDelegate, self).get_background(option, index)
+
+class CoqPercentDelegate(CoqProbabilityDelegate):
+    max_value = 100
+    format_str = "{}{:3.1f}{}"
+    suffix = "%"
 
 class CoqLikelihoodDelegate(CoqResultCellDelegate):
     fill = True

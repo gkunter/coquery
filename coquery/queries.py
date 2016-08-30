@@ -195,11 +195,9 @@ class TokenQuery(object):
                             print(query_string)
                             print(e)
                             raise e
-                        df = pd.DataFrame(self.string_folder(results))
-                        if not len(df.index):
+                        df = pd.DataFrame(self.string_folder(results), columns=results.keys())
+                        if len(df) == 0:
                             df = pd.DataFrame(columns=results.keys())
-                        else:
-                            df.columns = results.keys()
                         results = None
 
                         if options.cfg.use_cache:
@@ -223,7 +221,7 @@ class TokenQuery(object):
                         except AttributeError:
                             pass
 
-            if not df.empty:
+            if len(df) > 0:
                 if self.results_frame.empty:
                     self.results_frame = df
                 else:

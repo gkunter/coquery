@@ -173,6 +173,7 @@ class Session(object):
                 logger.info("Start query: '{}'".format(current_query.query_string))
             current_query.run()
             
+            # TODO: store query results in a l
             if not to_file:
                 self.data_table = pd.concat([self.data_table, current_query.results_frame])
             else:
@@ -230,12 +231,11 @@ class Session(object):
         Use the current manager to process the data table. If requested, use 
         a cached table (e.g. for sorting when no recalculation is needed).
         """
+        
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
         
-        # if no explicit recalculation is requested, try to use a cached 
-        # output object:
-        if not recalculate and self.has_cached_data():
-            df = self._manager_cache[(self, manager)]
+        if not recalculate:
+            df = self.output_object
         else:
             df = self.data_table
             df.index = range(len(df))
