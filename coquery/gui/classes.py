@@ -17,6 +17,7 @@ import logging
 import collections
 import numpy as np
 import pandas as pd
+import datetime
 
 from coquery import options
 from coquery import queries
@@ -1269,21 +1270,27 @@ class CoqTableView(QtGui.QTableView):
         def set_height(n, row):
             # determine the maximum required height for this row by 
             # checking the height of each cell
-            height = 0
+            
             for col in row.index:
-                height = max(height, 
-                             metric.boundingRect(rects[col], self._wrap_flag,
-                                          str(row[col])).height())
-            self.resizeRow.emit(n, height)
+                height = max(0, metric.boundingRect(rects[col], self._wrap_flag, str(row[col])).height())
+            if self.rowHeight(n) != height:
+                self.resizeRow.emit(n, height)
+            
+        cols = [x for x in self.model().header if x in (("coq_context_left",
+                                                         "coq_context_right", 
+                                                         "coq_context_string"))]
+        if not cols:
+            return
 
         df = self.model().content
+        
         metric = self.fontMetrics()
         # create a dictionary of QRect, each as wide as a column in the 
         # table
         rects = dict([
             (df.columns[i], QtCore.QRect(0, 0, self.columnWidth(i) - 2, 99999)) for i in range(self.horizontalHeader().count())])
 
-        df.apply(lambda x: set_height(np.where(df.index == x.name)[0], x), axis="columns")
+        df[cols].apply(lambda x: set_height(np.where(df.index == x.name)[0], x, 2), axis="columns")
 
     def resizeColumnsToContents(self, *args, **kwargs):
         self.setVisible(False)
