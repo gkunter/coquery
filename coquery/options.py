@@ -381,15 +381,16 @@ class Options(object):
 
         # create a dictionary that contains the corpora available for the 
         # current connection:
-        self.corpus_argument_dict = {
-            "help": "specify the corpus to use", 
-            "choices": [utf8(x) for x in get_available_resources(self.args.current_server).keys()], 
-            "type": type(str(""))}
-        
         if sys.version_info < (3, 0):
-            l = [utf8(x) for x in self.corpus_argument_dict["choices"]]
-            self.corpus_argument_dict["choices"] = l
-        self.corpus_argument_dict["choices"] = sorted(self.corpus_argument_dict["choices"])
+            self.corpus_argument_dict = {
+                "help": "specify the corpus to use", 
+                "choices": sorted([x.encode("utf-8") for x in get_available_resources(self.args.current_server).keys()]), 
+                "type": type(str(""))}
+        else:
+            self.corpus_argument_dict = {
+                "help": "specify the corpus to use", 
+                "choices": sorted([utf8(x) for x in get_available_resources(self.args.current_server).keys()]), 
+                "type": type(str(""))}
 
         # add the corpus names as possible values for the argument parser:
         self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
