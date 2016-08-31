@@ -15,6 +15,7 @@ from __future__ import unicode_literals
 from coquery import options
 from coquery import functions
 from coquery.defines import *
+from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtGui
 from .ui.addFunctionUi import Ui_FunctionsDialog
 
@@ -65,7 +66,7 @@ class FunctionDialog(QtGui.QDialog):
     def set_header(self, columns):
         session = options.cfg.main_window.Session
         self.ui.label_description.setText(
-            self.ui.label_description.text().format(
+            utf8(self.ui.label_description.text()).format(
                 ", ".join([session.translate_header(x) for x in columns])))
 
     def select_function(self, func):
@@ -110,7 +111,7 @@ class FunctionDialog(QtGui.QDialog):
         return func_list
 
     def check_label(self):
-        s = str(self.ui.edit_label.text())
+        s = utf8(self.ui.edit_label.text())
         if self._auto_label:
             self._auto_label = False
         elif not s:
@@ -142,7 +143,7 @@ class FunctionDialog(QtGui.QDialog):
                 self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
             else:
                 self.ui.parameter_box.setEnabled(True)
-                if not func.validate_input(self.ui.edit_function_value.text()):
+                if not func.validate_input(utf8(self.ui.edit_function_value.text())):
                     self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
                 else:
@@ -173,14 +174,14 @@ class FunctionDialog(QtGui.QDialog):
     def exec_(self):
         result = super(FunctionDialog, self).exec_()
         if result == QtGui.QDialog.Accepted:
-            if self.checked is not None:
+            if self.checkable:
                 l = []
                 for i in range(self.ui.list_functions.count()):
                     if self.ui.list_functions.item(i).checkState():
                         l.append(self.function_list[i])
                 return l
             else:
-                value = self.ui.edit_function_value.text()
+                value = utf8(self.ui.edit_function_value.text())
                 escaped = str(value).replace("\\", "\\\\")
                 escaped = escaped.replace("'", "\\'")
                 escaped = escaped.replace("{", "{{")
@@ -189,9 +190,9 @@ class FunctionDialog(QtGui.QDialog):
                 if self._auto_label:
                     label = None
                 else:
-                    label = str(self.ui.edit_label.text())
+                    label = utf8(self.ui.edit_label.text())
                 func = self.function_list[self.ui.list_functions.currentRow()]
-                aggr = str(self.ui.combo_combine.currentText())
+                aggr = utf8(self.ui.combo_combine.currentText())
                 if aggr == "":
                     aggr = func.default_aggr
 
