@@ -17,6 +17,7 @@ import logging
 import collections
 import numpy as np
 import pandas as pd
+import datetime
 
 from coquery import options
 from coquery import queries
@@ -364,6 +365,7 @@ class CoqGroupBox(QtGui.QGroupBox):
 
     style_opened = """
         CoqGroupBox {{
+            font: {title_weight};
             background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                             stop: 0 {button_button}, stop: 1 {button_midlight});
             border: 1px solid gray;
@@ -373,6 +375,8 @@ class CoqGroupBox(QtGui.QGroupBox):
         }}
 
         CoqGroupBox::title {{
+            font: {title_weight};
+                             
             background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                             stop: 0 {button_midlight}, stop: 1 {button_button});
             border-top: 1px;
@@ -406,6 +410,7 @@ class CoqGroupBox(QtGui.QGroupBox):
         
     style_closed = """
         CoqGroupBox {{
+            font: {title_weight};
             border: 0px solid gray;
             border-radius: 0px;
             margin-top: 0px; 
@@ -415,6 +420,7 @@ class CoqGroupBox(QtGui.QGroupBox):
         }}
 
         CoqGroupBox::title {{
+            font: {title_weight};
             background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                             stop: 0 {button_button}, stop: 1 {button_midlight});
             border-top: 1px;
@@ -446,9 +452,36 @@ class CoqGroupBox(QtGui.QGroupBox):
 
     toggled = QtCore.Signal(QtGui.QWidget)
     
+    def set_style(self, **kwargs):
+        if self.isChecked():
+            s = self.style_opened
+        else:
+            s = self.style_closed
+        
+        icon_size = QtGui.QPushButton().sizeHint().height() - 6
+        header_size = icon_size + 1
+        pad = 10
+        if "title_weight" not in kwargs:
+            kwargs["title_weight"] = "normal"
+        s = s.format(path=os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG"),
+                    sign_up="sign-minimize.png", 
+                    sign_down="sign-maximize.png",
+                    icon_size=icon_size, header_size=header_size,
+                    pad_right=pad,
+                    button_light=options.cfg.app.palette().color(QtGui.QPalette.Light).name(),
+                    button_midlight=options.cfg.app.palette().color(QtGui.QPalette.Midlight).name(),
+                    button_button=options.cfg.app.palette().color(QtGui.QPalette.Button).name(),
+                    button_mid=options.cfg.app.palette().color(QtGui.QPalette.Mid).name(),
+                    button_dark=options.cfg.app.palette().color(QtGui.QPalette.Dark).name(),
+                    box_light=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
+                    box_dark=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
+                    focus=options.cfg.app.palette().color(QtGui.QPalette.Highlight).name(),
+                    **kwargs)
+        self.setStyleSheet(s)
+    
     def __init__(self, *args, **kwargs):
         super(CoqGroupBox, self).__init__(*args, **kwargs)
-        self._text = None
+        self._text = ""
         self._alternative = None
         self.clicked.connect(self.setChecked)
         self.setStyleSheet(self.style_opened)
@@ -519,31 +552,11 @@ class CoqGroupBox(QtGui.QGroupBox):
         title_width = self.fontMetrics().width(self._text)
 
         if checked == True:
-            s = self.style_opened
             self._show_content()
         else:
-            s = self.style_closed
             self._hide_content()
 
-        icon_size = QtGui.QPushButton().sizeHint().height() - 6
-        header_size = icon_size + 1
-        pad = 10
-        s = s.format(path=os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG"),
-                    sign_up="sign-minimize.png", 
-                    sign_down="sign-maximize.png",
-                    icon_size=icon_size, header_size=header_size,
-                    pad_right=pad,
-                    button_light=options.cfg.app.palette().color(QtGui.QPalette.Light).name(),
-                    button_midlight=options.cfg.app.palette().color(QtGui.QPalette.Midlight).name(),
-                    button_button=options.cfg.app.palette().color(QtGui.QPalette.Button).name(),
-                    button_mid=options.cfg.app.palette().color(QtGui.QPalette.Mid).name(),
-                    button_dark=options.cfg.app.palette().color(QtGui.QPalette.Dark).name(),
-                    box_light=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
-                    box_dark=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
-                    focus=options.cfg.app.palette().color(QtGui.QPalette.Highlight).name(),
-                    
-                    )
-        self.setStyleSheet(s)
+        self.set_style()
         self.toggled.emit(self)
         
 class CoqDetailBox(QtGui.QWidget):
@@ -1530,13 +1543,11 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     pandas DataFrame object. It provides the required methods so that they 
     can be shown in the results view. """
 
-    def __init__(self, df=pd.DataFrame(), session=None, parent=None, *args):
+    def __init__(self, df, session=None, parent=None, *args):
         super(CoqTableModel, self).__init__(parent, *args)
         self._parent = parent
 
-        df = pd.DataFrame(self.string_folder(df))
-
-        self.rownames = [x+1 if np.isreal(x) else x for x in df.index.values]
+        start = datetime.datetime.now()
         self.content = df[[x for x in df.columns if not x.startswith("coquery_invisible")]]
         self.invisible_content = df[[x for x in df.columns if x.startswith("coquery_invisible")]]
         self.header = self.content.columns
@@ -1545,9 +1556,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self._align = []
         self._dtypes = []
         self._hidden_columns = []
-
-        self.rownames = [utf8(i+1) if isinstance(x, (np.integer, int)) else utf8(x) for i, x in enumerate(df.index)]
-
         # prepare look-up lists that speed up data retrieval:
         for i, col in enumerate(self.header):
             # remember hidden columns:
@@ -1572,6 +1580,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             else:
                 # otherwise, left-align:
                 self._align.append(_left_align)
+        for col in self.content.columns:
+            self.content[col] = self.content[col].apply(str)
         
     def is_visible(self, index):
         try:
@@ -1645,7 +1655,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # Return row names?
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
-                return self.rownames[index]
+                val = self.content.index[index]
+                return utf8(val + 1) if isinstance(val, (np.integer, int)) else utf8(val)
             else:
                 return None
 
@@ -1694,33 +1705,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         """ Return the number of columns. """
         return self.content.columns.size
 
-    def string_folder(self, df):
-        """
-        Yield the rows from the results with all string values folded.
-
-        This folder is used in yield_query_results, and helps to reduce the
-        amount of memory consumed by the query results data frames. It does 
-        so by keeping a map of string values so that each occurrence of a 
-        string in the query result is mapped to the identical string object,
-        and not to a new string object with the same content. 
-        
-        This string folder is based on:
-        http://www.mobify.com/blog/sqlalchemy-memory-magic/
-        """
-        string_map = {}
-        
-        def _lookup(value):
-            try:
-                return string_map[value]
-            except KeyError:
-                string_map[value] = utf8(value)
-                return string_map[value]
-            
-        for col in df.columns:
-            if df.dtypes[col] == object:
-                df[col] = df[col].apply(_lookup)
-        return df
-                    
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     fill = False
 
