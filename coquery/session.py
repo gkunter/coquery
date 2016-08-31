@@ -26,6 +26,7 @@ from . import options
 from .errors import *
 from .corpus import *
 from .defines import *
+from .general import *
 from . import queries
 from . import filters
 from . import managers
@@ -76,7 +77,7 @@ class Session(object):
         self._header_cache = {}
         self._manager_cache = {}
         self._first_saved_dataframe = True
-
+        
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
         # values. If the value is False, the row in the output object is
@@ -136,6 +137,8 @@ class Session(object):
         else:
             header = False
 
+        # FIXME:
+        # saving doesn't work anymore!
         df[columns].to_csv(
             output_file,
             header=header,
@@ -175,16 +178,17 @@ class Session(object):
             
             # TODO: store query results in a l
             if not to_file:
-                self.data_table = pd.concat([self.data_table, current_query.results_frame])
+                self.data_table = self.data_table.append(current_query.results_frame)
             else:
                 self.save_dataframe(manager.process(current_query.results_frame, self, True),
                                     append=True)
                 
             logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
 
-        self.filter_data()
-
-        self.data_table.index = range(1, len(self.data_table.index) + 1)
+        for col in self.data_table.columns:
+            if self.data_table.dtypes[col] == object:
+                if sys.version_info < (3, 0):
+                    self.data_table[col] = self.data_table[col].apply(lambda x: x.encode("utf-8"))
 
         ## FIXME: reimplement row visibility
         #self.reset_row_visibility(queries.TokenQuery, self.data_table)
@@ -238,11 +242,9 @@ class Session(object):
             df = self.output_object
         else:
             df = self.data_table
-            df.index = range(len(df))
             recalculate = True
 
         self.output_object = manager.process(df, self, recalculate)
-        
         #self._manager_cache[(self, manager)] = self.output_object
 
     def drop_cached_aggregates(self):
