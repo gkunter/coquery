@@ -159,7 +159,6 @@ class CoqueryApp(QtGui.QMainWindow):
         except TypeError:
             self.ui.centralwidget.adjustSize()
             self.adjustSize()
-
         
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -293,6 +292,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.statusBar().layout().addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))        
         self.statusBar().layout().addWidget(QtGui.QLabel(_translate("MainWindow", "Connection: ", None)))
         self.statusBar().layout().addWidget(self.ui.combo_config)
+        self.statusBar().layout().setStretchFactor(self.ui.status_progress, 0.5)
+        self.statusBar().layout().setStretchFactor(self.ui.multi_query_progress, 0.5)
 
         self.change_mysql_configuration(options.cfg.current_server)
         self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
@@ -546,7 +547,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_summary.clicked.connect(self.change_managing)
             
         self.corpusListUpdated.connect(self.check_corpus_widgets)
-        self.columnVisibilityChanged.connect(lambda: self.reaggregate(recalculate=True))
+        self.columnVisibilityChanged.connect(lambda: self.reaggregate(recalculate=True, start=True))
 
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
@@ -600,7 +601,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.list_group_columns.insert_resource(start + i, rc_feature)
 
         self.activate_group_column_buttons()
-        self.reaggregate()
+        self.reaggregate(start=True)
 
     def add_group_column(self, rc_feature=None, item=None):
         if not item:
@@ -610,9 +611,11 @@ class CoqueryApp(QtGui.QMainWindow):
                 selected = [x.objectName() for x in self.ui.options_tree.selectedItems()]
             for col in selected:
                 self.ui.list_group_columns.add_resource(col)
+        self.ui.group_groups.setTitle("Grouping (active)")
+        self.ui.group_groups.set_style(title_weight="900")
 
         self.activate_group_column_buttons()
-        self.reaggregate()
+        self.reaggregate(start=True)
     
     def remove_group_column(self, rc_feature=None):
         if rc_feature:
@@ -622,21 +625,23 @@ class CoqueryApp(QtGui.QMainWindow):
         for item in selected:
             self.ui.list_group_columns.remove_item(item)
         options.cfg.group_columns = self.get_group_columns()
+        if not options.cfg.group_columns:
+            self.ui.group_groups.setTitle("Grouping")
 
         self.activate_group_column_buttons()
-        self.reaggregate()
+        self.reaggregate(start=True)
 
     def change_managing_type(self):
         if self.ui.radio_summary.isChecked():
             options.cfg.MODE = self.ui.combo_summary.currentText()
-            self.reaggregate(recalculate=False)
+            self.reaggregate(start=True)
 
     def change_managing(self):
         if self.ui.radio_no_summary.isChecked():
             options.cfg.MODE = QUERY_MODE_TOKENS
         else:
             options.cfg.MODE = self.ui.combo_summary.currentText()
-        self.reaggregate(recalculate=False)
+        self.reaggregate(start=True)
 
     def set_context_values(self, mode=None, left_span=None, right_span=None):
         self.disconnect_context_widgets()
@@ -695,7 +700,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.get_context_values()            
             
         self.disconnect_context_widgets()
-        self.reaggregate()
+        self.reaggregate(start=True)
         self.connect_context_widgets()
 
     def enable_corpus_widgets(self):
@@ -822,14 +827,11 @@ class CoqueryApp(QtGui.QMainWindow):
     def finalize_reaggregation(self):
         self.display_results(drop=False)
         self.stop_progress_indicator()
-        self.show_query_status()
         self.resize_rows()
+        self.show_query_status()
         print("reaggregation: done")
         
-    def run_reaggregation(self, recalculate):
-        self.Session.aggregate_data(recalculate)
-        
-    def reaggregate(self, recalculate=True):
+    def reaggregate(self, recalculate=True, start=False):
         """
         Reaggregate the current data table when changing the visibility of
         the table columns.
@@ -839,16 +841,17 @@ class CoqueryApp(QtGui.QMainWindow):
         if not self.Session:
             return
         
+        if start:
+            self.Session.start_timer()
         self.showMessage("Managing data...")
         self.unfiltered_tokens = len(self.Session.data_table.index)
-        self.thread = classes.CoqThread(lambda: self.run_reaggregation(recalculate), parent=self)
+        self.thread = classes.CoqThread(lambda: self.Session.aggregate_data(recalculate), parent=self)
         self.thread.taskException.connect(self.exception_during_query)
         self.thread.taskFinished.connect(self.finalize_reaggregation)
 
         if not self.Session.has_cached_data():
             self.start_progress_indicator()
         
-        self.Session.start_timer()
         print("reaggregate")
         self.thread.start()
 
@@ -975,8 +978,6 @@ class CoqueryApp(QtGui.QMainWindow):
                 tables.remove(x)
                 tables.insert(0, x)
         tables.remove("coquery")
-        tables.remove("statistics")
-        tables.append("statistics")
         tables.append("coquery")
         
         last_checked = list(self.ui.options_tree.get_checked())
@@ -1100,6 +1101,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def display_results(self, drop=True):
         self.ui.data_preview.setEnabled(True)
         self.ui.data_preview.setFont(options.cfg.table_font)
+        self.ui.data_preview.verticalHeader().setDefaultSectionSize(QtGui.QLabel().sizeHint().height() + 2)
 
         # enable menu entries:
         self.ui.action_save_results.setEnabled(True)
@@ -1111,7 +1113,9 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.menuAnalyse.setEnabled(True)
 
-        self.table_model = classes.CoqTableModel(self.Session.output_object, session=self.Session)
+        self.table_model = classes.CoqTableModel(
+            self.Session.output_object, 
+            session=self.Session)
         self.ui.data_preview.setModel(self.table_model)
 
         if drop:
@@ -1892,7 +1896,7 @@ class CoqueryApp(QtGui.QMainWindow):
             manager.remove_sorter(column)
         else:
             manager.add_sorter(column, ascending, reverse)
-        self.reaggregate(recalculate=False)
+        self.reaggregate(recalculate=False, start=True)
 
     def set_query_button(self):
         """ Set the action button to start queries. """
@@ -2567,6 +2571,9 @@ class CoqueryApp(QtGui.QMainWindow):
         for col in [x for x in options.cfg.group_columns if x]:
             self.ui.list_group_columns.add_resource(col)
             options.cfg.group_columns = self.get_group_columns()
+        if options.cfg.group_columns:
+            self.ui.group_groups.setTitle("Grouping (active)")
+            self.ui.group_groups.set_style(title_weight="900")
 
         self.activate_group_column_buttons()
         
@@ -2709,9 +2716,8 @@ class CoqueryApp(QtGui.QMainWindow):
             kwargs = {"function_class": functions.StringFunction}
 
         response = functionapply.FunctionDialog.set_function(
-            columns=columns, **kwargs, parent=self)
-
-        if not response:
+            columns=columns, parent=self, **kwargs)
+        if response is None:
             return
 
         if group:
