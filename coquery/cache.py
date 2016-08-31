@@ -38,8 +38,8 @@ class CoqQueryCache(object):
                         self._cache.currsize, self._cache.maxsize))
                     print("Using query cache (current size: {}, max size: {}).".format(
                         self._cache.currsize, self._cache.maxsize))
-            except IOError:
-                logger.warning("Cannot read query cache, creating a new one (size: {}).".format(cfg.query_cache_size))
+            except (IOError, ValueError):
+                logger.warning("Cannot read query cache, creating a new one (size: {}).".format(options.cfg.query_cache_size))
 
         if self._cache is None:
             self._cache = cachetools.LFUCache(maxsize=options.cfg.query_cache_size, getsizeof=sys.getsizeof)
