@@ -363,7 +363,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_heat_map.triggered.connect(lambda: self.visualize_data("heatmap"))
         self.ui.action_bubble_chart.triggered.connect(lambda: self.visualize_data("bubbleplot"))
     
-        self.ui.menuDensity_plots.setEnabled(False)
+        self.ui.menuDensity_plots.setEnabled(True)
         self.ui.action_kde_plot.triggered.connect(lambda: self.visualize_data("densityplot"))
         self.ui.action_ecd_plot.triggered.connect(lambda: self.visualize_data("densityplot", cumulative=True))
             
@@ -2253,17 +2253,26 @@ class CoqueryApp(QtGui.QMainWindow):
         from . import settings
         old_context_font = options.cfg.context_font
         last_wrap = options.cfg.word_wrap
-        settings.Settings.manage(options.cfg, self)
-        if options.cfg.word_wrap != last_wrap:
-            self.ui.data_preview.setWordWrap(options.cfg.word_wrap)
-            self.resize_rows()
+        settings_changed = settings.Settings.manage(options.cfg, self)
+        
+        if settings_changed:
+            self.ui.data_preview.setFont(options.cfg.table_font)
+            self.ui.data_preview.verticalHeader().setDefaultSectionSize(QtGui.QLabel().sizeHint().height() + 2)
 
-        self.ui.data_preview.setFont(options.cfg.table_font)
+            if options.cfg.word_wrap != last_wrap:
+                self.ui.data_preview.setWordWrap(options.cfg.word_wrap)
+                self.resize_rows()
 
-        if options.cfg.context_font != old_context_font:
-            for widget in self.widget_list:
-                if isinstance(widget, contextviewer.ContextView):
-                    widget.update_context()
+            try:
+                self.table_model.formatted = self.table_model.format_content(
+                    self.table_model.content)
+            except Exception as e:
+                print(e)
+
+            if options.cfg.context_font != old_context_font:
+                for widget in self.widget_list:
+                    if isinstance(widget, contextviewer.ContextView):
+                        widget.update_context()
 
     def change_current_server(self):
         name = self.ui.combo_config.currentText()
@@ -2704,7 +2713,7 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.Tokens, functions.Types, 
                          functions.TypeTokenRatio,
                          functions.CorpusSize, functions.SubcorpusSize]
-                checked = manager._summary_functions
+                checked = manager._summary_functions.get_list()
                          
             kwargs = {
                 "function_types": types,
@@ -2713,8 +2722,16 @@ class CoqueryApp(QtGui.QMainWindow):
                 "checked": checked,
                 "edit_label": False}
         else:
-            kwargs = {"function_class": functions.StringFunction}
-
+            dtypes = pd.Series([self.table_model.get_dtype(x) for x in columns])
+            print(dtypes != object)
+            try:
+                if all(dtypes != object):
+                    kwargs = {"function_class": functions.MathFunction}
+                else:
+                    kwargs = {"function_class": functions.StringFunction}
+            except Exception as e:
+                print(e)
+                kwargs = {"function_class": functions.Function}
         response = functionapply.FunctionDialog.set_function(
             columns=columns, parent=self, **kwargs)
         if response is None:
