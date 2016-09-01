@@ -41,6 +41,7 @@ import pandas as pd
 from .defines import *
 from .errors import *
 from .links import get_by_hash
+from .general import *
 from . import corpus
 from . import tokens
 from . import options
@@ -63,37 +64,6 @@ class TokenQuery(object):
         self.results_frame = pd.DataFrame()
         TokenQuery.filter_list = Session.filter_list
         self._keys = []
-
-    def string_folder(self, results):
-        """
-        Yield the rows from the results with all string values folded.
-
-        This folder is used in yield_query_results, and helps to reduce the
-        amount of memory consumed by the query results data frames. It does 
-        so by keeping a map of string values so that each occurrence of a 
-        string in the query result is mapped to the identical string object,
-        and not to a new string object with the same content. 
-        
-        This string folder is based on:
-        http://www.mobify.com/blog/sqlalchemy-memory-magic/
-        """
-        string_map = {}
-        self._keys = []
-        for row in results:
-            self._keys = row.keys()
-            l = []
-            for key, value in row.items():
-                if isinstance(value, decimal.Decimal):
-                  l.append(float(value))  
-                elif isinstance(value, str):
-                    s = string_map.get(value, None)
-                    if s is None:
-                        s = string_map[value] = value
-                    l.append(s)
-                else:
-                    l.append(value)
-            
-            yield l
 
     def __len__(self):
         return len(self.tokens)
@@ -162,8 +132,6 @@ class TokenQuery(object):
                 self.Resource.attach_list = set([])
                 # This list is filled by get_query_string().
             
-            # This SQLAlchemy optimization including the string folder 
-            # is based on http://www.mobify.com/blog/sqlalchemy-memory-magic/
             query_string = self.Resource.get_query_string(self, self._sub_query)
             md5 = hashlib.md5("".join(sorted(query_string)).encode()).hexdigest()
             
@@ -189,21 +157,31 @@ class TokenQuery(object):
                                 connection.execute(S)
 
                         try:
-                            results = connection.execution_options(stream_results=True).execute(query_string.replace("%", "%%"))
+                            results = (connection
+                                       .execution_options(stream_results=True)
+                                       .execute(query_string.replace("%", "%%")))
                         except Exception as e:
                             connection.close()
                             print(query_string)
                             print(e)
                             raise e
-                        df = pd.DataFrame(self.string_folder(results), columns=results.keys())
+
+                        df = pd.DataFrame(list(iter(results)), columns=results.keys())
+                        
+                        for x in df.columns:
+                            if df.dtypes[x] == object:
+                                df[x] = df[x].fillna("")
+                        
                         if len(df) == 0:
                             df = pd.DataFrame(columns=results.keys())
-                        results = None
+
+                        del results
 
                         if options.cfg.use_cache:
                             options.cfg.query_cache.add((self.Resource.name, manager_hash, md5), df)
 
                 df = self.insert_static_data(df)
+                
                 connection.close()
 
             if not options.cfg.output_case_sensitive and len(df.index) > 0:
