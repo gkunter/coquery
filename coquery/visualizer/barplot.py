@@ -190,7 +190,7 @@ class Visualizer(vis.BaseVisualizer):
                             self._rectangles[ax] = collections.defaultdict(dict)
                         self._rectangles[ax][i][key] = val
 
-    def draw(self, func=None):
+    def draw(self, func=None, number_column=None):
         """ Plot bar charts. """
         def plot_facet(data, color):
             if self.stacked:
@@ -245,10 +245,16 @@ class Visualizer(vis.BaseVisualizer):
                 #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
             else:
                 ax = plt.gca()
-                df = data.assign(COQ_FUNC=lambda d: fun.evaluate(d))
-                df = df[self._groupby + ["COQ_FUNC"]].drop_duplicates().fillna(0)
+                if self._value_column:
+                    df = data
+                    values = self._value_column
+                else:
+                    values = "COQ_FUNC"
+                    df = data.assign(COQ_FUNC=lambda d: fun.evaluate(d))
 
-                kwargs = {"x": "COQ_FUNC",
+                df = df[self._groupby + [values]].drop_duplicates().fillna(0)
+
+                kwargs = {"x": values,
                           "y": self._groupby[0],
                           "order": self._levels[0],
                           "palette": self.options["color_palette_values"],
@@ -266,16 +272,23 @@ class Visualizer(vis.BaseVisualizer):
                 #self.add_rectangles(df, ax, stacked=False)
                 #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
 
+        self._value_column = number_column
+
         if self.percentage:
             self._levels[-1] = sorted(self._levels[-1])
                 
         sns.despine(self.g.fig,
                     left=False, right=False, top=False, bottom=False)
 
-        fun = func(columns=self._groupby, session=options.cfg.main_window.Session)
+        if number_column is None:
+            fun = func(columns=self._groupby, session=options.cfg.main_window.Session)
+            value_label = fun.get_label(session=options.cfg.main_window.Session)
+        else:
+            value_label = number_column
 
         self.map_data(plot_facet)
-        self.options["label_x_axis"] = fun.get_label(session=options.cfg.main_window.Session) 
+
+        self.options["label_x_axis"] = number_column
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
 
         if self.percentage:
