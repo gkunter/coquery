@@ -18,11 +18,13 @@ import logging
 
 from coquery.errors import *
 from coquery import options
+from coquery.functions import *
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
     _plot_frequency = True
     vmax = 0
+    function_list = [Freq, FreqPMW, FreqNorm, Proportion, Percent]
 
     def __init__(self, *args, **kwargs):
         try:
@@ -51,7 +53,6 @@ class Visualizer(vis.BaseVisualizer):
             
         super(Visualizer, self).set_defaults()
 
-
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
@@ -59,53 +60,66 @@ class Visualizer(vis.BaseVisualizer):
     def draw(self, **kwargs):
         
         def plot_facet(data, color, **kwargs):
-            colors = dict(zip(
-                self._levels[0],
-                self.options["color_palette_values"]))
+            data = data.dropna(subset=self._number_columns[-2:])
+            if self._levels != []:
+                colors = dict(zip(
+                    self._levels[0],
+                    self.options["color_palette_values"]))
+            else:
+                colors = self.options["color_palette_values"]
             try:
                 if len(self._number_columns) > 1:
                     sns.kdeplot(
                         data[self._number_columns[-2]],
                         data[self._number_columns[-1]],
                         shade=True,
+                        color=colors,
                         shade_lowest=False,
-                        color=color,
-                        cumulative=self.cumulative,
                         ax=plt.gca())
-                elif len(self._number_columns) == 1:
-                    if len(self._groupby) == 1:
+                else:
+                    if len(self._groupby) > 0:
                         for x in self._levels[-1]:
-                            sns.kdeplot(data[data[self._groupby[-1]] == x][self._number_columns[-1]],
+                            sns.kdeplot(data[data[self._groupby[-1]] == x][self._number_columns[0]],
                                 color=colors[x],
                                 shade=True,
                                 cumulative=self.cumulative,
                                 ax=plt.gca())
+                    else:
+                        sns.kdeplot(data[self._number_columns[0]],
+                                    color=colors[0],
+                                    shade=True,
+                                    cumulative=self.cumulative,
+                                    ax=plt.gca())
+                                    
             except Exception as e:
                 print(e)
-            #ct.plot(kind="area", ax=plt.gca(), stacked=True, color=self.get_palette(), **kwargs)
             
         self.map_data(plot_facet)
         
+        return
+        
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
 
-        category_levels = self._levels[-1]
-        legend_bar = [
-            plt.Rectangle(
-                (0, 0), 1, 1,
-                fc=self.options["color_palette_values"][i], 
-                edgecolor="none") for i, _ in enumerate(category_levels)
-            ]
-        try:
-            print(legend_bar)
-            self.g.fig.get_axes()[-1].legend(
-                legend_bar, category_levels,
-                ncol=self.options["label_legend_columns"],
-                title=self.options["label_legend"], 
-                frameon=True, 
-                framealpha=0.7, 
-                loc="lower left").draggable()
-        except Exception as e:
-            print(e)
-            raise e
+        if self._levels:
+
+            category_levels = self._levels[-1]
+            legend_bar = [
+                plt.Rectangle(
+                    (0, 0), 1, 1,
+                    fc=self.options["color_palette_values"][i], 
+                    edgecolor="none") for i, _ in enumerate(category_levels)
+                ]
+            try:
+                print(legend_bar)
+                self.g.fig.get_axes()[-1].legend(
+                    legend_bar, category_levels,
+                    ncol=self.options["label_legend_columns"],
+                    title=self.options["label_legend"], 
+                    frameon=True, 
+                    framealpha=0.7, 
+                    loc="lower left").draggable()
+            except Exception as e:
+                print(e)
+                raise e
         
 logger = logging.getLogger(NAME)
