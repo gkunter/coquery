@@ -223,7 +223,7 @@ class BaseVisualizer(QtCore.QObject):
             ncols = int(n / nrows) + 1
             return (nrows, ncols)
         
-    def draw(self, func=None):
+    def draw(self, func=None, number_column=None):
         """ Do the visualization."""
         pass
 
@@ -314,7 +314,7 @@ class BaseVisualizer(QtCore.QObject):
         
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
-        self._factor_columns = [x for x in self._table.columns[self._table.dtypes == object] if not x in self._time_columns]
+        self._factor_columns = [x for x in self._table.columns if self._table.dtypes[x] in (bool, object) and not x in self._time_columns]
         self._number_columns = [x for x in self._table.select_dtypes(include=["int", "float"]).columns if not x.startswith("coquery_invisible")]
         
         if self.dimensionality:
