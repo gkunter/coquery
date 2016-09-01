@@ -129,7 +129,7 @@ class Function(CoqObject):
                 if self.value:
                     args.append('"{}"'.format(self.value))
                 if len(self.columns) > 1:
-                    args.append(self.aggr)
+                    args.append('"{}"'.format(self.aggr))
                 
                 return "{}({})".format(self.get_name(), ", ".join(args))
                     
@@ -239,13 +239,13 @@ class StringMatch(StringFunction):
         self.re = re.compile(value)
     
     def _func(self, col):
-        return col.apply(lambda x: bool(self.re.search(str(x))))
+        return col.apply(lambda x: ["no", "yes"][bool(self.re.search(str(x)))])
     
     @classmethod
     def validate_input(cls, value):
         try:
             re.compile(value)
-        except Exception: 
+        except Exception as e: 
             return False
         else:
             return True
@@ -269,11 +269,15 @@ class StringExtract(StringMatch):
 ## Numeric functions
 ####################
 
-class Calc(Function):
+class MathFunction(Function):
+    _name = "virtual"
+
+class Calc(MathFunction):
     _name = "CALC"
     combine_modes = num_combine
+    parameters = 2
     
-    def __init__(self, sign=None, value=None, columns=[], *args, **kwargs):
+    def __init__(self, sign="+", value=None, columns=[], *args, **kwargs):
         super(Calc, self).__init__(columns, *args, **kwargs)
         self.sign = sign
         self.value = value
@@ -548,3 +552,48 @@ class ContextString(ContextColumns):
         return pd.Series(
             data=[collapse_words(list(pd.Series(left + [x.upper() for x in target] + right)))],
             index=["coq_context_string"])
+
+
+class FunctionList(CoqObject):
+    def __init__(self, l=[], *args, **kwargs):
+        self._list = l
+
+    def apply(self, df, connection):
+        if self._list == []:
+            return df
+        for fun in self._list:
+            df[fun.get_id()] = fun.evaluate(df, connection)
+        return df
+
+    def get_list(self):
+        return self._list
+    
+    def set_list(self, l):
+        self._list = l
+
+    def has_function(self, fun):
+        for x in self._list:
+            if x.get_id() == fun.get_id():
+                return True
+        return False
+
+    def add_function(self, fun):
+        self._list.append(fun)
+        
+    def remove_function(self, fun):
+        self._list.remove(fun)
+        
+        for x in self._list:
+            if x.get_id() == fun.get_id():
+                self.remove_function(x)
+    
+    def replace_function(self, old, new):
+        ix = self._list.index(old)
+        self._list[ix] = new
+        
+    def __iter__(self, *args, **kwargs):
+        return self._list.__iter__(*args, **kwargs)
+
+    def __repr__(self, *args, **kwargs):
+        return self._list.__repr__(*args, **kwargs)
+
