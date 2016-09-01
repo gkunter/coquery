@@ -35,7 +35,8 @@ class Manager(CoqObject):
         self.hidden_columns = set([])
         self._columns = []
         self._gf = []
-        self._summary_functions = []
+        self.user_summary_functions = FunctionList()
+        self.manager_summary_functions = FunctionList()
         self._group_filters = []
         self._filters = []
 
@@ -103,9 +104,6 @@ class Manager(CoqObject):
         l = []
         vis_cols = self.get_visible_columns(df, session)
 
-        for func_type in self._summary_functions:
-            l.append(func_type(columns=vis_cols, session=session))
-
         if options.cfg.context_mode == CONTEXT_COLUMNS:
             l.append(ContextColumns(session=session))
         elif options.cfg.context_mode == CONTEXT_KWIC:
@@ -113,7 +111,6 @@ class Manager(CoqObject):
         elif options.cfg.context_mode == CONTEXT_STRING:
             l.append(ContextString(session=session))
 
-        print(l)
         return l
     
     def _get_group_functions(self, df, session):
@@ -130,21 +127,24 @@ class Manager(CoqObject):
         l = []
         for func_type in self._gf:
             l.append(func_type(columns=vis_cols, group=groups))
+        
         return l
-    
-    def _get_summary_functions(self, df, session):
-        return self._summary_functions
     
     @staticmethod
     def _apply_function(df, fun, connection):
-        if fun.single_column:
-            df = df.assign(COQ_FUNCTION=lambda d: fun.evaluate(d, connection=connection))
-            return df.rename(columns={"COQ_FUNCTION": fun.get_id()})
-        else:
-            new_df = df.apply(lambda x: fun.evaluate(x, connection=connection), axis="columns")
-            return pd.concat([df, new_df], axis=1)
-    
+        try:
+            if fun.single_column:
+                df = df.assign(COQ_FUNCTION=lambda d: fun.evaluate(d, connection=connection))
+                return df.rename(columns={"COQ_FUNCTION": fun.get_id()})
+            else:
+                new_df = df.apply(lambda x: fun.evaluate(x, connection=connection), axis="columns")
+                return pd.concat([df, new_df], axis=1)
+        except Exception as e:
+            print(e)
+            raise e
+        
     def mutate_groups(self, df, session, connection):
+        print("\tmutate_groups()")
         for fun in self._group_functions:
             grouped = df.groupby(fun.group)
             if len(grouped.groups) == 1:
@@ -152,21 +152,22 @@ class Manager(CoqObject):
             else:
                 if fun.single_column:
                     val = grouped.apply(lambda d: fun.evaluate(d))
-                    val.index = val.index.labels[-1]
+                    val.index = df.index
                     df[fun.get_id()] = val
                 else:
                     new_df = grouped.apply(lambda d: fun.evaluate(d))
                     new_df.index = new_df.index.labels[-1]
-
+                    df = pd.concat([df, new_df], axis="columns")
+        print("\tdone")
         return df
     
     def mutate(self, df, session, connection):
         """
         Modify the transformed data frame by applying all needed functions.
         """
-        for fun in self._main_functions:
-            df = Manager._apply_function(df, fun, connection)
-        
+        print("\tmutate()")
+        df = FunctionList(self._column_functions).apply(df, connection)
+        print("\tdone")
         return df
     
     def remove_sorter(self, column):
@@ -186,6 +187,8 @@ class Manager(CoqObject):
         return None
     
     def arrange(self, df, session):
+        print("\tarrange()")
+
         if len(df) == 0:
             return df
         
@@ -197,6 +200,7 @@ class Manager(CoqObject):
             # gather sorting information:
             for sorter in self.sorters:
                 directions.append(sorter.ascending)
+                # create dummy columns for reverse sorting:
                 if sorter.reverse:
                     target = "{}_rev".format(sorter.column)
                     df[target] = (df[sorter.column].apply(lambda x: x[::-1]))
@@ -258,11 +262,14 @@ class Manager(CoqObject):
         else:
             df = df_data
         df = df.reset_index(drop=True)
+        print("\tdone")
         return df
         
     def summarize(self, df, session, connection):
-        for fun in self._column_functions + self._summary_functions:
-            df = Manager._apply_function(df, fun, connection)
+        print("\tsummarize()")
+        df = self.manager_summary_functions.apply(df, connection)
+        df = self.user_summary_functions.apply(df, connection)
+        print("\tdone")
         return df
 
     def distinct(self, df, session):
@@ -275,23 +282,33 @@ class Manager(CoqObject):
         return df.reset_index(drop=True)
 
     def filter(self, df, session):
+        print("\tfilter()")
         for filt in self._filters:
             try:
                 df = df.query(filt)
             except Exception:
                 pass
+        print("\tdone")
         return df
     
     def filter_groups(self, df, session):
+        print("\tfilter_groups()")
+        print("\tdone")
         return df
 
     def select(self, df, session):
+        print("\tselect()")
         l = self.get_visible_columns(df, session, hidden=True)
         self._columns = df.columns
+        print("\tdone")
         return df[l]
 
     def process(self, df, session, recalculate=True):
+        print("process()")
+        self._main_functions = []
+        self._group_functions = []
         engine = session.Resource.get_engine()
+        print("\tBEFORE PROCESS:", df.columns)
         with engine.connect() as connection:
             if recalculate:
                 df = df[[x for x in df.columns if not x.startswith("func_")]]
@@ -302,14 +319,18 @@ class Manager(CoqObject):
                 df = self.filter_groups(df, session)
             df = self.arrange(df, session)
             
-            self._summary_functions = self._get_summary_functions(df, session)
+            print("\t", len(df.columns))
             df = self.summarize(df, session, connection)
+            print("\t", len(df.columns))
             df = self.filter(df, session)
             df = self.select(df, session)
-            df = df.fillna("")
+            #df = df.fillna("")
 
         self._functions = (self._main_functions + self._group_functions +
-                           self._column_functions + self._summary_functions)
+                           self._column_functions + 
+                           self.manager_summary_functions.get_list() + 
+                           self.user_summary_functions.get_list())
+        print("\tAFTER PROCESS:", df.columns)
         return df
     
 class Distinct(Manager):
@@ -322,9 +343,15 @@ class Distinct(Manager):
 class FrequencyList(Distinct):
     name = "FREQUENCY"
     
-    def _get_summary_functions(self, df, session):
-        return self._summary_functions + [Freq(columns=self.get_visible_columns(df, session))]
+    def __init__(self, *args, **kwargs):
+        super(FrequencyList, self).__init__(*args, **kwargs)
     
+    def summarize(self, df, session, connection):
+        freq_function = Freq(columns=self.get_visible_columns(df, session))
+        if not self.user_summary_functions.has_function(freq_function):
+            self.manager_summary_functions = FunctionList([freq_function])
+        return super(FrequencyList, self).summarize(df, session, connection)
+        
 class ContingencyTable(FrequencyList):
     name = "CONTINGENCY"
     
@@ -336,6 +363,7 @@ class ContingencyTable(FrequencyList):
         return df[l]
 
     def mutate(self, df, session, connection):
+        print("mutate()")
         def _get_column_label(row):
             col_label = session.translate_header(row[0])
             if row[1] == "All":
