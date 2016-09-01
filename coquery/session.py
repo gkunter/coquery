@@ -283,6 +283,16 @@ class Session(object):
 
         self.data_table = pd.merge(self.data_table, self.frequency_table[columns], how="inner", copy=False, on=columns)
         
+    def retranslate_header(self, label):
+        """
+        Return the column name in the current content data frame that matches 
+        the giben display name.
+        """
+        for x in self.data_table.columns:
+            if self.translate_header(x) == label:
+                return x
+        return None        
+        
     def translate_header(self, header, ignore_alias=False):
         """ 
         Return a string that contains the display name for the header 
