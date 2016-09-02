@@ -29,7 +29,6 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         
         fields : dictionary
         """
-        print(default)
         super(NamedTableOptionsDialog, self).__init__(filename, default, parent, 
                                                  icon, ui=Ui_NamedTableOptions)
 
@@ -68,7 +67,6 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         except TypeError:
             pass
 
-
     def update_content(self):
         super(NamedTableOptionsDialog, self).update_content()
         self.map = dict()
@@ -82,15 +80,14 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         options.settings.setValue("namedtableoptions_size", self.size())
         
     def map_query_item_type(self, label):
-        column = self.ui.query_column.value() - 1
-        header = self.file_table.columns[column]
+        header = self.file_table.columns[self._col_select]
         for key, value in list(self.map.items()):
-            if value == column:
+            if value == self._col_select:
                 line_edit = getattr(self.ui, "edit_{}".format(key))
                 line_edit.setText("")
                 self.map.pop(key)
 
-        self.map[label] = column
+        self.map[label] = self._col_select
         line_edit = getattr(self.ui, "edit_{}".format(label))
         line_edit.setText(header)
         
@@ -98,7 +95,6 @@ class NamedTableOptionsDialog(CSVOptionDialog):
     def getOptions(path, fields=[], default=None, parent=None, icon=None):
         dialog = NamedTableOptionsDialog(path, fields, default, parent, icon)
         result = dialog.exec_()
-        print(result)
         if result == QtGui.QDialog.Accepted:
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
                 str(dialog.ui.quote_char.currentText())]
