@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 import datetime
 
+from coquery import general
 from coquery import options
 from coquery import queries
 from coquery import filters
@@ -74,7 +75,7 @@ class CoqThread(QtCore.QThread):
                     result = profiler.runcall(self.FUN, *self.args, **self.kwargs)
                 finally:
                     profiler.dump_stats(os.path.join(
-                        options.get_home_dir(), 
+                        general.get_home_dir(), 
                         "thread{}.profile".format(hex(id(self)))))
             else:
                 result = self.FUN(*self.args, **self.kwargs)
@@ -1511,9 +1512,10 @@ class CoqTableView(QtGui.QTableView):
         def set_height(n, row):
             # determine the maximum required height for this row by 
             # checking the height of each cell
-            
+
+            height = 0
             for col in row.index:
-                height = max(0, metric.boundingRect(rects[col], self._wrap_flag, str(row[col])).height())
+                height = max(height, metric.boundingRect(rects[col], self._wrap_flag, str(row[col])).height())
             if self.rowHeight(n) != height:
                 self.resizeRow.emit(n, height)
             
@@ -1580,9 +1582,24 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             else:
                 # otherwise, left-align:
                 self._align.append(_left_align)
-        for col in self.content.columns:
-            self.content[col] = self.content[col].apply(str)
+
+        self.formatted = self.format_content(self.content)
         
+    def get_dtype(self, column):
+        return self._dtypes[list(self.header).index(column)]
+    
+    def format_content(self, source):
+        df = pd.DataFrame(index = source.index)
+        float_formatter = lambda x: options.cfg.float_format.format(x) if not np.isnan(x) else ""
+        for col in source.columns:
+            if source.dtypes[col] == float:
+                df[col] = source[col].apply(float_formatter)
+            elif source.dtypes[col] == int:
+                df[col] = source[col].apply(lambda x: str(x))
+            else:
+                df[col] = source[col]
+        return df
+    
     def is_visible(self, index):
         try:
             return index.column() not in self._hidden_columns
@@ -1611,10 +1628,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole:
             ix = index.column()
             if not ix in self._hidden_columns:
-                if self._dtypes[ix] == float:
-                    return options.cfg.float_format.format(self.content.values[index.row()][ix])
-                else:
-                    return self.content.values[index.row()][ix] 
+                return self.formatted.values[index.row()][ix] 
             else:
                 return "[hidden]"
 
