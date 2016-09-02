@@ -102,6 +102,7 @@ class CSVOptionDialog(QtGui.QDialog):
             self.ui.quote_char.addItem(quote_chars[x])
         
         self.ui.query_column.setValue(1)
+        self._col_select = 0
 
         #sep, col, head, skip, quotechar = default
         if default.sep == "\t":
@@ -215,7 +216,6 @@ class CSVOptionDialog(QtGui.QDialog):
                 sep=str(self.separator),
                 quoting=3 if not quote else 0,
                 quotechar=quote if quote else "#",
-                na_filter=False,
                 nrows=100,
                 error_bad_lines=False,
                 encoding=encoding)
@@ -313,7 +313,9 @@ class CSVOptionDialog(QtGui.QDialog):
         self.ui.FilePreviewArea.selectColumn(self.ui.query_column.value() - 1)
 
     def click_column(self, index):
-        self.ui.query_column.setValue(index.column()+1)
+        if hasattr(self.ui, "query_column"):
+            self.ui.query_column.setValue(index.column()+1)
+        self._col_select = index.column()
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
