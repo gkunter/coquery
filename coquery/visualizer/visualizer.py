@@ -42,7 +42,7 @@ class BaseVisualizer(QtCore.QObject):
     are specified in :func:`draw`. This method is usually called externally 
     by :func:`VisualizerDialog.Plot`. 
     """
-    _plot_frequency = False
+    numerical_axes = 0
     default_func = None
 
     def __init__(self, data_model, data_view, parent = None):
@@ -59,7 +59,7 @@ class BaseVisualizer(QtCore.QObject):
         mpl.rcParams["axes.formatter.useoffset"] = "False"
 
     def set_defaults(self):
-        if self._plot_frequency:
+        if self.numerical_axes and False:
             if not self.options.get("color_number"):
                 self.options["color_number"] = 1
             if not self.options.get("label_legend_columns"):
@@ -125,8 +125,6 @@ class BaseVisualizer(QtCore.QObject):
                                                                                                                          
     def _validate_layout(func):
         def func_wrapper(self):
-            if self._plot_frequency:
-                return func(self)
             if self._col_wrap:
                 if self._col_wrap > 16:
                     raise VisualizationInvalidLayout
@@ -263,35 +261,15 @@ class BaseVisualizer(QtCore.QObject):
         if not options.cfg.main_window.Session:
             raise VisualizationNoDataError
         
-        ## get the column order from the visual QTableView:
-        #header = self._view.horizontalHeader()
-        #column_order = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
-        #if self._plot_frequency:
-            #column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True)]
-        #else:
-            #column_order = [x for x in column_order if options.cfg.column_visibility.get(x, True) and not x.startswith("statistics")]
-
-        #print(options.cfg.main_window.Session.data_table.columns)
-        #print(column_order)
-
         header = self._view.horizontalHeader()
         view_columns = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
-        print(0, options.cfg.main_window.Session.output_object.columns)
         view_columns = [x for x in view_columns if x in options.cfg.main_window.Session.output_object.columns]
 
         session = options.cfg.main_window.Session
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
-
-        #if self._plot_frequency:
-            #view_columns = [x for x in view_columns if x not in manager.hidden_columns]
-        #else:
-            #view_columns = [x for x in view_columns if x not in manager.hidden_columns and not x.startswith("statistics")]
-        print(1, view_columns)
-
         view_columns = [x for x in view_columns if x not in manager.hidden_columns]
         
         column_order = view_columns
-        print(2, view_columns)
         column_order.append("coquery_invisible_corpus_id")
 
         try:
@@ -309,8 +287,6 @@ class BaseVisualizer(QtCore.QObject):
             self._table = session.output_object[column_order]
         
         self._table.columns = [session.translate_header(x) for x in self._table.columns]
-        print(column_order)
-        print(self._table.head())
         
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
@@ -323,7 +299,6 @@ class BaseVisualizer(QtCore.QObject):
             self._groupby = []
 
         self._levels = [sorted([utf8(y) for y in pd.unique(self._table[x].ravel())]) for x in self._groupby]
-
 
         if len(self._factor_columns) > self.dimensionality:
             self._col_factor = self._factor_columns[-self.dimensionality - 1]
