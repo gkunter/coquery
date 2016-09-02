@@ -289,7 +289,8 @@ class InstallerGui(QtGui.QDialog):
             self.builder = self.builder_class(
                 gui=self, 
                 mapping=self._table_options.mapping,
-                dtypes=self._table_options.dtypes)
+                dtypes=self._table_options.dtypes,
+                table_options=self._table_options)
         elif hasattr(self, "_nltk_tagging"):
             pos = self.ui.use_pos_tagging.isChecked()
             self.builder = self.builder_class(pos=pos, gui=self)
