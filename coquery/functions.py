@@ -178,11 +178,11 @@ class Function(CoqObject):
         return None            
     
     def evaluate(self, df, *args, **kwargs):
-        val = df[self.columns].apply(self._func)
-        val = val.apply(self.select, axis="columns")
-        assert isinstance(val, pd.Series)
-        assert len(val) == len(df)
-        
+        try:
+            val = df[self.columns].apply(self._func)
+            val = val.apply(self.select, axis="columns")
+        except KeyError:
+            val = [np.nan] * len(df)
         return val
     
     @classmethod
@@ -202,7 +202,7 @@ class StringLength(StringFunction):
     combine_modes = num_combine
     
     def _func(self, cols):
-        return cols.apply(lambda x: len(str(x)))
+        return cols.apply(lambda x: len(x) if isinstance(x, str) else len(str(x)))
     
 class StringCount(StringFunction):
     _name = "COUNT"
@@ -315,9 +315,12 @@ class Freq(BaseFreq):
     default_aggr = "sum"
     
     def evaluate(self, df, *args, **kwargs):
+        """
+        Count the number of rows with equal values in the target columns.
+        """
+        fun = Freq(columns=self.columns, group=self.group)
         # do not calculate the frequencies again if the data frame already 
         # contains an identical frequency column:
-        fun = Freq(columns=self.columns, group=self.group)
         if self.find_function(df, fun):
             if options.cfg.verbose:
                 print(self._name, "using df.Freq()")
@@ -326,21 +329,25 @@ class Freq(BaseFreq):
             if options.cfg.verbose:
                 print(self._name, "calculating df.Freq()")
             
+        # ignore external columns:
+        columns = [x for x in self.columns if not x.startswith("db_")]
+            
         if len(df) == 0:
             return pd.Series(index=df.index)
-        if len(self.columns) == 0:
+        if len(columns) == 0:
             # if the function is applied over no columns (e.g. because all 
             # columns are hidden), the function returns a Series containing 
             # simply the length of the data frame:
             return pd.Series([len(df)] * len(df), index = df.index)
-        
-        d = {self.columns[0]: "count"}
-        d.update({x: "first" for x in [x for x in df.columns.values if x not in self.columns and not x.startswith("coquery_invisible")]})
-        val = df.merge( (df.groupby(self.columns)
-                            .agg(d)
-                            .rename(columns={self.columns[0]: self.get_id()})
-                            .reset_index()), 
-                         on=self.columns, how="left")[self.get_id()]
+        d = {columns[0]: "count"}
+        d.update(
+            {x: "first" for x in 
+                [y for y in df.columns.values if y not in columns and not y.startswith("coquery_invisible")]})
+        val = df.merge(df.groupby(columns)
+                         .agg(d)
+                         .rename(columns={columns[0]: self.get_id()})
+                         .reset_index(), 
+                       on=columns, how="left")[self.get_id()]
         val.index = df.index
         return val
 
@@ -391,6 +398,14 @@ class FreqNorm(Freq):
         val = d.apply(lambda row: row.val / row.subsize, axis="columns")
         val.index = df.index
         return val
+
+class RowNumber(Freq):
+    _name = "statistics_row_number"
+    
+    def evaluate(self, df, *args, **kwargs):
+        val = pd.Series(range(1, len(df)+1), index=df.index)
+        return val
+
 
 #############################################################################
 ## Distributional functions
@@ -519,50 +534,59 @@ class ContextColumns(Function):
         self.left_cols = ["coq_context_lc{}".format(i+1) for i in range(options.cfg.context_left)][::-1]
         self.right_cols = ["coq_context_rc{}".format(i+1) for i in range(options.cfg.context_right)]
 
-    def evaluate(self, df, connection, *args, **kwargs):
+    def _func(self, row, connection):
         left, target, right = self.session.Resource.get_context(
-            df["coquery_invisible_corpus_id"], 
-            df["coquery_invisible_origin_id"],
-            df["coquery_invisible_number_of_tokens"], True, connection)
+            row["coquery_invisible_corpus_id"], 
+            row["coquery_invisible_origin_id"],
+            row["coquery_invisible_number_of_tokens"], True, connection)
         return pd.Series(
             data=left + right, 
             index=self.left_cols + self.right_cols)
 
+    def evaluate(self, df, connection, *args, **kwargs):
+        val = df.apply(lambda x: self._func(x, connection), axis="columns")
+        val.index = df.index
+        return val
+        
 class ContextKWIC(ContextColumns):
     _name = "CONTEXT_KWIC"
     
-    def evaluate(self, df, *args, **kwargs):
-        row = super(ContextKWIC, self).evaluate(df, *args, **kwargs)
+    def _func(self, row, connection):
+        row = super(ContextKWIC, self)._func(row, connection)
         return pd.Series(
             data=[collapse_words(row[self.left_cols]), collapse_words(row[self.right_cols])], 
             index=[["coq_context_left", "coq_context_right"]])
 
 class ContextString(ContextColumns):
     _name = "CONTEXT_STRING"
+    single_column = True
     
     def __init__(self, session, *args):
         super(ContextString, self).__init__(session, *args)
         self.word_feature = getattr(self.session.Resource, QUERY_ITEM_WORD)
 
-    def evaluate(self, df, connection, *args, **kwargs):
+    def _func(self, row, connection):
         left, target, right = self.session.Resource.get_context(
-            df["coquery_invisible_corpus_id"], 
-            df["coquery_invisible_origin_id"],
-            df["coquery_invisible_number_of_tokens"], True, connection)
+            row["coquery_invisible_corpus_id"], 
+            row["coquery_invisible_origin_id"],
+            row["coquery_invisible_number_of_tokens"], True, connection)
         return pd.Series(
             data=[collapse_words(list(pd.Series(left + [x.upper() for x in target] + right)))],
             index=["coq_context_string"])
-
 
 class FunctionList(CoqObject):
     def __init__(self, l=[], *args, **kwargs):
         self._list = l
 
-    def apply(self, df, connection):
+    def apply(self, df, connection, manager=None):
         if self._list == []:
             return df
         for fun in self._list:
-            df[fun.get_id()] = fun.evaluate(df, connection)
+            if fun.single_column:
+                df[fun.get_id()] = fun.evaluate(df, connection=connection)
+            else:
+                val = fun.evaluate(df, connection=connection)
+                df = pd.concat([df, val], axis="columns")
         return df
 
     def get_list(self):
