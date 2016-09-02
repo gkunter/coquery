@@ -117,7 +117,14 @@
           </widget>
          </item>
          <item>
-          <widget class="QComboBox" name="combo_combine"/>
+          <widget class="QComboBox" name="combo_combine">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QLabel" name="label_remark">
