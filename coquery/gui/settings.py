@@ -286,6 +286,7 @@ class Settings(QtGui.QDialog):
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             dialog.change_options()
+        return result
         
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
