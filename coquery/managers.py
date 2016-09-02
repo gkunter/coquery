@@ -35,6 +35,9 @@ class Manager(CoqObject):
         self.hidden_columns = set([])
         self._columns = []
         self._gf = []
+        
+        self.user_group_functions = FunctionList()
+        self.manager_group_functions = FunctionList()
         self.user_summary_functions = FunctionList()
         self.manager_summary_functions = FunctionList()
         self._group_filters = []
@@ -79,6 +82,9 @@ class Manager(CoqObject):
     
     def get_function(self, id):
         for fun in self._functions:
+            if type(fun) == type:
+                logger.warning("Function {} not found in manager".format(fun))
+                return None
             if fun.get_id() == id:
                 return fun 
     
@@ -144,21 +150,20 @@ class Manager(CoqObject):
             raise e
         
     def mutate_groups(self, df, session, connection):
-        print("\tmutate_groups()")
-        for fun in self._group_functions:
-            grouped = df.groupby(fun.group)
-            if len(grouped.groups) == 1:
-                df = self._apply_function(df, fun, connection)
-            else:
-                if fun.single_column:
-                    val = grouped.apply(lambda d: fun.evaluate(d))
-                    val.index = df.index
-                    df[fun.get_id()] = val
-                else:
-                    new_df = grouped.apply(lambda d: fun.evaluate(d))
-                    new_df.index = new_df.index.labels[-1]
-                    df = pd.concat([df, new_df], axis="columns")
-        print("\tdone")
+        print("\tmutate_groups({})".format(options.cfg.group_columns))
+        
+        vis_col = self.get_visible_columns(df, session)
+        fun_list = [fun(columns=vis_col) for fun in self.user_group_functions.get_list()]
+        group_functions = self.manager_group_functions.get_list() + fun_list
+        grouped = df.groupby(options.cfg.group_columns)
+
+        for fun in group_functions:
+            l = pd.Series()
+            for x in grouped.groups:
+                val = fun.evaluate(df.iloc[grouped.groups[x]], connection)
+                l = l.append(val)
+            df[fun.get_id()] = l
+            
         return df
     
     def mutate(self, df, session, connection):
@@ -166,8 +171,10 @@ class Manager(CoqObject):
         Modify the transformed data frame by applying all needed functions.
         """
         print("\tmutate()")
+        df = FunctionList(self._get_main_functions(df, session)).apply(df, connection)
         df = FunctionList(self._column_functions).apply(df, connection)
         print("\tdone")
+        df = df.reset_index(drop=True)
         return df
     
     def remove_sorter(self, column):
@@ -185,6 +192,71 @@ class Manager(CoqObject):
             if x.column == column:
                 return x
         return None
+    
+    def arrange_groups(self, df, session):
+        print("\tarrange_group()")
+        if len(df) == 0:
+            return df
+        
+        if len(session.query_list) == 1:
+            columns = ["coquery_invisible_corpus_id"]
+            directions = [True]
+        else:
+            columns = []
+            directions = []
+    
+        # use group columns as sorters
+        for column in options.cfg.group_columns:
+            columns += session.Resource.format_resource_feature(column,
+                session.get_max_token_count())
+        directions = [True] * len(columns)
+
+        if columns and len(session.query_list) != 1:
+            columns += ["coquery_invisible_corpus_id"]
+            directions += [True]
+
+            
+
+        # filter columns that should be in the data frame, but which aren't 
+        # (this may happen for example with the contingency table which 
+        # takes one column and rearranges it)
+        column_check = [x in df.columns for x in columns]
+        for i, col in enumerate(column_check):
+            if not col:
+                directions.pop(i)
+                columns.pop(i)
+                
+        if COLUMN_NAMES["statistics_column_total"] in df.index:
+            # make sure that the row containing the totals is the last row:
+            df_data = df[df.index != COLUMN_NAMES["statistics_column_total"]]
+            df_totals = df[df.index == COLUMN_NAMES["statistics_column_total"]]
+        else:
+            df_data = df
+
+        # always sort by coquery_invisible_corpus_id if there is no other
+        # sorter -- but not if the session covered multiple queries.
+
+        # sort the data frame (excluding a totals row) with backward 
+        # compatibility:
+        try:
+            # pandas <= 0.16.2:
+            df_data = df_data.sort(columns=columns, 
+                            ascending=directions,
+                            axis="index")[df.columns]
+        except AttributeError:
+            # pandas >= 0.17.0
+            df_data = df_data.sort_values(by=columns, 
+                                    ascending=directions,
+                                    axis="index")[df.columns]
+        if COLUMN_NAMES["statistics_column_total"] in df.index:
+            # return sorted data frame plus a potentially totals row:
+            df = pd.concat([df_data, df_totals])
+        else:
+            df = df_data
+        df = df.reset_index(drop=True)
+        print("\tdone")
+        return df
+        
     
     def arrange(self, df, session):
         print("\tarrange()")
@@ -207,13 +279,6 @@ class Manager(CoqObject):
                 else:
                     target = sorter.column
                 columns.append(target)
-        else:
-            # no sorters specified, use group columns as sorters
-            for column in options.cfg.group_columns:
-                columns += session.Resource.format_resource_feature(column,
-                    session.get_max_token_count())
-                
-            directions = [True] * len(columns)
 
         # filter columns that should be in the data frame, but which aren't 
         # (this may happen for example with the contingency table which 
@@ -231,18 +296,8 @@ class Manager(CoqObject):
         else:
             df_data = df
 
-        # always sort by coquery_invisible_corpus_id if there is no other
-        # sorter -- but not if the session covered multiple queries.
         if len(columns) == 0:
-            if len(session.query_list) == 1:
-                columns = ["coquery_invisible_corpus_id"]
-                directions = [True]
-            else:
-                if COLUMN_NAMES["statistics_column_total"] in df.index:
-                    # return sorted data frame plus a potentially totals row:
-                    return pd.concat([df_data, df_totals])
-                else:
-                    return df_data
+            return df
 
         # sort the data frame (excluding a totals row) with backward 
         # compatibility:
@@ -308,29 +363,27 @@ class Manager(CoqObject):
         self._main_functions = []
         self._group_functions = []
         engine = session.Resource.get_engine()
-        print("\tBEFORE PROCESS:", df.columns)
         with engine.connect() as connection:
             if recalculate:
                 df = df[[x for x in df.columns if not x.startswith("func_")]]
                 self._main_functions = self._get_main_functions(df, session)
                 df = self.mutate(df, session, connection)
-                self._group_functions = self._get_group_functions(df, session)
+                df = self.arrange_groups(df, session)
                 df = self.mutate_groups(df, session, connection)
                 df = self.filter_groups(df, session)
             df = self.arrange(df, session)
             
-            print("\t", len(df.columns))
             df = self.summarize(df, session, connection)
-            print("\t", len(df.columns))
             df = self.filter(df, session)
             df = self.select(df, session)
             #df = df.fillna("")
 
         self._functions = (self._main_functions + self._group_functions +
                            self._column_functions + 
+                           self.manager_group_functions.get_list() + 
+                           self.user_group_functions.get_list() +
                            self.manager_summary_functions.get_list() + 
                            self.user_summary_functions.get_list())
-        print("\tAFTER PROCESS:", df.columns)
         return df
     
 class Distinct(Manager):
