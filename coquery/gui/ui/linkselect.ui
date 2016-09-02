@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>554</width>
-    <height>464</height>
+    <height>484</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -77,7 +77,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Link to an external table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You can link the column &lt;span style=&quot; font-weight:600;&quot;&gt;'{resource_feature}'&lt;/span&gt; from '{corpus}' to a column from a table in a different corpus. The remaining columns from this external table will then be available as output columns.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Note:&lt;/span&gt; If you select an output column from an external table, only those tokens from the corpus '{corpus}' will be shown that also have a matching entry in the linked external table. Tokens without a matching entry in the external table will not be shown in the query results.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Link to an external table&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You can link the column &lt;span style=&quot; font-weight:600;&quot;&gt;'{resource_feature}'&lt;/span&gt; from '{corpus}' to a column from a table in a different corpus. The remaining columns from this external table will then be available as output columns.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>

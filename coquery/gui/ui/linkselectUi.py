@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_LinkSelect(object):
     def setupUi(self, LinkSelect):
         LinkSelect.setObjectName(_fromUtf8("LinkSelect"))
-        LinkSelect.resize(554, 464)
+        LinkSelect.resize(554, 484)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -99,7 +99,7 @@ class Ui_LinkSelect(object):
 
     def retranslateUi(self, LinkSelect):
         LinkSelect.setWindowTitle(_translate("LinkSelect", "Select link column – Coquery", None))
-        self.label.setText(_translate("LinkSelect", "<html><head/><body><p><span style=\" font-weight:600;\">Link to an external table</span></p><p>You can link the column <span style=\" font-weight:600;\">\'{resource_feature}\'</span> from \'{corpus}\' to a column from a table in a different corpus. The remaining columns from this external table will then be available as output columns.</p><p><span style=\" font-weight:600;\">Note:</span> If you select an output column from an external table, only those tokens from the corpus \'{corpus}\' will be shown that also have a matching entry in the linked external table. Tokens without a matching entry in the external table will not be shown in the query results.</p></body></html>", None))
+        self.label.setText(_translate("LinkSelect", "<html><head/><body><p><span style=\" font-weight:600;\">Link to an external table</span></p><p>You can link the column <span style=\" font-weight:600;\">\'{resource_feature}\'</span> from \'{corpus}\' to a column from a table in a different corpus. The remaining columns from this external table will then be available as output columns.</p></body></html>", None))
         self.treeWidget.headerItem().setText(0, _translate("LinkSelect", "Corpus", None))
         self.checkBox.setText(_translate("LinkSelect", "Ignore case when comparing contents.", None))
 

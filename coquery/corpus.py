@@ -1934,7 +1934,7 @@ class CorpusClass(object):
                 alias = "db_{}_coq_{}_{}".format(ex_res.db_name, table, hashed).upper()
                 
                 sql_template = """
-                INNER JOIN 
+                LEFT JOIN 
                         (SELECT {columns}
                         FROM    {corpus}.{table})
                         AS      {alias}
