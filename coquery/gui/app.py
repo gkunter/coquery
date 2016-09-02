@@ -281,19 +281,21 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.multi_query_progress.setFormat("Running query... (%v of %m)")
         self.ui.multi_query_progress.hide()
         self.updateMultiProgress.connect(self.ui.multi_query_progress.setValue)
+        self.updateMultiProgress.connect(lambda n: self.ui.status_progress.setValue(0))
 
         self.statusBar().layout().setContentsMargins(0, 0, 4, 0)
         self.statusBar().setMinimumHeight(QtGui.QProgressBar().sizeHint().height())
         self.statusBar().setMaximumHeight(QtGui.QProgressBar().sizeHint().height())
         self.statusBar().setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.statusBar().layout().addWidget(self.ui.status_message, 1)
-        self.statusBar().layout().addWidget(self.ui.status_progress, 1)
         self.statusBar().layout().addWidget(self.ui.multi_query_progress, 1)
+        self.statusBar().layout().addWidget(self.ui.status_progress, 1)
         self.statusBar().layout().addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))        
         self.statusBar().layout().addWidget(QtGui.QLabel(_translate("MainWindow", "Connection: ", None)))
         self.statusBar().layout().addWidget(self.ui.combo_config)
-        self.statusBar().layout().setStretchFactor(self.ui.status_progress, 0.5)
-        self.statusBar().layout().setStretchFactor(self.ui.multi_query_progress, 0.5)
+        self.statusBar().layout().setStretchFactor(self.ui.status_message, 1)
+        self.statusBar().layout().setStretchFactor(self.ui.status_progress, 1)
+        self.statusBar().layout().setStretchFactor(self.ui.multi_query_progress, 1)
 
         self.change_mysql_configuration(options.cfg.current_server)
         self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
@@ -1379,13 +1381,12 @@ class CoqueryApp(QtGui.QMainWindow):
         
     def start_progress_indicator(self, n=None):
         """ Show the progress indicator, and make it move. """
+        self.ui.status_progress.setRange(0, 0)
+        self.ui.status_progress.show()
         if n is None:
-            self.ui.status_progress.setRange(0, 0)
-            self.ui.status_progress.show()
             self.ui.multi_query_progress.hide()
         else:
-            self.ui.multi_query_progress.setMaximum(n)
-            self.ui.multi_query_progress.setRange(0, 0)
+            self.ui.multi_query_progress.setRange(0, n)
             self.ui.multi_query_progress.show()
             
         self._multi_progress = n
@@ -2700,20 +2701,25 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if group or summary:
             if group:
-                types = [functions.Entropy, functions.Percent, 
+                types = [
+                         functions.Freq, functions.FreqNorm,
+                         functions.FreqPTW, functions.FreqPMW,
+                         functions.RowNumber,
+                         functions.Entropy, functions.Percent, 
                          functions.Proportion, functions.Tokens, 
                          functions.Types, functions.TypeTokenRatio]
-                checked = manager._gf
+                checked = manager.user_group_functions.get_list()
   
             else:
                 types = [functions.Entropy, 
                          functions.Freq, functions.FreqNorm,
                          functions.FreqPTW, functions.FreqPMW,
+                         functions.RowNumber,
                          functions.Percent, functions.Proportion, 
                          functions.Tokens, functions.Types, 
                          functions.TypeTokenRatio,
                          functions.CorpusSize, functions.SubcorpusSize]
-                checked = manager._summary_functions.get_list()
+                checked = manager.user_summary_functions.get_list()
                          
             kwargs = {
                 "function_types": types,
@@ -2738,9 +2744,9 @@ class CoqueryApp(QtGui.QMainWindow):
             return
 
         if group:
-            manager._gf = response
+            manager.user_group_functions.set_list(response)
         elif summary:
-            manager._summary_functions = response
+            manager.user_summary_functions.set_list(response)
         else:
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
