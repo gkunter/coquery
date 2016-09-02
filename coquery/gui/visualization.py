@@ -175,8 +175,12 @@ class VisualizerDialog(QtGui.QWidget):
         self.spinner_label = QtGui.QLabel("Bandwidth: ")
         self.spinner.valueChanged.connect(self.update_plot)
         
-        self.combo_function = QtGui.QComboBox()
-        self.label_function = QtGui.QLabel("Choose display:")
+        self.combo_x_function = QtGui.QComboBox()
+        self.label_x_function = QtGui.QLabel("Variable on &X axis:")
+        self.label_x_function.setBuddy(self.combo_x_function)
+        self.combo_y_function = QtGui.QComboBox()
+        self.label_y_function = QtGui.QLabel("Variable on &Y axis:")
+        self.label_y_function.setBuddy(self.combo_y_function)
         
         self.toolbar = None
         self.canvas = None
@@ -211,17 +215,29 @@ class VisualizerDialog(QtGui.QWidget):
         else:
             self.visualizer.update_data()
 
-        if self._function_list:
-            func = self._function_list[self.combo_function.currentIndex()]
-        else:
-            func = self.default_func
+
+        kwargs = {}
+        if self.visualizer.numerical_axes == 2:
+            try:
+                kwargs["func_y"] = self._function_list[self.combo_y_function.currentIndex()]
+                kwargs["column_y"] = None
+            except IndexError:
+                kwargs["func_y"] = None
+                kwargs["column_y"] = utf8(self.combo_y_function.currentText())
+        if self.visualizer.numerical_axes == 1:
+            try:
+                kwargs["func_x"] = self._function_list[self.combo_x_function.currentIndex()]
+                kwargs["column_x"] = None
+            except IndexError:
+                kwargs["func_x"] = None
+                kwargs["column_x"] = utf8(self.combo_x_function.currentText())
 
         self.visualizer.setup_figure()
         
         self.remove_matplot()
         self.add_matplot()
             
-        self.visualizer.draw(func=func)
+        self.visualizer.draw(**kwargs)
 
         self.visualizer.g.fig.tight_layout()
         self.visualizer.adjust_axes()
@@ -244,8 +260,12 @@ class VisualizerDialog(QtGui.QWidget):
 
         if not self.toolbar:
             self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
-            self.toolbar.addWidget(self.label_function)
-            self.toolbar.addWidget(self.combo_function)
+            if self.visualizer.numerical_axes == 2:
+                self.toolbar.addWidget(self.label_y_function)
+                self.toolbar.addWidget(self.combo_y_function)
+            if self.visualizer.numerical_axes == 1:
+                self.toolbar.addWidget(self.label_x_function)
+                self.toolbar.addWidget(self.combo_x_function)
             if options.cfg.experimental:
                 self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
             if self.smooth:
@@ -360,15 +380,23 @@ class VisualizerDialog(QtGui.QWidget):
         self.smooth = kwargs.get("smooth", False)
         self.visualizer = visualizer_class(model, view, parent=None, **kwargs)
         self._function_list = self.visualizer.function_list
-        self.combo_function.addItems([fnc.get_name() for fnc in self._function_list])
-        self.combo_function.currentIndexChanged.connect(self.update_plot)
+        try:
+            self.combo_x_function.addItems([fnc.get_name() for fnc in self._function_list] + self.visualizer._number_columns)
+            self.combo_x_function.currentIndexChanged.connect(self.update_plot)
+        except AttributeError:
+            pass
+        try:
+            self.combo_y_function.addItems([fnc.get_name() for fnc in self._function_list] + self.visualizer._number_columns)
+            self.combo_y_function.currentIndexChanged.connect(self.update_plot)
+        except AttributeError:
+            pass
+        
         if not self.visualizer._table.empty:
             self.setVisible(True)
             self.connect_signals()
             options.cfg.main_window.widget_list.append(self)
             self.add_matplot()
             self.thread = classes.CoqThread(self.visualizer.draw, 
-                                            func=self.visualizer.default_func,
                                             parent=self)
             self.thread.taskStarted.connect(self.startplot)
             self.thread.taskFinished.connect(self.finishplot)
