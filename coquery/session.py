@@ -164,6 +164,8 @@ class Session(object):
         number_of_queries = len(self.query_list)
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
 
+        dtype_list = []
+
         for i, current_query in enumerate(self.query_list):
             if options.cfg.gui and number_of_queries > 1:
                 options.cfg.main_window.updateMultiProgress.emit(i+1)
@@ -174,16 +176,45 @@ class Session(object):
                 logger.info("Start query ({} of {}): '{}'".format(i+1, number_of_queries, current_query.query_string))
             else:
                 logger.info("Start query: '{}'".format(current_query.query_string))
-            current_query.run()
             
-            # TODO: store query results in a l
+            df = current_query.run()
+            
             if not to_file:
-                self.data_table = self.data_table.append(current_query.results_frame)
-            else:
-                self.save_dataframe(manager.process(current_query.results_frame, self, True),
-                                    append=True)
+
+                # apply clumsy hack that tries to make sure that the dtypes of 
+                # data frames containing NaNs or empty strings does not change
+                # when appending the new data frame to the previous.
                 
-            logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
+                # The same hack is also needed in queries.run().
+                if len(self.data_table) > 0 and df.dtypes.tolist() != dtype_list.tolist():
+                    for x in df.columns:
+                        # the idea is that pandas/numpy use the 'object' 
+                        # dtype as a fall-back option for strange results,
+                        # including those with NaNs. 
+                        # One problem is that integer columns become floats
+                        # in the process. This is so because Pandas does not 
+                        # have an integer NA type:
+                        # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
+
+                        if df.dtypes[x] != dtype_list[x]:
+                            _working = None
+                            if df.dtypes[x] == object:
+                                if not df[x].any():
+                                    df[x] = [np.nan] * len(df)
+                                    dtype_list[x] = self.data_table[x].dtype
+                            elif dtype_list[x] == object:
+                                if not self.data_table[x].any():
+                                    self.data_table[x] = [np.nan] * len(self.data_table)
+                                    dtype_list[x] = df[x].dtype
+                else:
+                    dtype_list = df.dtypes
+
+                self.data_table = self.data_table.append(df)
+            else:
+                self.save_dataframe(manager.process(df, self, True), append=True)
+                
+            logger.info("Query executed ({:.3f} seconds, {} match{})".format(
+                time.time() - start_time, len(df), "es" if len(df) != 1 else ""))
 
         for col in self.data_table.columns:
             if self.data_table.dtypes[col] == object:
