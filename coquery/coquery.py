@@ -30,6 +30,7 @@ import time
 import logging
 import logging.handlers
 
+from . import general
 from .errors import *
 from . import options
 from .defines import *
@@ -58,13 +59,11 @@ def check_system():
         sys.exit(1)
 
 def main():
-    check_system()
-    options.process_options()
-    coquery_home = options.get_home_dir()
+    coquery_home = general.get_home_dir()
     logger = set_logger(os.path.join(coquery_home, "coquery.log"))
 
-    #if options.use_qt:
-        #sys.path.append(os.path.join(sys.path[0], "gui"))
+    check_system()
+    options.process_options()
 
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (NAME, VERSION))
