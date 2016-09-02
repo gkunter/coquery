@@ -94,6 +94,7 @@ COLUMN_NAMES = {
 
     # Labels that are used in the Statistics special table:
     "statistics_proportion": "Proportion",
+    "statistics_row_number": "Row number",
     "statistics_percent": "Percentage",
     "statistics_entropy": "Entropy",
     "statistics_frequency": "Frequency", 
@@ -123,6 +124,7 @@ COLUMN_NAMES = {
         }
 
 FUNCTION_DESC = {
+    "statistics_row_number": "Row number of the match",
     "statistics_corpus_size": "Size of the corpus in words",
     "statistics_subcorpus_size": "Size of the subcorpus in words",
     "statistics_entropy": "Calculate Shannon's entropy",
@@ -219,7 +221,12 @@ MODULE_INFORMATION = {
     "cachetools": ("cachetools — Extensible memoizing collections and decorators",
             "1.1.6",
             "Remember query results to speed up queries",
-            "https://github.com/tkem/cachetools")}
+            "https://github.com/tkem/cachetools"),
+    "statsmodels": ("statsmodels — Statistical computations and models for use with SciPy",
+            "0.7.0",
+            "Plot estimated cumulative distributions",
+            "http://www.statsmodels.org/stable/"),    
+    }
 
 
 
