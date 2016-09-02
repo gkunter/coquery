@@ -38,6 +38,7 @@ class AvailableModulesDialog(QtGui.QDialog):
                 ("PyMySQL", options.use_mysql),
                 ("SciPy", options.use_scipy), 
                 ("Seaborn", options.use_seaborn),
+                ("statsmodels", options.use_statsmodels),
                 ("NLTK", options.use_nltk),
                 ("tgt", options.use_tgt),
                 ("chardet", options.use_chardet),
