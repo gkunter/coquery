@@ -27,6 +27,13 @@ class FunctionDialog(QtGui.QDialog):
         super(FunctionDialog, self).__init__(parent)
         self.ui = Ui_FunctionsDialog()
         self.ui.setupUi(self)
+
+        max_width = 0
+        for x in functions.combine_map:
+            max_width = max(max_width, QtGui.QLabel(x).sizeHint().width() + 
+                               QtGui.QComboBox().sizeHint().width())
+        self.ui.combo_combine.setMaximumWidth(max_width)
+        self.ui.combo_combine.setMinimumWidth(max_width)
         
         self.max_parameters = max_parameters
         self.edit_label = edit_label
@@ -158,7 +165,7 @@ class FunctionDialog(QtGui.QDialog):
             
         tmp_func = func(
             columns = self.columns,
-            value = str(self.ui.edit_function_value),
+            value = utf8(self.ui.edit_function_value.text()),
             aggr = aggr)
         
         if self._auto_label:
@@ -182,10 +189,7 @@ class FunctionDialog(QtGui.QDialog):
                 return l
             else:
                 value = utf8(self.ui.edit_function_value.text())
-                escaped = str(value).replace("\\", "\\\\")
-                escaped = escaped.replace("'", "\\'")
-                escaped = escaped.replace("{", "{{")
-                escaped = escaped.replace("}", "}}")
+                escaped = value.replace("'", "\'")
                 
                 if self._auto_label:
                     label = None
