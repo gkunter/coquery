@@ -26,7 +26,6 @@ import sys
 import os
 import argparse
 import logging
-import platform
 import warnings
 import codecs
 import ast
@@ -45,6 +44,7 @@ if not hasattr(ast, "TryFinally"):
 import hashlib
 from collections import defaultdict
 
+from coquery import general
 from . import tokens
 from .links import Link
 from .unicode import utf8
@@ -169,7 +169,7 @@ class Options(object):
     def __init__(self):
         self.args = argparse.Namespace()
         
-        self.args.coquery_home = get_home_dir(create=True)
+        self.args.coquery_home = general.get_home_dir(create=True)
 
         self.prog_name = NAME
         self.config_name = "%s.cfg" % NAME.lower()
@@ -1152,18 +1152,17 @@ def process_options():
     try:
         from .gui.pyqt_compat import QtCore
         settings = QtCore.QSettings(
-                    os.path.join(get_home_dir(), "coquery.ini"),
+                    os.path.join(general.get_home_dir(), "coquery.ini"),
                     QtCore.QSettings.IniFormat)
     except IOError:
         settings = None
-
     options = Options()
     cfg = options.cfg
     options.get_options()
     if use_cachetools:
         from . import cache
         cfg.query_cache = cache.CoqQueryCache()
-        
+    
 def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
     """
     Read the Python code from path, and validate that it contains only 
@@ -1347,7 +1346,7 @@ def get_available_resources(configuration):
 
     # add corpus_path to sys.path so that modules can be imported from
     # that location:
-    corpora_path = os.path.join(get_home_dir(), "connections", configuration, "corpora")
+    corpora_path = os.path.join(general.get_home_dir(), "connections", configuration, "corpora")
 
     # create the directory if it doesn't exist yet: 
     # cycle through the modules in the corpus path:
@@ -1375,12 +1374,8 @@ def get_available_resources(configuration):
         try:
             find = imp.find_module(corpus_name, [corpora_path])
             module = imp.load_module(corpus_name, *find)
-        except SyntaxError as e:
-            logger.warn("There is a syntax error in corpus module {}. The corpus is not available for queries. contact the corpus module maintainer.".format(corpus_name))
-        except UnicodeEncodeError as e:
-            logger.warn("There is a Unicode error in corpus module {}: {}".format(corpus_name, str(e)))
         except Exception as e:
-            logger.warn("There is an error in corpus module {}: {}".format(corpus_name, str(e)))
+            logger.warn("There is an error in corpus module '{}': {}\nThe corpus is not available for queries.".format(corpus_name, str(e)))
         else:
             try:
                 d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
@@ -1411,63 +1406,6 @@ def get_resource(name, connection= None):
         connection = cfg.current_server
     Resource, Corpus, Lexicon, _ = get_available_resources(connection)[name]
     return Resource, Corpus, Lexicon
-
-def get_home_dir(create=True):
-    """
-    Return the path to the Coquery home directory. Also, create all required
-    directories.
-    
-    The coquery_home path points to the directory where Coquery stores (and 
-    looks for) the following files:
-    
-    $COQ_HOME/coquery.cfg               configuration file
-    $COQ_HOME/coquery.log               log files
-    $COQ_HOME/installer/                additional corpus installers
-    $COQ_HOME/connections/$MYSQL_CONFIG/corpora
-                                        installed corpus modules
-    $COQ_HOME/connections/$MYSQL_CONFIG/adhoc
-                                        adhoc installer modules
-    $COQ_HOME/connections/$MYSQL_CONFIG/databases
-                                        SQLite databases
-    
-    The location of $COQ_HOME depends on the operating system:
-    
-    Linux           either $XDG_CONFIG_HOME or ~/.config/Coquery
-    Windows         %APPDATA%/Coquery
-    Mac OS X        ~/Library/Application Support/Coquery
-    """
-
-    if platform.system() == "Linux":
-        try:
-            basepath = os.environ["XDG_CONFIG_HOME"]
-        except KeyError:
-            basepath = os.path.expanduser("~/.config")
-    elif platform.system() == "Windows":
-        try:
-            basepath = os.environ["APPDATA"]
-        except KeyError:
-            basepath = os.path.expanduser("~")
-    elif platform.system() == "Darwin":
-        basepath = os.path.expanduser("~/Library/Application Support")
-        
-    coquery_home = os.path.join(basepath, "Coquery")
-    connections_path = os.path.join(coquery_home, "connections")
-    custom_installer_path = os.path.join(coquery_home, "installer")
-    
-    if create:
-        # create Coquery home if it doesn't exist yet:
-        if not os.path.exists(coquery_home):
-            os.makedirs(coquery_home)
-            
-        # create custom installer directory if it doesn't exist yet:
-        if not os.path.exists(custom_installer_path):
-            os.makedirs(custom_installer_path)
-            
-        # create connection directory if it doesn't exist yet:
-        if not os.path.exists(connections_path):
-            os.makedirs(connections_path)
-
-    return coquery_home
 
 def decode_query_string(s):
     """
@@ -1560,6 +1498,7 @@ use_odfpy = has_module("odf")
 use_bs4 = has_module("bs4")
 use_scipy = has_module("scipy")
 use_cachetools = has_module("cachetools")
+use_statsmodels = has_module("statsmodels")
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:
