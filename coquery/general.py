@@ -156,7 +156,7 @@ try:
     import psutil
 
     def summarize_memory():
-        print("Virtual machine: {:.2f}Mb".format(psutil.Process().memory_info_ex().vms / (1024 * 1024))
+        print("Virtual machine: {:.2f}Mb".format(psutil.Process().memory_info_ex().vms / (1024 * 1024)))
         summary.print_(summary.summarize(muppy.get_objects()), limit=1)
 
 except Exception as e:
