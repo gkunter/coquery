@@ -26,6 +26,7 @@ from coquery.functions import *
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
+    numerical_axes = 1
     
     function_list = [Freq, FreqPMW, FreqNorm, Proportion, Percent]
     default_func = Freq
@@ -190,7 +191,7 @@ class Visualizer(vis.BaseVisualizer):
                             self._rectangles[ax] = collections.defaultdict(dict)
                         self._rectangles[ax][i][key] = val
 
-    def draw(self, func=None, number_column=None):
+    def draw(self, func_x=default_func, column_x=None):
         """ Plot bar charts. """
         def plot_facet(data, color):
             if self.stacked:
@@ -272,23 +273,23 @@ class Visualizer(vis.BaseVisualizer):
                 #self.add_rectangles(df, ax, stacked=False)
                 #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
 
-        self._value_column = number_column
-
         if self.percentage:
             self._levels[-1] = sorted(self._levels[-1])
                 
         sns.despine(self.g.fig,
                     left=False, right=False, top=False, bottom=False)
 
-        if number_column is None:
-            fun = func(columns=self._groupby, session=options.cfg.main_window.Session)
+        self._value_column = column_x
+
+        if column_x is None:
+            fun = func_x(columns=self._groupby, session=options.cfg.main_window.Session)
             value_label = fun.get_label(session=options.cfg.main_window.Session)
+            self.options["label_x_axis"] = value_label
         else:
-            value_label = number_column
+            self.options["label_x_axis"] = "mean({})".format(column_x)
 
         self.map_data(plot_facet)
 
-        self.options["label_x_axis"] = number_column
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
 
         if self.percentage:
