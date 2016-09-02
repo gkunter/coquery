@@ -19,6 +19,7 @@ import string
 import sys
 import sqlalchemy
 
+from coquery import general
 from coquery import sqlhelper
 from coquery import options
 from coquery.errors import *
@@ -328,7 +329,7 @@ class ConnectionConfiguration(QtGui.QDialog):
                 self.ui.button_remove.setEnabled(True)
 
     def get_sql_path(self, name):
-        return os.path.join(options.get_home_dir(), "connections", name, "databases")
+        return os.path.join(general.get_home_dir(), "connections", name, "databases")
 
     def set_sql_path(self):
         d = self.get_values()
