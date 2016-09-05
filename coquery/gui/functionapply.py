@@ -18,15 +18,32 @@ from coquery.defines import *
 from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtGui
 from .ui.addFunctionUi import Ui_FunctionsDialog
+from .classes import CoqListItem
 
 class FunctionDialog(QtGui.QDialog):
-    def __init__(self, columns=[], function_class=functions.StringFunction, 
+    def __init__(self, columns=[], available_columns=[],
+                 function_class=functions.StringFunction, 
                  function_types=None,
                  func=None, max_parameters=1, checkable=False, checked=[],
                  edit_label=True, parent=None):
         super(FunctionDialog, self).__init__(parent)
         self.ui = Ui_FunctionsDialog()
         self.ui.setupUi(self)
+
+        self.ui.button_up.setIcon(options.cfg.main_window.get_icon("sign-up"))
+        self.ui.button_down.setIcon(options.cfg.main_window.get_icon("sign-down"))
+        self.ui.button_add.setIcon(options.cfg.main_window.get_icon("sign-left"))
+        self.ui.button_remove.setIcon(options.cfg.main_window.get_icon("sign-right"))
+
+        self.session = options.cfg.main_window.Session
+        for x in available_columns:
+            item = CoqListItem(self.session.translate_header(x))
+            item.setObjectName(x)
+            self.ui.list_available_columns.addItem(item)        
+        for x in columns:
+            item = CoqListItem(self.session.translate_header(x))
+            item.setObjectName(x)
+            self.ui.list_selected_columns.addItem(item)        
 
         max_width = 0
         for x in functions.combine_map:
