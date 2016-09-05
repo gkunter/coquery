@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>706</width>
-    <height>831</height>
+    <width>783</width>
+    <height>1137</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -48,9 +48,9 @@
              </sizepolicy>
             </property>
             <property name="title">
-             <string>Co&amp;rpus</string>
+             <string>&amp;Data source</string>
             </property>
-            <layout class="QVBoxLayout" name="output_columns" stretch="0">
+            <layout class="QVBoxLayout" name="output_columns" stretch="0,0">
              <property name="spacing">
               <number>0</number>
              </property>
@@ -67,27 +67,63 @@
               <number>4</number>
              </property>
              <item>
-              <widget class="QComboBox" name="combo_corpus">
+              <layout class="QHBoxLayout" name="horizontalLayout_2">
+               <property name="spacing">
+                <number>10</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="label_2">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>&amp;Corpus:</string>
+                 </property>
+                 <property name="buddy">
+                  <cstring>combo_corpus</cstring>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="combo_corpus">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="focusPolicy">
+                  <enum>Qt::WheelFocus</enum>
+                 </property>
+                 <property name="editable">
+                  <bool>false</bool>
+                 </property>
+                 <property name="insertPolicy">
+                  <enum>QComboBox::InsertAlphabetically</enum>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QComboBox::AdjustToContents</enum>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_data_columns">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
-               <property name="focusPolicy">
-                <enum>Qt::WheelFocus</enum>
-               </property>
-               <property name="editable">
-                <bool>false</bool>
-               </property>
-               <property name="insertPolicy">
-                <enum>QComboBox::InsertAlphabetically</enum>
-               </property>
-               <property name="sizeAdjustPolicy">
-                <enum>QComboBox::AdjustToContents</enum>
-               </property>
-               <property name="frame">
-                <bool>true</bool>
+               <property name="text">
+                <string>Data co&amp;lumns:</string>
                </property>
               </widget>
              </item>
@@ -95,39 +131,34 @@
            </widget>
           </item>
           <item>
-           <widget class="QGroupBox" name="groupBox_buttons">
+           <widget class="QFrame" name="frame_buttons">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <layout class="QGridLayout" name="box_buttons">
-             <property name="sizeConstraint">
-              <enum>QLayout::SetDefaultConstraint</enum>
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <property name="margin">
+              <number>0</number>
              </property>
-             <property name="leftMargin">
-              <number>8</number>
-             </property>
-             <property name="topMargin">
-              <number>4</number>
-             </property>
-             <property name="rightMargin">
-              <number>5</number>
-             </property>
-             <property name="bottomMargin">
-              <number>4</number>
-             </property>
-             <property name="horizontalSpacing">
-              <number>8</number>
-             </property>
-             <property name="verticalSpacing">
-              <number>-1</number>
-             </property>
-             <item row="3" column="0">
+             <item>
+              <spacer name="horizontalSpacer_3">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
               <widget class="QPushButton" name="button_run_query">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
@@ -137,49 +168,7 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="0">
-              <widget class="QPushButton" name="button_filters">
-               <property name="text">
-                <string>Fil&amp;ters</string>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="1">
-              <layout class="QHBoxLayout" name="query_layout"/>
-             </item>
-             <item row="0" column="1">
-              <spacer name="horizontalSpacer_6">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>32</width>
-                 <height>0</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item row="2" column="0">
-              <widget class="QPushButton" name="button_stopwords">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="text">
-                <string>Stop &amp;words</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <layout class="QHBoxLayout" name="stopword_layout"/>
-             </item>
-             <item row="1" column="1">
-              <layout class="QHBoxLayout" name="filter_layout"/>
-             </item>
-             <item row="3" column="2">
+             <item>
               <spacer name="horizontalSpacer">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -209,7 +198,7 @@
            <property name="bottomMargin">
             <number>4</number>
            </property>
-           <item row="0" column="0">
+           <item row="0" column="0" alignment="Qt::AlignTop">
             <widget class="QRadioButton" name="radio_query_string">
              <property name="text">
               <string/>
@@ -222,14 +211,14 @@
            <item row="0" column="1">
             <widget class="CoqTextEdit" name="edit_query_string">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
+           <item row="1" column="0" alignment="Qt::AlignTop">
             <widget class="QRadioButton" name="radio_query_file">
              <property name="text">
               <string/>
@@ -300,9 +289,9 @@
         <item>
          <widget class="QGroupBox" name="groupBox">
           <property name="title">
-           <string>Output management</string>
+           <string>Output &amp;management</string>
           </property>
-          <layout class="QVBoxLayout" name="box_functions">
+          <layout class="QVBoxLayout" name="box_functions" stretch="0,1">
            <property name="spacing">
             <number>4</number>
            </property>
@@ -316,301 +305,443 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="CoqGroupBox" name="group_context">
+            <widget class="QToolBox" name="toolBox">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="title">
-              <string>&amp;Context</string>
+             <property name="minimumSize">
+              <size>
+               <width>250</width>
+               <height>0</height>
+              </size>
              </property>
-             <property name="checkable">
-              <bool>true</bool>
+             <property name="currentIndex">
+              <number>3</number>
              </property>
-             <property name="checked">
-              <bool>false</bool>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_8">
-              <item>
-               <layout class="QVBoxLayout" name="verticalLayout_10">
-                <item>
-                 <widget class="QRadioButton" name="radio_context_none">
-                  <property name="styleSheet">
-                   <string notr="true">text-align: center center</string>
-                  </property>
-                  <property name="text">
-                   <string>None</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QRadioButton" name="radio_context_mode_kwic">
-                  <property name="styleSheet">
-                   <string notr="true">text-align: center center</string>
-                  </property>
-                  <property name="text">
-                   <string>KWIC</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QRadioButton" name="radio_context_mode_string">
-                  <property name="styleSheet">
-                   <string notr="true">text-align: center center</string>
-                  </property>
-                  <property name="text">
-                   <string>Single string</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QRadioButton" name="radio_context_mode_columns">
-                  <property name="styleSheet">
-                   <string notr="true">text-align: center center</string>
-                  </property>
-                  <property name="text">
-                   <string>Columns</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_4">
-                <item>
-                 <widget class="QSpinBox" name="context_left_span">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                    <horstretch>1</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="buttonSymbols">
-                   <enum>QAbstractSpinBox::UpDownArrows</enum>
-                  </property>
-                  <property name="suffix">
-                   <string/>
-                  </property>
-                  <property name="prefix">
-                   <string>Left: </string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QSpinBox" name="context_right_span">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                    <horstretch>1</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="frame">
-                   <bool>true</bool>
-                  </property>
-                  <property name="buttonSymbols">
-                   <enum>QAbstractSpinBox::UpDownArrows</enum>
-                  </property>
-                  <property name="suffix">
-                   <string/>
-                  </property>
-                  <property name="prefix">
-                   <string>Right: </string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="CoqGroupBox" name="group_groups">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="title">
-              <string>&amp;Grouping</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="checked">
-              <bool>false</bool>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_11">
-              <item>
-               <widget class="CoqListWidget" name="list_group_columns">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>200</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_6">
-                <property name="sizeConstraint">
-                 <enum>QLayout::SetFixedSize</enum>
-                </property>
-                <item>
-                 <widget class="QPushButton" name="button_remove_group">
-                  <property name="text">
-                   <string>Remove</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QToolButton" name="button_group_up">
-                  <property name="text">
-                   <string/>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QToolButton" name="button_group_down">
-                  <property name="text">
-                   <string/>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_add_group_function">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Group functions...</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="CoqGroupBox" name="group_manager">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="title">
-              <string>Summar&amp;y</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="checked">
-              <bool>false</bool>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_12">
-              <item>
-               <layout class="QGridLayout" name="layout_summary">
-                <item row="0" column="0">
-                 <widget class="QRadioButton" name="radio_no_summary">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="toolTip">
-                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Do not aggregate the query results.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Every token that matches the query string is listed in the 'Query results' table. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="checked">
-                   <bool>true</bool>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QLabel" name="label_5">
-                  <property name="text">
-                   <string>Show all &amp;matches</string>
-                  </property>
-                  <property name="buddy">
-                   <cstring>radio_no_summary</cstring>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QRadioButton" name="radio_summary">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="checked">
-                   <bool>false</bool>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <layout class="QVBoxLayout" name="verticalLayout_13">
-                  <item>
-                   <widget class="QLabel" name="label_6">
-                    <property name="text">
-                     <string>&amp;Transform matches:</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-                    </property>
-                    <property name="buddy">
-                     <cstring>radio_summary</cstring>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QComboBox" name="combo_summary">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_add_summary_function">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Summary functions...</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
+             <widget class="QWidget" name="page">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>223</width>
+                <height>141</height>
+               </rect>
+              </property>
+              <attribute name="label">
+               <string>&amp;Context</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_2">
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout_10">
+                 <item>
+                  <widget class="QRadioButton" name="radio_context_none">
+                   <property name="styleSheet">
+                    <string notr="true">text-align: center center</string>
+                   </property>
+                   <property name="text">
+                    <string>None</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radio_context_mode_kwic">
+                   <property name="styleSheet">
+                    <string notr="true">text-align: center center</string>
+                   </property>
+                   <property name="text">
+                    <string>KWIC</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radio_context_mode_string">
+                   <property name="styleSheet">
+                    <string notr="true">text-align: center center</string>
+                   </property>
+                   <property name="text">
+                    <string>Single string</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radio_context_mode_columns">
+                   <property name="styleSheet">
+                    <string notr="true">text-align: center center</string>
+                   </property>
+                   <property name="text">
+                    <string>Columns</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_4">
+                 <item>
+                  <widget class="QSpinBox" name="context_left_span">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>1</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="buttonSymbols">
+                    <enum>QAbstractSpinBox::UpDownArrows</enum>
+                   </property>
+                   <property name="suffix">
+                    <string/>
+                   </property>
+                   <property name="prefix">
+                    <string>Left: </string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="context_right_span">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>1</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="frame">
+                    <bool>true</bool>
+                   </property>
+                   <property name="buttonSymbols">
+                    <enum>QAbstractSpinBox::UpDownArrows</enum>
+                   </property>
+                   <property name="suffix">
+                    <string/>
+                   </property>
+                   <property name="prefix">
+                    <string>Right: </string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_2">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="page_2">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>240</width>
+                <height>301</height>
+               </rect>
+              </property>
+              <attribute name="label">
+               <string>Stop&amp;words</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_3">
+               <item>
+                <widget class="QCheckBox" name="checkBox">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>Use stop words</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QListWidget" name="list_stopwords">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>50</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="alternatingRowColors">
+                  <bool>true</bool>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::ExtendedSelection</enum>
+                 </property>
+                 <property name="flow">
+                  <enum>QListView::TopToBottom</enum>
+                 </property>
+                 <property name="isWrapping" stdset="0">
+                  <bool>true</bool>
+                 </property>
+                 <property name="resizeMode">
+                  <enum>QListView::Adjust</enum>
+                 </property>
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <property name="viewMode">
+                  <enum>QListView::IconMode</enum>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                 <property name="selectionRectVisible">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="layout_stopword_buttons">
+                 <property name="sizeConstraint">
+                  <enum>QLayout::SetMinimumSize</enum>
+                 </property>
+                 <item>
+                  <widget class="QPushButton" name="pushButton">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="text">
+                    <string>Save</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="pushButton_2">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="text">
+                    <string>Load</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="page_3">
+              <attribute name="label">
+               <string>&amp;Grouping</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_5">
+               <item>
+                <widget class="CoqListWidget" name="list_group_columns">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>50</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="layout_group_columns_2">
+                 <property name="sizeConstraint">
+                  <enum>QLayout::SetMinimumSize</enum>
+                 </property>
+                 <item>
+                  <widget class="QPushButton" name="button_remove_group_2">
+                   <property name="text">
+                    <string>Remove</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="button_group_up_2">
+                   <property name="text">
+                    <string/>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="button_group_down_2">
+                   <property name="text">
+                    <string/>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QPushButton" name="button_filters_2">
+                 <property name="text">
+                  <string>Group fil&amp;ters...</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="button_add_group_function">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>Group functions...</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_5">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="page_4">
+              <attribute name="label">
+               <string>&amp;Summary</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_6">
+               <item>
+                <layout class="QGridLayout" name="layout_summary">
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="label_5">
+                   <property name="text">
+                    <string>Show all &amp;matches</string>
+                   </property>
+                   <property name="buddy">
+                    <cstring>radio_no_summary</cstring>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0" alignment="Qt::AlignTop">
+                  <widget class="QRadioButton" name="radio_no_summary">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Do not aggregate the query results.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Every token that matches the query string is listed in the 'Query results' table. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <layout class="QVBoxLayout" name="verticalLayout_14">
+                   <item>
+                    <widget class="QLabel" name="label_7">
+                     <property name="text">
+                      <string>&amp;Transform matches:</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                     </property>
+                     <property name="buddy">
+                      <cstring>radio_summary</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QComboBox" name="combo_summary_2"/>
+                   </item>
+                  </layout>
+                 </item>
+                 <item row="1" column="0" alignment="Qt::AlignTop">
+                  <widget class="QRadioButton" name="radio_summary">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="checked">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QPushButton" name="button_filters">
+                 <property name="text">
+                  <string>Summary fil&amp;ters...</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="button_add_summary_function">
+                 <property name="text">
+                  <string>Summary functions...</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_4">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
            <item>
@@ -675,7 +806,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>706</width>
+     <width>783</width>
      <height>23</height>
     </rect>
    </property>
@@ -795,7 +926,7 @@
   <action name="action_open_input_file">
    <property name="icon">
     <iconset theme="document-open">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Open input file...</string>
@@ -807,7 +938,7 @@
   <action name="action_help">
    <property name="icon">
     <iconset theme="help-contents">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Help</string>
@@ -844,7 +975,7 @@
   <action name="action_statistics">
    <property name="icon">
     <iconset theme="view-statistics">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Statistics</string>
@@ -853,7 +984,7 @@
   <action name="action_connection_settings">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Database connections...</string>
@@ -862,7 +993,7 @@
   <action name="action_settings">
    <property name="icon">
     <iconset theme="configure">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Settings...</string>
@@ -871,7 +1002,7 @@
   <action name="action_quit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -883,7 +1014,7 @@
   <action name="action_build_corpus">
    <property name="icon">
     <iconset theme="document-new">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Build new corpus...</string>
@@ -898,7 +1029,7 @@
    </property>
    <property name="icon">
     <iconset theme="edit-delete">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Remove corpus...</string>
@@ -910,7 +1041,7 @@
   <action name="action_manage_corpus">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Corpus &amp;manager...</string>
@@ -969,7 +1100,7 @@
   <action name="action_corpus_documentation">
    <property name="icon">
     <iconset theme="help-browser">
-     <normaloff>../../../../../../../../.designer/backup</normaloff>../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Documentation...</string>
@@ -1053,7 +1184,7 @@
   <action name="action_save_results">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../.designer/backup</normaloff>../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Save results...</string>
@@ -1065,7 +1196,7 @@
   <action name="action_copy_to_clipboard">
    <property name="icon">
     <iconset theme="edit-copy">
-     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../.designer/backup</normaloff>../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Copy selection to clipboard</string>
@@ -1087,7 +1218,7 @@
   <action name="action_save_selection">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Sa&amp;ve selection...</string>
@@ -1138,12 +1269,6 @@
    <class>CoqTextEdit</class>
    <extends>QTextEdit</extends>
    <header location="global">..classes</header>
-  </customwidget>
-  <customwidget>
-   <class>CoqGroupBox</class>
-   <extends>QGroupBox</extends>
-   <header location="global">..classes</header>
-   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
