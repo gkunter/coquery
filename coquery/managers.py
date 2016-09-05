@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import hashlib
+import logging
 
 from .defines import *
 from .functions import *
@@ -119,22 +120,8 @@ class Manager(CoqObject):
 
         return l
     
-    def _get_group_functions(self, df, session):
-        vis_cols = self.get_visible_columns(df, session, hidden=True)
-        vis_cols = [x for x in vis_cols if not x.startswith("coquery_invisible")]
-        groups = []
-        for rc_feature in options.cfg.group_columns:
-            groups += session.Resource.format_resource_feature(rc_feature,
-                        session.get_max_token_count())
-                    
-        if not groups:
-            return []
-
-        l = []
-        for func_type in self._gf:
-            l.append(func_type(columns=vis_cols, group=groups))
-        
-        return l
+    def _get_group_functions(self, df, session, connection):
+        return self.manager_group_functions.get_list() + self.user_group_functions.get_list()
     
     @staticmethod
     def _apply_function(df, fun, connection):
@@ -150,14 +137,21 @@ class Manager(CoqObject):
             raise e
         
     def mutate_groups(self, df, session, connection):
+        if len(df) == 0 or len(options.cfg.group_columns) == 0:
+            return df
         print("\tmutate_groups({})".format(options.cfg.group_columns))
-        
         vis_col = self.get_visible_columns(df, session)
-        fun_list = [fun(columns=vis_col) for fun in self.user_group_functions.get_list()]
-        group_functions = self.manager_group_functions.get_list() + fun_list
-        grouped = df.groupby(options.cfg.group_columns)
-
-        for fun in group_functions:
+        l = self.user_group_functions.get_list()
+        l = [fun(columns=vis_col, connection=connection) if type(fun) == type else fun for fun in l]
+        self.user_group_functions = FunctionList(l)
+        
+        try:
+            grouped = df.groupby(options.cfg.group_columns)
+        except KeyError as e:
+            print(options.cfg.group_columns)
+            print(df.head())
+            raise e
+        for fun in self._get_group_functions(df, session, connection):
             l = pd.Series()
             for x in grouped.groups:
                 val = fun.evaluate(df.iloc[grouped.groups[x]], connection)
@@ -195,7 +189,7 @@ class Manager(CoqObject):
     
     def arrange_groups(self, df, session):
         print("\tarrange_group()")
-        if len(df) == 0:
+        if len(df) == 0 or len(options.cfg.group_columns) == 0:
             return df
         
         if len(session.query_list) == 1:
@@ -378,12 +372,12 @@ class Manager(CoqObject):
             df = self.select(df, session)
             #df = df.fillna("")
 
-        self._functions = (self._main_functions + self._group_functions +
-                           self._column_functions + 
-                           self.manager_group_functions.get_list() + 
-                           self.user_group_functions.get_list() +
-                           self.manager_summary_functions.get_list() + 
-                           self.user_summary_functions.get_list())
+            self._functions = (self._main_functions + self._group_functions +
+                            self._column_functions + 
+                            self._get_group_functions(df, session, connection) + 
+                            self.manager_summary_functions.get_list() + 
+                            self.user_summary_functions.get_list())
+        print(self._functions)
         return df
     
 class Distinct(Manager):
@@ -509,3 +503,4 @@ def get_manager(manager, resource):
     finally:
         return options.cfg.managers[resource][manager]
 
+logger = logging.getLogger(NAME)
