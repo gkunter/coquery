@@ -164,7 +164,11 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Initialize all widgets with suitable data """
 
         self.ui.options_tree = self.create_output_options_tree()
-        self.ui.output_columns.addWidget(self.ui.options_tree)
+        self.ui.output_columns.insertWidget(2, self.ui.options_tree)
+        try:
+            self.ui.label_data_columns.setBuddy(self.ui.options_tree)
+        except AttributeError:
+            pass
 
         self.ui.combo_summary.addItems(SUMMARY_MODES)
         
@@ -177,23 +181,15 @@ class CoqueryApp(QtGui.QMainWindow):
         if index > -1:
             self.ui.combo_corpus.setCurrentIndex(index)
         
-        # fix alignment of radio buttons:
-        self.ui.layout_query.setAlignment(self.ui.radio_query_string, QtCore.Qt.AlignTop)
-        self.ui.layout_query.setAlignment(self.ui.radio_query_file, QtCore.Qt.AlignTop)
-
-        self.ui.layout_summary.setAlignment(self.ui.radio_no_summary, QtCore.Qt.AlignTop)
-        self.ui.layout_summary.setAlignment(self.ui.radio_summary, QtCore.Qt.AlignTop)
-
-        
-        self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords)
-        self.ui.stopword_layout.addWidget(self.ui.stopword_switch)
-        self.ui.stopword_switch.toggled.connect(self.toggle_stopword_switch)
-        self.set_stopword_button()
+        #self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords)
+        #self.ui.stopword_layout.addWidget(self.ui.stopword_switch)
+        #self.ui.stopword_switch.toggled.connect(self.toggle_stopword_switch)
+        #self.set_stopword_button()
                 
-        self.ui.filter_switch = classes.CoqSwitch(state=options.cfg.use_corpus_filters)
-        self.ui.filter_switch.toggled.connect(self.toggle_filter_switch)
-        self.ui.filter_layout.addWidget(self.ui.filter_switch)
-        self.set_filter_button()        
+        #self.ui.filter_switch = classes.CoqSwitch(state=options.cfg.use_corpus_filters)
+        #self.ui.filter_switch.toggled.connect(self.toggle_filter_switch)
+        #self.ui.filter_layout.addWidget(self.ui.filter_switch)
+        #self.set_filter_button()        
 
         ## set auto-completer for the filter edit:
         #self.filter_variable_model = QtGui.QStringListModel()
@@ -377,8 +373,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_stacked_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=False, smooth=True))
         self.ui.action_line_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=False, percentage=False, smooth=True))
         
-        self.ui.action_toggle_filters.triggered.connect(lambda: self.ui.filter_switch.toggle())
-        self.ui.action_toggle_stopwords.triggered.connect(lambda: self.ui.stopword_switch.toggle())
+        #self.ui.action_toggle_filters.triggered.connect(lambda: self.ui.filter_switch.toggle())
+        #self.ui.action_toggle_stopwords.triggered.connect(lambda: self.ui.stopword_switch.toggle())
         
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
@@ -520,8 +516,8 @@ class CoqueryApp(QtGui.QMainWindow):
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)
 
-        self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
-        self.ui.button_filters.clicked.connect(self.manage_filters)
+        #self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
+        #self.ui.button_filters.clicked.connect(self.manage_filters)
         
         self.connect_context_widgets()
 
@@ -535,14 +531,30 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_add_summary_function.clicked.connect(lambda: self.add_function(summary=True))
         self.ui.button_add_group_function.clicked.connect(lambda: self.add_function(group=True))
         
-        group = [self.ui.group_context, self.ui.group_groups, self.ui.group_manager]
-        self.ui.exclusive_group_functions = classes.CoqExclusiveGroup(group)
-        for element in group:
-            element.setChecked(False)
-        self.ui.group_manager.setChecked(True)
-        
+        #group = [self.ui.group_context, self.ui.group_stopwords, self.ui.group_groups, self.ui.group_manager]
+        #self.ui.exclusive_group_functions = classes.CoqExclusiveGroup(group)
+        #for element in group:
+            #element.setChecked(False)
+        #self.ui.group_manager.setChecked(True)
+
+        # Set the height of the group column box to 5 lines:
         self.ui.list_group_columns.setMinimumHeight(QtGui.QLabel().sizeHint().height() * 5)
         self.ui.list_group_columns.setMaximumHeight(QtGui.QLabel().sizeHint().height() * 5)
+        # Set the height of the stopword box to 5 lines:
+        self.ui.list_stopwords.setMinimumHeight(QtGui.QLabel().sizeHint().height() * 5)
+        self.ui.list_stopwords.setMaximumHeight(QtGui.QLabel().sizeHint().height() * 5)
+        
+        #self.ui.group_stopwords.hide()
+        #self.ui.group_groups.hide()
+        #self.ui.group_manager.hide()
+        #self.ui.group_context.hide()
+        
+        ## Set the width of the list widgets 
+        
+        self.ui.list_stopwords.setMaximumWidth(self.ui.layout_stopword_buttons.sizeHint().width())
+        self.ui.list_group_columns.setMaximumWidth(self.ui.layout_group_columns.sizeHint().width())
+        print(self.ui.list_group_columns.sizeHint())
+        print(self.ui.list_stopwords.sizeHint())
         
         # set up hooks for the summary widgets:
         self.ui.radio_no_summary.clicked.connect(self.change_managing)
@@ -1228,15 +1240,17 @@ class CoqueryApp(QtGui.QMainWindow):
 
 
     def set_stopword_button(self):
-        if len(options.cfg.stopword_list):
-            self.ui.stopword_switch.show()
-        else:
-            self.ui.stopword_switch.hide()
-            self.ui.stopword_switch.setOff()
-            options.cfg.use_stopwords = False
+        pass
+        #if len(options.cfg.stopword_list):
+            #self.ui.stopword_switch.show()
+        #else:
+            #self.ui.stopword_switch.hide()
+            #self.ui.stopword_switch.setOff()
+            #options.cfg.use_stopwords = False
 
     def toggle_stopword_switch(self):
-        options.cfg.use_stopwords = self.ui.stopword_switch.isOn()
+        pass
+        #options.cfg.use_stopwords = self.ui.stopword_switch.isOn()
 
     def manage_stopwords(self):
         from . import stopwords 
@@ -1245,21 +1259,23 @@ class CoqueryApp(QtGui.QMainWindow):
         if result is not None:
             options.cfg.stopword_list = result
         self.set_stopword_button()
-        # activate the filter switch if the filter list was empty before, but 
-        # is filled now:
-        if not old_list and options.cfg.stopword_list:
-            self.ui.stopword_switch.setOn()
+        ## activate the filter switch if the filter list was empty before, but 
+        ## is filled now:
+        #if not old_list and options.cfg.stopword_list:
+            #self.ui.stopword_switch.setOn()
     
     def set_filter_button(self):
-        if len(options.cfg.filter_list):
-            self.ui.filter_switch.show()
-        else:
-            self.ui.filter_switch.hide()
-            self.ui.filter_switch.setOff()
-            options.cfg.use_corpus_filters = False
+        pass
+        #if len(options.cfg.filter_list):
+            #self.ui.filter_switch.show()
+        #else:
+            #self.ui.filter_switch.hide()
+            #self.ui.filter_switch.setOff()
+            #options.cfg.use_corpus_filters = False
 
     def toggle_filter_switch(self):
-        options.cfg.use_corpus_filters = self.ui.filter_switch.isOn()
+        return False
+        #options.cfg.use_corpus_filters = self.ui.filter_switch.isOn()
 
     def manage_filters(self):
         from . import filterviewer
@@ -1269,11 +1285,11 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.filter_list = result
         self.set_filter_button()
         
-        # activate the filter switch if the filter list was empty before, but 
-        # is filled now:
-        if not old_list and options.cfg.filter_list:
-            self.ui.filter_switch.setOn()
-            options.cfg.use_corpus_filters = True
+        ## activate the filter switch if the filter list was empty before, but 
+        ## is filled now:
+        #if not old_list and options.cfg.filter_list:
+            #self.ui.filter_switch.setOn()
+            #options.cfg.use_corpus_filters = True
     
     def save_results(self, selection=False, clipboard=False):
         if not clipboard:
@@ -2564,10 +2580,10 @@ class CoqueryApp(QtGui.QMainWindow):
             #self.ui.filter_box.addTag(filt)
             #options.cfg.filter_list.remove(filt)
         
-        if options.cfg.use_stopwords:
-            self.ui.stopword_switch.setOn()
-        if options.cfg.use_corpus_filters:
-            self.ui.filter_switch.setOn()
+        #if options.cfg.use_stopwords:
+            #self.ui.stopword_switch.setOn()
+        #if options.cfg.use_corpus_filters:
+            #self.ui.filter_switch.setOn()
         
         # get table from last session, if possible:
         try:
@@ -2582,8 +2598,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.list_group_columns.add_resource(col)
             options.cfg.group_columns = self.get_group_columns()
         if options.cfg.group_columns:
-            self.ui.group_groups.setTitle("Grouping (active)")
-            self.ui.group_groups.set_style(title_weight="900")
+            print(options.cfg.group_columns)
+            #self.ui.group_groups.setTitle("Grouping (active)")
+            #self.ui.group_groups.set_style(title_weight="900")
 
         self.activate_group_column_buttons()
         
@@ -2727,9 +2744,10 @@ class CoqueryApp(QtGui.QMainWindow):
                 "checkable": True,
                 "checked": checked,
                 "edit_label": False}
+            
+            available_columns = []
         else:
             dtypes = pd.Series([self.table_model.get_dtype(x) for x in columns])
-            print(dtypes != object)
             try:
                 if all(dtypes != object):
                     kwargs = {"function_class": functions.MathFunction}
@@ -2738,8 +2756,11 @@ class CoqueryApp(QtGui.QMainWindow):
             except Exception as e:
                 print(e)
                 kwargs = {"function_class": functions.Function}
+            available_columns = [x for x in self.table_model.content.columns if x not in columns]
+
         response = functionapply.FunctionDialog.set_function(
-            columns=columns, parent=self, **kwargs)
+            columns=columns, available_columns=available_columns,
+            parent=self, **kwargs)
         if response is None:
             return
 
@@ -2796,7 +2817,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.options_tree.takeTopLevelItem(self.ui.options_tree.indexOfTopLevelItem(item))
         else:
             item.parent().removeChild(item)
-        if hasattr(item, link):
+        if hasattr(item, "link"):
             options.cfg.table_links[options.cfg.current_server].remove(item.link)
 
 #try:
