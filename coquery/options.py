@@ -819,7 +819,10 @@ class Options(object):
                             self.args.stopword_list = []                            
                         try:
                             group = config_file.get("gui", "group_columns")
-                            self.args.group_columns = group.split(",")
+                            if group:
+                                self.args.group_columns = group.split(",")
+                            else:
+                                self.args.group_columns = []
                         except (NoOptionError, ValueError):
                             self.args.group_columns = []
                         try:
