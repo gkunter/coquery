@@ -236,7 +236,10 @@ class StringMatch(StringFunction):
     def __init__(self, value, columns=[], *args, **kwargs):
         super(StringMatch, self).__init__(columns, *args, **kwargs)
         self.value = value
-        self.re = re.compile(value)
+        try:
+            self.re = re.compile(value)
+        except Exception as e:
+            self.re = None
     
     def _func(self, col):
         return col.apply(lambda x: ["no", "yes"][bool(self.re.search(str(x)))])
@@ -573,6 +576,10 @@ class ContextString(ContextColumns):
         return pd.Series(
             data=[collapse_words(list(pd.Series(left + [x.upper() for x in target] + right)))],
             index=["coq_context_string"])
+
+#############################################################################
+## FunctionList class
+#############################################################################
 
 class FunctionList(CoqObject):
     def __init__(self, l=[], *args, **kwargs):
