@@ -319,14 +319,14 @@
               </size>
              </property>
              <property name="currentIndex">
-              <number>3</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="page">
               <property name="geometry">
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>223</width>
+                <width>118</width>
                 <height>141</height>
                </rect>
               </property>
@@ -444,7 +444,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>240</width>
-                <height>301</height>
+                <height>261</height>
                </rect>
               </property>
               <attribute name="label">
@@ -556,6 +556,14 @@
               </layout>
              </widget>
              <widget class="QWidget" name="page_3">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>240</width>
+                <height>296</height>
+               </rect>
+              </property>
               <attribute name="label">
                <string>&amp;Grouping</string>
               </attribute>
@@ -577,26 +585,26 @@
                 </widget>
                </item>
                <item>
-                <layout class="QHBoxLayout" name="layout_group_columns_2">
+                <layout class="QHBoxLayout" name="layout_group_columns">
                  <property name="sizeConstraint">
                   <enum>QLayout::SetMinimumSize</enum>
                  </property>
                  <item>
-                  <widget class="QPushButton" name="button_remove_group_2">
+                  <widget class="QPushButton" name="button_remove_group">
                    <property name="text">
                     <string>Remove</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QToolButton" name="button_group_up_2">
+                  <widget class="QToolButton" name="button_group_up">
                    <property name="text">
                     <string/>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QToolButton" name="button_group_down_2">
+                  <widget class="QToolButton" name="button_group_down">
                    <property name="text">
                     <string/>
                    </property>
@@ -640,6 +648,14 @@
               </layout>
              </widget>
              <widget class="QWidget" name="page_4">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>240</width>
+                <height>188</height>
+               </rect>
+              </property>
               <attribute name="label">
                <string>&amp;Summary</string>
               </attribute>
@@ -691,7 +707,7 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QComboBox" name="combo_summary_2"/>
+                    <widget class="QComboBox" name="combo_summary"/>
                    </item>
                   </layout>
                  </item>
