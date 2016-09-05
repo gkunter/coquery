@@ -721,6 +721,17 @@ class CoqSpinner(QtGui.QWidget):
         self._label.hide()
         self._anim.stop()
 
+class CoqListItem(QtGui.QListWidgetItem):
+    def __init__(self, *args, **kwargs):
+        super(CoqListItem, self).__init__(*args, **kwargs)
+        self._objectName = ""
+        
+    def setObjectName(self, s):
+        self._objectName = s
+        
+    def objectName(self):
+        return self._objectName
+
 class CoqTreeItem(QtGui.QTreeWidgetItem):
     """ 
     Define a tree element class that stores the output column options in
