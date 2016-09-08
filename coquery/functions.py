@@ -446,6 +446,14 @@ class Percent(Proportion):
         
 class Entropy(Proportion):
     _name = "statistics_entropy"
+    # This is a very informative discussion of the relation between entropy 
+    # in physics and information science:
+    
+    # http://www.askamathematician.com/2010/01/q-whats-the-relationship-between-entropy-in-the-information-theory-sense-and-the-thermodynamics-sense/
+
+    # It also contains one of the most useful definitons of entropy that I've
+    # come across so far: entropy is a measure of "how hard it is to describe
+    # this thing".
     
     def evaluate(self, df, *args, **kwargs):
         _df = df[self.columns]
