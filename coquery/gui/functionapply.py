@@ -55,15 +55,6 @@ class FunctionDialog(QtGui.QDialog):
         self.max_parameters = max_parameters
         self.edit_label = edit_label
 
-        if max_parameters == 0:
-            self.ui.parameter_box.hide()
-        if len(columns) < 2:
-            self.ui.box_combine.hide()
-        if len(columns) < 1:
-            self.ui.label_description.hide()
-        if not edit_label:
-            self.ui.widget_label.hide()
-            
         self.checkable = checkable
         self.checked = checked
         self.function_types = function_types
@@ -74,11 +65,15 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.list_functions.currentItemChanged.connect(lambda: self.check_gui())
         self.ui.edit_function_value.textChanged.connect(lambda: self.check_gui())
         self.ui.edit_label.textEdited.connect(self.check_label)
+
+        self.ui.button_add.clicked.connect(self.add_selected)
+        self.ui.button_remove.clicked.connect(self.remove_selected)
+        self.ui.button_up.clicked.connect(self.selected_up)
+        self.ui.button_down.clicked.connect(self.selected_down)
         
         if func:
             self.select_function(func)
         
-        self.set_header(self.columns)
         self.check_gui()
         self.ui.list_functions.setFocus(1)
                 
@@ -87,12 +82,30 @@ class FunctionDialog(QtGui.QDialog):
         except TypeError:
             pass
 
-    def set_header(self, columns):
-        session = options.cfg.main_window.Session
-        self.ui.label_description.setText(
-            utf8(self.ui.label_description.text()).format(
-                ", ".join([session.translate_header(x) for x in columns])))
-
+    def add_selected(self):
+        selected = self.ui.list_available_columns.selectedItems()
+        for x in selected:
+            i = self.ui.list_available_columns.row(x)
+            self.ui.list_available_columns.takeItem(i)
+            self.ui.list_selected_columns.insertItem(self.ui.list_selected_columns.count(), x)
+            self.columns.append(x.objectName())
+        self.check_gui()
+        
+    def remove_selected(self):
+        selected = self.ui.list_selected_columns.selectedItems()
+        for x in selected:
+            i = self.ui.list_selected_columns.row(x)
+            self.ui.list_selected_columns.takeItem(i)
+            self.ui.list_available_columns.insertItem(self.ui.list_available_columns.count(), x)
+            self.columns.remove(x.objectName())
+        self.check_gui()
+        
+    def selected_up(self):
+        pass
+    
+    def selected_down(self):
+        pass
+    
     def select_function(self, func):
         self.columns = func.columns
         try:
@@ -142,16 +155,17 @@ class FunctionDialog(QtGui.QDialog):
             self._auto_label = True
 
     def check_gui(self, func=None, only_label=False):
-        if self.max_parameters == 0:
-            return
-        func = self.function_list[self.ui.list_functions.currentRow()]
-        if not only_label:
-            if len(self.columns) < 2:
-                self.ui.box_combine.setDisabled(True)
-                self.ui.label_remark.show()
-            else:
-                self.ui.label_remark.hide()
+        self.ui.parameter_box.setEnabled(self.max_parameters > 0)
+        self.ui.box_combine.setEnabled(len(self.columns) > 1)
             
+        if not self.edit_label:
+            self.ui.widget_label.hide()
+        else:
+            self.ui.widget_label.show()
+
+        func = self.function_list[self.ui.list_functions.currentRow()]
+
+        if not only_label:
             current_combine = str(self.ui.combo_combine.currentText())
             self.ui.combo_combine.clear()
             for x in func.combine_modes:
@@ -162,11 +176,9 @@ class FunctionDialog(QtGui.QDialog):
                 self.ui.combo_combine.setCurrentIndex(0)
             
             if func.parameters == 0 or self.max_parameters == 0:
-                self.ui.parameter_box.setDisabled(True)
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
                 self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
             else:
-                self.ui.parameter_box.setEnabled(True)
                 if not func.validate_input(utf8(self.ui.edit_function_value.text())):
                     self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
