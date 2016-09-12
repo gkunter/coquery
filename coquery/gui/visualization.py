@@ -381,7 +381,10 @@ class VisualizerDialog(QtGui.QWidget):
         self.visualizer = visualizer_class(model, view, parent=None, **kwargs)
         self._function_list = self.visualizer.function_list
         try:
-            self.combo_x_function.addItems([fnc.get_name() for fnc in self._function_list] + self.visualizer._number_columns)
+            self.combo_x_function.addItems([fnc.get_name() for fnc in self._function_list])
+            for x in self.visualizer._number_columns:
+                if x not in [fnc(columns=self.visualizer._group_by, session=options.cfg.main_window.Session).get_id() for fnc in self._function_list]:
+                    self.combo_x_function.addItem(x)
             self.combo_x_function.currentIndexChanged.connect(self.update_plot)
         except AttributeError:
             pass
