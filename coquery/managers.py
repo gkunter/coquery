@@ -146,7 +146,11 @@ class Manager(CoqObject):
         self.user_group_functions = FunctionList(l)
         
         try:
-            grouped = df.groupby(options.cfg.group_columns)
+            columns = []
+            for column in options.cfg.group_columns:
+                columns += session.Resource.format_resource_feature(column,
+                    session.get_max_token_count())
+            grouped = df.groupby(columns)
         except KeyError as e:
             print(options.cfg.group_columns)
             print(df.head())
@@ -377,7 +381,6 @@ class Manager(CoqObject):
                             self._get_group_functions(df, session, connection) + 
                             self.manager_summary_functions.get_list() + 
                             self.user_summary_functions.get_list())
-        print(self._functions)
         return df
     
 class Distinct(Manager):
