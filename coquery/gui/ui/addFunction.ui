@@ -14,261 +14,242 @@
    <string>Add a function – Coquery</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
-   <property name="spacing">
-    <number>16</number>
-   </property>
-   <property name="sizeConstraint">
-    <enum>QLayout::SetMinimumSize</enum>
-   </property>
    <item>
-    <widget class="QFrame" name="frame">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+    <layout class="QVBoxLayout" name="verticalLayout_3">
+     <property name="spacing">
+      <number>16</number>
      </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="spacing">
-       <number>4</number>
-      </property>
-      <property name="sizeConstraint">
-       <enum>QLayout::SetMinimumSize</enum>
-      </property>
-      <property name="leftMargin">
-       <number>8</number>
-      </property>
-      <property name="topMargin">
-       <number>6</number>
-      </property>
-      <property name="rightMargin">
-       <number>8</number>
-      </property>
-      <property name="bottomMargin">
-       <number>6</number>
-      </property>
-      <item>
-       <widget class="QLabel" name="label_description">
-        <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add a function:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <item>
+      <widget class="QWidget" name="widget_label" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <property name="margin">
+         <number>0</number>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" name="widget_label" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <item>
-          <widget class="QLabel" name="label">
-           <property name="text">
-            <string>Label:</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="edit_label"/>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_3">
+        <item>
+         <widget class="QLabel" name="label">
           <property name="text">
-           <string>&amp;Selected columns:</string>
+           <string>&amp;Label:</string>
           </property>
           <property name="buddy">
-           <cstring>list_selected_columns</cstring>
+           <cstring>edit_label</cstring>
           </property>
          </widget>
         </item>
-        <item row="1" column="0" rowspan="2">
-         <widget class="CoqListWidget" name="list_selected_columns">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="dragDropMode">
-           <enum>QAbstractItemView::InternalMove</enum>
-          </property>
-         </widget>
+        <item>
+         <widget class="QLineEdit" name="edit_label"/>
         </item>
-        <item row="2" column="1">
-         <layout class="QVBoxLayout" name="verticalLayout_5">
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QListWidget" name="list_functions">
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="currentRow">
+          <number>-1</number>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name="parameter_box" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetFixedSize</enum>
+          </property>
+          <property name="margin">
+           <number>0</number>
+          </property>
           <item>
-           <widget class="QToolButton" name="button_up">
+           <widget class="QLabel" name="label_5">
             <property name="text">
-             <string/>
+             <string>Ar&amp;gument:</string>
+            </property>
+            <property name="buddy">
+             <cstring>edit_function_value</cstring>
             </property>
            </widget>
           </item>
           <item>
-           <spacer name="verticalSpacer_2">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_6">
-            <item>
-             <widget class="QToolButton" name="button_add">
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QToolButton" name="button_remove">
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <spacer name="verticalSpacer_3">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QToolButton" name="button_down">
-            <property name="text">
-             <string/>
+           <widget class="QLineEdit" name="edit_function_value">
+            <property name="placeholderText">
+             <string>(no value specified)</string>
             </property>
            </widget>
           </item>
          </layout>
-        </item>
-        <item row="2" column="2">
-         <widget class="QListWidget" name="list_available_columns">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="dragDropMode">
-           <enum>QAbstractItemView::DragOnly</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>&amp;Available columns:</string>
-          </property>
-          <property name="buddy">
-           <cstring>list_available_columns</cstring>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QListWidget" name="list_functions">
-        <property name="selectionBehavior">
-         <enum>QAbstractItemView::SelectRows</enum>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-        <property name="currentRow">
-         <number>-1</number>
-        </property>
-        <property name="sortingEnabled">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" name="parameter_box" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="verticalSpacing">
+        <number>0</number>
+       </property>
+       <item row="1" column="0">
+        <widget class="CoqListWidget" name="list_selected_columns">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="dragDropMode">
+          <enum>QAbstractItemView::InternalMove</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <layout class="QVBoxLayout" name="verticalLayout_5">
          <item>
-          <widget class="QLabel" name="label_5">
-           <property name="text">
-            <string>&amp;Parameter:</string>
-           </property>
-           <property name="buddy">
-            <cstring>edit_function_value</cstring>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="edit_function_value">
-           <property name="placeholderText">
-            <string>(no value specified)</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" name="box_combine" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QLabel" name="label_4">
-           <property name="text">
-            <string>&amp;Combine values:</string>
-           </property>
-           <property name="buddy">
-            <cstring>combo_combine</cstring>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="combo_combine">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_remark">
-           <property name="text">
-            <string>(not needed for one column)</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer">
+          <spacer name="verticalSpacer_2">
            <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+            <enum>Qt::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
-             <height>20</height>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item alignment="Qt::AlignHCenter">
+          <widget class="QToolButton" name="button_up">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_6">
+           <item>
+            <widget class="QToolButton" name="button_add">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item alignment="Qt::AlignVCenter">
+            <widget class="QToolButton" name="button_remove">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item alignment="Qt::AlignHCenter">
+          <widget class="QToolButton" name="button_down">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
             </size>
            </property>
           </spacer>
          </item>
         </layout>
-       </widget>
-      </item>
-     </layout>
-    </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QListWidget" name="list_available_columns">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="dragDropMode">
+          <enum>QAbstractItemView::DragOnly</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>&amp;Available columns:</string>
+         </property>
+         <property name="buddy">
+          <cstring>list_available_columns</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>&amp;Selected columns:</string>
+         </property>
+         <property name="buddy">
+          <cstring>list_selected_columns</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QWidget" name="box_combine" native="true">
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <property name="margin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>&amp;Combine values:</string>
+            </property>
+            <property name="buddy">
+             <cstring>combo_combine</cstring>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="combo_combine">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
