@@ -146,7 +146,13 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.figure_font = options.settings.value("figure_font", QtGui.QLabel().font())
         options.cfg.table_font = options.settings.value("table_font", QtGui.QLabel().font())
         options.cfg.context_font = options.settings.value("context_font", QtGui.QLabel().font())
-
+        x = options.settings.value("splitter")
+        try:
+            y = x.toByteArray()
+        except (TypeError, AttributeError):
+            y = x
+        finally:
+            self.ui.splitter.restoreState(y)
         # Taskbar icons in Windows require a workaround as described here:
         # https://stackoverflow.com/questions/1551605#1552105
         if sys.platform == "win32":
@@ -180,6 +186,67 @@ class CoqueryApp(QtGui.QMainWindow):
         index = self.ui.combo_corpus.findText(options.cfg.corpus)
         if index > -1:
             self.ui.combo_corpus.setCurrentIndex(index)
+
+        # Set the height of the group column box to 5 lines:
+        self.ui.list_group_columns.setMinimumHeight(QtGui.QLabel().sizeHint().height() * 5)
+        self.ui.list_group_columns.setMaximumHeight(QtGui.QLabel().sizeHint().height() * 5)
+        # Set the height of the stopword box to 5 lines:
+        self.ui.list_stopwords.setMinimumHeight(QtGui.QLabel().sizeHint().height() * 5)
+        self.ui.list_stopwords.setMaximumHeight(QtGui.QLabel().sizeHint().height() * 5)
+        
+        for i in range(self.ui.tool_widget.count()):
+            self.ui.tool_widget.setTabText(i, TOOLBOX_TAB[i])
+        
+        max_height = 0
+        max_width = 0
+        for i in range(self.ui.tool_widget.count()):
+            self.ui.tool_widget.setCurrentIndex(i)
+            max_height = max(max_height, self.ui.tool_widget.widget(i).sizeHint().height())
+            max_width = max(max_width, self.ui.tool_widget.sizeHint().width())
+        max_height = max_height + self.ui.tool_widget.count() * (QtGui.QPushButton().sizeHint().height() + 6)
+
+        self.ui.list_stopwords.setMaximumWidth(max_width)
+        self.ui.list_stopwords.setMinimumWidth(max_width)
+        self.ui.list_group_columns.setMaximumWidth(max_width)
+        self.ui.list_group_columns.setMinimumWidth(max_width)
+
+
+        #self.ui.tool_widget.setMinimumHeight(max_height)
+        #self.ui.tool_widget.setMinimumWidth(max_width + 26)
+
+        icon_size = QtGui.QPushButton().sizeHint().height() - 20
+        self.ui.tool_widget.setStyleSheet("""
+            QToolBox {{
+                        background-color: {button_mid};
+                       }}
+            QToolBox::tab {{
+                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 {button_button}, stop: 1.0 {button_midlight});
+                border-radius: 5px;
+                /* image: url({path}/{sign_down});
+                image-position: right; */
+            }}
+
+            QToolBox::tab:selected {{ /* italicize selected tabs */
+                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 {button_light}, stop: 1.0 {button_button});
+                border-color: red;
+                border-width: 3px;
+
+            }}""".format(path=os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG"),
+                    sign_up="sign-minimize.png", 
+                    sign_down="sign-maximize.png",
+                    icon_size=icon_size, 
+                    button_light=options.cfg.app.palette().color(QtGui.QPalette.Light).name(),
+                    button_midlight=options.cfg.app.palette().color(QtGui.QPalette.Midlight).name(),
+                    button_button=options.cfg.app.palette().color(QtGui.QPalette.Button).name(),
+                    button_mid=options.cfg.app.palette().color(QtGui.QPalette.Mid).name(),
+                    button_dark=options.cfg.app.palette().color(QtGui.QPalette.Dark).name(),
+                    box_light=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
+                    box_dark=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
+                    focus=options.cfg.app.palette().color(QtGui.QPalette.Highlight).name(),
+                    ))
+                
         
         #self.ui.stopword_switch = classes.CoqSwitch(state=options.cfg.use_stopwords)
         #self.ui.stopword_layout.addWidget(self.ui.stopword_switch)
@@ -527,34 +594,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_group_down.clicked.connect(lambda: self.move_group_column(direction="down"))
         self.ui.list_group_columns.itemActivated.connect(self.activate_group_column_buttons)
         self.ui.list_group_columns.itemDropped.connect(lambda x: self.add_group_column(item=x))
-        
+        self.ui.list_group_columns.featureRemoved.connect(self.uncheck_grouped_feature)
         self.ui.button_add_summary_function.clicked.connect(lambda: self.add_function(summary=True))
         self.ui.button_add_group_function.clicked.connect(lambda: self.add_function(group=True))
-        
-        #group = [self.ui.group_context, self.ui.group_stopwords, self.ui.group_groups, self.ui.group_manager]
-        #self.ui.exclusive_group_functions = classes.CoqExclusiveGroup(group)
-        #for element in group:
-            #element.setChecked(False)
-        #self.ui.group_manager.setChecked(True)
-
-        # Set the height of the group column box to 5 lines:
-        self.ui.list_group_columns.setMinimumHeight(QtGui.QLabel().sizeHint().height() * 5)
-        self.ui.list_group_columns.setMaximumHeight(QtGui.QLabel().sizeHint().height() * 5)
-        # Set the height of the stopword box to 5 lines:
-        self.ui.list_stopwords.setMinimumHeight(QtGui.QLabel().sizeHint().height() * 5)
-        self.ui.list_stopwords.setMaximumHeight(QtGui.QLabel().sizeHint().height() * 5)
-        
-        #self.ui.group_stopwords.hide()
-        #self.ui.group_groups.hide()
-        #self.ui.group_manager.hide()
-        #self.ui.group_context.hide()
-        
-        ## Set the width of the list widgets 
-        
-        self.ui.list_stopwords.setMaximumWidth(self.ui.layout_stopword_buttons.sizeHint().width())
-        self.ui.list_group_columns.setMaximumWidth(self.ui.layout_group_columns.sizeHint().width())
-        print(self.ui.list_group_columns.sizeHint())
-        print(self.ui.list_stopwords.sizeHint())
         
         # set up hooks for the summary widgets:
         self.ui.radio_no_summary.clicked.connect(self.change_managing)
@@ -625,11 +667,21 @@ class CoqueryApp(QtGui.QMainWindow):
                 selected = [x.objectName() for x in self.ui.options_tree.selectedItems()]
             for col in selected:
                 self.ui.list_group_columns.add_resource(col)
-        self.ui.group_groups.setTitle("Grouping (active)")
-        self.ui.group_groups.set_style(title_weight="900")
+            print(rc_feature, selected)
+        else:
+            print("item:", item)
 
+        self.ui.tool_widget.setTabIcon(TOOLBOX_GROUPING, self.get_icon("star"))
+
+        if self.ui.options_tree.getCheckState(rc_feature) == QtCore.Qt.Unchecked:
+            self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.PartiallyChecked)
+        
         self.activate_group_column_buttons()
         self.reaggregate(start=True)
+
+    def uncheck_grouped_feature(self, rc_feature):
+        if self.ui.options_tree.getCheckState(rc_feature) == QtCore.Qt.PartiallyChecked:
+            self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.Unchecked)
     
     def remove_group_column(self, rc_feature=None):
         if rc_feature:
@@ -640,7 +692,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.list_group_columns.remove_item(item)
         options.cfg.group_columns = self.get_group_columns()
         if not options.cfg.group_columns:
-            self.ui.group_groups.setTitle("Grouping")
+            self.ui.tool_widget.setTabIcon(TOOLBOX_GROUPING, QtGui.QIcon())
 
         self.activate_group_column_buttons()
         self.reaggregate(start=True)
@@ -669,6 +721,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.radio_context_mode_sentence.setChecked(True)
         elif mode == CONTEXT_NONE:
             self.ui.radio_context_none.setChecked(True)
+        if mode != None and mode != CONTEXT_NONE:
+            self.ui.tool_widget.setTabIcon(TOOLBOX_CONTEXT, self.get_icon("star"))
             
         if left_span is not None:
             self.ui.context_left_span.setValue(left_span)
@@ -705,10 +759,13 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.context_left = 0
             options.cfg.context_right = 0
             options.cfg.context_span = 0
+            self.ui.tool_widget.setTabIcon(TOOLBOX_CONTEXT, QtGui.QIcon())
+
         else:
             options.cfg.context_left = self.ui.context_left_span.value()
             options.cfg.context_right = self.ui.context_right_span.value()
             options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+            self.ui.tool_widget.setTabIcon(TOOLBOX_CONTEXT, self.get_icon("star"))
             
         self.set_context_values()
         self.get_context_values()            
@@ -1428,9 +1485,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.stop_progress_indicator()
             
             if isinstance(self.Session, StatisticsSession):
-                self.ui.group_manager.setEnabled(False)
+                self.ui.tool_widget.widget(TOOLBOX_GROUPING).setDisabled(True)
             else:
-                self.ui.group_manager.setEnabled(True)
+                self.ui.tool_widget.widget(TOOLBOX_GROUPING).setEnabled(True)
             
         # Create an alert in the system taskbar to indicate that the query has 
         # completed:
@@ -2250,6 +2307,9 @@ class CoqueryApp(QtGui.QMainWindow):
             options.settings.setValue("figure_font", options.cfg.figure_font)
             options.settings.setValue("table_font", options.cfg.table_font)
             options.settings.setValue("context_font", options.cfg.context_font)
+            x = self.ui.splitter.saveState()
+            print(x)
+            options.settings.setValue("splitter", x)
             while self.widget_list:
                 x = self.widget_list.pop(0)
                 x.close()
@@ -2598,9 +2658,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.list_group_columns.add_resource(col)
             options.cfg.group_columns = self.get_group_columns()
         if options.cfg.group_columns:
-            print(options.cfg.group_columns)
-            #self.ui.group_groups.setTitle("Grouping (active)")
-            #self.ui.group_groups.set_style(title_weight="900")
+            self.ui.tool_widget.setTabIcon(TOOLBOX_GROUPING, self.get_icon("star"))
 
         self.activate_group_column_buttons()
         

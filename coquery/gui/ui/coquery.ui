@@ -198,26 +198,6 @@
            <property name="bottomMargin">
             <number>4</number>
            </property>
-           <item row="0" column="0" alignment="Qt::AlignTop">
-            <widget class="QRadioButton" name="radio_query_string">
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="CoqTextEdit" name="edit_query_string">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="0" alignment="Qt::AlignTop">
             <widget class="QRadioButton" name="radio_query_file">
              <property name="text">
@@ -283,6 +263,26 @@
              </item>
             </layout>
            </item>
+           <item row="0" column="1">
+            <widget class="CoqTextEdit" name="edit_query_string">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0" alignment="Qt::AlignTop">
+            <widget class="QRadioButton" name="radio_query_string">
+             <property name="text">
+              <string/>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>
@@ -291,7 +291,7 @@
           <property name="title">
            <string>Output &amp;management</string>
           </property>
-          <layout class="QVBoxLayout" name="box_functions" stretch="0,1">
+          <layout class="QVBoxLayout" name="box_functions" stretch="0">
            <property name="spacing">
             <number>4</number>
            </property>
@@ -305,33 +305,25 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="QToolBox" name="toolBox">
+            <widget class="QTabWidget" name="tool_widget">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+              <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="minimumSize">
-              <size>
-               <width>250</width>
-               <height>0</height>
-              </size>
+             <property name="tabPosition">
+              <enum>QTabWidget::West</enum>
+             </property>
+             <property name="tabShape">
+              <enum>QTabWidget::Triangular</enum>
              </property>
              <property name="currentIndex">
-              <number>2</number>
+              <number>0</number>
              </property>
-             <widget class="QWidget" name="page">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>118</width>
-                <height>141</height>
-               </rect>
-              </property>
-              <attribute name="label">
-               <string>&amp;Context</string>
+             <widget class="QWidget" name="tabWidgetPage1">
+              <attribute name="title">
+               <string/>
               </attribute>
               <layout class="QVBoxLayout" name="verticalLayout_2">
                <item>
@@ -431,24 +423,16 @@
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
-                   <height>40</height>
+                   <height>0</height>
                   </size>
                  </property>
                 </spacer>
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="page_2">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>240</width>
-                <height>261</height>
-               </rect>
-              </property>
-              <attribute name="label">
-               <string>Stop&amp;words</string>
+             <widget class="QWidget" name="tabWidgetPage2">
+              <attribute name="title">
+               <string/>
               </attribute>
               <layout class="QVBoxLayout" name="verticalLayout_3">
                <item>
@@ -555,17 +539,9 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="page_3">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>240</width>
-                <height>296</height>
-               </rect>
-              </property>
-              <attribute name="label">
-               <string>&amp;Grouping</string>
+             <widget class="QWidget" name="Grouping">
+              <attribute name="title">
+               <string/>
               </attribute>
               <layout class="QVBoxLayout" name="verticalLayout_5">
                <item>
@@ -647,17 +623,9 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="page_4">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>240</width>
-                <height>188</height>
-               </rect>
-              </property>
-              <attribute name="label">
-               <string>&amp;Summary</string>
+             <widget class="QWidget" name="Summary">
+              <attribute name="title">
+               <string/>
               </attribute>
               <layout class="QVBoxLayout" name="verticalLayout_6">
                <item>
@@ -702,7 +670,7 @@
                       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
                      </property>
                      <property name="buddy">
-                      <cstring>radio_summary</cstring>
+                      <cstring>combo_summary</cstring>
                      </property>
                     </widget>
                    </item>
@@ -751,7 +719,7 @@
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
-                   <height>40</height>
+                   <height>0</height>
                   </size>
                  </property>
                 </spacer>
@@ -759,19 +727,6 @@
               </layout>
              </widget>
             </widget>
-           </item>
-           <item>
-            <spacer name="verticalSpacer">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>0</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </widget>
@@ -823,7 +778,7 @@
      <x>0</x>
      <y>0</y>
      <width>783</width>
-     <height>23</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

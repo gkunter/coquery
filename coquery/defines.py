@@ -67,6 +67,9 @@ CONTEXT_STRING = "String"
 CONTEXT_COLUMNS = "Columns"
 CONTEXT_SENTENCE = "Sentence"
 
+TOOLBOX_TAB = ["Conte&xt", "Stop&words", "&Grouping", "Summar&y"]
+TOOLBOX_CONTEXT, TOOLBOX_STOPWORDS, TOOLBOX_GROUPING, TOOLBOX_SUMMARY = [i for i, _ in enumerate(TOOLBOX_TAB)]
+
 # These labels are used in the corpus manager:
 INSTALLER_DEFAULT = "Default corpus installers"
 INSTALLER_CUSTOM = "Downloaded corpus installers"
