@@ -201,7 +201,12 @@ class Options(object):
         self.args.filter_list = []
         self.args.stopword_list = []
         self.args.table_links = defaultdict(list)
+        
+        self.args.use_context = False
         self.args.use_stopwords = False
+        self.args.use_grouping = False
+        self.args.use_summarize = False
+        
         self.args.use_corpus_filters = False
         
         if getattr(sys, "frozen", None):
@@ -714,7 +719,7 @@ class Options(object):
                         try:
                             self.args.context_mode = config_file.get("main", "context_mode")
                         except NoOptionError:
-                            self.args.context_mode = CONTEXT_NONE
+                            self.args.context_mode = CONTEXT_KWIC
                         try:
                             self.args.output_case_sensitive = config_file.getboolean("main", "output_case_sensitive")
                         except NoOptionError:
@@ -886,9 +891,21 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.use_corpus_filters = False
                         try:
+                            self.args.use_context = config_file.getboolean("gui", "use_context")
+                        except (NoOptionError, ValueError):
+                            self.args.use_context = False                        
+                        try:
                             self.args.use_stopwords = config_file.getboolean("gui", "use_stopwords")
                         except (NoOptionError, ValueError):
                             self.args.use_stopwords = False                        
+                        try:
+                            self.args.use_grouping = config_file.getboolean("gui", "use_grouping")
+                        except (NoOptionError, ValueError):
+                            self.args.use_grouping = False                        
+                        try:
+                            self.args.use_summarize = config_file.getboolean("gui", "use_summarize")
+                        except (NoOptionError, ValueError):
+                            self.args.use_summarize = False                        
                         try:
                             self.args.number_of_tokens = config_file.getint("gui", "number_of_tokens")
                         except (NoOptionError, ValueError):
@@ -1041,7 +1058,12 @@ def save_configuration():
         if cfg.stopword_list:
             config.set("gui", "stopword_list", 
                        encode_query_string("\n".join(cfg.stopword_list)))
+        
+        config.set("gui", "use_context", cfg.use_context)
         config.set("gui", "use_stopwords", cfg.use_stopwords)
+        config.set("gui", "use_grouping", cfg.use_grouping)
+        config.set("gui", "use_summarize", cfg.use_summarize)
+        
         config.set("gui", "use_corpus_filters", cfg.use_corpus_filters)        
 
         try:
