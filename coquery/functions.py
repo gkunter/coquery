@@ -536,7 +536,7 @@ class SubcorpusSize(CorpusSize):
 #############################################################################
 
 class ContextColumns(Function):
-    _name = "CONTEXT_COLUMN"
+    _name = "coq_context_column"
     single_column = False
 
     def __init__(self, session, *args):
@@ -544,6 +544,11 @@ class ContextColumns(Function):
         self.session = session
         self.left_cols = ["coq_context_lc{}".format(i+1) for i in range(options.cfg.context_left)][::-1]
         self.right_cols = ["coq_context_rc{}".format(i+1) for i in range(options.cfg.context_right)]
+
+    def get_id(self):
+        if self.alias:
+            return self.alias
+        return self._name
 
     def _func(self, row, connection):
         left, target, right = self.session.Resource.get_context(
@@ -560,7 +565,7 @@ class ContextColumns(Function):
         return val
         
 class ContextKWIC(ContextColumns):
-    _name = "CONTEXT_KWIC"
+    _name = "coq_context_kwic"
     
     def _func(self, row, connection):
         row = super(ContextKWIC, self)._func(row, connection)
@@ -569,7 +574,7 @@ class ContextKWIC(ContextColumns):
             index=[["coq_context_left", "coq_context_right"]])
 
 class ContextString(ContextColumns):
-    _name = "CONTEXT_STRING"
+    _name = "coq_context_string"
     single_column = True
     
     def __init__(self, session, *args):
