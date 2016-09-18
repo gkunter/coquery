@@ -246,8 +246,8 @@ class Options(object):
         self.args.query_cache_size = 500 * 1024 * 1024
         self.args.use_cache = use_cachetools
         
-        self.args.context_left = 0
-        self.args.context_right = 0
+        self.args.context_left = 3
+        self.args.context_right = 3
         # these attributes are used only in the GUI:
         self.args.column_width = {}
         self.args.column_color = {}
