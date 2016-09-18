@@ -110,13 +110,14 @@ class Manager(CoqObject):
         """
         l = []
         vis_cols = self.get_visible_columns(df, session)
-
-        if options.cfg.context_mode == CONTEXT_COLUMNS:
-            l.append(ContextColumns(session=session))
-        elif options.cfg.context_mode == CONTEXT_KWIC:
-            l.append(ContextKWIC(session=session))
-        elif options.cfg.context_mode == CONTEXT_STRING:
-            l.append(ContextString(session=session))
+        
+        if options.cfg.use_context:
+            if options.cfg.context_mode == CONTEXT_COLUMNS:
+                l.append(ContextColumns(session=session))
+            elif options.cfg.context_mode == CONTEXT_KWIC:
+                l.append(ContextKWIC(session=session))
+            elif options.cfg.context_mode == CONTEXT_STRING:
+                l.append(ContextString(session=session))
 
         return l
     
