@@ -881,12 +881,10 @@ class SQLResource(BaseResource):
         # child tables).
         # FIXME: some mechanism is probably necessary to handle self-joined 
         # tables
-        if hasattr(self, "corpus_source_id"):
-            options.cfg.token_origin_id = "corpus_source_id"
-        elif hasattr(self, "corpus_file_id"):
-            options.cfg.token_origin_id = "corpus_file_id"
-        else:
-            options.cfg.token_origin_id = None
+        options.cfg.token_origin_id = getattr(self.resource, "corpus_source_id",
+                        getattr(self.resource, "corpus_file_id",
+                            getattr(self.resource, "corpus_sentence_id",
+                                self.resource.corpus_id)))
             
     @classmethod
     def get_engine(cls, *args, **kwargs):
@@ -2735,15 +2733,11 @@ class CorpusClass(object):
             return []
 
     def _read_context_for_renderer(self, token_id, source_id, token_width):
-        origin_id = ""
-        try:
-            origin_id = self.resource.corpus_source_id
-        except AttributeError:
-            try:
-                origin_id = self.resource.corpus_file_id
-            except AttributeError:
-                origin_id = self.resource.corpus_sentence_id
-
+        origin_id = getattr(self.resource, "corpus_source_id",
+                        getattr(self.resource, "corpus_file_id",
+                            getattr(self.resource, "corpus_sentence_id",
+                                self.resource.corpus_id)))
+        
         if hasattr(self.resource, "tag_table"):
             format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word_table}.{word} AS COQ_WORD, {tag} AS COQ_TAG_TAG, {tag_table}.{tag_type} AS COQ_TAG_TYPE, {attribute} AS COQ_ATTRIBUTE, {tag_id} AS COQ_TAG_ID FROM {corpus} {joined_tables} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
         else:
