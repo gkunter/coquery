@@ -76,7 +76,7 @@ class Manager(CoqObject):
         self._column_functions.remove(fun)
         
         for x in self._column_functions:
-            if fun.get_id() in x.columns:
+            if fun.get_id() in x.columns(df=None):
                 self.remove_column_function(x)
     
     def replace_column_function(self, old, new):

@@ -1201,7 +1201,9 @@ def process_options():
     if use_cachetools:
         from . import cache
         cfg.query_cache = cache.CoqQueryCache()
-    
+
+    add_source_path(cfg.custom_installer_path)
+        
 def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
     """
     Read the Python code from path, and validate that it contains only 

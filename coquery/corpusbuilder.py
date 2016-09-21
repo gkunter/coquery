@@ -454,8 +454,11 @@ class Table(object):
         For CHAR and TEXT types, the optimal data type is VARCHAR(max), where 
         max is the maximum number of characters for the column.
         
-        For DECIMAL, NUMERIC, FLOAT, DOUBLE, REAL types, the optimal type is 
-        not changed on MySQL, but changed to REAL on SQLite3.
+        FOR DECIMAL and NUMERIC types, the optimal type is changed to FLOAT
+        on MySQL and to REAL on SQLite3.
+        
+        For FLOAT, DOUBLE, and REAL types, the optimal type is not changed on 
+        MySQL, but changed to REAL on SQLite3.
         
         Parameters
         ----------
@@ -510,7 +513,7 @@ class Table(object):
                 if v_min >= 0:
                     dt_type = "BIGINT UNSIGNED"
                 else:
-                    dt_type ="BIGINT"
+                    dt_type = "BIGINT"
 
         # character data types:
         elif col.base_type.endswith(("CHAR", "TEXT")):
@@ -520,12 +523,19 @@ class Table(object):
                 max_len = connection.execute(S).fetchone()[0]
             dt_type = "VARCHAR({})".format(max_len)
             
-        # float and decimal data types:
-        elif col.base_type in ["DECIMAL", "NUMERIC", "FLOAT", "DOUBLE", "REAL"]:
+        # fixed-point types:
+        elif col.base_type in ["DECIMAL", "NUMERIC"]:
             if self._DB.db_type == SQL_SQLITE:
                 dt_type = "REAL"
             else:
-                dt_type = col.base_type
+                dt_type = col.data_type.replace(col.base_type, "FLOAT")
+                
+        # float and decimal data types:
+        elif col.base_type in ["FLOAT", "DOUBLE", "REAL"]:
+            if self._DB.db_type == SQL_SQLITE:
+                dt_type = "REAL"
+            else:
+                dt_type = col.data_type
             
             S = "SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL".format(
                 col.name, self.name)

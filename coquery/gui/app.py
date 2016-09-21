@@ -152,7 +152,8 @@ class CoqueryApp(QtGui.QMainWindow):
         except (TypeError, AttributeError):
             y = x
         finally:
-            self.ui.splitter.restoreState(y)
+            if y != None:
+                self.ui.splitter.restoreState(y)
         # Taskbar icons in Windows require a workaround as described here:
         # https://stackoverflow.com/questions/1551605#1552105
         if sys.platform == "win32":
@@ -2844,15 +2845,14 @@ class CoqueryApp(QtGui.QMainWindow):
             dtypes = pd.Series([self.table_model.get_dtype(x) for x in columns])
             try:
                 if all(dtypes != object):
-                    kwargs.update({"function_class": functions.MathFunction})
+                    kwargs.update({"function_class": (functions.MathFunction, functions.LogicFunction)})
                 else:
-                    kwargs.update({"function_class": functions.StringFunction})
+                    kwargs.update({"function_class": (functions.StringFunction, functions.LogicFunction)})
             except Exception as e:
                 print(e)
-                kwargs.update({"function_class": functions.Function})
+                kwargs.update({"function_class": (functions.Function)})
             if not "available_columns" in kwargs:
                 kwargs.update({"available_columns": [x for x in self.table_model.content.columns if x not in columns]})
-
         response = functionapply.FunctionDialog.set_function(parent=self, columns=columns, **kwargs)
 
         if response is None:

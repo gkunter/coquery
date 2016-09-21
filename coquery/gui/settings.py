@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 import sys
 
 from coquery import options
+from coquery.errors import remove_source_path, add_source_path
 from .pyqt_compat import QtGui, QtCore
 from .ui.settingsUi import Ui_SettingsDialog
 
@@ -274,8 +275,9 @@ class Settings(QtGui.QDialog):
         self._options.align_quantified = bool(self.ui.check_align_quantified.isChecked())
         self._options.word_wrap = [0, int(QtCore.Qt.TextWordWrap)][bool(self.ui.check_word_wrap.isChecked())]
         self._options.float_format = "{:.%if}" % self._options.digits
+        remove_source_path(self._options.custom_installer_path)
         self._options.custom_installer_path = str(self.ui.edit_installer_path.text())        
-        self._options.custom_installer_path = str(self.ui.edit_installer_path.text())        
+        add_source_path(self._options.custom_installer_path)
         self._options.table_font = self._table_font
         self._options.figure_font = self._figure_font
         self._options.context_font = self._context_font

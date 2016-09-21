@@ -23,6 +23,19 @@ import textwrap
 from .defines import *
 from .unicode import utf8
 
+_source_paths = [sys.path[0]]
+
+def add_source_path(s):
+    global _source_paths
+    _source_paths.append(s)
+    
+def remove_source_path(s):
+    global _source_paths
+    _source_paths.remove(s)
+
+def get_source_paths():
+    return _source_paths
+
 class GenericException(Exception):
     def __init__(self, *par):
         self.par = ", ".join([utf8(x) for x in par])
@@ -270,7 +283,7 @@ def get_error_repr(exc_info):
     for file_name, line_no, func_name, text in Trace:
         path, module_name = os.path.split(file_name)
         # only print exceptions from Coquery files:
-        if path.startswith(sys.path[0]):
+        if any([path.startswith(x) for x in get_source_paths()]):
             trace_string += "{} {}, line {}: {}\n".format(
                 Indent, module_name, line_no, func_name.replace("<", "&lt;"))
             Indent += "  "

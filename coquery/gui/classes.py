@@ -1630,6 +1630,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 df[col] = source[col].apply(float_formatter)
             elif source.dtypes[col] == int:
                 df[col] = source[col].apply(lambda x: str(x))
+            elif source.dtypes[col] == bool:
+                df[col] =source[col].apply(lambda x: ["no", "yes"][bool(x)])
             else:
                 df[col] = source[col]
         return df
@@ -1670,7 +1672,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ToolTipRole:
             ix = index.column()
             col = self.header[ix]
-            
             if not ix in self._hidden_columns:
                 if self._dtypes[ix] == float:
                     return "<div>{}</div>".format(escape(options.cfg.float_format.format(self.content.values[index.row()][ix] )))

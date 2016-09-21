@@ -78,7 +78,7 @@ all_combine = num_combine + seq_combine + bool_combine
 #############################################################################
 
 class Function(CoqObject):
-    _name = "id"
+    _name = "virtual"
     parameters = 0
     default_aggr = "first"
     allow_null = False
@@ -86,7 +86,11 @@ class Function(CoqObject):
     no_column_labels = False
     single_column = True
 
-    def __init__(self, columns=[], value=None, label=None, alias=None, sweep=False, aggr=None, group=[], **kwargs):
+    @staticmethod
+    def get_description():
+        return "Base functions"
+
+    def __init__(self, columns=[], value=None, label=None, alias=None, group=[], sweep=False, aggr=None, **kwargs):
         """
         Parameters
         ----------
@@ -96,8 +100,10 @@ class Function(CoqObject):
         """
         self._columns = columns
         self.sweep = sweep
-        self.group = group
         self.alias = alias
+        self.group = group
+        if group:
+            print("---- GROUP ARGUMENT USED ----")
         self.value = value
         self.label = label
         if aggr != None:
@@ -130,7 +136,7 @@ class Function(CoqObject):
                 args.append(",".join([session.translate_header(x) for x in cols]))
                 if self.value:
                     args.append('"{}"'.format(self.value))
-                if len(self.columns(df)) > 1:
+                if len(self.columns(df=None)) > 1:
                     args.append('"{}"'.format(self.aggr))
                 
                 return "{}({})".format(self.get_name(), ", ".join(args))
@@ -190,9 +196,11 @@ class Function(CoqObject):
     def evaluate(self, df, *args, **kwargs):
         try:
             val = df[self.columns(df, **kwargs)].apply(self._func)
-            val = val.apply(self.select, axis="columns")
-        except KeyError:
-            val = [np.nan] * len(df)
+            if len(val.columns) > 1:
+                val = val.apply(self.select, axis="columns")
+        except (KeyError, ValueError):
+            val = pd.Series(data=[np.nan] * len(df))
+
         return val
     
     @classmethod
@@ -205,7 +213,10 @@ class Function(CoqObject):
 
 class StringFunction(Function):
     combine_modes = str_combine
-    pass
+
+    @staticmethod
+    def get_description():
+        return "String functions"
 
 class StringLength(StringFunction):
     _name = "LENGTH"
@@ -252,7 +263,7 @@ class StringMatch(StringFunction):
             self.re = None
     
     def _func(self, col):
-        return col.apply(lambda x: ["no", "yes"][bool(self.re.search(str(x)))])
+        return col.apply(lambda x: bool(self.re.search(str(x))))
     
     @classmethod
     def validate_input(cls, value):
@@ -284,6 +295,10 @@ class StringExtract(StringMatch):
 
 class MathFunction(Function):
     _name = "virtual"
+
+    @staticmethod
+    def get_description():
+        return "Mathematical functions"
 
 class Calc(MathFunction):
     _name = "CALC"
@@ -320,6 +335,10 @@ class Calc(MathFunction):
 
 class BaseFreq(Function):
     _name = "virtual"
+
+    @staticmethod
+    def get_description():
+        return "Frequency functions"
 
 class Freq(BaseFreq):
     _name = "statistics_frequency"
@@ -420,13 +439,16 @@ class RowNumber(Freq):
         val = pd.Series(range(1, len(df)+1), index=df.index)
         return val
 
-
 #############################################################################
 ## Distributional functions
 #############################################################################
 
 class BaseProportion(Freq):
     _name = "virtual"
+
+    @staticmethod
+    def get_description():
+        return "Distribution functions"
 
 class Proportion(BaseProportion):
     _name = "statistics_proportion"
@@ -511,6 +533,10 @@ class CorpusSize(Function):
     combine_modes = no_combine
     no_column_labels = True
 
+    @staticmethod
+    def get_description():
+        return "Corpus size functions"
+
     def __init__(self, columns=[], *args, **kwargs):
         super(CorpusSize, self).__init__(columns, *args, **kwargs)
     
@@ -551,6 +577,10 @@ class SubcorpusSize(CorpusSize):
 class ContextColumns(Function):
     _name = "coq_context_column"
     single_column = False
+
+    @staticmethod
+    def get_description():
+        return "Context functions"
 
     def __init__(self, *args):
         super(ContextColumns, self).__init__(*args)
@@ -602,7 +632,84 @@ class ContextString(ContextColumns):
             row["coquery_invisible_number_of_tokens"], connection)
         return pd.Series(
             data=[collapse_words(list(pd.Series(left + [x.upper() for x in target] + right)))],
-            index=["coq_context_string"])
+            index=[self._name])
+
+#############################################################################
+## Logic functions
+#############################################################################
+
+class LogicFunction(Function):
+    _name = "virtual"
+    combine_modes = bool_combine
+    
+    @staticmethod
+    def get_description():
+        return "Logical functions"
+    
+    def _func(self, cols):
+        
+        ## make string column comparison:
+        if cols.dtype == object:
+            return cols.apply(lambda x: self._comp(x, str(self.value)))
+        else:
+            return cols.apply(lambda x: self._comp(x, float(self.value)))
+
+class Equal(LogicFunction):
+    _name = "EQUAL"
+    
+    def _comp(self, x, y):
+        return x == y
+    
+class NotEqual(LogicFunction):
+    _name = "NOTEQUAL"
+
+    def _comp(self, x, y):
+        return x != y
+
+class GreaterThan(LogicFunction):
+    _name = "GREATERTHAN"
+
+    def _comp(self, x, y):
+        return x > y
+
+class LessThan(LogicFunction):
+    _name = "LESSTHAN"
+
+    def _comp(self, x, y):
+        return x < y
+
+class And(LogicFunction):
+    _name = "AND"
+    
+    def _comb(self, x, y):
+        return bool(x and y)
+
+class Or(LogicFunction):
+    _name = "OR"
+    
+    def _comb(self, x, y):
+        return bool(x or y)
+
+class Xor(LogicFunction):
+    _name = "XOR"
+    
+    def _comb(self, x, y):
+        return bool(x) != bool(y)
+
+class IsTrue(LogicFunction):
+    _name = "ISTRUE"
+    parameters = 0
+    
+    def _func(self, cols):
+        return cols.apply(lambda x: bool(x))
+        
+class IsFalse(LogicFunction):
+    _name = "ISFALSE"
+    parameters = 0
+    
+    def _func(self, cols):
+        return cols.apply(lambda x: not bool(x))
+
 
 #############################################################################
 ## FunctionList class
