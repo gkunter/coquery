@@ -1241,6 +1241,7 @@ class CoqListWidget(QtGui.QListWidget):
             return
         label = getattr(options.cfg.main_window.resource, rc_feature)
         new_item = QtGui.QListWidgetItem(label)
+
         self.columns.append((new_item, rc_feature))
         self.addItem(new_item)
         self.setCurrentItem(new_item)
@@ -1257,7 +1258,10 @@ class CoqListWidget(QtGui.QListWidget):
         self.insertItem(i, new_item)
         self.setCurrentItem(new_item)
         self.itemActivated.emit(new_item)
-    
+        try:
+            new_item.setObjectName(rc_feature)
+        except AttributeError as e:
+            print(e)
     def remove_item(self, item):
         i = self.row(item)
         _, rc_feature = self.columns[i]
