@@ -2507,7 +2507,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.options_tree.takeTopLevelItem(self.ui.options_tree.indexOfTopLevelItem(item))
         else:
             item.parent().removeChild(item)
-        if hasattr(item, link):
+        if hasattr(item, "link"):
             options.cfg.table_links[options.cfg.current_server].remove(item.link)
 
 #try:
