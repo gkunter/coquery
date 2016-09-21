@@ -94,7 +94,7 @@ class Function(CoqObject):
             True if the function sweeps through the coluns, and False if it 
             sticks to one row at a time during evaluation
         """
-        self.columns = columns
+        self._columns = columns
         self.sweep = sweep
         self.group = group
         self.alias = alias
@@ -113,7 +113,9 @@ class Function(CoqObject):
         else:
             return cls._name
 
-    def get_label(self, session):
+    def get_label(self, session, manager):
+        cols = self.columns(df=None, manager=manager, session=session)
+        
         if self.label:
             return self.label
         else:
@@ -125,10 +127,10 @@ class Function(CoqObject):
                 return self.get_name()
             else:
                 args = []
-                args.append(",".join([session.translate_header(x) for x in self.columns]))
+                args.append(",".join([session.translate_header(x) for x in cols]))
                 if self.value:
                     args.append('"{}"'.format(self.value))
-                if len(self.columns) > 1:
+                if len(self.columns(df)) > 1:
                     args.append('"{}"'.format(self.aggr))
                 
                 return "{}({})".format(self.get_name(), ", ".join(args))
@@ -136,12 +138,12 @@ class Function(CoqObject):
             if self.group:
                 return "{}({},group={})".format(
                     self.get_name(), 
-                    ",".join([session.translate_header(x) for x in self.columns]),
+                    ",".join([session.translate_header(x) for x in cols]),
                     ",".join([session.translate_header(x) for x in self.group]))
             else:
                 return "{}({},\"{}\")".format(
                     self.get_name(), 
-                    ",".join([session.translate_header(x) for x in self.columns]),
+                    ",".join([session.translate_header(x) for x in cols]),
                     self.aggr)
     
     def set_label(self, label):
@@ -177,9 +179,17 @@ class Function(CoqObject):
                 return col
         return None            
     
+    def columns(self, df, **kwargs):
+        if df is None or not self.sweep:
+            return self._columns
+        else:
+            return get_visible_columns(df, 
+                                        manager=kwargs["manager"],
+                                        session=kwargs["session"])
+
     def evaluate(self, df, *args, **kwargs):
         try:
-            val = df[self.columns].apply(self._func)
+            val = df[self.columns(df, **kwargs)].apply(self._func)
             val = val.apply(self.select, axis="columns")
         except KeyError:
             val = [np.nan] * len(df)
@@ -297,8 +307,8 @@ class Calc(MathFunction):
                 val1 = val1 * val2
             return val1
             
-        val = df[self.columns[0]]
-        for x in self.columns[1:]:
+        val = df[self.columns(df, **kwargs)[0]]
+        for x in self.columns(df, **kwargs)[1:]:
             val = _calc(val, df[x])
         if self.value:
             val = _calc(val, self.value)
@@ -321,7 +331,7 @@ class Freq(BaseFreq):
         """
         Count the number of rows with equal values in the target columns.
         """
-        fun = Freq(columns=self.columns, group=self.group)
+        fun = Freq(columns=self.columns(df, **kwargs), group=self.group)
         # do not calculate the frequencies again if the data frame already 
         # contains an identical frequency column:
         if self.find_function(df, fun):
@@ -333,7 +343,7 @@ class Freq(BaseFreq):
                 print(self._name, "calculating df.Freq()")
             
         # ignore external columns:
-        columns = [x for x in self.columns if not x.startswith("db_")]
+        columns = [x for x in self.columns(df, **kwargs) if not x.startswith("db_")]
             
         if len(df) == 0:
             return pd.Series(index=df.index)
@@ -358,14 +368,14 @@ class FreqPMW(Freq):
     _name = "statistics_per_million_words"
     words = 1000000
 
-    def __init__(self, session, columns=[], *args, **kwargs):
+    def __init__(self, columns=[], *args, **kwargs):
         super(FreqPMW, self).__init__(columns, *args, **kwargs)
-        self.session = session
     
     def evaluate(self, df, *args, **kwargs):
+        session = kwargs["session"]
         val = super(FreqPMW, self).evaluate(df, *args, **kwargs)
         if len(val) > 0:
-            corpus_size = self.session.Corpus.get_corpus_size(filters=self.session.filter_list)
+            corpus_size = session.Corpus.get_corpus_size(filters=session.filter_list)
         val = val.apply(lambda x: x / (corpus_size / self.words))
         val.index = df.index
         return val
@@ -381,18 +391,19 @@ class FreqNorm(Freq):
     """
     _name = "statistics_normalized"
     
-    def __init__(self, session, columns=[], *args, **kwargs):
+    def __init__(self, columns=[], *args, **kwargs):
         super(FreqNorm, self).__init__(columns, *args, **kwargs)
-        self.session = session
 
     def evaluate(self, df, *args, **kwargs):
+        session = kwargs["session"]
+
         val = super(FreqNorm, self).evaluate(df, *args, **kwargs)
 
         if len(val) == 0:
             return pd.Series([], index=df.index)
             
-        fun = SubcorpusSize(session=self.session, 
-                            columns=self.columns,
+        fun = SubcorpusSize(session=session,
+                            columns=self.columns(df, **kwargs),
                             group=self.group)
         subsize = fun.evaluate(df, *args, **kwargs)
 
@@ -425,7 +436,7 @@ class Proportion(BaseProportion):
         super(Proportion, self).__init__(*args, **kwargs)
     
     def evaluate(self, df, *args, **kwargs):
-        fun = Proportion(columns=self.columns, group=self.group)
+        fun = Proportion(columns=self.columns(df, **kwargs), group=self.group)
         if self.find_function(df, fun):
             if options.cfg.verbose:
                 print(self._name, "using df.Proportion()")
@@ -456,7 +467,7 @@ class Entropy(Proportion):
     # this thing".
     
     def evaluate(self, df, *args, **kwargs):
-        _df = df[self.columns]
+        _df = df[self.columns(df, **kwargs)]
         _df["COQ_PROP"] = super(Entropy, self).evaluate(df, *args, **kwargs)
         _df = _df.drop_duplicates()
         if len(_df) == 1:
@@ -477,7 +488,8 @@ class Types(Function):
     no_column_labels = True
     
     def evaluate(self, df, *args, **kwargs):
-        length = len(df[self.columns].drop_duplicates())
+        cols = self.columns(df, **kwargs)
+        length = len(df[cols].drop_duplicates())
         return pd.Series([length] * len(df), index=df.index)
 
 class TypeTokenRatio(Types):
@@ -499,12 +511,12 @@ class CorpusSize(Function):
     combine_modes = no_combine
     no_column_labels = True
 
-    def __init__(self, session, columns=[], *args, **kwargs):
+    def __init__(self, columns=[], *args, **kwargs):
         super(CorpusSize, self).__init__(columns, *args, **kwargs)
-        self.session = session
     
     def evaluate(self, df, *args, **kwargs):
-        corpus_size = self.session.Corpus.get_corpus_size(filters=self.session.filter_list)
+        session = kwargs["session"]
+        corpus_size = session.Corpus.get_corpus_size(filters=session.filter_list)
         return pd.Series([corpus_size] * len(df), index=df.index)
 
 class SubcorpusSize(CorpusSize):
@@ -512,7 +524,8 @@ class SubcorpusSize(CorpusSize):
     no_column_labels = True
 
     def evaluate(self, df, *args, **kwargs):
-        fun = SubcorpusSize(session=self.session, columns=self.columns, group=self.group)
+        session = kwargs["session"]
+        fun = SubcorpusSize(session=session, columns=self.columns(df, **kwargs), group=self.group)
         if self.find_function(df, fun):
             if options.cfg.verbose:
                 print(self._name, "using df.SubcorpusSize()")
@@ -521,13 +534,13 @@ class SubcorpusSize(CorpusSize):
             if options.cfg.verbose:
                 print(self._name, "calculating df.SubcorpusSize()")
         
-        corpus_features = [x for x, _ in self.session.Resource.get_corpus_features()]
-        column_list = [x for x in corpus_features if "coq_{}_1".format(x) in self.columns]
+        corpus_features = [x for x, _ in session.Resource.get_corpus_features()]
+        column_list = [x for x in corpus_features if "coq_{}_1".format(x) in self.columns(df, **kwargs)]
         
-        val = df.apply(self.session.Corpus.get_subcorpus_size, 
+        val = df.apply(session.Corpus.get_subcorpus_size, 
                        columns=column_list,
                        axis=1,
-                       filters=self.session.filter_list)
+                       filters=session.filter_list)
 
         return val
 
@@ -539,9 +552,8 @@ class ContextColumns(Function):
     _name = "coq_context_column"
     single_column = False
 
-    def __init__(self, session, *args):
+    def __init__(self, *args):
         super(ContextColumns, self).__init__(*args)
-        self.session = session
         self.left_cols = ["coq_context_lc{}".format(i+1) for i in range(options.cfg.context_left)][::-1]
         self.right_cols = ["coq_context_rc{}".format(i+1) for i in range(options.cfg.context_right)]
 
@@ -550,25 +562,28 @@ class ContextColumns(Function):
             return self.alias
         return self._name
 
-    def _func(self, row, connection):
-        left, target, right = self.session.Resource.get_context(
+    def _func(self, row, connection, session):
+        left, target, right = session.Resource.get_context(
             row["coquery_invisible_corpus_id"], 
             row["coquery_invisible_origin_id"],
-            row["coquery_invisible_number_of_tokens"], True, connection)
+            row["coquery_invisible_number_of_tokens"], connection)
         return pd.Series(
             data=left + right, 
             index=self.left_cols + self.right_cols)
 
     def evaluate(self, df, connection, *args, **kwargs):
-        val = df.apply(lambda x: self._func(x, connection), axis="columns")
+        session = kwargs["session"]
+        val = df.apply(lambda x: self._func(row=x, 
+                                            connection=connection, 
+                                            session=session), axis="columns")
         val.index = df.index
         return val
         
 class ContextKWIC(ContextColumns):
     _name = "coq_context_kwic"
     
-    def _func(self, row, connection):
-        row = super(ContextKWIC, self)._func(row, connection)
+    def _func(self, row, connection, session):
+        row = super(ContextKWIC, self)._func(row, connection, session)
         return pd.Series(
             data=[collapse_words(row[self.left_cols]), collapse_words(row[self.right_cols])], 
             index=[["coq_context_left", "coq_context_right"]])
@@ -577,15 +592,14 @@ class ContextString(ContextColumns):
     _name = "coq_context_string"
     single_column = True
     
-    def __init__(self, session, *args):
-        super(ContextString, self).__init__(session, *args)
-        self.word_feature = getattr(self.session.Resource, QUERY_ITEM_WORD)
+    def __init__(self, *args):
+        super(ContextString, self).__init__(*args)
 
-    def _func(self, row, connection):
-        left, target, right = self.session.Resource.get_context(
+    def _func(self, row, connection, session):
+        left, target, right = session.Resource.get_context(
             row["coquery_invisible_corpus_id"], 
             row["coquery_invisible_origin_id"],
-            row["coquery_invisible_number_of_tokens"], True, connection)
+            row["coquery_invisible_number_of_tokens"], connection)
         return pd.Series(
             data=[collapse_words(list(pd.Series(left + [x.upper() for x in target] + right)))],
             index=["coq_context_string"])
@@ -598,14 +612,14 @@ class FunctionList(CoqObject):
     def __init__(self, l=[], *args, **kwargs):
         self._list = l
 
-    def apply(self, df, connection, manager=None):
+    def apply(self, df, connection, session, manager=None):
         if self._list == []:
             return df
         for fun in self._list:
             if fun.single_column:
-                df[fun.get_id()] = fun.evaluate(df, connection=connection)
+                df[fun.get_id()] = fun.evaluate(df, connection=connection, session=session)
             else:
-                val = fun.evaluate(df, connection=connection)
+                val = fun.evaluate(df, connection=connection, session=session)
                 df = pd.concat([df, val], axis="columns")
         return df
 

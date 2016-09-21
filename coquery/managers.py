@@ -16,7 +16,7 @@ import logging
 
 from .defines import *
 from .functions import *
-from .general import CoqObject
+from .general import CoqObject, get_visible_columns
 from . import options
 
 class Sorter(CoqObject):
@@ -44,26 +44,6 @@ class Manager(CoqObject):
         self._group_filters = []
         self._filters = []
 
-    def get_visible_columns(self, df, session, hidden=False):
-        """
-        Return a list with the column names that are currently visible.
-        """
-        if hidden:
-            l = list(df.columns.values)
-        else:
-            l = [x for x in list(df.columns.values) if (
-                    not x.startswith("coquery_invisible") and 
-                    not x in self.hidden_columns)]
-
-        resource_order = session.Resource.get_preferred_output_order()
-        for x in resource_order[::-1]:
-            lex_list = [y for y in l if x in y]
-            lex_list = sorted(lex_list)[::-1]
-            for lex in lex_list:
-                l.remove(lex)
-                l.insert(0, lex)
-        return l
-        
     def hide_column(self, column):
         self.hidden_columns.add(column)
         
@@ -109,15 +89,15 @@ class Manager(CoqObject):
         will be executed after user functions.
         """
         l = []
-        vis_cols = self.get_visible_columns(df, session)
+        vis_cols = get_visible_columns(df, manager=self, session=session)
         
         if options.cfg.use_context:
             if options.cfg.context_mode == CONTEXT_COLUMNS:
-                l.append(ContextColumns(session=session))
+                l.append(ContextColumns())
             elif options.cfg.context_mode == CONTEXT_KWIC:
-                l.append(ContextKWIC(session=session))
+                l.append(ContextKWIC())
             elif options.cfg.context_mode == CONTEXT_STRING:
-                l.append(ContextString(session=session))
+                l.append(ContextString())
 
         return l
     
@@ -125,13 +105,13 @@ class Manager(CoqObject):
         return self.manager_group_functions.get_list() + self.user_group_functions.get_list()
     
     @staticmethod
-    def _apply_function(df, fun, connection):
+    def _apply_function(df, fun, connection, session):
         try:
             if fun.single_column:
-                df = df.assign(COQ_FUNCTION=lambda d: fun.evaluate(d, connection=connection))
+                df = df.assign(COQ_FUNCTION=lambda d: fun.evaluate(d, connection=connection, session=session))
                 return df.rename(columns={"COQ_FUNCTION": fun.get_id()})
             else:
-                new_df = df.apply(lambda x: fun.evaluate(x, connection=connection), axis="columns")
+                new_df = df.apply(lambda x: fun.evaluate(x, connection=connection, session=session), axis="columns")
                 return pd.concat([df, new_df], axis=1)
         except Exception as e:
             print(e)
@@ -141,25 +121,28 @@ class Manager(CoqObject):
         if len(df) == 0 or len(options.cfg.group_columns) == 0:
             return df
         print("\tmutate_groups({})".format(options.cfg.group_columns))
-        vis_col = self.get_visible_columns(df, session)
+        vis_cols = get_visible_columns(df, manager=self, session=session)
         l = self.user_group_functions.get_list()
         l = [fun(columns=vis_col, connection=connection) if type(fun) == type else fun for fun in l]
         self.user_group_functions = FunctionList(l)
-        
-        try:
-            columns = []
-            for column in options.cfg.group_columns:
-                columns += session.Resource.format_resource_feature(column,
-                    session.get_max_token_count())
-            grouped = df.groupby(columns)
-        except KeyError as e:
-            print(options.cfg.group_columns)
-            print(df.head())
-            raise e
+
+        columns = []
+        # use group columns as sorters
+        for col in options.cfg.group_columns:
+            formatted_cols = session.Resource.format_resource_feature(col, session.get_max_token_count())
+            for x in formatted_cols:
+                if x in df.columns:
+                    columns.append(x)
+
+        if len(columns) == 0:
+            return df
+
+        grouped = df.groupby(columns)
+
         for fun in self._get_group_functions(df, session, connection):
             l = pd.Series()
             for x in grouped.groups:
-                val = fun.evaluate(df.iloc[grouped.groups[x]], connection)
+                val = fun.evaluate(df.iloc[grouped.groups[x]], connection, session=session, manager=self)
                 l = l.append(val)
             df[fun.get_id()] = l
             
@@ -170,8 +153,8 @@ class Manager(CoqObject):
         Modify the transformed data frame by applying all needed functions.
         """
         print("\tmutate()")
-        df = FunctionList(self._get_main_functions(df, session)).apply(df, connection)
-        df = FunctionList(self._column_functions).apply(df, connection)
+        df = FunctionList(self._get_main_functions(df, session)).apply(df, connection, session=session)
+        df = FunctionList(self._column_functions).apply(df, connection, session=session)
         print("\tdone")
         df = df.reset_index(drop=True)
         return df
@@ -193,28 +176,21 @@ class Manager(CoqObject):
         return None
     
     def arrange_groups(self, df, session):
-        print("\tarrange_group()")
+        print("\tarrange_groups({})".format(options.cfg.group_columns))
         if len(df) == 0 or len(options.cfg.group_columns) == 0:
             return df
-        
-        if len(session.query_list) == 1:
-            columns = ["coquery_invisible_corpus_id"]
-            directions = [True]
-        else:
-            columns = []
-            directions = []
-    
+
+        columns = []
         # use group columns as sorters
-        for column in options.cfg.group_columns:
-            columns += session.Resource.format_resource_feature(column,
-                session.get_max_token_count())
+        for col in options.cfg.group_columns:
+            formatted_cols = session.Resource.format_resource_feature(col, session.get_max_token_count())
+            for x in formatted_cols:
+                if x in df.columns:
+                    columns.append(x)
         directions = [True] * len(columns)
 
-        if columns and len(session.query_list) != 1:
-            columns += ["coquery_invisible_corpus_id"]
-            directions += [True]
-
-            
+        columns += ["coquery_invisible_corpus_id"]
+        directions += [True]
 
         # filter columns that should be in the data frame, but which aren't 
         # (this may happen for example with the contingency table which 
@@ -321,13 +297,13 @@ class Manager(CoqObject):
         
     def summarize(self, df, session, connection):
         print("\tsummarize()")
-        df = self.manager_summary_functions.apply(df, connection)
-        df = self.user_summary_functions.apply(df, connection)
+        df = self.manager_summary_functions.apply(df, connection, session=session)
+        df = self.user_summary_functions.apply(df, connection, session=session)
         print("\tdone")
         return df
 
     def distinct(self, df, session):
-        vis_cols = self.get_visible_columns(df, session)
+        vis_cols = get_visible_columns(df, manager=self, session=session)
         try:
             df = df.drop_duplicates(subset=vis_cols)
         except ValueError:
@@ -352,10 +328,10 @@ class Manager(CoqObject):
 
     def select(self, df, session):
         print("\tselect()")
-        l = self.get_visible_columns(df, session, hidden=True)
+        vis_cols = get_visible_columns(df, manager=self, session=session, hidden=True)
         self._columns = df.columns
         print("\tdone")
-        return df[l]
+        return df[vis_cols]
 
     def process(self, df, session, recalculate=True):
         print("process()")
@@ -398,7 +374,9 @@ class FrequencyList(Distinct):
         super(FrequencyList, self).__init__(*args, **kwargs)
     
     def summarize(self, df, session, connection):
-        freq_function = Freq(columns=self.get_visible_columns(df, session))
+        vis_cols = get_visible_columns(df, manager=self, session=session)
+        freq_function = Freq(columns=vis_cols)
+        
         if not self.user_summary_functions.has_function(freq_function):
             self.manager_summary_functions = FunctionList([freq_function])
         return super(FrequencyList, self).summarize(df, session, connection)
@@ -433,14 +411,14 @@ class ContingencyTable(FrequencyList):
                 return row[0]
 
         # collapse the data frame:
-        df = super(ContingencyTable, self).mutate(df, session)
+        df = super(ContingencyTable, self).mutate(df, session, connection=connection)
         df = super(ContingencyTable, self).filter(df, session)
-        df = super(ContingencyTable, self).summarize(df, session)
+        df = super(ContingencyTable, self).summarize(df, session, connection=connection)
 
-        vis_col = self.get_visible_columns(df, session)
+        vis_cols = get_visible_columns(df, manager=self, session=session)
 
-        cat_col = list(df[vis_col].select_dtypes(include=[object]).columns.values)
-        num_col = list(df[vis_col].select_dtypes(include=[np.number]).columns.values) + ["coquery_invisible_number_of_tokens", "coquery_invisible_corpus_id"]
+        cat_col = list(df[vis_cols].select_dtypes(include=[object]).columns.values)
+        num_col = list(df[vis_cols].select_dtypes(include=[np.number]).columns.values) + ["coquery_invisible_number_of_tokens", "coquery_invisible_corpus_id"]
 
         agg_fnc = {}
         for col in num_col:
