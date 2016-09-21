@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 
 from coquery import options
 from coquery import functions
+from coquery import managers
 from coquery.defines import *
 from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtGui
@@ -35,22 +36,25 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.button_add.setIcon(options.cfg.main_window.get_icon("sign-left"))
         self.ui.button_remove.setIcon(options.cfg.main_window.get_icon("sign-right"))
 
-        self.session = options.cfg.main_window.Session
-        for x in available_columns:
-            item = CoqListItem(self.session.translate_header(x))
-            item.setObjectName(x)
-            self.ui.list_available_columns.addItem(item)        
-        for x in columns:
-            item = CoqListItem(self.session.translate_header(x))
-            item.setObjectName(x)
-            self.ui.list_selected_columns.addItem(item)        
+        if available_columns == []:
+            self.ui.widget_column_select.hide()
+        else:
+            self.session = options.cfg.main_window.Session
+            for x in available_columns:
+                item = CoqListItem(self.session.translate_header(x))
+                item.setObjectName(x)
+                self.ui.list_available_columns.addItem(item)        
+            for x in columns:
+                item = CoqListItem(self.session.translate_header(x))
+                item.setObjectName(x)
+                self.ui.list_selected_columns.addItem(item)        
 
-        max_width = 0
-        for x in functions.combine_map:
-            max_width = max(max_width, QtGui.QLabel(x).sizeHint().width() + 
-                               QtGui.QComboBox().sizeHint().width())
-        self.ui.combo_combine.setMaximumWidth(max_width)
-        self.ui.combo_combine.setMinimumWidth(max_width)
+            max_width = 0
+            for x in functions.combine_map:
+                max_width = max(max_width, QtGui.QLabel(x).sizeHint().width() + 
+                                QtGui.QComboBox().sizeHint().width())
+            self.ui.combo_combine.setMaximumWidth(max_width)
+            self.ui.combo_combine.setMinimumWidth(max_width)
         
         self.max_parameters = max_parameters
         self.edit_label = edit_label
@@ -191,14 +195,17 @@ class FunctionDialog(QtGui.QDialog):
         aggr = str(self.ui.combo_combine.currentText())
         if aggr == "":
             aggr = func.default_aggr
-            
+        
+        session = options.cfg.main_window.Session
+        manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         tmp_func = func(
             columns = self.columns,
             value = utf8(self.ui.edit_function_value.text()),
-            aggr = aggr)
+            aggr = aggr,
+            session = session)
         
         if self._auto_label:
-            self.ui.edit_label.setText(tmp_func.get_label(session=options.cfg.main_window.Session))
+            self.ui.edit_label.setText(tmp_func.get_label(session=session, manager=manager))
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
@@ -241,8 +248,8 @@ class FunctionDialog(QtGui.QDialog):
         return dialog.exec_()
         
     @staticmethod
-    def edit_function(func, parent=None):
-        dialog = FunctionDialog(func=func, parent=parent)
+    def edit_function(func, parent=None, **kwargs):
+        dialog = FunctionDialog(func=func, parent=parent, **kwargs)
         dialog.setVisible(True)
         
         return dialog.exec_()
