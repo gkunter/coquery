@@ -151,6 +151,26 @@ class CoqObject(object):
                     l.append(str(attr))
         return hashlib.md5(u"".join(l).encode()).hexdigest()
 
+def get_visible_columns(df, manager, session, hidden=False):
+    """
+    Return a list with the column names that are currently visible.
+    """
+    if hidden:
+        l = list(df.columns.values)
+    else:
+        l = [x for x in list(df.columns.values) if (
+                not x.startswith("coquery_invisible") and 
+                not x in manager.hidden_columns)]
+
+    resource_order = session.Resource.get_preferred_output_order()
+    for x in resource_order[::-1]:
+        lex_list = [y for y in l if x in y]
+        lex_list = sorted(lex_list)[::-1]
+        for lex in lex_list:
+            l.remove(lex)
+            l.insert(0, lex)
+    return l
+
 try:
     from pympler import summary, muppy
     import psutil
