@@ -523,7 +523,6 @@ class Table(object):
                 max_len = connection.execute(S).fetchone()[0]
             dt_type = "VARCHAR({})".format(max_len)
             
-            
         # fixed-point types:
         elif col.base_type in ["DECIMAL", "NUMERIC"]:
             if self._DB.db_type == SQL_SQLITE:
