@@ -74,7 +74,6 @@ class Session(object):
         self.output_order = []
         self.header_shown = False
         self.input_columns = []
-        self._header_cache = {}
         self._manager_cache = {}
         self._first_saved_dataframe = True
         
@@ -88,7 +87,7 @@ class Session(object):
 
         # verify filter list:
         new_list = []
-        if options.cfg.use_corpus_filters:
+        if options.cfg.use_summary_filters:
             for filt in options.cfg.filter_list:
                 if isinstance(filt, filters.QueryFilter):
                     new_list.append(filt)
@@ -300,7 +299,7 @@ class Session(object):
         """
         Apply the frequency filters to the output object.
         """
-        if not self.filter_list or not options.cfg.use_corpus_filters:
+        if not self.filter_list or not options.cfg.use_summary_filters:
             return 
         no_freq = True
         for filt in self.filter_list:
@@ -359,9 +358,6 @@ class Session(object):
         if not ignore_alias and header in options.cfg.column_names:
             return options.cfg.column_names[header]
         
-        if header in self._header_cache:
-            return self._header_cache[header]
-        
         # FIXME:
         # this is an ugly hack: a RuntimeError is raised if the header could
         # be translated!
@@ -383,7 +379,22 @@ class Session(object):
             if header.startswith("statistics_g_test"):
                 label = header.partition("statistics_g_test_")[-1]
                 raise RuntimeError("G²('{}', y)".format(label))
-            
+
+            if header.startswith("coq_context"):
+                if header == "coq_context_left":
+                    s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_left)
+                elif header == "coq_context_right":
+                    s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_right)
+                elif header == "coq_context_string":
+                    s = "{}({}L, {}R)".format(COLUMN_NAMES[header],
+                                              options.cfg.context_left,
+                                              options.cfg.context_right)
+                elif header.startswith("coq_context_lc"):
+                    s = "L{}".format(header.split("coq_context_lc")[-1])
+                elif header.startswith("coq_context_rc"):
+                    s = "R{}".format(header.split("coq_context_rc")[-1])
+                raise RuntimeError(s)
+                    
             # other features:
             if header in COLUMN_NAMES:
                 raise RuntimeError(COLUMN_NAMES[header])
@@ -394,16 +405,20 @@ class Session(object):
                 match = re.search("(.*)\((.*)\)", header)
                 if match:
                     s = match.group(1)
+                    print(s, header)
                     fun = manager.get_function(s)
-                    raise RuntimeError("{}({})".format(
-                                                    fun.get_label(session=self),
-                                                    match.group(2)))
+                    try:
+                        raise RuntimeError("{}({})".format(
+                                                        fun.get_label(session=self, manager=manager),
+                                                        match.group(2)))
+                    except AttributeError:
+                        raise RuntimeError(header)
                 else:
                     fun = manager.get_function(header)
                     if fun == None:
                         raise RuntimeError(header)
-                    raise RuntimeError(fun.get_label(session=self))
-            
+                    raise RuntimeError(fun.get_label(session=self, manager=manager))
+
             if header.startswith("db_"):
                 match = re.match("db_(.*)_coq_(.*)", header)
                 resource = options.get_resource_of_database(match.group(1))
@@ -417,12 +432,6 @@ class Session(object):
                 res_prefix = ""
                 resource = self.Resource
                 
-            # special treatment of context columns:
-            if header.startswith("context_lc"):
-                raise RuntimeError("L{}".format(header.split("context_lc")[-1]))
-            if header.startswith("context_rc"):
-                raise RuntimeError("R{}".format(header.split("context_rc")[-1]))
-            
             rc_feature, _, number = header.rpartition("_")
             
             # If there is only one query token, number is set to "" so that no
@@ -461,10 +470,9 @@ class Session(object):
                 raise RuntimeError("{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number))
 
             raise RuntimeError(header)
+
         except RuntimeError as e:
-            self._header_cache[header] = e.args[0]
-            
-        return self._header_cache[header]
+            return e.args[0]
 
 class StatisticsSession(Session):
     def __init__(self):

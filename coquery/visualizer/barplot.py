@@ -74,16 +74,18 @@ class Visualizer(vis.BaseVisualizer):
             self.options["label_x_axis"] = "Percentage"
         else:
             self.options["label_x_axis"] = "Frequency"
-            
+        
+        session = options.cfg.main_window.Session
+        
         if len(self._groupby) == 2:
-            self.options["label_y_axis"] = self._groupby[0]
-            self.options["label_legend"] = self._groupby[1]
+            self.options["label_y_axis"] = session.translate_header(self._groupby[0])
+            self.options["label_legend"] = session.translate_header(self._groupby[1])
         else:
-            self.options["label_legend"] = self._groupby[0]
+            self.options["label_legend"] = session.translate_header(self._groupby[0])
             if self.percentage:
                 self.options["label_y_axis"] = ""
             else:
-                self.options["label_y_axis"] = self._groupby[0]
+                self.options["label_y_axis"] = session.translate_header(self._groupby[0])
 
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
@@ -273,6 +275,8 @@ class Visualizer(vis.BaseVisualizer):
                 #self.add_rectangles(df, ax, stacked=False)
                 #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
 
+        session = options.cfg.main_window.Session
+
         if self.percentage:
             self._levels[-1] = sorted(self._levels[-1])
                 
@@ -282,15 +286,16 @@ class Visualizer(vis.BaseVisualizer):
         self._value_column = column_x
 
         if column_x is None:
-            fun = func_x(columns=self._groupby, session=options.cfg.main_window.Session)
-            value_label = fun.get_label(session=options.cfg.main_window.Session)
+            fun = func_x(columns=self._groupby, session=session)
+            value_label = fun.get_label(session=session)
             self.options["label_x_axis"] = value_label
         else:
             self.options["label_x_axis"] = "mean({})".format(column_x)
 
         self.map_data(plot_facet)
 
-        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
+        self.g.set_axis_labels(self.options["label_x_axis"], 
+                               self.options["label_y_axis"])
 
         if self.percentage:
             self.g.set(xlim=(0, 100))

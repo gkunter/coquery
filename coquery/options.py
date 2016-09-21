@@ -201,8 +201,14 @@ class Options(object):
         self.args.filter_list = []
         self.args.stopword_list = []
         self.args.table_links = defaultdict(list)
+        
+        self.args.use_context = False
         self.args.use_stopwords = False
-        self.args.use_corpus_filters = False
+        self.args.use_grouping = False
+        self.args.use_group_filters = False
+        self.args.use_aggregate = False
+        self.args.use_summarize = False
+        self.args.use_summary_filters = False
         
         if getattr(sys, "frozen", None):
             self.args.base_path = os.path.dirname(sys.executable)
@@ -241,8 +247,8 @@ class Options(object):
         self.args.query_cache_size = 500 * 1024 * 1024
         self.args.use_cache = use_cachetools
         
-        self.args.context_left = 0
-        self.args.context_right = 0
+        self.args.context_left = 3
+        self.args.context_right = 3
         # these attributes are used only in the GUI:
         self.args.column_width = {}
         self.args.column_color = {}
@@ -714,7 +720,7 @@ class Options(object):
                         try:
                             self.args.context_mode = config_file.get("main", "context_mode")
                         except NoOptionError:
-                            self.args.context_mode = CONTEXT_NONE
+                            self.args.context_mode = CONTEXT_KWIC
                         try:
                             self.args.output_case_sensitive = config_file.getboolean("main", "output_case_sensitive")
                         except NoOptionError:
@@ -797,7 +803,6 @@ class Options(object):
                             self.args.context_mode = config_file.get("context", "mode")
                         except (NoOptionError, ValueError):
                             pass
-
                     elif section == "links":
                         for _, val in config_file.items("links"):
                             try:
@@ -808,6 +813,10 @@ class Options(object):
                                 link = eval(link_text)
                                 self.args.table_links[connection].append(link)
                     elif section == "gui":
+                        try:
+                            self.args.last_toolbox = config_file.getint("gui", "last_toolbox")
+                        except (NoOptionError, ValueError):
+                            self.args.last_toolbox = 0
                         try:
                             self.args.select_radio_query_file = bool(config_file.getboolean("gui", "select_radio_query_file"))
                         except (NoOptionError, ValueError):
@@ -882,13 +891,33 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.text_source_path = os.path.expanduser("~")
                         try:
-                            self.args.use_corpus_filters = config_file.getboolean("gui", "use_corpus_filters")
+                            self.args.use_context = config_file.getboolean("gui", "use_context")
                         except (NoOptionError, ValueError):
-                            self.args.use_corpus_filters = False
+                            self.args.use_context = False                        
                         try:
                             self.args.use_stopwords = config_file.getboolean("gui", "use_stopwords")
                         except (NoOptionError, ValueError):
                             self.args.use_stopwords = False                        
+                        try:
+                            self.args.use_grouping = config_file.getboolean("gui", "use_grouping")
+                        except (NoOptionError, ValueError):
+                            self.args.use_grouping = False                        
+                        try:
+                            self.args.use_group_filters = config_file.getboolean("gui", "use_group_filters")
+                        except (NoOptionError, ValueError):
+                            self.args.use_group_filters = False                        
+                        try:
+                            self.args.use_aggregate = config_file.getboolean("gui", "use_aggregate")
+                        except (NoOptionError, ValueError):
+                            self.args.use_aggregate = False                        
+                        try:
+                            self.args.use_summarize = config_file.getboolean("gui", "use_summarize")
+                        except (NoOptionError, ValueError):
+                            self.args.use_summarize = False                        
+                        try:
+                            self.args.use_summary_filters = config_file.getboolean("gui", "use_summary_filters")
+                        except (NoOptionError, ValueError):
+                            self.args.use_summary_filters = False
                         try:
                             self.args.number_of_tokens = config_file.getint("gui", "number_of_tokens")
                         except (NoOptionError, ValueError):
@@ -1041,8 +1070,15 @@ def save_configuration():
         if cfg.stopword_list:
             config.set("gui", "stopword_list", 
                        encode_query_string("\n".join(cfg.stopword_list)))
+        
+        config.set("gui", "last_toolbox", cfg.last_toolbox)
+        config.set("gui", "use_context", cfg.use_context)
         config.set("gui", "use_stopwords", cfg.use_stopwords)
-        config.set("gui", "use_corpus_filters", cfg.use_corpus_filters)        
+        config.set("gui", "use_grouping", cfg.use_grouping)
+        config.set("gui", "use_group_filters", cfg.use_group_filters)
+        config.set("gui", "use_aggregate", cfg.use_aggregate)
+        config.set("gui", "use_summarize", cfg.use_summarize)
+        config.set("gui", "use_summary_filters", cfg.use_summary_filters)        
 
         try:
             config.set("gui", "select_radio_query_file", cfg.select_radio_query_file)

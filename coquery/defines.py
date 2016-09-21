@@ -67,6 +67,9 @@ CONTEXT_STRING = "String"
 CONTEXT_COLUMNS = "Columns"
 CONTEXT_SENTENCE = "Sentence"
 
+(TOOLBOX_CONTEXT, TOOLBOX_STOPWORDS, TOOLBOX_GROUPING, 
+TOOLBOX_AGGREGATE, TOOLBOX_SUMMARY) = range(5)
+
 # These labels are used in the corpus manager:
 INSTALLER_DEFAULT = "Default corpus installers"
 INSTALLER_CUSTOM = "Downloaded corpus installers"
@@ -100,9 +103,9 @@ COLUMN_NAMES = {
     "statistics_frequency": "Frequency", 
     "statistics_corpus_size": "Corpus size: Total",
     "statistics_subcorpus_size": "Corpus size: Subcorpus",
-    "statistics_per_million_words": "Frequency (pmw)",
-    "statistics_per_thousand_words": "Frequency (ptw)",
-    "statistics_normalized": "Frequency (normalized)",
+    "statistics_per_million_words": "Frequency pmw",
+    "statistics_per_thousand_words": "Frequency ptw",
+    "statistics_normalized": "Normalized frequency",
     "statistics_tokens": "Number of matches",
     "statistics_types": "Number of unique matches",
     "statistics_ttr": "Type-token ratio",
@@ -237,6 +240,11 @@ except NameError:
     # Python 3 does not have unicode and long, so define them here:
     unicode = str
     long = int
+
+msg_column_not_in_data = """
+<p>This column is not contained in the results table.</p>
+<p>Select the column in the output column table and re-run the query.</p>
+"""
 
 msg_adhoc_builder_texts = """
 <p>You can build a new corpus by storing the words from a selection of text 

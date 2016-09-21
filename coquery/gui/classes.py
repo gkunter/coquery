@@ -445,6 +445,7 @@ class CoqGroupBox(QtGui.QGroupBox):
 
         CoqGroupBox::indicator:unchecked {{
             image: url({path}/{sign_down});
+
         }}
         
         CoqGroupBox::indicator:checked {{
@@ -881,8 +882,16 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         the item. """
         
         def _check_state(item, object_name, state, column=0):
+            # is this the feature you're looking for?
             if item.objectName() == object_name:
-                item.setCheckState(column, state)
+                # Group columns are always required features, so if a 
+                # group column is supposed to be unchecked, it is still
+                # checked partially.
+                if state == QtCore.Qt.Unchecked and object_name in options.cfg.group_columns:
+                    item.setCheckState(column, QtCore.Qt.PartiallyChecked)
+                else:
+                    item.setCheckState(column, state)
+                
                 if state == QtCore.Qt.Checked:
                     item.parent().setExpanded(True)
                 self.update(item, column)
@@ -906,13 +915,21 @@ class CoqTreeWidget(QtGui.QTreeWidget):
                     # that this is not really a problem.
                     # FIXME: Figure out why this happens, and remove the 
                     # cause
+                    print("Exception raised")
                     pass
                 self.update(root, column)
             
             for child in [root.child(i) for i in
                             range(root.childCount())]:
                 _check_state(child, object_name, state, column)
-                
+    
+    def getCheckState(self, object_name):
+        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
+            for child in [root.child(i) for i in range(root.childCount())]:
+                if child.objectName() == object_name:
+                    return child.checkState(0)
+        return None
+    
     def mimeData(self, *args):
         """ Add the resource variable name to the MIME data (for drag and 
         drop). """
@@ -1181,6 +1198,7 @@ class CoqTextTag(QtGui.QFrame):
     
 class CoqListWidget(QtGui.QListWidget):
     itemDropped = QtCore.Signal(QtGui.QListWidgetItem)
+    featureRemoved = QtCore.Signal(str)
     
     def __init__(self, *args, **kwargs):
         super(CoqListWidget, self).__init__(*args, **kwargs)
@@ -1223,6 +1241,7 @@ class CoqListWidget(QtGui.QListWidget):
             return
         label = getattr(options.cfg.main_window.resource, rc_feature)
         new_item = QtGui.QListWidgetItem(label)
+
         self.columns.append((new_item, rc_feature))
         self.addItem(new_item)
         self.setCurrentItem(new_item)
@@ -1239,7 +1258,10 @@ class CoqListWidget(QtGui.QListWidget):
         self.insertItem(i, new_item)
         self.setCurrentItem(new_item)
         self.itemActivated.emit(new_item)
-    
+        try:
+            new_item.setObjectName(rc_feature)
+        except AttributeError as e:
+            print(e)
     def remove_item(self, item):
         i = self.row(item)
         _, rc_feature = self.columns[i]
@@ -1252,6 +1274,7 @@ class CoqListWidget(QtGui.QListWidget):
         if i != None:
             item, _ = self.columns.pop(i)
             self.takeItem(self.row(item))
+            self.featureRemoved.emit(rc_feature)
     
 class CoqTagEdit(QtGui.QLineEdit):
     """ Define a QLineEdit class that is used to enter query filters. """

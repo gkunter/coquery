@@ -286,8 +286,6 @@ class BaseVisualizer(QtCore.QObject):
             #self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
             self._table = session.output_object[column_order]
         
-        self._table.columns = [session.translate_header(x) for x in self._table.columns]
-        
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
         self._factor_columns = [x for x in self._table.columns if self._table.dtypes[x] in (bool, object) and not x in self._time_columns]

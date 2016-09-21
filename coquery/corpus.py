@@ -978,8 +978,7 @@ class SQLResource(BaseResource):
         Query.Session.output_order = self.get_select_list(Query)
         return query_string
 
-    def get_context(self, token_id, origin_id, number_of_tokens, case_sensitive, db_connection):
-
+    def get_context(self, token_id, origin_id, number_of_tokens, db_connection):
         def get_orth(word_id):
             """ 
             Return the orthographic forms of the word_ids.
@@ -988,8 +987,8 @@ class SQLResource(BaseResource):
             
             Parameters
             ----------
-            word_id : value or list
-                A value or list of value designating the words_ids that are to 
+            word_id : list
+                A list of values designating the words_ids that are to 
                 be looked up.
                 
             Returns
@@ -998,39 +997,34 @@ class SQLResource(BaseResource):
                 A list of strings, giving the orthographic representation of the
                 words.
             """
-            if not hasattr(word_id, "__iter__"):
-                word_id = [word_id]
-            if not hasattr(self, "corpus_word_id"):
-                return word_id
-            else:
-                L = []
-                for i in word_id:
-                    if i not in self._word_cache:
-                        if not self._get_orth_str:
-                            if hasattr(self, "surface_feature"):
-                                word_feature = self.surface_feature
-                            else:
-                                word_feature = getattr(self, QUERY_ITEM_WORD)
-                            _, _, table, feature = self.split_resource_feature(word_feature)
+            L = []
+            for i in word_id:
+                if i not in self._word_cache:
+                    if not self._get_orth_str:
+                        if hasattr(self, "surface_feature"):
+                            word_feature = self.surface_feature
+                        else:
+                            word_feature = getattr(self, QUERY_ITEM_WORD)
+                        _, _, table, feature = self.split_resource_feature(word_feature)
 
-                            self.lexicon.joined_tables = []
-                            self.lexicon.table_list = [self.word_table]
-                            self.lexicon.add_table_path("word_id", word_feature)
-                            
-                            self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
-                                getattr(self, word_feature),
-                                " ".join(self.lexicon.table_list),
-                                self.word_table,
-                                self.word_id)
-                        try:
-                            self._word_cache[i], = db_connection.execute(self._get_orth_str.format(i)).fetchone()
-                        except TypeError as e:
-                            print(e)
-                            print(i)
-                            print(self._get_orth_str.format(i))
-                            self._word_cache[i] = DEFAULT_MISSING_VALUE
-                    L.append(self._word_cache[i])
-                return L
+                        self.lexicon.joined_tables = []
+                        self.lexicon.table_list = [self.word_table]
+                        self.lexicon.add_table_path("word_id", word_feature)
+                        
+                        self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
+                            getattr(self, word_feature),
+                            " ".join(self.lexicon.table_list),
+                            self.word_table,
+                            self.word_id)
+                    try:
+                        self._word_cache[i], = db_connection.execute(self._get_orth_str.format(i)).fetchone()
+                    except TypeError as e:
+                        print(e)
+                        print(i)
+                        print(self._get_orth_str.format(i))
+                        self._word_cache[i] = DEFAULT_MISSING_VALUE
+                L.append(self._word_cache[i])
+            return L
                 
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
@@ -1046,14 +1040,23 @@ class SQLResource(BaseResource):
         # Get words in left context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 start, token_id - 1, origin_id)
-        left_context_words = get_orth([x for (x, ) in db_connection.execute(S)])
+
+        results = db_connection.execute(S)
+        if not hasattr(self, "corpus_word_id"):
+            left_context_words = [x for (x, ) in results]
+        else:
+            left_context_words = get_orth([x for (x, ) in results])
         left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
 
         if options.cfg.context_mode == CONTEXT_STRING:
             # Get words matching the query:
             S = self.corpus.sql_string_get_wordid_in_range(
                     token_id, token_id + number_of_tokens - 1, origin_id)
-            string_context_words = get_orth([x for (x, ) in db_connection.execute(S) if x])
+            results = db_connection.execute(S)
+            if not hasattr(self, "corpus_word_id"):
+                string_context_words = [x for (x, ) in results if x]
+            else:
+                string_context_words = get_orth([x for (x, ) in results if x])
         else:
             string_context_words = []
 
@@ -1062,7 +1065,11 @@ class SQLResource(BaseResource):
                 token_id + number_of_tokens, 
                 token_id + number_of_tokens + options.cfg.context_right - 1, 
                 origin_id)
-        right_context_words = get_orth([x for (x, ) in db_connection.execute(S)])
+        results = db_connection.execute(S)
+        if not hasattr(self, "corpus_word_id"):
+            right_context_words = [x for (x, ) in results]
+        else:
+            right_context_words = get_orth([x for (x, ) in results])
         right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
         return (left_context_words, string_context_words, right_context_words)
