@@ -87,7 +87,7 @@ class Session(object):
 
         # verify filter list:
         new_list = []
-        if options.cfg.use_corpus_filters:
+        if options.cfg.use_summary_filters:
             for filt in options.cfg.filter_list:
                 if isinstance(filt, filters.QueryFilter):
                     new_list.append(filt)
@@ -299,7 +299,7 @@ class Session(object):
         """
         Apply the frequency filters to the output object.
         """
-        if not self.filter_list or not options.cfg.use_corpus_filters:
+        if not self.filter_list or not options.cfg.use_summary_filters:
             return 
         no_freq = True
         for filt in self.filter_list:
@@ -405,15 +405,19 @@ class Session(object):
                 match = re.search("(.*)\((.*)\)", header)
                 if match:
                     s = match.group(1)
+                    print(s, header)
                     fun = manager.get_function(s)
-                    raise RuntimeError("{}({})".format(
-                                                    fun.get_label(session=self),
-                                                    match.group(2)))
+                    try:
+                        raise RuntimeError("{}({})".format(
+                                                        fun.get_label(session=self, manager=manager),
+                                                        match.group(2)))
+                    except AttributeError:
+                        raise RuntimeError(header)
                 else:
                     fun = manager.get_function(header)
                     if fun == None:
                         raise RuntimeError(header)
-                    raise RuntimeError(fun.get_label(session=self))
+                    raise RuntimeError(fun.get_label(session=self, manager=manager))
 
             if header.startswith("db_"):
                 match = re.match("db_(.*)_coq_(.*)", header)
