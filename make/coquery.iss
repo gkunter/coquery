@@ -8,7 +8,7 @@
 
 # define coq_version "0.9.2a"
 # define coq_path "C:\Users\Gero Kunter\coquery-0.9.2"
-# define coq_icon "artwork\icons\logo.ico"
+# define coq_icon "logo.ico"
 
 AppId={{42204621-F37F-40C3-96E2-886FFF94D497}
 AppName=Coquery
