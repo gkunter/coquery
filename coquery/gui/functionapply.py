@@ -23,7 +23,7 @@ from .classes import CoqListItem
 
 class FunctionDialog(QtGui.QDialog):
     def __init__(self, columns=[], available_columns=[],
-                 function_class=functions.StringFunction, 
+                 function_class=[], 
                  function_types=None,
                  func=None, max_parameters=1, checkable=False, checked=[],
                  edit_label=True, parent=None):
@@ -36,37 +36,30 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.button_add.setIcon(options.cfg.main_window.get_icon("sign-left"))
         self.ui.button_remove.setIcon(options.cfg.main_window.get_icon("sign-right"))
 
-        if available_columns == []:
-            self.ui.widget_column_select.hide()
-        else:
-            self.session = options.cfg.main_window.Session
-            for x in available_columns:
-                item = CoqListItem(self.session.translate_header(x))
-                item.setObjectName(x)
-                self.ui.list_available_columns.addItem(item)        
-            for x in columns:
-                item = CoqListItem(self.session.translate_header(x))
-                item.setObjectName(x)
-                self.ui.list_selected_columns.addItem(item)        
+        self.session = options.cfg.main_window.Session
+        for x in available_columns:
+            item = CoqListItem(self.session.translate_header(x))
+            item.setObjectName(x)
+            self.ui.list_available_columns.addItem(item)        
+        for x in columns:
+            item = CoqListItem(self.session.translate_header(x))
+            item.setObjectName(x)
+            self.ui.list_selected_columns.addItem(item)        
 
-            max_width = 0
-            for x in functions.combine_map:
-                max_width = max(max_width, QtGui.QLabel(x).sizeHint().width() + 
-                                QtGui.QComboBox().sizeHint().width())
-            self.ui.combo_combine.setMaximumWidth(max_width)
-            self.ui.combo_combine.setMinimumWidth(max_width)
+        max_width = 0
+        for x in functions.combine_map:
+            max_width = max(max_width, QtGui.QLabel(x).sizeHint().width() + 
+                            QtGui.QComboBox().sizeHint().width())
+        self.ui.combo_combine.setMaximumWidth(max_width)
+        self.ui.combo_combine.setMinimumWidth(max_width)
         
         self.max_parameters = max_parameters
         self.edit_label = edit_label
 
         self.checkable = checkable
         self.checked = checked
-        self.function_types = function_types
-        self.function_list = self.fill_list(function_class)
-        self.ui.list_functions.setCurrentRow(0)
         self.columns = columns
         self._auto_label = True
-        self.ui.list_functions.currentItemChanged.connect(lambda: self.check_gui())
         self.ui.edit_function_value.textChanged.connect(lambda: self.check_gui())
         self.ui.edit_label.textEdited.connect(self.check_label)
 
@@ -74,17 +67,64 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.button_remove.clicked.connect(self.remove_selected)
         self.ui.button_up.clicked.connect(self.selected_up)
         self.ui.button_down.clicked.connect(self.selected_down)
+
+        self.function_types = function_types
+        self._func = []
+
+        self.ui.list_functions.currentRowChanged.connect(lambda: self.check_gui())
+        
+        if function_class == []:
+            # remove function class selection widget
+            widget = self.ui.list_classes
+            self.ui.horizontalLayout.removeWidget(widget)
+            widget.hide()
+            del widget
+            self.function_list = self.fill_list(function_types)
+            self.ui.list_functions.setCurrentRow(0)
+            self.ui.list_functions.setFocus(1)
+        else:
+            for i, fc in enumerate(function_class):
+                group = QtGui.QListWidgetItem(fc.get_description())
+                self.ui.list_classes.addItem(group)
+
+                l = []
+                for attr in [getattr(functions, x) for x in functions.__dict__]:
+                    try:
+                        if (issubclass(attr, fc) and attr != fc):
+                            l.append(attr)
+                    except TypeError:
+                        # this is raised if attr is not a class, but e.g. a 
+                        # string
+                        pass
+                l = sorted(l, key=lambda x: x.get_name())
+                self._func.append(l)
+                
+            self.ui.list_classes.currentRowChanged.connect(self.set_function_group)
+            self.set_function_group(0)
         
         if func:
             self.select_function(func)
         
         self.check_gui()
-        self.ui.list_functions.setFocus(1)
                 
         try:
             self.resize(options.settings.value("functionapply_size"))
         except TypeError:
             pass
+
+    def set_function_group(self, i):
+        self.function_list = self._func[i]
+        self.ui.list_functions.blockSignals(True)
+        self.ui.list_classes.blockSignals(True)
+        self.ui.list_functions.clear()
+        for x in self.function_list:
+            desc = FUNCTION_DESC.get(x._name, "no description available")
+            item = QtGui.QListWidgetItem("{} – {}".format(x.get_name(), desc))
+            self.ui.list_functions.addItem(item)
+        self.ui.list_classes.setCurrentRow(i)
+        self.ui.list_functions.blockSignals(False)
+        self.ui.list_classes.blockSignals(False)
+        self.ui.list_functions.setCurrentRow(0)
 
     def add_selected(self):
         selected = self.ui.list_available_columns.selectedItems()
@@ -128,27 +168,30 @@ class FunctionDialog(QtGui.QDialog):
             self._auto_label = False
             
     def fill_list(self, function_class):
-        l = self.ui.list_functions
         if self.function_types:
             func_list = self.function_types
         else:
             func_list = []
-            for attr in [getattr(functions, x) for x in functions.__dict__]:
-                try:
-                    if (issubclass(attr, function_class) and attr != function_class):
-                        func_list.append(attr)
-                except TypeError:
-                    pass
-                
-        func_list= sorted(func_list, key=lambda x: x.get_name())
-
+            for fc in function_class:
+                l = []
+                for attr in [getattr(functions, x) for x in functions.__dict__]:
+                    try:
+                        if (issubclass(attr, fc) and 
+                            attr != fc and
+                            attr._name != "virtual"):
+                            l.append(attr)
+                    except TypeError:
+                        pass
+                func_list += sorted(l, key=lambda x: x.get_name())
+            
+        widget = self.ui.list_functions
         for x in func_list:
             desc = FUNCTION_DESC.get(x._name, "no description available")
             item = QtGui.QListWidgetItem("{} – {}".format(x.get_name(), desc))
             if self.checkable:
                 item.setCheckState(QtCore.Qt.Checked if x in self.checked else QtCore.Qt.Unchecked)
                 item.setData(QtCore.Qt.UserRole, x)
-            l.insertItem(l.count(), item)
+            widget.addItem(item)
         return func_list
 
     def check_label(self):
