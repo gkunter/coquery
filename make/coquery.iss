@@ -6,9 +6,9 @@
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 
-# define coq_version "0.9.2"
-# define coq_path "C:\Users\Gero Kunter\coquery-0.9.2"
-# define coq_icon "artwork\icons\coquery.ico"
+# define coq_version "0.10.0dev"
+# define coq_path "C:\Users\Gero Kunter\coquery-0.10.0dev"
+# define coq_icon "artwork\icons\logo.ico"
 
 AppId={{42204621-F37F-40C3-96E2-886FFF94D497}
 AppName=Coquery
@@ -22,7 +22,7 @@ AppUpdatesURL=http://www.coquery.org
 DefaultDirName={pf}\Coquery
 DisableProgramGroupPage=yes
 LicenseFile={#coq_path}\make\gpl-3.0.txt
-OutputBaseFilename=setup
+OutputBaseFilename=setup-coquery-{#coq_version}
 SetupIconFile={#coq_path}\coquery\icons\artwork\logo.ico
 Compression=lzma
 SolidCompression=yes
@@ -38,11 +38,11 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; \
 Source: "{#coq_path}\make\dist\coquery\coquery.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#coq_path}\make\dist\coquery\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
-Source: "{#coq_path}\coquery\\icons\artwork\logo.ico"; DestDir: "{app}"
+Source: "{#coq_path}\coquery\icons\artwork\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{commonprograms}\Coquery"; Filename: "{app}\logo.ico"
-Name: "{commondesktop}\Coquery"; Filename: "{app}\logo.ico"; Tasks: desktopicon
+Name: "{commondesktop}\Coquery"; Filename: "{app}\coquery.exe"; WorkingDir: "{app}"; \
+  IconFileName: "{app}\{#coq_icon}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\coquery.exe"; Description: "{cm:LaunchProgram,Coquery}"; Flags: nowait postinstall skipifsilent
