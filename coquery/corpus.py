@@ -881,10 +881,11 @@ class SQLResource(BaseResource):
         # child tables).
         # FIXME: some mechanism is probably necessary to handle self-joined 
         # tables
-        options.cfg.token_origin_id = getattr(self.resource, "corpus_source_id",
-                        getattr(self.resource, "corpus_file_id",
-                            getattr(self.resource, "corpus_sentence_id",
-                                self.resource.corpus_id)))
+        
+        for x in ["corpus_source_id", "corpus_file_id", "corpus_sentence_id", "corpus_id"]:
+            if hasattr(self, x):
+                options.cfg.token_origin_id = x
+                break
             
     @classmethod
     def get_engine(cls, *args, **kwargs):
