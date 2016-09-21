@@ -60,7 +60,11 @@ class NamedTableOptionsDialog(CSVOptionDialog):
             widget.setMinimumHeight(max_height)
 
         for x in default.mapping:
-            getattr(self.ui, "edit_{}".format(x)).setText(self.map[x])
+            try:
+                getattr(self.ui, "edit_{}".format(x)).setText(self.map[x])
+            except TypeError:
+                # Ignore mappings if there is a type error:
+                pass
 
         try:
             self.resize(options.settings.value("namedtableoptions_size"))
