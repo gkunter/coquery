@@ -30,10 +30,10 @@ from coquery.documents import *
 class BuilderClass(BaseCorpusBuilder):
     file_name = None
     
-    def __init__(self, gui=False, pos=True, mapping={}, dtypes=[]):
+    def __init__(self, gui=False, pos=True, mapping={}, dtypes=[], table_options=None):
         # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui)
-
+        self._table_options = table_options
         _columns = []
         
         for i, label in enumerate(dtypes.index.values):
@@ -168,8 +168,24 @@ class BuilderClass(BaseCorpusBuilder):
         old_stderr = sys.stderr
         err = io.StringIO()
         sys.stderr = err
+
+        if self._table_options != None:
+            kwargs = {
+                "encoding": self._table_options.encoding,
+                "header": 0 if self._table_options.header else None,
+                "sep": self._table_options.sep,
+                "skiprows": self._table_options.skip_lines,
+                "quotechar": self._table_options.quote_char}
+        else:
+            kwargs = {"encoding": "utf-8"}
+
+        kwargs.update({"low_memory": False, "error_bad_lines": False})
+
         try:
-            df = pd.read_csv(self.arguments.path, low_memory=False, error_bad_lines=False)
+            df = pd.read_csv(self.arguments.path, **kwargs)
+        except Exception as e:
+            logger.error(e)
+            print(e)
         finally:
             sys.stderr = old_stderr
             
