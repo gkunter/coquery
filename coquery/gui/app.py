@@ -869,6 +869,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.thread.taskFinished.connect(self.finalize_reaggregation)
 
         if not self.Session.has_cached_data():
+            print(1)
             self.start_progress_indicator()
         
         print("reaggregate")
@@ -1488,8 +1489,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_query_button()
         self.stop_progress_indicator()
         
-    def start_progress_indicator(self, n=None):
-        """ Show the progress indicator, and make it move. """
+    def _display_progress(self, n=None):
         self.ui.status_progress.setRange(0, 0)
         self.ui.status_progress.show()
         if n is None:
@@ -1497,7 +1497,10 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.multi_query_progress.setRange(0, n)
             self.ui.multi_query_progress.show()
-            
+        
+    def start_progress_indicator(self, n=None):
+        """ Show the progress indicator, and make it move. """
+        self._display_progress(n)
         self._multi_progress = n
         
     def stop_progress_indicator(self):
@@ -1878,12 +1881,18 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         from .renamecolumn import RenameColumnDialog
         
-        column_name = self.Session.translate_header(column, ignore_alias=True)
-        current_name = options.cfg.column_names.get(column, column_name)
-        
-        name = RenameColumnDialog.get_name(column_name,
-                                           current_name)
-        options.cfg.column_names[column] = name
+        if column.startswith("func_"):
+            manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+            fun = manager.get_function(column)
+            column_name = fun.get_label(self.Session, manager, unlabel=True)
+            current_name = fun.get_label(self.Session, manager, unlabel=False)
+            name = RenameColumnDialog.get_name(column_name, current_name)
+            fun.set_label(name)
+        else:
+            column_name = self.Session.translate_header(column, ignore_alias=True)
+            current_name = options.cfg.column_names.get(column, column_name)
+            name = RenameColumnDialog.get_name(column_name, current_name)
+            options.cfg.column_names[column] = name
 
     def hide_columns(self, selection):
         """
@@ -2094,6 +2103,7 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 self.showMessage("Writing to file...")
 
+            print(2)
             self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
             self.query_thread.taskFinished.connect(lambda: self.finalize_query(options.cfg.to_file))
@@ -2111,6 +2121,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.getGuiValues()
         self.new_session = StatisticsSession()
         self.showMessage("Gathering corpus statistics...")
+        print(3)
         self.start_progress_indicator()
         self.query_thread = classes.CoqThread(self.new_session.run_queries, parent=self)
         self.query_thread.taskFinished.connect(self.finalize_query)
@@ -2888,6 +2899,11 @@ class CoqueryApp(QtGui.QMainWindow):
         for col in columns:
             func = manager.get_function(col)
             manager.remove_column_function(func)
+            try:
+                options.cfg.column_names.remove(func.get_id())
+            except AttributeError:
+                pass
+                
         self.update_columns()
             
     def remove_item(self, item):
