@@ -17,6 +17,12 @@ import warnings
 import sqlalchemy
 import pandas as pd
 
+# ensure Python 2.7 compatibility
+try:
+    import StringIO as io
+except ImportError:
+    import io as io
+
 from .errors import *
 from .defines import *
 from . import options
@@ -277,7 +283,11 @@ class SqlDB (object):
             rows from the dataframe. If "fail", the dataframe is NOT 
             loaded into the table.
         """
-        df.to_sql(table_name, self.engine, if_exists=if_exists, index=bool(index_label), index_label=index_label)
+        df.to_sql(table_name, 
+                  self.engine, 
+                  if_exists=if_exists, 
+                  index=bool(index_label), 
+                  index_label=index_label)
 
     def load_infile(self, 
                     file_name, 
@@ -286,7 +296,8 @@ class SqlDB (object):
                     sep=None, 
                     skip=0, 
                     quoting=None,
-                    term=None):
+                    term=None,
+                    engine="python"):
         """
         Bulk-load a text file into a table.
         
@@ -305,13 +316,30 @@ class SqlDB (object):
         term : character 
             The character that terminates lines in the text file
         """
+        old_stderr = sys.stderr
+        err = io.StringIO()
+        sys.stderr = err
         
         print(target)
         df = pd.read_csv(file_name, 
-                             sep=sep, 
-                             names=target,
-                             quoting=quoting,
-                             header=skip, engine="python")
+                            sep=sep, 
+                            names=target,
+                            quoting=quoting,
+                            header=skip, 
+                            error_bad_lines=False,
+                            engine=engine)
+
+        sys.stderr = old_stderr
+            
+        try:
+            warn_string = eval(err.getvalue()).decode("utf-8")
+        except:
+            warn_string = err.getvalue()
+        for x in warn_string.split("\n"):
+            print(x)
+            if x:
+                logger.warn("File {} – {}".format(self.arguments.path, x))
+
         print(df.head())
         self.load_dataframe(df, table_name, None)
         return
