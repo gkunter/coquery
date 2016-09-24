@@ -516,6 +516,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.check_aggregate.stateChanged.connect(self.change_aggregate)
         self.ui.check_summarize.stateChanged.connect(self.change_summarize)
 
+        self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
+        
+
         self.ui.radio_context_mode_kwic.toggled.connect(self.change_context)
         self.ui.radio_context_mode_string.toggled.connect(self.change_context)
         self.ui.radio_context_mode_columns.toggled.connect(self.change_context)

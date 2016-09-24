@@ -15,14 +15,8 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_4">
-    <property name="leftMargin">
-     <number>2</number>
-    </property>
     <property name="topMargin">
      <number>0</number>
-    </property>
-    <property name="rightMargin">
-     <number>2</number>
     </property>
     <property name="bottomMargin">
      <number>0</number>
@@ -46,9 +40,6 @@
         </sizepolicy>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,3,1">
-        <property name="margin">
-         <number>0</number>
-        </property>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0">
           <property name="spacing">
@@ -151,9 +142,6 @@
         </item>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_11">
-          <property name="spacing">
-           <number>4</number>
-          </property>
           <item>
            <widget class="QGroupBox" name="box_input_settings">
             <property name="title">
@@ -252,7 +240,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QGroupBox" name="group_query_button">
+           <widget class="QGroupBox" name="groupBox_2">
             <layout class="QHBoxLayout" name="horizontalLayout_3">
              <item>
               <spacer name="horizontalSpacer">
@@ -452,7 +440,7 @@
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>2</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="tool_widgetPage1">
               <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -585,7 +573,7 @@
              <widget class="QWidget" name="tool_widgetPage2">
               <layout class="QVBoxLayout" name="verticalLayout_3">
                <item>
-                <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,1,0" columnstretch="0,1">
+                <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0" columnstretch="0,0">
                  <property name="sizeConstraint">
                   <enum>QLayout::SetFixedSize</enum>
                  </property>
@@ -605,74 +593,43 @@
                  <item row="0" column="1">
                   <widget class="QLabel" name="label_3">
                    <property name="text">
-                    <string>Use stop words:</string>
+                    <string>Apply stop words:</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="2" column="1">
+                 <item row="1" column="1">
                   <widget class="QWidget" name="widget_stopwords" native="true">
                    <layout class="QVBoxLayout" name="verticalLayout_8">
                     <property name="margin">
                      <number>0</number>
                     </property>
                     <item>
-                     <layout class="QHBoxLayout" name="horizontalLayout_5">
-                      <item>
-                       <widget class="QDialogButtonBox" name="buttonBox">
-                        <property name="sizePolicy">
-                         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                          <horstretch>0</horstretch>
-                          <verstretch>0</verstretch>
-                         </sizepolicy>
-                        </property>
-                        <property name="orientation">
-                         <enum>Qt::Vertical</enum>
-                        </property>
-                        <property name="standardButtons">
-                         <set>QDialogButtonBox::Discard|QDialogButtonBox::Open|QDialogButtonBox::Save</set>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
+                     <widget class="QPushButton" name="button_stopwords">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="text">
+                       <string>Manage stop &amp;words...</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="verticalSpacer_6">
+                      <property name="orientation">
+                       <enum>Qt::Vertical</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>115</width>
+                        <height>191</height>
+                       </size>
+                      </property>
+                     </spacer>
                     </item>
                    </layout>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QListWidget" name="list_stopwords">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="alternatingRowColors">
-                    <bool>true</bool>
-                   </property>
-                   <property name="selectionMode">
-                    <enum>QAbstractItemView::ExtendedSelection</enum>
-                   </property>
-                   <property name="flow">
-                    <enum>QListView::TopToBottom</enum>
-                   </property>
-                   <property name="isWrapping" stdset="0">
-                    <bool>true</bool>
-                   </property>
-                   <property name="resizeMode">
-                    <enum>QListView::Adjust</enum>
-                   </property>
-                   <property name="spacing">
-                    <number>10</number>
-                   </property>
-                   <property name="viewMode">
-                    <enum>QListView::IconMode</enum>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="selectionRectVisible">
-                    <bool>true</bool>
-                   </property>
                   </widget>
                  </item>
                 </layout>
@@ -983,7 +940,7 @@
      <x>0</x>
      <y>0</y>
      <width>1113</width>
-     <height>23</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1023,6 +980,9 @@
     </property>
     <addaction name="action_connection_settings"/>
     <addaction name="action_settings"/>
+    <addaction name="separator"/>
+    <addaction name="action_toggle_filters"/>
+    <addaction name="action_toggle_stopwords"/>
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
@@ -1099,7 +1059,7 @@
   <action name="action_open_input_file">
    <property name="icon">
     <iconset theme="document-open">
-     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Open input file...</string>
@@ -1111,7 +1071,7 @@
   <action name="action_help">
    <property name="icon">
     <iconset theme="help-contents">
-     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Help</string>
@@ -1148,7 +1108,7 @@
   <action name="action_statistics">
    <property name="icon">
     <iconset theme="view-statistics">
-     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Statistics</string>
@@ -1157,7 +1117,7 @@
   <action name="action_connection_settings">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Database connections...</string>
@@ -1166,7 +1126,7 @@
   <action name="action_settings">
    <property name="icon">
     <iconset theme="configure">
-     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Settings...</string>
@@ -1175,7 +1135,7 @@
   <action name="action_quit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -1187,7 +1147,7 @@
   <action name="action_build_corpus">
    <property name="icon">
     <iconset theme="document-new">
-     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Build new corpus...</string>
@@ -1202,7 +1162,7 @@
    </property>
    <property name="icon">
     <iconset theme="edit-delete">
-     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Remove corpus...</string>
@@ -1214,7 +1174,7 @@
   <action name="action_manage_corpus">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Corpus &amp;manager...</string>
@@ -1273,7 +1233,7 @@
   <action name="action_corpus_documentation">
    <property name="icon">
     <iconset theme="help-browser">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Documentation...</string>
@@ -1357,7 +1317,7 @@
   <action name="action_save_results">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../../../../../.designer/backup</normaloff>../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Save results...</string>
@@ -1369,7 +1329,7 @@
   <action name="action_copy_to_clipboard">
    <property name="icon">
     <iconset theme="edit-copy">
-     <normaloff>../../../../../../../../.designer/backup</normaloff>../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Copy selection to clipboard</string>
@@ -1391,7 +1351,7 @@
   <action name="action_save_selection">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Sa&amp;ve selection...</string>
