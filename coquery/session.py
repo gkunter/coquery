@@ -154,6 +154,14 @@ class Session(object):
         output object. Afterwards, apply all filters, and aggregate the data.
         If Coquery is run as a console program, write the aggregated data to 
         a file (or the standard output).
+        
+        Parameters
+        ----------
+        to_file : bool
+            True if the query results are directly written to a file, and 
+            False if they will be displayed in the GUI. Data that is written
+            directly to a file contains less information, e.g. it doesn't 
+            contain an origin ID or a corpus ID (unless requested).
         """
         self.start_timer()
         
@@ -176,7 +184,7 @@ class Session(object):
             else:
                 logger.info("Start query: '{}'".format(current_query.query_string))
             
-            df = current_query.run()
+            df = current_query.run(to_file)
 
             # FIXME:
             # If the current query did not return any match, nothing is added 
@@ -355,124 +363,136 @@ class Session(object):
         """
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
+        # if options.cfg.verbose: print("translate_header({})".format(header))
         if not ignore_alias and header in options.cfg.column_names:
+            # if options.cfg.verbose: print(1)
             return options.cfg.column_names[header]
         
-        # FIXME:
-        # this is an ugly hack: a RuntimeError is raised if the header could
-        # be translated!
-        try:
-            # Retain the column header if the query string was from an input file
-            if header == "coquery_query_string" and options.cfg.query_label:
-                raise RuntimeError(options.cfg.query_label)
+        # Retain the column header if the query string was from an input file
+        if header == "coquery_query_string" and options.cfg.query_label:
+            # if options.cfg.verbose: print(2)
+            return options.cfg.query_label
 
-            if header.startswith("coquery_invisible"):
-                raise RuntimeError(header)
+        if header.startswith("coquery_invisible"):
+            # if options.cfg.verbose: print(3)
+            return header
 
-            # treat frequency columns:
-            if header == "statistics_frequency":
-                if options.cfg.query_label:
-                    raise RuntimeError("{}({})".format(COLUMN_NAMES[header], options.cfg.query_label))
-                else:
-                    raise RuntimeError("{}".format(COLUMN_NAMES[header]))
-            
-            if header.startswith("statistics_g_test"):
-                label = header.partition("statistics_g_test_")[-1]
-                raise RuntimeError("G²('{}', y)".format(label))
-
-            if header.startswith("coq_context"):
-                if header == "coq_context_left":
-                    s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_left)
-                elif header == "coq_context_right":
-                    s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_right)
-                elif header == "coq_context_string":
-                    s = "{}({}L, {}R)".format(COLUMN_NAMES[header],
-                                              options.cfg.context_left,
-                                              options.cfg.context_right)
-                elif header.startswith("coq_context_lc"):
-                    s = "L{}".format(header.split("coq_context_lc")[-1])
-                elif header.startswith("coq_context_rc"):
-                    s = "R{}".format(header.split("coq_context_rc")[-1])
-                raise RuntimeError(s)
-                    
-            # other features:
-            if header in COLUMN_NAMES:
-                raise RuntimeError(COLUMN_NAMES[header])
-            
-            # deal with function headers:
-            if header.startswith("func_"):
-                manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
-                match = re.search("(.*)\((.*)\)", header)
-                if match:
-                    s = match.group(1)
-                    print(s, header)
-                    fun = manager.get_function(s)
-                    try:
-                        raise RuntimeError("{}({})".format(
-                                                        fun.get_label(session=self, manager=manager),
-                                                        match.group(2)))
-                    except AttributeError:
-                        raise RuntimeError(header)
-                else:
-                    fun = manager.get_function(header)
-                    if fun == None:
-                        raise RuntimeError(header)
-                    raise RuntimeError(fun.get_label(session=self, manager=manager))
-
-            if header.startswith("db_"):
-                match = re.match("db_(.*)_coq_(.*)", header)
-                resource = options.get_resource_of_database(match.group(1))
-                res_prefix = "{}.".format(resource.name)
-                header = match.group(2)
+        # treat frequency columns:
+        if header == "statistics_frequency":
+            if options.cfg.query_label:
+                # if options.cfg.verbose: print(4)
+                return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
             else:
-                match = re.match("coq_(.*)", header)
-                if not match:
-                    raise RuntimeError(header)
-                header = match.group(1)
-                res_prefix = ""
-                resource = self.Resource
+                # if options.cfg.verbose: print(5)
+                return "{}".format(COLUMN_NAMES[header])
+        
+        if header.startswith("statistics_g_test"):
+            label = header.partition("statistics_g_test_")[-1]
+            # if options.cfg.verbose: print(6)
+            return "G²('{}', y)".format(label)
+
+        if header.startswith("coq_context"):
+            if header == "coq_context_left":
+                s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_left)
+            elif header == "coq_context_right":
+                s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_right)
+            elif header == "coq_context_string":
+                s = "{}({}L, {}R)".format(COLUMN_NAMES[header],
+                                            options.cfg.context_left,
+                                            options.cfg.context_right)
+            elif header.startswith("coq_context_lc"):
+                s = "L{}".format(header.split("coq_context_lc")[-1])
+            elif header.startswith("coq_context_rc"):
+                s = "R{}".format(header.split("coq_context_rc")[-1])
+            # if options.cfg.verbose: print(7)
+            return s
                 
-            rc_feature, _, number = header.rpartition("_")
-            
-            # If there is only one query token, number is set to "" so that no
-            # number suffix is added to the labels in this case:
-            if self.get_max_token_count() == 1:
-                number = ""
-
-            # special treatment of query tokens:
-            if rc_feature == "coquery_query_token":
+        # other features:
+        if header in COLUMN_NAMES:
+            # if options.cfg.verbose: print(8)
+            return COLUMN_NAMES[header]
+        
+        # deal with function headers:
+        if header.startswith("func_"):
+            manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
+            match = re.search("(.*)\((.*)\)", header)
+            if match:
+                s = match.group(1)
+                # if options.cfg.verbose: print(s, header)
+                fun = manager.get_function(s)
                 try:
-                    number = self.quantified_number_labels[int(number) - 1]
-                except ValueError:
-                    pass
-                raise RuntimeError("{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number))
-            
-            # special treatment of lexicon features:
-            if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
-                try:
-                    number = self.quantified_number_labels[int(number) - 1]
-                except ValueError:
-                    pass
-                raise RuntimeError("{}{}{}".format(res_prefix, getattr(resource, str(rc_feature)), number))
+                    # if options.cfg.verbose: print(9)
+                    return "{}({})".format(fun.get_label(session=self, manager=manager),
+                                           match.group(2))
+                except AttributeError:
+                    # if options.cfg.verbose: print(10)
+                    return header
+            else:
+                fun = manager.get_function(header)
+                if fun == None:
+                    # if options.cfg.verbose: print(11)
+                    return header
+                else:
+                    # if options.cfg.verbose: print(12)
+                    return fun.get_label(session=self, manager=manager)
 
-            # treat any other feature that is provided by the corpus:
+        if header.startswith("db_"):
+            match = re.match("db_(.*)_coq_(.*)", header)
+            resource = options.get_resource_of_database(match.group(1))
+            res_prefix = "{}.".format(resource.name)
+            header = match.group(2)
+        else:
+            match = re.match("coq_(.*)", header)
+            if not match:
+                # if options.cfg.verbose: print(13)
+                return header
+            header = match.group(1)
+            res_prefix = ""
+            resource = self.Resource
+            
+        rc_feature, _, number = header.rpartition("_")
+        
+        # If there is only one query token, number is set to "" so that no
+        # number suffix is added to the labels in this case:
+        if self.get_max_token_count() == 1:
+            number = ""
+
+        # special treatment of query tokens:
+        if rc_feature == "coquery_query_token":
             try:
-                raise RuntimeError("{}{}".format(res_prefix, getattr(resource, str(rc_feature))))
-            except AttributeError:
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
                 pass
+            # if options.cfg.verbose: print(14)
+            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
+        
+        # special treatment of lexicon features:
+        if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
+            try:
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
+                pass
+            # if options.cfg.verbose: print(15)
+            return "{}{}{}".format(res_prefix, getattr(resource, str(rc_feature)), number)
 
-            # other features:
-            if rc_feature in COLUMN_NAMES:
-                try:
-                    number = self.quantified_number_labels[int(number) - 1]
-                except ValueError:
-                    pass
-                raise RuntimeError("{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number))
+        # treat any other feature that is provided by the corpus:
+        try:
+            # if options.cfg.verbose: print(16)
+            return "{}{}".format(res_prefix, getattr(resource, str(rc_feature)))
+        except AttributeError:
+            pass
 
-            raise RuntimeError(header)
-
-        except RuntimeError as e:
-            return e.args[0]
+        # other features:
+        if rc_feature in COLUMN_NAMES:
+            try:
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
+                pass
+            # if options.cfg.verbose: print(17)
+            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
+        
+        # if options.cfg.verbose: print(18)
+        return header
 
 class StatisticsSession(Session):
     def __init__(self):

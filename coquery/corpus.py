@@ -941,7 +941,7 @@ class SQLResource(BaseResource):
         
         return df
     
-    def get_query_string(self, Query, token_list):
+    def get_query_string(self, Query, token_list, to_file=False):
         """
         Get a query string that can be used to retrieve the query matches.
 
@@ -954,6 +954,11 @@ class SQLResource(BaseResource):
             An TokenQuery instance that specifies the current query.
         token_list : list 
             A list of Tokens
+        to_file : bool
+            True if the query results are directly written to a file, and 
+            False if they will be displayed in the GUI. Data that is written
+            directly to a file contains less information, e.g. it doesn't 
+            contain an origin ID or a corpus ID (unless requested).
             
         Returns
         -------
@@ -969,7 +974,7 @@ class SQLResource(BaseResource):
                     query_string = self.corpus.sql_string_query_lookup(Query, token_list)
             else:
                 # otherwise, use the self-joined corpus table:
-                query_string = self.corpus.sql_string_query(Query, token_list)
+                query_string = self.corpus.sql_string_query(Query, token_list, to_file)
                 #l = self.corpus.get_required_features(Query, token_list)
                 #if options.cfg.verbose:
                     #print(l)
@@ -1762,7 +1767,7 @@ class CorpusClass(object):
                 table_set.add(tab)
         return table_set
 
-    def get_token_query_string(self, current_token, number):
+    def get_token_query_string(self, current_token, number, to_file=False):
         """ 
         Return a SQL SELECT string that selects a table matching the current 
         token, and which includes all columns that are requested, or which 
@@ -1774,6 +1779,11 @@ class CorpusClass(object):
             An instance of CorpusToken as a part of a query string.
         number : int
             The number of current_token in the query string (starting with 0)
+        to_file : bool
+            True if the query results are directly written to a file, and 
+            False if they will be displayed in the GUI. Data that is written
+            directly to a file contains less information, e.g. it doesn't 
+            contain an origin ID or a corpus ID (unless requested).
 
         Returns
         -------
@@ -2033,7 +2043,7 @@ class CorpusClass(object):
         # corpus origin resource (which is either the source id or the file
         # id) to the selected columns, but only for the first query item, 
         # and only if the gui is used:
-        if (options.cfg.gui and not options.cfg.to_file) and number == 0 and options.cfg.token_origin_id:
+        if (to_file or options.cfg.to_file) and number == 0 and options.cfg.token_origin_id:
             select_list.add("coq_{}_1".format(options.cfg.token_origin_id))
 
         S = "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
@@ -2417,9 +2427,17 @@ class CorpusClass(object):
             #)
 
 
-    def get_select_columns(self, Query, token_list):
+    def get_select_columns(self, Query, token_list, to_file=False):
         """
         Get a list of aliased columns that is used in the query string.
+
+        Parameters
+        ----------
+        to_file : bool
+            True if the query results are directly written to a file, and 
+            False if they will be displayed in the GUI. Data that is written
+            directly to a file contains less information, e.g. it doesn't 
+            contain an origin ID or a corpus ID (unless requested).
         """
 
         corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
@@ -2526,10 +2544,10 @@ class CorpusClass(object):
         #if (options.cfg.context_mode != CONTEXT_NONE and 
             #options.cfg.token_origin_id != None and
             #(options.cfg.context_left or options.cfg.context_right)):
-        final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
-
-        # Always add the corpus id to the output fields:
-        final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
+        if not to_file or (options.cfg.use_context):
+            final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
+            # Always add the corpus id to the output fields:
+            final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
         return final_select
 
     def get_lexical_item_positions(self, token_list):
@@ -2557,10 +2575,22 @@ class CorpusClass(object):
             positions_lexical_items.append(column_number)
         return positions_lexical_items
 
-    def sql_string_query(self, Query, token_list):
+    def sql_string_query(self, Query, token_list, to_file=False):
         """ 
         Return a string that is sufficient to run the query on the
         MySQL database. 
+        
+        Parameters
+        ----------
+        Query : instance of TokenQuery
+            The currently active query
+        token_list : list
+            A list of Token instances
+        to_file : bool
+            True if the query results are directly written to a file, and 
+            False if they will be displayed in the GUI. Data that is written
+            directly to a file contains less information, e.g. it doesn't 
+            contain an origin ID or a corpus ID (unless requested).
         """
 
         token_query_list = {}
@@ -2595,7 +2625,7 @@ class CorpusClass(object):
 
             s = self.get_token_query_string(
                 tokens.COCAToken(token, self.lexicon), 
-                column_number)
+                column_number, to_file)
             if i + 1 == referent_id:
                 token_query_list[i+1] = s                
             elif i + 1 < referent_id:
@@ -2621,7 +2651,7 @@ class CorpusClass(object):
         for referent_id, _ in order:
             query_string_part.append(token_query_list[referent_id])
 
-        final_select = self.get_select_columns(Query, token_list)
+        final_select = self.get_select_columns(Query, token_list, to_file)
         
         # construct the query string from the token query parts:
         query_string = " ".join(query_string_part)

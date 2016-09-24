@@ -105,13 +105,21 @@ class TokenQuery(object):
         """ Apply filters to the data frame. """
         return df
     
-    def run(self):
+    def run(self, to_file=False):
         """
         Run the query, and store the results in an internal data frame.
         
         This method runs all required subqueries for the query string, e.g.
         the quantified queries if quantified tokens are used. The results are 
         stored in self.results_frame.
+        
+        Parameters
+        ----------
+        to_file : bool
+            True if the query results are directly written to a file, and 
+            False if they will be displayed in the GUI. Data that is written
+            directly to a file contains less information, e.g. it doesn't 
+            contain an origin ID or a corpus ID (unless requested).
         """
         manager_hash = managers.get_manager(options.cfg.MODE, self.Resource.name).get_hash()
         self.results_frame = pd.DataFrame()
@@ -132,7 +140,7 @@ class TokenQuery(object):
                 self.Resource.attach_list = set([])
                 # This list is filled by get_query_string().
             
-            query_string = self.Resource.get_query_string(self, self._sub_query)
+            query_string = self.Resource.get_query_string(self, self._sub_query, to_file)
             md5 = hashlib.md5("".join(sorted(query_string)).encode()).hexdigest()
             
             with self.Resource.get_engine().connect() as connection:

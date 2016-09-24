@@ -105,7 +105,7 @@ class Function(CoqObject):
         if group:
             print("---- GROUP ARGUMENT USED ----")
         self.value = value
-        self.label = label
+        self._label = label
         if aggr != None:
             self.aggr = aggr
         else:
@@ -119,11 +119,11 @@ class Function(CoqObject):
         else:
             return cls._name
 
-    def get_label(self, session, manager):
+    def get_label(self, session, manager, unlabel=False):
         cols = self.columns(df=None, manager=manager, session=session)
         
-        if self.label:
-            return self.label
+        if self._label and not unlabel:
+            return self._label
         else:
             if self.group:
                 return "{}({})".format(
@@ -153,7 +153,7 @@ class Function(CoqObject):
                     self.aggr)
     
     def set_label(self, label):
-        self.label = label
+        self._label = label
         
     def _func(self, col):
         """

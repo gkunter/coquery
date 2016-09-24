@@ -1696,17 +1696,22 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         optimal = table.suggest_data_type(column.name)
                     except TypeError:
                         continue
-                current = self.DB.get_field_type(table.name, column.name).strip()
+                current = self.DB.get_field_type(table.name, column.name).strip().upper()
+                
+                # length values are only used with VARCHAR types, otherwise,
+                # they are stripped:
+                if column.base_type.upper() != "VARCHAR":
+                    current = re.sub("\(\d+\)", "", current)
                 
                 if current.lower() != optimal.lower():
+                    self.logger.info("Optimizing column {}.{} from {} to {}".format(
+                        table.name, column.name, current, optimal))
                     try:
                         self.DB.modify_field_type(table.name, column.name, optimal)
                     except Exception as e:
                         print(e)
                         self.logger.warning(e)
                     else:
-                        self.logger.info("Optimized column {}.{} from {} to {}".format(
-                            table.name, column.name, current, optimal))
                         column.data_type = optimal
                 column_count += 1
 

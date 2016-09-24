@@ -178,7 +178,6 @@ class Options(object):
 
         self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
         self.args.version = self.version
-        self.args.query_label = ""
         self.args.input_path = ""
         self.args.query_string = ""
         self.args.ask_on_quit = True

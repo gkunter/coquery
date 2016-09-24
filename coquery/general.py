@@ -171,6 +171,19 @@ def get_visible_columns(df, manager, session, hidden=False):
             l.insert(0, lex)
     return l
 
+def get_chunk(iterable):
+    """
+    Yield a chunk from the big file given as 'iterable'.
+    
+    This function is based on a rather elegant solution posted on Stack 
+    Overflow: http://stackoverflow.com/a/24862655
+    """
+    iterable = iter(iterable)
+    while True:
+        yield itertools.chain(
+            [next(iterable)], 
+            itertools.islice(iterable, chunk_size - 1))
+
 try:
     from pympler import summary, muppy
     import psutil
