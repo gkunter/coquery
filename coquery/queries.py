@@ -62,7 +62,6 @@ class TokenQuery(object):
         self.Results = []
         self.input_frame = pd.DataFrame()
         self.results_frame = pd.DataFrame()
-        TokenQuery.filter_list = Session.filter_list
         self._keys = []
 
     def __len__(self):
