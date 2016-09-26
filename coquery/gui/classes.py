@@ -1627,13 +1627,22 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         float_formatter = lambda x: options.cfg.float_format.format(x) if not np.isnan(x) else ""
         for col in source.columns:
             if source.dtypes[col] == float:
-                df[col] = source[col].apply(float_formatter)
+                # try to force floats to int:
+                try:
+                    as_int = source[col].astype(int, error_on_fail=False)
+                except ValueError:
+                    as_int = pd.Series(index=source[col].index)
+                if all(as_int == source[col]):
+                    df[col] = as_int.apply(lambda x: str(x))
+                else:
+                    df[col] = source[col].apply(float_formatter)
             elif source.dtypes[col] == int:
                 df[col] = source[col].apply(lambda x: str(x))
             elif source.dtypes[col] == bool:
                 df[col] =source[col].apply(lambda x: ["no", "yes"][bool(x)])
             else:
                 df[col] = source[col]
+        df = df.fillna(DEFAULT_MISSING_VALUE)
         return df
     
     def is_visible(self, index):
