@@ -24,7 +24,7 @@ from .pyqt_compat import QtGui, QtCore
 from .ui.csvOptionsUi import Ui_FileOptions
 
 class CSVOptions(object):
-    def __init__(self, sep=",", header=True, quote_char='"', skip_lines=0, 
+    def __init__(self, file_name="", sep=",", header=True, quote_char='"', skip_lines=0, 
                  encoding="utf-8", selected_column=None, mapping={}, dtypes=None):
         self.sep = sep
         self.header = header
@@ -34,6 +34,7 @@ class CSVOptions(object):
         self.selected_column = selected_column
         self.mapping = mapping
         self.dtypes = dtypes
+        self.file_name = file_name
         
     def __repr__(self):
         return "CSVOptions(sep='{}', header={}, quote_char='{}', skip_lines={}, encoding='{}', selected_column={}, mapping={}, dtypes={})".format(
@@ -85,11 +86,9 @@ quote_chars = {
     "": "None"}
 
 class CSVOptionDialog(QtGui.QDialog):
-    def __init__(self, filename, default=None, parent=None, icon=None, ui=None):
+    def __init__(self, default=None, parent=None, icon=None, ui=None):
         super(CSVOptionDialog, self).__init__(parent)
-        
-        self.filename = filename
-        
+        self.file_name = default.file_name
         self.file_content = None
         
         if ui:
@@ -97,6 +96,9 @@ class CSVOptionDialog(QtGui.QDialog):
         else:
             self.ui = Ui_FileOptions()
         self.ui.setupUi(self)
+        self.ui.button_browse_file.setIcon(parent.get_icon("folder"))
+        
+        self.ui.edit_file_name.setText(default.file_name)
         
         for x in quote_chars:
             self.ui.quote_char.addItem(quote_chars[x])
@@ -137,6 +139,8 @@ class CSVOptionDialog(QtGui.QDialog):
         self.ui.quote_char.currentIndexChanged.connect(self.update_content)
         self.ui.combo_encoding.currentIndexChanged.connect(self.update_content)
         self.ui.FilePreviewArea.clicked.connect(self.click_column)
+        self.ui.edit_file_name.textChanged.connect(self.update_content)
+        self.ui.button_browse_file.clicked.connect(self.select_file)
 
         self.set_encoding_selection(default.encoding)
 
@@ -151,8 +155,8 @@ class CSVOptionDialog(QtGui.QDialog):
         options.settings.setValue("csvoptions_size", self.size())
         
     @staticmethod
-    def getOptions(path, default=None, parent=None, icon=None):
-        dialog = CSVOptionDialog(filename=path, default=default, parent=parent, icon=icon)
+    def getOptions(default=None, parent=None, icon=None):
+        dialog = CSVOptionDialog(default=default, parent=parent, icon=icon)
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
@@ -165,6 +169,7 @@ class CSVOptionDialog(QtGui.QDialog):
                 skip_lines=dialog.ui.ignore_lines.value(),
                 encoding=utf8(dialog.ui.combo_encoding.currentText()),
                 quote_char=quote,
+                file_name=utf8(dialog.ui.edit_file_name.text()),
                 dtypes=dialog.file_table.dtypes)
         else:
             return None
@@ -211,7 +216,7 @@ class CSVOptionDialog(QtGui.QDialog):
         encoding = utf8(self.ui.combo_encoding.currentText())
         try:
             self.file_table = pd.read_table(
-                self.filename,
+                self.file_name,
                 header=header,
                 sep=str(self.separator),
                 quoting=3 if not quote else 0,
@@ -230,22 +235,22 @@ class CSVOptionDialog(QtGui.QDialog):
                 if options.use_chardet:
                     # detect character encoding using chardet
                     import chardet
-                    content = open(self.filename, "rb").read()
+                    content = open(self.file_name, "rb").read()
                     detection = chardet.detect(content[:32000])
                     encoding = detection["encoding"]
                     file_buffer = StringIO(codecs.decode(content, encoding=encoding))
                 else:
                     # dumb detection. First try utf-8, then latin-1.
                     try:
-                        content = codecs.open(self.filename, "rb", encoding="utf-8").read()
+                        content = codecs.open(self.file_name, "rb", encoding="utf-8").read()
                         encoding = "utf-8"
                     except UnicodeDecodeError:
-                        content = codecs.open(self.filename, "rb", encoding="latin-1").read()
+                        content = codecs.open(self.file_name, "rb", encoding="latin-1").read()
                         encoding = "latin-1"
                     file_buffer = StringIO(content)
                 try:
                     self.file_table = pd.read_table(
-                        self.filename,
+                        self.file_name,
                         header=header,
                         sep=str(self.separator),
                         quoting=3 if not quote else 0,
@@ -258,7 +263,7 @@ class CSVOptionDialog(QtGui.QDialog):
                     # the table could still not be read. Raise an error.
                     QtGui.QMessageBox.critical(
                         self.parent(), "Query file error", 
-                        msg_csv_file_error.format(self.filename))
+                        msg_csv_file_error.format(self.file_name))
                     raise e
                 else:
                     # we have found a working encoding
@@ -269,7 +274,7 @@ class CSVOptionDialog(QtGui.QDialog):
                 # encoding.
                 QtGui.QMessageBox.critical(
                     self.parent(), "Query file error", 
-                    msg_csv_encoding_error.format(file=self.filename, 
+                    msg_csv_encoding_error.format(file=self.file_name, 
                                                   encoding=encoding))
                 # return to the last encoding, which was hopefully working:
                 self.set_encoding_selection(self._last_encoding)
@@ -277,7 +282,7 @@ class CSVOptionDialog(QtGui.QDialog):
             else:
                 QtGui.QMessageBox.critical(
                     self.parent(), "Query file error", 
-                    msg_csv_file_error.format(self.filename))
+                    msg_csv_file_error.format(self.file_name))
                 raise e
             
         # ascii encoding is always replaced by utf-8
@@ -286,9 +291,30 @@ class CSVOptionDialog(QtGui.QDialog):
         self._last_encoding = encoding
         if header == None:
             self.file_table.columns = ["X{}".format(x) for x in range(len(self.file_table.columns))]
+
+    def select_file(self):
+        """ Call a file selector, and add file name to query file input. """
+        name = QtGui.QFileDialog.getOpenFileName(directory=options.cfg.query_file_path)
+        
+        # getOpenFileName() returns different types in PyQt and PySide, fix:
+        if type(name) == tuple:
+            name = name[0]
+        
+        if name:
+            self.file_name = utf8(name)
+            options.cfg.query_file_path = os.path.dirname(self.file_name)
+            self.ui.edit_file_name.setText(self.file_name)
             
     def update_content(self):
-        self.split_file_content()
+        if not os.path.exists(utf8(self.ui.edit_file_name.text())):
+            self.ui.edit_file_name.setStyleSheet("QLineEdit { background-color: rgb(255, 255, 192) }")
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+            self.file_table = pd.DataFrame()
+        else:
+            self.ui.edit_file_name.setStyleSheet("QLineEdit {{ background-color: {} }} ".format(options.cfg.app.palette().color(QtGui.QPalette.Base).name()))
+            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+            self.split_file_content()
+            
         self.table_model = MyTableModel(self, self.file_table, self.ui.ignore_lines.value())
         self.ui.FilePreviewArea.setModel(self.table_model)
         self.set_query_column()
