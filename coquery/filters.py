@@ -14,8 +14,9 @@ import logging
 
 from .defines import *
 from . import options
+from .general import CoqObject
 
-class QueryFilter(object):
+class QueryFilter(CoqObject):
     """ Define a class that stores a query filter. 
     
     Query filters are text strings that follow a very simple syntax. Valid
@@ -167,6 +168,8 @@ class QueryFilter(object):
         b : boolean
             True if the argumnet is a valid filter text, or False otherwise.
         """
+        return True
+        
         var, op, value_range, value_list = self.parse_filter(s)
         if not var:
             return False
