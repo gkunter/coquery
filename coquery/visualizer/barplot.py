@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 
 from coquery.gui.pyqt_compat import QtCore
 from coquery.functions import *
+from coquery.managers import *
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
@@ -235,7 +236,7 @@ class Visualizer(vis.BaseVisualizer):
                     data["COQ_FUNC"] = fun.evaluate(data)
                     df = data[self._groupby + ["COQ_FUNC"]].drop_duplicates()
                     df["COQ_FUNC"] = df["COQ_FUNC"].cumsum()
-
+                    df = df.reset_index(drop=True)
                     for n, i in enumerate(df.index[::-1]):
                         tmp = sns.barplot(
                             x="COQ_FUNC",
@@ -253,7 +254,8 @@ class Visualizer(vis.BaseVisualizer):
                     values = self._value_column
                 else:
                     values = "COQ_FUNC"
-                    df = data.assign(COQ_FUNC=lambda d: fun.evaluate(d))
+                    df = data.assign(COQ_FUNC=lambda d: fun.evaluate(d,
+                                                                     session=options.cfg.main_window.Session))
 
                 df = df[self._groupby + [values]].drop_duplicates().fillna(0)
 
@@ -276,6 +278,7 @@ class Visualizer(vis.BaseVisualizer):
                 #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
 
         session = options.cfg.main_window.Session
+        manager = get_manager(options.cfg.MODE, session.Resource.name)
 
         if self.percentage:
             self._levels[-1] = sorted(self._levels[-1])
@@ -287,7 +290,7 @@ class Visualizer(vis.BaseVisualizer):
 
         if column_x is None:
             fun = func_x(columns=self._groupby, session=session)
-            value_label = fun.get_label(session=session)
+            value_label = fun.get_label(manager=manager, session=session)
             self.options["label_x_axis"] = value_label
         else:
             self.options["label_x_axis"] = "mean({})".format(column_x)
