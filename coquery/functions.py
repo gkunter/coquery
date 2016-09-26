@@ -85,6 +85,7 @@ class Function(CoqObject):
     combine_modes = all_combine
     no_column_labels = False
     single_column = True
+    drop_on_na = True
 
     @staticmethod
     def get_description():
@@ -345,6 +346,7 @@ class Freq(BaseFreq):
     combine_modes = no_combine
     no_column_labels = True
     default_aggr = "sum"
+    drop_on_na = False
     
     def evaluate(self, df, *args, **kwargs):
         """
@@ -371,15 +373,18 @@ class Freq(BaseFreq):
             # columns are hidden), the function returns a Series containing 
             # simply the length of the data frame:
             return pd.Series([len(df)] * len(df), index = df.index)
+
         d = {columns[0]: "count"}
         d.update(
             {x: "first" for x in 
                 [y for y in df.columns.values if y not in columns and not y.startswith("coquery_invisible")]})
+
         val = df.merge(df.groupby(columns)
                          .agg(d)
                          .rename(columns={columns[0]: self.get_id()})
                          .reset_index(), 
                        on=columns, how="left")[self.get_id()]
+        val = val.fillna(0)
         val.index = df.index
         return val
 
@@ -720,14 +725,39 @@ class FunctionList(CoqObject):
         self._list = l
 
     def apply(self, df, connection, session, manager=None):
-        if self._list == []:
-            return df
+        """
+        Apply all functions in the list to the data frame.
+        """
+        # in order to allow zero frequencies for empty result tables, empty 
+        # data frames can be retained if a function demands it. This is 
+        # handled by keeping track of the drop_on_na attribute. As soon as 
+        # one function in the list wishes to retain a data frame that contains 
+        # NAs, the data frame will not be dropped. 
+        # This code only keeps track of the attributes. The actual dropping
+        # takes place (or doesn't) in the summarize() method of the manager.
+        if manager:
+            if manager.drop_on_na == None:
+                drop_on_na = True
+            else:
+                drop_on_na = manager.drop_on_na
+        else:
+            drop_on_na = True
+
         for fun in self._list:
+            drop_on_na = drop_on_na and fun.drop_on_na
+            
+            # Functions can return either single columns or data frames. 
+            # Handle the function result accordingly:
             if fun.single_column:
-                df[fun.get_id()] = fun.evaluate(df, connection=connection, session=session)
+                val = fun.evaluate(df, connection=connection, session=session)
+                df[fun.get_id()] = val
             else:
                 val = fun.evaluate(df, connection=connection, session=session)
                 df = pd.concat([df, val], axis="columns")
+        
+        # tell the manager whether rows with NA will be dropped:
+        if manager:
+            manager.drop_on_na = drop_on_na
         return df
 
     def get_list(self):
