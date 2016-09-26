@@ -139,6 +139,8 @@ class CoqueryApp(QtGui.QMainWindow):
         
         options.cfg.main_window = self
 
+        self._group_functions = functions.FunctionList()
+
         try:
             self.restoreState(options.settings.value("main_state"))
         except TypeError:
@@ -238,17 +240,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_query_button()
         
         self.ui.data_preview.setEnabled(False)
+        self.ui.text_no_match.hide()
         self.ui.menuAnalyse.setEnabled(False)
 
-        ## set horizontal splitter: left: full stretch, right: no stretch
-        #self.ui.splitter.setStretchFactor(0, 1)
-        #self.ui.splitter.setStretchFactor(1, 0)
         ## set vertical splitter: top: no stretch, bottom: full stretch
-        #self.ui.splitter_2.setStretchFactor(0, 0)
-        #self.ui.splitter_2.setStretchFactor(1, 1)
         self.ui.splitter.setStretchFactor(0, 0)
         self.ui.splitter.setStretchFactor(1, 1)
-
 
         header = self.ui.data_preview.horizontalHeader()
         header.sectionFinallyResized.connect(self.result_column_resize)
@@ -268,21 +265,17 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.horizontalHeader().setSelectionBehavior(QtGui.QAbstractItemView.SelectColumns)
         self.ui.data_preview.horizontalHeader().setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
+        options.cfg.word_wrap = [0, int(QtCore.Qt.TextWordWrap)][bool(getattr(options.cfg, "word_wrap", False))]
         self.ui.data_preview.setSelectionBehavior(self.ui.data_preview.SelectItems)
         self.ui.data_preview.setSelectionMode(self.ui.data_preview.ExtendedSelection)
-
-
-        options.cfg.word_wrap = [0, int(QtCore.Qt.TextWordWrap)][bool(getattr(options.cfg, "word_wrap", False))]
         self.ui.data_preview.setWordWrap(options.cfg.word_wrap)
 
         self.ui.status_message = QtGui.QLabel("{} {}".format(NAME, VERSION))
-
-        self.ui.combo_config = QtGui.QComboBox()
-
         self.ui.status_progress = QtGui.QProgressBar()
         self.ui.status_progress.hide()
         
         self.ui.multi_query_progress = QtGui.QProgressBar()
+        self.ui.combo_config = QtGui.QComboBox()
         self.ui.multi_query_progress.setFormat("Running query... (%v of %m)")
         self.ui.multi_query_progress.hide()
         self.updateMultiProgress.connect(self.ui.multi_query_progress.setValue)
@@ -382,9 +375,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_percentage_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=True, smooth=True))
         self.ui.action_stacked_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=False, smooth=True))
         self.ui.action_line_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=False, percentage=False, smooth=True))
-        
-        #self.ui.action_toggle_filters.triggered.connect(lambda: self.ui.filter_switch.toggle())
-        #self.ui.action_toggle_stopwords.triggered.connect(lambda: self.ui.stopword_switch.toggle())
         
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
@@ -515,9 +505,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.check_grouping.stateChanged.connect(self.change_grouping)
         self.ui.check_aggregate.stateChanged.connect(self.change_aggregate)
         self.ui.check_summarize.stateChanged.connect(self.change_summarize)
+        self.ui.check_summarize_filters.stateChanged.connect(self.change_summarize_filters)
 
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
-        
+        self.ui.button_filters.clicked.connect(self.manage_filters)
 
         self.ui.radio_context_mode_kwic.toggled.connect(self.change_context)
         self.ui.radio_context_mode_string.toggled.connect(self.change_context)
@@ -631,13 +622,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_toolbox_appearance(TOOLBOX_GROUPING)
 
     def change_context(self):
+        """
+        Enable or disable contexts.
+        """
         options.cfg.use_context = self.ui.check_context.isChecked()
-        # determine context mode:
-        if not self.ui.check_context.isChecked():
-            self.ui.widget_context.setDisabled(True)
-        else:
-            self.ui.widget_context.setEnabled(True)
-        
         self.get_context_values()
         self.reaggregate(start=True)
         self.set_toolbox_appearance(TOOLBOX_CONTEXT)
@@ -656,14 +644,17 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         options.cfg.use_grouping = self.ui.check_grouping.isChecked()
         self.reaggregate(start=True)
+        self.set_toolbox_appearance(TOOLBOX_GROUPING)
 
     def change_aggregate(self):
         options.cfg.use_aggregate = self.ui.check_aggregate.isChecked()
 
         if not options.cfg.use_aggregate:
             options.cfg.MODE = QUERY_MODE_TOKENS
+            self.ui.combo_aggregate.blockSignals(True)
         else:
             options.cfg.MODE = self.ui.combo_aggregate.currentText()
+            self.ui.combo_aggregate.blockSignals(False)
         self.reaggregate(start=True)
         self.set_toolbox_appearance(TOOLBOX_AGGREGATE)
 
@@ -677,6 +668,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def change_summarize(self):
         options.cfg.use_summarize = self.ui.check_summarize.isChecked()
+        self.set_toolbox_appearance(TOOLBOX_SUMMARY)
+        self.reaggregate(start=True)
+
+    def change_summarize_filters(self):
+        options.cfg.use_summarize_filters = self.ui.check_summarize_filters.isChecked()
         self.set_toolbox_appearance(TOOLBOX_SUMMARY)
         self.reaggregate(start=True)
 
@@ -714,6 +710,18 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.context_left = self.ui.context_left_span.value()
         options.cfg.context_right = self.ui.context_right_span.value()
         options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+
+    def manage_stopwords(self):
+        from . import stopwords 
+        old_list = options.cfg.stopword_list
+        result = stopwords.Stopwords.manage(options.cfg.stopword_list, options.cfg.icon)
+        if result is not None:
+            options.cfg.stopword_list = result
+
+        if set(old_list) != set(options.cfg.stopword_list):
+            self.reaggregate()
+        
+        self.set_toolbox_appearance(TOOLBOX_STOPWORDS)
 
     def enable_corpus_widgets(self):
         self.ui.options_area.setEnabled(True)
@@ -842,7 +850,20 @@ class CoqueryApp(QtGui.QMainWindow):
         self.resize_rows()
         self.show_query_status()
         self.check_group_items()
+        self.ui.tool_widget.setEnabled(True)
         print("reaggregation: done")
+
+        manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+        if manager.stopwords_failed:
+            rc_feature = getattr(self.Session.Resource,
+                            getattr(self.Session.Resource, QUERY_ITEM_WORD))
+            msg = msg_no_word_information.format(rc_feature)
+            QtGui.QMessageBox.warning(self, 
+                                       "No word information available for stopwords – Coquery", 
+                                       msg, 
+                                       QtGui.QMessageBox.Ok, 
+                                       QtGui.QMessageBox.Ok)
+
         
     def reaggregate(self, recalculate=True, start=False):
         """
@@ -863,6 +884,8 @@ class CoqueryApp(QtGui.QMainWindow):
         if not self.Session:
             return
         
+        self.Session.group_functions = self._group_functions
+
         if start:
             self.Session.start_timer()
         self.showMessage("Managing data...")
@@ -872,10 +895,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.thread.taskFinished.connect(self.finalize_reaggregation)
 
         if not self.Session.has_cached_data():
-            print(1)
             self.start_progress_indicator()
         
         print("reaggregate")
+        self.ui.tool_widget.setDisabled(True)
         self.thread.start()
 
     @staticmethod
@@ -959,7 +982,8 @@ class CoqueryApp(QtGui.QMainWindow):
             check = self.ui.check_summarize
             widget = self.ui.widget_summarize
 
-        widget.setEnabled(check.isChecked())
+        #widget.setEnabled(check.isChecked())
+        
         if row == TOOLBOX_CONTEXT:
             if not check.isChecked():
                 _set_icon(2, None)
@@ -974,6 +998,12 @@ class CoqueryApp(QtGui.QMainWindow):
                 _set_icon(1, "filter" if check.isChecked() else None)
             else:
                 _set_icon(2, "sign-question" if check.isChecked() else None)
+                _set_icon(1, None)
+            if self.Session:
+                manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+                if manager.stopwords_failed:
+                    _set_icon(2, "warning" if check.isChecked() else None)
+                    _set_icon(1, None)
         elif row == TOOLBOX_GROUPING:
             if self.ui.list_group_columns.columns:
                 _set_icon(2, "lightning" if check.isChecked() else None)
@@ -984,7 +1014,7 @@ class CoqueryApp(QtGui.QMainWindow):
             _set_icon(2, "lightning" if check.isChecked() else None)
         elif row == TOOLBOX_SUMMARY:
             _set_icon(2, "lightning" if check.isChecked() else None)
-            if options.cfg.use_summary_filters:
+            if options.cfg.use_summarize_filters:
                 _set_icon(1, "filter" if options.cfg.filter_list else "sign-question")
             else:
                 _set_icon(1, None)
@@ -1005,7 +1035,10 @@ class CoqueryApp(QtGui.QMainWindow):
         elif row == TOOLBOX_AGGREGATE:
             check = self.ui.check_aggregate
         elif row == TOOLBOX_SUMMARY:
-            check = self.ui.check_summarize
+            if col == 1:
+                check = self.ui.check_summarize_filters
+            else:
+                check = self.ui.check_summarize
         
         # Toggle activation:
         if col == 2:
@@ -1018,9 +1051,9 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.use_group_filters = not options.cfg.use_group_filters
 
             elif row == TOOLBOX_SUMMARY:
-                if not check.isChecked():
-                    self.toggle_toolbox(row, 2)
-                options.cfg.use_summary_filters = not options.cfg.use_summary_filters
+                checked = not check.isChecked()
+                check.setChecked(checked)
+                options.cfg.use_summarize_filters = not options.cfg.use_summarize_filters
         
         self.set_toolbox_appearance(row)
             
@@ -1042,14 +1075,6 @@ class CoqueryApp(QtGui.QMainWindow):
             corpus_name = utf8(self.ui.combo_corpus.currentText())
             self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[corpus_name]
 
-            #self.ui.filter_box.resource = self.resource
-            #corpus_variables = [x for _, x in self.resource.get_corpus_features()]
-            #corpus_variables.append("Freq")
-            #corpus_variables.append("Freq.pmw")
-            #try:
-                #self.filter_variable_model.setStringList(corpus_variables)
-            #except AttributeError:
-                #pass
         options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
         self.change_corpus_features()
 
@@ -1112,15 +1137,23 @@ class CoqueryApp(QtGui.QMainWindow):
             try:
                 label = getattr(self.resource, str("{}_table".format(table)))
             except AttributeError:
-                label = table.capitalize()
+                if table == "coquery":
+                    label = "Query"
+                else:
+                    label = table.capitalize()
                 
             root.setText(0, label)
             root.setCheckState(0, QtCore.Qt.Unchecked)
             if table_dict[table]:
                 self.ui.options_tree.addTopLevelItem(root)
             
+            if table != "coquery":
+                resource_list = sorted(table_dict[table])
+            else:
+                resource_list = table_dict[table]
+
             # add a leaf for each table variable, in alphabetical order:
-            for _, var in sorted([(getattr(self.resource, x), x) for x in table_dict[table]]):
+            for var in resource_list:
                 leaf = classes.CoqTreeItem()
                 leaf.setObjectName(coqueryUi._fromUtf8(var))
                 root.addChild(leaf)
@@ -1210,13 +1243,22 @@ class CoqueryApp(QtGui.QMainWindow):
         self.resize_thread.start()
     
     def display_results(self, drop=True):
-        self.ui.data_preview.setEnabled(True)
-        self.ui.data_preview.setFont(options.cfg.table_font)
-        self.ui.data_preview.verticalHeader().setDefaultSectionSize(QtGui.QLabel().sizeHint().height() + 2)
-
-        # enable menu entries:
-        self.ui.action_save_results.setEnabled(True)
-        self.ui.action_copy_to_clipboard.setEnabled(True)
+        if len(self.Session.output_object) == 0:
+            self.ui.data_preview.hide()
+            self.ui.text_no_match.show()
+            # disable menu entries:
+            self.ui.action_save_results.setEnabled(False)
+            self.ui.action_copy_to_clipboard.setEnabled(False)
+            self.ui.data_preview.setEnabled(False)
+        else:
+            self.ui.data_preview.show()
+            self.ui.text_no_match.hide()
+            # enable menu entries:
+            self.ui.action_save_results.setEnabled(True)
+            self.ui.action_copy_to_clipboard.setEnabled(True)
+            self.ui.data_preview.setEnabled(True)
+            self.ui.data_preview.setFont(options.cfg.table_font)
+            self.ui.data_preview.verticalHeader().setDefaultSectionSize(QtGui.QLabel().sizeHint().height() + 2)
 
         # Visualizations menu is disabled for corpus statistics:
         if isinstance(self.Session, StatisticsSession):
@@ -1335,59 +1377,18 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.input_separator = " "
             self.switch_to_file()
 
-
-    def set_stopword_button(self):
-        pass
-        #if len(options.cfg.stopword_list):
-            #self.ui.stopword_switch.show()
-        #else:
-            #self.ui.stopword_switch.hide()
-            #self.ui.stopword_switch.setOff()
-            #options.cfg.use_stopwords = False
-
-    def toggle_stopword_switch(self):
-        pass
-        #options.cfg.use_stopwords = self.ui.stopword_switch.isOn()
-
-    def manage_stopwords(self):
-        from . import stopwords 
-        old_list = options.cfg.stopword_list
-        result = stopwords.Stopwords.manage(options.cfg.stopword_list, options.cfg.icon)
-        if result is not None:
-            options.cfg.stopword_list = result
-        self.set_stopword_button()
-        ## activate the filter switch if the filter list was empty before, but 
-        ## is filled now:
-        #if not old_list and options.cfg.stopword_list:
-            #self.ui.stopword_switch.setOn()
-    
-    def set_filter_button(self):
-        pass
-        #if len(options.cfg.filter_list):
-            #self.ui.filter_switch.show()
-        #else:
-            #self.ui.filter_switch.hide()
-            #self.ui.filter_switch.setOff()
-            #options.cfg.use_corpus_filters = False
-
-    def toggle_filter_switch(self):
-        return False
-        #options.cfg.use_corpus_filters = self.ui.filter_switch.isOn()
-
     def manage_filters(self):
         from . import filterviewer
         old_list = options.cfg.filter_list
         result = filterviewer.Filters.manage(options.cfg.filter_list, options.cfg.icon)
         if result is not None:
             options.cfg.filter_list = result
-        self.set_filter_button()
+
+            if set(old_list) != set(options.cfg.filter_list):
+                self.reaggregate()
         
-        ## activate the filter switch if the filter list was empty before, but 
-        ## is filled now:
-        #if not old_list and options.cfg.filter_list:
-            #self.ui.filter_switch.setOn()
-            #options.cfg.use_corpus_filters = True
-    
+            self.set_toolbox_appearance(TOOLBOX_SUMMARY)
+        
     def save_results(self, selection=False, clipboard=False):
         if not clipboard:
             if selection:
@@ -1491,6 +1492,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.showMessage("Query failed.")
         self.set_query_button()
         self.stop_progress_indicator()
+        self.ui.tool_widget.setEnabled(True)
         
     def _display_progress(self, n=None):
         self.ui.status_progress.setRange(0, 0)
@@ -2106,7 +2108,6 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 self.showMessage("Writing to file...")
 
-            print(2)
             self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
             self.query_thread.taskFinished.connect(lambda: self.finalize_query(options.cfg.to_file))
@@ -2124,7 +2125,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.getGuiValues()
         self.new_session = StatisticsSession()
         self.showMessage("Gathering corpus statistics...")
-        print(3)
         self.start_progress_indicator()
         self.query_thread = classes.CoqThread(self.new_session.run_queries, parent=self)
         self.query_thread.taskFinished.connect(self.finalize_query)
@@ -2660,6 +2660,11 @@ class CoqueryApp(QtGui.QMainWindow):
     def setGUIDefaults(self):
         """ Set up the gui values based on the values in options.cfg.* """
         self.block_context_widgets()
+
+        for col in [x for x in options.cfg.group_columns if x]:
+            self.ui.list_group_columns.add_resource(col)
+            options.cfg.group_columns = self.get_group_columns()
+
         # set corpus combo box to current corpus:
         index = self.ui.combo_corpus.findText(options.cfg.corpus)
         if index > -1:
@@ -2669,9 +2674,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.check_grouping.setChecked(options.cfg.use_grouping)
         self.ui.check_aggregate.setChecked(options.cfg.use_aggregate)
         self.ui.check_summarize.setChecked(options.cfg.use_summarize)
-        if options.cfg.use_aggregate:
+        print(options.cfg.use_summarize_filters)
+        self.ui.check_summarize_filters.setChecked(options.cfg.use_summarize_filters)
+
+        if options.cfg.MODE != QUERY_MODE_TOKENS:
             self.ui.combo_aggregate.setCurrentIndex(SUMMARY_MODES.index(options.cfg.MODE))
-            self.ui.combo_aggregate.currentIndexChanged.connect(self.change_managing_type)
+        self.ui.combo_aggregate.currentIndexChanged.connect(self.change_managing_type)
 
         for i in range(self.ui.list_toolbox.rowCount()):
             self.set_toolbox_appearance(i)
@@ -2690,14 +2698,6 @@ class CoqueryApp(QtGui.QMainWindow):
                                 right_span=options.cfg.context_right)
 
         self.unblock_context_widgets()
-        #for filt in list(options.cfg.filter_list):
-            #self.ui.filter_box.addTag(filt)
-            #options.cfg.filter_list.remove(filt)
-        
-        #if options.cfg.use_stopwords:
-            #self.ui.stopword_switch.setOn()
-        #if options.cfg.use_corpus_filters:
-            #self.ui.filter_switch.setOn()
         
         # get table from last session, if possible:
         try:
@@ -2708,10 +2708,6 @@ class CoqueryApp(QtGui.QMainWindow):
         except AttributeError:
             pass
         
-        for col in [x for x in options.cfg.group_columns if x]:
-            self.ui.list_group_columns.add_resource(col)
-            options.cfg.group_columns = self.get_group_columns()
-
         self.activate_group_column_buttons()
         
 
@@ -2835,7 +2831,7 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.Entropy, functions.Percent, 
                          functions.Proportion, functions.Tokens, 
                          functions.Types, functions.TypeTokenRatio]
-                checked = manager.user_group_functions.get_list()
+                checked = self._group_functions.get_list()
   
             else:
                 types = [functions.Entropy, 
@@ -2873,7 +2869,7 @@ class CoqueryApp(QtGui.QMainWindow):
             return
 
         if group:
-            manager.user_group_functions.set_list([x(sweep=True) for x in response])
+            self._group_functions.set_list([x(sweep=True) for x in response])
         elif summary:
             manager.user_summary_functions.set_list([x(sweep=True) for x in response])
         else:
