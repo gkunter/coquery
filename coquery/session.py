@@ -30,6 +30,7 @@ from .general import *
 from . import queries
 from . import filters
 from . import managers
+from . import functions
 from . import tokens
 
 class Session(object):
@@ -76,7 +77,7 @@ class Session(object):
         self.input_columns = []
         self._manager_cache = {}
         self._first_saved_dataframe = True
-        
+
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
         # values. If the value is False, the row in the output object is
@@ -85,19 +86,19 @@ class Session(object):
         ## FIXME: reimplement row visibility
         #self.row_visibility = {}
 
-        # verify filter list:
-        new_list = []
-        if options.cfg.use_summary_filters:
-            for filt in options.cfg.filter_list:
-                if isinstance(filt, filters.QueryFilter):
-                    new_list.append(filt)
-                else:
-                    new_filt = filters.QueryFilter()
-                    new_filt.resource = self.Resource
-                    new_filt.text = filt
-                    new_list.append(new_filt)
-        self.filter_list = new_list
-        self.Resource.filter_list = new_list
+        ## verify filter list:
+        #new_list = []
+        #if options.cfg.use_summarize_filters:
+            #for filt in options.cfg.filter_list:
+                #if isinstance(filt, filters.QueryFilter):
+                    #new_list.append(filt)
+                #else:
+                    #new_filt = filters.QueryFilter()
+                    #new_filt.resource = self.Resource
+                    #new_filt.text = filt
+                    #new_list.append(new_filt)
+        #self.filter_list = new_list
+        #self.Resource.filter_list = new_list
         
     def get_max_token_count(self):
         """
@@ -170,6 +171,7 @@ class Session(object):
 
         number_of_queries = len(self.query_list)
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
+        manager.set_filters(options.cfg.filter_list)
 
         dtype_list = []
 
@@ -302,32 +304,6 @@ class Session(object):
         #self.row_visibility[query_type] = pd.Series(
             #data=[True] * len(df.index), index=df.index)
 
-    def filter_data(self, column="statistics_frequency"):
-        return
-        """
-        Apply the frequency filters to the output object.
-        """
-        if not self.filter_list or not options.cfg.use_summary_filters:
-            return 
-        no_freq = True
-        for filt in self.filter_list:
-            if filt.var == COLUMN_NAMES["statistics_frequency"]:
-                if not hasattr(self, "frequency_table"):
-                    self.frequency_table = self.get_frequency_table()
-                try:
-                    self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]
-                    no_freq = False
-                except AttributeError:
-                    pass
-        
-        # did at least one of the filters contain a frequency filter?
-        if no_freq:
-            return
-
-        columns = [x for x in self.data_table.columns if not x.startswith(("statistics_", "coquery_invisible")) and x != column]
-
-        self.data_table = pd.merge(self.data_table, self.frequency_table[columns], how="inner", copy=False, on=columns)
-        
     def retranslate_header(self, label):
         """
         Return the column name in the current content data frame that matches 
