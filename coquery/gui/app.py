@@ -330,8 +330,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_view_log.setIcon(self.get_icon("calendar-clock"))
         self.ui.action_save_results.setIcon(self.get_icon("floppy"))
         self.ui.action_save_selection.setIcon(self.get_icon("floppy"))
-        self.ui.button_browse_file.setIcon(self.get_icon("folder"))
-        self.ui.button_file_options.setIcon(self.get_icon("table"))
+        self.ui.button_change_file.setIcon(self.get_icon("folder"))
         self.ui.button_remove_group.setIcon(self.get_icon("sign-delete"))
         #self.ui.button_add_group.setIcon(self.get_icon("sign-add"))
         self.ui.button_group_up.setIcon(self.get_icon("sign-up"))
@@ -467,10 +466,8 @@ class CoqueryApp(QtGui.QMainWindow):
         Hook up signals so that the GUI can adequately react to user 
         input.
         """
-        # hook file browser button:
-        self.ui.button_browse_file.clicked.connect(self.select_file)
         # hook file options button:
-        self.ui.button_file_options.clicked.connect(self.file_options)
+        self.ui.button_change_file.clicked.connect(self.file_options)
 
         # hook up events so that the radio buttons are set correctly
         # between either query from file or query from string:
@@ -802,12 +799,10 @@ class CoqueryApp(QtGui.QMainWindow):
         file_name = str(self.ui.edit_file_name.text())
         if not os.path.isfile(file_name):
             self.ui.edit_file_name.setStyleSheet("QLineEdit { background-color: rgb(255, 255, 192) }")
-            self.ui.button_file_options.setEnabled(False)
             return False
         else:
             self.ui.edit_file_name.setStyleSheet("QLineEdit {{ background-color: {} }} ".format(
                 options.cfg.app.palette().color(QtGui.QPalette.Base).name()))
-            self.ui.button_file_options.setEnabled(True)
             return True
 
     def switch_to_file(self):
@@ -1333,19 +1328,6 @@ class CoqueryApp(QtGui.QMainWindow):
         if options.cfg.memory_dump:
             memory_dump()
 
-    def select_file(self):
-        """ Call a file selector, and add file name to query file input. """
-        name = QtGui.QFileDialog.getOpenFileName(directory=options.cfg.query_file_path)
-        
-        # getOpenFileName() returns different types in PyQt and PySide, fix:
-        if type(name) == tuple:
-            name = name[0]
-        
-        if name:
-            options.cfg.query_file_path = os.path.dirname(utf8(name))
-            self.ui.edit_file_name.setText(name)
-            self.switch_to_file()
-            
     def file_options(self):
         """ Get CSV file options for current query input file. """
         from . import csvoptions
@@ -1357,11 +1339,11 @@ class CoqueryApp(QtGui.QMainWindow):
             skip_lines=options.cfg.skip_lines,
             #encoding=options.cfg.input_encoding,
             encoding="utf-16",
+            file_name=utf8(self.ui.edit_file_name.text()),
             selected_column=options.cfg.query_column_number)
         
         results = csvoptions.CSVOptionDialog.getOptions(
-            utf8(self.ui.edit_file_name.text()),
-            csv_options, self, icon=options.cfg.icon)
+            default=csv_options, parent=self, icon=options.cfg.icon)
         
         if results:
             options.cfg.input_separator = results.sep 
@@ -1370,6 +1352,7 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.skip_lines = results.skip_lines
             options.cfg.quote_char = results.quote_char
             options.cfg.input_encoding = results.encoding
+            self.ui.edit_file_name.setText(results.file_name)
             
             if options.cfg.input_separator == "{tab}":
                 options.cfg.input_separator = "\t"
@@ -2107,6 +2090,8 @@ class CoqueryApp(QtGui.QMainWindow):
                     self.showMessage("")
             else:
                 self.showMessage("Writing to file...")
+            
+            self.new_session.group_functions = self._group_functions
 
             self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
@@ -2831,7 +2816,7 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.Entropy, functions.Percent, 
                          functions.Proportion, functions.Tokens, 
                          functions.Types, functions.TypeTokenRatio]
-                checked = self._group_functions.get_list()
+                checked = [type(x) for x in self._group_functions.get_list()]
   
             else:
                 types = [functions.Entropy, 
@@ -2842,7 +2827,7 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.Tokens, functions.Types, 
                          functions.TypeTokenRatio,
                          functions.CorpusSize, functions.SubcorpusSize]
-                checked = manager.user_summary_functions.get_list()
+                checked = [type(x) for x in manager.user_summary_functions.get_list()]
                          
             kwargs.update({
                 "function_types": types,
