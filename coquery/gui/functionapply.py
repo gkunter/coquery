@@ -72,7 +72,18 @@ class FunctionDialog(QtGui.QDialog):
         self._func = []
 
         self.ui.list_functions.currentRowChanged.connect(lambda: self.check_gui())
+
+        if max_parameters == 0:
+            self.ui.parameter_box.hide()
         
+        if available_columns == []:
+            self.ui.widget_column_select.hide()
+            sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+            sizePolicy.setHorizontalStretch(0)
+            sizePolicy.setVerticalStretch(0)
+            sizePolicy.setHeightForWidth(self.ui.list_functions.sizePolicy().hasHeightForWidth())
+            self.ui.list_functions.setSizePolicy(sizePolicy)
+
         if function_class == []:
             # remove function class selection widget
             widget = self.ui.list_classes
@@ -240,7 +251,6 @@ class FunctionDialog(QtGui.QDialog):
             aggr = func.default_aggr
         
         session = options.cfg.main_window.Session
-        manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         tmp_func = func(
             columns = self.columns,
             value = utf8(self.ui.edit_function_value.text()),
@@ -248,7 +258,13 @@ class FunctionDialog(QtGui.QDialog):
             session = session)
         
         if self._auto_label:
-            self.ui.edit_label.setText(tmp_func.get_label(session=session, manager=manager))
+            try:
+                manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+            except AttributeError:
+                pass
+            else:
+                # only set the auto label if a manager is available
+                self.ui.edit_label.setText(tmp_func.get_label(session=session, manager=manager))
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
