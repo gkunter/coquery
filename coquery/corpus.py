@@ -137,27 +137,6 @@ class LexiconClass(object):
         df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
         return set(list(df.ix[:,0]))
 
-    def get_stopword_ids(self):
-        """
-        Return a list of all word ids that match the entries in the stopword 
-        list.
-        """
-        if not options.cfg.use_stopwords:
-            return set([])
-        if not hasattr(self, "_cached_stopword_list") or self._cached_stopword_list != options.cfg.stopword_list:
-            id_list = set([])
-            for stopword in options.cfg.stopword_list:
-                token = tokens.COCAToken(stopword, self)
-                if token.lemmatize:
-                    L = set(self.lexicon.get_lemmatized_wordids(token, stopwords=False))
-                else:
-                    L = set(self.lexicon.get_matching_wordids(token, stopwords=False))
-
-                id_list.update(L)
-            self._cached_stopword_list = list(options.cfg.stopword_list)
-            self._cached_stopword_ids = id_list
-        return self._cached_stopword_ids
-
     def sql_string_get_wordid_list_where(self, token):
         """ 
         Return an SQL string that contains the WHERE conditions matching the 
@@ -339,8 +318,6 @@ class LexiconClass(object):
         """
         if token.S == "%" or token.S == "":
             return []
-        if stopwords:
-            stopword_ids = self.get_stopword_ids()
         
         S = self.sql_string_get_lemmatized_wordids(token)
         engine = self.resource.get_engine()
@@ -364,8 +341,6 @@ class LexiconClass(object):
         """
         if token.S == "%" or token.S == "":
             return []
-        if stopwords:
-            stopword_ids = self.get_stopword_ids()
         S = self.sql_string_get_matching_wordids(token)
         df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
         if not len(df.index):
@@ -374,12 +349,8 @@ class LexiconClass(object):
             else:
                 raise WordNotInLexiconError
         else:
-            if stopwords:
-                l = [x for x in list(df.ix[:,0]) if not x in stopword_ids]
-                return l
-            else:
-                x = list(df.ix[:,0])
-                return x
+            x = list(df.ix[:,0])
+            return x
         
 class BaseResource(object):
     """
@@ -387,10 +358,10 @@ class BaseResource(object):
     # add internal table that can be used to access frequency information:
     coquery_query_string = "Query string"
     coquery_expanded_query_string = "Expanded query string"
-    coquery_query_file = "Input file"
-    coquery_current_date = "Current date"
-    coquery_current_time = "Current time"
-    coquery_query_token = "Query token"
+    #coquery_query_file = "Input file"
+    #coquery_current_date = "Current date"
+    #coquery_current_time = "Current time"
+    coquery_query_token = "Query item"
 
     special_table_list = ["coquery", "tag"]
 
@@ -816,6 +787,7 @@ class BaseResource(object):
     def translate_filters(cls, filters):
         """ Return a translation list that contains the corpus feature names
         of the variables used in the filter texts. """
+        print("translate_filters")
         corpus_variables = cls.get_corpus_features()
         filter_list = []
         for filt in filters:
@@ -1804,20 +1776,23 @@ class CorpusClass(object):
             corpus_variables = [x for x, _ in self.resource.get_corpus_features() if not x.endswith(("_starttime", "_endtime"))]
             requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
 
-        # add all features that are required for the query filters:
         rc_where_constraints = defaultdict(set)
-        if number == 0:
-            for filt in self.resource.translate_filters(self.resource.filter_list):
-                variable, rc_feature, table_name, op, value_list, _value_range = filt
-                if op.upper() == "LIKE":
-                    if "*" not in value_list[0]:
-                        value_list[0] = "*{}*".format(value_list[0])
-                    value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
-                requested_features.append(rc_feature)
-                rc_table = "{}_table".format(rc_feature.partition("_")[0])
-                rc_where_constraints[rc_table].add(
-                    '{} {} "{}"'.format(
-                        getattr(self.resource, rc_feature), op, value_list[0]))
+
+        # FIXME:
+        # is this still needed if filters are applied after the query?
+        ## add all features that are required for the query filters:
+        #if number == 0:
+            #for filt in self.resource.translate_filters(self.resource.filter_list):
+                #variable, rc_feature, table_name, op, value_list, _value_range = filt
+                #if op.upper() == "LIKE":
+                    #if "*" not in value_list[0]:
+                        #value_list[0] = "*{}*".format(value_list[0])
+                    #value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
+                #requested_features.append(rc_feature)
+                #rc_table = "{}_table".format(rc_feature.partition("_")[0])
+                #rc_where_constraints[rc_table].add(
+                    #'{} {} "{}"'.format(
+                        #getattr(self.resource, rc_feature), op, value_list[0]))
 
         # make sure that the word_id is always included in the query:
         # FIXME: Why is this needed?
@@ -1858,18 +1833,6 @@ class CorpusClass(object):
                     s = "NOT ({})".format(" AND ".join(sub_list))
                 else:
                     s = " AND ".join(sub_list)
-            if current_token.S in ["%", ""] or not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
-                stopwords = self.lexicon.get_stopword_ids()
-                if stopwords:
-                    if sub_list:
-                        s = "({}) AND ({} NOT IN ({}))".format(
-                            s,
-                            self.resource.corpus_word_id,
-                            ", ".join([str(x) for x in stopwords]))
-                    else:
-                        s = "{} NOT IN ({})".format(
-                            self.resource.corpus_word_id,
-                            ", ".join([str(x) for x in stopwords]))
 
             if s:
                 if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
