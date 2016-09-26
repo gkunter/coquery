@@ -204,6 +204,9 @@ class TokenUnsupportedTranscriptError(NoTraceException):
 class InvalidFilterError(NoTraceException):
     error_message = "Invalid query filter specification"
 
+class WordInformationUnavailableError(NoTraceException):
+    error_message = "Word information is not avaiable"
+
 class CorpusUnavailableQueryTypeError(GenericException):
     error_message = "Query type %s not available for corpus %s"
     def __init__(self, Corpus, Type):

@@ -241,6 +241,15 @@ except NameError:
     unicode = str
     long = int
 
+msg_no_word_information = """
+<p><b>Your stopword filters could not be applied to the results table.</b></p>
+<p>In order to be able to use stopword filtering, the results table must 
+contain the orthographic representation of the matches. However, this 
+information was not selected as an output column in the last query.</p>
+<p>Please activate the output column '<b>{}</b>' and run the query again
+in order to be able to use stopword filtering.</p>
+"""
+
 msg_column_not_in_data = """
 <p>This column is not contained in the results table.</p>
 <p>Select the column in the output column table and re-run the query.</p>
