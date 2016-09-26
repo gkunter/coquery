@@ -15,7 +15,9 @@ import hashlib
 import logging
 
 from .defines import *
+from .errors import *
 from .functions import *
+from . import filters
 from .general import CoqObject, get_visible_columns
 from . import options
 
@@ -37,10 +39,10 @@ class Manager(CoqObject):
         self._columns = []
         self._gf = []
         
-        self.user_group_functions = FunctionList()
         self.manager_group_functions = FunctionList()
-        self.user_summary_functions = FunctionList()
         self.manager_summary_functions = FunctionList()
+        self.user_summary_functions = FunctionList()
+
         self._group_filters = []
         self._filters = []
 
@@ -83,6 +85,9 @@ class Manager(CoqObject):
         ix = self._column_functions.index(old)
         self._column_functions[ix] = new
     
+    def set_filters(self, filter_list):
+        self._filters = filter_list
+    
     def _get_main_functions(self, df, session):
         """
         Returns a list of functions that are provided by this manager. They
@@ -102,7 +107,7 @@ class Manager(CoqObject):
         return l
     
     def _get_group_functions(self, df, session, connection):
-        return self.manager_group_functions.get_list() + self.user_group_functions.get_list()
+        return self.manager_group_functions.get_list() + session.group_functions.get_list()
     
     @staticmethod
     def _apply_function(df, fun, connection, session):
@@ -122,9 +127,9 @@ class Manager(CoqObject):
             return df
         print("\tmutate_groups({})".format(options.cfg.group_columns))
         vis_cols = get_visible_columns(df, manager=self, session=session)
-        l = self.user_group_functions.get_list()
+        l = session.group_functions.get_list()
         l = [fun(columns=vis_col, connection=connection) if type(fun) == type else fun for fun in l]
-        self.user_group_functions = FunctionList(l)
+        session.group_functions = FunctionList(l)
 
         columns = []
         # use group columns as sorters
@@ -152,6 +157,8 @@ class Manager(CoqObject):
         """
         Modify the transformed data frame by applying all needed functions.
         """
+        if len(df) == 0:
+            return df
         print("\tmutate()")
         df = FunctionList(self._get_main_functions(df, session)).apply(df, connection, session=session)
         df = FunctionList(self._column_functions).apply(df, connection, session=session)
@@ -176,9 +183,10 @@ class Manager(CoqObject):
         return None
     
     def arrange_groups(self, df, session):
-        print("\tarrange_groups({})".format(options.cfg.group_columns))
         if len(df) == 0 or len(options.cfg.group_columns) == 0:
             return df
+
+        print("\tarrange_groups({})".format(options.cfg.group_columns))
 
         columns = []
         # use group columns as sorters
@@ -234,11 +242,11 @@ class Manager(CoqObject):
         
     
     def arrange(self, df, session):
-        print("\tarrange()")
-
         if len(df) == 0:
             return df
         
+        print("\tarrange()")
+
         original_columns = df.columns
         columns = []
         directions = []
@@ -296,6 +304,9 @@ class Manager(CoqObject):
         return df
         
     def summarize(self, df, session, connection):
+        if len(df) == 0:
+            return df
+        
         print("\tsummarize()")
         df = self.manager_summary_functions.apply(df, connection, session=session)
         df = self.user_summary_functions.apply(df, connection, session=session)
@@ -312,26 +323,73 @@ class Manager(CoqObject):
         return df.reset_index(drop=True)
 
     def filter(self, df, session):
+        if len(df) == 0 or not options.cfg.use_summarize_filters:
+            return df
+
         print("\tfilter()")
+        new_list = []
         for filt in self._filters:
-            try:
-                df = df.query(filt)
-            except Exception:
-                pass
+            new_filt = filters.QueryFilter()
+            new_filt.resource = session.Resource
+            new_filt.text = filt
+            new_list.append(new_filt)
+
+        print("\t\t".join(session.Resource.translate_filters(new_list)))
+        return df
+
+
+            #if filt.count("=") == 1:
+                #filt = filt.replace("=", "==")
+            #try:
+                #df = df.query(filt)
+            #except Exception as e:
+                #print(e)
+                #pass
         print("\tdone")
         return df
     
+    def get_available_columns(self, session):
+        pass
+    
     def filter_groups(self, df, session):
+        if len(df) == 0 or len(options.cfg.group_columns) == 0:
+            return df
+
         print("\tfilter_groups()")
         print("\tdone")
         return df
 
     def select(self, df, session):
+        if len(df) == 0:
+            return df
+
         print("\tselect()")
         vis_cols = get_visible_columns(df, manager=self, session=session, hidden=True)
         self._columns = df.columns
         print("\tdone")
         return df[vis_cols]
+
+    def filter_stopwords(self, df, session):
+        self.stopwords_failed = False
+
+        if not options.cfg.use_stopwords or not options.cfg.stopword_list:
+            return df
+
+        print("\tfilter_stopwords({})".format(options.cfg.stopword_list))
+        word_id_column = getattr(session.Resource, QUERY_ITEM_WORD)
+        columns = []
+        for col in df.columns:
+            if col.startswith("coq_{}_".format(word_id_column)):
+                columns.append(col)
+        if columns == []:
+            self.stopwords_failed = True
+            return df
+        
+        print("\tdone")
+        valid = (df[columns].
+                 apply(lambda x: x.apply(lambda y: y in options.cfg.stopword_list)).
+                 apply(lambda x: not any(x), axis="columns"))
+        return df[valid]
 
     def process(self, df, session, recalculate=True):
         print("process()")
@@ -339,6 +397,7 @@ class Manager(CoqObject):
         self._group_functions = []
         engine = session.Resource.get_engine()
         with engine.connect() as connection:
+            df = self.filter_stopwords(df, session)
             if recalculate:
                 df = df[[x for x in df.columns if not x.startswith("func_")]]
                 self._main_functions = self._get_main_functions(df, session)
