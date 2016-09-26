@@ -207,7 +207,7 @@ class Options(object):
         self.args.use_group_filters = False
         self.args.use_aggregate = False
         self.args.use_summarize = False
-        self.args.use_summary_filters = False
+        self.args.use_summarize_filters = False
         
         if getattr(sys, "frozen", None):
             self.args.base_path = os.path.dirname(sys.executable)
@@ -914,9 +914,9 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.use_summarize = False                        
                         try:
-                            self.args.use_summary_filters = config_file.getboolean("gui", "use_summary_filters")
+                            self.args.use_summarize_filters = config_file.getboolean("gui", "use_summarize_filters")
                         except (NoOptionError, ValueError):
-                            self.args.use_summary_filters = False
+                            self.args.use_summarize_filters = False
                         try:
                             self.args.number_of_tokens = config_file.getint("gui", "number_of_tokens")
                         except (NoOptionError, ValueError):
@@ -1077,7 +1077,7 @@ def save_configuration():
         config.set("gui", "use_group_filters", cfg.use_group_filters)
         config.set("gui", "use_aggregate", cfg.use_aggregate)
         config.set("gui", "use_summarize", cfg.use_summarize)
-        config.set("gui", "use_summary_filters", cfg.use_summary_filters)        
+        config.set("gui", "use_summarize_filters", cfg.use_summarize_filters)        
 
         try:
             config.set("gui", "select_radio_query_file", cfg.select_radio_query_file)
