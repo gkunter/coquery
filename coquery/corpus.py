@@ -827,7 +827,6 @@ class BaseResource(object):
         return item_map
 
 class SQLResource(BaseResource):
-    _word_cache = {}
     _get_orth_str = None
     
     def get_operator(self, Token):
@@ -843,6 +842,7 @@ class SQLResource(BaseResource):
     
     def __init__(self, lexicon, corpus):
         super(SQLResource, self).__init__()
+        self._word_cache = {}
         self.lexicon = lexicon
         self.corpus = corpus
         _, _, self.db_type, _, _ = options.get_con_configuration()
@@ -1007,9 +1007,14 @@ class SQLResource(BaseResource):
         if options.cfg.context_sentence:
             raise NotImplementedError("Sentence contexts are currently not supported.")
 
-        token_id = int(token_id)
-
         left_span = options.cfg.context_left
+        right_span = options.cfg.context_right
+
+        try:
+            token_id = int(token_id)
+        except ValueError:
+            return [None] * int(left_span), [None] * int(number_of_tokens), [None] * int(right_span)
+
         if left_span > token_id:
             start = 1
         else:
@@ -2833,7 +2838,7 @@ class CorpusClass(object):
         named widget.ui.context_area. """
 
         def expand_row(x):
-            self.id_list += list(range(x.coquery_invisible_corpus_id, x.end))
+            self.id_list += list(range(int(x.coquery_invisible_corpus_id), int(x.end)))
 
         html_escape_table = {
             "&": "&amp;",
