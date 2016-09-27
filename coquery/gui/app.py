@@ -173,7 +173,10 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Initialize all widgets with suitable data """
 
         self.ui.options_tree = self.create_output_options_tree()
-        self.ui.output_columns.insertWidget(2, self.ui.options_tree)
+        self.ui.output_columns.insertWidget(1, self.ui.options_tree)
+        self.ui.output_columns.setStretch(0, 0)
+        self.ui.output_columns.setStretch(1, 1)
+        self.ui.output_columns.setStretch(2, 0)
         try:
             self.ui.label_data_columns.setBuddy(self.ui.options_tree)
         except AttributeError:
@@ -375,6 +378,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_stacked_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=False, smooth=True))
         self.ui.action_line_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=False, percentage=False, smooth=True))
         
+        self.ui.action_toggle_management.triggered.connect(self.toggle_data_management)
+        self.ui.action_toggle_columns.triggered.connect(self.toggle_output_columns)
+        self.ui.action_toggle_management.setChecked(options.cfg.show_data_management)
+        self.ui.action_toggle_columns.setChecked(options.cfg.show_output_columns)
+        
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
         self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
@@ -502,6 +510,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.check_grouping.stateChanged.connect(self.change_grouping)
         self.ui.check_aggregate.stateChanged.connect(self.change_aggregate)
         self.ui.check_summarize.stateChanged.connect(self.change_summarize)
+        self.ui.check_drop_duplicates.stateChanged.connect(self.change_summarize)
         self.ui.check_summarize_filters.stateChanged.connect(self.change_summarize_filters)
 
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
@@ -510,14 +519,35 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_context_mode_kwic.toggled.connect(self.change_context)
         self.ui.radio_context_mode_string.toggled.connect(self.change_context)
         self.ui.radio_context_mode_columns.toggled.connect(self.change_context)
-        self.ui.context_left_span.valueChanged.connect(self.change_context)
-        self.ui.context_right_span.valueChanged.connect(self.change_context)
+        self.ui.context_left_span.editingFinished.connect(self.change_context)
+        self.ui.context_right_span.editingFinished.connect(self.change_context)
 
         self.corpusListUpdated.connect(self.check_corpus_widgets)
         self.columnVisibilityChanged.connect(lambda: self.reaggregate(recalculate=True, start=True))
 
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
+
+    def set_main_screen_appearance(self):
+        if options.cfg.show_data_management:
+            self.ui.group_management.show()
+        else:
+            self.ui.group_management.hide()
+
+        if options.cfg.show_output_columns:
+            self.ui.options_tree.show()
+        else:
+            self.ui.options_tree.hide()
+            
+    def toggle_data_management(self):
+        options.cfg.show_data_management = not options.cfg.show_data_management
+        self.ui.action_toggle_management.setChecked(options.cfg.show_data_management)
+        self.set_main_screen_appearance()
+
+    def toggle_output_columns(self):
+        options.cfg.show_output_columns = not options.cfg.show_output_columns
+        self.ui.action_toggle_columns.setChecked(options.cfg.show_output_columns)
+        self.set_main_screen_appearance()
 
     def change_toolbox(self, i):
         self.ui.list_toolbox.selectRow(i)
@@ -665,6 +695,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def change_summarize(self):
         options.cfg.use_summarize = self.ui.check_summarize.isChecked()
+        options.cfg.drop_duplicates = self.ui.check_drop_duplicates.isChecked()
         self.set_toolbox_appearance(TOOLBOX_SUMMARY)
         self.reaggregate(start=True)
 
@@ -963,21 +994,14 @@ class CoqueryApp(QtGui.QMainWindow):
                 
         if row == TOOLBOX_CONTEXT:
             check = self.ui.check_context
-            widget = self.ui.widget_context
         elif row == TOOLBOX_STOPWORDS:
             check = self.ui.check_stopwords
-            widget = self.ui.widget_stopwords
         elif row == TOOLBOX_GROUPING:
             check = self.ui.check_grouping
-            widget = self.ui.widget_grouping
         elif row == TOOLBOX_AGGREGATE:
             check = self.ui.check_aggregate
-            widget = self.ui.widget_aggregate
         elif row == TOOLBOX_SUMMARY:
             check = self.ui.check_summarize
-            widget = self.ui.widget_summarize
-
-        #widget.setEnabled(check.isChecked())
         
         if row == TOOLBOX_CONTEXT:
             if not check.isChecked():
@@ -1008,7 +1032,8 @@ class CoqueryApp(QtGui.QMainWindow):
         elif row == TOOLBOX_AGGREGATE:
             _set_icon(2, "lightning" if check.isChecked() else None)
         elif row == TOOLBOX_SUMMARY:
-            _set_icon(2, "lightning" if check.isChecked() else None)
+            active = check.isChecked() or self.ui.check_drop_duplicates.isChecked()
+            _set_icon(2, "lightning" if active else None)
             if options.cfg.use_summarize_filters:
                 _set_icon(1, "filter" if options.cfg.filter_list else "sign-question")
             else:
@@ -1039,6 +1064,8 @@ class CoqueryApp(QtGui.QMainWindow):
         if col == 2:
             checked = not check.isChecked()
             check.setChecked(checked)
+            if row == TOOLBOX_SUMMARY:
+                self.ui.check_drop_duplicates.setChecked(checked)
         elif col == 1:
             if row == TOOLBOX_GROUPING:
                 if not check.isChecked():
@@ -1239,19 +1266,19 @@ class CoqueryApp(QtGui.QMainWindow):
     
     def display_results(self, drop=True):
         if len(self.Session.output_object) == 0:
-            self.ui.data_preview.hide()
+            #self.ui.data_preview.hide()
+            #self.ui.data_preview.setEnabled(False)
             self.ui.text_no_match.show()
             # disable menu entries:
             self.ui.action_save_results.setEnabled(False)
             self.ui.action_copy_to_clipboard.setEnabled(False)
-            self.ui.data_preview.setEnabled(False)
         else:
-            self.ui.data_preview.show()
+            #self.ui.data_preview.show()
+            self.ui.data_preview.setEnabled(True)
             self.ui.text_no_match.hide()
             # enable menu entries:
             self.ui.action_save_results.setEnabled(True)
             self.ui.action_copy_to_clipboard.setEnabled(True)
-            self.ui.data_preview.setEnabled(True)
             self.ui.data_preview.setFont(options.cfg.table_font)
             self.ui.data_preview.verticalHeader().setDefaultSectionSize(QtGui.QLabel().sizeHint().height() + 2)
 
@@ -2659,7 +2686,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.check_grouping.setChecked(options.cfg.use_grouping)
         self.ui.check_aggregate.setChecked(options.cfg.use_aggregate)
         self.ui.check_summarize.setChecked(options.cfg.use_summarize)
-        print(options.cfg.use_summarize_filters)
+        self.ui.check_drop_duplicates.setChecked(options.cfg.drop_duplicates)
         self.ui.check_summarize_filters.setChecked(options.cfg.use_summarize_filters)
 
         if options.cfg.MODE != QUERY_MODE_TOKENS:
@@ -2693,6 +2720,7 @@ class CoqueryApp(QtGui.QMainWindow):
         except AttributeError:
             pass
         
+        self.set_main_screen_appearance()
         self.activate_group_column_buttons()
         
 
@@ -2854,9 +2882,13 @@ class CoqueryApp(QtGui.QMainWindow):
             return
 
         if group:
-            self._group_functions.set_list([x(sweep=True) for x in response])
+            self._group_functions.set_list([x(sweep=True, hidden=True) for x in response])
         elif summary:
             manager.user_summary_functions.set_list([x(sweep=True) for x in response])
+            if manager.user_summary_functions.get_list():
+                self.ui.check_summarize.setChecked(True)
+            else:
+                self.ui.check_summarize.setChecked(False)
         else:
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
