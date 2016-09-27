@@ -44,7 +44,7 @@
             <property name="title">
              <string>&amp;Resource selection</string>
             </property>
-            <layout class="QVBoxLayout" name="output_columns" stretch="0">
+            <layout class="QVBoxLayout" name="output_columns">
              <property name="spacing">
               <number>0</number>
              </property>
@@ -61,7 +61,7 @@
               <number>4</number>
              </property>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
                <property name="spacing">
                 <number>10</number>
                </property>
@@ -107,6 +107,19 @@
                 </widget>
                </item>
               </layout>
+             </item>
+             <item>
+              <spacer name="verticalSpacer_7">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </spacer>
              </item>
             </layout>
            </widget>
@@ -193,7 +206,7 @@
                <item row="0" column="1">
                 <widget class="QPushButton" name="button_change_file">
                  <property name="text">
-                  <string>&amp;Browse</string>
+                  <string>&amp;Browse...</string>
                  </property>
                  <property name="shortcut">
                   <string>Alt+B</string>
@@ -253,7 +266,7 @@
          </layout>
         </item>
         <item>
-         <widget class="QGroupBox" name="groupBox">
+         <widget class="QGroupBox" name="group_management">
           <property name="title">
            <string>Output &amp;management</string>
           </property>
@@ -333,7 +346,7 @@
              </item>
              <item row="1" column="0">
               <property name="text">
-               <string>Stopwords</string>
+               <string>Stop words</string>
               </property>
              </item>
              <item row="1" column="1">
@@ -409,7 +422,7 @@
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>4</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tool_widgetPage1">
               <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -542,7 +555,7 @@
              <widget class="QWidget" name="tool_widgetPage2">
               <layout class="QVBoxLayout" name="verticalLayout_3">
                <item>
-                <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0" columnstretch="0,0">
+                <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0" columnstretch="0,1">
                  <property name="sizeConstraint">
                   <enum>QLayout::SetFixedSize</enum>
                  </property>
@@ -562,7 +575,7 @@
                  <item row="0" column="1">
                   <widget class="QLabel" name="label_3">
                    <property name="text">
-                    <string>Apply stop words:</string>
+                    <string>Remove stop words:</string>
                    </property>
                   </widget>
                  </item>
@@ -581,7 +594,7 @@
                        </sizepolicy>
                       </property>
                       <property name="text">
-                       <string>Manage stop &amp;words...</string>
+                       <string>Stop &amp;word list...</string>
                       </property>
                      </widget>
                     </item>
@@ -793,13 +806,67 @@
              <widget class="QWidget" name="page">
               <layout class="QVBoxLayout" name="verticalLayout_13">
                <item>
-                <layout class="QGridLayout" name="gridLayout_7" columnstretch="0,1,0,0">
+                <layout class="QGridLayout" name="gridLayout_7" columnstretch="0,1">
+                 <item row="3" column="1">
+                  <widget class="QPushButton" name="button_filters">
+                   <property name="text">
+                    <string>Filter list...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="label_6">
+                   <property name="text">
+                    <string>Use summary functions:</string>
+                   </property>
+                   <property name="buddy">
+                    <cstring>check_aggregate</cstring>
+                   </property>
+                  </widget>
+                 </item>
                  <item row="2" column="0">
                   <widget class="QCheckBox" name="check_summarize_filters">
                    <property name="text">
                     <string/>
                    </property>
                   </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QCheckBox" name="check_drop_duplicates">
+                   <property name="text">
+                    <string/>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="1">
+                  <widget class="QLabel" name="label_8">
+                   <property name="text">
+                    <string>&amp;Drop duplicate rows</string>
+                   </property>
+                   <property name="buddy">
+                    <cstring>check_drop_duplicates</cstring>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QPushButton" name="button_add_summary_function">
+                   <property name="text">
+                    <string>Function list...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="1">
+                  <spacer name="verticalSpacer">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                  </spacer>
                  </item>
                  <item row="0" column="0">
                   <widget class="QCheckBox" name="check_summarize">
@@ -814,58 +881,15 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="3">
-                  <widget class="QLabel" name="label_6">
-                   <property name="text">
-                    <string>Summarize output</string>
-                   </property>
-                   <property name="buddy">
-                    <cstring>check_aggregate</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="3">
-                  <widget class="QWidget" name="widget_summarize" native="true">
-                   <layout class="QVBoxLayout" name="verticalLayout_12">
-                    <property name="margin">
-                     <number>0</number>
-                    </property>
-                    <item>
-                     <widget class="QPushButton" name="button_add_summary_function">
-                      <property name="text">
-                       <string>Summary functions...</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                 <item row="3" column="3">
-                  <widget class="QPushButton" name="button_filters">
-                   <property name="text">
-                    <string>Summary filters...</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="3">
+                 <item row="2" column="1">
                   <widget class="QLabel" name="label_7">
                    <property name="text">
-                    <string>Filter results</string>
+                    <string>Use row filters:</string>
+                   </property>
+                   <property name="buddy">
+                    <cstring>check_summarize_filters</cstring>
                    </property>
                   </widget>
-                 </item>
-                 <item row="4" column="3">
-                  <spacer name="verticalSpacer">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>20</width>
-                     <height>40</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                 </layout>
                </item>
@@ -918,6 +942,12 @@
          <widget class="QTextEdit" name="text_no_match">
           <property name="enabled">
            <bool>true</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
           <property name="html">
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -984,8 +1014,8 @@ p, li { white-space: pre-wrap; }
     <addaction name="action_connection_settings"/>
     <addaction name="action_settings"/>
     <addaction name="separator"/>
-    <addaction name="action_toggle_filters"/>
-    <addaction name="action_toggle_stopwords"/>
+    <addaction name="action_toggle_columns"/>
+    <addaction name="action_toggle_management"/>
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
@@ -1363,20 +1393,20 @@ p, li { white-space: pre-wrap; }
     <string>Ctrl+Shift+S</string>
    </property>
   </action>
-  <action name="action_toggle_filters">
+  <action name="action_toggle_management">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Use &amp;filters</string>
+    <string>Show &amp;output management</string>
    </property>
   </action>
-  <action name="action_toggle_stopwords">
+  <action name="action_toggle_columns">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Use stop&amp;words</string>
+    <string>Show &amp;column &amp;selection</string>
    </property>
   </action>
   <action name="action_create_textgrid">
