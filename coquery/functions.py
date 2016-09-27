@@ -527,7 +527,7 @@ class TypeTokenRatio(Types):
     
     def evaluate(self, df, *args, **kwargs):
         types = super(TypeTokenRatio, self).evaluate(df, *args, **kwargs)
-        tokens = Tokens(group=self.group, columns=self._columns, hidden=True).evaluate(df, *args, **kwargs)
+        tokens = Tokens(group=self.group, columns=self._columns, hidden=self._hidden).evaluate(df, *args, **kwargs)
         return (pd.DataFrame({"types": types, "tokens": tokens}, index=df.index)
                     .apply(lambda row: row.types / row.tokens, axis="columns"))
 
