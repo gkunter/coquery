@@ -95,7 +95,7 @@ class FunctionDialog(QtGui.QDialog):
             self.ui.list_functions.setFocus(1)
         else:
             for i, fc in enumerate(function_class):
-                group = QtGui.QListWidgetItem(fc.get_description())
+                group = CoqListItem(fc.get_description())
                 self.ui.list_classes.addItem(group)
 
                 l = []
@@ -130,7 +130,8 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.list_functions.clear()
         for x in self.function_list:
             desc = FUNCTION_DESC.get(x._name, "no description available")
-            item = QtGui.QListWidgetItem("{} – {}".format(x.get_name(), desc))
+            item = CoqListItem("{} – {}".format(x.get_name(), desc))
+            item.setObjectName(x)
             self.ui.list_functions.addItem(item)
         self.ui.list_classes.setCurrentRow(i)
         self.ui.list_functions.blockSignals(False)
@@ -198,7 +199,8 @@ class FunctionDialog(QtGui.QDialog):
         widget = self.ui.list_functions
         for x in func_list:
             desc = FUNCTION_DESC.get(x._name, "no description available")
-            item = QtGui.QListWidgetItem("{} – {}".format(x.get_name(), desc))
+            item = CoqListItem("{} – {}".format(x.get_name(), desc))
+            item.setObjectName(x)
             if self.checkable:
                 item.setCheckState(QtCore.Qt.Checked if x in self.checked else QtCore.Qt.Unchecked)
                 item.setData(QtCore.Qt.UserRole, x)
@@ -280,7 +282,8 @@ class FunctionDialog(QtGui.QDialog):
                 l = []
                 for i in range(self.ui.list_functions.count()):
                     if self.ui.list_functions.item(i).checkState():
-                        l.append(self.function_list[i])
+                        l.append(self.ui.list_functions.item(i).objectName())
+                        #l.append(self.function_list[i])
                 return l
             else:
                 value = utf8(self.ui.edit_function_value.text())

@@ -78,7 +78,7 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1,2">
+       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,2,1">
         <property name="sizeConstraint">
          <enum>QLayout::SetFixedSize</enum>
         </property>
