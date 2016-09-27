@@ -77,6 +77,9 @@ class Session(object):
         self.input_columns = []
         self._manager_cache = {}
         self._first_saved_dataframe = True
+        self.filter_list = []
+
+        self.group_functions = functions.FunctionList()
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
@@ -174,8 +177,12 @@ class Session(object):
         manager.set_filters(options.cfg.filter_list)
 
         dtype_list = []
+        
+        self.queries = {}
 
         for i, current_query in enumerate(self.query_list):
+            self.queries[i] = current_query
+
             if options.cfg.gui and number_of_queries > 1:
                 options.cfg.main_window.updateMultiProgress.emit(i+1)
             if not self.quantified_number_labels:
@@ -187,48 +194,44 @@ class Session(object):
                 logger.info("Start query: '{}'".format(current_query.query_string))
             
             df = current_query.run(to_file)
+            
+            # apply clumsy hack that tries to make sure that the dtypes of 
+            # data frames containing NaNs or empty strings does not change
+            # when appending the new data frame to the previous.
+            
+            # The same hack is also needed in queries.run().
+            if len(self.data_table) > 0 and df.dtypes.tolist() != dtype_list.tolist():
+                for x in df.columns:
+                    # the idea is that pandas/numpy use the 'object' 
+                    # dtype as a fall-back option for strange results,
+                    # including those with NaNs. 
+                    # One problem is that integer columns become floats
+                    # in the process. This is so because Pandas does not 
+                    # have an integer NA type:
+                    # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
 
-            # FIXME:
-            # If the current query did not return any match, nothing is added 
-            # at all to the results table. This means that zero-frequency
-            # queries are not recorded, which may lead to surprises.
-            # Is there any sensible way of fixing that? For instance, queries 
-            # which include the query string could at least contain that 
-            # column, with NAs in all other columns.
-            if len(df) > 0:
-                if not to_file:
-                    # apply clumsy hack that tries to make sure that the dtypes of 
-                    # data frames containing NaNs or empty strings does not change
-                    # when appending the new data frame to the previous.
-                    
-                    # The same hack is also needed in queries.run().
-                    if len(self.data_table) > 0 and df.dtypes.tolist() != dtype_list.tolist():
-                        for x in df.columns:
-                            # the idea is that pandas/numpy use the 'object' 
-                            # dtype as a fall-back option for strange results,
-                            # including those with NaNs. 
-                            # One problem is that integer columns become floats
-                            # in the process. This is so because Pandas does not 
-                            # have an integer NA type:
-                            # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
+                    if df.dtypes[x] != dtype_list[x]:
+                        _working = None
+                        if df.dtypes[x] == object:
+                            if not df[x].any():
+                                df[x] = [np.nan] * len(df)
+                                dtype_list[x] = self.data_table[x].dtype
+                        elif dtype_list[x] == object:
+                            if not self.data_table[x].any():
+                                self.data_table[x] = [np.nan] * len(self.data_table)
+                                dtype_list[x] = df[x].dtype
+            else:
+                dtype_list = df.dtypes
 
-                            if df.dtypes[x] != dtype_list[x]:
-                                _working = None
-                                if df.dtypes[x] == object:
-                                    if not df[x].any():
-                                        df[x] = [np.nan] * len(df)
-                                        dtype_list[x] = self.data_table[x].dtype
-                                elif dtype_list[x] == object:
-                                    if not self.data_table[x].any():
-                                        self.data_table[x] = [np.nan] * len(self.data_table)
-                                        dtype_list[x] = df[x].dtype
-                    else:
-                        dtype_list = df.dtypes
+            df = current_query.insert_static_data(df)
+            #df["coquery_invisible_query_number"] = i
 
-                    self.data_table = self.data_table.append(df)
-                else:
-                    self.save_dataframe(manager.process(df, self, True), append=True)
-                
+            if not to_file:
+                self.data_table = self.data_table.append(df)
+            else:
+                df = manager.process(df, session=self)
+                self.save_dataframe(df, append=True)
+
             logger.info("Query executed ({:.3f} seconds, {} match{})".format(
                 time.time() - start_time, len(df), "es" if len(df) != 1 else ""))
 
