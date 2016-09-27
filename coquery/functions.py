@@ -91,7 +91,7 @@ class Function(CoqObject):
     def get_description():
         return "Base functions"
 
-    def __init__(self, columns=[], value=None, label=None, alias=None, group=[], sweep=False, aggr=None, **kwargs):
+    def __init__(self, columns=[], value=None, label=None, alias=None, group=[], sweep=False, aggr=None, hidden=False, **kwargs):
         """
         Parameters
         ----------
@@ -100,6 +100,7 @@ class Function(CoqObject):
             sticks to one row at a time during evaluation
         """
         self._columns = columns
+        self._hidden = hidden
         self.sweep = sweep
         self.alias = alias
         self.group = group
@@ -192,7 +193,8 @@ class Function(CoqObject):
         else:
             return get_visible_columns(df, 
                                         manager=kwargs["manager"],
-                                        session=kwargs["session"])
+                                        session=kwargs["session"],
+                                        hidden=self._hidden)
 
     def evaluate(self, df, *args, **kwargs):
         try:
@@ -524,9 +526,9 @@ class TypeTokenRatio(Types):
     no_column_labels = True
     
     def evaluate(self, df, *args, **kwargs):
-        val = super(TypeTokenRatio, self).evaluate(df, *args, **kwargs)
-        fun = Tokens(group=self.group).evaluate(df, *args, **kwargs)
-        return (pd.DataFrame({"types": val, "tokens": fun}, index=df.index)
+        types = super(TypeTokenRatio, self).evaluate(df, *args, **kwargs)
+        tokens = Tokens(group=self.group, columns=self._columns, hidden=True).evaluate(df, *args, **kwargs)
+        return (pd.DataFrame({"types": types, "tokens": tokens}, index=df.index)
                     .apply(lambda row: row.types / row.tokens, axis="columns"))
 
 #############################################################################
@@ -608,11 +610,16 @@ class ContextColumns(Function):
 
     def evaluate(self, df, connection, *args, **kwargs):
         session = kwargs["session"]
-        val = df.apply(lambda x: self._func(row=x, 
+        if ("coquery_invisible_corpus_id" not in df.columns or
+            "coquery_invisible_origin_id" not in df.columns or
+            "coquery_invisible_number_of_tokens" not in df.columns):
+            return pd.Series(index=df.index)
+        else:
+            val = df.apply(lambda x: self._func(row=x, 
                                             connection=connection, 
                                             session=session), axis="columns")
-        val.index = df.index
-        return val
+            val.index = df.index
+            return val
         
 class ContextKWIC(ContextColumns):
     _name = "coq_context_kwic"
@@ -686,13 +693,13 @@ class LessThan(LogicFunction):
 class And(LogicFunction):
     _name = "AND"
     
-    def _comb(self, x, y):
+    def _comp(self, x, y):
         return bool(x and y)
 
 class Or(LogicFunction):
     _name = "OR"
     
-    def _comb(self, x, y):
+    def _comp(self, x, y):
         return bool(x or y)
 
 class Xor(LogicFunction):
@@ -715,6 +722,30 @@ class IsFalse(LogicFunction):
     def _func(self, cols):
         return cols.apply(lambda x: not bool(x))
 
+##############################################################################
+### Query functions
+##############################################################################
+
+#class QueryFunction(Function):
+    #_name = "virtual"
+    #combine_modes = bool_combine
+    
+    #@staticmethod
+    #def get_description():
+        #return "Query functions"
+
+#class QueryString(QueryFunction):
+    #_name = "coquery_query_string"
+    
+    #def _func(self, row, session):
+        #return session.queries[row["coquery_invisible_query_number"]].S
+    
+    #def evaluate(self, df, *args, **kwargs):
+        #session = kwargs["session"]
+        #val = df.apply(lambda row: session.queries[row["coquery_invisible_query_number"]].query_string, axis="columns")
+        #print(val)
+        #val.index = df.index
+        #return val
 
 #############################################################################
 ## FunctionList class
@@ -749,10 +780,10 @@ class FunctionList(CoqObject):
             # Functions can return either single columns or data frames. 
             # Handle the function result accordingly:
             if fun.single_column:
-                val = fun.evaluate(df, connection=connection, session=session)
+                val = fun.evaluate(df, connection=connection, session=session, manager=manager)
                 df[fun.get_id()] = val
             else:
-                val = fun.evaluate(df, connection=connection, session=session)
+                val = fun.evaluate(df, connection=connection, session=session, manager=manager)
                 df = pd.concat([df, val], axis="columns")
         
         # tell the manager whether rows with NA will be dropped:
