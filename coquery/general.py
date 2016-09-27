@@ -153,10 +153,26 @@ class CoqObject(object):
 
 def get_visible_columns(df, manager, session, hidden=False):
     """
-    Return a list with the column names that are currently visible.
+    Return a list with column names from the data frame. 
+    
+    Internal columns, i.e. those whose name starts with the string 
+    'coquery_invisible', are never returned. The parameter 'hidden' controls 
+    if columns hidden by the data manager are included.
+    
+    Parameters
+    ----------
+    manager : Manager object
+        The currently active manager.
+    
+    session : Session object
+        The currently active session.
+    
+    hidden : bool
+        True if columns hidden by the manager are included. False if columns 
+        hidden by the manager are excluded.    
     """
     if hidden:
-        l = list(df.columns.values)
+        l = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible")]
     else:
         l = [x for x in list(df.columns.values) if (
                 not x.startswith("coquery_invisible") and 
