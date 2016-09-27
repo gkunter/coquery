@@ -201,6 +201,9 @@ class Options(object):
         self.args.stopword_list = []
         self.args.table_links = defaultdict(list)
         
+        self.args.show_data_management = False
+        self.args.show_output_columns = False
+        
         self.args.use_context = False
         self.args.use_stopwords = False
         self.args.use_grouping = False
@@ -208,6 +211,7 @@ class Options(object):
         self.args.use_aggregate = False
         self.args.use_summarize = False
         self.args.use_summarize_filters = False
+        self.args.drop_duplicates = True
         
         if getattr(sys, "frozen", None):
             self.args.base_path = os.path.dirname(sys.executable)
@@ -889,6 +893,16 @@ class Options(object):
                             self.args.text_source_path = config_file.get("gui", "text_source_path")
                         except (NoOptionError, ValueError):
                             self.args.text_source_path = os.path.expanduser("~")
+
+                        try:
+                            self.args.show_data_management = config_file.getboolean("gui", "show_data_management")
+                        except (NoOptionError, ValueError):
+                            self.args.show_data_management = False                        
+                        try:
+                            self.args.show_output_columns = config_file.getboolean("gui", "show_output_columns")
+                        except (NoOptionError, ValueError):
+                            self.args.show_output_columns = False                        
+
                         try:
                             self.args.use_context = config_file.getboolean("gui", "use_context")
                         except (NoOptionError, ValueError):
@@ -917,6 +931,10 @@ class Options(object):
                             self.args.use_summarize_filters = config_file.getboolean("gui", "use_summarize_filters")
                         except (NoOptionError, ValueError):
                             self.args.use_summarize_filters = False
+                        try:
+                            self.args.drop_duplicates = config_file.getboolean("gui", "drop_duplicates")
+                        except (NoOptionError, ValueError):
+                            self.args.drop_duplicates = False
                         try:
                             self.args.number_of_tokens = config_file.getint("gui", "number_of_tokens")
                         except (NoOptionError, ValueError):
@@ -1070,6 +1088,8 @@ def save_configuration():
             config.set("gui", "stopword_list", 
                        encode_query_string("\n".join(cfg.stopword_list)))
         
+        config.set("gui", "show_data_management", cfg.show_data_management)
+        config.set("gui", "show_output_columns", cfg.show_output_columns)
         config.set("gui", "last_toolbox", cfg.last_toolbox)
         config.set("gui", "use_context", cfg.use_context)
         config.set("gui", "use_stopwords", cfg.use_stopwords)
@@ -1078,6 +1098,7 @@ def save_configuration():
         config.set("gui", "use_aggregate", cfg.use_aggregate)
         config.set("gui", "use_summarize", cfg.use_summarize)
         config.set("gui", "use_summarize_filters", cfg.use_summarize_filters)        
+        config.set("gui", "drop_duplicates", cfg.drop_duplicates)
 
         try:
             config.set("gui", "select_radio_query_file", cfg.select_radio_query_file)
