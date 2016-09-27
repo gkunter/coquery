@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#fef # -*- coding: utf-8 -*-
 """
 managers.py is part of Coquery.
 
@@ -38,6 +38,7 @@ class Manager(CoqObject):
         self.hidden_columns = set([])
         self._columns = []
         self._gf = []
+        self.drop_on_na = None
         
         self.manager_group_functions = FunctionList()
         self.manager_summary_functions = FunctionList()
@@ -126,11 +127,10 @@ class Manager(CoqObject):
         if len(df) == 0 or len(options.cfg.group_columns) == 0:
             return df
         print("\tmutate_groups({})".format(options.cfg.group_columns))
-        vis_cols = get_visible_columns(df, manager=self, session=session)
+        vis_cols = get_visible_columns(df, manager=self, session=session, hidden=True)
         l = session.group_functions.get_list()
         l = [fun(columns=vis_col, connection=connection) if type(fun) == type else fun for fun in l]
         session.group_functions = FunctionList(l)
-
         columns = []
         # use group columns as sorters
         for col in options.cfg.group_columns:
@@ -143,7 +143,6 @@ class Manager(CoqObject):
             return df
 
         grouped = df.groupby(columns)
-
         for fun in self._get_group_functions(df, session, connection):
             l = pd.Series()
             for x in grouped.groups:
@@ -160,10 +159,10 @@ class Manager(CoqObject):
         if len(df) == 0:
             return df
         print("\tmutate()")
-        df = FunctionList(self._get_main_functions(df, session)).apply(df, connection, session=session)
-        df = FunctionList(self._column_functions).apply(df, connection, session=session)
-        print("\tdone")
+        df = FunctionList(self._get_main_functions(df, session)).apply(df, connection, session=session, manager=self)
+        df = FunctionList(self._column_functions).apply(df, connection, session=session, manager=self)
         df = df.reset_index(drop=True)
+        print("\tdone")
         return df
     
     def remove_sorter(self, column):
@@ -304,12 +303,20 @@ class Manager(CoqObject):
         return df
         
     def summarize(self, df, session, connection):
-        if len(df) == 0:
-            return df
+        #if len(df) == 0:
+            #return df
         
         print("\tsummarize()")
-        df = self.manager_summary_functions.apply(df, connection, session=session)
-        df = self.user_summary_functions.apply(df, connection, session=session)
+        df = self.manager_summary_functions.apply(df, connection, session=session, manager=self)
+        if options.cfg.use_summarize:
+            df = self.user_summary_functions.apply(df, connection, session=session, manager=self)
+        if self.drop_on_na and df.isnull().values.any():
+            print("summarize drop")
+            df = df.dropna(axis="index")
+
+        if options.cfg.drop_duplicates:
+            df = self.distinct(df, session)
+                          
         print("\tdone")
         return df
 
@@ -364,8 +371,12 @@ class Manager(CoqObject):
             return df
 
         print("\tselect()")
-        vis_cols = get_visible_columns(df, manager=self, session=session, hidden=True)
+
+        # 'coquery_dummy' is used to manage frequency queries with zero 
+        # matches. It is never displayed:
+        vis_cols = [x for x in df.columns if x != "coquery_dummy"]
         self._columns = df.columns
+
         print("\tdone")
         return df[vis_cols]
 
@@ -393,6 +404,7 @@ class Manager(CoqObject):
 
     def process(self, df, session, recalculate=True):
         print("process()")
+        self.drop_on_na = None
         self._main_functions = []
         self._group_functions = []
         engine = session.Resource.get_engine()
@@ -406,27 +418,19 @@ class Manager(CoqObject):
                 df = self.mutate_groups(df, session, connection)
                 df = self.filter_groups(df, session)
             df = self.arrange(df, session)
-            
             df = self.summarize(df, session, connection)
             df = self.filter(df, session)
             df = self.select(df, session)
-            #df = df.fillna("")
 
             self._functions = (self._main_functions + self._group_functions +
                             self._column_functions + 
                             self._get_group_functions(df, session, connection) + 
                             self.manager_summary_functions.get_list() + 
                             self.user_summary_functions.get_list())
+        print("done")
         return df
     
-class Distinct(Manager):
-    name = "DISTINCT"
-    
-    def summarize(self, df, session, connection):
-        df = super(Distinct, self).summarize(df, session, connection)
-        return self.distinct(df, session)
-
-class FrequencyList(Distinct):
+class FrequencyList(Manager):
     name = "FREQUENCY"
     
     def __init__(self, *args, **kwargs):
@@ -521,8 +525,6 @@ class ContingencyTable(FrequencyList):
 def manager_factory(manager):
     if manager == QUERY_MODE_FREQUENCIES:
         return FrequencyList()
-    elif manager == QUERY_MODE_DISTINCT:
-        return Distinct()
     elif manager == QUERY_MODE_CONTINGENCY:
         return ContingencyTable()
     elif manager == QUERY_MODE_COLLOCATIONS:
