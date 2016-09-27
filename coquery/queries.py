@@ -63,6 +63,7 @@ class TokenQuery(object):
         self.input_frame = pd.DataFrame()
         self.results_frame = pd.DataFrame()
         self._keys = []
+        self.empty_query = False
 
     def __len__(self):
         return len(self.tokens)
@@ -187,8 +188,6 @@ class TokenQuery(object):
                         if options.cfg.use_cache:
                             options.cfg.query_cache.add((self.Resource.name, manager_hash, md5), df)
 
-                df = self.insert_static_data(df)
-                
                 connection.close()
 
             if not options.cfg.output_case_sensitive and len(df.index) > 0:
@@ -323,22 +322,37 @@ class TokenQuery(object):
             The data frame containing also the static data.
         """
         
-        for column in self.Session.output_order + options.cfg.group_columns:
+        # if df is empty, a dummy data frame is created with NAs in all 
+        # content columns. This is needed so that frequency queries with empty
+        # results can be displayed as 0.
+        if (len(df) == 0):
+            col = []
+            for x in options.cfg.selected_features:
+                if x.startswith("coquery_"):
+                    col.append(x)
+                else:
+                    col += self.Resource.format_resource_feature(x, self._max_number_of_tokens)
+            col.append("coquery_dummy")
+            if options.cfg.use_context:
+                col.append("coquery_invisible_corpus_id")
+                col.append("coquery_invisible_origin_id")
+            df = pd.DataFrame([[pd.np.nan] * len(col)], columns=col)
+            self.empty_query = True
+        else:
+            df["coquery_dummy"] = 0
+            self.empty_query = False
+        
+        columns = self.Session.output_order
+        if options.cfg.use_grouping:
+            columns += options.cfg.group_columns
+        
+        for column in columns:
             if column == "coquery_invisible_number_of_tokens":
                 df[column] = self._current_number_of_tokens
             if column == "coquery_query_string":
                 df[column] = self.query_string
             elif column == "coquery_expanded_query_string":
                 df[column] = self._current_subquery_string
-            elif column == "coquery_query_file":
-                if options.cfg.input_path:
-                    df[column] = options.cfg.input_path
-                else:
-                    df[column] = ""
-            elif column == "coquery_current_date":
-                df[column] = datetime.datetime.now().strftime("%Y-%m-%d")
-            elif column == "coquery_current_time":
-                df[column] = datetime.datetime.now().strftime("%H:%M:%S")
             elif column.startswith("coquery_query_token"):
                 token_list = self.query_string.split() 
                 n = int(column.rpartition("_")[-1])
