@@ -12,18 +12,13 @@ import os.path
 import sys
 import argparse
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
+from .mockmodule import setup_module
 
-# Mock module requirements:
-class mock_module(object):
-    pass
+setup_module("sqlalchemy")
 
-sys.modules["sqlalchemy"] = mock_module
-sys.modules["options"] = mock_module
-from corpus import CorpusClass, LexiconClass, BaseResource
-
-import textgrids
-import options
+from coquery.corpus import CorpusClass, LexiconClass, BaseResource
+from coquery import textgrids
+from coquery import options
 
 def _get_source_id(token_id):
     return [1, 1, 2, 2, 2][token_id-1]

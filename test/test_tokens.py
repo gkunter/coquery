@@ -4,20 +4,14 @@
 from __future__ import print_function
 
 import unittest
-import os.path
-import sys
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
+from .mockmodule import setup_module
 
-# Mock module requirements:
-class mock_module(object):
-    pass
+setup_module("sqlalchemy")
+setup_module("options")
 
-sys.modules["sqlalchemy"] = mock_module
-sys.modules["options"] = mock_module
-from corpus import LexiconClass, BaseResource
-
-import tokens
+from coquery.corpus import LexiconClass, BaseResource
+from coquery import tokens
 
 class TestLexicon(LexiconClass):
     def is_part_of_speech(self, pos):
@@ -87,28 +81,28 @@ class TestModuleMethods(unittest.TestCase):
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
         
     def test_parse_query_string_escape1(self):
-        S = '\\"this is a query\\"'
+        S = r'\"this is a query\"'
         L = ['"this', 'is', 'a', 'query"']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
 
     def test_parse_query_string_escape2(self):
-        S1 = 'this \\[is] a query'
+        S1 = r'this \[is] a query'
         L1 = ['this', '[is]', 'a', 'query']
-        S2 = 'this \\[is a query'
+        S2 = r'this \[is a query'
         L2 = ['this', '[is', 'a', 'query']
         self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
         self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
 
     def test_parse_query_string_escape2(self):
-        S1 = 'this \\/is] a query'
+        S1 = r'this \/is] a query'
         L1 = ['this', '/is]', 'a', 'query']
-        S2 = 'this is a que\\/ry'
+        S2 = r'this is a que\/ry'
         L2 = ['this', 'is', 'a', 'que/ry']
         self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
         self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
         
     def test_parse_query_string_escape3(self):
-        S = 'this\\ is a query'
+        S = r'this\ is a query'
         L = ['this is', 'a', 'query']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
         
@@ -530,7 +524,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.word_specifiers, ["%"])
         
     def test_wildcards2(self):
-        token = self.token_type("\\*", self.lexicon)
+        token = self.token_type(r"\*", self.lexicon)
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
@@ -547,7 +541,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.transcript_specifiers, [])
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.gloss_specifiers, [])
-        self.assertEqual(token.word_specifiers, ["\\%"])
+        self.assertEqual(token.word_specifiers, [r"\%"])
         
     def test_wildcards4(self):
         token = self.token_type("?", self.lexicon)
@@ -560,7 +554,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.word_specifiers, ["_"])
         
     def test_wildcards5(self):
-        token = self.token_type("\\?", self.lexicon)
+        token = self.token_type(r"\?", self.lexicon)
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
@@ -577,7 +571,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.transcript_specifiers, [])
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.gloss_specifiers, [])
-        self.assertEqual(token.word_specifiers, ["\\_"])
+        self.assertEqual(token.word_specifiers, [r"\_"])
         
     def test_wildcards7(self):
         token = self.token_type("*e??r", self.lexicon)
@@ -617,10 +611,10 @@ class TestQueryTokenCOCA(unittest.TestCase):
         token = self.token_type("", self.lexicon)
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
-        self.assertFalse(token.has_wildcards("\\%"))
-        self.assertFalse(token.has_wildcards("\\%abc"))
-        self.assertFalse(token.has_wildcards("abc\\%abc"))
-        self.assertFalse(token.has_wildcards("abc\\%"))
+        self.assertFalse(token.has_wildcards(r"\%"))
+        self.assertFalse(token.has_wildcards(r"\%abc"))
+        self.assertFalse(token.has_wildcards(r"abc\%abc"))
+        self.assertFalse(token.has_wildcards(r"abc\%"))
         
     def test_has_wildcards5(self):
         token = self.token_type("", self.lexicon)
@@ -644,46 +638,45 @@ class TestQueryTokenCOCA(unittest.TestCase):
         token = self.token_type("", self.lexicon)
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
-        self.assertFalse(token.has_wildcards("\\_"))
-        self.assertFalse(token.has_wildcards("\\_abc"))
-        self.assertFalse(token.has_wildcards("abc\\_abc"))
-        self.assertFalse(token.has_wildcards("abc\\_"))
+        self.assertFalse(token.has_wildcards(r"\_"))
+        self.assertFalse(token.has_wildcards(r"\_abc"))
+        self.assertFalse(token.has_wildcards(r"abc\_abc"))
+        self.assertFalse(token.has_wildcards(r"abc\_"))
         
     def test_replace_wildcards(self):
         self.assertEqual(self.token_type.replace_wildcards("*ab"), "%ab")
         self.assertEqual(self.token_type.replace_wildcards("a*b"), "a%b")
         self.assertEqual(self.token_type.replace_wildcards("ab*"), "ab%")
 
-        self.assertEqual(self.token_type.replace_wildcards("\\*ab"), "*ab")
-        self.assertEqual(self.token_type.replace_wildcards("a\\*b"), "a*b")
-        self.assertEqual(self.token_type.replace_wildcards("ab\\*"), "ab*")
+        self.assertEqual(self.token_type.replace_wildcards(r"\*ab"), "*ab")
+        self.assertEqual(self.token_type.replace_wildcards(r"a\*b"), "a*b")
+        self.assertEqual(self.token_type.replace_wildcards(r"ab\*"), "ab*")
 
-        self.assertEqual(self.token_type.replace_wildcards("%ab"), "\\%ab")
-        self.assertEqual(self.token_type.replace_wildcards("a%b"), "a\\%b")
-        self.assertEqual(self.token_type.replace_wildcards("ab%"), "ab\\%")
+        self.assertEqual(self.token_type.replace_wildcards("%ab"), r"\%ab")
+        self.assertEqual(self.token_type.replace_wildcards("a%b"), r"a\%b")
+        self.assertEqual(self.token_type.replace_wildcards("ab%"), r"ab\%")
 
         self.assertEqual(self.token_type.replace_wildcards("?ab"), "_ab")
         self.assertEqual(self.token_type.replace_wildcards("a?b"), "a_b")
         self.assertEqual(self.token_type.replace_wildcards("ab?"), "ab_")
 
-        self.assertEqual(self.token_type.replace_wildcards("\\?ab"), "?ab")
-        self.assertEqual(self.token_type.replace_wildcards("a\\?b"), "a?b")
-        self.assertEqual(self.token_type.replace_wildcards("ab\\?"), "ab?")
+        self.assertEqual(self.token_type.replace_wildcards(r"\?ab"), "?ab")
+        self.assertEqual(self.token_type.replace_wildcards(r"a\?b"), "a?b")
+        self.assertEqual(self.token_type.replace_wildcards(r"ab\?"), "ab?")
 
-        self.assertEqual(self.token_type.replace_wildcards("_ab"), "\\_ab")
-        self.assertEqual(self.token_type.replace_wildcards("a_b"), "a\\_b")
-        self.assertEqual(self.token_type.replace_wildcards("ab_"), "ab\\_")
-
+        self.assertEqual(self.token_type.replace_wildcards("_ab"), r"\_ab")
+        self.assertEqual(self.token_type.replace_wildcards("a_b"), r"a\_b")
+        self.assertEqual(self.token_type.replace_wildcards("ab_"), r"ab\_")
 
     def test_underscore1(self):
-        token = self.token_type("\\{b_trans}", self.lexicon)
+        token = self.token_type(r"\{b_trans}", self.lexicon)
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
         self.assertEqual(token.transcript_specifiers, [])
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.gloss_specifiers, [])
-        self.assertEqual(token.word_specifiers, ["{b\\_trans}"])
+        self.assertEqual(token.word_specifiers, [r"{b\_trans}"])
         
     def test_negation0(self):
         token = self.token_type("abc", self.lexicon)
@@ -816,7 +809,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.word_specifiers, [])
 
     def test_escape_negation1(self):
-        token = self.token_type("\\~abc", self.lexicon)
+        token = self.token_type(r"\~abc", self.lexicon)
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
@@ -826,7 +819,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.word_specifiers, ["~abc"])
         
     def test_escape_negation2(self):
-        token = self.token_type("~\\~abc", self.lexicon)
+        token = self.token_type(r"~\~abc", self.lexicon)
         self.assertTrue(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
@@ -836,7 +829,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.word_specifiers, ["~abc"])
         
     def test_escape_negation3(self):
-        token = self.token_type("\\~~abc", self.lexicon)
+        token = self.token_type(r"\~~abc", self.lexicon)
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
@@ -846,7 +839,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.word_specifiers, ["~~abc"])
 
     def test_escape_hash1(self):
-        token = self.token_type("\\#abc", self.lexicon)
+        token = self.token_type(r"\#abc", self.lexicon)
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
@@ -856,7 +849,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.word_specifiers, ["#abc"])
         
     def test_escape_hash2(self):
-        token = self.token_type("#\\#abc", self.lexicon)
+        token = self.token_type(r"#\#abc", self.lexicon)
         self.assertFalse(token.negated)
         self.assertTrue(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
@@ -866,7 +859,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.word_specifiers, ["#abc"])
         
     def test_escape_hash3(self):
-        token = self.token_type("\\##abc", self.lexicon)
+        token = self.token_type(r"\##abc", self.lexicon)
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])

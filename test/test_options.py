@@ -3,12 +3,8 @@
 from __future__ import print_function
 
 import unittest
-import os.path
-import sys
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
-
-from options import decode_query_string, encode_query_string
+from coquery.options import decode_query_string, encode_query_string
 
 class TestQueryStringParse(unittest.TestCase):
     """
@@ -26,11 +22,11 @@ class TestQueryStringParse(unittest.TestCase):
         super(TestQueryStringParse, self).runTest()
 
     def test_parse(self):
-        self.assertItemsEqual(decode_query_string("abc,def"), "abc\ndef")
-        self.assertItemsEqual(decode_query_string('"abc,def"'), "abc,def")
-        self.assertItemsEqual(decode_query_string('\\"abc'), '"abc')
-        self.assertItemsEqual(decode_query_string('"*{1,2}"'), "*{1,2}")
-        self.assertItemsEqual(decode_query_string('"*{1,2}",abc'), "*{1,2}\nabc")
+        self.assertEqual(decode_query_string("abc,def"), "abc\ndef")
+        self.assertEqual(decode_query_string('"abc,def"'), "abc,def")
+        self.assertEqual(decode_query_string('\\"abc'), '"abc')
+        self.assertEqual(decode_query_string('"*{1,2}"'), "*{1,2}")
+        self.assertEqual(decode_query_string('"*{1,2}",abc'), "*{1,2}\nabc")
 
     def test_encode(self):
         self.assertEqual(encode_query_string("abc"), '"abc"')

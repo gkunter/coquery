@@ -5,13 +5,9 @@ from __future__ import print_function
 
 import unittest
 import sys
-import os
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery/gui")))
-
-from unicode import utf8
-from gui.pyqt_compat import QtCore
+from coquery.unicode import utf8
+from coquery.gui.pyqt_compat import QtCore
 
 class TestModuleMethods(unittest.TestCase):
     def test_namespace_conflict(self):
