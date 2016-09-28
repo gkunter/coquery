@@ -427,6 +427,8 @@ class Options(object):
             sys.exit(1)
         D = {}
         
+        shorthands = {}            
+
         if self.args.corpus:
             try:
                 # build a dictionary D for the selected corpus that contains as 
@@ -468,8 +470,6 @@ class Options(object):
             # add output column shorthand options
             group = self.parser.add_argument_group("Output column shorthands", "These options are shorthand forms that select some commonly used output columns. The equivalent shows the corresponding longer output option.")
                
-            shorthands = {}            
-
             add_shorthand(group, shorthands, "-U", ["corpus_id"], "show the corpus ID of each token") 
             
             add_shorthand(group, shorthands, "-O", 
