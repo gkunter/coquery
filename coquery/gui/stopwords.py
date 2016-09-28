@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 import codecs
 import pandas as pd
+import os
 
 from coquery import options
 from coquery.defines import *
