@@ -612,7 +612,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.list_group_columns.insert_resource(start + i, rc_feature)
 
         self.activate_group_column_buttons()
-        self.reaggregate(start=True)
+        if options.cfg.use_grouping:
+            self.reaggregate(start=True)
 
     def add_group_column(self, rc_feature=None, item=None):
         if not item:
@@ -623,13 +624,13 @@ class CoqueryApp(QtGui.QMainWindow):
             for col in selected:
                 self.ui.list_group_columns.add_resource(col)
 
-        self.ui.list_toolbox.item(TOOLBOX_GROUPING, 2).setIcon(self.get_icon("lightning"))
-
         if self.ui.options_tree.getCheckState(rc_feature) == QtCore.Qt.Unchecked:
             self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.PartiallyChecked)
         
         self.activate_group_column_buttons()
-        self.reaggregate(start=True)
+        if options.cfg.use_grouping:
+            self.reaggregate(start=True)
+        self.set_toolbox_appearance(TOOLBOX_GROUPING)
 
     def uncheck_grouped_feature(self, rc_feature):
         if self.ui.options_tree.getCheckState(rc_feature) == QtCore.Qt.PartiallyChecked:
@@ -645,7 +646,8 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.group_columns = self.get_group_columns()
 
         self.activate_group_column_buttons()
-        self.reaggregate(start=True)
+        if options.cfg.use_grouping:
+            self.reaggregate(start=True)
         self.set_toolbox_appearance(TOOLBOX_GROUPING)
 
     def change_context(self):
@@ -654,7 +656,8 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         options.cfg.use_context = self.ui.check_context.isChecked()
         self.get_context_values()
-        self.reaggregate(start=True)
+        if options.cfg.use_context:
+            self.reaggregate(start=True)
         self.set_toolbox_appearance(TOOLBOX_CONTEXT)
 
     def change_stopwords(self):
@@ -662,7 +665,8 @@ class CoqueryApp(QtGui.QMainWindow):
         Enable or disable stopword filtering.
         """
         options.cfg.use_stopwords = self.ui.check_stopwords.isChecked()
-        self.reaggregate(start=True)
+        if options.cfg.use_stopwords:
+            self.reaggregate(start=True)
         self.set_toolbox_appearance(TOOLBOX_STOPWORDS)
     
     def change_grouping(self):
@@ -746,7 +750,8 @@ class CoqueryApp(QtGui.QMainWindow):
         if result is not None:
             options.cfg.stopword_list = result
 
-        if set(old_list) != set(options.cfg.stopword_list):
+        if (options.cfg.use_stopwords and 
+            set(old_list) != set(options.cfg.stopword_list)):
             self.reaggregate()
         
         self.set_toolbox_appearance(TOOLBOX_STOPWORDS)
@@ -880,7 +885,7 @@ class CoqueryApp(QtGui.QMainWindow):
         print("reaggregation: done")
 
         manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
-        if manager.stopwords_failed:
+        if options.cfg.use_stopwords and manager.stopwords_failed:
             rc_feature = getattr(self.Session.Resource,
                             getattr(self.Session.Resource, QUERY_ITEM_WORD))
             msg = msg_no_word_information.format(rc_feature)
@@ -1394,7 +1399,8 @@ class CoqueryApp(QtGui.QMainWindow):
         if result is not None:
             options.cfg.filter_list = result
 
-            if set(old_list) != set(options.cfg.filter_list):
+            if (options.cfg.use_summarize_filters and 
+                set(old_list) != set(options.cfg.filter_list)):
                 self.reaggregate()
         
             self.set_toolbox_appearance(TOOLBOX_SUMMARY)
