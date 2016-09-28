@@ -383,7 +383,7 @@ class Manager(CoqObject):
     def filter_stopwords(self, df, session):
         self.stopwords_failed = False
 
-        if not options.cfg.use_stopwords or not options.cfg.stopword_list:
+        if not options.cfg.stopword_list:
             return df
 
         print("\tfilter_stopwords({})".format(options.cfg.stopword_list))
@@ -396,10 +396,10 @@ class Manager(CoqObject):
             self.stopwords_failed = True
             return df
         
+        stopwords = [x.lower() for x in options.cfg.stopword_list]
+        valid = ~(df[columns].apply(lambda x: x.str.lower())
+                             .isin(stopwords)).apply(any, axis="columns")
         print("\tdone")
-        valid = (df[columns].
-                 apply(lambda x: x.apply(lambda y: y in options.cfg.stopword_list)).
-                 apply(lambda x: not any(x), axis="columns"))
         return df[valid]
 
     def process(self, df, session, recalculate=True):
@@ -409,17 +409,25 @@ class Manager(CoqObject):
         self._group_functions = []
         engine = session.Resource.get_engine()
         with engine.connect() as connection:
-            df = self.filter_stopwords(df, session)
-            if recalculate:
-                df = df[[x for x in df.columns if not x.startswith("func_")]]
-                self._main_functions = self._get_main_functions(df, session)
-                df = self.mutate(df, session, connection)
+
+            if options.cfg.use_stopwords:
+                df = self.filter_stopwords(df, session)
+
+            df = df[[x for x in df.columns if not x.startswith("func_")]]
+            self._main_functions = self._get_main_functions(df, session)
+            df = self.mutate(df, session, connection)
+            
+            if options.cfg.use_grouping:
                 df = self.arrange_groups(df, session)
                 df = self.mutate_groups(df, session, connection)
                 df = self.filter_groups(df, session)
+                    
             df = self.arrange(df, session)
-            df = self.summarize(df, session, connection)
-            df = self.filter(df, session)
+            if not options.cfg.use_summarize:
+                df = self.summarize(df, session, connection)
+            if not options.cfg.use_summarize_filters:
+                df = self.filter(df, session)
+                
             df = self.select(df, session)
 
             self._functions = (self._main_functions + self._group_functions +
