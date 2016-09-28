@@ -400,6 +400,14 @@ class BaseResource(object):
         # handle resources from one of the special tables:
         if rc_feature.startswith(tuple(cls.special_table_list)):
             return [rc_feature]
+
+        # handle external links by delegating the formatting to the external
+        # resource:
+        _, hashed, table, feature = cls.split_resource_feature(rc_feature)
+        if hashed != None:
+            link, res = get_by_hash(hashed)
+            l = res.format_resource_feature("{}_{}".format(table, feature), N)
+            return ["db_{}_{}".format(res.db_name, x) for x in l]
         
         # handle lexicon features:
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
