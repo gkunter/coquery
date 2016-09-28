@@ -11,10 +11,104 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import logging
+import pandas as pd
 
 from .defines import *
 from . import options
 from .general import CoqObject
+
+try:
+    import numexpr
+    _query_engine = "numexpr"
+except ImportError:
+    _query_engine ="python"
+
+try:
+    string_types = (unicode, str)
+except NameError:
+    string_types = (str, )
+
+class Filter(CoqObject):
+    def __init__(self, feature, operator, value):
+        self.feature = feature
+        self.operator = operator
+        self.value = value
+        
+    def __repr__(self):
+        return "Filter(feature='{}', operator={}, value={})".format(
+            self.feature, 
+            [x for x in globals() if eval(x) == self.operator][0], 
+            "'{}'".format(self.value) if isinstance(self.value, string_types) else self.value)
+        
+    def get_filter_string(self):
+        def fix(x):
+            """
+            Fixes the value x so it can be used in a Pandas query() call.
+            
+            A fixed string is enclosed in simple quotation marks. Quotation 
+            marks inside the string are escaped.
+            """
+            if isinstance(x, string_types):                
+                if "'" in x:
+                    val = x.replace("'", "\\'")
+                else:
+                    val = x
+                val = "'{}'".format(val)
+            else:
+                val = str(x)
+            return val
+
+        # if the value is an NA (either None or np.nan), a trick described 
+        # here is used: http://stackoverflow.com/a/26535881/5215507
+        # 
+        # This trick involves testing equality between values and themselves, 
+        # i.e. ``df.query("value1 == value1")``. Cells with NAs in the column 
+        # ``value1`` will return ``False`` because ``pd.np.nan == pd.np.nan`` 
+        # is always ``False``.
+        #
+        # Thus, testing whether FEATURE equals NA returns the query string
+        # FEATURE != FEATURE.
+        
+        if self.operator == OP_MATCH:
+            raise ValueError("RegEx filters do not use query strings.")
+        if self.operator == OP_RANGE:
+            if len(self.value) == 0:
+                raise ValueError("Filter uses an empty range.")
+            if type(min(self.value)) != type(max(self.value)):
+                raise TypeError("Range values have different types.")
+        if self.value is None or self.value is pd.np.nan:
+            if self.operator not in [OP_NE, OP_EQ]:
+                raise ValueError("Only OP_EQ and OP_NE are allowed with NA values")
+        
+        if self.value is None or self.value is pd.np.nan:
+            val = self.feature
+            if self.operator == OP_EQ:
+                self.operator = OP_NE
+            else:
+                self.operator = OP_EQ
+        elif isinstance(self.value, list):
+            if self.operator == OP_RANGE:
+                return "{} <= {} < {}".format(
+                                            fix(min(self.value)), 
+                                            self.feature, 
+                                            fix(max(self.value)))                
+            else:
+                val = "[{}]".format(", ".join([fix(x) for x in self.value]))
+        else:
+            val = fix(self.value)
+
+        return "{} {} {}".format(self.feature, self.operator, val)
+        
+    def apply(self, df):
+        if self.operator == OP_MATCH:
+            if df[self.feature].dropna().dtype == object:
+                return df.iloc[df[self.feature].dropna().str.contains(self.value).index]
+            else:
+                # coerce non-string columns to string:
+                S = df[self.feature].dropna().astype(str)
+                return df.iloc[S[S.str.contains(self.value)].index]
+        else:
+            return df.query(self.get_filter_string(), engine=_query_engine)
 
 class QueryFilter(CoqObject):
     """ Define a class that stores a query filter. 
