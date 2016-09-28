@@ -34,6 +34,16 @@ QUERY_MODE_COLLOCATIONS = "Collocations"
 QUERY_MODE_CONTINGENCY = "Contingency table"
 QUERY_MODE_CONTRASTS = "G-test matrix"
 
+OP_EQ = "=="
+OP_LE = "<="
+OP_LT = "<"
+OP_GE = ">="
+OP_GT = ">"
+OP_NE = "!="
+OP_IN = "in"
+OP_RANGE = "between"
+OP_MATCH = "matches"
+
 # this dictionary is used to provide keywords for the command line interface:
 QUERY_MODES = {
     "TOKEN": QUERY_MODE_TOKENS,
