@@ -176,10 +176,6 @@ class TokenQuery(object):
 
                         df = pd.DataFrame(list(iter(results)), columns=results.keys())
                         
-                        for x in df.columns:
-                            if df.dtypes[x] == object:
-                                df[x] = df[x].fillna("")
-                        
                         if len(df) == 0:
                             df = pd.DataFrame(columns=results.keys())
 
@@ -331,7 +327,7 @@ class TokenQuery(object):
                 if x.startswith("coquery_"):
                     col.append(x)
                 else:
-                    col += self.Resource.format_resource_feature(x, self._max_number_of_tokens)
+                    col += [y for y in self.Resource.format_resource_feature(x, self._max_number_of_tokens) if y not in col]
             col.append("coquery_dummy")
             if options.cfg.use_context:
                 col.append("coquery_invisible_corpus_id")
