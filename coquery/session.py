@@ -210,6 +210,11 @@ class Session(object):
                     # have an integer NA type:
                     # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
 
+                    try:
+                        dtype_changed = df.dtypes[x] != dtype_list[x]
+                    except IndexError:
+                        continue
+
                     if df.dtypes[x] != dtype_list[x]:
                         _working = None
                         if df.dtypes[x] == object:
@@ -238,7 +243,11 @@ class Session(object):
         for col in self.data_table.columns:
             if self.data_table.dtypes[col] == object:
                 if sys.version_info < (3, 0):
-                    self.data_table[col] = self.data_table[col].apply(lambda x: x.encode("utf-8"))
+                    try:
+                        self.data_table[col] = self.data_table[col].apply(lambda x: x.encode("utf-8"))
+                    except Exception as e:
+                        print(e)
+                        logger.warn(e)
 
         ## FIXME: reimplement row visibility
         #self.reset_row_visibility(queries.TokenQuery, self.data_table)
