@@ -17,12 +17,6 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 
-try:
-    import numexpr
-    _query_engine = "numexpr"
-except ImportError:
-    _query_engine ="python"
-
 from . import options
 from .defines import *
 from .general import *
@@ -226,7 +220,7 @@ class StringLength(StringFunction):
     combine_modes = num_combine
     
     def _func(self, cols):
-        return cols.apply(lambda x: len(x) if isinstance(x, str) else len(str(x)))
+        return cols.apply(lambda x: len(x) if isinstance(x, str) else len(str(x)) if x != None else x)
     
 class StringCount(StringFunction):
     _name = "COUNT"
@@ -237,7 +231,7 @@ class StringCount(StringFunction):
         super(StringCount, self).__init__(columns=columns, value=value, *args, **kwargs)
     
     def _func(self, col):
-        return col.apply(lambda x: str(x).count(self.value))
+        return col.apply(lambda x: str(x).count(self.value) if x != None else x)
     
 class StringChain(StringFunction):
     _name = "CHAIN"
@@ -266,7 +260,21 @@ class StringMatch(StringFunction):
             self.re = None
     
     def _func(self, col):
-        return col.apply(lambda x: bool(self.re.search(str(x))))
+        def _match_str(x):
+            if x is pd.np.nan or x is None:
+                return None
+            return bool(self.re.search(x))
+                
+        def _match(x):
+            if x is pd.np.nan or x is None:
+                return None
+            else: 
+                return (self.re.search(str(x)))
+                
+        if pd.Series(col.dropna().tolist()).dtypes == object:
+            return col.apply(lambda x: _match_str(x))
+        else:
+            return col.apply(lambda x: _match(x))
     
     @classmethod
     def validate_input(cls, value):
@@ -284,6 +292,8 @@ class StringExtract(StringMatch):
     
     def _func(self, col):
         def _match(s):
+            if s == None:
+                return None
             re = self.re.search(str(s))
             try:
                 return re.group()
