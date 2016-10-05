@@ -40,24 +40,25 @@ class Filter(CoqObject):
             [x for x in globals() if eval(x) == self.operator][0], 
             "'{}'".format(self.value) if isinstance(self.value, string_types) else self.value)
         
-    def get_filter_string(self):
-        def fix(x):
-            """
-            Fixes the value x so it can be used in a Pandas query() call.
-            
-            A fixed string is enclosed in simple quotation marks. Quotation 
-            marks inside the string are escaped.
-            """
-            if isinstance(x, string_types):                
-                if "'" in x:
-                    val = x.replace("'", "\\'")
-                else:
-                    val = x
-                val = "'{}'".format(val)
+    @staticmethod
+    def fix(x):
+        """
+        Fixes the value x so it can be used in a Pandas query() call.
+        
+        A fixed string is enclosed in simple quotation marks. Quotation 
+        marks inside the string are escaped.
+        """
+        if isinstance(x, string_types):                
+            if "'" in x:
+                val = x.replace("'", "\\'")
             else:
-                val = str(x)
-            return val
+                val = x
+            val = "'{}'".format(val)
+        else:
+            val = str(x)
+        return val
 
+    def get_filter_string(self):
         # if the value is an NA (either None or np.nan), a trick described 
         # here is used: http://stackoverflow.com/a/26535881/5215507
         # 
@@ -89,15 +90,15 @@ class Filter(CoqObject):
         elif isinstance(self.value, list):
             if self.operator == OP_RANGE:
                 return "{} <= {} < {}".format(
-                                            fix(min(self.value)), 
+                                            self.fix(min(self.value)), 
                                             self.feature, 
-                                            fix(max(self.value)))                
+                                            self.fix(max(self.value)))                
             else:
-                val = "[{}]".format(", ".join([fix(x) for x in self.value]))
+                val = "[{}]".format(", ".join([self.fix(x) for x in self.value]))
         else:
-            val = fix(self.value)
+            val = self.fix(self.value)
 
-        return "{} {} {}".format(self.feature, self.operator, val)
+        return "{} {} {}".format(self.feature, OPERATOR_STRINGS[self.operator], val)
         
     def apply(self, df):
         if self.operator == OP_MATCH:
@@ -163,6 +164,7 @@ class QueryFilter(CoqObject):
             self._variable, self._op, self._value_list, self._value_range = self.parse_filter(s)
         else:
             raise RuntimeError(msg_invalid_filter.format(s))
+
     def __repr__(self):
         return "QueryFilter('{}', {})".format(self.text, self.resource)
     
