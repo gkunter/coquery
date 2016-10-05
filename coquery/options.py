@@ -45,6 +45,7 @@ import hashlib
 from collections import defaultdict
 
 from coquery import general
+from coquery import filters
 from . import tokens
 from .links import Link
 from .unicode import utf8
@@ -790,8 +791,37 @@ class Options(object):
                             if value:
                                 self.args.selected_features.append(variable)
                     elif section == "filter":
-                        for _, filt_text in config_file.items("filter"):
-                            self.args.filter_list.append(filt_text.strip('"'))
+                        # getting the filters from the configuration is
+                        # somewhat complicated. Each filter has three 
+                        # configuration variables:
+                        # filter_N_column, filter_N_operator, filter_N_value,
+                        # where N is the number of the filter.
+                        filt_columns = {}
+                        filt_operators = {}
+                        filt_values = {}
+                        for var, value in config_file.items("filter"):
+                            if var.startswith("filter_"):
+                                parsed = var.split("_")
+                                if len(parsed) == 3:
+                                    _, s_num, cat = parsed
+                                    try:
+                                        num = int(s_num)
+                                    except ValueError:
+                                        continue
+                                    if cat == "column":
+                                        filt_columns[num] = value
+                                    elif cat == "operator":
+                                        filt_operators[num] = int(value)
+                                    elif cat == "value":
+                                        filt_values[num] = value
+                        max_filt = max(len(filt_columns), len(filt_operators), len(filt_values))
+                        for i in range(max_filt):
+                            col = filt_columns.get(i, None)
+                            op = filt_operators.get(i, None)
+                            val = filt_values.get(i, None)
+                            if all([col, op, val]):
+                                filt = filters.Filter(col, op, val)
+                                self.args.filter_list.append(filt)
 
                     elif section == "context":
                         try:
@@ -956,6 +986,8 @@ class Options(object):
         else:
             self.args.first_run = True
 
+        print(0, self.args.filter_list)
+
         # Use QSettings?
         if settings:
             for x in [str(x) for x in settings.allKeys()]:
@@ -1057,7 +1089,9 @@ def save_configuration():
         if not "filter" in config.sections():
             config.add_section("filter")
         for i, filt in enumerate(cfg.filter_list):
-            config.set("filter", "filter{}".format(i+1), '"{}"'.format(filt))
+            config.set("filter", "filter_{}_column".format(i), filt.feature)
+            config.set("filter", "filter_{}_operator".format(i), filt.operator)
+            config.set("filter", "filter_{}_value".format(i), filt.value)
     
     if cfg.table_links:
         if not "links" in config.sections():
