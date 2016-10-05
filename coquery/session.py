@@ -296,7 +296,8 @@ class Session(object):
         """
         
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
-        
+        manager.set_filters(options.cfg.filter_list)
+
         if not recalculate:
             df = self.output_object
         else:
@@ -402,7 +403,8 @@ class Session(object):
         
         # deal with function headers:
         if header.startswith("func_"):
-            manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
+            manager = managers.get_manager(options.cfg.MODE, 
+                                           self.Resource.name)
             match = re.search("(.*)\((.*)\)", header)
             if match:
                 s = match.group(1)
