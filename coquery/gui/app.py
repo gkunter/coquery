@@ -1039,7 +1039,7 @@ class CoqueryApp(QtGui.QMainWindow):
         elif row == TOOLBOX_SUMMARY:
             active = check.isChecked() or self.ui.check_drop_duplicates.isChecked()
             _set_icon(2, "lightning" if active else None)
-            if options.cfg.use_summarize_filters:
+            if self.ui.check_summarize_filters.isChecked():
                 _set_icon(1, "filter" if options.cfg.filter_list else "sign-question")
             else:
                 _set_icon(1, None)
@@ -1393,14 +1393,25 @@ class CoqueryApp(QtGui.QMainWindow):
             self.switch_to_file()
 
     def manage_filters(self):
-        from . import filterviewer
+        from . import addfilters
         old_list = options.cfg.filter_list
-        result = filterviewer.Filters.manage(options.cfg.filter_list, options.cfg.icon)
+        
+        try:
+            columns = self.table_model.content.columns
+        except AttributeError:
+            columns = []
+            
+        result = addfilters.FilterDialog.set_filters(
+            filter_list=options.cfg.filter_list,
+            columns=columns, session=self.Session)
+
         if result is not None:
             options.cfg.filter_list = result
 
-            if (options.cfg.use_summarize_filters and 
-                set(old_list) != set(options.cfg.filter_list)):
+            s1 = {x.get_hash() for x in old_list} 
+            s2 = {x.get_hash() for x in result}
+
+            if (options.cfg.use_summarize_filters and s1 != s2):
                 self.reaggregate()
         
             self.set_toolbox_appearance(TOOLBOX_SUMMARY)
