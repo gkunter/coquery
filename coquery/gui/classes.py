@@ -733,6 +733,17 @@ class CoqListItem(QtGui.QListWidgetItem):
     def objectName(self):
         return self._objectName
 
+class CoqTableItem(QtGui.QTableWidgetItem):
+    def __init__(self, *args, **kwargs):
+        super(CoqTableItem, self).__init__(*args, **kwargs)
+        self._objectName = ""
+        
+    def setObjectName(self, s):
+        self._objectName = s
+        
+    def objectName(self):
+        return self._objectName
+
 class CoqTreeItem(QtGui.QTreeWidgetItem):
     """ 
     Define a tree element class that stores the output column options in
