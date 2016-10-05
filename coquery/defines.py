@@ -34,15 +34,49 @@ QUERY_MODE_COLLOCATIONS = "Collocations"
 QUERY_MODE_CONTINGENCY = "Contingency table"
 QUERY_MODE_CONTRASTS = "G-test matrix"
 
-OP_EQ = "=="
-OP_LE = "<="
-OP_LT = "<"
-OP_GE = ">="
-OP_GT = ">"
-OP_NE = "!="
-OP_IN = "in"
-OP_RANGE = "between"
-OP_MATCH = "matches"
+_OPERATORS = list(range(11))
+(OP_EQ,
+OP_LE,
+OP_LT,
+OP_GE,
+OP_GT,
+OP_NE,
+OP_IN,
+OP_NIN,
+OP_RANGE,
+OP_MATCH,
+OP_NMATCH) = _OPERATORS
+
+OPERATOR_STRINGS = {
+    OP_EQ: "==",
+    OP_LE: "<=",
+    OP_LT: "<",
+    OP_GE: ">=",
+    OP_GT: ">",
+    OP_NE: "!=",
+    OP_IN: "in",
+    OP_NIN: "not in",
+    OP_RANGE: "is within the range of",
+    OP_MATCH: "contains",
+    OP_NMATCH: "does not contain",
+    }
+
+
+
+OPERATOR_LABELS = {
+    OP_EQ: "is",
+    OP_LE: "is less than or equals",
+    OP_LT: "is less than",
+    OP_GE: "is greater than or equals",
+    OP_GT: "is greater than",
+    OP_NE: "does not equal",
+    OP_IN: "is one of",
+    OP_NIN: "is not one of",
+    OP_RANGE: "is within the range of",
+    OP_MATCH: "contains",
+    OP_NMATCH: "does not contain",
+    }
+
 
 # this dictionary is used to provide keywords for the command line interface:
 QUERY_MODES = {
