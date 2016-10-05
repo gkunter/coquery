@@ -87,6 +87,7 @@ class Manager(CoqObject):
         self._column_functions[ix] = new
     
     def set_filters(self, filter_list):
+        print("set_filters({})".format(filter_list))
         self._filters = filter_list
     
     def _get_main_functions(self, df, session):
@@ -250,6 +251,10 @@ class Manager(CoqObject):
         columns = []
         directions = []
         
+        # list that stores unusuable sorters (e.g. because the sorter 
+        # refers to a function column and the function has been deleted):
+        drop_list = []
+        
         if self.sorters:
             # gather sorting information:
             for sorter in self.sorters:
@@ -260,7 +265,14 @@ class Manager(CoqObject):
                     df[target] = (df[sorter.column].apply(lambda x: x[::-1]))
                 else:
                     target = sorter.column
-                columns.append(target)
+                
+                if target not in df.columns:
+                    drop_list.append(target)
+                else:
+                    columns.append(target)
+
+        # drop illegal sorters:
+        self.sorters = [x for x in self.sorters if not x in drop_list]
 
         # filter columns that should be in the data frame, but which aren't 
         # (this may happen for example with the contingency table which 
@@ -334,24 +346,9 @@ class Manager(CoqObject):
             return df
 
         print("\tfilter()")
-        new_list = []
         for filt in self._filters:
-            new_filt = filters.QueryFilter()
-            new_filt.resource = session.Resource
-            new_filt.text = filt
-            new_list.append(new_filt)
-
-        print("\t\t".join(session.Resource.translate_filters(new_list)))
-        return df
-
-
-            #if filt.count("=") == 1:
-                #filt = filt.replace("=", "==")
-            #try:
-                #df = df.query(filt)
-            #except Exception as e:
-                #print(e)
-                #pass
+            print("\t\t", filt)
+            df = filt.apply(df)
         print("\tdone")
         return df
     
@@ -423,9 +420,9 @@ class Manager(CoqObject):
                 df = self.filter_groups(df, session)
                     
             df = self.arrange(df, session)
-            if not options.cfg.use_summarize:
+            if options.cfg.use_summarize:
                 df = self.summarize(df, session, connection)
-            if not options.cfg.use_summarize_filters:
+            if options.cfg.use_summarize_filters:
                 df = self.filter(df, session)
                 
             df = self.select(df, session)
