@@ -28,11 +28,31 @@ QUERY_ITEM_GLOSS = "query_item_gloss"
 
 QUERY_MODE_TOKENS = "Tokens"
 QUERY_MODE_FREQUENCIES = "Frequency list"
-QUERY_MODE_DISTINCT = "Collapse"
 QUERY_MODE_STATISTICS = "Statistics"
 QUERY_MODE_COLLOCATIONS = "Collocations"
 QUERY_MODE_CONTINGENCY = "Contingency table"
 QUERY_MODE_CONTRASTS = "G-test matrix"
+
+# this dictionary is used to provide keywords for the command line interface:
+QUERY_MODES = {
+    "TOKEN": QUERY_MODE_TOKENS,
+    "FREQ": QUERY_MODE_FREQUENCIES,
+    "STATS": QUERY_MODE_STATISTICS,
+    "COLL": QUERY_MODE_COLLOCATIONS,
+    "GTEST": QUERY_MODE_CONTRASTS,
+    "CONT": QUERY_MODE_CONTINGENCY
+    }
+
+# this list is used to populate and query the summary mode combo box in the 
+# user # interface
+SUMMARY_MODES = [
+    QUERY_MODE_FREQUENCIES,
+    QUERY_MODE_CONTINGENCY,
+    QUERY_MODE_COLLOCATIONS,
+    QUERY_MODE_CONTRASTS
+    ]
+
+
 
 _OPERATORS = list(range(11))
 (OP_EQ,
@@ -61,8 +81,6 @@ OPERATOR_STRINGS = {
     OP_NMATCH: "does not contain",
     }
 
-
-
 OPERATOR_LABELS = {
     OP_EQ: "is",
     OP_LE: "is less than or equals",
@@ -77,27 +95,6 @@ OPERATOR_LABELS = {
     OP_NMATCH: "does not contain",
     }
 
-
-# this dictionary is used to provide keywords for the command line interface:
-QUERY_MODES = {
-    "TOKEN": QUERY_MODE_TOKENS,
-    "FREQ": QUERY_MODE_FREQUENCIES,
-    "UNIQUE": QUERY_MODE_DISTINCT,
-    "STATS": QUERY_MODE_STATISTICS,
-    "COLL": QUERY_MODE_COLLOCATIONS,
-    "GTEST": QUERY_MODE_CONTRASTS,
-    "CONT": QUERY_MODE_CONTINGENCY
-    }
-
-# this list is used to populate and query the summary mode combo box in the 
-# user # interface
-SUMMARY_MODES = [
-    QUERY_MODE_FREQUENCIES,
-    QUERY_MODE_CONTINGENCY,
-    QUERY_MODE_DISTINCT,
-    QUERY_MODE_COLLOCATIONS,
-    QUERY_MODE_CONTRASTS
-    ]
 
 SORT_NONE = 0
 SORT_INC = 1
@@ -153,6 +150,8 @@ COLUMN_NAMES = {
     "statistics_tokens": "Number of matches",
     "statistics_types": "Number of unique matches",
     "statistics_ttr": "Type-token ratio",
+    "statistics_passing_rows": "Passing rows",
+    "statistics_filtered_rows": "Filtered rows",
     "statistics_group_entropy": "Group: Entropy",
     "statistics_group_tokens": "Group: Number of matches",
     "statistics_group_types": "Group: Number of unique matches",
@@ -171,6 +170,8 @@ COLUMN_NAMES = {
         }
 
 FUNCTION_DESC = {
+    "statistics_passing_rows": "Count the number of rows that passed the filter",
+    "statistics_filtered_rows": "Count the number of rows that were removed by a filter",
     "statistics_row_number": "Row number of the match",
     "statistics_corpus_size": "Size of the corpus in words",
     "statistics_subcorpus_size": "Size of the subcorpus in words",
@@ -190,7 +191,6 @@ PREFERRED_ORDER = ["corpus_word", "word_label",
                    "corpus_transcript", "word_transcript", "transcript_label", 
                    "corpus_lemma", "word_lemma", "lemma_label", 
                    "lemma_pos"]
-
 
 DEFAULT_CONFIGURATION = "Default"
 
