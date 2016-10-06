@@ -339,7 +339,8 @@ class TokenQuery(object):
             self.empty_query = False
         
         columns = self.Session.output_order
-        if options.cfg.use_grouping:
+        group_functions = self.Session.group_functions
+        if group_functions or options.cfg.use_group_filters:
             columns += options.cfg.group_columns
         
         for column in columns:
