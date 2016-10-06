@@ -175,6 +175,7 @@ class Session(object):
         number_of_queries = len(self.query_list)
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
         manager.set_filters(options.cfg.filter_list)
+        manager.set_group_filters(options.cfg.group_filter_list)
 
         dtype_list = []
         
@@ -297,6 +298,7 @@ class Session(object):
         
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
         manager.set_filters(options.cfg.filter_list)
+        manager.set_group_filters(options.cfg.group_filter_list)
 
         if not recalculate:
             df = self.output_object
