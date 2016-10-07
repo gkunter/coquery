@@ -101,15 +101,25 @@ class Filter(CoqObject):
         return "{} {} {}".format(self.feature, OPERATOR_STRINGS[self.operator], val)
         
     def apply(self, df):
-        if self.operator == OP_MATCH:
+        if self.operator in (OP_MATCH, OP_NMATCH):
             if df[self.feature].dropna().dtype == object:
-                return df.iloc[df[self.feature].dropna().str.contains(self.value).index]
+                col = df[self.feature].dropna()
             else:
                 # coerce non-string columns to string:
-                S = df[self.feature].dropna().astype(str)
-                return df.iloc[S[S.str.contains(self.value)].index]
+                col = df[self.feature].dropna().astype(str)
+            if self.operator == OP_MATCH:
+                matching = col.str.contains(self.value)
+            else: # OP_NMATCH
+                matching = ~col.str.contains(self.value)
+            return df.iloc[col[matching].index]
         else:
-            return df.query(self.get_filter_string(), engine=_query_engine)
+            try:
+                return df.query(self.get_filter_string(), engine=_query_engine)
+            except Exception as e:
+                S = "Could not apply filter {}: {}".format(self, str(e))
+                print(S)
+                logger.warn(S)
+                return df
 
 class QueryFilter(CoqObject):
     """ Define a class that stores a query filter. 
