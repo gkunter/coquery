@@ -199,6 +199,7 @@ class Options(object):
 
         self.args.query_list = []
         self.args.filter_list = []
+        self.args.group_filter_list = []
         self.args.stopword_list = []
         self.args.table_links = defaultdict(list)
         
@@ -207,7 +208,6 @@ class Options(object):
         
         self.args.use_context = False
         self.args.use_stopwords = False
-        self.args.use_grouping = False
         self.args.use_group_filters = False
         self.args.use_aggregate = False
         self.args.use_summarize = False
@@ -545,37 +545,37 @@ class Options(object):
         except AttributeError:
             pass
         
-        if self.args.source_filter:
-            Genres, Years, Negated = tokens.COCATextToken(self.args.source_filter, None).get_parse()
+        #if self.args.source_filter:
+            #Genres, Years, Negated = tokens.COCATextToken(self.args.source_filter, None).get_parse()
             
-            date_label = ""
-            genre_label = ""
+            #date_label = ""
+            #genre_label = ""
             
-            if Genres:
-                if "corpus_genre" in dir(resource):
-                    genre_label = resource.corpus_genre
-                elif "source_genre" in dir(resource):
-                    genre_label = resource.source_genre
-                elif "source_info_genre" in dir(resource):
-                    genre_label = resource.source_info_genre
-                elif "genre_label" in dir(resource):
-                    genre_label = resource.genre_label
-            if Years:
-                if "corpus_year" in dir(resource):
-                    date_label = resource.corpus_year
-                elif "corpus_date" in dir(resource):
-                    date_label = resource.corpus_date
-                elif "source_year" in dir(resource):
-                    date_label = resource.source_year
-                elif "source_date" in dir(resource):
-                    date_label = resource.source_date
+            #if Genres:
+                #if "corpus_genre" in dir(resource):
+                    #genre_label = resource.corpus_genre
+                #elif "source_genre" in dir(resource):
+                    #genre_label = resource.source_genre
+                #elif "source_info_genre" in dir(resource):
+                    #genre_label = resource.source_info_genre
+                #elif "genre_label" in dir(resource):
+                    #genre_label = resource.genre_label
+            #if Years:
+                #if "corpus_year" in dir(resource):
+                    #date_label = resource.corpus_year
+                #elif "corpus_date" in dir(resource):
+                    #date_label = resource.corpus_date
+                #elif "source_year" in dir(resource):
+                    #date_label = resource.source_year
+                #elif "source_date" in dir(resource):
+                    #date_label = resource.source_date
             
-            if date_label:
-                for year in Years:
-                    self.args.filter_list.append("{} = {}".format(date_label,  year))
-            if genre_label:
-                for genre in Genres:
-                    self.args.filter_list.append("{} = {}".format(genre_label,  genre))
+            #if date_label:
+                #for year in Years:
+                    #self.args.filter_list.append("{} = {}".format(date_label,  year))
+            #if genre_label:
+                #for genre in Genres:
+                    #self.args.filter_list.append("{} = {}".format(genre_label,  genre))
                     
         # Go through the table dictionary D, and add the resource features 
         # to the list of selected features if the corresponding choice 
@@ -646,6 +646,7 @@ class Options(object):
             self.args.current_resources = get_available_resources(self.args.current_server)
 
     def read_configuration(self):
+        
         if os.path.exists(self.cfg.config_path):
             logger.info("Using configuration file %s" % self.cfg.config_path)
             config_file = ConfigParser()
@@ -799,21 +800,27 @@ class Options(object):
                         filt_columns = {}
                         filt_operators = {}
                         filt_values = {}
+                        group_filt_columns = {}
+                        group_filt_operators = {}
+                        group_filt_values = {}
+                        
                         for var, value in config_file.items("filter"):
-                            if var.startswith("filter_"):
-                                parsed = var.split("_")
-                                if len(parsed) == 3:
-                                    _, s_num, cat = parsed
-                                    try:
-                                        num = int(s_num)
-                                    except ValueError:
-                                        continue
-                                    if cat == "column":
-                                        filt_columns[num] = value
-                                    elif cat == "operator":
-                                        filt_operators[num] = int(value)
-                                    elif cat == "value":
-                                        filt_values[num] = value
+                            parsed = var.split("_")
+                            if len(parsed) == 3:
+                                f_type, s_num, cat = parsed
+                                try:
+                                    num = int(s_num)
+                                except ValueError:
+                                    continue
+                                if f_type == "filter":
+                                    if cat == "column":     filt_columns[num] = value
+                                    elif cat == "operator": filt_operators[num] = int(value)
+                                    elif cat == "value":    filt_values[num] = value
+                                elif f_type == "groupfilter":
+                                    if cat == "column":     group_filt_columns[num] = value
+                                    elif cat == "operator": group_filt_operators[num] = int(value)
+                                    elif cat == "value":    group_filt_values[num] = value
+                                    
                         max_filt = max(len(filt_columns), len(filt_operators), len(filt_values))
                         for i in range(max_filt):
                             col = filt_columns.get(i, None)
@@ -822,6 +829,15 @@ class Options(object):
                             if all([col, op, val]):
                                 filt = filters.Filter(col, op, val)
                                 self.args.filter_list.append(filt)
+
+                        max_group_filt = max(len(group_filt_columns), len(group_filt_operators), len(group_filt_values))
+                        for i in range(max_group_filt):
+                            col = group_filt_columns.get(i, None)
+                            op = group_filt_operators.get(i, None)
+                            val = group_filt_values.get(i, None)
+                            if all([col, op, val]):
+                                filt = filters.Filter(col, op, val)
+                                self.args.group_filter_list.append(filt)
 
                     elif section == "context":
                         try:
@@ -942,10 +958,6 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.use_stopwords = False                        
                         try:
-                            self.args.use_grouping = config_file.getboolean("gui", "use_grouping")
-                        except (NoOptionError, ValueError):
-                            self.args.use_grouping = False                        
-                        try:
                             self.args.use_group_filters = config_file.getboolean("gui", "use_group_filters")
                         except (NoOptionError, ValueError):
                             self.args.use_group_filters = False                        
@@ -985,8 +997,6 @@ class Options(object):
                         context_dict = {}
         else:
             self.args.first_run = True
-
-        print(0, self.args.filter_list)
 
         # Use QSettings?
         if settings:
@@ -1092,6 +1102,10 @@ def save_configuration():
             config.set("filter", "filter_{}_column".format(i), filt.feature)
             config.set("filter", "filter_{}_operator".format(i), filt.operator)
             config.set("filter", "filter_{}_value".format(i), filt.value)
+        for i, filt in enumerate(cfg.group_filter_list):
+            config.set("filter", "groupfilter_{}_column".format(i), filt.feature)
+            config.set("filter", "groupfilter_{}_operator".format(i), filt.operator)
+            config.set("filter", "groupfilter_{}_value".format(i), filt.value)
     
     if cfg.table_links:
         if not "links" in config.sections():
@@ -1127,7 +1141,6 @@ def save_configuration():
         config.set("gui", "last_toolbox", cfg.last_toolbox)
         config.set("gui", "use_context", cfg.use_context)
         config.set("gui", "use_stopwords", cfg.use_stopwords)
-        config.set("gui", "use_grouping", cfg.use_grouping)
         config.set("gui", "use_group_filters", cfg.use_group_filters)
         config.set("gui", "use_aggregate", cfg.use_aggregate)
         config.set("gui", "use_summarize", cfg.use_summarize)
