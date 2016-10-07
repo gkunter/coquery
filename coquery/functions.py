@@ -98,8 +98,8 @@ class Function(CoqObject):
         self.sweep = sweep
         self.alias = alias
         self.group = group
-        if group:
-            print("---- GROUP ARGUMENT USED ----")
+        #if group:
+            #print("---- GROUP ARGUMENT USED ----")
         self.value = value
         self._label = label
         if aggr != None:
@@ -122,9 +122,11 @@ class Function(CoqObject):
             return self._label
         else:
             if self.group:
-                return "{}({})".format(
-                    self.get_name(), 
-                    "+".join([session.translate_header(x) for x in self.group]))
+                template = "{func}(groups={cols})"
+                return template.format(
+                    func=self.get_name(), 
+                    cols=":".join(["'{}'".format(session.translate_header(x)) for x in options.cfg.group_columns]))
+            
             if self.no_column_labels:
                 return self.get_name()
             else:
@@ -137,17 +139,6 @@ class Function(CoqObject):
                 
                 return "{}({})".format(self.get_name(), ", ".join(args))
                     
-            if self.group:
-                return "{}({},group={})".format(
-                    self.get_name(), 
-                    ",".join([session.translate_header(x) for x in cols]),
-                    ",".join([session.translate_header(x) for x in self.group]))
-            else:
-                return "{}({},\"{}\")".format(
-                    self.get_name(), 
-                    ",".join([session.translate_header(x) for x in cols]),
-                    self.aggr)
-    
     def set_label(self, label):
         self._label = label
         
@@ -228,10 +219,16 @@ class StringCount(StringFunction):
     combine_modes = num_combine
     
     def __init__(self, value, columns=[], *args, **kwargs):
-        super(StringCount, self).__init__(columns=columns, value=value, *args, **kwargs)
+        super(StringCount, self).__init__(columns, *args, **kwargs)
+        self.value = value
+        try:
+            self.re = re.compile(value)
+        except Exception as e:
+            self.re = None
     
     def _func(self, col):
-        return col.apply(lambda x: str(x).count(self.value) if x != None else x)
+        return col.apply(lambda x: len(self.re.findall(x)) if x != None else None)
+        #return col.apply(lambda x: str(x).count(self.value) if x != None else x)
     
 class StringChain(StringFunction):
     _name = "CHAIN"
@@ -454,6 +451,54 @@ class RowNumber(Freq):
     
     def evaluate(self, df, *args, **kwargs):
         val = pd.Series(range(1, len(df)+1), index=df.index)
+        return val
+
+class Rank(Freq):
+    _name = "statistics_rank"
+    
+    def evaluate(self, df, *args, **kwargs):
+        rank_df = df[self.columns(df, **kwargs)].drop_duplicates().reset_index(drop=True)
+        rank_df[self._name] = rank_df.sort_values(by=rank_df.columns.tolist()).index.tolist()
+        val = df.merge(rank_df, how="left")[self._name]
+        val = val + 1
+        val.index = df.index
+        return val
+
+#############################################################################
+## Filter functions
+#############################################################################
+
+class BaseFilter(Function):
+    _name = "virtual"
+    
+class FilteredRows(BaseFilter):
+    _name = "statistics_filtered_rows"
+    
+    def evaluate(self, df, *args, **kwargs):
+        manager = kwargs["manager"]
+        key = kwargs.get("key", None)
+        if key:
+            pre = manager._len_pre_group_filter.get(key, None)
+        else:
+            pre = manager._len_pre_filter
+        if pre == None:
+            pre = len(df)
+        val = pd.Series([pre] * len(df), index = df.index)
+        return val
+
+class PassingRows(BaseFilter):
+    _name = "statistics_passing_rows"
+    
+    def evaluate(self, df, *args, **kwargs):
+        manager = kwargs["manager"]
+        key = kwargs.get("key", None)
+        if key:
+            post = manager._len_post_group_filter.get(key, None)
+        else:
+            post = manager._len_post_filter
+        if post == None:
+            post = len(df)
+        val = pd.Series([post] * len(df), index = df.index)
         return val
 
 #############################################################################
@@ -806,6 +851,12 @@ class FunctionList(CoqObject):
     
     def set_list(self, l):
         self._list = l
+
+    def find_function(self, fun_id):
+        for x in self._list:
+            if x.get_id() == fun_id:
+                return x
+        return None
 
     def has_function(self, fun):
         for x in self._list:
