@@ -37,8 +37,12 @@ class Manager(CoqObject):
         self.sorters = []
         self.hidden_columns = set([])
         self._columns = []
-        self._gf = []
+        self._len_pre_filter = None
+        self._len_post_filter = None
+        self._len_pre_group_filter = {}
+        self._len_post_group_filter = {}
         self.drop_on_na = None
+        self.stopwords_failed = False
         
         self.manager_group_functions = FunctionList()
         self.manager_summary_functions = FunctionList()
@@ -90,6 +94,10 @@ class Manager(CoqObject):
         print("set_filters({})".format(filter_list))
         self._filters = filter_list
     
+    def set_group_filters(self, filter_list):
+        print("set_group_filters({})".format(filter_list))
+        self._group_filters = filter_list
+    
     def _get_main_functions(self, df, session):
         """
         Returns a list of functions that are provided by this manager. They
@@ -124,14 +132,7 @@ class Manager(CoqObject):
             print(e)
             raise e
         
-    def mutate_groups(self, df, session, connection):
-        if len(df) == 0 or len(options.cfg.group_columns) == 0:
-            return df
-        print("\tmutate_groups({})".format(options.cfg.group_columns))
-        vis_cols = get_visible_columns(df, manager=self, session=session, hidden=True)
-        l = session.group_functions.get_list()
-        l = [fun(columns=vis_col, connection=connection) if type(fun) == type else fun for fun in l]
-        session.group_functions = FunctionList(l)
+    def get_group_columns(self, df, session):
         columns = []
         # use group columns as sorters
         for col in options.cfg.group_columns:
@@ -139,15 +140,29 @@ class Manager(CoqObject):
             for x in formatted_cols:
                 if x in df.columns:
                     columns.append(x)
-
+        return columns
+    
+    def mutate_groups(self, df, session, connection):
+        if len(df) == 0 or len(options.cfg.group_columns) == 0:
+            return df
+        print("\tmutate_groups({})".format(options.cfg.group_columns))
+        group_functions = self._get_group_functions(df, session, connection)
+        
+        vis_cols = get_visible_columns(df, manager=self, session=session, hidden=True)
+        l = session.group_functions.get_list()
+        l = [fun(columns=vis_col, connection=connection) if type(fun) == type else fun for fun in l]
+        session.group_functions = FunctionList(l)
+    
+        columns = self.get_group_columns(df, session)
+    
         if len(columns) == 0:
             return df
 
         grouped = df.groupby(columns)
-        for fun in self._get_group_functions(df, session, connection):
+        for fun in group_functions:
             l = pd.Series()
             for x in grouped.groups:
-                val = fun.evaluate(df.iloc[grouped.groups[x]], connection, session=session, manager=self)
+                val = fun.evaluate(df.iloc[grouped.groups[x]], connection, session=session, manager=self, key=x)
                 l = l.append(val)
             df[fun.get_id()] = l
             
@@ -188,17 +203,9 @@ class Manager(CoqObject):
 
         print("\tarrange_groups({})".format(options.cfg.group_columns))
 
-        columns = []
-        # use group columns as sorters
-        for col in options.cfg.group_columns:
-            formatted_cols = session.Resource.format_resource_feature(col, session.get_max_token_count())
-            for x in formatted_cols:
-                if x in df.columns:
-                    columns.append(x)
-        directions = [True] * len(columns)
-
+        columns = self.get_group_columns(df, session)
         columns += ["coquery_invisible_corpus_id"]
-        directions += [True]
+        directions = [True] * len(columns)
 
         # filter columns that should be in the data frame, but which aren't 
         # (this may happen for example with the contingency table which 
@@ -243,6 +250,7 @@ class Manager(CoqObject):
     
     def arrange(self, df, session):
         if len(df) == 0:
+            print("exit arrange")
             return df
         
         print("\tarrange()")
@@ -254,10 +262,10 @@ class Manager(CoqObject):
         # list that stores unusuable sorters (e.g. because the sorter 
         # refers to a function column and the function has been deleted):
         drop_list = []
-        
         if self.sorters:
             # gather sorting information:
             for sorter in self.sorters:
+                print(sorter)
                 directions.append(sorter.ascending)
                 # create dummy columns for reverse sorting:
                 if sorter.reverse:
@@ -345,23 +353,50 @@ class Manager(CoqObject):
         if len(df) == 0 or not options.cfg.use_summarize_filters:
             return df
 
+        self.reset_group_filter_statistics()
+        self._len_pre_filter = len(df)
         print("\tfilter()")
         for filt in self._filters:
             print("\t\t", filt)
             df = filt.apply(df)
         print("\tdone")
+        df = df.reset_index(drop=True)
+        self._len_post_filter = len(df)
         return df
     
     def get_available_columns(self, session):
         pass
     
+    def reset_filter_statistics(self):
+        self._len_pre_filter = None
+        self._len_post_filter = None
+
+    def reset_group_filter_statistics(self):
+        self._len_pre_group_filter = {}
+        self._len_post_group_filter = {}
+    
     def filter_groups(self, df, session):
-        if len(df) == 0 or len(options.cfg.group_columns) == 0:
+        if len(df) == 0 or len(options.cfg.group_columns) == 0 or not options.cfg.use_group_filters or len(self._group_filters) == 0:
+            print("filter_groups exit")
             return df
 
         print("\tfilter_groups()")
+        self.reset_group_filter_statistics()
+        
+        columns = self.get_group_columns(df, session)
+        grouped = df.groupby(columns)
+        new_df = pd.DataFrame(columns = df.columns)
+        for x in grouped.groups:
+            _df = df.iloc[grouped.groups[x]]
+            _df = _df.reset_index(drop=True)
+            self._len_pre_group_filter[x] = len(_df)
+            for filt in self._group_filters:
+                _df = filt.apply(_df)
+            new_df = pd.concat([new_df, _df], axis=0)
+            self._len_post_group_filter[x] = len(_df)
         print("\tdone")
-        return df
+        new_df = new_df.reset_index(drop=True)
+        return new_df
 
     def select(self, df, session):
         if len(df) == 0:
@@ -414,16 +449,16 @@ class Manager(CoqObject):
             self._main_functions = self._get_main_functions(df, session)
             df = self.mutate(df, session, connection)
             
-            if options.cfg.use_grouping:
+            if options.cfg.group_columns:
+                if options.cfg.use_group_filters:
+                    df = self.filter_groups(df, session)
                 df = self.arrange_groups(df, session)
                 df = self.mutate_groups(df, session, connection)
-                df = self.filter_groups(df, session)
                     
-            df = self.arrange(df, session)
-            if options.cfg.use_summarize:
-                df = self.summarize(df, session, connection)
             if options.cfg.use_summarize_filters:
                 df = self.filter(df, session)
+            df = self.summarize(df, session, connection)
+            df = self.arrange(df, session)
                 
             df = self.select(df, session)
 
@@ -454,13 +489,12 @@ class ContingencyTable(FrequencyList):
     
     def select(self, df, session):
         l = list(super(ContingencyTable, self).select(df, session).columns)
-        for col in df.columns:
+        for col in [x for x in df.columns if x != "coquery_dummy"]:
             if col not in l:
                 l.append(col)
         return df[l]
 
     def mutate(self, df, session, connection):
-        print("mutate()")
         def _get_column_label(row):
             col_label = session.translate_header(row[0])
             if row[1] == "All":
@@ -477,6 +511,8 @@ class ContingencyTable(FrequencyList):
                                             row[1].replace("'", "''"))
             else:
                 return row[0]
+
+        print("mutate()")
 
         # collapse the data frame:
         df = super(ContingencyTable, self).mutate(df, session, connection=connection)
