@@ -21,6 +21,54 @@ from .pyqt_compat import QtCore, QtGui
 from .ui.addFunctionUi import Ui_FunctionsDialog
 from .classes import CoqListItem
 
+class FunctionItem(QtGui.QWidget):
+    def __init__(self, func, checkable=True, *args, **kwargs):
+        super(FunctionItem, self).__init__(*args, **kwargs)
+
+        name = func.get_name()
+        desc = FUNCTION_DESC.get(func._name, None)
+        
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed) 
+        sizePolicy.setHorizontalStretch(0) 
+        sizePolicy.setVerticalStretch(0) 
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth()) 
+        self.setSizePolicy(sizePolicy) 
+        self.horizontalLayout = QtGui.QHBoxLayout(self)
+
+        self.checkbox = QtGui.QCheckBox()
+        self.verticalLayout = QtGui.QVBoxLayout() 
+        self.verticalLayout.setSizeConstraint(QtGui.QLayout.SetFixedSize) 
+        self.verticalLayout.setMargin(0)
+        self.label_1 = QtGui.QLabel(name, self)
+        self.verticalLayout.addWidget(self.label_1)
+
+        if desc != None:
+            self.label_2 = QtGui.QLabel(desc, self)
+            self.verticalLayout.addWidget(self.label_2)
+
+            font = self.label_1.font()
+            font.setPointSize(font.pointSize() * 0.8)
+            self.label_2.setFont(font)
+            
+        self.horizontalLayout.addWidget(self.checkbox)
+        self.horizontalLayout.addLayout(self.verticalLayout)
+        self.horizontalLayout.setStretch(1, 1)
+
+    def setCheckState(self, *args, **kwargs):
+        return self.checkbox.setCheckState(*args, **kwargs)
+    
+    def checkState(self, *args, **kwargs):
+        return self.checkbox.checkState(*args, **kwargs)
+    
+    def sizeHint(self):
+        size_hint = self.verticalLayout.sizeHint()
+        height = max(size_hint.height(),
+                     QtGui.QLabel().sizeHint().height(),
+                     QtGui.QCheckBox().sizeHint().height(),
+                     self.verticalLayout.sizeHint().height() * 1.1)
+        size_hint.setHeight(height)
+        return size_hint
+
 class FunctionDialog(QtGui.QDialog):
     def __init__(self, columns=[], available_columns=[],
                  function_class=[], 
@@ -130,9 +178,13 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.list_functions.clear()
         for x in self.function_list:
             desc = FUNCTION_DESC.get(x._name, "no description available")
-            item = CoqListItem("{} – {}".format(x.get_name(), desc))
+            #item = CoqListItem("{} – {}".format(x.get_name(), desc))
+            item = CoqListItem()
             item.setObjectName(x)
+            item_widget = FunctionItem(x)
             self.ui.list_functions.addItem(item)
+            item.setSizeHint(item_widget.sizeHint())
+            self.ui.list_functions.setItemWidget(item, item_widget)
         self.ui.list_classes.setCurrentRow(i)
         self.ui.list_functions.blockSignals(False)
         self.ui.list_classes.blockSignals(False)
@@ -197,14 +249,18 @@ class FunctionDialog(QtGui.QDialog):
                 func_list += sorted(l, key=lambda x: x.get_name())
             
         widget = self.ui.list_functions
-        for x in func_list:
-            desc = FUNCTION_DESC.get(x._name, "no description available")
-            item = CoqListItem("{} – {}".format(x.get_name(), desc))
-            item.setObjectName(x)
+        for x in sorted(func_list, key=lambda x: x.get_name(), reverse=True):
+            item = CoqListItem()
+            item.setData(QtCore.Qt.UserRole, x)
+            item_widget = FunctionItem(x)
+            item.setSizeHint(item_widget.sizeHint())
+
             if self.checkable:
-                item.setCheckState(QtCore.Qt.Checked if x in self.checked else QtCore.Qt.Unchecked)
-                item.setData(QtCore.Qt.UserRole, x)
+                item_widget.setCheckState(QtCore.Qt.Checked if x in self.checked else QtCore.Qt.Unchecked)
+
             widget.addItem(item)
+            widget.setItemWidget(item, item_widget)
+
         return func_list
 
     def check_label(self):
@@ -281,9 +337,9 @@ class FunctionDialog(QtGui.QDialog):
             if self.checkable:
                 l = []
                 for i in range(self.ui.list_functions.count()):
-                    if self.ui.list_functions.item(i).checkState():
-                        l.append(self.ui.list_functions.item(i).objectName())
-                        #l.append(self.function_list[i])
+                    item = self.ui.list_functions.item(i)
+                    if self.ui.list_functions.itemWidget(item).checkState():
+                        l.append(item.data(QtCore.Qt.UserRole))
                 return l
             else:
                 value = utf8(self.ui.edit_function_value.text())
