@@ -172,10 +172,10 @@ def get_visible_columns(df, manager, session, hidden=False):
         hidden by the manager are excluded.    
     """
     if hidden:
-        l = [x for x in list(df.columns.values) if not x.startswith("coquery_invisible")]
+        l = [x for x in list(df.columns.values) if not x.startswith(("coquery_dummy", "coquery_invisible"))]
     else:
         l = [x for x in list(df.columns.values) if (
-                not x.startswith("coquery_invisible") and 
+                not x.startswith(("coquery_dummy", "coquery_invisible")) and 
                 not x in manager.hidden_columns)]
 
     resource_order = session.Resource.get_preferred_output_order()
