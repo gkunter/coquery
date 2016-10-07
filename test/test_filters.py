@@ -131,9 +131,10 @@ class TestApply(unittest.TestCase):
         filt7 = Filter(STRING_COLUMN, OP_IN, ["abc", "xxx"])
         filt8 = Filter(STRING_COLUMN, OP_RANGE, ["abc", "xxx"])
         filt9 = Filter(STRING_COLUMN, OP_MATCH, ".b")
-        filt10 = Filter(STRING_COLUMN, OP_EQ, "")
-        filt11 = Filter(STRING_COLUMN, OP_EQ, None)
-        filt12 = Filter(STRING_COLUMN, OP_NE, None)
+        filt10 = Filter(STRING_COLUMN, OP_NMATCH, ".b")
+        filt11 = Filter(STRING_COLUMN, OP_EQ, "")
+        filt12 = Filter(STRING_COLUMN, OP_EQ, None)
+        filt13 = Filter(STRING_COLUMN, OP_NE, None)
         
         self.assertListEqual(filt1.apply(df).index.tolist(), 
                              df[df[STRING_COLUMN] == "xxx"].index.tolist())
@@ -152,12 +153,13 @@ class TestApply(unittest.TestCase):
         self.assertListEqual(filt8.apply(df).index.tolist(), 
                              df[("abc" <= df[STRING_COLUMN]) & (df[STRING_COLUMN] < "xxx")].index.tolist())
         self.assertListEqual(filt9.apply(df).index.tolist(), 
-                             df.iloc[df[STRING_COLUMN].dropna().apply(lambda x:
-                                bool(re.search(".b", x))).index].index.tolist())
-        self.assertListEqual(filt10.apply(df).index.tolist(), [])
-        self.assertListEqual(filt11.apply(df).index.tolist(), 
-                             df[df[STRING_COLUMN].isnull()].index.tolist())
+                             df.dropna()[df[STRING_COLUMN].dropna().apply(lambda x: bool(re.search(".b", x)))].index.tolist())
+        self.assertListEqual(filt10.apply(df).index.tolist(), 
+                             df.dropna()[df[STRING_COLUMN].dropna().apply(lambda x: not bool(re.search(".b", x)))].index.tolist())
+        self.assertListEqual(filt11.apply(df).index.tolist(), [])
         self.assertListEqual(filt12.apply(df).index.tolist(), 
+                             df[df[STRING_COLUMN].isnull()].index.tolist())
+        self.assertListEqual(filt13.apply(df).index.tolist(), 
                              df[~df[STRING_COLUMN].isnull()].index.tolist())
 
     def test_numeric_filter(self):
