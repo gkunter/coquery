@@ -36,7 +36,6 @@ class Manager(CoqObject):
         self._column_functions = []
         self.sorters = []
         self.hidden_columns = set([])
-        self._columns = []
         self._len_pre_filter = None
         self._len_post_filter = None
         self._len_pre_group_filter = {}
@@ -59,15 +58,7 @@ class Manager(CoqObject):
         
     def is_hidden_column(self, column):
         return column in self.hidden_columns
-    
-    def get_data_columns(self):
-        """
-        Return a list of data columns. The list is based on the last call to
-        process(). If process() was not called for this data manager yet,
-        the function raises a ValueError.
-        """
-        return self._columns
-    
+        
     def get_function(self, id):
         for fun in self._functions:
             if type(fun) == type:
@@ -91,11 +82,9 @@ class Manager(CoqObject):
         self._column_functions[ix] = new
     
     def set_filters(self, filter_list):
-        print("set_filters({})".format(filter_list))
         self._filters = filter_list
     
     def set_group_filters(self, filter_list):
-        print("set_group_filters({})".format(filter_list))
         self._group_filters = filter_list
     
     def _get_main_functions(self, df, session):
@@ -325,14 +314,16 @@ class Manager(CoqObject):
     def summarize(self, df, session, connection):
         #if len(df) == 0:
             #return df
+        vis_cols = get_visible_columns(df, manager=self, session=session)
         
         print("\tsummarize()")
         df = self.manager_summary_functions.apply(df, connection, session=session, manager=self)
         if options.cfg.use_summarize:
             df = self.user_summary_functions.apply(df, connection, session=session, manager=self)
-        if self.drop_on_na and df.isnull().values.any():
-            print("summarize drop")
-            df = df.dropna(axis="index")
+
+        if options.cfg.drop_on_na:
+            ix = df[vis_cols].dropna(axis="index", how="all").index
+            df = df.iloc[ix]
 
         if options.cfg.drop_duplicates:
             df = self.distinct(df, session)
@@ -399,16 +390,57 @@ class Manager(CoqObject):
         return new_df
 
     def select(self, df, session):
-        if len(df) == 0:
-            return df
-
+        """
+        Select the columns that will appear in the final output. Also, put 
+        them into the preferred order.
+        """
         print("\tselect()")
 
         # 'coquery_dummy' is used to manage frequency queries with zero 
         # matches. It is never displayed:
         vis_cols = [x for x in df.columns if x != "coquery_dummy"]
-        self._columns = df.columns
+        vis_cols = sorted(vis_cols)
 
+        resource = session.Resource
+
+        lexical_features = []
+        db_lexical_features = []
+        corpus_features = []
+        db_corpus_features = []
+        functions = []
+        others = []
+
+        for col in list(vis_cols):
+            if col.startswith("coq_"):
+                this_res = resource
+                this_rc_feature = resource.extract_resource_feature(col)
+            elif col.startswith("db_"):
+                fields = col.split("_")
+                last_index = len(fields) - fields[::-1].index("coq") - 1
+                db_name = "_".join(fields[1:last_index])
+                this_res = options.get_resource_of_database(fields[1])
+                this_rc_feature = "_".join(fields[last_index + 1:-1])
+            elif col.startswith("func_"):
+                functions.append(col)
+                continue
+            else:
+                others.append(col)
+                continue
+            if this_res.is_lexical(this_rc_feature):
+                lexical_features.append(col)
+            else:
+                corpus_features.append(col)
+
+        resource_order = resource.get_preferred_output_order()
+
+        for feature in resource_order[::-1]:
+            lex_list = [col for col in lexical_features if feature in col]
+            lex_list = sorted(lex_list)[::-1]
+            for lex in lex_list:
+                lexical_features.remove(lex)
+                lexical_features.insert(0, lex)
+                
+        vis_cols = lexical_features + corpus_features + others + functions
         print("\tdone")
         return df[vis_cols]
 
