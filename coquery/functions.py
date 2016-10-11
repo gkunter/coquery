@@ -12,7 +12,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import division
 
+import random
+import string
 import re
+import sys
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -20,6 +23,11 @@ from scipy import stats
 from . import options
 from .defines import *
 from .general import *
+
+try:
+    max_int = sys.maxint
+except AttributeError:
+    max_int = sys.maxsize
 
 try:
     _iqr = stats.iqr
@@ -206,30 +214,24 @@ class StringFunction(Function):
     def get_description():
         return "String functions"
 
+class StringRegEx(StringFunction):
+
+    @classmethod
+    def validate_input(cls, value):
+        try:
+            re.compile(value)
+        except Exception as e: 
+            return False
+        else:
+            return True
+
 class StringLength(StringFunction):
     _name = "LENGTH"
     combine_modes = num_combine
     
     def _func(self, cols):
         return cols.apply(lambda x: len(x) if isinstance(x, str) else len(str(x)) if x != None else x)
-    
-class StringCount(StringFunction):
-    _name = "COUNT"
-    parameters = 1
-    combine_modes = num_combine
-    
-    def __init__(self, value, columns=[], *args, **kwargs):
-        super(StringCount, self).__init__(columns, *args, **kwargs)
-        self.value = value
-        try:
-            self.re = re.compile(value)
-        except Exception as e:
-            self.re = None
-    
-    def _func(self, col):
-        return col.apply(lambda x: len(self.re.findall(x)) if x != None else None)
-        #return col.apply(lambda x: str(x).count(self.value) if x != None else x)
-    
+
 class StringChain(StringFunction):
     _name = "CHAIN"
     parameters = 1
@@ -243,7 +245,27 @@ class StringChain(StringFunction):
     def _select(self, row):
         return self.value.join([str(x) for x in row])
 
-class StringMatch(StringFunction):
+class StringCount(StringRegEx):
+    _name = "COUNT"
+    parameters = 1
+    combine_modes = num_combine
+    
+    def __init__(self, value, columns=[], *args, **kwargs):
+        super(StringCount, self).__init__(columns, *args, **kwargs)
+        self.value = value
+        try:
+            self.re = re.compile(value)
+        except Exception as e:
+            self.re = None
+    
+    def _func(self, col):
+        if self.re == None:
+            return pd.Series([pd.np.nan] * len(col), index=col.index)
+        else:
+            return col.apply(lambda x: len(self.re.findall(x)) if x != None else None)
+        #return col.apply(lambda x: str(x).count(self.value) if x != None else x)
+    
+class StringMatch(StringRegEx):
     _name = "MATCH"
     parameters = 1
     combine_modes = str_combine
@@ -273,16 +295,7 @@ class StringMatch(StringFunction):
         else:
             return col.apply(lambda x: _match(x))
     
-    @classmethod
-    def validate_input(cls, value):
-        try:
-            re.compile(value)
-        except Exception as e: 
-            return False
-        else:
-            return True
-
-class StringExtract(StringMatch):
+class StringExtract(StringRegEx):
     _name = "EXTRACT"
     parameters = 1
     combine_modes = str_combine
@@ -371,12 +384,51 @@ class Freq(BaseFreq):
         else:
             if options.cfg.verbose:
                 print(self._name, "calculating df.Freq()")
-            
-        # ignore external columns:
-        columns = [x for x in self.columns(df, **kwargs) if not x.startswith("db_")]
-            
+
         if len(df) == 0:
             return pd.Series(index=df.index)
+        try:
+            if df["coquery_dummy"].isnull().all():
+                return pd.Series([0] * len(df), index = df.index)
+        except KeyError:
+            # this happens if the data frame does not have the column 
+            # 'coquery_dummy'
+            pass
+
+        # ignore external columns:
+        columns = [x for x in self.columns(df, **kwargs) if not x.startswith("db_")]
+
+        # There is an ugly, ugly bug/feature in Pandas up to at least 0.18.0 
+        # which makes grouping unreliable if there are columns with missing 
+        # values. 
+        # Reference: 
+        # http://pandas.pydata.org/pandas-docs/stable/missing_data.html#na-values-in-groupby
+        # This is considered rather a bug in this Github issue:
+        # https://github.com/pydata/pandas/issues/3729
+        
+        # The replacement workaround is suggested here:
+        # http://stackoverflow.com/questions/18429491
+        
+        replace_dict = {}
+        for x in columns:
+            if df[x].isnull().any():
+                while True:
+                    if df[x].dtype == object:
+                        # Random string implementation taken from here:
+                        # http://stackoverflow.com/a/2257449/5215507                        
+                        repl = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(20))
+                    elif df[x].dtype == int:
+                        repl = random.randint(-sys.maxsize, +sys.maxsize)
+                    elif df[x].dtype == float:
+                        repl = random.random()
+                    elif df[x].dtype == bool:
+                        raise TypeError
+                    if (df[x] != repl).all():
+                        replace_dict[x] = repl
+                        break
+
+                df[x] = df[x].fillna(replace_dict[x])
+        
         if len(columns) == 0:
             # if the function is applied over no columns (e.g. because all 
             # columns are hidden), the function returns a Series containing 
@@ -386,15 +438,21 @@ class Freq(BaseFreq):
         d = {columns[0]: "count"}
         d.update(
             {x: "first" for x in 
-                [y for y in df.columns.values if y not in columns and not y.startswith("coquery_invisible")]})
+                [y for y in df.columns.values if y not in columns and not y.startswith(("coquery_invisible"))]})
 
         val = df.merge(df.groupby(columns)
                          .agg(d)
                          .rename(columns={columns[0]: self.get_id()})
-                         .reset_index(), 
-                       on=columns, how="left")[self.get_id()]
-        val = val.fillna(0)
+                         .reset_index(), on=columns, how="left")[self.get_id()]
         val.index = df.index
+
+        val.apply(lambda x:int(x) if x != None else x)
+        if "coquery_dummy" in df.columns:
+            val[df["coquery_dummy"].isnull()] = 0
+            
+        for x in replace_dict:
+            df[x] = df[x].replace(replace_dict[x], pd.np.nan)
+            
         return val
 
 class FreqPMW(Freq):
@@ -830,7 +888,10 @@ class FunctionList(CoqObject):
             drop_on_na = True
 
         for fun in self._list:
-            drop_on_na = drop_on_na and fun.drop_on_na
+            if options.cfg.drop_on_na:
+                drop_on_na = True
+            else:
+                drop_on_na = drop_on_na and fun.drop_on_na
             
             # Functions can return either single columns or data frames. 
             # Handle the function result accordingly:
