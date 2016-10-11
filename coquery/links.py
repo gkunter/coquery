@@ -19,7 +19,8 @@ class Link(object):
     The Link class is used to link a table from one corpus to another corpus.
     """
     
-    def __init__(self, res_from, rc_from, res_to, rc_to, join="LEFT JOIN", case=False):
+    def __init__(self, res_from, rc_from, res_to, rc_to, join="LEFT JOIN", case=False,
+                 one_to_many=False):
         """
         Parameters
         ----------
@@ -33,6 +34,9 @@ class Link(object):
             The resource feature where the link ends
         join : str
             The SQL join type
+        one_to_many : bool
+            True if all entries in the linked table are returned, or False if 
+            only the first entry is returned
         case : bool 
             Determine whether the the join will be case sensitive
         """
@@ -42,6 +46,7 @@ class Link(object):
         self.rc_to = rc_to
         self.join_type = join
         self.case = case
+        self.one_to_many = one_to_many
         
     def get_hash(self):
         l = []
