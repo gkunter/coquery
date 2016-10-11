@@ -1637,13 +1637,19 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         df = pd.DataFrame(index = source.index)
 
         for col in source.columns:
+            # special case: only NAs?
+            if source[col].isnull().all():
+                df[col] = source[col].astype(object)
+                continue
+            
             dtype = pd.Series(source[col].dropna().tolist()).dtype
+
+            # float
             if dtype == float:
-                
                 # try to force floats to int:
                 try:
                     as_int = source[col].astype(int, error_on_fail=False)
-                except ValueError:
+                except (ValueError, TypeError):
                     as_int = pd.Series(index=source[col].index)
 
                 if all(as_int == source[col]):
@@ -1654,17 +1660,25 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                     df[col] = source[col].apply(lambda x: options.cfg.float_format.format(x) if (
                                                 x is not None and 
                                                 x is not pd.np.nan) else None)
+
+            # int
             elif dtype == int:
                 df[col] = source[col].apply(lambda x: str(x) if (
                                                 x is not None and 
                                                 x is not pd.np.nan) else None)
+            
+            # bool
             elif dtype == bool:
                 df[col] = source[col].apply(lambda x: ["no", "yes"][bool(x)] if (
                                                 x is not None and 
                                                 x is not pd.np.nan) else None)
-            else:
+            # object
+            elif dtype == object:
                 df[col] = source[col]
-        df = df.fillna(DEFAULT_MISSING_VALUE)
+            # unknown column type
+            else:
+                raise TypeError
+        df = df.fillna(options.cfg.na_string)
         return df
     
     def is_visible(self, index):
