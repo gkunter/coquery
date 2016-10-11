@@ -187,6 +187,8 @@ class BuilderClass(BaseCorpusBuilder):
 
     expected_files = sorted(["eow.cd", "eol.cd", "epw.cd", "epl.cd", "emw.cd", "eml.cd", "esl.cd"])
     
+    lexicon_root_table = "corpus"
+    
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui, *args)
@@ -317,7 +319,6 @@ class BuilderClass(BaseCorpusBuilder):
         self.map_query_item(QUERY_ITEM_TRANSCRIPT, "phonoword_phonstrsdisc")
         self.map_query_item(QUERY_ITEM_POS, "syntaxlemma_class")
         self.map_query_item(QUERY_ITEM_WORD, "corpus_worddia")
-        
 
     def build_load_files(self):
         def add_orth_word():
