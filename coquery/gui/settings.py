@@ -13,6 +13,7 @@ import sys
 
 from coquery import options
 from coquery.errors import remove_source_path, add_source_path
+from coquery.unicode import utf8
 from .pyqt_compat import QtGui, QtCore
 from .ui.settingsUi import Ui_SettingsDialog
 
@@ -194,6 +195,14 @@ class Settings(QtGui.QDialog):
         except AttributeError:
             pass
         try:
+            self.ui.edit_na_string.setText(self._options.na_string)
+        except AtttributeError:
+            pass        
+        try:
+            self.ui.check_drop_empty_queries.setChecked(bool(self._options.drop_on_na))
+        except AttributeError:
+            pass
+        try:
             self.ui.edit_installer_path.setText(self._options.custom_installer_path)
         except AttributeError:
             pass
@@ -242,15 +251,14 @@ class Settings(QtGui.QDialog):
 
         # Query options
         self._options.query_case_sensitive = not bool(self.ui.check_ignore_case_query.isChecked())
+        self._options.drop_on_na = bool(self.ui.check_drop_empty_queries.isChecked())
         self._options.use_cache = bool(self.ui.check_use_cache.isChecked())
         self._options.last_cache_size = int(self.ui.spin_cache_size.value())
         if self._options.use_cache:
             if self._options.query_cache_size != self._options.last_cache_size:
                 self._options.query_cache_size = self._options.last_cache_size * 1024 * 1024
                 self._options.query_cache.resize(self._options.query_cache_size)
-            new_cache_path = str(self.ui.edit_cache_path.text())
-            print(new_cache_path)
-            print(self._options.cache_path)
+            new_cache_path = utf8(self.ui.edit_cache_path.text())
             if new_cache_path != self._options.cache_path:
                 try:
                     self._options.query_cache.move(new_cache_path)
@@ -276,11 +284,12 @@ class Settings(QtGui.QDialog):
         self._options.word_wrap = [0, int(QtCore.Qt.TextWordWrap)][bool(self.ui.check_word_wrap.isChecked())]
         self._options.float_format = "{:.%if}" % self._options.digits
         remove_source_path(self._options.custom_installer_path)
-        self._options.custom_installer_path = str(self.ui.edit_installer_path.text())        
+        self._options.custom_installer_path = utf8(self.ui.edit_installer_path.text())        
         add_source_path(self._options.custom_installer_path)
         self._options.table_font = self._table_font
         self._options.figure_font = self._figure_font
         self._options.context_font = self._context_font
+        self._options.na_string = utf8(self.ui.edit_na_string.text())
 
     @staticmethod
     def manage(options, parent=None):
