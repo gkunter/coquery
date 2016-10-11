@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1113</width>
-    <height>806</height>
+    <height>829</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -182,24 +182,18 @@
              <item row="1" column="1">
               <layout class="QGridLayout" name="gridLayout_6" columnstretch="1,0">
                <item row="0" column="0">
-                <widget class="QLineEdit" name="edit_file_name">
+                <widget class="CoqClickableLabel" name="edit_file_name">
                  <property name="enabled">
                   <bool>true</bool>
                  </property>
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
                  </property>
-                 <property name="accessibleDescription">
-                  <string/>
+                 <property name="frameShadow">
+                  <enum>QFrame::Sunken</enum>
                  </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                 <property name="placeholderText">
-                  <string>(no query input file selected)</string>
+                 <property name="text">
+                  <string>(no query file selected)</string>
                  </property>
                 </widget>
                </item>
@@ -924,8 +918,8 @@
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Droid Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:11pt; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Droid Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="textInteractionFlags">
            <set>Qt::NoTextInteraction</set>
@@ -944,7 +938,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1113</width>
-     <height>23</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1515,6 +1509,11 @@ p, li { white-space: pre-wrap; }
   <customwidget>
    <class>CoqTextEdit</class>
    <extends>QTextEdit</extends>
+   <header location="global">..classes</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqClickableLabel</class>
+   <extends>QLabel</extends>
    <header location="global">..classes</header>
   </customwidget>
  </customwidgets>

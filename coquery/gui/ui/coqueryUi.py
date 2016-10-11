@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(1113, 806)
+        MainWindow.resize(1113, 829)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.verticalLayout_4 = QtGui.QVBoxLayout(self.centralwidget)
@@ -124,15 +124,10 @@ class Ui_MainWindow(object):
         self.gridLayout_3.addWidget(self.radio_query_file, 1, 0, 1, 1, QtCore.Qt.AlignTop)
         self.gridLayout_6 = QtGui.QGridLayout()
         self.gridLayout_6.setObjectName(_fromUtf8("gridLayout_6"))
-        self.edit_file_name = QtGui.QLineEdit(self.box_input_settings)
+        self.edit_file_name = CoqClickableLabel(self.box_input_settings)
         self.edit_file_name.setEnabled(True)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Minimum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.edit_file_name.sizePolicy().hasHeightForWidth())
-        self.edit_file_name.setSizePolicy(sizePolicy)
-        self.edit_file_name.setAccessibleDescription(_fromUtf8(""))
-        self.edit_file_name.setReadOnly(True)
+        self.edit_file_name.setFrameShape(frameShape)
+        self.edit_file_name.setFrameShadow(QtGui.QFrame.Sunken)
         self.edit_file_name.setObjectName(_fromUtf8("edit_file_name"))
         self.gridLayout_6.addWidget(self.edit_file_name, 0, 0, 1, 1)
         self.button_change_file = QtGui.QPushButton(self.box_input_settings)
@@ -504,7 +499,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1113, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1113, 24))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -766,7 +761,7 @@ class Ui_MainWindow(object):
         self.box_corpus_select.setTitle(_translate("MainWindow", "&Resource selection", None))
         self.label_2.setText(_translate("MainWindow", "&Corpus:", None))
         self.box_input_settings.setTitle(_translate("MainWindow", "Query &strings", None))
-        self.edit_file_name.setPlaceholderText(_translate("MainWindow", "(no query input file selected)", None))
+        self.edit_file_name.setText(_translate("MainWindow", "(no query file selected)", None))
         self.button_change_file.setText(_translate("MainWindow", "&Browse...", None))
         self.button_change_file.setShortcut(_translate("MainWindow", "Alt+B", None))
         self.button_run_query.setText(_translate("MainWindow", "&Query", None))
@@ -806,8 +801,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:11pt; font-weight:600;\">No match.</span></p></body></html>", None))
+"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">No match.</span></p></body></html>", None))
         self.menuFile.setTitle(_translate("MainWindow", "&File", None))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help", None))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus", None))
@@ -895,5 +890,5 @@ class Ui_MainWindow(object):
         self.actionSelect_group_functions.setText(_translate("MainWindow", "Select group functions...", None))
         self.actionContext_options.setText(_translate("MainWindow", "Context options...", None))
 
-from ..classes import CoqListWidget, CoqTableView, CoqTextEdit
+from ..classes import CoqClickableLabel, CoqListWidget, CoqTableView, CoqTextEdit
 

@@ -223,7 +223,6 @@ class CoqueryApp(QtGui.QMainWindow):
         #self.path_completer.setModel(self.dirModel)
         #self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
         #self.ui.edit_file_name.setCompleter(self.path_completer)
-        self.ui.edit_file_name.setDisabled(True)
 
         # set up group columns
         self.ui.button_remove_group.setDisabled(True)
@@ -484,14 +483,14 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         # hook file options button:
         self.ui.button_change_file.clicked.connect(self.file_options)
+        self.ui.edit_file_name.clicked.connect(self.file_options)
 
         # hook up events so that the radio buttons are set correctly
         # between either query from file or query from string:
         self.focus_to_file = focusFilter()
         self.ui.edit_file_name.installEventFilter(self.focus_to_file)
 
-        self.ui.edit_file_name.textChanged.connect(self.switch_to_file)
-        self.ui.edit_file_name.textChanged.connect(self.verify_file_name)
+        self.ui.edit_file_name.clicked.connect(self.switch_to_file)
         self.focus_to_query = focusFilter()
         self.focus_to_query.focus.connect(self.switch_to_query)
         self.ui.edit_query_string.installEventFilter(self.focus_to_query)
