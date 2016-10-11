@@ -358,14 +358,30 @@ class BaseResource(object):
     # add internal table that can be used to access frequency information:
     coquery_query_string = "Query string"
     coquery_expanded_query_string = "Expanded query string"
-    #coquery_query_file = "Input file"
-    #coquery_current_date = "Current date"
-    #coquery_current_time = "Current time"
     coquery_query_token = "Query item"
 
     special_table_list = ["coquery", "tag"]
-
     render_token_style = "background: lightyellow"
+    
+    @classmethod
+    def extract_resource_feature(cls, column):
+        """
+        Returns the resource feature from the column name.
+        
+        This assumes, for the time being, that the column name has the form
+        coq_xxxx_N, i.e. the form that is produced by the 
+        ``format_resource_feature()`` method. 
+        
+        Columns from the 'special_table_list' class attribute are returned as 
+        they are.
+        
+        Other columns raise an AssertionError. 
+        """
+        fields = column.split("_")
+        if fields[0] in cls.special_table_list:
+            return fields
+        assert fields[0] == "coq", column
+        return "_".join(fields[1:-1])
     
     @classmethod
     def format_resource_feature(cls, rc_feature, N):
@@ -687,7 +703,7 @@ class BaseResource(object):
         table_dict = cls.get_table_dict()
         if "corpus" not in table_dict:
             return []
-        lexicon_tables = cls.get_table_tree("word")
+        lexicon_tables = cls.get_table_tree(getattr(cls, "lexicon_root_table", "word"))
 
         corpus_variables = []
         for x in table_dict:
@@ -706,14 +722,7 @@ class BaseResource(object):
         variables are returned that all resource variable names that are 
         desendants of table 'word'. """
         table_dict = cls.get_table_dict()
-        table = "word"
-        #try:
-            #_, _, table, _ = cls.split_resource_feature(getattr(cls, QUERY_ITEM_WORD))
-        #except AttributeError:
-            #return []
-        #if table == "corpus":
-            #return []
-        lexicon_tables = cls.get_table_tree(table)
+        lexicon_tables = cls.get_table_tree(getattr(cls, "lexicon_root_table", "word"))
         lexicon_variables = []
         for x in table_dict:
             if x in lexicon_tables and x not in cls.special_table_list:
@@ -1921,24 +1930,42 @@ class CorpusClass(object):
                         getattr(ex_res, rc_ext), alias))
                     select_list.add(alias)
                         
+                if not link.one_to_many:
+                    column_list.append(getattr(ex_res, "{}_id".format(table)))
+                        
                 # construct subquery that joins the external table:
                 columns = ", ".join(set(column_list))
                 alias = "db_{}_coq_{}_{}".format(ex_res.db_name, table, hashed).upper()
                 
-                sql_template = """
-                LEFT JOIN 
+                if link.one_to_many:
+                    target = ""
+                    table_id = ""
+                    sql_template = """
+                    LEFT JOIN 
+                            (SELECT {columns}
+                            FROM    {corpus}.{table})
+                            AS      {alias}
+                    ON      coq_{internal_feature}_{n} = {alias}.db_{corpus}_coq_{external_feature}_{n}
+                    """
+                else:
+                    table_id = getattr(ex_res, "{}_id".format(table))
+                    target = getattr(ex_res, link.rc_to)
+                    sql_template = """
+                    LEFT JOIN
                         (SELECT {columns}
-                        FROM    {corpus}.{table})
-                        AS      {alias}
-                ON      coq_{internal_feature}_{n} = {alias}.db_{corpus}_coq_{external_feature}_{n}
-                """
+                        FROM {corpus}.{table}) AS {alias} 
+                        ON {alias}.{table_id} = 
+                            (SELECT MIN({table_id}) 
+                               FROM {corpus}.{table} 
+                              WHERE {target} = coq_{internal_feature}_{n})
+                    """
                 
                 S = sql_template.format(
                     columns=columns, n=number+1, 
                     internal_feature=link.rc_from, 
                     corpus=ex_res.db_name, 
                     table=getattr(ex_res, linked_table), 
-                    external_feature=link.rc_to, alias=alias)
+                    external_feature=link.rc_to, alias=alias, target=target, table_id=table_id)
                 
                 external_links.append(S)
                 
@@ -1985,7 +2012,7 @@ class CorpusClass(object):
                         rc_table.split("_")[0],
                         number+1)
                     
-                    join_strings[rc_table] = "INNER JOIN (SELECT {columns} FROM {table} {where}) AS COQ_{rc_table} ON {parent_id} = {child_id}".format(
+                    join_strings[rc_table] = "LEFT JOIN (SELECT {columns} FROM {table} {where}) AS COQ_{rc_table} ON {parent_id} = {child_id}".format(
                         columns = columns, 
                         table = table,
                         rc_table = rc_table.upper(),
@@ -2158,7 +2185,7 @@ class CorpusClass(object):
                     table_features[this_tab].append("{}_{}_id".format(this_tab, next_tab))
 
             sql_template = """
-            INNER JOIN 
+            LEFT JOIN 
                     (SELECT {features} 
                     FROM    {table}) 
                     AS      {alias} 
@@ -2642,6 +2669,7 @@ class CorpusClass(object):
         # that it is somewhat easier to read:
         if options.cfg.verbose:
             query_string = query_string.replace("INNER JOIN ", "\nINNER JOIN \n\t")
+            query_string = query_string.replace("LEFT JOIN ", "\nLEFT JOIN \n\t")
             query_string = query_string.replace("SELECT ", "SELECT \n\t")
             query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
