@@ -731,6 +731,14 @@ class Options(object):
                         except NoOptionError:
                             self.args.output_case_sensitive = False
                         try:
+                            self.args.drop_on_na = config_file.getboolean("main", "drop_on_na")
+                        except NoOptionError:
+                            self.args.drop_on_na = True
+                        try:
+                            self.args.na_string = config_file.get("main", "na_string")
+                        except NoOptionError:
+                            self.args.na_string = DEFAULT_MISSING_VALUE
+                        try:
                             self.args.output_to_lower = config_file.getboolean("main", "output_to_lower")
                         except NoOptionError:
                             self.args.output_to_lower = True
@@ -1061,6 +1069,8 @@ def save_configuration():
     config.set("main", "context_mode", cfg.context_mode)
     config.set("main", "output_case_sensitive", cfg.output_case_sensitive)
     config.set("main", "query_case_sensitive", cfg.query_case_sensitive)
+    config.set("main", "drop_on_na", cfg.drop_on_na)
+    config.set("main", "na_string", cfg.na_string)
     try:
         config.set("main", "output_to_lower", cfg.output_to_lower)
     except AttributeError:
