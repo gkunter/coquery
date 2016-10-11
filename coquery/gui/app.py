@@ -204,14 +204,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.list_toolbox.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Interactive)
         self.ui.list_toolbox.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Interactive)
 
-        ## set auto-completer for the filter edit:
-        #self.filter_variable_model = QtGui.QStringListModel()
-        #self.completer = QtGui.QCompleter()
-        #self.completer.setModel(self.filter_variable_model)
-        #self.completer.setCompletionMode(QtGui.QCompleter.InlineCompletion)
-        #self.completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
-        #self.ui.filter_box.edit_tag.setCompleter(self.completer)
-
         # use a file system model for the file name auto-completer::
         self.dirModel = QtGui.QFileSystemModel(parent=self)
         # make sure that the model is updated on changes to the file system:
