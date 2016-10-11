@@ -146,6 +146,11 @@ class CSVOptionDialog(QtGui.QDialog):
 
         self.set_new_separator()
 
+        # Add auto complete to file name edit:
+        completer = QtGui.QCompleter()
+        completer.setModel(QtGui.QDirModel(completer))
+        self.ui.edit_file_name.setCompleter(completer)
+
         try:
             self.resize(options.settings.value("csvoptions_size"))
         except TypeError:
