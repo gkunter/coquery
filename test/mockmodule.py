@@ -19,5 +19,13 @@ class mock_module(object):
     except NameError:
         pass
 
+class MockOptions(object):
+    def __getattribute__(self, x):
+        return object.__getattribute__(self, x)
+    
+    def __setattr__(self, *args, **kwargs):
+        return super(MockOptions, self).__setattr__(*args, **kwargs)
+    
+
 def setup_module(s):
     sys.modules[s] = mock_module
