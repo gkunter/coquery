@@ -218,11 +218,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.dirModel.setRootPath(QtCore.QDir.currentPath())
         self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
 
-        # set auto-completer for the input file edit:
-        self.path_completer = QtGui.QCompleter(parent=self)
-        self.path_completer.setModel(self.dirModel)
-        self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
-        self.ui.edit_file_name.setCompleter(self.path_completer)
+        ## set auto-completer for the input file edit:
+        #self.path_completer = QtGui.QCompleter(parent=self)
+        #self.path_completer.setModel(self.dirModel)
+        #self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
+        #self.ui.edit_file_name.setCompleter(self.path_completer)
+        self.ui.edit_file_name.setDisabled(True)
 
         # set up group columns
         self.ui.button_remove_group.setDisabled(True)
@@ -2454,8 +2455,9 @@ class CoqueryApp(QtGui.QMainWindow):
         from . import settings
         old_context_font = options.cfg.context_font
         last_wrap = options.cfg.word_wrap
+        old_drop_on_na = options.cfg.drop_on_na 
+
         settings_changed = settings.Settings.manage(options.cfg, self)
-        
         if settings_changed:
             self.ui.data_preview.setFont(options.cfg.table_font)
             self.ui.data_preview.verticalHeader().setDefaultSectionSize(QtGui.QLabel().sizeHint().height() + 2)
@@ -2474,6 +2476,9 @@ class CoqueryApp(QtGui.QMainWindow):
                 for widget in self.widget_list:
                     if isinstance(widget, contextviewer.ContextView):
                         widget.update_context()
+            
+            if (old_drop_on_na != options.cfg.drop_on_na):
+                self.reaggregate(start=True)
 
     def change_current_server(self):
         name = self.ui.combo_config.currentText()
@@ -2821,8 +2826,10 @@ class CoqueryApp(QtGui.QMainWindow):
             item = self.ui.options_tree.getItem(link.rc_from)
             
             res_from, _, _, _ = options.cfg.current_resources[link.res_from]
-            ext_res, _, _, _ = options.cfg.current_resources[link.res_to]
-
+            try:
+                ext_res, _, _, _ = options.cfg.current_resources[link.res_to]
+            except KeyError:
+                return
             _, _, tab, feat = ext_res.split_resource_feature(link.rc_to)
             ext_table = "{}_table".format(tab)
             
