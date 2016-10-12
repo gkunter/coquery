@@ -1166,7 +1166,7 @@ class CoqueryApp(QtGui.QMainWindow):
         # reasonable defaults:
         if options.cfg.first_run:
             if self._first_corpus:
-                last_checked = ["word_label"]
+                self.selected_features = ["word_label"]
                 self._first_corpus = False
         
         self.ui.options_tree.clear()
@@ -1230,7 +1230,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     leaf.setIcon(0, self.get_icon("tag"))
                     root.setIcon(0, self.get_icon("tag"))
 
-                if var in last_checked: 
+                if var in self.selected_features: 
                     leaf.setCheckState(0, QtCore.Qt.Checked)
                 else:
                     leaf.setCheckState(0, QtCore.Qt.Unchecked)
