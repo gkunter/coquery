@@ -273,10 +273,12 @@ MODULE_INFORMATION = {
     "statsmodels": ("statsmodels — Statistical computations and models for use with SciPy",
             "0.7.0",
             "Plot estimated cumulative distributions",
-            "http://www.statsmodels.org/stable/"),    
+            "http://www.statsmodels.org/stable/"), 
+    "stopwords": ("stop-words: Get list of common stop words in various languages in Python",
+            "2015.2.23.1",
+            "Add stop word presets for different languages to stop word dialog",
+            "https://github.com/Alir3z4/python-stop-words"),
     }
-
-
 
 # for Python 3 compatibility:
 try:
