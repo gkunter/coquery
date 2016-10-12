@@ -2062,11 +2062,9 @@ class CoqFlowLayout(QtGui.QLayout):
         return self.minimumSize()
  
     def minimumSize(self):
-        size = QtCore.QSize()
-        for item in self.itemList:
-            size = size.expandedTo(item.minimumSize())
-        size += QtCore.QSize(2 * self.margin(), 2 * self.margin())
-        return size
+        w = self.geometry().width()
+        h = self.doLayout(QtCore.QRect(0, 0, w, 0), True)
+        return QtCore.QSize(w + 2 * self.margin(), h + 2 * self.margin())        
  
     def margin(self):
         return 0
@@ -2075,11 +2073,11 @@ class CoqFlowLayout(QtGui.QLayout):
         x = rect.x()
         y = rect.y()
         lineHeight = 0
+        spaceX = self.spacing()
+        spaceY = self.spacing()
  
         for item in self.itemList:
             wid = item.widget()
-            spaceX = self.spacing()
-            spaceY = self.spacing()
             nextX = x + item.sizeHint().width() + spaceX
             if nextX - spaceX > rect.right() and lineHeight > 0:
                 x = rect.x()
