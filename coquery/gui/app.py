@@ -110,6 +110,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.widget_list = []
         self.Session = None
         
+        self.selected_features = set()
+        
         self._first_corpus = False
         if options.cfg.first_run and not options.cfg.current_resources:
             self._first_corpus = True
@@ -868,6 +870,7 @@ class CoqueryApp(QtGui.QMainWindow):
         tree.addGroup.connect(self.add_group_column)
         tree.removeGroup.connect(self.remove_group_column)
         tree.removeItem.connect(self.remove_item)
+        tree.itemChanged.connect(self.toggle_selected_feature)
         
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -1129,6 +1132,8 @@ class CoqueryApp(QtGui.QMainWindow):
         if not options.cfg.current_resources:
             self.ui.options_tree.clear()
             return
+
+        self.ui.options_tree.blockSignals(True)
         
         table_dict = self.resource.get_table_dict()
         # Ignore denormalized tables:
@@ -1188,7 +1193,6 @@ class CoqueryApp(QtGui.QMainWindow):
                 resource_list = sorted(table_dict[table])
             else:
                 resource_list = table_dict[table]
-
             # add a leaf for each table variable, in alphabetical order:
             for var in resource_list:
                 leaf = classes.CoqTreeItem()
@@ -1238,6 +1242,18 @@ class CoqueryApp(QtGui.QMainWindow):
         for _, group_column in self.ui.list_group_columns.columns:
             if not hasattr(self.resource, group_column):
                 self.ui.list_group_columns.remove_resource(group_column)
+
+        self.ui.options_tree.blockSignals(False)
+
+    def toggle_selected_feature(self, item):
+        is_checked = (item.checkState(0) == QtCore.Qt.Checked)
+        rc_feature = utf8(item.objectName())
+        if rc_feature and not rc_feature.endswith("_table"):
+            if is_checked:
+                self.selected_features.add(rc_feature)
+            else:
+                self.selected_features.remove(rc_feature)
+            print(self.selected_features)
 
     def fill_combo_corpus(self):
         """ 
@@ -2612,36 +2628,11 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.select_radio_query_file = bool(self.ui.radio_query_file.isChecked())
 
             options.cfg.external_links = self.get_external_links()
-            options.cfg.selected_features = self.get_selected_features()
+            # FIXME: eventually, selected_features should be a session variable
+            options.cfg.selected_features = self.selected_features
             options.cfg.selected_functions = self.get_functions()
             options.cfg.group_columns = self.get_group_columns()
-            return True
 
-    def get_selected_features(self):
-        """
-        Traverse through the output columns tree and obtain all features that 
-        are checked.
-
-        Returns
-        -------
-        l : list 
-            A list of resource features that were checked in the tree widget.
-        """
-        def traverse(node):
-            checked = []
-            for child in [node.child(i) for i in range(node.childCount())]:
-                checked += traverse(child)
-            if node.checkState(0) == QtCore.Qt.Checked and not node.isDisabled() and not node.objectName().endswith("_table"):
-                if node.objectName() != "":
-                    checked.append(node.objectName())
-            return checked
-
-        tree = self.ui.options_tree
-        l = []
-        for root in [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]:
-            l += traverse(root)
-        return l
-        
     def get_external_links(self):
         """
         Traverse through the output columns tree and obtain all external links 
