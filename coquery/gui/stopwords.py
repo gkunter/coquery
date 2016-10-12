@@ -15,9 +15,13 @@ import os
 
 from coquery import options
 from coquery.defines import *
+from coquery.unicode import utf8
 from . import classes
 from .pyqt_compat import QtCore, QtGui
 from .ui.stopwordsUi import Ui_Stopwords
+
+if options.use_stopwords_module:
+    import stop_words
 
 class CoqStopWord(QtGui.QListWidgetItem):
     def __init__(self, *args):
@@ -112,6 +116,14 @@ class Stopwords(QtGui.QDialog):
         self._word_list= word_list
         self.ui = Ui_Stopwords()
         self.ui.setupUi(self)
+        if not options.use_stopwords_module:
+            self.ui.widget_stopword_list.hide()
+        else:
+            lang = sorted([x.capitalize() for x in stop_words.AVAILABLE_LANGUAGES])
+            self.ui.combo_language.addItems(lang)
+            self.ui.combo_language.setCurrentIndex(lang.index("English"))
+            self.ui.button_add_list.clicked.connect(self.add_stopword_list)
+
         self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
         self.ui.stopword_list.close()
         #self.ui.stopword_list = CoqStopwordList()
@@ -127,9 +139,14 @@ class Stopwords(QtGui.QDialog):
             self.resize(options.settings.value("stopwords_size"))
         except TypeError:
             pass
+        ix = self.ui.combo_language.findText(utf8(options.settings.value("stopword_language")))
+        if ix >= 0:
+            self.ui.combo_language.setCurrentIndex(ix)
 
     def closeEvent(self, event):
         options.settings.setValue("stopwords_size", self.size())
+        
+        options.settings.setValue("stopword_language", utf8(self.ui.combo_language.currentText()))
         self.close()
  
     def reset_list(self):
@@ -164,13 +181,20 @@ class Stopwords(QtGui.QDialog):
                 with codecs.open(name, "r", encoding=options.cfg.output_encoding) as input_file:
                     for word in sorted(set(" ".join(input_file.readlines()).split())):
                         if word and not self.ui.stopword_list.hasTag(word):
-                            self.ui.stopword_list.addTag(str(word))
+                            self.ui.stopword_list.addTag(utf8(word))
             except IOError as e:
                 QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
             except (UnicodeEncodeError, UnicodeDecodeError):
                 QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
             finally:
                 self.ui.buttonBox.setEnabled(True)
+    
+    def add_stopword_list(self):
+        lang = utf8(self.ui.combo_language.currentText())
+        stopwords = stop_words.get_stop_words(lang.lower())
+        for word in stopwords:
+            if not self.ui.stopword_list.hasTag(word):
+                self.ui.stopword_list.addTag(utf8(word))
     
     def exec_(self):
         result = super(Stopwords, self).exec_()

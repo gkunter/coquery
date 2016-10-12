@@ -62,6 +62,22 @@ class Ui_Stopwords(object):
         self.horizontalLayout.addWidget(self.stopword_list)
         self.horizontalLayout.setStretch(0, 1)
         self.verticalLayout_3.addLayout(self.horizontalLayout)
+        self.widget_stopword_list = QtGui.QWidget(self.frame)
+        self.widget_stopword_list.setObjectName(_fromUtf8("widget_stopword_list"))
+        self.horizontalLayout_2 = QtGui.QHBoxLayout(self.widget_stopword_list)
+        self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
+        self.label_2 = QtGui.QLabel(self.widget_stopword_list)
+        self.label_2.setObjectName(_fromUtf8("label_2"))
+        self.horizontalLayout_2.addWidget(self.label_2)
+        self.combo_language = QtGui.QComboBox(self.widget_stopword_list)
+        self.combo_language.setObjectName(_fromUtf8("combo_language"))
+        self.horizontalLayout_2.addWidget(self.combo_language)
+        self.button_add_list = QtGui.QPushButton(self.widget_stopword_list)
+        self.button_add_list.setObjectName(_fromUtf8("button_add_list"))
+        self.horizontalLayout_2.addWidget(self.button_add_list)
+        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem)
+        self.verticalLayout_3.addWidget(self.widget_stopword_list)
         self.verticalLayout_3.setStretch(1, 1)
         self.verticalLayout_4.addWidget(self.frame)
         self.buttonBox = QtGui.QDialogButtonBox(Stopwords)
@@ -70,6 +86,7 @@ class Ui_Stopwords(object):
         self.buttonBox.setCenterButtons(False)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.verticalLayout_4.addWidget(self.buttonBox)
+        self.label_2.setBuddy(self.combo_language)
 
         self.retranslateUi(Stopwords)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), Stopwords.accept)
@@ -79,5 +96,7 @@ class Ui_Stopwords(object):
     def retranslateUi(self, Stopwords):
         Stopwords.setWindowTitle(_translate("Stopwords", " Stop words – Coquery", None))
         self.label.setText(_translate("Stopwords", "Currently active stop words:", None))
+        self.label_2.setText(_translate("Stopwords", "&Language:", None))
+        self.button_add_list.setText(_translate("Stopwords", "A&dd preset list", None))
 
 
