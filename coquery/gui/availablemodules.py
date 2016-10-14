@@ -46,7 +46,6 @@ class AvailableModulesDialog(QtGui.QDialog):
                 ("python-docx", options.use_docx),
                 ("odfpy", options.use_odfpy),
                 ("BeautifulSoup", options.use_bs4),
-                ("stop-words", options.use_stopwords_module),
                 )
         
         self.ui.table_modules.setRowCount(len(modules))

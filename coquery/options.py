@@ -265,6 +265,7 @@ class Options(object):
         self.args.installer_path = os.path.join(self.args.base_path, "installer")
         self.args.connections_path = os.path.join(self.args.coquery_home, "connections")
         self.args.cache_path = os.path.join(self.args.coquery_home, "cache")
+        self.args.stopword_path = os.path.join(self.args.base_path, "stopwords")
 
         self.args.use_mysql = True
         
@@ -277,7 +278,6 @@ class Options(object):
         self.args.group_filter_list = []
         self.args.selected_features= []
         self.args.external_links = {}
-        self.args.selected_functions = []
 
         # these attributes are used only in the GUI:
         self.args.column_width = {}
@@ -1468,7 +1468,6 @@ use_bs4 = has_module("bs4")
 use_scipy = has_module("scipy")
 use_cachetools = has_module("cachetools")
 use_statsmodels = has_module("statsmodels")
-use_stopwords_module = has_module("stop_words")
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:
