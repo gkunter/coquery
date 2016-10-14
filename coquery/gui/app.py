@@ -19,14 +19,15 @@ import os
 import codecs
 import random
 import logging
-from collections import defaultdict
-
 import numpy as np
 import pandas as pd
+from collections import defaultdict
+
 from coquery import queries
 from coquery import managers
 from coquery import functions
 from coquery import sqlhelper
+from coquery.general import memory_dump
 from coquery.session import *
 from coquery.defines import *
 from coquery.unicode import utf8
@@ -37,17 +38,12 @@ from . import errorbox
 from . import contextviewer
 from .pyqt_compat import QtCore, QtGui, QtHelp
 from .ui import coqueryUi, coqueryTinyUi
+from .resourcetree import CoqResourceTree
+from .menus import CoqResourceMenu, CoqColumnMenu
 
-# add required paths:
-sys.path.append(options.cfg.base_path)
-sys.path.append(os.path.join(options.cfg.base_path, "visualizer"))
-sys.path.append(os.path.join(options.cfg.base_path, "installer"))
-
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    def _fromUtf8(s):
-        return s
+## add path required for visualizers::
+if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
+    sys.path.append(os.path.join(options.cfg.base_path, "visualizer"))
 
 class focusFilter(QtCore.QObject):
     """ Define an event filter that reacts to focus events. This filter is
@@ -106,6 +102,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.last_index = None
         self.corpus_manager = None
         self._group_functions = functions.FunctionList()
+        self._column_functions = functions.FunctionList()
         
         self.widget_list = []
         self.Session = None
@@ -120,13 +117,15 @@ class CoqueryApp(QtGui.QMainWindow):
         # Retrieve font and metrics for the CoqItemDelegates
         options.cfg.font = options.cfg.app.font()
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
+        options.cfg.figure_font = options.settings.value("figure_font", QtGui.QLabel().font())
+        options.cfg.table_font = options.settings.value("table_font", QtGui.QLabel().font())
+        options.cfg.context_font = options.settings.value("context_font", QtGui.QLabel().font())
 
         if size.width() < 800 or size.height() < 600:
             self.ui = coqueryTinyUi.Ui_MainWindow()
         else:
             self.ui = coqueryUi.Ui_MainWindow()
         self.ui.setupUi(self)
-        self.ui.data_preview.setHorizontalHeader(classes.CoqHorizontalHeader(QtCore.Qt.Horizontal))
         self.setMenuBar(self.ui.menubar)
         
         self.setup_app()
@@ -146,9 +145,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.restoreState(options.settings.value("main_state"))
         except TypeError:
             pass
-        options.cfg.figure_font = options.settings.value("figure_font", QtGui.QLabel().font())
-        options.cfg.table_font = options.settings.value("table_font", QtGui.QLabel().font())
-        options.cfg.context_font = options.settings.value("context_font", QtGui.QLabel().font())
         x = options.settings.value("splitter")
         try:
             y = x.toByteArray()
@@ -173,13 +169,15 @@ class CoqueryApp(QtGui.QMainWindow):
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
-        self.ui.options_tree = self.create_output_options_tree()
-        self.ui.output_columns.insertWidget(1, self.ui.options_tree)
+        self.column_tree = CoqResourceTree(parent=self)
+
+        self.ui.options_tree = self.column_tree
+        self.ui.output_columns.insertWidget(1, self.column_tree)
         self.ui.output_columns.setStretch(0, 0)
         self.ui.output_columns.setStretch(1, 1)
         self.ui.output_columns.setStretch(2, 0)
         try:
-            self.ui.label_data_columns.setBuddy(self.ui.options_tree)
+            self.ui.label_data_columns.setBuddy(self.column_tree)
         except AttributeError:
             pass
 
@@ -231,6 +229,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.setup_menu_actions()
         self.setup_icons()
 
+
         self.change_corpus()
 
         self.set_query_button()
@@ -243,29 +242,6 @@ class CoqueryApp(QtGui.QMainWindow):
         ## set vertical splitter: top: no stretch, bottom: full stretch
         self.ui.splitter.setStretchFactor(0, 0)
         self.ui.splitter.setStretchFactor(1, 1)
-
-        header = self.ui.data_preview.horizontalHeader()
-        header.sectionFinallyResized.connect(self.result_column_resize)
-        header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        header.customContextMenuRequested.connect(self.show_header_menu)
-        header.sectionMoved.connect(self.column_moved)
-
-        header = self.ui.data_preview.verticalHeader()
-        header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        header.customContextMenuRequested.connect(self.show_row_header_menu)
-
-        self.ui.data_preview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.ui.data_preview.setSortingEnabled(False)
-
-        self.ui.data_preview.clicked.connect(self.result_cell_clicked)
-        self.ui.data_preview.horizontalHeader().setMovable(True)
-        self.ui.data_preview.horizontalHeader().setSelectionBehavior(QtGui.QAbstractItemView.SelectColumns)
-        self.ui.data_preview.horizontalHeader().setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-
-        options.cfg.word_wrap = [0, int(QtCore.Qt.TextWordWrap)][bool(getattr(options.cfg, "word_wrap", False))]
-        self.ui.data_preview.setSelectionBehavior(self.ui.data_preview.SelectItems)
-        self.ui.data_preview.setSelectionMode(self.ui.data_preview.ExtendedSelection)
-        self.ui.data_preview.setWordWrap(options.cfg.word_wrap)
 
         self.ui.status_message = QtGui.QLabel("{} {}".format(NAME, VERSION))
         self.ui.status_progress = QtGui.QProgressBar()
@@ -303,18 +279,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
         
-    def keyPressEvent(self, e):
-        """
-        Add handler for key press events.
-        """
-        super(CoqueryApp, self).keyPressEvent(e)
-
-    def statusBar(self):
-        if hasattr(self.ui, "statusbar"):
-            return self.ui.statusbar
-        else:
-            return super(CoqueryApp, self).statusbar()
-
     def setup_icons(self):
         self.ui.action_help.setIcon(self.get_icon("life-buoy"))
         self.ui.action_connection_settings.setIcon(self.get_icon("database"))
@@ -381,95 +345,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
         self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
         
-    def help(self):
-        from . import helpviewer
-        
-        self.helpviewer = helpviewer.HelpViewer(parent=self)
-        self.helpviewer.show()
-
-    def show_file_menu(self):
-        # leave if the results table is empty:
-        if not self.ui.data_preview.isEnabled() or len(self.table_model.content) == 0:
-            # disable the result-related menu entries:
-            self.ui.action_save_selection.setDisabled(True)
-            self.ui.action_save_results.setDisabled(True)
-            self.ui.action_copy_to_clipboard.setDisabled(True)
-            self.ui.action_create_textgrid.setDisabled(True)
-            return
-
-        # enable "Save results"
-        self.ui.action_save_results.setEnabled(True)
-        self.ui.action_create_textgrid.setEnabled(True)
-
-        # enable "Save selection" and "Copy selection to clipboard" if there 
-        # is a selection:
-        if self.ui.data_preview.selectionModel() and self.ui.data_preview.selectionModel().selection():
-            self.ui.action_save_selection.setEnabled(True)
-            self.ui.action_copy_to_clipboard.setEnabled(True)
-            
-    def show_corpus_menu(self):
-        if self.ui.combo_corpus.count():
-            self.ui.action_corpus_documentation.setEnabled(True)
-            self.ui.action_statistics.setEnabled(True)
-        else:
-            self.ui.action_corpus_documentation.setEnabled(False)
-            self.ui.action_statistics.setEnabled(False)
-
-    def show_results_menu(self):
-        self.ui.menu_Results.clear()
-
-        # FIXME:
-        # The menu should always display the available options so that users
-        # can use it to explore the program (cf. Cooper et al. 2014. About 
-        # Face. 4th edition. Wiley: ch. 18 'the main justification of [menus'] 
-        # existence is to teach us about what is available')
-
-        # Add Output column entry:
-        if self.ui.options_tree.selectedItems():
-            self.ui.menuOutputOptions = self.get_output_column_menu(selection=self.ui.options_tree.selectedItems())
-            self.ui.menu_Results.addMenu(self.ui.menuOutputOptions)
-        else:
-            self.ui.action_output_options = QtGui.QAction(self.ui.menu_Results)
-            self.ui.menu_Results.addAction(self.ui.action_output_options)
-            self.ui.action_output_options.setDisabled(True)
-            self.ui.action_output_options.setText(_translate("MainWindow", "No output column selected.", None))
-            
-        self.ui.menu_Results.addSeparator()
-
-        self.ui.menuNoColumns = QtGui.QAction(self.ui.menu_Results)
-        self.ui.menuNoColumns.setText(_translate("MainWindow", "No columns selected.", None))
-        self.ui.menuNoColumns.setDisabled(True)
-        self.ui.menu_Results.addAction(self.ui.menuNoColumns)
-
-        self.ui.menuNoRows = QtGui.QAction(self.ui.menu_Results)
-        self.ui.menuNoRows.setText(_translate("MainWindow", "No rows selected.", None))
-        self.ui.menuNoRows.setDisabled(True)
-        self.ui.menu_Results.addAction(self.ui.menuNoRows)
-
-        select = self.ui.data_preview.selectionModel()
-
-        if select:
-            # Check if columns are selected
-            selection = []
-            if select and select.selectedColumns():
-                # Add column submenu
-                for x in self.ui.data_preview.selectionModel().selectedColumns():
-                    selection.append(self.table_model.header[x.column()])
-                
-            self.ui.menuColumns = self.get_column_submenu(selection=selection)
-            self.ui.menu_Results.insertMenu(self.ui.menuNoColumns, self.ui.menuColumns)
-            self.ui.menu_Results.removeAction(self.ui.menuNoColumns)
-
-            selection = []
-            # Check if rows are selected
-            if select and select.selectedRows():
-                # Add rows submenu
-                selection = self.table_model.content.index[[x.row() for x in self.ui.data_preview.selectionModel().selectedRows()]]
-                
-            self.ui.menuRows = self.get_row_submenu(selection=selection)
-            self.ui.menu_Results.insertMenu(self.ui.menuNoRows, self.ui.menuRows)
-            self.ui.menu_Results.removeAction(self.ui.menuNoRows)
-
     def setup_hooks(self):
         """ 
         Hook up signals so that the GUI can adequately react to user 
@@ -526,11 +401,111 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.context_left_span.editingFinished.connect(self.change_context)
         self.ui.context_right_span.editingFinished.connect(self.change_context)
 
+        self.ui.data_preview.horizontalHeader().sectionFinallyResized.connect(self.result_column_resize)
+        self.ui.data_preview.horizontalHeader().customContextMenuRequested.connect(self.show_header_menu)
+        self.ui.data_preview.horizontalHeader().sectionMoved.connect(self.column_moved)
+        self.ui.data_preview.verticalHeader().customContextMenuRequested.connect(self.show_row_header_menu)
+        self.ui.data_preview.clicked.connect(self.result_cell_clicked)
+
         self.corpusListUpdated.connect(self.check_corpus_widgets)
         self.columnVisibilityChanged.connect(lambda: self.reaggregate(recalculate=True, start=True))
 
+        self.column_tree.itemChanged.connect(self.toggle_selected_feature)
+
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
+
+    def help(self):
+        from . import helpviewer
+        
+        self.helpviewer = helpviewer.HelpViewer(parent=self)
+        self.helpviewer.show()
+
+    def show_file_menu(self):
+        """
+        Enables or disables entries in the file menu if needed.
+        """
+        # leave if the results table is empty:
+        if not self.ui.data_preview.isEnabled() or len(self.table_model.content) == 0:
+            # disable the result-related menu entries:
+            self.ui.action_save_selection.setDisabled(True)
+            self.ui.action_save_results.setDisabled(True)
+            self.ui.action_copy_to_clipboard.setDisabled(True)
+            self.ui.action_create_textgrid.setDisabled(True)
+            return
+
+        # enable "Save results"
+        self.ui.action_save_results.setEnabled(True)
+        self.ui.action_create_textgrid.setEnabled(True)
+
+        # enable "Save selection" and "Copy selection to clipboard" if there 
+        # is a selection:
+        if self.ui.data_preview.selectionModel() and self.ui.data_preview.selectionModel().selection():
+            self.ui.action_save_selection.setEnabled(True)
+            self.ui.action_copy_to_clipboard.setEnabled(True)
+            
+    def show_corpus_menu(self):
+        if self.ui.combo_corpus.count():
+            self.ui.action_corpus_documentation.setEnabled(True)
+            self.ui.action_statistics.setEnabled(True)
+        else:
+            self.ui.action_corpus_documentation.setEnabled(False)
+            self.ui.action_statistics.setEnabled(False)
+
+    def show_results_menu(self):
+        self.ui.menu_Results.clear()
+
+        # FIXME:
+        # The menu should always display the available options so that users
+        # can use it to explore the program (cf. Cooper et al. 2014. About 
+        # Face. 4th edition. Wiley: ch. 18 'the main justification of [menus'] 
+        # existence is to teach us about what is available')
+
+        # Add Output column entry:
+        if self.column_tree.selectedItems():
+            self.ui.menuOutputOptions = self.get_output_column_menu(selection=self.column_tree.selectedItems())
+            self.ui.menu_Results.addMenu(self.ui.menuOutputOptions)
+        else:
+            self.ui.action_output_options = QtGui.QAction(self.ui.menu_Results)
+            self.ui.menu_Results.addAction(self.ui.action_output_options)
+            self.ui.action_output_options.setDisabled(True)
+            self.ui.action_output_options.setText(_translate("MainWindow", "No output column selected.", None))
+            
+        self.ui.menu_Results.addSeparator()
+
+        self.ui.menuNoColumns = QtGui.QAction(self.ui.menu_Results)
+        self.ui.menuNoColumns.setText(_translate("MainWindow", "No columns selected.", None))
+        self.ui.menuNoColumns.setDisabled(True)
+        self.ui.menu_Results.addAction(self.ui.menuNoColumns)
+
+        self.ui.menuNoRows = QtGui.QAction(self.ui.menu_Results)
+        self.ui.menuNoRows.setText(_translate("MainWindow", "No rows selected.", None))
+        self.ui.menuNoRows.setDisabled(True)
+        self.ui.menu_Results.addAction(self.ui.menuNoRows)
+
+        select = self.ui.data_preview.selectionModel()
+
+        if select:
+            # Check if columns are selected
+            selection = []
+            if select and select.selectedColumns():
+                # Add column submenu
+                for x in self.ui.data_preview.selectionModel().selectedColumns():
+                    selection.append(self.table_model.header[x.column()])
+                
+            self.ui.menuColumns = self.get_column_submenu(selection=selection)
+            self.ui.menu_Results.insertMenu(self.ui.menuNoColumns, self.ui.menuColumns)
+            self.ui.menu_Results.removeAction(self.ui.menuNoColumns)
+
+            selection = []
+            # Check if rows are selected
+            if select and select.selectedRows():
+                # Add rows submenu
+                selection = self.table_model.content.index[[x.row() for x in self.ui.data_preview.selectionModel().selectedRows()]]
+                
+            self.ui.menuRows = self.get_row_submenu(selection=selection)
+            self.ui.menu_Results.insertMenu(self.ui.menuNoRows, self.ui.menuRows)
+            self.ui.menu_Results.removeAction(self.ui.menuNoRows)
 
     def set_main_screen_appearance(self):
         if options.cfg.show_data_management:
@@ -539,9 +514,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.group_management.hide()
 
         if options.cfg.show_output_columns:
-            self.ui.options_tree.show()
+            self.column_tree.show()
         else:
-            self.ui.options_tree.hide()
+            self.column_tree.hide()
             
     def toggle_data_management(self):
         options.cfg.show_data_management = not options.cfg.show_data_management
@@ -557,22 +532,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.list_toolbox.selectRow(i)
         self.ui.tool_widget.setCurrentIndex(i)
         options.cfg.last_toolbox = i
-
-    def block_context_widgets(self):
-        self.ui.check_context.blockSignals(True)
-        self.ui.radio_context_mode_kwic.blockSignals(True)
-        self.ui.radio_context_mode_string.blockSignals(True)
-        self.ui.radio_context_mode_columns.blockSignals(True)
-        self.ui.context_left_span.blockSignals(True)
-        self.ui.context_right_span.blockSignals(True)
-
-    def unblock_context_widgets(self):
-        self.ui.check_context.blockSignals(False)
-        self.ui.radio_context_mode_kwic.blockSignals(False)
-        self.ui.radio_context_mode_string.blockSignals(False)
-        self.ui.radio_context_mode_columns.blockSignals(False)
-        self.ui.context_left_span.blockSignals(False)
-        self.ui.context_right_span.blockSignals(False)
 
     def check_group_items(self):
         for item, group_column in self.ui.list_group_columns.columns:
@@ -624,12 +583,12 @@ class CoqueryApp(QtGui.QMainWindow):
             if rc_feature:
                 selected = [rc_feature]
             else:
-                selected = [x.objectName() for x in self.ui.options_tree.selectedItems()]
+                selected = [x.objectName() for x in self.column_tree.selectedItems()]
             for col in selected:
                 self.ui.list_group_columns.add_resource(col)
 
-        if self.ui.options_tree.getCheckState(rc_feature) == QtCore.Qt.Unchecked:
-            self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.PartiallyChecked)
+        if self.column_tree.getCheckState(rc_feature) == QtCore.Qt.Unchecked:
+            self.column_tree.setCheckState(rc_feature, QtCore.Qt.PartiallyChecked)
         
         options.cfg.group_columns = self.get_group_columns()
         self.activate_group_column_buttons()
@@ -638,8 +597,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_toolbox_appearance(TOOLBOX_GROUPING)
 
     def uncheck_grouped_feature(self, rc_feature):
-        if self.ui.options_tree.getCheckState(rc_feature) == QtCore.Qt.PartiallyChecked:
-            self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.Unchecked)
+        if self.column_tree.getCheckState(rc_feature) == QtCore.Qt.PartiallyChecked:
+            self.column_tree.setCheckState(rc_feature, QtCore.Qt.Unchecked)
     
     def remove_group_column(self, rc_feature=None):
         old_list = set(options.cfg.group_columns)
@@ -854,32 +813,6 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Toggle to query string input. """
         self.ui.radio_query_string.setChecked(True)
 
-    def create_output_options_tree(self):
-        """ 
-        Create and setup a tree widget for the output columns
-        """
-        tree = classes.CoqTreeWidget()
-        tree.setColumnCount(1)
-        tree.setHeaderHidden(True)
-        tree.setRootIsDecorated(True)
-
-        tree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        tree.customContextMenuRequested.connect(self.get_output_column_menu)        
-        
-        tree.addLink.connect(self.add_link)
-        tree.addGroup.connect(self.add_group_column)
-        tree.removeGroup.connect(self.remove_group_column)
-        tree.removeItem.connect(self.remove_item)
-        tree.itemChanged.connect(self.toggle_selected_feature)
-        
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(tree.sizePolicy().hasHeightForWidth())
-        tree.setSizePolicy(sizePolicy)
-
-        return tree
-    
     def finalize_reaggregation(self):
         self.display_results(drop=False)
         self.stop_progress_indicator()
@@ -921,6 +854,7 @@ class CoqueryApp(QtGui.QMainWindow):
             return
         
         self.Session.group_functions = self._group_functions
+        self.Session._column_functions = self._column_functions
 
         if start:
             self.Session.start_timer()
@@ -1111,139 +1045,21 @@ class CoqueryApp(QtGui.QMainWindow):
             self.enable_corpus_widgets()
             self.ui.centralwidget.setEnabled(True)
 
-        if self.ui.combo_corpus.count():
-            corpus_name = utf8(self.ui.combo_corpus.currentText())
-            self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[corpus_name]
-
-        options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
-        self.change_corpus_features()
-
-    def change_corpus_features(self):
-        """ 
-        Construct a new output option tree.
-        
-        The content of the tree depends on the features that are available in
-        the current resource. All features that were checked in the old output 
-        option tree will also be checked in the new one. In this way, users 
-        can easily change between corpora without loosing their output column 
-        selections.        
-        """
-        
-        if not options.cfg.current_resources:
-            self.ui.options_tree.clear()
-            return
-
-        self.ui.options_tree.blockSignals(True)
-        
-        table_dict = self.resource.get_table_dict()
-        # Ignore denormalized tables:
-        tables = [x for x in table_dict.keys() if not x.startswith("corpusngram")]
-        # ignore internal  variables of the form {table}_id, {table}_table,
-        # {table}_table_{other}
-        for table in tables:
-            for var in list(table_dict[table]):
-                if var == "corpus_id":
-                    continue
-                if (var.endswith("_table") or 
-                    var.endswith("_id") or 
-                    var.startswith("{}_table".format(table)) or
-                    var.startswith("corpusngram_")):
-                    table_dict[table].remove(var)
-                    
-        # Rearrange table names so that they occur in a sensible order:
-        for x in reversed(["word", "lemma", "corpus", "speaker", "source", "file"]):
-            if x in tables:
-                tables.remove(x)
-                tables.insert(0, x)
-        tables.remove("coquery")
-        tables.append("coquery")
-        
-        last_checked = list(self.ui.options_tree.get_checked())
-        
-        # After installing the first corpus during the first launch of 
-        # Coquery, the word_label column is automatically selected so that 
-        # new users unfamiliar with the concept of output columns will get 
-        # reasonable defaults:
         if options.cfg.first_run:
             if self._first_corpus:
                 self.selected_features = ["word_label"]
                 self._first_corpus = False
-        
-        self.ui.options_tree.clear()
-        
-        # populate the self.ui.options_tree with a root for each table:
-        for table in tables:
-            root = classes.CoqTreeItem()
-            root.setObjectName(coqueryUi._fromUtf8("{}_table".format(table)))
-            root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
-            try:
-                label = getattr(self.resource, str("{}_table".format(table)))
-            except AttributeError:
-                if table == "coquery":
-                    label = "Query"
-                else:
-                    label = table.capitalize()
-                
-            root.setText(0, label)
-            root.setCheckState(0, QtCore.Qt.Unchecked)
-            if table_dict[table]:
-                self.ui.options_tree.addTopLevelItem(root)
-            
-            if table != "coquery":
-                resource_list = sorted(table_dict[table])
-            else:
-                resource_list = table_dict[table]
-            # add a leaf for each table variable, in alphabetical order:
-            for var in resource_list:
-                leaf = classes.CoqTreeItem()
-                leaf.setObjectName(coqueryUi._fromUtf8(var))
-                root.addChild(leaf)
-                label = getattr(self.resource, var)
-                # Add labels if this feature is mapped to a query item type
-                try:
-                    if var == self.resource.query_item_word:
-                        label = "{} [Word]".format(label)
-                except AttributeError:
-                    pass
-                try:
-                    if var == self.resource.query_item_lemma:
-                        label = "{} [Lemma]".format(label)
-                except AttributeError:
-                    pass
-                try:
-                    if var == self.resource.query_item_transcript:
-                        label = "{} [Transcript]".format(label)
-                except AttributeError:
-                    pass
-                try:
-                    if var == self.resource.query_item_pos:
-                        label = "{} [POS]".format(label)
-                except AttributeError:
-                    pass
-                try:
-                    if var == self.resource.query_item_gloss:
-                        label = "{} [Gloss]".format(label)
-                except AttributeError:
-                    pass
-                leaf.setText(0, label)
-                if label != getattr(self.resource, var):
-                    leaf.setIcon(0, self.get_icon("tag"))
-                    root.setIcon(0, self.get_icon("tag"))
 
-                if var in self.selected_features: 
-                    leaf.setCheckState(0, QtCore.Qt.Checked)
-                else:
-                    leaf.setCheckState(0, QtCore.Qt.Unchecked)
-                leaf.update_checkboxes(0, expand=True)
+        if self.ui.combo_corpus.count():
+            corpus_name = utf8(self.ui.combo_corpus.currentText())
+            self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[corpus_name]
+            self.column_tree.setup_resource(self.resource)
+        else:
+            self.column_tree.clear()
 
-        for link in options.cfg.table_links[options.cfg.current_server]:
-            self.add_table_link(link)
+        self.column_tree.select(self.selected_features)
 
-        for _, group_column in self.ui.list_group_columns.columns:
-            if not hasattr(self.resource, group_column):
-                self.ui.list_group_columns.remove_resource(group_column)
-
-        self.ui.options_tree.blockSignals(False)
+        options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
 
     def toggle_selected_feature(self, item):
         is_checked = (item.checkState(0) == QtCore.Qt.Checked)
@@ -1297,21 +1113,16 @@ class CoqueryApp(QtGui.QMainWindow):
     
     def display_results(self, drop=True):
         if len(self.Session.output_object) == 0:
-            #self.ui.data_preview.hide()
-            #self.ui.data_preview.setEnabled(False)
             self.ui.text_no_match.show()
             # disable menu entries:
             self.ui.action_save_results.setEnabled(False)
             self.ui.action_copy_to_clipboard.setEnabled(False)
         else:
-            #self.ui.data_preview.show()
             self.ui.data_preview.setEnabled(True)
             self.ui.text_no_match.hide()
             # enable menu entries:
             self.ui.action_save_results.setEnabled(True)
             self.ui.action_copy_to_clipboard.setEnabled(True)
-            self.ui.data_preview.setFont(options.cfg.table_font)
-            self.ui.data_preview.verticalHeader().setDefaultSectionSize(QtGui.QLabel().sizeHint().height() + 2)
 
         # Visualizations menu is disabled for corpus statistics:
         if isinstance(self.Session, StatisticsSession):
@@ -1319,69 +1130,27 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.menuAnalyse.setEnabled(True)
 
-        self.table_model = classes.CoqTableModel(
-            self.Session.output_object, 
-            session=self.Session)
-        self.ui.data_preview.setModel(self.table_model)
-
-        if drop:
-            # drop row colors and row visibility:
-
-            ## FIXME: reimplement row visibility
-            #self.Session.reset_row_visibility(self.Session.query_type)
-            #options.cfg.row_visibility = collections.defaultdict(dict)
-            options.cfg.row_color = {}
-        # set column widths:
-        for i, column in enumerate(self.table_model.header):
-            if column in options.cfg.column_width:
-                pass
-                #self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column])
-                #self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower().replace(" ", "_").replace(":", "_")])
-        
-        #set delegates:
-        header = self.ui.data_preview.horizontalHeader()
-        for i in range(header.count()):
-            column = self.table_model.header[header.logicalIndex(i)]
-            if column.startswith("func_"):
-                manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
-                fun = manager.get_function(column)
-                try:
-                    retranslate = dict(zip(COLUMN_NAMES.values(), COLUMN_NAMES.keys()))[fun.get_name()]
-                except (KeyError, AttributeError):
-                    pass
-                else:
-                    column = retranslate
-            if column in ("statistics_proportion", 
-                      "statistics_normalized", "statistics_ttr",
-                      "statistics_group_proportion", "statistics_group_ttr",
-                      "coq_conditional_probability_left", 
-                      "coq_conditional_probability_right",  
-                      "coq_statistics_uniquenessratio"):
-                deleg = classes.CoqProbabilityDelegate(self.ui.data_preview)
-            elif column in ("statistics_percent", "statistics_group_percent"):
-                deleg = classes.CoqPercentDelegate(self.ui.data_preview)
-            elif column in ("statistics_column_total"):
-                deleg = classes.CoqTotalDelegate(self.ui.data_preview)                
-            elif column.startswith("statistics_g_test"):
-                deleg = classes.CoqLikelihoodDelegate(self.ui.data_preview)
-            else:
-                deleg = classes.CoqResultCellDelegate(self.ui.data_preview)
-            self.ui.data_preview.setItemDelegateForColumn(i, deleg)
-
-        # reset row delegates if an ALL row has previously been set:
-        if hasattr(self, "_old_row_delegate"):
-            row, delegate = self._old_row_delegate
-            self.ui.data_preview.setItemDelegateForRow(row, delegate)
-            del self._old_row_delegate
-
-        # set row delegate for ALL row of Contingency aggregates:
-        if options.cfg.MODE == QUERY_MODE_CONTINGENCY:
-            row = self.table_model.rowCount() - 1
-            self._old_row_delegate = (row, self.ui.data_preview.itemDelegateForRow(row))
-            self.ui.data_preview.setItemDelegateForRow(row, classes.CoqTotalDelegate(self.ui.data_preview))
-
+        self.table_model = classes.CoqTableModel(self.Session.output_object, session=self.Session)
         if self.table_model.rowCount():
             self.last_results_saved = False
+        
+        self.ui.data_preview.setModel(self.table_model)
+        self.ui.data_preview.setDelegates()
+
+        #if drop:
+            ## drop row colors and row visibility:
+
+            ### FIXME: reimplement row visibility
+            ##self.Session.reset_row_visibility(self.Session.query_type)
+            ##options.cfg.row_visibility = collections.defaultdict(dict)
+            #options.cfg.row_color = {}
+        ## set column widths:
+        #for i, column in enumerate(self.table_model.header):
+            ## FIXME: reimplement column widths
+            #if column in options.cfg.column_width:
+                #pass
+                ##self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column])
+                ##self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower().replace(" ", "_").replace(":", "_")])
         
         if options.cfg.memory_dump:
             memory_dump()
@@ -1629,65 +1398,14 @@ class CoqueryApp(QtGui.QMainWindow):
         if not item:
             return
 
-        # create a context menu:
-        menu = QtGui.QMenu("Output column options", self)
-        action = QtGui.QWidgetAction(self)
+        menu = CoqResourceMenu(item=item, parent=self)
+        menu.viewUniquesRequested.connect(self.show_unique_values)
+        menu.viewEntriesRequested.connect(lambda x:self.show_unique_values(x, uniques=False))
+        menu.addLinkRequested.connect(self.add_link)
+        menu.addGroupRequested.connect(self.add_group_column)
+        menu.removeGroupRequested.connect(self.remove_group_column)
+        menu.removeItemRequested.connect(self.remove_link)
 
-        # if point is set, the menu was called as a context menu: 
-        if point:
-            # Use column name as header
-            label = QtGui.QLabel("<b>{}</b>".format(item.text(0)), self)
-            label.setAlignment(QtCore.Qt.AlignCenter)
-            action.setDefaultWidget(label)
-            menu.addAction(action)
-        
-        # no options are shown for entries from the special tables and for 
-        # linked tables (but for columns from linked tables)
-        if not (item.objectName().startswith("statistics") or
-                item.objectName().endswith("_table")):
-            add_link = QtGui.QAction("&Link an external table", self)
-            add_grouping = QtGui.QAction("Add to &group columns", self)
-            remove_link = QtGui.QAction("&Remove linked table", self)
-            remove_grouping = QtGui.QAction("Remove from &group columns", self)
-            view_entries = QtGui.QAction("View all &values", self)
-            view_unique = QtGui.QAction("View &unique values", self)
-            
-            parent = item.parent()
-
-            if hasattr(item, "link"):
-                menu.addAction(remove_link)
-                remove_link.triggered.connect(lambda: self.ui.options_tree.removeItem.emit(item))
-            else:
-                if not item.objectName().startswith("coquery"):
-                    menu.addAction(view_unique)
-                    menu.addAction(view_entries)
-                    view_unique.setEnabled(options.cfg.gui.test_mysql_connection())
-                    view_entries.setEnabled(options.cfg.gui.test_mysql_connection())
-                    view_unique.triggered.connect(lambda: self.show_unique_values(item))
-                    view_entries.triggered.connect(lambda: self.show_unique_values(item, uniques=False))
-
-                menu.addSeparator()
-
-                if not item.objectName().startswith("coquery"):
-                    if not hasattr(item.parent(), "link"):
-                        menu.addAction(add_link)
-                        add_link.triggered.connect(lambda: self.ui.options_tree.addLink.emit(item))
-
-                if self.ui.list_group_columns.find_resource(item.objectName()) is not None:
-                    menu.addAction(remove_grouping)
-                    remove_grouping.triggered.connect(lambda: self.ui.options_tree.removeGroup.emit(item.objectName()))
-                else:
-                    menu.addAction(add_grouping)
-                    add_grouping.triggered.connect(lambda: self.ui.options_tree.addGroup.emit(item.objectName()))
-        else:
-            if utf8(item.objectName()).endswith("_table"):
-                unavailable = QtGui.QAction(_translate("MainWindow", "No option available for tables.", None), self)
-            else:
-                 unavailable = QtGui.QAction(_translate("MainWindow", "No option available for special columns.", None), self)
-            unavailable.setDisabled(True)
-            menu.addAction(unavailable)      
-            
-            
         # if point is set, the menu was called as a context menu: 
         if point:
             menu.popup(self.ui.options_tree.mapToGlobal(point))
@@ -1736,9 +1454,6 @@ class CoqueryApp(QtGui.QMainWindow):
             The screen position for which the context menu is requested
         """
 
-        # show menu about the column
-        menu = QtGui.QMenu("Column options", self)
-
         if point:
             header = self.ui.data_preview.horizontalHeader()
             index = header.logicalIndexAt(point.x())
@@ -1746,107 +1461,17 @@ class CoqueryApp(QtGui.QMainWindow):
             if column not in selection:
                 selection = [column]
 
-        session = options.cfg.main_window.Session
-        manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
-        sorter = manager.get_sorter(selection[0])
+        menu = CoqColumnMenu(columns=selection, parent=self)
+        menu.showColumnRequested.connect(self.show_columns)
+        menu.hideColumnRequested.connect(self.hide_columns)
+        menu.renameColumnRequested.connect(self.rename_column)
+        menu.resetColorRequested.connect(self.reset_colors)
+        menu.changeColorRequested.connect(self.change_colors)
+        menu.addFunctionRequested.connect(self.add_function)
+        menu.removeFunctionRequested.connect(self.remove_functions)
+        menu.editFunctionRequested.connect(self.edit_function)
+        menu.changeSortingRequested.connect(self.change_sorting_order)
 
-        display_name = "<br/>".join([session.translate_header(x) for x in selection])
-
-        action = QtGui.QWidgetAction(self)
-        label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
-        label.setAlignment(QtCore.Qt.AlignCenter)
-        action.setDefaultWidget(label)
-        menu.addAction(action)
-        menu.addSeparator()
-
-        if len(selection) > 1:
-            suffix = "s"
-        else:
-            suffix = ""
-
-        if not all([x not in manager.hidden_columns for x in selection]):
-            action = QtGui.QAction("&Show column{}".format(suffix), self)
-            action.triggered.connect(lambda: self.show_columns(selection))
-            action.setIcon(self.get_icon("sign-maximize"))
-            menu.addAction(action)
-
-        if not all([x in manager.hidden_columns for x in selection]):
-            action = QtGui.QAction("&Hide column{}".format(suffix), self)
-            action.triggered.connect(lambda: self.hide_columns(selection))
-            action.setIcon(self.get_icon("sign-minimize"))
-            menu.addAction(action)
-
-        # Only show additional options if all columns are visible:
-        if all([x not in manager.hidden_columns for x in selection]):
-        
-            if len(selection) == 1:
-                action = QtGui.QAction("&Rename column...", self)
-                action.triggered.connect(lambda: self.rename_column(column))
-                menu.addAction(action)
-
-            if set(selection).intersection(set(options.cfg.column_color.keys())):
-                action = QtGui.QAction("&Reset color{}".format(suffix), self)
-                action.triggered.connect(lambda: self.reset_colors(selection))
-                menu.addAction(action)
-
-            action = QtGui.QAction("&Change color{}...".format(suffix), self)
-            action.triggered.connect(lambda: self.change_colors(selection))
-            menu.addAction(action)
-            
-            menu.addSeparator()
-            
-            action = QtGui.QAction("&Add function...", self)
-            action.triggered.connect(lambda: self.add_function(selection))
-            menu.addAction(action)
-            
-            if all([x.startswith("func_") for x in selection]):
-                if len(selection) == 1:
-                    action = QtGui.QAction("&Edit function...", self)
-                    action.triggered.connect(lambda: self.edit_function(selection[0]))
-                    menu.addAction(action)
-                action = QtGui.QAction("&Remove function{}".format(suffix), self)
-                action.triggered.connect(lambda: self.remove_functions(selection))
-                menu.addAction(action)
-                
-            menu.addSeparator()
-
-            if len(selection) == 1:
-                column = selection[0]
-                group = QtGui.QActionGroup(self, exclusive=True)
-                
-                sort_none = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
-                sort_asc = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
-                sort_desc = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
-
-                sort_none.triggered.connect(lambda: self.change_sorting_order(column, None))
-                sort_asc.triggered.connect(lambda: self.change_sorting_order(column, ascending=True))
-                sort_desc.triggered.connect(lambda: self.change_sorting_order(column, ascending=False))
-
-                menu.addAction(sort_none)
-                menu.addAction(sort_asc)
-                menu.addAction(sort_desc)
-                
-                if self.table_model.content[[column]].dtypes[0] == "object":
-                    sort_asc_rev = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
-                    sort_desc_rev = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
-                    sort_asc_rev.triggered.connect(lambda: self.change_sorting_order(column, ascending=True, reverse=True))
-                    sort_desc_rev.triggered.connect(lambda: self.change_sorting_order(column, ascending=True, reverse=True))
-                    menu.addAction(sort_asc_rev)
-                    menu.addAction(sort_desc_rev)
-
-                try:
-                    if sorter.ascending:
-                        if sorter.reverse:
-                            sort_asc_rev.setChecked(True)
-                        else:
-                            sort_asc.setChecked(True)
-                    else:
-                        if sorter.reverse:
-                            sort_desc_rev.setChecked(True)
-                        else:
-                            sort_desc.setChecked(True)
-                except AttributeError:
-                    sort_none.setChecked(True)
         return menu
 
     def get_row_submenu(self, selection=pd.Series(), point=None):
@@ -2190,6 +1815,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.showMessage("Writing to file...")
             
             self.new_session.group_functions = self._group_functions
+            self.new_session.column_functions = self._column_functions
 
             self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
@@ -2630,7 +2256,6 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.external_links = self.get_external_links()
             # FIXME: eventually, selected_features should be a session variable
             options.cfg.selected_features = self.selected_features
-            options.cfg.selected_functions = self.get_functions()
             options.cfg.group_columns = self.get_group_columns()
 
     def get_external_links(self):
@@ -2672,36 +2297,6 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         return [x for _, x in self.ui.list_group_columns.columns]
 
-    def get_functions(self):
-        """
-        Traverse through the output columns tree and obtain all functions that 
-        are checked.
-        
-        Returns
-        -------
-        l : list 
-            A list of tuples. The first element of each tuple is the resource 
-            feature, the second element is the function, and the third element
-            is the name of the function as it appears in the tree widget. 
-        """
-        def traverse(node):
-            checked = []
-            for child in [node.child(i) for i in range(node.childCount())]:
-                checked += traverse(child)
-            if node.checkState(0) == QtCore.Qt.Checked and node._func:
-                checked.append((node.objectName(), 
-                                node._func, 
-                                True,
-                                node.full_label,
-                                str(node.text(0))))
-            return checked
-
-        tree = self.ui.options_tree
-        l = []
-        for root in [tree.topLevelItem(i) for i in range(tree.topLevelItemCount())]:
-            l += traverse(root)
-        return l
-
     def show_log(self):
         from . import logfile
         log_view = logfile.LogfileViewer(parent=self)
@@ -2721,7 +2316,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
     def setGUIDefaults(self):
         """ Set up the gui values based on the values in options.cfg.* """
-        self.block_context_widgets()
+        self.ui.tool_widget.blockSignals(True)
 
         for col in [x for x in options.cfg.group_columns if x]:
             self.ui.list_group_columns.add_resource(col)
@@ -2759,8 +2354,6 @@ class CoqueryApp(QtGui.QMainWindow):
                                 left_span=options.cfg.context_left,
                                 right_span=options.cfg.context_right)
 
-        self.unblock_context_widgets()
-        
         # get table from last session, if possible:
         try:
             self.table_model.set_header(options.cfg.last_header)
@@ -2770,81 +2363,12 @@ class CoqueryApp(QtGui.QMainWindow):
         except AttributeError:
             pass
         
+        self.ui.tool_widget.blockSignals(False)
+        
+        
         self.set_main_screen_appearance()
         self.activate_group_column_buttons()
         
-
-    #def select_table(self):
-        #"""
-        #Open a table select widget.
-        
-        #The table select widget contains a QTreeWidget with all corpora 
-        #except the currently active one as parents, and the respective tables
-        #as children.
-        
-        #The return tuple contains the corpus and the table name. 
-        
-        #Returns
-        #-------
-        #(corpus, table) : tuple
-            #The name of the corpus and the name of the table from that corpus
-            #as feature strings. 
-        #"""
-        
-        
-        #corpus, table, feature = linkselect.LinkSelect.display(self)
-        
-        #corpus = "bnc"
-        #table = "word"
-        #feature_name = "word_label"
-        
-        #return (corpus, table, feature_name)
-
-    def add_table_link(self, link):
-        """
-        Adds the columns from the linked table to the output column tree.
-        """
-        if link.res_from == utf8(self.ui.combo_corpus.currentText()):
-            item = self.ui.options_tree.getItem(link.rc_from)
-            
-            res_from, _, _, _ = options.cfg.current_resources[link.res_from]
-            try:
-                ext_res, _, _, _ = options.cfg.current_resources[link.res_to]
-            except KeyError:
-                return
-            _, _, tab, feat = ext_res.split_resource_feature(link.rc_to)
-            ext_table = "{}_table".format(tab)
-            
-            #link.key_feature = str(item.objectName())
-            #resource, _, _ = options.get_resource(utf8(self.ui.combo_corpus.currentText()))
-            #link._from = (resource.name, link.key_feature)
-            
-            tree = classes.CoqTreeLinkItem()
-            tree.setCheckState(0, QtCore.Qt.Unchecked)
-            tree.setLink(link)
-            tree.setText(0, "{}.{}".format(
-                link.res_to,
-                getattr(ext_res, ext_table)))
-
-            table = ext_res.get_table_dict()[tab]
-            table = sorted(table, key=lambda x: getattr(ext_res, x))
-            # fill new tree with the features from the linked table (exclude
-            # the linking feature):
-            for rc_feature in [x for x in table if x != link.rc_to]:
-                _, _, _, feature = ext_res.split_resource_feature(rc_feature)
-                # exclude special resource features
-                if feature not in ("id", "table") and not feature.endswith("_id"):
-                    new_item = classes.CoqTreeItem()
-                    new_item.setText(0, getattr(ext_res, rc_feature))
-                    new_item.rc_feature = rc_feature
-                    new_item.setObjectName("{}.{}".format(link.get_hash(), rc_feature))
-                    new_item.setCheckState(0, QtCore.Qt.Unchecked)
-                    tree.addChild(new_item)
-
-            ## Insert newly created table as a child of the linked item:
-            item.addChild(tree)
-            item.setExpanded(True)
-            
     def add_link(self, item):
         """
         Link the selected output column to a column from an external table.
@@ -2861,22 +2385,23 @@ class CoqueryApp(QtGui.QMainWindow):
             An entry in the output column list
         """
         from . import linkselect
-        column = 0
 
         current_corpus = utf8(self.ui.combo_corpus.currentText())
         resource, _, _ = options.get_resource(current_corpus)
 
         link = linkselect.LinkSelect.pick(
-            res_from=resource, 
-            rc_from=item.objectName(),
-            corpus_omit=[current_corpus],
-            parent=self)
+                                        res_from=resource, 
+                                        rc_from=item.objectName(),
+                                        corpus_omit=[current_corpus],
+                                        parent=self)
         
-        if not link:
-            return
-        else:
+        if link:
             options.cfg.table_links[options.cfg.current_server].append(link)
-            self.add_table_link(link)
+            self.column_tree.add_external_link(item, link)
+
+    def remove_link(self, item):
+        self.column_tree.remove_external_link(item)
+        options.cfg.table_links[options.cfg.current_server].remove(item.link)
           
     def set_function_button_labels(self):
         l = self._group_functions.get_list()
@@ -2972,34 +2497,34 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
-            manager.add_column_function(fun)
+            self._column_functions.add_function(fun)
 
         self.set_function_button_labels()
 
         if hasattr(self, "table_model"):
             self.update_columns()
             
-
     def edit_function(self, column):
         from . import functionapply
         session = options.cfg.main_window.Session
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
-        func = manager.get_function(column)
+        func = self._column_functions.find_function(column)
+        print(func, column)
         response = functionapply.FunctionDialog.edit_function(func, parent=self)
         if response:
             fun_type, value, aggr, label = response
             new_func = fun_type(columns=func.columns, value=value, aggr=aggr, label=label)
-            manager.replace_column_function(func, new_func)
+            self._column_functions.replace_function(func, new_func)
             self.update_columns()
 
     def remove_functions(self, columns):
         session = options.cfg.main_window.Session
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         for col in columns:
-            func = manager.get_function(col)
-            try:
-                manager.remove_column_function(func)
-            except ValueError:
+            func = self._column_functions.find_function(col)
+            if func:
+                self._column_functions.remove_function(func)
+            else:
                 # this exception can happen if the function is a summary 
                 # or a grouping function:
                 summary_func = manager.user_summary_functions.find_function(col)
@@ -3015,57 +2540,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 
         self.update_columns()
             
-    def remove_item(self, item):
-        """
-        Remove either a link or a function from the list of output columns.        
-        
-        Parameters
-        ----------
-        item : CoqTreeItem
-            An entry in the output column list
-        """
-        def remove_children(node):
-            for child in [node.child(i) for i in range(node.childCount())]:
-                remove_children(child)
-                node.removeChild(child)
-            node.close()
-
-        # remove linked table, but only if the item is not a function:
-        if item.parent and item.parent()._link_by and not item._func:
-            item = item.parent()
-            self.ui.options_tree.takeTopLevelItem(self.ui.options_tree.indexOfTopLevelItem(item))
-        else:
-            item.parent().removeChild(item)
-        if hasattr(item, "link"):
-            options.cfg.table_links[options.cfg.current_server].remove(item.link)
-
-#try:
-    #_encoding = QtGui.QApplication.UnicodeUTF8
-    #def _translate(context, text, disambig):
-        #return QtGui.QApplication.translate(context, text, disambig, _encoding)
-#except AttributeError:
-    #def _translate(context, text, disambig):
-        #return QtGui.QApplication.translate(context, text, disambig)
-
 def _translate(x, text, y):
     return utf8(text)
     
-def memory_dump():
-    import gc
-    x = 0
-    for obj in gc.get_objects():
-        i = id(obj)
-        size = sys.getsizeof(obj, 0)
-        # referrers = [id(o) for o in gc.get_referrers(obj)]
-        try:
-            cls = str(obj.__class__)
-        except:
-            cls = "<no class>"
-        if size > 1024 * 50:
-            referents = set([id(o) for o in gc.get_referents(obj)])
-            x += 1
-            print(x, {'id': i, 'class': cls, 'size': size, "ref": len(referents)})
-            #if len(referents) < 2000:
-                #print(obj)
-
 logger = logging.getLogger(NAME)
