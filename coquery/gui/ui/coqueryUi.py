@@ -470,7 +470,7 @@ class Ui_MainWindow(object):
         self.layoutWidget.setObjectName(_fromUtf8("layoutWidget"))
         self.verticalLayout_15 = QtGui.QVBoxLayout(self.layoutWidget)
         self.verticalLayout_15.setObjectName(_fromUtf8("verticalLayout_15"))
-        self.data_preview = CoqTableView(self.layoutWidget)
+        self.data_preview = CoqResultsTable(self.layoutWidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -499,7 +499,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1113, 24))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1113, 23))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -753,7 +753,7 @@ class Ui_MainWindow(object):
         self.label_7.setBuddy(self.check_summarize_filters)
 
         self.retranslateUi(MainWindow)
-        self.tool_widget.setCurrentIndex(2)
+        self.tool_widget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -801,8 +801,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">No match.</span></p></body></html>", None))
+"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:11pt; font-weight:600;\">No match.</span></p></body></html>", None))
         self.menuFile.setTitle(_translate("MainWindow", "&File", None))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help", None))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus", None))
@@ -890,5 +890,6 @@ class Ui_MainWindow(object):
         self.actionSelect_group_functions.setText(_translate("MainWindow", "Select group functions...", None))
         self.actionContext_options.setText(_translate("MainWindow", "Context options...", None))
 
-from ..classes import CoqClickableLabel, CoqListWidget, CoqTableView, CoqTextEdit
+from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
+from ..resultstable import CoqResultsTable
 
