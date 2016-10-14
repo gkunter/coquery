@@ -862,8 +862,6 @@ class CoqTreeWidget(QtGui.QTreeWidget):
     """
     addLink = QtCore.Signal(CoqTreeItem)
     addFunction = QtCore.Signal(CoqTreeItem)
-    addGroup = QtCore.Signal(str)
-    removeGroup = QtCore.Signal(str)
     removeItem = QtCore.Signal(CoqTreeItem)
     
     def __init__(self, *args):
