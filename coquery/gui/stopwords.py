@@ -15,13 +15,11 @@ import os
 
 from coquery import options
 from coquery.defines import *
+from coquery.general import is_language_code, language_by_code, code_by_language
 from coquery.unicode import utf8
 from . import classes
 from .pyqt_compat import QtCore, QtGui
 from .ui.stopwordsUi import Ui_Stopwords
-
-if options.use_stopwords_module:
-    import stop_words
 
 class CoqStopWord(QtGui.QListWidgetItem):
     def __init__(self, *args):
@@ -116,13 +114,17 @@ class Stopwords(QtGui.QDialog):
         self._word_list= word_list
         self.ui = Ui_Stopwords()
         self.ui.setupUi(self)
-        if not options.use_stopwords_module:
-            self.ui.widget_stopword_list.hide()
-        else:
-            lang = sorted([x.capitalize() for x in stop_words.AVAILABLE_LANGUAGES])
-            self.ui.combo_language.addItems(lang)
-            self.ui.combo_language.setCurrentIndex(lang.index("English"))
-            self.ui.button_add_list.clicked.connect(self.add_stopword_list)
+        
+        lang = []
+        for file in os.listdir(options.cfg.stopword_path):
+            code, ext = os.path.splitext(file)
+            if is_language_code(code) and ext == ".txt":
+                lang.append(language_by_code(code).capitalize())
+
+        lang = sorted(lang)
+        self.ui.combo_language.addItems(lang)
+        self.ui.combo_language.setCurrentIndex(lang.index("English"))
+        self.ui.button_add_list.clicked.connect(self.add_stopword_list)
 
         self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
         self.ui.stopword_list.close()
@@ -191,8 +193,14 @@ class Stopwords(QtGui.QDialog):
     
     def add_stopword_list(self):
         lang = utf8(self.ui.combo_language.currentText())
-        stopwords = stop_words.get_stop_words(lang.lower())
-        for word in stopwords:
+        
+        stopwords = []
+        for line in open(os.path.join(options.cfg.stopword_path, 
+                               "{}.txt".format(code_by_language(lang))), "r"):
+            if not line.strip().startswith("#"):
+                stopwords.append(line.strip())
+
+        for word in sorted(set(stopwords)):
             if not self.ui.stopword_list.hasTag(word):
                 self.ui.stopword_list.addTag(utf8(word))
     
