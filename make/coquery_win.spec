@@ -31,6 +31,8 @@ for file in glob.glob(os.path.join(coq_path, "texts")):
 	data.append((file, os.path.join("texts")))
 for file in glob.glob(os.path.join(coq_path, "help")):
 	data.append((file, os.path.join("help")))
+for file in glob.glob(os.path.join(coq_path, "stopwords")):
+    data.append((file, os.path.join("stopwords")))
 
 for file in glob.glob(os.path.join(coq_path, "installer", "coq_install_*.py")):
 	l.append((file, "installer"))
