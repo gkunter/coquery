@@ -195,7 +195,7 @@ class Session(object):
                 logger.info("Start query: '{}'".format(current_query.query_string))
             
             df = current_query.run(to_file)
-            
+
             # apply clumsy hack that tries to make sure that the dtypes of 
             # data frames containing NaNs or empty strings does not change
             # when appending the new data frame to the previous.
@@ -213,7 +213,7 @@ class Session(object):
 
                     try:
                         dtype_changed = df.dtypes[x] != dtype_list[x]
-                    except IndexError:
+                    except (IndexError, KeyError):
                         continue
 
                     if df.dtypes[x] != dtype_list[x]:
