@@ -18,6 +18,7 @@ import platform
 import os
 
 from .unicode import utf8
+from .defines import LANGUAGES
 
 contraction = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
 punct = '!\'),-./:;?^_`}’”]'
@@ -187,6 +188,25 @@ def get_visible_columns(df, manager, session, hidden=False):
             l.insert(0, lex)
     return l
 
+def is_language_name(code):
+    return code in LANGUAGES["Language name"].values()
+
+def is_language_code(code):
+    return code in LANGUAGES["639-1"].values()
+
+def language_by_code(code):
+    ix = dict(zip(LANGUAGES["639-1"].values(), LANGUAGES["639-1"].keys()))[code]
+    return LANGUAGES["Language name"][ix]
+
+def native_language_by_code(code):
+    ix = dict(zip(LANGUAGES["639-1"].values(), LANGUAGES["639-1"].keys()))[code]
+    return LANGUAGES["Native name"][ix]
+
+def code_by_language(code):
+    ix = dict(zip(LANGUAGES["Language name"].values(), LANGUAGES["Language name"].keys()))[code]
+    return LANGUAGES["639-1"][ix]
+
+
 def get_chunk(iterable):
     """
     Yield a chunk from the big file given as 'iterable'.
@@ -200,6 +220,26 @@ def get_chunk(iterable):
             [next(iterable)], 
             itertools.islice(iterable, chunk_size - 1))
 
+# Memory status functions:
+
+def memory_dump():
+    import gc
+    x = 0
+    for obj in gc.get_objects():
+        i = id(obj)
+        size = sys.getsizeof(obj, 0)
+        # referrers = [id(o) for o in gc.get_referrers(obj)]
+        try:
+            cls = str(obj.__class__)
+        except:
+            cls = "<no class>"
+        if size > 1024 * 50:
+            referents = set([id(o) for o in gc.get_referents(obj)])
+            x += 1
+            print(x, {'id': i, 'class': cls, 'size': size, "ref": len(referents)})
+            #if len(referents) < 2000:
+                #print(obj)
+
 try:
     from pympler import summary, muppy
     import psutil
@@ -207,7 +247,6 @@ try:
     def summarize_memory():
         print("Virtual machine: {:.2f}Mb".format(psutil.Process().memory_info_ex().vms / (1024 * 1024)))
         summary.print_(summary.summarize(muppy.get_objects()), limit=1)
-
 except Exception as e:
     def summarize_memory():
         print("summarize_memory: {}".format(lambda: str(e)))

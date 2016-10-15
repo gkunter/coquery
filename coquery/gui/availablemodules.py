@@ -45,7 +45,8 @@ class AvailableModulesDialog(QtGui.QDialog):
                 ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options.use_pdfminer),
                 ("python-docx", options.use_docx),
                 ("odfpy", options.use_odfpy),
-                ("BeautifulSoup", options.use_bs4))
+                ("BeautifulSoup", options.use_bs4),
+                )
         
         self.ui.table_modules.setRowCount(len(modules))
         

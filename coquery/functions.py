@@ -216,6 +216,14 @@ class StringFunction(Function):
 
 class StringRegEx(StringFunction):
 
+    def __init__(self, value, columns=[], *args, **kwargs):
+        super(StringRegEx, self).__init__(columns, *args, **kwargs)
+        self.value = value
+        try:
+            self.re = re.compile(value)
+        except Exception as e:
+            self.re = None
+    
     @classmethod
     def validate_input(cls, value):
         try:
@@ -250,14 +258,6 @@ class StringCount(StringRegEx):
     parameters = 1
     combine_modes = num_combine
     
-    def __init__(self, value, columns=[], *args, **kwargs):
-        super(StringCount, self).__init__(columns, *args, **kwargs)
-        self.value = value
-        try:
-            self.re = re.compile(value)
-        except Exception as e:
-            self.re = None
-    
     def _func(self, col):
         if self.re == None:
             return pd.Series([pd.np.nan] * len(col), index=col.index)
@@ -269,14 +269,6 @@ class StringMatch(StringRegEx):
     _name = "MATCH"
     parameters = 1
     combine_modes = str_combine
-    
-    def __init__(self, value, columns=[], *args, **kwargs):
-        super(StringMatch, self).__init__(columns, *args, **kwargs)
-        self.value = value
-        try:
-            self.re = re.compile(value)
-        except Exception as e:
-            self.re = None
     
     def _func(self, col):
         def _match_str(x):
@@ -335,14 +327,17 @@ class Calc(MathFunction):
         
     def evaluate(self, df, *args, **kwargs):
         def _calc(val1, val2):
-            if self.sign == "+":
-                val1 = val1 + val2
-            elif self.sign == "-":
-                val1 = val1 - val2
-            elif self.sign == "/":
-                val1 = val1 / val2
-            elif self.sign == "*":
-                val1 = val1 * val2
+            try:
+                if self.sign == "+":
+                    val1 = val1 + val2
+                elif self.sign == "-":
+                    val1 = val1 - val2
+                elif self.sign == "/":
+                    val1 = val1 / val2
+                elif self.sign == "*":
+                    val1 = val1 * val2
+            except:
+                val1 = pd.Series([pd.np.nan] * len(val1), index=val1.index)
             return val1
             
         val = df[self.columns(df, **kwargs)[0]]
@@ -915,6 +910,7 @@ class FunctionList(CoqObject):
 
     def find_function(self, fun_id):
         for x in self._list:
+            print("\t", x.get_id()) 
             if x.get_id() == fun_id:
                 return x
         return None

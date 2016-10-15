@@ -15,12 +15,81 @@ from __future__ import absolute_import
 # Python 3.x: import configparser 
 # Python 2.x: import ConfigParser as configparser
 try:
-    from ConfigParser import *
+    from ConfigParser import ConfigParser as _configparser, RawConfigParser
+    from ConfigParser import NoOptionError, ParsingError
+    
 except ImportError:
-    try:
-        from configparser import * 
-    except ImportError as e:
-        raise e
+    from configparser import ConfigParser as _configparser, RawConfigParser
+    from configparser import NoOptionError, ParsingError
+
+class CoqConfigParser(_configparser):
+    def str(self, section, option, fallback=None, d={}):
+        fallback = d.get(option, fallback)
+        try:
+            val = self.get(section, option)
+        except NoOptionError:
+            if fallback != None:
+                val = fallback
+            else:
+                raise NoOptionError
+        return val
+
+    def bool(self, section, option, fallback=None, d={}):
+        fallback = d.get(option, fallback)
+        try:
+            val = self.getboolean(section, option)
+        except NoOptionError:
+            if fallback != None:
+                val = fallback
+            else:
+                raise NoOptionError
+        return val
+
+    def int(self, section, option, fallback=None, d={}):
+        fallback = d.get(option, fallback)
+        try:
+            val = self.getint(section, option)
+        except NoOptionError:
+            if fallback != None:
+                val = fallback
+            else:
+                raise NoOptionError
+        return val
+
+    def float(self, section, option, fallback=None, d={}):
+        fallback = d.get(option, fallback)
+        try:
+            val = self.getfloat(section, option)
+        except NoOptionError:
+            if fallback != None:
+                val = fallback
+            else:
+                raise NoOptionError
+        return val
+
+class UnicodeConfigParser(RawConfigParser):
+    """
+    Define a subclass of RawConfigParser that works with Unicode (hopefully).
+    """
+    def write(self, fp):
+        """Fixed for Unicode output"""
+        if self._defaults:
+            fp.write("[%s]\n" % DEFAULTSECT)
+            for (key, value) in self._defaults.items():
+                fp.write("%s = %s\n" % (key, unicode(value).replace('\n', '\n\t')))
+            fp.write("\n")
+        for section in self._sections:
+            fp.write("[%s]\n" % section)
+            for (key, value) in self._sections[section].items():
+                if key != "__name__":
+                    fp.write("%s = %s\n" %
+                             (key, unicode(value).replace('\n','\n\t')))
+            fp.write("\n")
+
+    # This function is needed to override default lower-case conversion
+    # of the parameter's names. They will be saved 'as is'.
+    def optionxform(self, strOut):
+        return strOut
 
 import sys
 import os
@@ -171,6 +240,10 @@ class Options(object):
         self.args = argparse.Namespace()
         
         self.args.coquery_home = general.get_home_dir(create=True)
+        if getattr(sys, "frozen", None):
+            self.args.base_path = os.path.dirname(sys.executable)
+        elif __file__:
+            self.args.base_path = os.path.dirname(__file__)
 
         self.prog_name = NAME
         self.config_name = "%s.cfg" % NAME.lower()
@@ -179,14 +252,6 @@ class Options(object):
 
         self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
         self.args.version = self.version
-        self.args.input_path = ""
-        self.args.query_string = ""
-        self.args.ask_on_quit = True
-        self.args.save_query_string = True
-        self.args.save_query_file = True
-        self.args.select_radio_query_file = False
-        self.args.reaggregate_data = True
-        self.args.server_side = True
         self.args.server_configuration = dict()
         self.args.current_server = None
         self.args.current_resources = None
@@ -195,46 +260,13 @@ class Options(object):
         self.args.number_of_tokens = 0
         self.args.last_number_of_tokens = 0
         
-        self.args.show_log_messages = ["ERROR", "WARNING", "INFO"]
-
-        self.args.query_list = []
-        self.args.filter_list = []
-        self.args.group_filter_list = []
-        self.args.stopword_list = []
         self.args.table_links = defaultdict(list)
         
-        self.args.show_data_management = False
-        self.args.show_output_columns = False
-        
-        self.args.use_context = False
-        self.args.use_stopwords = False
-        self.args.use_group_filters = False
-        self.args.use_aggregate = False
-        self.args.use_summarize = False
-        self.args.use_summarize_filters = False
-        self.args.drop_duplicates = True
-        
-        if getattr(sys, "frozen", None):
-            self.args.base_path = os.path.dirname(sys.executable)
-        elif __file__:
-            self.args.base_path = os.path.dirname(__file__)
-
-        self.args.query_file_path = os.path.expanduser("~")
-        self.args.results_file_path = os.path.expanduser("~")
-        self.args.output_file_path = os.path.expanduser("~")
-        self.args.uniques_file_path = os.path.expanduser("~")
-        self.args.textgrids_file_path = os.path.expanduser("~")
-        self.args.text_source_path = os.path.join(self.args.base_path, "texts", "alice")
-        self.args.corpus_source_path = os.path.expanduser("~")
-        self.args.corpus_table_source_path = ""
-        self.args.stopwords_file_path = os.path.expanduser("~")
-        self.args.filter_file_path = os.path.expanduser("~")
-
-        self.args.connections_path = os.path.join(self.args.coquery_home, "connections")
         self.args.installer_path = os.path.join(self.args.base_path, "installer")
+        self.args.connections_path = os.path.join(self.args.coquery_home, "connections")
         self.args.cache_path = os.path.join(self.args.coquery_home, "cache")
-        
-        self.args.custom_installer_path = os.path.join(self.args.coquery_home, "installer")
+        self.args.stopword_path = os.path.join(self.args.base_path, "stopwords")
+
         self.args.use_mysql = True
         
         try:
@@ -242,17 +274,11 @@ class Options(object):
         except AttributeError:
             self.args.parameter_string = " ".join([x for x in sys.argv [1:]])
 
+        self.args.filter_list = []
+        self.args.group_filter_list = []
         self.args.selected_features= []
         self.args.external_links = {}
-        #self.args.external_links = defaultdict(list)
-        self.args.selected_functions = []
 
-        # default query cache size to 500 MB:
-        self.args.query_cache_size = 500 * 1024 * 1024
-        self.args.use_cache = use_cachetools
-        
-        self.args.context_left = 3
-        self.args.context_right = 3
         # these attributes are used only in the GUI:
         self.args.column_width = {}
         self.args.column_color = {}
@@ -261,15 +287,6 @@ class Options(object):
 
         self.args.managers = {}
 
-        # Set defaults for CSV files:
-        self.args.query_column_number = 1
-        self.args.skip_lines = 0
-        self.args.input_separator = ','
-        self.args.output_separator = ","
-        self.args.quote_char = '"'
-        self.args.xkcd = None
-        
-        self.args.output_to_lower = True
 
     @property
     def cfg(self):
@@ -317,7 +334,6 @@ class Options(object):
         group = self.parser.add_argument_group("Query options")
         group.add_argument("-C", "--output_case", help="be case-sensitive in the output (default: ignore case)", action="store_true", dest="output_case_sensitive")
         group.add_argument("--query_case", help="be case-sensitive when querying (default: ignore case)", action="store_true", dest="query_case_sensitive")
-        group.add_argument("--one_by_one", help="retrieve results from server one by one (somewhat slower, but uses less memory)", action="store_true", dest="server_side")
         group.add_argument("-r", "--regexp", help="use regular expressions", action="store_true", dest="regexp")
 
         # Output options:
@@ -613,17 +629,7 @@ class Options(object):
             self.args.input_separator = self.args.input_separator.decode('string_escape')
         except AttributeError:
             self.args.input_separator = codecs.getdecoder("unicode_escape") (self.args.input_separator) [0]
-        try:
-            self.args.output_separator = self.args.output_separator.decode('string_escape')
-        except AttributeError:
-            self.args.output_separator = codecs.getdecoder("unicode_escape") (self.args.output_separator) [0]
         
-        if self.args.context_span:
-            self.args.context_left = self.args.context_span
-            self.args.context_right = self.args.context_span
-
-        self.args.float_format = "{:.%if}" % self.args.digits
-            
         # make sure that a command query consisting of one string is still
         # stored as a list:
         if self.args.query_list:
@@ -646,369 +652,234 @@ class Options(object):
             self.args.current_resources = get_available_resources(self.args.current_server)
 
     def read_configuration(self):
+        defaults = {
+            "default_corpus": "",
+            "query_mode": QUERY_MODE_TOKENS,
+            "query_string": "",
+            "query_cache_size": 500 * 1024 * 1024,
+            "use_cache": use_cachetools,
+            "query_case_sensitive": False,
+            "output_case_sensitive": False,
+            "output_to_lower": True,
+            "drop_duplicates": True,
+            "na_string": DEFAULT_MISSING_VALUE,
+            "custom_installer_path": os.path.join(self.args.coquery_home, "installer"),
+            "csv_file": "",
+            "csv_separator": ",",
+            "csv_column": 1,
+            "csv_has_header": False,
+            "csv_line_skip": 0, 
+            "csv_quote_char": '"',
+            "context_mode": CONTEXT_KWIC,
+            "context_left": 3,
+            "context_right": 3,
+            "context_restrict": False,
+            "show_log_messages": ["ERROR", "WARNING", "INFO"],
+            "decimal_digits": 3,
+            }
+        
+        self.args.first_run = True
+        config_file = CoqConfigParser()
         
         if os.path.exists(self.cfg.config_path):
             logger.info("Using configuration file %s" % self.cfg.config_path)
-            config_file = ConfigParser()
             try:
                 config_file.read(self.cfg.config_path)
-            except (IOError, TypeError):
+            except (IOError, TypeError, ParsingError) as e:
+                print(e)
                 warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
-            if "sql" in config_file.sections():
-                server_configuration = defaultdict(dict)
+            else:
+                self.args.first_run = False
+        
+        for x in ["main", "sql", "gui", "output", "filter", "context", "links"]:
+            if x not in config_file.sections():
+                config_file.add_section(x)
 
-                for name, value in config_file.items("sql"):
-                    if name.startswith("config_"):
+        # read SQL configuration:
+        server_configuration = defaultdict(dict)
+        for name, value in config_file["sql"].items():
+            if name.startswith("config_"):
+                try:
+                    _, number, variable = name.split("_")
+                except ValueError:
+                    continue
+                else:
+                    if variable == "port":
                         try:
-                            _, number, variable = name.split("_")
+                            server_configuration[number][variable] = int(value)
                         except ValueError:
                             continue
-                        else:
-                            if variable == "port":
-                                try:
-                                    server_configuration[number][variable] = int(value)
-                                except ValueError:
-                                    continue
-                            elif variable in ["name", "host", "type", "user", "password", "path"]:
-                                server_configuration[number][variable] = value
-                for i in server_configuration:
-                    d = server_configuration[i]
-                    if "type" not in d:
-                        d["type"] = SQL_MYSQL
-                    if d["type"] == SQL_MYSQL:
-                        required_vars = ["name", "host", "port", "user", "password"]
-                    elif d["type"] == SQL_SQLITE:
-                        if "path" not in d:
-                            d["path"] = ""
-                        required_vars = ["name", "path"]
-                    try:
-                        if all(var in d for var in required_vars):
-                            self.args.server_configuration[d["name"]] = d
-                    except KeyError:
-                        pass
+                    elif variable in ["name", "host", "type", "user", "password", "path"]:
+                        server_configuration[number][variable] = value
+        for i in server_configuration:
+            d = server_configuration[i]
+            if "type" not in d:
+                d["type"] = SQL_MYSQL
+            if d["type"] == SQL_MYSQL:
+                required_vars = ["name", "host", "port", "user", "password"]
+            elif d["type"] == SQL_SQLITE:
+                if "path" not in d:
+                    d["path"] = ""
+                required_vars = ["name", "path"]
+            try:
+                if all(var in d for var in required_vars):
+                    self.args.server_configuration[d["name"]] = d
+            except KeyError:
+                pass
 
-                try:
-                    if self.args.current_server == None:
-                        self.args.current_server = config_file.get("sql", "active_configuration")
-                        if self.args.current_server in self.args.server_configuration:
-                            self.args.current_resources = get_available_resources(self.args.current_server)
-                        else:
-                            raise ValueError
-                except (NoOptionError, ValueError):
-                    self.args.current_server = "Default"
+        # select active SQL configuration, or use Default as fallback
+        try:
+            if self.args.current_server == None:
+                self.args.current_server = config_file.str("sql", "active_configuration")
+                if self.args.current_server in self.args.server_configuration:
                     self.args.current_resources = get_available_resources(self.args.current_server)
-                
-            # only use the other settings from the configuration file if a 
-            # GUI is used:
-            if self.args.gui:
-                for section in config_file.sections():
-                    if section == "main":
-                        try:
-                            default_corpus = config_file.get("main", "default_corpus")
-                        except (NoOptionError, ValueError):
-                            default_corpus = self.corpora_dict.keys()[0]
-                        self.args.corpus = default_corpus
-                        try:
-                            mode = config_file.get("main", "query_mode")
-                            self.args.MODE = mode
-                        except (NoOptionError, ValueError):
-                            self.args.MODE = QUERY_MODE_TOKENS
-                        try:
-                            last_query = config_file.get("main", "query_string")
-                            self.args.query_list = decode_query_string(last_query)
-                        except (NoOptionError, ValueError):
-                            pass
-                        try:
-                            self.args.server_side = config_file.get("main", "one_by_one")
-                        except NoOptionError:
-                            self.args.server_side = True
-                        try:
-                            self.args.context_mode = config_file.get("main", "context_mode")
-                        except NoOptionError:
-                            self.args.context_mode = CONTEXT_KWIC
-                        try:
-                            self.args.output_case_sensitive = config_file.getboolean("main", "output_case_sensitive")
-                        except NoOptionError:
-                            self.args.output_case_sensitive = False
-                        try:
-                            self.args.drop_on_na = config_file.getboolean("main", "drop_on_na")
-                        except NoOptionError:
-                            self.args.drop_on_na = True
-                        try:
-                            self.args.na_string = config_file.get("main", "na_string")
-                        except NoOptionError:
-                            self.args.na_string = DEFAULT_MISSING_VALUE
-                        try:
-                            self.args.output_to_lower = config_file.getboolean("main", "output_to_lower")
-                        except NoOptionError:
-                            self.args.output_to_lower = True
-                        try:
-                            self.args.query_case_sensitive = config_file.getboolean("main", "query_case_sensitive")
-                        except NoOptionError:
-                            self.args.query_case_sensitive = True
-                        try:
-                            self.args.custom_installer_path = config_file.get("main", "custom_installer_path")
-                        except NoOptionError:
-                            pass
-                        try:
-                            self.args.query_cache_size = config_file.getint("main", "query_cache_size")
-                        except NoOptionError:
-                            pass
-                        
-                        if use_cachetools:
-                            try:
-                                self.args.use_cache = config_file.getboolean("main", "use_cache")
-                            except NoOptionError:
-                                pass
-                        
-                        try:
-                            self.args.input_path = config_file.get("main", "csv_file")
-                        except (NoOptionError, ValueError):
-                            pass
-                        else:
-                            # Read CSV options, but only if a CSV file name
-                            # is also in the configuration. If the file name
-                            # was provided as an argument, we shouldn't use
-                            # the saved values.
-                            try:
-                                self.args.input_separator = config_file.get("main", "csv_separator")
-                            except (NoOptionError, ValueError):
-                                pass
-                            try:
-                                self.args.query_column_number = config_file.getint("main", "csv_column")
-                            except (NoOptionError, ValueError):
-                                pass
-                            try:
-                                self.args.file_has_headers = config_file.getboolean("main", "csv_has_header")
-                            except (NoOptionError, ValueError):
-                                pass
-                            try:
-                                self.args.skip_lines = config_file.getint("main", "csv_line_skip")
-                            except (NoOptionError, ValueError):
-                                pass
-                            try:
-                                self.args.quote_char = config_file.get("main", "csv_quote_char")
-                            except (NoOptionError, ValueError):
-                                pass
-                        try:
-                            self.args.xkcd = config_file.getboolean("main", "xkcd")
-                        except (NoOptionError, ValueError):
-                            pass
+                else:
+                    raise ValueError
+        except (NoOptionError, ValueError):
+            self.args.current_server = "Default"
+            self.args.current_resources = get_available_resources(self.args.current_server)
+        
+        # only use the other settings from the configuration file if a 
+        # GUI is used:
+        if self.args.gui:
+            # Read MAIN section:
+            self.args.corpus = config_file.str("main", "default_corpus", d=defaults)
+            self.args.MODE = config_file.str("main", "query_mode", d=defaults)
+            last_query = config_file.str("main", "query_string", d=defaults)
+            try:
+                self.args.query_list = decode_query_string(last_query)
+            except (ValueError):
+                self.args.query_list = []
+                pass
+            self.args.query_cache_size = config_file.int("main", "query_cache_size", d=defaults)
+            self.args.query_case_sensitive = config_file.bool("main", "query_case_sensitive", d=defaults)
+            self.args.output_case_sensitive = config_file.bool("main", "output_case_sensitive", d=defaults)
+            self.args.output_to_lower = config_file.bool("main", "output_to_lower", d=defaults)
+            self.args.drop_on_na = config_file.bool("main", "drop_on_na", d=defaults)
+            self.args.na_string = config_file.str("main", "na_string", d=defaults)
+            self.args.custom_installer_path = config_file.str("main", "custom_installer_path", d=defaults)
+            if use_cachetools:
+                self.args.use_cache = config_file.bool("main", "use_cache", d=defaults)
+            self.args.input_path = config_file.str("main", "csv_file", d=defaults)
+            self.args.input_separator = config_file.str("main", "csv_separator", d=defaults)
+            self.args.query_column_number = config_file.int("main", "csv_column", d=defaults)
+            self.args.file_has_headers = config_file.bool("main", "csv_has_header", d=defaults)
+            self.args.skip_lines = config_file.int("main", "csv_line_skip", d=defaults)
+            self.args.quote_char = config_file.str("main", "csv_quote_char", d=defaults)
+            self.args.xkcd = config_file.bool("main", "xkcd", fallback=False)
 
-                    elif section == "output":
-                        for variable, value in config_file.items("output"):
-                            if value:
-                                self.args.selected_features.append(variable)
-                    elif section == "filter":
-                        # getting the filters from the configuration is
-                        # somewhat complicated. Each filter has three 
-                        # configuration variables:
-                        # filter_N_column, filter_N_operator, filter_N_value,
-                        # where N is the number of the filter.
-                        filt_columns = {}
-                        filt_operators = {}
-                        filt_values = {}
-                        group_filt_columns = {}
-                        group_filt_operators = {}
-                        group_filt_values = {}
-                        
-                        for var, value in config_file.items("filter"):
-                            parsed = var.split("_")
-                            if len(parsed) == 3:
-                                f_type, s_num, cat = parsed
-                                try:
-                                    num = int(s_num)
-                                except ValueError:
-                                    continue
-                                if f_type == "filter":
-                                    if cat == "column":     filt_columns[num] = value
-                                    elif cat == "operator": filt_operators[num] = int(value)
-                                    elif cat == "value":    filt_values[num] = value
-                                elif f_type == "groupfilter":
-                                    if cat == "column":     group_filt_columns[num] = value
-                                    elif cat == "operator": group_filt_operators[num] = int(value)
-                                    elif cat == "value":    group_filt_values[num] = value
-                                    
-                        max_filt = max(len(filt_columns), len(filt_operators), len(filt_values))
-                        for i in range(max_filt):
-                            col = filt_columns.get(i, None)
-                            op = filt_operators.get(i, None)
-                            val = filt_values.get(i, None)
-                            if all([col, op, val]):
-                                filt = filters.Filter(col, op, val)
-                                self.args.filter_list.append(filt)
+            # read CONTEXT section:
+            self.args.context_left = config_file.int("context", "context_left", d=defaults)
+            self.args.context_right = config_file.int("context", "context_right", d=defaults)
+            self.args.context_mode = config_file.str("context", "context_mode", d=defaults)
+            self.args.context_restrict = config_file.str("context", "context_restrict", d=defaults)
 
-                        max_group_filt = max(len(group_filt_columns), len(group_filt_operators), len(group_filt_values))
-                        for i in range(max_group_filt):
-                            col = group_filt_columns.get(i, None)
-                            op = group_filt_operators.get(i, None)
-                            val = group_filt_values.get(i, None)
-                            if all([col, op, val]):
-                                filt = filters.Filter(col, op, val)
-                                self.args.group_filter_list.append(filt)
+            # read OUTPUT section:
+            for variable, value in config_file["output"].items():
+                if value:
+                    self.args.selected_features.append(variable)
 
-                    elif section == "context":
-                        try:
-                            self.args.context_left = config_file.getint("context", "words_left")
-                        except (NoOptionError, ValueError):
-                            pass
-                        try:
-                            self.args.context_right = config_file.getint("context", "words_right")
-                        except (NoOptionError, ValueError):
-                            pass
-                        try:
-                            self.args.context_mode = config_file.get("context", "mode")
-                        except (NoOptionError, ValueError):
-                            pass
-                    elif section == "links":
-                        for _, val in config_file.items("links"):
-                            try:
-                                connection, _, link_text = val.partition(",")
-                            except ValueError:
-                                pass
-                            else:
-                                link = eval(link_text)
-                                self.args.table_links[connection].append(link)
-                    elif section == "gui":
-                        try:
-                            self.args.last_toolbox = config_file.getint("gui", "last_toolbox")
-                        except (NoOptionError, ValueError):
-                            self.args.last_toolbox = 0
-                        try:
-                            self.args.select_radio_query_file = bool(config_file.getboolean("gui", "select_radio_query_file"))
-                        except (NoOptionError, ValueError):
-                            self.args.select_radio_query_file = False
-                        try:
-                            stopwords = config_file.get("gui", "stopword_list")
-                            self.args.stopword_list = decode_query_string(stopwords).split("\n")
-                        except (NoOptionError, ValueError):
-                            self.args.stopword_list = []                            
-                        try:
-                            self.args.selected_aggregate = config_file.get("gui", "selected_aggregate")
-                        except (NoOptionError, ValueError):
-                            self.args.selected_aggregate = SUMMARY_MODES[0]
-                        try:
-                            group = config_file.get("gui", "group_columns")
-                            if group:
-                                self.args.group_columns = group.split(",")
-                            else:
-                                self.args.group_columns = []
-                        except (NoOptionError, ValueError):
-                            self.args.group_columns = []
-                        try:
-                            self.args.ask_on_quit = bool(config_file.getboolean("gui", "ask_on_quit"))
-                        except (NoOptionError, ValueError):
-                            self.args.ask_on_quit = True
-                        try:
-                            self.args.word_wrap = config_file.getboolean("gui", "word_wrap")
-                        except (NoOptionError, ValueError):
-                            self.args.word_wrap = False
-                        try:
-                            self.args.save_query_string = config_file.getboolean("gui", "save_query_string")
-                        except (NoOptionError, ValueError):
-                            self.args.save_query_string = True
-                        try:
-                            self.args.save_query_file = config_file.getboolean("gui", "save_query_file")
-                        except (NoOptionError, ValueError):
-                            self.args.save_query_file = True
-                        try:
-                            self.args.query_file_path = config_file.get("gui", "query_file_path")
-                        except (NoOptionError, ValueError):
-                            self.args.query_file_path = os.path.expanduser("~")
-                        try:
-                            self.args.textgrids_file_path = config_file.get("gui", "textgrids_file_path")
-                        except (NoOptionError, ValueError):
-                            self.args.textgrids_file_path = os.path.expanduser("~")
-                        try:
-                            self.args.results_file_path = config_file.get("gui", "results_file_path")
-                        except (NoOptionError, ValueError):
-                            self.args.results_file_path = os.path.expanduser("~")
-                        try:
-                            self.args.output_file_path = config_file.get("gui", "output_file_path")
-                        except (NoOptionError, ValueError):
-                            self.args.output_file_path = os.path.expanduser("~")
-                        try:
-                            self.args.stopwords_file_path = config_file.get("gui", "stopwords_file_path")
-                        except (NoOptionError, ValueError):
-                            self.args.stopwords_file_path = os.path.expanduser("~")
-                        try:
-                            self.args.filter_file_path = config_file.get("gui", "filter_file_path")
-                        except (NoOptionError, ValueError):
-                            self.args.filter_file_path = os.path.expanduser("~")
-                        try:
-                            self.args.uniques_file_path = config_file.get("gui", "uniques_file_path")
-                        except (NoOptionError, ValueError):
-                            self.args.uniques_file_path = os.path.expanduser("~")
-                        try:
-                            self.args.corpus_source_path = config_file.get("gui", "corpus_source_path")
-                        except (NoOptionError, ValueError):
-                            self.args.corpus_source_path = os.path.expanduser("~")
-                        try:
-                            self.args.corpus_table_source_path = config_file.get("gui", "corpus_table_source_path")
-                        except (NoOptionError, ValueError):
-                            self.args.corpus_table_source_path = ""
-                        try:
-                            self.args.text_source_path = config_file.get("gui", "text_source_path")
-                        except (NoOptionError, ValueError):
-                            self.args.text_source_path = os.path.expanduser("~")
+            # read LINKS section
+            for _, val in config_file["links"].items():
+                try:
+                    connection, _, link_text = val.partition(",")
+                except ValueError:
+                    pass
+                else:
+                    # FIXME: this is a bit insecure!
+                    link = eval(link_text)
+                    self.args.table_links[connection].append(link)
 
-                        try:
-                            self.args.show_data_management = config_file.getboolean("gui", "show_data_management")
-                        except (NoOptionError, ValueError):
-                            self.args.show_data_management = False                        
-                        try:
-                            self.args.show_output_columns = config_file.getboolean("gui", "show_output_columns")
-                        except (NoOptionError, ValueError):
-                            self.args.show_output_columns = False                        
 
-                        try:
-                            self.args.use_context = config_file.getboolean("gui", "use_context")
-                        except (NoOptionError, ValueError):
-                            self.args.use_context = False                        
-                        try:
-                            self.args.use_stopwords = config_file.getboolean("gui", "use_stopwords")
-                        except (NoOptionError, ValueError):
-                            self.args.use_stopwords = False                        
-                        try:
-                            self.args.use_group_filters = config_file.getboolean("gui", "use_group_filters")
-                        except (NoOptionError, ValueError):
-                            self.args.use_group_filters = False                        
-                        try:
-                            self.args.use_aggregate = config_file.getboolean("gui", "use_aggregate")
-                        except (NoOptionError, ValueError):
-                            self.args.use_aggregate = False                        
-                        try:
-                            self.args.use_summarize = config_file.getboolean("gui", "use_summarize")
-                        except (NoOptionError, ValueError):
-                            self.args.use_summarize = False                        
-                        try:
-                            self.args.use_summarize_filters = config_file.getboolean("gui", "use_summarize_filters")
-                        except (NoOptionError, ValueError):
-                            self.args.use_summarize_filters = False
-                        try:
-                            self.args.drop_duplicates = config_file.getboolean("gui", "drop_duplicates")
-                        except (NoOptionError, ValueError):
-                            self.args.drop_duplicates = False
-                        try:
-                            self.args.number_of_tokens = config_file.getint("gui", "number_of_tokens")
-                        except (NoOptionError, ValueError):
-                            self.args.number_of_tokens = 0
-                        try:
-                            self.args.width = config_file.getint("gui", "width")
-                        except (NoOptionError, ValueError):
-                            self.args.width = None
-                        try:
-                            self.args.height = config_file.getint("gui", "height")
-                        except (NoOptionError, ValueError):
-                            self.args.height = None
-                        try:
-                            self.args.show_log_messages = [x.strip() for x in config_file.get("gui", "show_log_messages").split(",") if x]
-                        except (NoOptionError, ValueError):
-                            pass
+            # read GUI section:
+            group = config_file.str("gui", "group_columns", fallback="")
+            self.args.group_columns = group.split(",")
+            self.args.last_toolbox = config_file.int("gui", "last_toolbox", fallback=0)
+            self.args.select_radio_query_file = config_file.bool("gui", "select_radio_query_file", fallback=False)
+            stopwords = config_file.str("gui", "stopword_list", fallback="")
+            self.args.stopword_list = decode_query_string(stopwords).split("\n")
+            group = config_file.str("gui", "group_columns", fallback="")
+            self.args.ask_on_quit = config_file.bool("gui", "ask_on_quit", fallback=True)
+            self.args.word_wrap = config_file.bool("gui", "word_wrap", fallback=False)
+            self.args.save_query_string = config_file.bool("gui", "save_query_string", fallback=True)
+            self.args.save_query_file = config_file.bool("gui", "save_query_file", fallback=True)
+            
+            # various paths:
+            self.args.query_file_path = config_file.str("gui", "query_file_path", fallback=os.path.expanduser("~"))
+            self.args.textgrids_file_path = config_file.str("gui", "textgrids_file_path", fallback=os.path.expanduser("~"))
+            self.args.results_file_path = config_file.str("gui", "results_file_path", fallback=os.path.expanduser("~"))
+            self.args.output_file_path = config_file.str("gui", "output_file_path", fallback=os.path.expanduser("~"))
+            self.args.stopwords_file_path = config_file.str("gui", "stopwords_file_path", fallback=os.path.expanduser("~"))
+            self.args.filter_file_path = config_file.str("gui", "filter_file_path", fallback=os.path.expanduser("~"))
+            self.args.uniques_file_path = config_file.str("gui", "uniques_file_path", fallback=os.path.expanduser("~"))
+            self.args.corpus_source_path = config_file.str("gui", "corpus_source_path", fallback=os.path.expanduser("~"))
+            self.args.corpus_table_source_path = config_file.str("gui", "corpus_table_source_path", fallback="")
+            self.args.text_source_path = config_file.str("gui", "text_source_path", fallback="")
 
-                        context_dict = {}
-        else:
-            self.args.first_run = True
+            self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=False)
+            self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=False)
+
+            self.args.use_context = config_file.bool("gui", "use_context", fallback=True)
+            self.args.use_stopwords = config_file.bool("gui", "use_stopwords", fallback=False)
+            self.args.use_group_filters = config_file.bool("gui", "use_group_filters", fallback=False)
+            self.args.use_aggregate = config_file.bool("gui", "use_aggregate", fallback=False)
+            self.args.use_summarize = config_file.bool("gui", "use_summarize", fallback=False)
+            self.args.use_summarize_filters = config_file.bool("gui", "use_summarize_filters", fallback=False)
+            self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
+            # FIXME: number_of_tokens should not be stored in options.cfg!
+            self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)
+            self.args.show_log_messages = [x.strip() for x in config_file.str("gui", "show_log_messages", d=defaults).split(",") if x]
+            self.args.digits = config_file.int("gui", "decimal_digits", d=defaults)
+            self.args.float_format = config_file.str("gui", "float_format", fallback="{:.%if}" % self.args.digits)
+
+            # read FILTER section
+            
+            # getting the filters from the configuration is
+            # somewhat complicated. Each filter has three 
+            # configuration variables:
+            # filter_N_column, filter_N_operator, filter_N_value,
+            # where N is the number of the filter.
+            filt_columns = {}
+            filt_operators = {}
+            filt_values = {}
+            group_filt_columns = {}
+            group_filt_operators = {}
+            group_filt_values = {}
+            
+            for var, value in config_file["filter"].items():
+                parsed = var.split("_")
+                if len(parsed) == 3:
+                    f_type, s_num, cat = parsed
+                    try:
+                        num = int(s_num)
+                    except ValueError:
+                        continue
+                    if f_type == "filter":
+                        if cat == "column":     filt_columns[num] = value
+                        elif cat == "operator": filt_operators[num] = int(value)
+                        elif cat == "value":    filt_values[num] = value
+                    elif f_type == "groupfilter":
+                        if cat == "column":     group_filt_columns[num] = value
+                        elif cat == "operator": group_filt_operators[num] = int(value)
+                        elif cat == "value":    group_filt_values[num] = value
+
+            max_filt = max(len(filt_columns), len(filt_operators), len(filt_values))
+            for i in range(max_filt):
+                col = filt_columns.get(i, None)
+                op = filt_operators.get(i, None)
+                val = filt_values.get(i, None)
+                if all([col, op, val]):
+                    filt = filters.Filter(col, op, val)
+                    self.args.filter_list.append(filt)
+
+            max_group_filt = max(len(group_filt_columns), len(group_filt_operators), len(group_filt_values))
+            for i in range(max_group_filt):
+                col = group_filt_columns.get(i, None)
+                op = group_filt_operators.get(i, None)
+                val = group_filt_values.get(i, None)
+                if all([col, op, val]):
+                    filt = filters.Filter(col, op, val)
+                    self.args.group_filter_list.append(filt)
 
         # Use QSettings?
         if settings:
@@ -1023,30 +894,6 @@ class Options(object):
             
 cfg = None
 settings = None
-
-class UnicodeConfigParser(RawConfigParser):
-    """
-    Define a subclass of RawConfigParser that works with Unicode (hopefully).
-    """
-    def write(self, fp):
-        """Fixed for Unicode output"""
-        if self._defaults:
-            fp.write("[%s]\n" % DEFAULTSECT)
-            for (key, value) in self._defaults.items():
-                fp.write("%s = %s\n" % (key, unicode(value).replace('\n', '\n\t')))
-            fp.write("\n")
-        for section in self._sections:
-            fp.write("[%s]\n" % section)
-            for (key, value) in self._sections[section].items():
-                if key != "__name__":
-                    fp.write("%s = %s\n" %
-                             (key, unicode(value).replace('\n','\n\t')))
-            fp.write("\n")
-
-    # This function is needed to override default lower-case conversion
-    # of the parameter's names. They will be saved 'as is'.
-    def optionxform(self, strOut):
-        return strOut
 
 def save_configuration():
     config = UnicodeConfigParser()
@@ -1069,7 +916,6 @@ def save_configuration():
         config.set("main", "csv_has_header", cfg.file_has_headers)
         config.set("main", "csv_line_skip", cfg.skip_lines)
         config.set("main", "csv_quote_char", cfg.quote_char)
-    config.set("main", "one_by_one", cfg.server_side)
     config.set("main", "context_mode", cfg.context_mode)
     config.set("main", "output_case_sensitive", cfg.output_case_sensitive)
     config.set("main", "query_case_sensitive", cfg.query_case_sensitive)

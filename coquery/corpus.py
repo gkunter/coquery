@@ -1705,14 +1705,6 @@ class CorpusClass(object):
             required_features.add(link.rc_from)
             required_features.add("{}.{}".format(link.res_to, link.rc_to))
 
-        # add features required for functions:
-        for res, _, _, _ in options.cfg.selected_functions:
-            func, hashed, table, feature = self.resource.split_resource_feature(res)
-            assert hashed == None, "External functions currently not available"
-            assert func
-            print("FNC", res, table, feature)
-            required_features.add("{}_{}".format(table, feature))
-        
         # make sure that the word_id is always included in the query:
         # FIXME: Why is this needed?
         required_features.add("corpus_word_id")
@@ -2503,27 +2495,6 @@ class CorpusClass(object):
             if table not in self.resource.special_table_list:
                 if "." not in rc_feature:
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
-
-        # add any resource feature that is required by a function:
-        for res, _, _, _, _ in options.cfg.selected_functions:
-            func, hashed, table, feature = self.resource.split_resource_feature(res)
-            assert func
-            # function on field from external table?
-            if hashed != None:
-                link, res = get_by_hash(hashed)
-                db_name = res.db_name
-                field_str = "db_{db_name}_coq_{rc_feature}_{{N}}"
-            else:
-                db_name = None
-                field_str = "coq_{rc_feature}_{{N}}"
-            
-            rc_feature= "{}_{}".format(table, feature)
-            label = field_str.format(db_name=db_name, rc_feature=rc_feature)
-            
-            if rc_feature in [x for x, _ in self.resource.get_lexicon_features()]:
-                final_select += [label.format(N=x+1) for x in range(Query.Session.get_max_token_count())]
-            else:
-                final_select.append(label.format(N=1))
 
         for rc_feature in options.cfg.group_columns:
             L = self.resource.format_resource_feature(rc_feature, max_token_count)

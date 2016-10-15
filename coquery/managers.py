@@ -33,7 +33,6 @@ class Manager(CoqObject):
     
     def __init__(self):
         self._functions = []
-        self._column_functions = []
         self.sorters = []
         self.hidden_columns = set([])
         self._len_pre_filter = None
@@ -66,20 +65,6 @@ class Manager(CoqObject):
                 return None
             if fun.get_id() == id:
                 return fun 
-    
-    def add_column_function(self, fun):
-        self._column_functions.append(fun)
-        
-    def remove_column_function(self, fun):
-        self._column_functions.remove(fun)
-        
-        for x in self._column_functions:
-            if fun.get_id() in x.columns(df=None):
-                self.remove_column_function(x)
-    
-    def replace_column_function(self, old, new):
-        ix = self._column_functions.index(old)
-        self._column_functions[ix] = new
     
     def set_filters(self, filter_list):
         self._filters = filter_list
@@ -165,7 +150,7 @@ class Manager(CoqObject):
             return df
         print("\tmutate()")
         df = FunctionList(self._get_main_functions(df, session)).apply(df, connection, session=session, manager=self)
-        df = FunctionList(self._column_functions).apply(df, connection, session=session, manager=self)
+        df = FunctionList(session.column_functions).apply(df, connection, session=session, manager=self)
         df = df.reset_index(drop=True)
         print("\tdone")
         return df
@@ -254,7 +239,6 @@ class Manager(CoqObject):
         if self.sorters:
             # gather sorting information:
             for sorter in self.sorters:
-                print(sorter)
                 directions.append(sorter.ascending)
                 # create dummy columns for reverse sorting:
                 if sorter.reverse:
@@ -495,7 +479,7 @@ class Manager(CoqObject):
             df = self.select(df, session)
 
             self._functions = (self._main_functions + self._group_functions +
-                            self._column_functions + 
+                            session.column_functions.get_list() + 
                             self._get_group_functions(df, session, connection) + 
                             self.manager_summary_functions.get_list() + 
                             self.user_summary_functions.get_list())
