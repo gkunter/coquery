@@ -181,8 +181,15 @@ class CoqueryApp(QtGui.QMainWindow):
         except AttributeError:
             pass
 
-        self.ui.combo_aggregate.addItems(SUMMARY_MODES)
-        
+        self.ui.aggregate_radio_list = []
+        row_pos = self.ui.grid_transform.rowCount()
+        for label in SUMMARY_MODES:
+            radio = QtGui.QRadioButton(label)
+            radio.toggled.connect(self.set_aggregate)
+            ix = SUMMARY_MODES.index(label)
+            self.ui.grid_transform.addWidget(radio, row_pos + ix, 1)
+            self.ui.aggregate_radio_list.append(radio)
+
         if options.cfg.current_resources:
             # add available resources to corpus dropdown box:
             corpora = sorted(list(options.cfg.current_resources.keys()))
@@ -684,20 +691,20 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if not options.cfg.use_aggregate:
             options.cfg.MODE = QUERY_MODE_TOKENS
-            self.ui.combo_aggregate.blockSignals(True)
         else:
-            options.cfg.MODE = self.ui.combo_aggregate.currentText()
-            self.ui.combo_aggregate.blockSignals(False)
-        self.reaggregate(start=True)
+            for radio in self.ui.aggregate_radio_list:
+                if radio.isChecked():
+                    options.cfg.MODE = utf8(radio.text())
         self.set_toolbox_appearance(TOOLBOX_AGGREGATE)
+        self.reaggregate(start=True)
 
-    def change_managing_type(self):
-        if options.cfg.use_aggregate:
-            options.cfg.MODE = self.ui.combo_aggregate.currentText()
-        else:
-            options.cfg.MODE = QUERY_MODE_TOKENS
-        self.reaggregate(start=True)
-        self.set_toolbox_appearance(TOOLBOX_AGGREGATE)
+    def set_aggregate(self):
+        for radio in self.ui.aggregate_radio_list:
+            if radio.isChecked():
+                options.cfg.MODE = utf8(radio.text())
+                self.set_toolbox_appearance(TOOLBOX_AGGREGATE)
+                if options.cfg.use_aggregate:
+                    self.reaggregate(start=True)
 
     def change_summarize(self):
         options.cfg.use_summarize = self.ui.check_summarize.isChecked()
@@ -2596,9 +2603,10 @@ class CoqueryApp(QtGui.QMainWindow):
 
             if not options.cfg.use_aggregate:
                 options.cfg.MODE = QUERY_MODE_TOKENS
-            else:
-                aggregate_type = str(self.ui.combo_aggregate.currentText())
-                options.cfg.MODE = aggregate_type
+            for radio in self.ui.aggregate_radio_list:
+                if radio.isChecked():
+                    options.cfg.selected_aggregate = utf8(radio.text())
+                    break
 
             self.get_context_values()
                 
@@ -2748,9 +2756,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.check_drop_duplicates.setChecked(options.cfg.drop_duplicates)
         self.ui.check_summarize_filters.setChecked(options.cfg.use_summarize_filters)
 
-        if options.cfg.MODE != QUERY_MODE_TOKENS:
-            self.ui.combo_aggregate.setCurrentIndex(SUMMARY_MODES.index(options.cfg.MODE))
-        self.ui.combo_aggregate.currentIndexChanged.connect(self.change_managing_type)
+        for radio in self.ui.aggregate_radio_list:
+            if utf8(radio.text()) == options.cfg.selected_aggregate:
+                radio.setChecked(True)
+                break
 
         for i in range(self.ui.list_toolbox.rowCount()):
             self.set_toolbox_appearance(i)

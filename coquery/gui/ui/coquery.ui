@@ -422,19 +422,12 @@
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>2</number>
+              <number>3</number>
              </property>
              <widget class="QWidget" name="tool_widgetPage1">
               <layout class="QVBoxLayout" name="verticalLayout_7">
                <item>
                 <layout class="QGridLayout" name="gridLayout" columnstretch="0,0">
-                 <item row="0" column="1">
-                  <widget class="QLabel" name="label">
-                   <property name="text">
-                    <string>Add context</string>
-                   </property>
-                  </widget>
-                 </item>
                  <item row="0" column="0">
                   <widget class="QCheckBox" name="check_context">
                    <property name="sizePolicy">
@@ -535,14 +528,31 @@
                    </layout>
                   </widget>
                  </item>
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="label">
+                   <property name="text">
+                    <string>Add context</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLabel" name="label_4">
+                   <property name="text">
+                    <string>&amp;Restrict to sentences</string>
+                   </property>
+                   <property name="buddy">
+                    <cstring>check_restrict</cstring>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QCheckBox" name="check_restrict">
+                   <property name="text">
+                    <string/>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="checkBox">
-                 <property name="text">
-                  <string>Restrict to sentences</string>
-                 </property>
-                </widget>
                </item>
                <item>
                 <spacer name="verticalSpacer_2">
@@ -715,7 +725,7 @@
              <widget class="QWidget" name="tool_widgetPage4">
               <layout class="QVBoxLayout" name="verticalLayout_6">
                <item>
-                <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,1">
+                <layout class="QGridLayout" name="grid_transform" columnstretch="0,1">
                  <item row="0" column="0">
                   <widget class="QCheckBox" name="check_aggregate">
                    <property name="sizePolicy">
@@ -745,9 +755,6 @@
                     <property name="margin">
                      <number>0</number>
                     </property>
-                    <item>
-                     <widget class="QComboBox" name="combo_aggregate"/>
-                    </item>
                    </layout>
                   </widget>
                  </item>
