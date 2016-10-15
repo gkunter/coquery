@@ -884,6 +884,10 @@ class Options(object):
                         except (NoOptionError, ValueError):
                             self.args.stopword_list = []                            
                         try:
+                            self.args.selected_aggregate = config_file.get("gui", "selected_aggregate")
+                        except (NoOptionError, ValueError):
+                            self.args.selected_aggregate = SUMMARY_MODES[0]
+                        try:
                             group = config_file.get("gui", "group_columns")
                             if group:
                                 self.args.group_columns = group.split(",")
@@ -1145,7 +1149,7 @@ def save_configuration():
         if cfg.stopword_list:
             config.set("gui", "stopword_list", 
                        encode_query_string("\n".join(cfg.stopword_list)))
-        
+        config.set("gui", "selected_aggregate", cfg.selected_aggregate)
         config.set("gui", "show_data_management", cfg.show_data_management)
         config.set("gui", "show_output_columns", cfg.show_output_columns)
         config.set("gui", "last_toolbox", cfg.last_toolbox)
