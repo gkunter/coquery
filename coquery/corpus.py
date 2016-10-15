@@ -783,6 +783,8 @@ class BaseResource(object):
 
     @classmethod
     def is_lexical(cls, rc_feature):
+        if rc_feature not in dir(cls):
+            return False
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         resource = cls.get_referent_feature(rc_feature)
         return resource in lexicon_features
