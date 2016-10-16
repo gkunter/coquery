@@ -129,15 +129,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.setMenuBar(self.ui.menubar)
         
         self.setup_app()
-
-        # the dictionaries column_width and column_color store default
-        # attributes of the columns by display name. This means that problems
-        # may arise if several columns have the same name!
-        # FIXME: Make sure that the columns are identified correctly.
-        self.column_width = {}
-        self.column_color = {}
-        
-        self._resizing_column = False
         
         options.cfg.main_window = self
 
@@ -236,7 +227,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.setup_menu_actions()
         self.setup_icons()
 
-
         self.change_corpus()
 
         self.set_query_button()
@@ -285,6 +275,16 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer = QtCore.QTimer(self)
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
+        
+        # the dictionaries column_width and column_color store default
+        # attributes of the columns by display name. This means that problems
+        # may arise if several columns have the same name!
+        # FIXME: Make sure that the columns are identified correctly.
+        self.column_width = {}
+        self.column_color = {}
+        
+        self._resizing_column = False
+
         
     def setup_icons(self):
         self.ui.action_help.setIcon(self.get_icon("life-buoy"))
