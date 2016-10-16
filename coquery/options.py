@@ -38,33 +38,33 @@ class CoqConfigParser(_configparser):
         fallback = d.get(option, fallback)
         try:
             val = self.getboolean(section, option)
-        except NoOptionError:
+        except (NoOptionError, ValueError) as e:
             if fallback != None:
                 val = fallback
             else:
-                raise NoOptionError
+                raise e
         return val
 
     def int(self, section, option, fallback=None, d={}):
         fallback = d.get(option, fallback)
         try:
             val = self.getint(section, option)
-        except NoOptionError:
+        except (NoOptionError, ValueError) as e:
             if fallback != None:
                 val = fallback
             else:
-                raise NoOptionError
+                raise e
         return val
 
     def float(self, section, option, fallback=None, d={}):
         fallback = d.get(option, fallback)
         try:
             val = self.getfloat(section, option)
-        except NoOptionError:
+        except (NoOptionError, ValueError) as e:
             if fallback != None:
                 val = fallback
             else:
-                raise NoOptionError
+                raise e
         return val
 
 class UnicodeConfigParser(RawConfigParser):
@@ -662,6 +662,7 @@ class Options(object):
             "output_case_sensitive": False,
             "output_to_lower": True,
             "drop_duplicates": True,
+            "selected_aggregate": QUERY_MODE_FREQUENCIES,
             "na_string": DEFAULT_MISSING_VALUE,
             "custom_installer_path": os.path.join(self.args.coquery_home, "installer"),
             "csv_file": "",
@@ -760,6 +761,8 @@ class Options(object):
             self.args.custom_installer_path = config_file.str("main", "custom_installer_path", d=defaults)
             if use_cachetools:
                 self.args.use_cache = config_file.bool("main", "use_cache", d=defaults)
+            else:
+                self.args.use_cache = False
             self.args.input_path = config_file.str("main", "csv_file", d=defaults)
             self.args.input_separator = config_file.str("main", "csv_separator", d=defaults)
             self.args.query_column_number = config_file.int("main", "csv_column", d=defaults)
@@ -823,6 +826,7 @@ class Options(object):
             self.args.use_stopwords = config_file.bool("gui", "use_stopwords", fallback=False)
             self.args.use_group_filters = config_file.bool("gui", "use_group_filters", fallback=False)
             self.args.use_aggregate = config_file.bool("gui", "use_aggregate", fallback=False)
+            self.args.selected_aggregate = config_file.str("gui", "selected_aggregate", fallback=QUERY_MODE_FREQUENCIES)
             self.args.use_summarize = config_file.bool("gui", "use_summarize", fallback=False)
             self.args.use_summarize_filters = config_file.bool("gui", "use_summarize_filters", fallback=False)
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
