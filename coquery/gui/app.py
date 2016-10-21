@@ -86,6 +86,7 @@ class CoqueryApp(QtGui.QMainWindow):
     columnVisibilityChanged = QtCore.Signal()
     rowVisibilityChanged = QtCore.Signal()
     updateMultiProgress = QtCore.Signal(int)
+    abortRequested = QtCore.Signal()
 
     def __init__(self, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -225,10 +226,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.list_group_columns.viewport().setAcceptDrops(True)
         self.ui.list_group_columns.setDropIndicatorShown(False)
 
+        self.ui.button_box_reaggregate.hide()
+
         self.setup_hooks()
         self.setup_menu_actions()
         self.setup_icons()
-
 
         self.change_corpus()
 
@@ -371,6 +373,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.list_toolbox.currentCellChanged.connect(lambda x, _1, _2, _3: self.change_toolbox(x))
         self.ui.list_toolbox.cellClicked.connect(lambda row, col: self.toggle_toolbox(row, col))
 
+        self.ui.button_box_reaggregate.button(QtGui.QDialogButtonBox.Cancel).clicked.connect(lambda: self.abortRequested.emit())
+
         # set up hooks for the group column list:
         self.ui.button_remove_group.clicked.connect(self.remove_group_column)
         self.ui.button_group_up.clicked.connect(lambda: self.move_group_column(direction="up"))
@@ -414,6 +418,10 @@ class CoqueryApp(QtGui.QMainWindow):
 
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.abortRequested.emit()
 
     def help(self):
         from . import helpviewer
@@ -820,6 +828,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.show_query_status()
         self.check_group_items()
         self.ui.group_management.setEnabled(True)
+        self.ui.button_box_reaggregate.hide()
         print("reaggregation: done")
 
         manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
@@ -833,6 +842,9 @@ class CoqueryApp(QtGui.QMainWindow):
                                        QtGui.QMessageBox.Ok, 
                                        QtGui.QMessageBox.Ok)
 
+    def kill_reaggregation(self):
+        self.aggr_thread.terminate()
+        self.finalize_reaggregation()
         
     def reaggregate(self, recalculate=True, start=False):
         """
@@ -860,16 +872,18 @@ class CoqueryApp(QtGui.QMainWindow):
             self.Session.start_timer()
         self.showMessage("Managing data...")
         self.unfiltered_tokens = len(self.Session.data_table.index)
-        self.thread = classes.CoqThread(lambda: self.Session.aggregate_data(recalculate), parent=self)
-        self.thread.taskException.connect(self.exception_during_query)
-        self.thread.taskFinished.connect(self.finalize_reaggregation)
+        self.aggr_thread = classes.CoqThread(lambda: self.Session.aggregate_data(recalculate), parent=self)
+        self.aggr_thread.taskException.connect(self.exception_during_query)
+        self.aggr_thread.taskFinished.connect(self.finalize_reaggregation)
+        self.abortRequested.connect(self.kill_reaggregation)
 
         if not self.Session.has_cached_data():
             self.start_progress_indicator()
         
         print("reaggregate")
         self.ui.group_management.setDisabled(True)
-        self.thread.start()
+        self.ui.button_box_reaggregate.show()
+        self.aggr_thread.start()
 
     @staticmethod
     def get_icon(s, small_n_flat=True):
@@ -1719,7 +1733,8 @@ class CoqueryApp(QtGui.QMainWindow):
             for x in selection:
                 options.cfg.row_color[np.int64(x)] = col.name()
         
-    def change_sorting_order(self, column, ascending, reverse=False):
+    def change_sorting_order(self, tup):
+        column, ascending, reverse = tup
         manager = managers.get_manager(options.cfg.MODE, 
                                       options.cfg.main_window.Session.Resource.name)
         if ascending is None:
