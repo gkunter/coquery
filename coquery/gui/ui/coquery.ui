@@ -27,7 +27,7 @@
          <verstretch>1</verstretch>
         </sizepolicy>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,3,1">
+       <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,3,0">
         <item>
          <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0">
           <property name="spacing">
@@ -260,568 +260,294 @@
          </layout>
         </item>
         <item>
-         <widget class="QGroupBox" name="group_management">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="title">
-           <string>Output &amp;management</string>
-          </property>
-          <layout class="QVBoxLayout" name="box_functions" stretch="0,0,0">
-           <property name="spacing">
-            <number>4</number>
-           </property>
-           <property name="sizeConstraint">
-            <enum>QLayout::SetDefaultConstraint</enum>
-           </property>
-           <property name="leftMargin">
-            <number>4</number>
-           </property>
-           <property name="rightMargin">
-            <number>4</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QTableWidget" name="list_toolbox">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Ignored" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QGroupBox" name="group_management">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="title">
+             <string>Output &amp;management</string>
+            </property>
+            <layout class="QVBoxLayout" name="box_functions" stretch="0,0,0">
+             <property name="spacing">
+              <number>4</number>
              </property>
-             <property name="autoScroll">
-              <bool>false</bool>
+             <property name="sizeConstraint">
+              <enum>QLayout::SetDefaultConstraint</enum>
              </property>
-             <property name="editTriggers">
-              <set>QAbstractItemView::NoEditTriggers</set>
+             <property name="leftMargin">
+              <number>4</number>
              </property>
-             <property name="selectionMode">
-              <enum>QAbstractItemView::SingleSelection</enum>
+             <property name="rightMargin">
+              <number>4</number>
              </property>
-             <property name="selectionBehavior">
-              <enum>QAbstractItemView::SelectRows</enum>
-             </property>
-             <property name="showGrid">
-              <bool>false</bool>
-             </property>
-             <property name="rowCount">
-              <number>5</number>
-             </property>
-             <property name="columnCount">
-              <number>3</number>
-             </property>
-             <attribute name="horizontalHeaderVisible">
-              <bool>false</bool>
-             </attribute>
-             <attribute name="verticalHeaderVisible">
-              <bool>false</bool>
-             </attribute>
-             <row/>
-             <row/>
-             <row/>
-             <row/>
-             <row/>
-             <column/>
-             <column/>
-             <column/>
-             <item row="0" column="0">
-              <property name="text">
-               <string>Context</string>
-              </property>
-             </item>
-             <item row="0" column="1">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-             <item row="0" column="2">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-             <item row="1" column="0">
-              <property name="text">
-               <string>Stop words</string>
-              </property>
-             </item>
-             <item row="1" column="1">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-             <item row="1" column="2">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-             <item row="2" column="0">
-              <property name="text">
-               <string>Data grouping</string>
-              </property>
-             </item>
-             <item row="2" column="1">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-             <item row="2" column="2">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-             <item row="3" column="0">
-              <property name="text">
-               <string>Transform</string>
-              </property>
-             </item>
-             <item row="3" column="1">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-             <item row="3" column="2">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-             <item row="4" column="0">
-              <property name="text">
-               <string>Summarize</string>
-              </property>
-             </item>
-             <item row="4" column="1">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-             <item row="4" column="2">
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QStackedWidget" name="tool_widget">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="currentIndex">
+             <property name="bottomMargin">
               <number>0</number>
              </property>
-             <widget class="QWidget" name="tool_widgetPage1">
-              <layout class="QVBoxLayout" name="verticalLayout_7">
-               <item>
-                <layout class="QGridLayout" name="gridLayout" columnstretch="0,0">
-                 <item row="0" column="1">
-                  <widget class="QLabel" name="label">
-                   <property name="text">
-                    <string>Add context</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="0">
-                  <widget class="QCheckBox" name="check_context">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QWidget" name="widget_context" native="true">
-                   <layout class="QVBoxLayout" name="verticalLayout_2">
-                    <property name="margin">
-                     <number>0</number>
-                    </property>
-                    <item>
-                     <widget class="QRadioButton" name="radio_context_mode_kwic">
-                      <property name="styleSheet">
-                       <string notr="true">text-align: center center</string>
-                      </property>
-                      <property name="text">
-                       <string>&amp;KWIC</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QRadioButton" name="radio_context_mode_string">
-                      <property name="styleSheet">
-                       <string notr="true">text-align: center center</string>
-                      </property>
-                      <property name="text">
-                       <string>Sing&amp;le string</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QRadioButton" name="radio_context_mode_columns">
-                      <property name="styleSheet">
-                       <string notr="true">text-align: center center</string>
-                      </property>
-                      <property name="text">
-                       <string>Colu&amp;mns</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,1">
-                      <property name="spacing">
+             <item>
+              <widget class="QTableWidget" name="list_toolbox">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Ignored" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="autoScroll">
+                <bool>false</bool>
+               </property>
+               <property name="editTriggers">
+                <set>QAbstractItemView::NoEditTriggers</set>
+               </property>
+               <property name="selectionMode">
+                <enum>QAbstractItemView::SingleSelection</enum>
+               </property>
+               <property name="selectionBehavior">
+                <enum>QAbstractItemView::SelectRows</enum>
+               </property>
+               <property name="showGrid">
+                <bool>false</bool>
+               </property>
+               <property name="rowCount">
+                <number>5</number>
+               </property>
+               <property name="columnCount">
+                <number>3</number>
+               </property>
+               <attribute name="horizontalHeaderVisible">
+                <bool>false</bool>
+               </attribute>
+               <attribute name="verticalHeaderVisible">
+                <bool>false</bool>
+               </attribute>
+               <row/>
+               <row/>
+               <row/>
+               <row/>
+               <row/>
+               <column/>
+               <column/>
+               <column/>
+               <item row="0" column="0">
+                <property name="text">
+                 <string>Context</string>
+                </property>
+               </item>
+               <item row="0" column="1">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+               <item row="0" column="2">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+               <item row="1" column="0">
+                <property name="text">
+                 <string>Stop words</string>
+                </property>
+               </item>
+               <item row="1" column="1">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+               <item row="1" column="2">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+               <item row="2" column="0">
+                <property name="text">
+                 <string>Data grouping</string>
+                </property>
+               </item>
+               <item row="2" column="1">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+               <item row="2" column="2">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+               <item row="3" column="0">
+                <property name="text">
+                 <string>Transform</string>
+                </property>
+               </item>
+               <item row="3" column="1">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+               <item row="3" column="2">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+               <item row="4" column="0">
+                <property name="text">
+                 <string>Summarize</string>
+                </property>
+               </item>
+               <item row="4" column="1">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+               <item row="4" column="2">
+                <property name="text">
+                 <string/>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QStackedWidget" name="tool_widget">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="currentIndex">
+                <number>0</number>
+               </property>
+               <widget class="QWidget" name="tool_widgetPage1">
+                <layout class="QVBoxLayout" name="verticalLayout_7">
+                 <item>
+                  <layout class="QGridLayout" name="gridLayout" columnstretch="0,0">
+                   <item row="0" column="1">
+                    <widget class="QLabel" name="label">
+                     <property name="text">
+                      <string>Add context</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="check_context">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QWidget" name="widget_context" native="true">
+                     <layout class="QVBoxLayout" name="verticalLayout_3">
+                      <property name="margin">
                        <number>0</number>
                       </property>
                       <item>
-                       <widget class="QSpinBox" name="context_left_span">
-                        <property name="sizePolicy">
-                         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                          <horstretch>1</horstretch>
-                          <verstretch>0</verstretch>
-                         </sizepolicy>
+                       <widget class="QRadioButton" name="radio_context_mode_kwic">
+                        <property name="styleSheet">
+                         <string notr="true">text-align: center center</string>
                         </property>
-                        <property name="buttonSymbols">
-                         <enum>QAbstractSpinBox::UpDownArrows</enum>
-                        </property>
-                        <property name="suffix">
-                         <string/>
-                        </property>
-                        <property name="prefix">
-                         <string>Left: </string>
+                        <property name="text">
+                         <string>&amp;KWIC</string>
                         </property>
                        </widget>
                       </item>
-                      <item alignment="Qt::AlignTop">
-                       <widget class="QSpinBox" name="context_right_span">
-                        <property name="sizePolicy">
-                         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                          <horstretch>1</horstretch>
-                          <verstretch>0</verstretch>
-                         </sizepolicy>
+                      <item>
+                       <widget class="QRadioButton" name="radio_context_mode_string">
+                        <property name="styleSheet">
+                         <string notr="true">text-align: center center</string>
                         </property>
-                        <property name="frame">
-                         <bool>true</bool>
-                        </property>
-                        <property name="buttonSymbols">
-                         <enum>QAbstractSpinBox::UpDownArrows</enum>
-                        </property>
-                        <property name="suffix">
-                         <string/>
-                        </property>
-                        <property name="prefix">
-                         <string>Right: </string>
+                        <property name="text">
+                         <string>Sing&amp;le string</string>
                         </property>
                        </widget>
+                      </item>
+                      <item>
+                       <widget class="QRadioButton" name="radio_context_mode_columns">
+                        <property name="styleSheet">
+                         <string notr="true">text-align: center center</string>
+                        </property>
+                        <property name="text">
+                         <string>Colu&amp;mns</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,1">
+                        <property name="spacing">
+                         <number>0</number>
+                        </property>
+                        <item>
+                         <widget class="QSpinBox" name="context_left_span">
+                          <property name="sizePolicy">
+                           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                            <horstretch>1</horstretch>
+                            <verstretch>0</verstretch>
+                           </sizepolicy>
+                          </property>
+                          <property name="buttonSymbols">
+                           <enum>QAbstractSpinBox::UpDownArrows</enum>
+                          </property>
+                          <property name="suffix">
+                           <string/>
+                          </property>
+                          <property name="prefix">
+                           <string>Left: </string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item alignment="Qt::AlignTop">
+                         <widget class="QSpinBox" name="context_right_span">
+                          <property name="sizePolicy">
+                           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                            <horstretch>1</horstretch>
+                            <verstretch>0</verstretch>
+                           </sizepolicy>
+                          </property>
+                          <property name="frame">
+                           <bool>true</bool>
+                          </property>
+                          <property name="buttonSymbols">
+                           <enum>QAbstractSpinBox::UpDownArrows</enum>
+                          </property>
+                          <property name="suffix">
+                           <string/>
+                          </property>
+                          <property name="prefix">
+                           <string>Right: </string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
                       </item>
                      </layout>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="checkBox">
-                 <property name="text">
-                  <string>Restrict to sentences</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="verticalSpacer_2">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="tool_widgetPage2">
-              <layout class="QVBoxLayout" name="verticalLayout_3">
-               <item>
-                <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0" columnstretch="0,1">
-                 <property name="sizeConstraint">
-                  <enum>QLayout::SetFixedSize</enum>
-                 </property>
-                 <item row="0" column="0">
-                  <widget class="QCheckBox" name="check_stopwords">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLabel" name="label_3">
-                   <property name="text">
-                    <string>Filter stop words</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QWidget" name="widget_stopwords" native="true">
-                   <layout class="QVBoxLayout" name="verticalLayout_8">
-                    <property name="margin">
-                     <number>0</number>
-                    </property>
-                    <item>
-                     <widget class="QPushButton" name="button_stopwords">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
-                      </property>
-                      <property name="text">
-                       <string>Stop &amp;word list...</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <spacer name="verticalSpacer_6">
-                      <property name="orientation">
-                       <enum>Qt::Vertical</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                       <size>
-                        <width>115</width>
-                        <height>191</height>
-                       </size>
-                      </property>
-                     </spacer>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="tool_widgetPage3">
-              <layout class="QVBoxLayout" name="verticalLayout_5" stretch="1,0,0">
-               <item>
-                <layout class="QVBoxLayout" name="verticalLayout_9" stretch="1,0">
-                 <item>
-                  <widget class="CoqListWidget" name="list_group_columns">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="1,0,0">
-                   <item>
-                    <widget class="QPushButton" name="button_remove_group">
-                     <property name="text">
-                      <string>Remove</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QToolButton" name="button_group_up">
-                     <property name="text">
-                      <string/>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QToolButton" name="button_group_down">
-                     <property name="text">
-                      <string/>
-                     </property>
                     </widget>
                    </item>
                   </layout>
                  </item>
-                </layout>
-               </item>
-               <item>
-                <layout class="QGridLayout" name="gridLayout_4" columnstretch="0,1">
-                 <item row="1" column="1">
-                  <widget class="QPushButton" name="button_group_filters">
+                 <item>
+                  <widget class="QCheckBox" name="checkBox">
                    <property name="text">
-                    <string>Filter list...</string>
+                    <string>Restrict to sentences</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="0">
-                  <widget class="QCheckBox" name="check_group_filters">
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLabel" name="label_9">
-                   <property name="text">
-                    <string>Use group filters:</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <widget class="QPushButton" name="button_add_group_function">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="text">
-                  <string>Group functions{}...</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="tool_widgetPage4">
-              <layout class="QVBoxLayout" name="verticalLayout_6">
-               <item>
-                <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,1">
-                 <item row="0" column="0">
-                  <widget class="QCheckBox" name="check_aggregate">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLabel" name="label_5">
-                   <property name="text">
-                    <string>Transform results:</string>
-                   </property>
-                   <property name="buddy">
-                    <cstring>check_aggregate</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QWidget" name="widget_aggregate" native="true">
-                   <layout class="QVBoxLayout" name="verticalLayout_10">
-                    <property name="margin">
-                     <number>0</number>
-                    </property>
-                    <item>
-                     <widget class="QComboBox" name="combo_aggregate"/>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <spacer name="verticalSpacer_4">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="page">
-              <layout class="QVBoxLayout" name="verticalLayout_13">
-               <item>
-                <widget class="QPushButton" name="button_add_summary_function">
-                 <property name="text">
-                  <string>Summary functions{}...</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <layout class="QGridLayout" name="gridLayout_7" columnstretch="0,1">
-                 <item row="3" column="1">
-                  <widget class="QPushButton" name="button_filters">
-                   <property name="text">
-                    <string>Filter list...</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLabel" name="label_6">
-                   <property name="text">
-                    <string>Use summary functions:</string>
-                   </property>
-                   <property name="buddy">
-                    <cstring>check_aggregate</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QCheckBox" name="check_summarize_filters">
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0">
-                  <widget class="QCheckBox" name="check_drop_duplicates">
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="1">
-                  <widget class="QLabel" name="label_8">
-                   <property name="text">
-                    <string>&amp;Drop duplicate rows</string>
-                   </property>
-                   <property name="buddy">
-                    <cstring>check_drop_duplicates</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="1">
-                  <spacer name="verticalSpacer">
+                 <item>
+                  <spacer name="verticalSpacer_2">
                    <property name="orientation">
                     <enum>Qt::Vertical</enum>
                    </property>
@@ -833,37 +559,325 @@
                    </property>
                   </spacer>
                  </item>
-                 <item row="0" column="0">
-                  <widget class="QCheckBox" name="check_summarize">
+                </layout>
+               </widget>
+               <widget class="QWidget" name="tool_widgetPage2">
+                <layout class="QVBoxLayout" name="verticalLayout_5">
+                 <item>
+                  <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0" columnstretch="0,1">
+                   <property name="sizeConstraint">
+                    <enum>QLayout::SetFixedSize</enum>
+                   </property>
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="check_stopwords">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QLabel" name="label_3">
+                     <property name="text">
+                      <string>Filter stop words</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QWidget" name="widget_stopwords" native="true">
+                     <layout class="QVBoxLayout" name="verticalLayout_8">
+                      <property name="margin">
+                       <number>0</number>
+                      </property>
+                      <item>
+                       <widget class="QPushButton" name="button_stopwords">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="text">
+                         <string>Stop &amp;word list...</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="verticalSpacer_6">
+                        <property name="orientation">
+                         <enum>Qt::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>115</width>
+                          <height>191</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </widget>
+               <widget class="QWidget" name="tool_widgetPage3">
+                <layout class="QVBoxLayout" name="verticalLayout_6" stretch="1,0,0">
+                 <item>
+                  <layout class="QVBoxLayout" name="verticalLayout_9" stretch="1,0">
+                   <item>
+                    <widget class="CoqListWidget" name="list_group_columns">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>24</height>
+                      </size>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="1,0,0">
+                     <item>
+                      <widget class="QPushButton" name="button_remove_group">
+                       <property name="text">
+                        <string>Remove</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QToolButton" name="button_group_up">
+                       <property name="text">
+                        <string/>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QToolButton" name="button_group_down">
+                       <property name="text">
+                        <string/>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <layout class="QGridLayout" name="gridLayout_4" columnstretch="0,1">
+                   <item row="1" column="1">
+                    <widget class="QPushButton" name="button_group_filters">
+                     <property name="text">
+                      <string>Filter list...</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="check_group_filters">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QLabel" name="label_9">
+                     <property name="text">
+                      <string>Use group filters:</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_add_group_function">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
                    <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QLabel" name="label_7">
-                   <property name="text">
-                    <string>Use row filters</string>
-                   </property>
-                   <property name="buddy">
-                    <cstring>check_summarize_filters</cstring>
+                    <string>Group functions{}...</string>
                    </property>
                   </widget>
                  </item>
                 </layout>
-               </item>
-              </layout>
-             </widget>
-            </widget>
-           </item>
-          </layout>
-         </widget>
+               </widget>
+               <widget class="QWidget" name="tool_widgetPage4">
+                <layout class="QVBoxLayout" name="verticalLayout_10">
+                 <item>
+                  <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,1">
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="check_aggregate">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QLabel" name="label_5">
+                     <property name="text">
+                      <string>Transform results:</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>check_aggregate</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QWidget" name="widget_aggregate" native="true">
+                     <layout class="QVBoxLayout" name="verticalLayout_12">
+                      <property name="margin">
+                       <number>0</number>
+                      </property>
+                      <item>
+                       <widget class="QComboBox" name="combo_aggregate"/>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <spacer name="verticalSpacer_4">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </widget>
+               <widget class="QWidget" name="page">
+                <layout class="QVBoxLayout" name="verticalLayout_13">
+                 <item>
+                  <widget class="QPushButton" name="button_add_summary_function">
+                   <property name="text">
+                    <string>Summary functions{}...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <layout class="QGridLayout" name="gridLayout_7" columnstretch="0,1">
+                   <item row="3" column="1">
+                    <widget class="QPushButton" name="button_filters">
+                     <property name="text">
+                      <string>Filter list...</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QLabel" name="label_6">
+                     <property name="text">
+                      <string>Use summary functions:</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>check_aggregate</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="0">
+                    <widget class="QCheckBox" name="check_summarize_filters">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="4" column="0">
+                    <widget class="QCheckBox" name="check_drop_duplicates">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="4" column="1">
+                    <widget class="QLabel" name="label_8">
+                     <property name="text">
+                      <string>&amp;Drop duplicate rows</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>check_drop_duplicates</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="5" column="1">
+                    <spacer name="verticalSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="check_summarize">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="1">
+                    <widget class="QLabel" name="label_7">
+                     <property name="text">
+                      <string>Use row filters</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>check_summarize_filters</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </widget>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDialogButtonBox" name="button_box_reaggregate">
+            <property name="standardButtons">
+             <set>QDialogButtonBox::Cancel</set>
+            </property>
+            <property name="centerButtons">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>
