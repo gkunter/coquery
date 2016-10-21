@@ -320,7 +320,6 @@ class SqlDB (object):
         err = io.StringIO()
         sys.stderr = err
         
-        print(target)
         df = pd.read_csv(file_name, 
                             sep=sep, 
                             names=target,
@@ -336,14 +335,11 @@ class SqlDB (object):
         except:
             warn_string = err.getvalue()
         for x in warn_string.split("\n"):
-            print(x)
             if x:
                 logger.warn("File {} – {}".format(self.arguments.path, x))
 
-        print(df.head())
         self.load_dataframe(df, table_name, None)
         return
-        
         
         arguments = ""
         if self.db_type == SQL_MYSQL:
@@ -361,7 +357,6 @@ class SqlDB (object):
                 self.connection.execution_options(autocommit=True).execute('.separator "{}"'.format(sep))
             sql_template = '.import {file} {table}'
         S = sql_template.format(file=file_name, table=table_name, args=arguments, tup=",".join(target))
-        print(S)
         self.connection.execution_options(autocommit=True).execute(S)
 
     def get_field_type(self, table_name, column_name):
