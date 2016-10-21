@@ -81,7 +81,7 @@ class CoqColumnMenu(QtGui.QMenu):
     addFunctionRequested = QtCore.Signal(list)
     removeFunctionRequested = QtCore.Signal(list)
     editFunctionRequested = QtCore.Signal(str)
-    changeSortingRequested = QtCore.Signal(str, bool, bool)
+    changeSortingRequested = QtCore.Signal(tuple)
     
     def __init__(self, columns=[], title="", parent=None, *args, **kwargs):
         super(CoqColumnMenu, self).__init__(title, parent, *args, **kwargs)
@@ -163,9 +163,9 @@ class CoqColumnMenu(QtGui.QMenu):
                 sort_asc = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
                 sort_desc = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
 
-                sort_none.triggered.connect(lambda: self.changeSortingRequested.emit(column, None))
-                sort_asc.triggered.connect(lambda: self.changeSortingRequested.emit(column, True, False))
-                sort_desc.triggered.connect(lambda: self.changeSortingRequested.emit(column, False, False))
+                sort_none.triggered.connect(lambda: self.changeSortingRequested.emit((column, None, None)))
+                sort_asc.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, False)))
+                sort_desc.triggered.connect(lambda: self.changeSortingRequested.emit((column, False, False)))
 
                 self.addAction(sort_none)
                 self.addAction(sort_asc)
@@ -174,8 +174,8 @@ class CoqColumnMenu(QtGui.QMenu):
                 if parent.table_model.content[[column]].dtypes[0] == "object":
                     sort_asc_rev = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
                     sort_desc_rev = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
-                    sort_asc_rev.triggered.connect(lambda: self.changeSortingRequested.emit(column, True, True))
-                    sort_desc_rev.triggered.connect(lambda: self.changeSortingRequested.emit(column, False, True))
+                    sort_asc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, True)))
+                    sort_desc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, False, True)))
                     self.addAction(sort_asc_rev)
                     self.addAction(sort_desc_rev)
                 
