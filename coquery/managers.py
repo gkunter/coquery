@@ -402,7 +402,7 @@ class Manager(CoqObject):
                 fields = col.split("_")
                 last_index = len(fields) - fields[::-1].index("coq") - 1
                 db_name = "_".join(fields[1:last_index])
-                this_res = options.get_resource_of_database(fields[1])
+                this_res = options.get_resource_of_database(db_name)
                 this_rc_feature = "_".join(fields[last_index + 1:-1])
             elif col.startswith("func_"):
                 functions.append(col)
