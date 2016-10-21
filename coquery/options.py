@@ -27,44 +27,44 @@ class CoqConfigParser(_configparser):
         fallback = d.get(option, fallback)
         try:
             val = self.get(section, option)
-        except NoOptionError:
+        except NoOptionError as e:
             if fallback != None:
                 val = fallback
             else:
-                raise NoOptionError
+                raise e
         return val
 
     def bool(self, section, option, fallback=None, d={}):
         fallback = d.get(option, fallback)
         try:
             val = self.getboolean(section, option)
-        except NoOptionError:
+        except NoOptionError as e:
             if fallback != None:
                 val = fallback
             else:
-                raise NoOptionError
+                raise e
         return val
 
     def int(self, section, option, fallback=None, d={}):
         fallback = d.get(option, fallback)
         try:
             val = self.getint(section, option)
-        except NoOptionError:
+        except NoOptionError as e:
             if fallback != None:
                 val = fallback
             else:
-                raise NoOptionError
+                raise e
         return val
 
     def float(self, section, option, fallback=None, d={}):
         fallback = d.get(option, fallback)
         try:
             val = self.getfloat(section, option)
-        except NoOptionError:
+        except NoOptionError as e:
             if fallback != None:
                 val = fallback
             else:
-                raise NoOptionError
+                raise e
         return val
 
 class UnicodeConfigParser(RawConfigParser):
@@ -676,6 +676,7 @@ class Options(object):
             "context_restrict": False,
             "show_log_messages": ["ERROR", "WARNING", "INFO"],
             "decimal_digits": 3,
+            "drop_on_na": False,
             }
         
         self.args.first_run = True
