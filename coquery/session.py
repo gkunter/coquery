@@ -194,7 +194,7 @@ class Session(object):
             else:
                 logger.info("Start query: '{}'".format(current_query.query_string))
             
-            df = current_query.run(to_file)
+            df = current_query.run(to_file=to_file, connection=self.db_connection)
             
             # apply clumsy hack that tries to make sure that the dtypes of 
             # data frames containing NaNs or empty strings does not change

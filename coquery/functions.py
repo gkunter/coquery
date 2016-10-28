@@ -707,16 +707,16 @@ class ContextColumns(Function):
             return self.alias
         return self._name
 
-    def _func(self, row, connection, session):
+    def _func(self, row, session):
         left, target, right = session.Resource.get_context(
             row["coquery_invisible_corpus_id"], 
             row["coquery_invisible_origin_id"],
-            row["coquery_invisible_number_of_tokens"], connection)
+            row["coquery_invisible_number_of_tokens"], session.db_connection)
         return pd.Series(
             data=left + right, 
             index=self.left_cols + self.right_cols)
 
-    def evaluate(self, df, connection, *args, **kwargs):
+    def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
         if ("coquery_invisible_corpus_id" not in df.columns or
             "coquery_invisible_origin_id" not in df.columns or
@@ -724,7 +724,6 @@ class ContextColumns(Function):
             return pd.Series(index=df.index)
         else:
             val = df.apply(lambda x: self._func(row=x, 
-                                            connection=connection, 
                                             session=session), axis="columns")
             val.index = df.index
             return val
@@ -732,8 +731,8 @@ class ContextColumns(Function):
 class ContextKWIC(ContextColumns):
     _name = "coq_context_kwic"
     
-    def _func(self, row, connection, session):
-        row = super(ContextKWIC, self)._func(row, connection, session)
+    def _func(self, row, session):
+        row = super(ContextKWIC, self)._func(row, session)
         return pd.Series(
             data=[collapse_words(row[self.left_cols]), collapse_words(row[self.right_cols])], 
             index=[["coq_context_left", "coq_context_right"]])
@@ -745,11 +744,11 @@ class ContextString(ContextColumns):
     def __init__(self, *args):
         super(ContextString, self).__init__(*args)
 
-    def _func(self, row, connection, session):
+    def _func(self, row, session):
         left, target, right = session.Resource.get_context(
             row["coquery_invisible_corpus_id"], 
             row["coquery_invisible_origin_id"],
-            row["coquery_invisible_number_of_tokens"], connection)
+            row["coquery_invisible_number_of_tokens"], session.db_connection)
         return pd.Series(
             data=[collapse_words(list(pd.Series(left + [x.upper() for x in target] + right)))],
             index=[self._name])
@@ -863,7 +862,7 @@ class FunctionList(CoqObject):
     def __init__(self, l=[], *args, **kwargs):
         self._list = l
 
-    def apply(self, df, connection, session, manager=None):
+    def apply(self, df, session, manager=None):
         """
         Apply all functions in the list to the data frame.
         """
@@ -891,10 +890,10 @@ class FunctionList(CoqObject):
             # Functions can return either single columns or data frames. 
             # Handle the function result accordingly:
             if fun.single_column:
-                val = fun.evaluate(df, connection=connection, session=session, manager=manager)
+                val = fun.evaluate(df, session=session, manager=manager)
                 df[fun.get_id()] = val
             else:
-                val = fun.evaluate(df, connection=connection, session=session, manager=manager)
+                val = fun.evaluate(df, session=session, manager=manager)
                 df = pd.concat([df, val], axis="columns")
         
         # tell the manager whether rows with NA will be dropped:
