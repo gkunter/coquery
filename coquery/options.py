@@ -259,6 +259,7 @@ class Options(object):
         self.args.first_run = False
         self.args.number_of_tokens = 0
         self.args.last_number_of_tokens = 0
+        self.args.output_separator = ","
         
         self.args.table_links = defaultdict(list)
         
