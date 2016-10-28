@@ -2443,7 +2443,6 @@ class CorpusClass(object):
         positions_lexical_items = self.get_lexical_item_positions(token_list)
 
         max_token_count = Query.Session.get_max_token_count()
-
         final_select = []        
         for rc_feature in self.resource.get_preferred_output_order():
             if rc_feature in options.cfg.selected_features:
@@ -2492,7 +2491,14 @@ class CorpusClass(object):
             if any([x == rc_feature for x, _ in self.resource.get_lexicon_features()]):
                 break
             _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-            if table not in self.resource.special_table_list:
+            
+            # special table entries are included as NULL columns. This is 
+            # needed because otherwise, empty select lists can occur if the 
+            # only selected feature comes from a special table (e.g. only 
+            # Query string):
+            if table in self.resource.special_table_list:
+                final_select.append("NULL AS {}".format(rc_feature))
+            else:
                 if "." not in rc_feature:
                     final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
 
@@ -2628,7 +2634,6 @@ class CorpusClass(object):
             query_string_part.append(token_query_list[referent_id])
 
         final_select = self.get_select_columns(Query, token_list, to_file)
-        
         # construct the query string from the token query parts:
         query_string = " ".join(query_string_part)
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(set(final_select)))
