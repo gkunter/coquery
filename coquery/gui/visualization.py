@@ -260,10 +260,12 @@ class VisualizerDialog(QtGui.QWidget):
 
         if not self.toolbar:
             self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
-            if self.visualizer.numerical_axes == 2:
+            if (self.visualizer.numerical_axes == 2 and
+                self.visualizer.function_list):
                 self.toolbar.addWidget(self.label_y_function)
                 self.toolbar.addWidget(self.combo_y_function)
-            if self.visualizer.numerical_axes == 1:
+            if (self.visualizer.numerical_axes == 1 and 
+                self.visualizer.function_list):
                 self.toolbar.addWidget(self.label_x_function)
                 self.toolbar.addWidget(self.combo_x_function)
             if options.cfg.experimental:
