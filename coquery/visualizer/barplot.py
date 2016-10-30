@@ -17,9 +17,9 @@ import collections
 
 from coquery.visualizer import visualizer as vis
 import seaborn as sns
-from seaborn.palettes import cubehelix_palette
 import pandas as pd
 import matplotlib.pyplot as plt
+from seaborn.palettes import cubehelix_palette
 
 from coquery.gui.pyqt_compat import QtCore
 from coquery.functions import *
@@ -41,6 +41,7 @@ class Visualizer(vis.BaseVisualizer):
             self.stacked = kwargs.pop("stacked")
         except KeyError:
             self.stacked = False
+            
         super(Visualizer, self).__init__(*args, **kwargs)
 
         # The dictionary _rectangles manages the boxes for mouse-over lookup.

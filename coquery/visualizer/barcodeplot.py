@@ -47,6 +47,7 @@ def lineplot(x=None, y=None, data=None, order=None, palette=None,
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
+    function_list = []
     
     def format_coord(self, x, y, title):
         return "{}: <b>{}</b>, Corpus position: {}".format(
@@ -59,6 +60,7 @@ class Visualizer(vis.BaseVisualizer):
             pass
     
     def set_defaults(self):
+        session = options.cfg.main_window.Session
         self.options["color_palette"] = "Paired"
         self.options["color_number"] = len(self._levels[0])
         super(Visualizer, self).set_defaults()
@@ -66,7 +68,7 @@ class Visualizer(vis.BaseVisualizer):
         if not self._levels or len(self._levels[0]) < 2:
             self.options["label_y_axis"] = ""
         else:
-            self.options["label_y_axis"] = self._groupby[0]
+            self.options["label_y_axis"] = session.translate_header(self._groupby[0])
 
     def setup_figure(self):
         with sns.axes_style("white"):

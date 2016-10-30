@@ -23,16 +23,25 @@ from coquery.visualizer import visualizer as vis
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 1
+    function_list = []
 
     def format_coord(self, x, y, title):
         return "{}: <b>{}</b>, corpus position: {}".format(
             self._groupby[-1], sorted(self._levels[-1])[int(round(x))], int(y))
+    
+    def onclick(self, event):
+        try:
+            options.cfg.main_window.result_cell_clicked(token_id=int(event.xdata))
+        except TypeError:
+            pass
     
     def setup_figure(self):
         with sns.axes_style("ticks"):
             super(Visualizer, self).setup_figure()
  
     def set_defaults(self):
+        session = options.cfg.main_window.Session
+
         self.options["color_palette"] = "Paired"
         self.options["color_number"] = len(self._levels[0])
         super(Visualizer, self).set_defaults()
@@ -40,7 +49,7 @@ class Visualizer(vis.BaseVisualizer):
         if not self._levels or len(self._levels[0]) < 2:
             self.options["label_x_axis"] = ""
         else:
-            self.options["label_x_axis"] = self._groupby[0]
+            self.options["label_x_axis"] = session.translate_header(self._groupby[0])
 
     def onclick(self, event):
         try:
@@ -71,7 +80,7 @@ class Visualizer(vis.BaseVisualizer):
                     positions=range(len(self._levels[-1])),
                     col=col, 
                     ax=plt.gca())
-        
+
         self.g.map_dataframe(plot_facet)
 
         self.g.set(ylim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size(filters=[])))
