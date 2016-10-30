@@ -959,17 +959,18 @@ def save_configuration():
         for feature in cfg.selected_features:
             config.set("output", feature, True)
 
-    if cfg.filter_list:
-        if not "filter" in config.sections():
-            config.add_section("filter")
-        for i, filt in enumerate(cfg.filter_list):
-            config.set("filter", "filter_{}_column".format(i), filt.feature)
-            config.set("filter", "filter_{}_operator".format(i), filt.operator)
-            config.set("filter", "filter_{}_value".format(i), filt.value)
-        for i, filt in enumerate(cfg.group_filter_list):
-            config.set("filter", "groupfilter_{}_column".format(i), filt.feature)
-            config.set("filter", "groupfilter_{}_operator".format(i), filt.operator)
-            config.set("filter", "groupfilter_{}_value".format(i), filt.value)
+    if not "filter" in config.sections():
+        config.add_section("filter")
+
+    for i, filt in enumerate(cfg.filter_list):
+        print(filt)
+        config.set("filter", "filter_{}_column".format(i), filt.feature)
+        config.set("filter", "filter_{}_operator".format(i), filt.operator)
+        config.set("filter", "filter_{}_value".format(i), filt.value)
+    for i, filt in enumerate(cfg.group_filter_list):
+        config.set("filter", "groupfilter_{}_column".format(i), filt.feature)
+        config.set("filter", "groupfilter_{}_operator".format(i), filt.operator)
+        config.set("filter", "groupfilter_{}_value".format(i), filt.value)
     
     if cfg.table_links:
         if not "links" in config.sections():
