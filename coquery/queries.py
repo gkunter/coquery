@@ -105,7 +105,7 @@ class TokenQuery(object):
         """ Apply filters to the data frame. """
         return df
     
-    def run(self, to_file=False):
+    def run(self, connection=None, to_file=False):
         """
         Run the query, and store the results in an internal data frame.
         
@@ -143,48 +143,45 @@ class TokenQuery(object):
             query_string = self.Resource.get_query_string(self, self._sub_query, to_file)
             md5 = hashlib.md5("".join(sorted(query_string)).encode()).hexdigest()
             
-            with self.Resource.get_engine().connect() as connection:
-                df = None
-                if options.cfg.use_cache:
+            df = None
+            if options.cfg.use_cache:
+                try:
+                    df = options.cfg.query_cache.get((self.Resource.name, manager_hash, md5))
+                except KeyError:
+                    pass
+            if df is None:
+                if not query_string:
+                    df = pd.DataFrame()
+                else:
+                    if options.cfg.verbose:
+                        logger.info(query_string)
+
+                    # SQLite: attach external databases
+                    if self.Resource.db_type == SQL_SQLITE:
+                        for db_name in self.Resource.attach_list:
+                            path = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
+                            S = "ATTACH DATABASE '{}' AS {}".format(path, db_name)
+                            connection.execute(S)
+
                     try:
-                        df = options.cfg.query_cache.get((self.Resource.name, manager_hash, md5))
-                    except KeyError:
-                        pass
-                if df is None:
-                    if not query_string:
-                        df = pd.DataFrame()
-                    else:
-                        if options.cfg.verbose:
-                            logger.info(query_string)
+                        results = (connection
+                                    .execution_options(stream_results=True)
+                                    .execute(query_string.replace("%", "%%")))
+                    except Exception as e:
+                        connection.close()
+                        print(query_string)
+                        print(e)
+                        raise e
 
-                        # SQLite: attach external databases
-                        if self.Resource.db_type == SQL_SQLITE:
-                            for db_name in self.Resource.attach_list:
-                                path = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
-                                S = "ATTACH DATABASE '{}' AS {}".format(path, db_name)
-                                connection.execute(S)
+                    df = pd.DataFrame(list(iter(results)), columns=results.keys())
+                    
+                    if len(df) == 0:
+                        df = pd.DataFrame(columns=results.keys())
 
-                        try:
-                            results = (connection
-                                       .execution_options(stream_results=True)
-                                       .execute(query_string.replace("%", "%%")))
-                        except Exception as e:
-                            connection.close()
-                            print(query_string)
-                            print(e)
-                            raise e
+                    del results
 
-                        df = pd.DataFrame(list(iter(results)), columns=results.keys())
-                        
-                        if len(df) == 0:
-                            df = pd.DataFrame(columns=results.keys())
-
-                        del results
-
-                        if options.cfg.use_cache:
-                            options.cfg.query_cache.add((self.Resource.name, manager_hash, md5), df)
-
-                connection.close()
+                    if options.cfg.use_cache:
+                        options.cfg.query_cache.add((self.Resource.name, manager_hash, md5), df)
 
             if not options.cfg.output_case_sensitive and len(df.index) > 0:
                 word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
