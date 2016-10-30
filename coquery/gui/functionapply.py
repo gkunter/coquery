@@ -24,6 +24,7 @@ from .classes import CoqListItem
 class FunctionItem(QtGui.QWidget):
     def __init__(self, func, checkable=True, *args, **kwargs):
         super(FunctionItem, self).__init__(*args, **kwargs)
+        self.checkable = checkable
 
         name = func.get_name()
         desc = FUNCTION_DESC.get(func._name, None)
@@ -35,7 +36,8 @@ class FunctionItem(QtGui.QWidget):
         self.setSizePolicy(sizePolicy) 
         self.horizontalLayout = QtGui.QHBoxLayout(self)
 
-        self.checkbox = QtGui.QCheckBox()
+        if checkable:
+            self.checkbox = QtGui.QCheckBox()
         self.verticalLayout = QtGui.QVBoxLayout() 
         self.verticalLayout.setSizeConstraint(QtGui.QLayout.SetFixedSize) 
         self.verticalLayout.setMargin(0)
@@ -50,22 +52,35 @@ class FunctionItem(QtGui.QWidget):
             font.setPointSize(font.pointSize() * 0.8)
             self.label_2.setFont(font)
             
-        self.horizontalLayout.addWidget(self.checkbox)
+        if checkable:
+            self.horizontalLayout.addWidget(self.checkbox)
         self.horizontalLayout.addLayout(self.verticalLayout)
         self.horizontalLayout.setStretch(1, 1)
 
     def setCheckState(self, *args, **kwargs):
-        return self.checkbox.setCheckState(*args, **kwargs)
-    
+        if self.checkable:
+            return self.checkbox.setCheckState(*args, **kwargs)
+        else:
+            return None
+        
     def checkState(self, *args, **kwargs):
-        return self.checkbox.checkState(*args, **kwargs)
-    
+        if self.checkable:
+            return self.checkbox.checkState(*args, **kwargs)
+        else:
+            return False
+        
     def sizeHint(self):
         size_hint = self.verticalLayout.sizeHint()
-        height = max(size_hint.height(),
-                     QtGui.QLabel().sizeHint().height(),
-                     QtGui.QCheckBox().sizeHint().height(),
-                     self.verticalLayout.sizeHint().height() * 1.1)
+        if self.checkable:
+            height = max(size_hint.height(),
+                        QtGui.QLabel().sizeHint().height(),
+                        QtGui.QCheckBox().sizeHint().height(),
+                        self.verticalLayout.sizeHint().height() * 1.1)
+        else:
+            height = max(size_hint.height(),
+                        QtGui.QLabel().sizeHint().height(),
+                        self.verticalLayout.sizeHint().height() * 1.1)
+
         size_hint.setHeight(height)
         return size_hint
 
@@ -172,19 +187,16 @@ class FunctionDialog(QtGui.QDialog):
             pass
 
     def set_function_group(self, i):
-        self.function_list = self._func[i]
+        self.function_list = [x for x in self._func[i] if x._name != "virtual"]
         self.ui.list_functions.blockSignals(True)
         self.ui.list_classes.blockSignals(True)
         self.ui.list_functions.clear()
         for x in self.function_list:
             desc = FUNCTION_DESC.get(x._name, "no description available")
-            #item = CoqListItem("{} – {}".format(x.get_name(), desc))
-            item = CoqListItem()
+            item = CoqListItem("{} – {}".format(x.get_name(), desc))
             item.setObjectName(x)
-            item_widget = FunctionItem(x)
             self.ui.list_functions.addItem(item)
-            item.setSizeHint(item_widget.sizeHint())
-            self.ui.list_functions.setItemWidget(item, item_widget)
+            
         self.ui.list_classes.setCurrentRow(i)
         self.ui.list_functions.blockSignals(False)
         self.ui.list_classes.blockSignals(False)
@@ -215,7 +227,7 @@ class FunctionDialog(QtGui.QDialog):
         pass
     
     def select_function(self, func):
-        self.columns = func.columns
+        self.columns = func.columns()
         try:
             row = self.function_list.index(type(func))
             self.ui.list_functions.setCurrentRow(row)
@@ -227,8 +239,8 @@ class FunctionDialog(QtGui.QDialog):
             self.ui.combo_combine.setCurrentIndex(ix)
         except ValueError:
             pass
-        if func.label:
-            self.ui.edit_label.setText(func.label)
+        if func._label:
+            self.ui.edit_label.setText(func._label)
             self._auto_label = False
             
     def fill_list(self, function_class):
@@ -280,7 +292,6 @@ class FunctionDialog(QtGui.QDialog):
             self.ui.widget_label.show()
 
         func = self.function_list[self.ui.list_functions.currentRow()]
-
         if not only_label:
             current_combine = str(self.ui.combo_combine.currentText())
             self.ui.combo_combine.clear()
