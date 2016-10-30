@@ -168,7 +168,6 @@ class TokenQuery(object):
                                     .execution_options(stream_results=True)
                                     .execute(query_string.replace("%", "%%")))
                     except Exception as e:
-                        connection.close()
                         print(query_string)
                         print(e)
                         raise e
