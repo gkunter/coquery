@@ -58,9 +58,7 @@ class Session(object):
         self.Lexicon.resource= current_resource
         
         self.Resource = current_resource
-
         self.show_header = options.cfg.show_header
-
         self.query_type = queries.get_query_type(options.cfg.MODE)
 
         logger.info("Corpus '{}' on connection '{}'".format(
@@ -68,7 +66,6 @@ class Session(object):
 
         self.db_engine = sqlalchemy.create_engine(
             sqlhelper.sql_url(options.cfg.current_server, self.Resource.db_name))
-        self.db_connection = self.db_engine.connect()
 
         self.data_table = pd.DataFrame()
         self.output_object = pd.DataFrame()
@@ -78,7 +75,8 @@ class Session(object):
         self._manager_cache = {}
         self._first_saved_dataframe = True
         self.filter_list = []
-
+        
+        self.column_functions = functions.FunctionList()
         self.group_functions = functions.FunctionList()
 
         # row_visibility stores for each query type a pandas Series object
@@ -167,6 +165,9 @@ class Session(object):
             directly to a file contains less information, e.g. it doesn't 
             contain an origin ID or a corpus ID (unless requested).
         """
+        
+        self.db_connection = self.db_engine.connect()
+        
         self.start_timer()
         
         self.data_table = pd.DataFrame()
@@ -194,7 +195,7 @@ class Session(object):
             else:
                 logger.info("Start query: '{}'".format(current_query.query_string))
             
-            df = current_query.run(to_file)
+            df = current_query.run(connection=self.db_connection, to_file=to_file)
 
             # apply clumsy hack that tries to make sure that the dtypes of 
             # data frames containing NaNs or empty strings does not change
