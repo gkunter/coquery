@@ -1234,7 +1234,6 @@ class CoqueryApp(QtGui.QMainWindow):
         result = addfilters.FilterDialog.set_filters(
             filter_list=options.cfg.group_filter_list,
             columns=columns, session=self.Session, dtypes=dtypes)
-        print(result)
         if result is not None:
             options.cfg.group_filter_list = result
 
@@ -2518,11 +2517,23 @@ class CoqueryApp(QtGui.QMainWindow):
         session = options.cfg.main_window.Session
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         func = self._column_functions.find_function(column)
-        print(func, column)
-        response = functionapply.FunctionDialog.edit_function(func, parent=self)
+
+        dtypes = pd.Series([self.table_model.get_dtype(x) for x in func.columns(self.table_model.content)])
+        try:
+            if all(dtypes != object):
+                d = {"function_class": (functions.MathFunction, functions.LogicFunction)}
+            else:
+                d = {"function_class": (functions.StringFunction, functions.LogicFunction)}
+        except Exception as e:
+            print(e)
+            d = {"function_class": tuple()}
+
+        print("----")
+        print(func, func.columns(self.table_model.content), d)
+        response = functionapply.FunctionDialog.edit_function(func, parent=self, **d)
         if response:
             fun_type, value, aggr, label = response
-            new_func = fun_type(columns=func.columns, value=value, aggr=aggr, label=label)
+            new_func = fun_type(columns=func.columns(self.table_model.content), value=value, aggr=aggr, label=label)
             self._column_functions.replace_function(func, new_func)
             self.update_columns()
 
