@@ -14,7 +14,6 @@ import logging
 import pandas as pd
 
 from .defines import *
-from . import options
 from .general import CoqObject
 
 try:
