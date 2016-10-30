@@ -109,7 +109,7 @@ class CoqColumnMenu(QtGui.QMenu):
         reset_color = QtGui.QAction("&Reset color{}".format(suffix), parent)
         change_color = QtGui.QAction("&Change color{}...".format(suffix), parent)
         add_function = QtGui.QAction("&Add function...", parent)
-        edit_function = QtGui.QAction("&Edit function...", parent)
+        #edit_function = QtGui.QAction("&Edit function...", parent)
         remove_function = QtGui.QAction("&Remove function{}".format(suffix), parent)
 
         show_column.setIcon(parent.get_icon("sign-maximize"))
@@ -146,9 +146,9 @@ class CoqColumnMenu(QtGui.QMenu):
             # add additional function actions, but only if all columns really 
             # are functions:
             if all([x.startswith("func_") for x in columns]):
-                if len(columns) == 1:
-                    edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
-                    self.addAction(edit_function)
+                #if len(columns) == 1:
+                    #edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
+                    #self.addAction(edit_function)
                 remove_function.triggered.connect(lambda: self.removeFunctionRequested.emit(columns))
                 self.addAction(remove_function)
                 
