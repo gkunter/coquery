@@ -16,13 +16,20 @@ from __future__ import absolute_import
 # Python 2.x: import ConfigParser as configparser
 try:
     from ConfigParser import ConfigParser as _configparser, RawConfigParser
-    from ConfigParser import NoOptionError, ParsingError
+    from ConfigParser import NoOptionError, ParsingError, NoSectionError
     
 except ImportError:
     from configparser import ConfigParser as _configparser, RawConfigParser
-    from configparser import NoOptionError, ParsingError
+    from configparser import NoOptionError, ParsingError, NoSectionError
 
-class CoqConfigParser(_configparser):
+class CoqConfigParser(_configparser, object):
+    
+    def items(self, section):
+        try:
+            return super(CoqConfigParser, self).items(section)
+        except NoSectionError:
+            return []
+
     def str(self, section, option, fallback=None, d={}):
         fallback = d.get(option, fallback)
         try:
@@ -700,7 +707,7 @@ class Options(object):
 
         # read SQL configuration:
         server_configuration = defaultdict(dict)
-        for name, value in config_file["sql"].items():
+        for name, value in config_file.items("sql"):
             if name.startswith("config_"):
                 try:
                     _, number, variable = name.split("_")
@@ -780,12 +787,12 @@ class Options(object):
             self.args.context_restrict = config_file.str("context", "context_restrict", d=defaults)
 
             # read OUTPUT section:
-            for variable, value in config_file["output"].items():
+            for variable, value in config_file.items("output"):
                 if value:
                     self.args.selected_features.append(variable)
 
             # read LINKS section
-            for _, val in config_file["links"].items():
+            for _, val in config_file.items("links"):
                 try:
                     connection, _, link_text = val.partition(",")
                 except ValueError:
@@ -829,7 +836,6 @@ class Options(object):
             self.args.use_group_filters = config_file.bool("gui", "use_group_filters", fallback=False)
             self.args.use_aggregate = config_file.bool("gui", "use_aggregate", fallback=False)
             self.args.selected_aggregate = config_file.str("gui", "selected_aggregate", fallback=QUERY_MODE_FREQUENCIES)
-            self.args.use_summarize = config_file.bool("gui", "use_summarize", fallback=False)
             self.args.use_summarize_filters = config_file.bool("gui", "use_summarize_filters", fallback=False)
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
             # FIXME: number_of_tokens should not be stored in options.cfg!
@@ -852,7 +858,7 @@ class Options(object):
             group_filt_operators = {}
             group_filt_values = {}
             
-            for var, value in config_file["filter"].items():
+            for var, value in config_file.items("filter"):
                 parsed = var.split("_")
                 if len(parsed) == 3:
                     f_type, s_num, cat = parsed
@@ -984,10 +990,10 @@ def save_configuration():
     
     if not "context" in config.sections():
         config.add_section("context")
-    config.set("context", "mode", cfg.context_mode)
+    config.set("context", "context_mode", cfg.context_mode)
     if cfg.context_left or cfg.context_right:
-        config.set("context", "words_left", cfg.context_left)
-        config.set("context", "words_right", cfg.context_right)
+        config.set("context", "context_left", cfg.context_left)
+        config.set("context", "context_right", cfg.context_right)
 
     if cfg.gui:
         for x in cfg.column_width:
@@ -1010,7 +1016,6 @@ def save_configuration():
         config.set("gui", "use_stopwords", cfg.use_stopwords)
         config.set("gui", "use_group_filters", cfg.use_group_filters)
         config.set("gui", "use_aggregate", cfg.use_aggregate)
-        config.set("gui", "use_summarize", cfg.use_summarize)
         config.set("gui", "use_summarize_filters", cfg.use_summarize_filters)        
         config.set("gui", "drop_duplicates", cfg.drop_duplicates)
 
