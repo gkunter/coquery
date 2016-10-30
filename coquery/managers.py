@@ -302,8 +302,7 @@ class Manager(CoqObject):
         
         print("\tsummarize()")
         df = self.manager_summary_functions.apply(df, session=session, manager=self)
-        if options.cfg.use_summarize:
-            df = self.user_summary_functions.apply(df, session=session, manager=self)
+        df = self.user_summary_functions.apply(df, session=session, manager=self)
 
         if options.cfg.drop_on_na:
             ix = df[vis_cols].dropna(axis="index", how="all").index
