@@ -27,11 +27,11 @@ class CoqConfigParser(_configparser):
         fallback = d.get(option, fallback)
         try:
             val = self.get(section, option)
-        except NoOptionError:
+        except (NoOptionError, ValueError) as e:
             if fallback != None:
                 val = fallback
             else:
-                raise NoOptionError
+                raise e
         return val
 
     def bool(self, section, option, fallback=None, d={}):
@@ -259,6 +259,7 @@ class Options(object):
         self.args.first_run = False
         self.args.number_of_tokens = 0
         self.args.last_number_of_tokens = 0
+        self.args.output_separator = ","
         
         self.args.table_links = defaultdict(list)
         
@@ -677,6 +678,7 @@ class Options(object):
             "context_restrict": False,
             "show_log_messages": ["ERROR", "WARNING", "INFO"],
             "decimal_digits": 3,
+            "drop_on_na": False,
             }
         
         self.args.first_run = True
