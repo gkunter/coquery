@@ -359,6 +359,7 @@ class Manager(CoqObject):
         self.reset_group_filter_statistics()
         
         columns = self.get_group_columns(df, session)
+        print(columns)
         grouped = df.groupby(columns)
         new_df = pd.DataFrame(columns = df.columns)
         for x in grouped.groups:
@@ -485,7 +486,7 @@ class Manager(CoqObject):
                             self.user_summary_functions.get_list())
         print("done")
         return df
-    
+
 class FrequencyList(Manager):
     name = "FREQUENCY"
     
@@ -500,7 +501,7 @@ class FrequencyList(Manager):
             self.manager_summary_functions = FunctionList([freq_function])
         return super(FrequencyList, self).summarize(df, session, connection)
         
-class ContingencyTable(FrequencyList):
+class ContingencyTable(Manager):
     name = "CONTINGENCY"
     
     def select(self, df, session):
@@ -577,7 +578,12 @@ class ContingencyTable(FrequencyList):
             if piv.dtypes[x] != df.dtypes[name]:
                 piv[x] = piv[x].astype(df.dtypes[name])
 
+        print(piv)
         return piv
+
+    def summarize(self, df, session):
+        return df
+
 
 def manager_factory(manager):
     if manager == QUERY_MODE_FREQUENCIES:
