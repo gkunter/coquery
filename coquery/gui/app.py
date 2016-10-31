@@ -228,7 +228,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_box_reaggregate.button(QtGui.QDialogButtonBox.Apply).setText("&Manage")
         self.ui.button_box_reaggregate.button(QtGui.QDialogButtonBox.Cancel).setDisabled(True)
         self.ui.button_box_reaggregate.update()
-        #self.ui.button_box_reaggregate.hide()
 
         self.setup_hooks()
         self.setup_menu_actions()
@@ -861,7 +860,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.group_management.setEnabled(True)
         self.ui.button_box_reaggregate.button(QtGui.QDialogButtonBox.Apply).setDisabled(True)
         self.ui.button_box_reaggregate.button(QtGui.QDialogButtonBox.Cancel).setDisabled(True)
-        #self.ui.button_box_reaggregate.hide()
         print("reaggregation: done")
 
         manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
@@ -921,7 +919,6 @@ class CoqueryApp(QtGui.QMainWindow):
         
         print("reaggregate")
         self.ui.group_management.setDisabled(True)
-        #self.ui.button_box_reaggregate.show()
         self.aggr_thread.start()
 
     @staticmethod
