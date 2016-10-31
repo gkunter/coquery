@@ -198,11 +198,12 @@ class Visualizer(vis.BaseVisualizer):
     def draw(self, func_x=default_func, column_x=None):
         """ Plot bar charts. """
         def plot_facet(data, color):
+            session = options.cfg.main_window.Session
             if self.stacked:
                 ax = plt.gca()
 
                 if len(self._groupby) == 2:
-                    data["COQ_FUNC"] = fun.evaluate(data)
+                    data["COQ_FUNC"] = fun.evaluate(data, session=session)
                     
                     df = data.pivot_table(index=self._groupby[0],
                                           columns=[self._groupby[-1]],
@@ -234,7 +235,7 @@ class Visualizer(vis.BaseVisualizer):
                 else:
                     # one stacked bar (so, this is basically a spine chart)
                     #self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
-                    data["COQ_FUNC"] = fun.evaluate(data)
+                    data["COQ_FUNC"] = fun.evaluate(data, session=session)
                     df = data[self._groupby + ["COQ_FUNC"]].drop_duplicates()
                     df["COQ_FUNC"] = df["COQ_FUNC"].cumsum()
                     df = df.reset_index(drop=True)
