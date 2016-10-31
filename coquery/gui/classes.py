@@ -1576,7 +1576,8 @@ class CoqTableView(QtGui.QTableView):
         rects = dict([
             (df.columns[i], QtCore.QRect(0, 0, self.columnWidth(i) - 2, 99999)) for i in range(self.horizontalHeader().count())])
 
-        df[cols].apply(lambda x: set_height(np.where(df.index == x.name)[0], x, 2), axis="columns")
+        df[cols].apply(lambda x: set_height(np.where(df.index == x.name)[0], x), 
+                       axis="columns")
 
     def resizeColumnsToContents(self, *args, **kwargs):
         self.setVisible(False)
