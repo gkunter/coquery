@@ -58,28 +58,59 @@ class MyTableModel(QtCore.QAbstractTableModel):
         return len(self.df.columns.values)
 
     def data(self, index, role):
-        if role == QtCore.Qt.BackgroundRole and index.row() < self.skip_lines:
-            return QtGui.QBrush(QtCore.Qt.lightGray)        
-        elif role != QtCore.Qt.DisplayRole:
-            return None
-
-        column = self.header[index.column()]
-        value = self.df.iloc[index.row()][column]  
-        if isinstance(value, np.int64):
-            return int(value)
+        if index.row() < self.skip_lines:
+            group = QtGui.QPalette.Disabled
+        else:
+            group = QtGui.QPalette.Normal
+            
+        value = None
+        c_role = None
+        if role == QtCore.Qt.BackgroundRole:
+            c_role = QtGui.QPalette.Base
+        elif role == QtCore.Qt.ForegroundRole:
+            c_role = QtGui.QPalette.Text
+        elif role == QtCore.Qt.DisplayRole:
+            column = self.header[index.column()]
+            value = self.df.iloc[index.row()][index.column()]  
+            if isinstance(value, np.int64):
+                value = int(value)
+            
+        if c_role:
+            return options.cfg.app.palette().brush(group, c_role)
         else:
             return value
 
-    def headerData(self, col, orientation, role):
-        if not self.header or col > len(self.header):
-            return None
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            try:
-                return self.header[col]
-            except IndexError:
-                return None
-        return None
+    def headerData(self, index, orientation, role):
+        if orientation == QtCore.Qt.Vertical:
+            group = None
+            c_role = None
+            value = None
+            
+            if index < self.skip_lines:
+                group = QtGui.QPalette.Disabled
+            else:
+                group = QtGui.QPalette.Normal
 
+            if role == QtCore.Qt.DisplayRole:
+                value = self.df.index[index]
+            elif role == QtCore.Qt.BackgroundRole:
+                c_role = QtGui.QPalette.Window
+            elif role == QtCore.Qt.ForegroundRole:
+                c_role = QtGui.QPalette.WindowText
+                
+            if c_role:
+                return options.cfg.app.palette().brush(group, c_role)
+            else:
+                return value
+                    
+        elif orientation == QtCore.Qt.Horizontal:
+            if role == QtCore.Qt.DisplayRole:
+                try:
+                    return self.header[index]
+                except (IndexError, AttributeError):
+                    return None
+
+        return None
 quote_chars = {
     '"': 'Double quote (")',
     "'": "Single quote (')",
