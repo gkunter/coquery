@@ -695,6 +695,15 @@ class SubcorpusSize(CorpusSize):
 ## Context functions
 #############################################################################
 
+class SentenceId(Function):
+    _name = "coq_sentence_id"
+    
+    def evaluate(self, df, *args, **kwargs):
+        session = kwargs["session"]
+        val = session.Resource.get_sentence_ids(df["coquery_invisible_corpus_id"])
+        assert len(val) == len(df)
+        return val
+
 class ContextColumns(Function):
     _name = "coq_context_column"
     single_column = False
@@ -714,10 +723,15 @@ class ContextColumns(Function):
         return self._name
 
     def _func(self, row, session):
+        if self._sentence_column:
+            sentence_id = row[self._sentence_column]
+        else:
+            sentence_id = None
         left, target, right = session.Resource.get_context(
             row["coquery_invisible_corpus_id"], 
             row["coquery_invisible_origin_id"],
-            row["coquery_invisible_number_of_tokens"], session.db_connection)
+            row["coquery_invisible_number_of_tokens"], session.db_connection,
+            sentence_id=sentence_id)
         return pd.Series(
             data=left + right, 
             index=self.left_cols + self.right_cols)
@@ -729,6 +743,14 @@ class ContextColumns(Function):
             "coquery_invisible_number_of_tokens" not in df.columns):
             return pd.Series(index=df.index)
         else:
+            if options.cfg.context_restrict:
+                self._sentence_column = "coq_{}_1".format(session.Resource.corpus_sentence)
+                if self._sentence_column not in df.columns:
+                    val = SentenceId(session=session).evaluate(df, session=session)
+                    df["coquery_invisible_sentence_id"] = val
+                    self._sentence_column = "coquery_invisible_sentence_id"
+            else:
+                self._sentence_column = None
             val = df.apply(lambda x: self._func(row=x, 
                                             session=session), axis="columns")
             val.index = df.index
@@ -751,10 +773,15 @@ class ContextString(ContextColumns):
         super(ContextString, self).__init__(*args)
 
     def _func(self, row, session):
+        if self._sentence_column:
+            sentence_id = row[self._sentence_column]
+        else:
+            sentence_id = None
         left, target, right = session.Resource.get_context(
             row["coquery_invisible_corpus_id"], 
             row["coquery_invisible_origin_id"],
-            row["coquery_invisible_number_of_tokens"], session.db_connection)
+            row["coquery_invisible_number_of_tokens"], session.db_connection,
+            sentence_id=sentence_id)
         return pd.Series(
             data=[collapse_words(list(pd.Series(left + [x.upper() for x in target] + right)))],
             index=[self._name])
