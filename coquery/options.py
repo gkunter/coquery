@@ -784,7 +784,7 @@ class Options(object):
             self.args.context_left = config_file.int("context", "context_left", d=defaults)
             self.args.context_right = config_file.int("context", "context_right", d=defaults)
             self.args.context_mode = config_file.str("context", "context_mode", d=defaults)
-            self.args.context_restrict = config_file.str("context", "context_restrict", d=defaults)
+            self.args.context_restrict = config_file.bool("context", "context_restrict", d=defaults)
 
             # read OUTPUT section:
             for variable, value in config_file.items("output"):
@@ -991,6 +991,7 @@ def save_configuration():
     if not "context" in config.sections():
         config.add_section("context")
     config.set("context", "context_mode", cfg.context_mode)
+    config.set("context", "context_restrict", cfg.context_restrict)
     if cfg.context_left or cfg.context_right:
         config.set("context", "context_left", cfg.context_left)
         config.set("context", "context_right", cfg.context_right)
