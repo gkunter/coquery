@@ -559,7 +559,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 item.setToolTip(msg_column_not_in_data)
             else:
                 item.setIcon(QtGui.QIcon())
-                item.setToolTip(None)
+                item.setToolTip("")
 
     def activate_group_column_buttons(self):
         selected = self.ui.list_group_columns.selectedItems()
