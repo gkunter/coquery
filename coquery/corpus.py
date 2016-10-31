@@ -329,10 +329,7 @@ class LexiconClass(object):
             else:
                 raise WordNotInLexiconError
         else:
-            if stopwords:
-                return [x for x in list(df.ix[:,0]) if not x in stopword_ids]
-            else:
-                return list(df.ix[:,0])
+            return list(df.ix[:,0])
         
     def get_matching_wordids(self, token, stopwords=True):
         """
