@@ -352,7 +352,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_toggle_columns.triggered.connect(self.toggle_output_columns)
         self.ui.action_toggle_management.setChecked(options.cfg.show_data_management)
         self.ui.action_toggle_columns.setChecked(options.cfg.show_output_columns)
-        
+            
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
         self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
@@ -398,6 +398,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         self.ui.check_context.stateChanged.connect(self.change_context)
         self.ui.check_stopwords.stateChanged.connect(self.change_stopwords)
+        self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
         
         self.ui.check_group_filters.stateChanged.connect(self.change_grouping)
         
@@ -1104,8 +1105,17 @@ class CoqueryApp(QtGui.QMainWindow):
             self.column_tree.clear()
 
         self.column_tree.select(self.selected_features)
-
         options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
+        
+        # Enable "Restrict to sentences" checkbox if corpus
+        # actually contains sentence information:
+        if (hasattr(self.resource, "corpus_sentence") or
+            hasattr(self.resource, "corpus_sentence_id") or
+            hasattr(self.resource, "sentence_table")):
+            self.ui.check_restrict.setEnabled(True)
+        else:
+            self.ui.check_restrict.setEnabled(False)
+            
 
     def toggle_selected_feature(self, item):
         is_checked = (item.checkState(0) == QtCore.Qt.Checked)
@@ -2292,6 +2302,8 @@ class CoqueryApp(QtGui.QMainWindow):
                     options.cfg.selected_aggregate = utf8(radio.text())
                     break
 
+            options.cfg.context_restrict = self.ui.check_restrict.isChecked()
+
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
                 if type(self.ui.edit_query_string) == QtGui.QLineEdit:
@@ -2382,7 +2394,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.check_aggregate.setChecked(options.cfg.use_aggregate)
         self.ui.check_drop_duplicates.setChecked(options.cfg.drop_duplicates)
         self.ui.check_summarize_filters.setChecked(options.cfg.use_summarize_filters)
-
+        self.ui.check_restrict.setChecked(options.cfg.context_restrict)
         for radio in self.ui.aggregate_radio_list:
             if utf8(radio.text()) == options.cfg.selected_aggregate:
                 radio.setChecked(True)
