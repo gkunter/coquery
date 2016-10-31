@@ -304,6 +304,12 @@ class StringExtract(StringRegEx):
 
         return col.apply(lambda x: _match(x))
 
+class StringDecategoricalize(StringFunction):
+    _name = "DECAT"
+    
+    def _func(self, col):
+        return col
+
 ####################
 ## Numeric functions
 ####################
