@@ -46,6 +46,9 @@ class Visualizer(vis.BaseVisualizer):
         else:
             self.options["color_number"] = 1
 
+        if len(self._number_columns) == 0:
+            raise VisualizationInvalidDataError
+
         if len(self._number_columns) == 1:
             if self.cumulative:
                 self.options["label_y_axis"] = "Cumulative probability"
