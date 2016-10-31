@@ -23,6 +23,7 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_id = "ID"
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
+    corpus_sentence = "SentenceId"
     word_table = "Lexicon"
     word_id = "WordId"
     word_lemma = "Lemma"
@@ -105,8 +106,11 @@ class BuilderClass(BaseCorpusBuilder):
         
         self.create_table_description(self.corpus_table,
             [Identifier(self.corpus_id, "BIGINT UNSIGNED NOT NULL"),
+             Column(self.corpus_sentence, "INT UNSIGNED NOT NULL"), 
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table)])
+            
+        self._sentence_id = 0
 
     @staticmethod
     def validate_files(l):
@@ -226,6 +230,7 @@ class BuilderClass(BaseCorpusBuilder):
         # store new token in corpus table:
         return self.add_token_to_corpus(
             {self.corpus_word_id: word_id,
+             self.corpus_sentence: self._sentence_id,
              self.corpus_file_id: self._file_id})
 
     def process_file(self, file_name):
@@ -276,6 +281,7 @@ class BuilderClass(BaseCorpusBuilder):
             # and process this list one by one:
             sentence_list = nltk.sent_tokenize(raw_text)
             for sentence in sentence_list:
+                self._sentence_id += 1
                 # use NLTK tokenizer and POS tagger on this sentence:
                 tokens = nltk.word_tokenize(sentence)
                 pos_map = nltk.pos_tag(tokens)
@@ -299,6 +305,8 @@ class BuilderClass(BaseCorpusBuilder):
             
             tokens = raw_text.replace("\n", " ").split(" ")
             
+            final_punctuation = []
+            
             for token in [x.strip() for x in tokens if x.strip()]:
                 # any punctuation at the beginning of the token is added to the
                 # corpus as a punctuation token, and is also stripped from the
@@ -306,6 +314,20 @@ class BuilderClass(BaseCorpusBuilder):
                 while token and token[0] in string.punctuation:
                     self.add_token(token[0], "PUNCT")
                     token = token[1:]
+
+                # Try to detect sentence boundaries.
+                # A sentence boundary is assumed if 
+                # (a) there is final punctuation
+                # (b) final_punctuation contains only the sentence-delimiting 
+                #     punctuation marks .?!
+                # (c) the next word starts with a captial letter
+                
+                if (final_punctuation and 
+                    not re.sub("[.!?'\"]", "", "".join(final_punctuation)) and
+                    token[0] == token[0].upper()):
+                    self._sentence_id += 1
+                    print(self._sentence_id, token)
+                    
                 # next, detect any word-final punctuation:
                 final_punctuation = []
                 for ch in reversed(token):
