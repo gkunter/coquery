@@ -103,7 +103,10 @@ class LexiconClass(object):
     def is_part_of_speech(self, pos):
         if hasattr(self.resource, QUERY_ITEM_POS):
             S = self.sql_string_is_part_of_speech(pos)
-            df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+            engine = self.resource.get_engine()
+            df = pd.read_sql(S.replace("%", "%%"), engine)
+            engine.dispose()
+
             return len(df.index) > 0
         else:
             return False
@@ -134,7 +137,10 @@ class LexiconClass(object):
     def get_posid_list(self, token):
         """ Return a list of all PosIds that match the query token. """
         S = self.sql_string_get_posid_list(token)
-        df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+        engine = self.resource.get_engine()
+        df = pd.read_sql(S.replace("%", "%%"), engine)
+        engine.dispose()
+
         return set(list(df.ix[:,0]))
 
     def sql_string_get_wordid_list_where(self, token):
@@ -323,6 +329,7 @@ class LexiconClass(object):
         engine = self.resource.get_engine()
         df = pd.read_sql(S.replace("%", "%%"), engine)
         engine.dispose()
+        
         if not len(df.index):
             if token.negated:
                 return []
@@ -339,7 +346,10 @@ class LexiconClass(object):
         if token.S == "%" or token.S == "":
             return []
         S = self.sql_string_get_matching_wordids(token)
-        df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+        engine = self.resource.get_engine()
+        df = pd.read_sql(S.replace("%", "%%"), engine)
+        engine.dispose()
+
         if not len(df.index):
             if token.negated:
                 return []
@@ -927,6 +937,7 @@ class SQLResource(BaseResource):
         except AttributeError:
             df.sort(columns=list(df.columns)[:2], inplace=True)
         
+        engine.dispose()
         return df
     
     def get_query_string(self, Query, token_list, to_file=False):
@@ -972,7 +983,8 @@ class SQLResource(BaseResource):
         Query.Session.output_order = self.get_select_list(Query)
         return query_string
 
-    def get_context(self, token_id, origin_id, number_of_tokens, db_connection):
+    def get_context(self, token_id, origin_id, number_of_tokens, db_connection,
+                    sentence_id=None):
         def get_orth(word_id):
             """ 
             Return the orthographic forms of the word_ids.
@@ -1019,9 +1031,6 @@ class SQLResource(BaseResource):
                         self._word_cache[i] = DEFAULT_MISSING_VALUE
                 L.append(self._word_cache[i])
             return L
-                
-        if options.cfg.context_sentence:
-            raise NotImplementedError("Sentence contexts are currently not supported.")
 
         left_span = options.cfg.context_left
         right_span = options.cfg.context_right
@@ -1038,7 +1047,7 @@ class SQLResource(BaseResource):
         
         # Get words in left context:
         S = self.corpus.sql_string_get_wordid_in_range(
-                start, token_id - 1, origin_id)
+                start, token_id - 1, origin_id, sentence_id)
 
         results = db_connection.execute(S)
         if not hasattr(self, "corpus_word_id"):
@@ -1050,7 +1059,8 @@ class SQLResource(BaseResource):
         if options.cfg.context_mode == CONTEXT_STRING:
             # Get words matching the query:
             S = self.corpus.sql_string_get_wordid_in_range(
-                    token_id, token_id + number_of_tokens - 1, origin_id)
+                    token_id, token_id + number_of_tokens - 1, origin_id,
+                    sentence_id)
             results = db_connection.execute(S)
             if not hasattr(self, "corpus_word_id"):
                 string_context_words = [x for (x, ) in results if x]
@@ -1063,7 +1073,7 @@ class SQLResource(BaseResource):
         S = self.corpus.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens, 
                 token_id + number_of_tokens + options.cfg.context_right - 1, 
-                origin_id)
+                origin_id, sentence_id)
         results = db_connection.execute(S)
         if not hasattr(self, "corpus_word_id"):
             right_context_words = [x for (x, ) in results]
@@ -1072,6 +1082,42 @@ class SQLResource(BaseResource):
         right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
 
         return (left_context_words, string_context_words, right_context_words)
+
+    def get_sentence_ids(self, id_list):
+        """
+        Return a list containing the sentence IDs that belong to the list of 
+        corpus Ids.
+        """
+        
+        if hasattr(self, "corpus_sentence"):
+            sentence = self.corpus_sentence
+        elif hasattr(self, "corpus_sentence_id"):
+            sentence = self.corpus_sentence_id
+        else:
+            return [None] * len(id_list)
+
+        S = """
+        SELECT {sentence}, {token_id} 
+        FROM {corpus} 
+        WHERE {token_id} IN ({id_list})""".format(
+            corpus=self.corpus_table,
+            token_id=self.corpus_id,
+            sentence=sentence,
+            id_list=", ".join([str(x) for x in id_list]))
+
+        engine = self.get_engine()
+        df = pd.read_sql(S, engine)
+        engine.dispose()
+        
+        try:
+            df = df.sort_values(by=[self.corpus_id])
+            id_list = id_list.sort_values()
+        except AttributeError:
+            df = df.sort(columns=[self.corpus_id])
+            id_list = id_list.sort(inplace=False)
+        df.index = id_list.index
+
+        return df[sentence]
 
     def get_context_sentence(self, sentence_id):
         raise NotImplementedError
@@ -1223,7 +1269,10 @@ class CorpusClass(object):
             self.resource.corpus_table, 
             self.resource.corpus_id, 
             token_id)
-        df = pd.read_sql(S, self.resource.get_engine())
+        engine = self.resource.get_engine()
+        df = pd.read_sql(S, engine)
+        engine.dispose()
+        
         return df.values.ravel()[0]
 
     def get_file_data(self, token_id, features):
@@ -1255,7 +1304,11 @@ class CorpusClass(object):
                 corpus_id=self.resource.corpus_id,
                 token_ids="({})".format(", ".join([str(x) for x in tokens])))
 
-        return pd.read_sql(S, self.resource.get_engine())
+        engine = self.resource.get_engine()
+        df = pd.read_sql(S, engine)
+        engine.dispose()
+        
+        return df
 
     def get_origin_data(self, token_id):
         """
@@ -1337,7 +1390,10 @@ class CorpusClass(object):
                     table_name, id_column, df[column].values[0])
                 # Fetch all fields from the linked table for the current 
                 # token:
-                row = pd.read_sql(S, self.resource.get_engine())
+                engine = self.resource.get_engine()
+                row = pd.read_sql(S, engine)
+                engine.dispose()
+                
                 if len(row.index) > 0:
                     D = dict([(x, row.at[0,x]) for x in row.columns if x != id_column])
                     # append the row data to the list:
@@ -1380,7 +1436,9 @@ class CorpusClass(object):
 
         S = "SELECT COUNT(*) FROM {}".format(from_str)
         if not S in self._corpus_size_cache:
-            df = pd.read_sql(S.replace("%", "%%"), self.resource.get_engine())
+            engine = self.resource.get_engine()
+            df = pd.read_sql(S.replace("%", "%%"), engine)
+            engine.dispose()
             self._corpus_size_cache[S] = df.values.ravel()[0]
         return self._corpus_size_cache[S]
 
@@ -1454,6 +1512,10 @@ class CorpusClass(object):
             The number of tokens that match the query item specification after
             the filter list is applied.
         """
+        
+        # FIXME: an engine is passed to this method. This is probably not 
+        # a good idea.
+        
         filter_list = self.resource.translate_filters(filters)
 
         if s in ["%", "_"]:
@@ -1827,7 +1889,6 @@ class CorpusClass(object):
         if hasattr(self.resource, "corpus_word_id"):
             word_id_column = self.resource.corpus_word_id
         elif hasattr(self.resource, "corpus_word"):
-            #word_id_column = self.resource.corpus_word
             word_id_column = self.resource.corpus_id
         else:
             word_id_column = None
@@ -2650,40 +2711,51 @@ class CorpusClass(object):
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
         return query_string
 
-    def sql_string_get_sentence_wordid(self,  source_id):
-        return "SELECT {corpus_wordid} FROM {corpus} INNER JOIN {source} ON {corpus}.{corpus_source} = {source}.{source_id} WHERE {source}.{source_id} = {this_source}{verbose}".format(
-            corpus_wordid=self.resource.corpus_word_id,
-            corpus=self.resource.corpus_table,
-            source=self.resource.source_table,
-            corpus_source=self.resource.corpus_source_id,
-            source_id=self.resource.source_id,
-            corpus_token=self.resource.corpus_id,
-            this_source=source_id,
-            verbose=" -- sql_string_get_sentence_wordid" if options.cfg.verbose else "")
-
-    def sql_string_get_wordid_in_range(self, start, end, origin_id):
+    def sql_string_get_wordid_in_range(self, start, end, origin_id, sentence_id=None):
         if hasattr(self.resource, "corpus_word_id"):
             word_id_column = self.resource.corpus_word_id
         elif hasattr(self.resource, "corpus_word"):
             word_id_column = self.resource.corpus_word
+
         if options.cfg.token_origin_id and origin_id:
-            return "SELECT {corpus_wordid} from {corpus} WHERE {token_id} BETWEEN {start} AND {end} AND {corpus_source} = {this_source}".format(
-                corpus_wordid=word_id_column,
-                corpus=self.resource.corpus_table,
-                token_id=self.resource.corpus_id,
-                start=start, end=end,
-                corpus_source=getattr(self.resource, options.cfg.token_origin_id),
-                this_source=origin_id)
+            S = """
+                SELECT {corpus_wordid} 
+                FROM {corpus} 
+                WHERE {token_id} BETWEEN {start} AND {end} 
+                      AND {corpus_source} = {this_source}
+                """.format(
+                        corpus_wordid=word_id_column,
+                        corpus=self.resource.corpus_table,
+                        token_id=self.resource.corpus_id,
+                        start=start, end=end,
+                        corpus_source=getattr(self.resource, options.cfg.token_origin_id),
+                        this_source=origin_id)
+            if sentence_id:
+                if hasattr(self.resource, "corpus_sentence"):
+                    sentence = self.resource.corpus_sentence
+                elif hasattr(self.resource, "corpus_sentence_id"):
+                    sentence = self.resource.corpus_sentence_id
+                
+                S2 = """
+                      {corpus_sentence} = {sentence_id}
+                """.format(corpus_sentence=sentence,
+                           sentence_id=sentence_id)
+                S = " AND ".join([S, S2])
         else:
             # if no source id is specified, simply return the tokens in
             # the corpus that are within the specified range.
-            return "SELECT {corpus_wordid} FROM {corpus} WHERE {corpus_token} BETWEEN {start} AND {end} {verbose}".format(
-                corpus_wordid=word_id_column,
-                corpus=self.resource.corpus_table,
-                corpus_token=self.resource.corpus_id,
-                start=start, end=end,
-                verbose=" -- sql_string_get_wordid_in_range" if options.cfg.verbose else "")
-
+            S = """
+                SELECT {corpus_wordid} 
+                FROM {corpus} 
+                WHERE {corpus_token} BETWEEN {start} AND {end} {verbose}
+                """.format(
+                    corpus_wordid=word_id_column,
+                    corpus=self.resource.corpus_table,
+                    corpus_token=self.resource.corpus_id,
+                    start=start, end=end,
+                    verbose=" -- sql_string_get_wordid_in_range" if options.cfg.verbose else "")
+        return S
+    
     def get_tag_translate(self, s):
         # Define some TEI tags:
         tag_translate = {
@@ -2825,7 +2897,9 @@ class CorpusClass(object):
         if options.cfg.verbose:
             logger.info(S)
             print(S)
-        df = pd.read_sql(S, self.resource.get_engine())
+        engine = self.resource.get_engine()
+        df = pd.read_sql(S, engine)
+        engine.dispose()
 
         try:
             df = df.sort_values(by=headers)
