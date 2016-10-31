@@ -44,6 +44,7 @@ class BaseVisualizer(QtCore.QObject):
     """
     numerical_axes = 0
     default_func = None
+    function_list = []
 
     def __init__(self, data_model, data_view, parent = None):
         super(BaseVisualizer, self).__init__(parent=parent)
@@ -288,7 +289,10 @@ class BaseVisualizer(QtCore.QObject):
         
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
-        self._factor_columns = [x for x in self._table.columns if self._table.dtypes[x] in (bool, object) and not x in self._time_columns]
+        self._factor_columns = [x for x in self._table.columns if (
+                    self._table.dtypes[x] in (bool, object) and 
+                    x not in self._time_columns and
+                    not x.startswith("func_DECAT"))]
         self._number_columns = [x for x in self._table.select_dtypes(include=["int", "float"]).columns if not x.startswith("coquery_invisible")]
         
         if self.dimensionality:
