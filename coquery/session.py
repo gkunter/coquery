@@ -466,12 +466,15 @@ class Session(object):
             except ValueError:
                 pass
             # if options.cfg.verbose: print(15)
-            return "{}{}{}".format(res_prefix, getattr(resource, str(rc_feature)), number)
+            return "{}{}{}".format(res_prefix, 
+                                   getattr(resource, str(rc_feature)).replace("__", " "), 
+                                   number)
 
         # treat any other feature that is provided by the corpus:
         try:
             # if options.cfg.verbose: print(16)
-            return "{}{}".format(res_prefix, getattr(resource, str(rc_feature)))
+            return "{}{}".format(res_prefix, 
+                                 getattr(resource, str(rc_feature)).replace("__", " "))
         except AttributeError:
             pass
 
