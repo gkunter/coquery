@@ -741,8 +741,8 @@ class BuilderClass(BaseCorpusBuilder):
         self.word_id = "Word_id"
         self.word_label = "Word"
         self.word_lemma = "Lemma"
-        self.word_pos = "C5_POS"
-        self.word_lemma_pos = "Lemma_POS"
+        self.word_pos = "C5__POS"
+        self.word_lemma_pos = "Lemma__POS"
         self.word_type = "Type"
 
         self.create_table_description(self.word_table,
@@ -824,10 +824,11 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.sentence_table = "Sentences"
         self.sentence_id = "Sentence_id"
-        self.sentence_label = "Sentence_id"
+        self.sentence_label = "Sentence"
 
         self.create_table_description(self.sentence_table,
-            [Identifier(self.sentence_id, "SMALLINT(4) UNSIGNED NOT NULL")])
+            [Identifier(self.sentence_id, "INT UNSIGNED NOT NULL"),
+             Column(self.sentence_label, "VARCHAR(7) NOT NULL")])
 
         # Add the source table. Each row in this table represents a BNC 
         # source. Each sentence from the sentence table is linked to exactly
@@ -912,11 +913,11 @@ class BuilderClass(BaseCorpusBuilder):
         # tables to each token in the corpus.
         
         self.corpus_table = "Corpus"
-        self.corpus_id = "Token_id"
+        self.corpus_id = "ID"
         self.corpus_word_id = "Word_id"
         self.corpus_source_id = "Source_id"
         self.corpus_speaker_id = "Speaker_id"
-        self.corpus_sentence_id = "Sentence_id"
+        self.corpus_sentence_id = "Sentence_id" 
 
         self.create_table_description(self.corpus_table, 
             [Identifier(self.corpus_id, "INT(9) UNSIGNED NOT NULL"),
@@ -934,6 +935,7 @@ class BuilderClass(BaseCorpusBuilder):
         # the MySQL table) that is associated with a BNC speaker label (used
         # in the XML files).
         self._speaker_dict = {}
+        self._sentence_id = 0
 
     def xml_preprocess_tag(self, element):
         self._tagged = False
@@ -947,29 +949,30 @@ class BuilderClass(BaseCorpusBuilder):
                 word_text = ""
             
             if tag == "w":
-                lemma_text = element.attrib.get("hw", word_text).strip()
-                lemma_pos = element.attrib.get("pos", "UNC").strip()
-                word_pos = element.attrib.get("c5", "UNC").strip()
+                # word, get attributes from element
+                self._word_id = self.table(self.word_table).get_or_insert(
+                    {self.word_label: word_text, 
+                    self.word_lemma: element.attrib.get("hw", word_text).strip(), 
+                    self.word_lemma_pos: element.attrib.get("pos", "UNC").strip(),
+                    self.word_pos: element.attrib.get("c5", "UNC").strip(), 
+                    self.word_type: tag}, case=True)
             else:
-                lemma_text = word_text
-                lemma_pos = "PUNCT"
-                word_pos = "PUNCT"
+                # punctuation; use 'PUNCT' as POS labels, and 
+                # ``word_lemma`` equals ``word_label``
+                self._word_id = self.table(self.word_table).get_or_insert(
+                    {self.word_label: word_text, 
+                    self.word_lemma: word_text, 
+                    self.word_lemma_pos: "PUNCT",
+                    self.word_pos: "PUNCT", 
+                    self.word_type: tag}, case=True)
                 
-            # get word_id that matches current token (a new one is created
-            # if necessary:
-            self._word_id = self.table(self.word_table).get_or_insert(
-                {self.word_label: word_text, 
-                 self.word_lemma: lemma_text, 
-                 self.word_lemma_pos: lemma_pos,
-                 self.word_pos: word_pos, 
-                 self.word_type: tag}, case=True)
-            
             # store the new token with all needed information:
             self.add_token_to_corpus(
                 {self.corpus_word_id: self._word_id,
                  self.corpus_speaker_id: self._speaker_id,
                  self.corpus_sentence_id: self._sentence_id,
                  self.corpus_source_id: self._source_id})
+                
         elif tag == "u":
             who = element.attrib["who"].strip()
             lookup = self._speaker_dict.get(who, None)
@@ -987,7 +990,10 @@ class BuilderClass(BaseCorpusBuilder):
                     self._speaker_dict[who] = self._speaker_id
         # <s> is a sentence:
         elif tag == "s":
-            self._sentence_id = self.table(self.sentence_table).get_or_insert({})
+            sentence = "{}{}".format(self._value_source_xmlname, 
+                                     element.attrib["n"].strip())
+            self._sentence_id = self.table(
+                self.sentence_table).get_or_insert({self.sentence_label: sentence})
         
         #other supported elements:
         else:
@@ -1085,9 +1091,9 @@ class BuilderClass(BaseCorpusBuilder):
         # Get XMLName and OldName:
         for idno in file_desc.find("publicationStmt").findall("idno"):
             if idno.attrib["type"] == "bnc":
-                source_xmlname = idno.text.strip()
+                self._value_source_xmlname = idno.text.strip()
             else:
-                source_oldname = idno.text.strip()
+                self._value_source_oldname = idno.text.strip()
         
         body = self.xml_get_body(root)
         
@@ -1115,8 +1121,8 @@ class BuilderClass(BaseCorpusBuilder):
         # Get a valid source id for this text. If it isn't in the source 
         # table yet, store it as a new entry:
         self._source_id = self.table(self.source_table).get_or_insert(
-            {self.source_xmlname: source_xmlname, 
-             self.source_oldname: source_oldname, 
+            {self.source_xmlname: self._value_source_xmlname, 
+             self.source_oldname: self._value_source_oldname, 
              self.source_genre: source_type, 
              self.source_class: source_class, 
              self.source_year: source_date, 
