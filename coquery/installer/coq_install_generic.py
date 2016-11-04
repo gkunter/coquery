@@ -23,7 +23,7 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_id = "ID"
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
-    corpus_sentence = "SentenceId"
+    corpus_sentence = "Sentence_Id"
     word_table = "Lexicon"
     word_id = "WordId"
     word_lemma = "Lemma"
