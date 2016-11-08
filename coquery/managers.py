@@ -17,6 +17,7 @@ import logging
 from .defines import *
 from .errors import *
 from .functions import *
+from .functionlist import FunctionList
 from . import filters
 from .general import CoqObject, get_visible_columns
 from . import options
