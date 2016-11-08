@@ -1031,7 +1031,7 @@ class CoqueryApp(QtGui.QMainWindow):
         
         elif row == TOOLBOX_SUMMARY:
             try:
-                session = options.cfg.main_window.Session
+                session = self.Session
                 manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
             except:
                 manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
@@ -1384,10 +1384,8 @@ class CoqueryApp(QtGui.QMainWindow):
 
         header = self.ui.data_preview.horizontalHeader()
         ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
-        # FIXME: use manager instead
-        #ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
-        ordered_headers.append("coquery_invisible_corpus_id")
         tab = self.table_model.content[ordered_headers]
+        tab["coquery_invisible_corpus_id"] = self.table_model.invisible_content["coquery_invisible_corpus_id"]
 
         ## restrict to visible rows:
         # FIXME: reimplement row visibility
@@ -1441,6 +1439,11 @@ class CoqueryApp(QtGui.QMainWindow):
             self.set_query_button()
             self.stop_progress_indicator()
         else:
+            try:
+                self.Session.db_connection.close()
+                self.Session.db_engine.dispose()
+            except Exception as e:
+                print(e)
             self.Session = self.new_session
             del self.new_session
             self.reaggregate()
@@ -2490,7 +2493,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_add_group_function.setText(label.format(mark))
 
         try:
-            session = options.cfg.main_window.Session
+            session = self.Session
             manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         except:
             manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
@@ -2505,7 +2508,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def add_function(self, columns=[], summary=False, group=False, **kwargs):
         from . import functionapply
 
-        session = options.cfg.main_window.Session
+        session = self.Session
         if session is not None:
             manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         else:
@@ -2576,7 +2579,7 @@ class CoqueryApp(QtGui.QMainWindow):
             
     def edit_function(self, column):
         from . import functionapply
-        session = options.cfg.main_window.Session
+        session = self.Session
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         func = self._column_functions.find_function(column)
 
@@ -2600,7 +2603,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.update_columns()
 
     def remove_functions(self, columns):
-        session = options.cfg.main_window.Session
+        session = self.Session
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         for col in columns:
             func = self._column_functions.find_function(col)
