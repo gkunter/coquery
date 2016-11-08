@@ -54,7 +54,12 @@ class TokenQuery(object):
     """
     
     def __init__(self, S, Session):
-        self.query_list = tokens.preprocess_query(S)
+        try:
+            self.query_list = tokens.preprocess_query(S)
+        except TokenParseError as e:
+            logger.error(str(e))
+            S = ""
+            self.query_list = []
         self.query_string = S
         self.Session = Session
         self.Resource = Session.Resource
