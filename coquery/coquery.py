@@ -35,7 +35,6 @@ from .errors import *
 from . import options
 from .defines import *
 from .unicode import utf8
-from . import session
 
 def set_logger(log_file_path):
     logger = logging.getLogger(NAME)
@@ -124,8 +123,10 @@ def main():
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
         Coq.setGUIDefaults()
-        Coq.Session = session.SessionCommandLine()
         Coq.show()
+
+        from . import session
+        Coq.Session = session.SessionCommandLine()
 
         options.cfg.icon = Coq.get_icon("coquerel_icon.png", small_n_flat=False)
         Coq.setWindowIcon(options.cfg.icon)
@@ -138,6 +139,8 @@ def main():
 
     # Otherwise, run program as a command-line tool:
     else:
+        from . import session
+
         # Choose the appropriate Session type instance:
         if options.cfg.MODE == QUERY_MODE_STATISTICS:
             Session = session.StatisticsSession()
