@@ -19,7 +19,6 @@ from collections import *
 try:
     import sqlalchemy
     import pandas as pd
-    import numpy as np
 except ImportError:
     # Missing dependencies are handled in check_system() from coquery.py,
     # so we can pass any ImportError here.
