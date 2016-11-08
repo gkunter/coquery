@@ -10,7 +10,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-
+print("manager.py")
 import hashlib
 import logging
 
@@ -309,6 +309,7 @@ class Manager(CoqObject):
             df = df.iloc[ix]
 
         if options.cfg.drop_duplicates:
+            print("------------")
             df = self.distinct(df, session)
                           
         print("\tdone")
@@ -499,7 +500,7 @@ class FrequencyList(Manager):
             self.manager_summary_functions = FunctionList([freq_function])
         return super(FrequencyList, self).summarize(df, session)
         
-class ContingencyTable(Manager):
+class ContingencyTable(FrequencyList):
     name = "CONTINGENCY"
     
     def select(self, df, session):
@@ -509,7 +510,7 @@ class ContingencyTable(Manager):
                 l.append(col)
         return df[l]
 
-    def mutate(self, df, session):
+    def summarize(self, df, session):
         def _get_column_label(row):
             col_label = session.translate_header(row[0])
             if row[1] == "All":
@@ -527,17 +528,17 @@ class ContingencyTable(Manager):
             else:
                 return row[0]
 
-        print("mutate()")
-
-        # collapse the data frame:
-        df = super(ContingencyTable, self).mutate(df, session)
-        df = super(ContingencyTable, self).filter(df, session)
-        df = super(ContingencyTable, self).summarize(df, session)
+        df = self.distinct(super(ContingencyTable, self).summarize(df, session),
+                           session=session)
 
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
         cat_col = list(df[vis_cols].select_dtypes(include=[object]).columns.values)
         num_col = list(df[vis_cols].select_dtypes(include=[np.number]).columns.values) + ["coquery_invisible_number_of_tokens", "coquery_invisible_corpus_id"]
+        
+        print(num_col)
+        num_col = [x for x in num_col if x.startswith("func_Frequency")]
+        print(num_col)
 
         agg_fnc = {}
         for col in num_col:
@@ -556,7 +557,7 @@ class ContingencyTable(Manager):
                              margins_name="",
                              aggfunc=agg_fnc,
                              fill_value=0)
-        
+        print(piv)
         piv = piv.reset_index()
 
         l1 = pd.Series(piv.columns.levels[-2][piv.columns.labels[-2]])
@@ -576,12 +577,10 @@ class ContingencyTable(Manager):
             if piv.dtypes[x] != df.dtypes[name]:
                 piv[x] = piv[x].astype(df.dtypes[name])
 
-        print(piv)
+        piv = piv.drop([x.get_id() for x in self.manager_summary_functions.get_list()],
+                       axis="columns")
+
         return piv
-
-    def summarize(self, df, session):
-        return df
-
 
 def manager_factory(manager):
     if manager == QUERY_MODE_FREQUENCIES:
