@@ -26,6 +26,7 @@ from collections import defaultdict
 from coquery import queries
 from coquery import managers
 from coquery import functions
+from coquery import functionlist
 from coquery import sqlhelper
 from coquery.general import memory_dump
 from coquery.session import *
@@ -102,8 +103,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.last_connection_state = None
         self.last_index = None
         self.corpus_manager = None
-        self._group_functions = functions.FunctionList()
-        self._column_functions = functions.FunctionList()
+        self._group_functions = functionlist.FunctionList()
+        self._column_functions = functionlist.FunctionList()
         
         self.widget_list = []
         self.Session = None
@@ -969,7 +970,7 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             col = "#7f0000"
 
-        s = "Number of matches: {num:<8} Unique matches: {uniq:<8} Duration of last operation: {dur}"
+        s = "Total rows: {num:<8} Displayed rows: {uniq:<8} Duration of last operation: {dur}"
 
         if options.cfg.number_of_tokens and self.unfiltered_tokens != 0:
             s = "<font color='{{col}}'>Note: </font> Match limit ({{lim:<8}}) enabled. {s}".format(s=s)
@@ -1010,11 +1011,14 @@ class CoqueryApp(QtGui.QMainWindow):
             if self.Session:
                 manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
                 if manager.stopwords_failed:
-                    _set_icon(2, "warning" if check.isChecked() else None)
+                    _set_icon(2, "warning" if self.ui.check_stopwords.isChecked() else None)
                     _set_icon(1, None)
 
         elif row == TOOLBOX_GROUPING:
-            _set_icon(2, None)
+            if self._group_functions.get_list():
+                _set_icon(2, "lightning")
+            else:
+                _set_icon(2, None)
             if self.ui.check_group_filters.isChecked():
                 active = (self.ui.list_group_columns.columns and 
                           options.cfg.group_filter_list)
@@ -1026,8 +1030,17 @@ class CoqueryApp(QtGui.QMainWindow):
             _set_icon(2, "lightning" if check.isChecked() else None)
         
         elif row == TOOLBOX_SUMMARY:
-            active = (self.ui.check_drop_duplicates.isChecked())
+            try:
+                session = options.cfg.main_window.Session
+                manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+            except:
+                manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
+            l = manager.user_summary_functions.get_list()
+
+
+            active = (self.ui.check_drop_duplicates.isChecked() or l)
             _set_icon(2, "lightning" if active else None)
+
             if self.ui.check_summarize_filters.isChecked():
                 _set_icon(1, "filter" if options.cfg.filter_list else "sign-question")
             else:
