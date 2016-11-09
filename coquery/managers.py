@@ -10,7 +10,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-print("manager.py")
+
 import hashlib
 import logging
 
@@ -309,7 +309,6 @@ class Manager(CoqObject):
             df = df.iloc[ix]
 
         if options.cfg.drop_duplicates:
-            print("------------")
             df = self.distinct(df, session)
                           
         print("\tdone")
@@ -359,7 +358,6 @@ class Manager(CoqObject):
         self.reset_group_filter_statistics()
         
         columns = self.get_group_columns(df, session)
-        print(columns)
         grouped = df.groupby(columns)
         new_df = pd.DataFrame(columns = df.columns)
         for x in grouped.groups:
@@ -536,9 +534,7 @@ class ContingencyTable(FrequencyList):
         cat_col = list(df[vis_cols].select_dtypes(include=[object]).columns.values)
         num_col = list(df[vis_cols].select_dtypes(include=[np.number]).columns.values) + ["coquery_invisible_number_of_tokens", "coquery_invisible_corpus_id"]
         
-        print(num_col)
         num_col = [x for x in num_col if x.startswith("func_Frequency")]
-        print(num_col)
 
         agg_fnc = {}
         for col in num_col:

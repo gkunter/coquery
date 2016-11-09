@@ -971,7 +971,6 @@ def save_configuration():
         config.add_section("filter")
 
     for i, filt in enumerate(cfg.filter_list):
-        print(filt)
         config.set("filter", "filter_{}_column".format(i), filt.feature)
         config.set("filter", "filter_{}_operator".format(i), filt.operator)
         config.set("filter", "filter_{}_value".format(i), filt.value)
