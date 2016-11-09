@@ -50,7 +50,6 @@ class BaseVisualizer(QtCore.QObject):
         super(BaseVisualizer, self).__init__(parent=parent)
         self._model = None
         self._view = None
-        self._df = None
         self.options = {}
         self.set_data_source(data_model, data_view)
         self.set_defaults()
@@ -137,12 +136,6 @@ class BaseVisualizer(QtCore.QObject):
                 raise VisualizationInvalidLayout
             return func(self)
         return func_wrapper
-    
-    def set_data_table(self, df):
-        self._df = df
-        
-    def get_data_table(self):
-        return self._df
     
     @_validate_layout
     def setup_figure(self):
@@ -278,14 +271,10 @@ class BaseVisualizer(QtCore.QObject):
         except NameError:
             self._time_columns = []
        
-        #options.cfg.main_window.Session.mask_data()
-        # get visible rows::
-        try:
-            self._table = self._df[column_order]
-        except TypeError:
             # FIXME: reimplement row visibility
             #self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
-            self._table = session.output_object[column_order]
+        self._table = session.output_object[column_order]
+        self._table.columns = [session.translate_header(x) for x in self._table.columns]
         
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
