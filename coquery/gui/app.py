@@ -709,22 +709,24 @@ class CoqueryApp(QtGui.QMainWindow):
         #self.reaggregate(start=True)
         self.enable_apply_button()
 
-    def set_context_values(self, mode=None, left_span=None, right_span=None):
-        if mode is not None:
-            if mode == CONTEXT_STRING:
+    def set_context_values(self):
+        if options.cfg.context_mode == CONTEXT_NONE:
+            self.ui.radio_context_mode_kwic.setChecked(True)
+            self.ui.check_context.setChecked(False)
+        else:
+            self.ui.check_context.setChecked(True)
+            if options.cfg.context_mode == CONTEXT_STRING:
                 self.ui.radio_context_mode_string.setChecked(True)
-            elif mode == CONTEXT_COLUMNS:
+            elif options.cfg.context_mode == CONTEXT_COLUMNS:
                 self.ui.radio_context_mode_columns.setChecked(True)
-            elif mode == CONTEXT_SENTENCE:
+            elif options.cfg.context_mode == CONTEXT_SENTENCE:
                 self.ui.radio_context_mode_sentence.setChecked(True)
-            elif mode == CONTEXT_KWIC:
+            elif options.cfg.context_mode == CONTEXT_KWIC:
                 self.ui.radio_context_mode_kwic.setChecked(True)
-                
             
-        if left_span is not None:
-            self.ui.context_left_span.setValue(left_span)
-        if right_span is not None:
-            self.ui.context_right_span.setValue(right_span)
+        self.ui.context_left_span.setValue(options.cfg.context_left)
+        self.ui.context_right_span.setValue(options.cfg.context_right)
+        self.ui.check_restrict.setChecked(options.cfg.context_restrict)
 
     def get_context_values(self):
         # determine context mode:
@@ -2414,13 +2416,16 @@ class CoqueryApp(QtGui.QMainWindow):
         index = self.ui.combo_corpus.findText(options.cfg.corpus)
         if index > -1:
             self.ui.combo_corpus.setCurrentIndex(index)
-        self.ui.check_context.setChecked(options.cfg.use_context)
+
+        # Set context widgets
+        self.set_context_values()
+
         self.ui.check_stopwords.setChecked(options.cfg.use_stopwords)
         self.ui.check_group_filters.setChecked(options.cfg.use_group_filters)
         self.ui.check_aggregate.setChecked(options.cfg.use_aggregate)
         self.ui.check_drop_duplicates.setChecked(options.cfg.drop_duplicates)
         self.ui.check_summarize_filters.setChecked(options.cfg.use_summarize_filters)
-        self.ui.check_restrict.setChecked(options.cfg.context_restrict)
+
         for radio in self.ui.aggregate_radio_list:
             if utf8(radio.text()) == options.cfg.selected_aggregate:
                 radio.setChecked(True)
@@ -2437,11 +2442,6 @@ class CoqueryApp(QtGui.QMainWindow):
         
         for rc_feature in options.cfg.selected_features:
             self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.Checked)
-
-
-        self.set_context_values(mode=options.cfg.context_mode,
-                                left_span=options.cfg.context_left,
-                                right_span=options.cfg.context_right)
 
         # get table from last session, if possible:
         try:
