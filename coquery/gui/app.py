@@ -19,23 +19,21 @@ import os
 import codecs
 import random
 import logging
-import numpy as np
 import pandas as pd
 from collections import defaultdict
 
-from coquery import queries
 from coquery import managers
 from coquery import functions
 from coquery import sqlhelper
 from coquery.general import memory_dump
-from coquery.session import *
+from coquery import options
 from coquery.defines import *
+from coquery.errors import *
 from coquery.unicode import utf8
 from coquery.links import get_by_hash
 
 from . import classes
 from . import errorbox
-from . import contextviewer
 from .pyqt_compat import QtCore, QtGui, QtHelp
 from .ui import coqueryUi, coqueryTinyUi
 from .resourcetree import CoqResourceTree
@@ -130,6 +128,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.setMenuBar(self.ui.menubar)
         
         self.setup_app()
+        self.show()
         
         options.cfg.main_window = self
 
@@ -799,6 +798,9 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         token_width = 1
 
+        # FIXME: these imports feels utterly misplaced.
+        from coquery import queries, session
+
         if index is not None:
             if self.Session.query_type == queries.ContrastQuery:
                 from . import independencetestviewer
@@ -814,7 +816,7 @@ class CoqueryApp(QtGui.QMainWindow):
             data = self.table_model.content.iloc[row]
             meta_data = self.table_model.invisible_content.iloc[row]
             
-            if isinstance(self.Session, StatisticsSession):
+            if isinstance(self.Session, session.StatisticsSession):
                 column = data.index[model_index.column()]
                 self.show_unique_values(rc_feature=meta_data["coquery_invisible_rc_feature"],
                                         uniques=column != "coq_statistics_entries")
@@ -826,7 +828,8 @@ class CoqueryApp(QtGui.QMainWindow):
                     QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
                     
         origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
-        
+
+        from . import contextviewer
         viewer = contextviewer.ContextView(
             self.Session.Corpus, int(token_id), int(origin_id), int(token_width), 
             icon=options.cfg.icon)
@@ -1167,6 +1170,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.resize_thread.start()
     
     def display_results(self, drop=True):
+        from coquery import session
         if len(self.Session.output_object) == 0:
             self.ui.text_no_match.show()
             # disable menu entries:
@@ -1180,7 +1184,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_copy_to_clipboard.setEnabled(True)
 
         # Visualizations menu is disabled for corpus statistics:
-        if isinstance(self.Session, StatisticsSession):
+        if isinstance(self.Session, session.StatisticsSession):
             self.ui.menuAnalyse.setEnabled(False)
         else:
             self.ui.menuAnalyse.setEnabled(True)
@@ -1422,6 +1426,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.multi_query_progress.hide()
         
     def finalize_query(self, to_file=False):
+        from coquery import session
+
         self.query_thread = None
         if to_file:
             self.showMessage("Query results written to {}.".format(options.cfg.output_path))
@@ -1434,7 +1440,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.set_query_button()
             self.stop_progress_indicator()
             
-            if isinstance(self.Session, StatisticsSession):
+            if isinstance(self.Session, session.StatisticsSession):
                 self.ui.tool_widget.widget(TOOLBOX_GROUPING).setDisabled(True)
             else:
                 self.ui.tool_widget.widget(TOOLBOX_GROUPING).setEnabled(True)
@@ -1764,7 +1770,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def reset_row_color(self, selection):
         for x in selection:
             try:
-                options.cfg.row_color.pop(np.int64(x))
+                options.cfg.row_color.pop(pd.np.int64(x))
             except KeyError:
                 pass
         #self.table_model.layoutChanged.emit()
@@ -1773,7 +1779,7 @@ class CoqueryApp(QtGui.QMainWindow):
         col = QtGui.QColorDialog.getColor()
         if col.isValid():
             for x in selection:
-                options.cfg.row_color[np.int64(x)] = col.name()
+                options.cfg.row_color[pd.np.int64(x)] = col.name()
         
     def change_sorting_order(self, tup):
         column, ascending, reverse = tup
@@ -1825,6 +1831,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.stop_progress_indicator()
         
     def run_query(self):
+        from coquery import session
+
         shift_pressed = options.cfg.app.keyboardModifiers() & QtCore.Qt.ShiftModifier
         options.cfg.to_file = shift_pressed
         if options.cfg.to_file:
@@ -1842,15 +1850,16 @@ class CoqueryApp(QtGui.QMainWindow):
             
         self.getGuiValues()
         self.showMessage("Preparing query...")
+        
         try:
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = options.cfg.query_list[0].splitlines()
-                self.new_session = SessionCommandLine()
+                self.new_session = session.SessionCommandLine()
             else:
                 if not self.verify_file_name():
                     QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     return
-                self.new_session = SessionInputFile()
+                self.new_session = session.SessionInputFile()
         except TokenParseError as e:
             QtGui.QMessageBox.critical(self, "Query string parsing error – Coquery", e.par, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except SQLNoConfigurationError:
@@ -2302,7 +2311,9 @@ class CoqueryApp(QtGui.QMainWindow):
                     options.cfg.selected_aggregate = utf8(radio.text())
                     break
 
-            options.cfg.context_restrict = self.ui.check_restrict.isChecked()
+            options.cfg.context_restrict = (
+                self.ui.check_restrict.isChecked() and 
+                self.ui.check_restrict.isEnabled())
 
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
@@ -2318,7 +2329,6 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.selected_features = self.selected_features
             options.cfg.group_columns = self.get_group_columns()
             self.get_context_values()
-            print(options.cfg.context_mode)
 
     def get_external_links(self):
         """

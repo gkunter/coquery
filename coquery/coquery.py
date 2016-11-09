@@ -123,7 +123,6 @@ def main():
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
         Coq.setGUIDefaults()
-        Coq.show()
 
         from . import session
         Coq.Session = session.SessionCommandLine()
