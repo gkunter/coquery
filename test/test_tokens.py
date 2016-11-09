@@ -442,6 +442,16 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
         
+    def test_transcript_spaced(self):
+        token = self.token_type("/a b c d e/", self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, ["a b c d e"])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, [])
+    
     def test_transcript_and_pos2(self):
         token = self.token_type("/b*n*/.[N]", self.lexicon)
         self.assertFalse(token.negated)

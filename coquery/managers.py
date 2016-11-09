@@ -17,6 +17,7 @@ import logging
 from .defines import *
 from .errors import *
 from .functions import *
+from .functionlist import FunctionList
 from . import filters
 from .general import CoqObject, get_visible_columns
 from . import options
@@ -239,7 +240,6 @@ class Manager(CoqObject):
         if self.sorters:
             # gather sorting information:
             for sorter in self.sorters:
-                directions.append(sorter.ascending)
                 # create dummy columns for reverse sorting:
                 if sorter.reverse:
                     target = "{}_rev".format(sorter.column)
@@ -251,6 +251,7 @@ class Manager(CoqObject):
                     drop_list.append(target)
                 else:
                     columns.append(target)
+                    directions.append(sorter.ascending)
 
         # drop illegal sorters:
         self.sorters = [x for x in self.sorters if not x in drop_list]
@@ -286,6 +287,11 @@ class Manager(CoqObject):
             df_data = df_data.sort_values(by=columns, 
                                     ascending=directions,
                                     axis="index")[original_columns]
+        except Exception as e:
+            print(e)
+            print(columns, directions)
+            raise e
+        
         if COLUMN_NAMES["statistics_column_total"] in df.index:
             # return sorted data frame plus a potentially totals row:
             df = pd.concat([df_data, df_totals])
@@ -472,7 +478,7 @@ class Manager(CoqObject):
             df = self.filter(df, session)
         df = self.summarize(df, session)
         df = self.arrange(df, session)
-            
+
         df = self.select(df, session)
 
         self._functions = (self._main_functions + self._group_functions +

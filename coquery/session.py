@@ -31,6 +31,7 @@ from . import queries
 from . import filters
 from . import managers
 from . import functions
+from . import functionlist
 from . import tokens
 
 class Session(object):
@@ -76,8 +77,8 @@ class Session(object):
         self._first_saved_dataframe = True
         self.filter_list = []
         
-        self.column_functions = functions.FunctionList()
-        self.group_functions = functions.FunctionList()
+        self.column_functions = functionlist.FunctionList()
+        self.group_functions = functionlist.FunctionList()
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
@@ -466,12 +467,15 @@ class Session(object):
             except ValueError:
                 pass
             # if options.cfg.verbose: print(15)
-            return "{}{}{}".format(res_prefix, getattr(resource, str(rc_feature)), number)
+            return "{}{}{}".format(res_prefix, 
+                                   getattr(resource, str(rc_feature)).replace("__", " "), 
+                                   number)
 
         # treat any other feature that is provided by the corpus:
         try:
             # if options.cfg.verbose: print(16)
-            return "{}{}".format(res_prefix, getattr(resource, str(rc_feature)))
+            return "{}{}".format(res_prefix, 
+                                 getattr(resource, str(rc_feature)).replace("__", " "))
         except AttributeError:
             pass
 

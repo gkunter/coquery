@@ -69,7 +69,7 @@ class TextgridWriter(object):
             features = options.cfg.selected_features
 
         tiers = set([])
-        for rc_feature in [x for x in features if not x.startswith("coquery")]:
+        for rc_feature in [x for x in features if not x.startswith(("func_", "coquery_"))]:
             _, hashed, tab, feature = self.resource.split_resource_feature(rc_feature)
 
             # determine the table that contains timing information by 
@@ -103,6 +103,13 @@ class TextgridWriter(object):
                     grids[x].add_tier(tgt.IntervalTier(name=tier_name))
                     tiers.add(tier_name)
 
+        session = options.cfg.main_window.Session
+        for func in [x for x in features if x.startswith("func")]:
+            tier_name = session.translate_header(func)
+            for x in grids:
+                grids[x].add_tier(tgt.IntervalTier(name=tier_name))
+                tiers.add(tier_name)
+
         # if there is no tier in the grids, but the corpus times were 
         # selected, add a tier for the corpus IDs in all grids:
         if not (grids[list(grids.keys())[0]].tiers) and ("corpus_starttime" in options.cfg.selected_features and "corpus_endtime" in options.cfg.selected_features) and not self._artificial_corpus_id:
@@ -127,6 +134,8 @@ class TextgridWriter(object):
         grids = self.prepare_textgrids(order)
         file_data = self.get_file_data()
 
+        session = options.cfg.main_window.Session
+
         for i in self.df.index:
             row = self.df.loc[i]
             
@@ -144,6 +153,26 @@ class TextgridWriter(object):
                 # add the corpus IDs if no real feature is selected:
                 if col == "coquery_invisible_corpus_id" and self._artificial_corpus_id:
                     rc_feature = "corpus_id"
+                # Handle functions
+                elif col.startswith("func_"):
+                    rc_feature = None
+                    value = row[col]
+                    interval = tgt.Interval(0, tier.end_time, utf8(value))
+                    tier_name = session.translate_header(col)
+                    try:
+                        grid.get_tier_by_name(tier_name).add_interval(interval)
+                    except ValueError as e:
+                        # ValueErrors occur if the new interval 
+                        # overlaps with a previous interval. This
+                        # can happen if the boundaries are not 
+                        # exactly aligned. It also happens, and 
+                        # this is absolutely harmless, if the 
+                        # data frame contains multiple rows per 
+                        # token, e.g. because the token is
+                        # segmented.
+                        # Anyway. in this case, the overlapping
+                        # interval is discarded silently:
+                        pass                    
                 else:
                     # special treatment of columns from linked tables:
                     # handle external columns:
@@ -170,6 +199,7 @@ class TextgridWriter(object):
                             tier_name = "{}.{}".format(external_db, external_feature)
                         else:
                             tier_name = rc_feat
+                            
                         if not rc_feat.endswith(("_starttime", "_endtime")):
                             if rc_feat in [x for x, _ in self.resource.get_corpus_features()] and not self.resource.is_tokenized(rc_feat):
                                 tier = grid.get_tier_by_name(tier_name)
