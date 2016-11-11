@@ -740,17 +740,22 @@ class ContextColumns(Function):
         session = kwargs["session"]
         if ("coquery_invisible_corpus_id" not in df.columns or
             "coquery_invisible_origin_id" not in df.columns or
-            "coquery_invisible_number_of_tokens" not in df.columns):
-            return pd.Series(index=df.index)
+            "coquery_invisible_number_of_tokens" not in df.columns or 
+            df["coquery_invisible_number_of_tokens"].isnull().any()):
+            return pd.Series([None] * len(df), index=df.index, name="coquery_invisible_dummy")
         else:
+            self._sentence_column = None
             if options.cfg.context_restrict:
-                self._sentence_column = "coq_{}_1".format(session.Resource.corpus_sentence)
-                if self._sentence_column not in df.columns:
-                    val = SentenceId(session=session).evaluate(df, session=session)
-                    df["coquery_invisible_sentence_id"] = val
-                    self._sentence_column = "coquery_invisible_sentence_id"
-            else:
-                self._sentence_column = None
+                if hasattr(session.Resource, "corpus_sentence_id"):
+                    self._sentence_column = session.Resource.corpus_sentence_id
+                elif hasattr(session.Resource, "corpus_sentence"):
+                    self._sentence_column = session.Resource.corpus_sentence
+                if self._sentence_column:
+                    self._sentence_column = "coq_{}_1".format(sentence_col)
+                    if self._sentence_column not in df.columns:
+                        val = SentenceId(session=session).evaluate(df, session=session)
+                        df["coquery_invisible_sentence_id"] = val
+                        self._sentence_column = "coquery_invisible_sentence_id"
             val = df.apply(lambda x: self._func(row=x, 
                                             session=session), axis="columns")
             val.index = df.index
