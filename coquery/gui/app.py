@@ -1376,30 +1376,38 @@ class CoqueryApp(QtGui.QMainWindow):
             errorbox.alert_missing_module("tgt", self)
             return
 
-        name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.textgrids_file_path, options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
-        if type(name) == tuple:
-            name = name[0]
-        if name:
-            options.cfg.corpus_source_path = name
-        else:
-            return
-
-        from coquery.textgrids import TextgridWriter
-
-        options.cfg.textgrids_file_path = name
-
+        from . import textgridexport
+        
         header = self.ui.data_preview.horizontalHeader()
         ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
-        tab = self.table_model.content[ordered_headers]
-        tab["coquery_invisible_corpus_id"] = self.table_model.invisible_content["coquery_invisible_corpus_id"]
+        
+        result = textgridexport.TextgridExportDialog.manage(columns=ordered_headers)
+        if result:
+            from coquery.textgrids import TextgridWriter
 
-        ## restrict to visible rows:
-        # FIXME: reimplement row visibility
-        #tab = tab[self.Session.row_visibility[self.Session.query_type]]
-            
-        writer = TextgridWriter(tab, self.Session.Resource)
-        n = writer.write_grids(name, ordered_headers)
-        self.showMessage("Done writing {} text grids to {}.".format(n, name))
+            tab = self.table_model.content[ordered_headers]
+            tab["coquery_invisible_corpus_id"] = self.table_model.invisible_content["coquery_invisible_corpus_id"]
+
+            ## restrict to visible rows:
+            # FIXME: reimplement row visibility
+            #tab = tab[self.Session.row_visibility[self.Session.query_type]]
+                
+            self.textgrid_writer = TextgridWriter(tab, self.Session.Resource)
+
+            self.start_progress_indicator()
+            self.textgrid_thread = classes.CoqThread(self.textgrid_writer.write_grids, **result, parent=self)
+            self.textgrid_thread.taskException.connect(self.exception_during_textgrid)
+            self.textgrid_thread.taskFinished.connect(self.finalize_textgrid)
+            self.textgrid_thread.start()
+
+    def exception_during_textgrid(self):
+        errorbox.ErrorBox.show(self.exc_info, self.exception)
+        self.showMessage("Textgrids failed.")
+        self.stop_progress_indicator()
+
+    def finalize_textgrid(self):
+        self.stop_progress_indicator()
+        self.showMessage("Done writing {} text grids to {}.".format(self.textgrid_writer.n, self.textgrid_writer.output_path))
     
     def showMessage(self, S):
         self.ui.status_message.setText(S)
