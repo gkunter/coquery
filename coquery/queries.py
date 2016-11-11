@@ -202,6 +202,8 @@ class TokenQuery(object):
                         except AttributeError:
                             pass
 
+            df["coquery_invisible_number_of_tokens"] = self._current_number_of_tokens
+
             if len(df) > 0:
                 if self.results_frame.empty:
                     self.results_frame = df
@@ -345,8 +347,6 @@ class TokenQuery(object):
             columns += options.cfg.group_columns
         
         for column in columns:
-            if column == "coquery_invisible_number_of_tokens":
-                df[column] = self._current_number_of_tokens
             if column == "coquery_query_string":
                 df[column] = self.query_string
             elif column == "coquery_expanded_query_string":
