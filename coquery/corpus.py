@@ -2028,7 +2028,12 @@ class CorpusClass(object):
             else:
                 rc_tab = rc_table.split("_")[0]
                 sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
-                parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree) 
+                try:
+                    parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree) 
+                except TypeError as e:
+                    print(sub_tree)
+                    print(rc_table)
+                    raise e
                 table = getattr(self.resource, rc_table)
                 if parent_tree:
                     rc_parent = parent_tree["rc_table_name"]
