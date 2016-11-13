@@ -859,6 +859,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_query_string.setChecked(True)
 
     def finalize_reaggregation(self):
+        manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+        self._sort(manager=manager)
         self.display_results(drop=False)
         self.stop_progress_indicator()
         self.resize_rows()
@@ -869,7 +871,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_box_reaggregate.button(QtGui.QDialogButtonBox.Cancel).setDisabled(True)
         print("reaggregation: done")
 
-        manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
         if options.cfg.use_stopwords and manager.stopwords_failed:
             rc_feature = getattr(self.Session.Resource,
                             getattr(self.Session.Resource, QUERY_ITEM_WORD))
@@ -1203,7 +1204,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.menuAnalyse.setEnabled(False)
         else:
             self.ui.menuAnalyse.setEnabled(True)
-
+    
         self.table_model = classes.CoqTableModel(self.Session.output_object, session=self.Session)
         if self.table_model.rowCount():
             self.last_results_saved = False
@@ -1817,7 +1818,35 @@ class CoqueryApp(QtGui.QMainWindow):
             manager.add_sorter(column, ascending, reverse)
         # FIXME: Make sure that changing the sorting order does not cause
         # a recalculation!
-        self.reaggregate(recalculate=False, start=True)
+        
+        self.sort_content(manager, True)
+
+    def sort_content(self, manager, start=False):
+        """
+        """
+
+        if not self.Session:
+            return
+
+        if start:
+            self.Session.start_timer()
+        self.showMessage("Sorting data...")
+        self.sort_thread = classes.CoqThread(lambda: self._sort(manager), parent=self)
+        self.sort_thread.taskFinished.connect(self.finalize_sort)
+        self.start_progress_indicator()
+        self.ui.group_management.setDisabled(True)
+        self.sort_thread.start()
+
+    def _sort(self, manager):
+        df = self.Session.output_object
+        df = manager.arrange(df, session=self.Session)
+        self.Session.output_object = df
+
+    def finalize_sort(self):
+        self.display_results(drop=False)
+        self.stop_progress_indicator()
+        self.show_query_status()
+        self.ui.group_management.setEnabled(True)
 
     def set_query_button(self):
         """ Set the action button to start queries. """
