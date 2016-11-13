@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import hashlib
 import logging
+import collections
 
 from .defines import *
 from .errors import *
@@ -242,7 +243,7 @@ class Manager(CoqObject):
             for sorter in self.sorters:
                 # create dummy columns for reverse sorting:
                 if sorter.reverse:
-                    target = "{}_rev".format(sorter.column)
+                    target = "{}__rev".format(sorter.column)
                     df[target] = (df[sorter.column].apply(lambda x: x[::-1]))
                 else:
                     target = sorter.column
@@ -261,10 +262,10 @@ class Manager(CoqObject):
         # takes one column and rearranges it)
         column_check = [x in original_columns for x in columns]
         for i, col in enumerate(column_check):
-            if not col and not columns[i].endswith("_rev"):
+            if not col and not columns[i].endswith("__rev"):
                 directions.pop(i)
                 columns.pop(i)
-                
+        
         if COLUMN_NAMES["statistics_column_total"] in df.index:
             # make sure that the row containing the totals is the last row:
             df_data = df[df.index != COLUMN_NAMES["statistics_column_total"]]
@@ -291,21 +292,23 @@ class Manager(CoqObject):
             print(e)
             print(columns, directions)
             raise e
-        
+
+        df_data = df_data.reset_index(drop=True)
+
         if COLUMN_NAMES["statistics_column_total"] in df.index:
             # return sorted data frame plus a potentially totals row:
             df = pd.concat([df_data, df_totals])
         else:
             df = df_data
-        df = df.reset_index(drop=True)
         print("\tdone")
+
+        df = df[[x for x in df.columns if not x.endswith("__rev")]]
         return df
         
     def summarize(self, df, session):
         #if len(df) == 0:
             #return df
         vis_cols = get_visible_columns(df, manager=self, session=session)
-        
         print("\tsummarize()")
         df = self.manager_summary_functions.apply(df, session=session, manager=self)
         df = self.user_summary_functions.apply(df, session=session, manager=self)
@@ -477,7 +480,6 @@ class Manager(CoqObject):
         if options.cfg.use_summarize_filters:
             df = self.filter(df, session)
         df = self.summarize(df, session)
-        df = self.arrange(df, session)
 
         df = self.select(df, session)
 
@@ -488,6 +490,7 @@ class Manager(CoqObject):
                         self.user_summary_functions.get_list())
 
         print("done")
+        print(df.head())
         return df
 
 class FrequencyList(Manager):
@@ -512,7 +515,17 @@ class ContingencyTable(FrequencyList):
         for col in [x for x in df.columns if x != "coquery_dummy"]:
             if col not in l:
                 l.append(col)
-        return df[l]
+
+        #return df[l]
+
+        # make sure that the frequency column is shown last:
+        freq = self.manager_summary_functions.get_list()[0].get_id()
+        l.remove(freq)
+        l.append(freq)
+        df = df[l]
+        l[-1] = "statistics_column_total"
+        df.columns = l
+        return df
 
     def summarize(self, df, session):
         def _get_column_label(row):
@@ -540,33 +553,34 @@ class ContingencyTable(FrequencyList):
         cat_col = list(df[vis_cols].select_dtypes(include=[object]).columns.values)
         num_col = list(df[vis_cols].select_dtypes(include=[np.number]).columns.values) + ["coquery_invisible_number_of_tokens", "coquery_invisible_corpus_id"]
         
-        num_col = [x for x in num_col if x.startswith("func_Frequency")]
-
+        # determine appropriate aggregation functions:
+        # - internal columns that are needed for context look-up take 
+        #   the first value (so clicking on a cell in the contingency
+        #   table returns the first matching context)
+        # - frequency functions return the sum 
+        # - all other numeric columns return the mean
         agg_fnc = {}
         for col in num_col:
-            func = self.get_function(col)
-            if isinstance(func, Freq):
-                agg_fnc[col] = sum
-            elif col.startswith(("coquery_invisible")):
+            if col.startswith(("coquery_invisible")):
                 agg_fnc[col] = lambda x: int(x.values[0])
+            elif col.startswith(("func_Freq")):
+                agg_fnc[col] = sum
             else:
                 agg_fnc[col] = np.mean
 
+        # Create pivot table:
         piv = df.pivot_table(index=cat_col[:-1], 
                              columns=[cat_col[-1]], 
                              values=num_col, 
-                             margins=True, 
-                             margins_name="",
                              aggfunc=agg_fnc,
                              fill_value=0)
-        print(piv)
         piv = piv.reset_index()
 
+        # handle the multi-index that pivot_table() creates:
         l1 = pd.Series(piv.columns.levels[-2][piv.columns.labels[-2]])
         l2 = pd.Series(piv.columns.levels[-1][piv.columns.labels[-1]]) 
 
         piv.columns = pd.concat([l1, l2], axis=1).apply(_get_column_label, axis="columns")
-        piv.index = list(piv.index[:-1]) + [COLUMN_NAMES["statistics_column_total"]]
         
         # Ensure that the pivot columns have the same dtype as the original 
         # column:
@@ -579,9 +593,35 @@ class ContingencyTable(FrequencyList):
             if piv.dtypes[x] != df.dtypes[name]:
                 piv[x] = piv[x].astype(df.dtypes[name])
 
-        piv = piv.drop([x.get_id() for x in self.manager_summary_functions.get_list()],
-                       axis="columns")
+        # Sort the pivot table
+        try:
+            # pandas <= 0.16.2:
+            piv = piv.sort(columns=cat_col[:-1], axis="index")
+        except AttributeError:
+            # pandas >= 0.17.0
+            piv = piv.sort_values(by=columns, axis="index")
 
+        #piv = Manager.summarize(self, piv, session)
+
+        bundles = collections.defaultdict(list)
+
+        d = {}
+
+        # row-wise apply the aggregate function
+        for x in piv.columns[(len(cat_col)-1):]:
+            col = x.rpartition("(")[0]
+            if col: 
+                bundles[col].append(x)
+        for col in bundles:
+            piv[col] = piv[bundles[col]].apply(agg_fnc[col], axis="columns")
+        # add summary row:
+        for x in piv.columns[(len(cat_col)-1):]:
+            d[x] = agg_fnc[col](piv[x])
+        row_total = pd.DataFrame([pd.Series(d)], 
+                                 columns=piv.columns,
+                                 index=[COLUMN_NAMES["statistics_column_total"]]).fillna("")
+
+        piv = piv.append(row_total)
         return piv
 
 def manager_factory(manager):
