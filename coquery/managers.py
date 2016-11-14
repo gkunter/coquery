@@ -222,7 +222,6 @@ class Manager(CoqObject):
         df = df.reset_index(drop=True)
         print("\tdone")
         return df
-        
     
     def arrange(self, df, session):
         if len(df) == 0:
@@ -516,8 +515,6 @@ class ContingencyTable(FrequencyList):
             if col not in l:
                 l.append(col)
 
-        #return df[l]
-
         # make sure that the frequency column is shown last:
         freq = self.manager_summary_functions.get_list()[0].get_id()
         l.remove(freq)
@@ -623,6 +620,95 @@ class ContingencyTable(FrequencyList):
 
         piv = piv.append(row_total)
         return piv
+
+class Collocations(Manager):
+    """
+    Manager class which calculates the collocation measures for the 
+    current results table. 
+    
+    The basic algorithm works like this: 
+    (1) Get a list of all words in the left and right context
+    (2) Count how often each word occurs (separately either in the 
+        left or in the right context)
+    """
+
+    def _get_main_functions(self, df, session):
+        """
+        This manager will always use a ContextColumn function.
+        """
+        # FIXME:
+        # If the context span is zero (i.e. neither a left nor a right
+        # context, the program should alert the user somehow.
+        return [ContextColumns()]
+    
+    def summarize(self, df, session):
+        """
+        This returns a completely different data frame than the argument.
+        """
+
+        # FIXME: reimplement a function that returns the corpus 
+        # size taking current filters into account.
+        # Alternatively, get rid of this function call if the 
+        # corpus size can be handled correctly by an appropriate
+        # function
+        corpus_size = session.Resource.corpus.get_corpus_size()
+
+        fix_col = ["coquery_invisible_corpus_id"]
+
+        left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
+        right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
+        
+        left_context_span = df[left_cols]
+        right_context_span = df[right_cols]
+
+        # convert all context columns to upper or lower case unless
+        # the current setting says otherwise
+        if not options.cfg.output_case_sensitive:
+            if options.cfg.output_to_lower:
+                left_context_span = left_context_span.apply(lambda x: x.apply(str.lower))
+                right_context_span = right_context_span.apply(lambda x: x.apply(str.lower))
+            else:
+                left_context_span = left_context_span.apply(lambda x: x.apply(str.upper))
+                right_context_span = right_context_span.apply(lambda x: x.apply(str.upper))
+
+        left = left_context_span.stack().value_counts()
+        right = right_context_span.stack().value_counts()
+
+        all_words = [x for x in set(list(left.index) + list(right.index)) if x]
+    
+        left = left.reindex(all_words).fillna(0).astype(int)
+        right = right.reindex(all_words).fillna(0).astype(int)
+        
+        collocates = pd.concat([left, right], axis=1)
+        collocates = collocates.reset_index()
+        collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
+
+        # calculate collocate frequency (i.e. occurrences of the collocate
+        # in the context
+        collocates["coq_collocate_frequency"] = collocates[["coq_collocate_frequency_left", "coq_collocate_frequency_right"]].sum(axis=1)
+        # calculate total frequency of collocate
+        collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(
+            session.Resource.corpus.get_frequency, engine=session.db_engine)
+        # calculate conditional probabilities:
+        func = ConditionalProbability()
+        collocates["coq_conditional_probability_left"] = func.evaluate(collocates, 
+                            freq_cond="coq_collocate_frequency_left",
+                            freq_total="statistics_frequency")
+        collocates["coq_conditional_probability_right"] = func.evaluate(collocates, 
+                            freq_cond="coq_collocate_frequency_right",
+                            freq_total="statistics_frequency")
+        
+        func = MutualInformation()
+        collocates["coq_mutual_information"] = func.evaluate(collocates,
+                            f_1 = len(df),
+                            f_2 = "statistics_frequency",
+                            f_coll = "coq_collocate_frequency",
+                            size = corpus_size,
+                            span=len(left_cols) + len(right_cols))
+
+        aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
+        return aggregate
+
 
 def manager_factory(manager):
     if manager == QUERY_MODE_FREQUENCIES:
