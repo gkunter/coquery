@@ -645,6 +645,59 @@ class TypeTokenRatio(Types):
         return (pd.DataFrame({"types": types, "tokens": tokens}, index=df.index)
                     .apply(lambda row: row.types / row.tokens, axis="columns"))
 
+class ConditionalProbability(Proportion):
+    _name = "statistics_conditional_probability"
+    """
+    Calculate conditional probabilities for the event ``q`` under the 
+    condition ``c``.
+    
+    The function needs two arguments for ``evaluate()``. ``freq_cond`` 
+    specifies the frequency of ``q`` given condition ``c``. 
+    ``freq_total`` is the total (unconditioned) frequency of ``q``.
+    
+    The conditional probability Pcond(q | c) is calculated as 
+
+    Pcond(q | c) = P(c, q) / P(c) = f(c, q) / f(c),
+    
+    where f(c, q) is the number of occurrences of word c as a left 
+    collocate of query token q, and f(c) is the total number of 
+    occurrences of c in the corpus. """
+
+    def evaluate(self, df, *args, **kwargs):
+        freq_cond = kwargs["freq_cond"]
+        freq_total = kwargs["freq_total"]
+        return df[freq_cond] / df[freq_total]
+
+class MutualInformation(Proportion):
+    _name = "statistics_mutual_information"
+    """ Calculate the Mutual Information for two words. f_1 and f_2 are
+    the frequencies of the two words, f_coll is the frequency of 
+    word 2 in the neighbourhood of word 1, size is the corpus size, and
+    span is the size of the neighbourhood in words to the left and right
+    of word 2.
+    
+    Following http://corpus.byu.edu/mutualinformation.asp, MI is 
+    calculated as:
+
+        MI = log ( (f_coll * size) / (f_1 * f_2 * span) ) / log (2)
+    
+    """
+
+    def evaluate(self, df, *args, **kwargs):
+        f_1 = kwargs["f_1"]
+        f_2 = kwargs["f_2"]
+        f_coll = kwargs["f_coll"]
+        size = kwargs["size"]
+        span = kwargs["span"]
+
+        try:
+            val = pd.np.log((df[f_coll] * size) / (df[f_1] * df[f_2] * span)) / pd.np.log(2)
+        except (ZeroDivisionError, TypeError, Exception) as e:
+            print("Error while calculating mutual information: f1={} f2={} fcol={} size={} span={}".format(f_1, f_2, f_coll, size, span))
+            print(e)
+            return None
+        return val
+
 #############################################################################
 ## Corpus functions
 #############################################################################
