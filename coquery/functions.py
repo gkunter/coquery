@@ -524,6 +524,70 @@ class Rank(Freq):
         return val
 
 #############################################################################
+## Reference corpus functions
+#############################################################################
+
+class BaseReferenceCorpus(Function):
+    _name = "virtual"
+
+class ReferenceCorpusFrequency(BaseReferenceCorpus):
+    _name = "statistics_reference_corpus_frequency"
+    single_column = False
+
+    def __init__(self, *args, **kwargs):
+        super(ReferenceCorpusFrequency, self).__init__(columns=[], *args, **kwargs)
+    
+    def _func(self, x, corpus, engine):
+        val = x.apply(corpus.get_frequency, engine=engine)
+        return val
+    
+    def evaluate(self, df, *args, **kwargs):
+        session = kwargs["session"]
+        ResourceClass, CorpusClass, LexiconClass, _ = options.cfg.current_resources[options.cfg.reference_corpus]
+
+        current_lexicon = LexiconClass()
+        current_corpus = CorpusClass()
+        current_resource = ResourceClass(current_lexicon, current_corpus)
+        current_corpus.resource = current_resource
+        current_corpus.lexicon = current_lexicon
+        current_lexicon.resource = current_resource
+
+        word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
+        word_columns = [x for x in df.columns if word_feature in x]
+        val = df[word_columns].apply(lambda x: self._func(x, current_corpus, session.db_engine), axis="columns")
+        val.index = df.index
+        val.columns = ["{}_{}_{}".format(
+            self._name, x, options.cfg.reference_corpus) for x in val.columns]
+
+        return val
+
+class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
+    _name = "reference_per_million_words"
+    words = 1000000
+
+    def evaluate(self, df, *args, **kwargs):
+        val = super(ReferenceCorpusFrequencyPMW, self).evaluate(df, *args, **kwargs)
+        session = kwargs["session"]
+        ResourceClass, CorpusClass, LexiconClass, _ = options.cfg.current_resources[options.cfg.reference_corpus]
+
+        current_lexicon = LexiconClass()
+        current_corpus = CorpusClass()
+        current_resource = ResourceClass(current_lexicon, current_corpus)
+        current_corpus.resource = current_resource
+        current_corpus.lexicon = current_lexicon
+        current_lexicon.resource = current_resource
+
+        if len(val) > 0:
+            corpus_size = current_corpus.get_corpus_size()
+        val = val.apply(lambda x: x / (corpus_size / self.words))
+        val.index = df.index
+        return val
+
+class ReferenceCorpusFrequencyPTW(ReferenceCorpusFrequencyPMW):
+    words = 1000
+    _name = "reference_per_thousand_words"
+    
+#############################################################################
 ## Filter functions
 #############################################################################
 
@@ -663,9 +727,7 @@ class ConditionalProbability(Proportion):
     collocate of query token q, and f(c) is the total number of 
     occurrences of c in the corpus. """
 
-    def evaluate(self, df, *args, **kwargs):
-        freq_cond = kwargs["freq_cond"]
-        freq_total = kwargs["freq_total"]
+    def evaluate(self, df, freq_cond, freq_total, *args, **kwargs):
         return df[freq_cond] / df[freq_total]
 
 class MutualInformation(Proportion):
@@ -683,13 +745,7 @@ class MutualInformation(Proportion):
     
     """
 
-    def evaluate(self, df, *args, **kwargs):
-        f_1 = kwargs["f_1"]
-        f_2 = kwargs["f_2"]
-        f_coll = kwargs["f_coll"]
-        size = kwargs["size"]
-        span = kwargs["span"]
-
+    def evaluate(self, df, f_1, f_2, f_coll, size, span, *args, **kwargs):
         try:
             val = pd.np.log((df[f_coll] * size) / (df[f_1] * df[f_2] * span)) / pd.np.log(2)
         except (ZeroDivisionError, TypeError, Exception) as e:
