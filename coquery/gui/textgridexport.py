@@ -31,7 +31,14 @@ class TextgridExportDialog(QtGui.QDialog):
             item.setData(QtCore.Qt.UserRole, col)
             item.setCheckState(QtCore.Qt.Checked)
             self.ui.list_columns.addItem(item)        
+        self.restore_settings()
+        self.ui.button_output_path.clicked.connect(self.set_output_path)
+        self.ui.button_sound_path.clicked.connect(self.set_sound_path)
+        self.ui.edit_output_path.textChanged.connect(self.check_gui)
+        self.ui.edit_sound_path.textChanged.connect(self.check_gui)
+        self.ui.list_columns.itemClicked.connect(self.check_gui)
         
+    def restore_settings(self):
         try:
             self.resize(options.settings.value("textgridexport_size"))
         except TypeError:
@@ -48,12 +55,8 @@ class TextgridExportDialog(QtGui.QDialog):
         self.ui.edit_output_path.setText(options.settings.value("textgridexport_output_path", 
                                                                 os.path.expanduser("~")))
         self.ui.edit_sound_path.setText(options.settings.value("textgridexport_sound_path", ""))
-
-        self.ui.button_output_path.clicked.connect(self.set_output_path)
-        self.ui.button_sound_path.clicked.connect(self.set_sound_path)
-        self.ui.edit_output_path.textChanged.connect(self.check_gui)
-        self.ui.edit_sound_path.textChanged.connect(self.check_gui)
-        self.ui.list_columns.itemClicked.connect(self.check_gui)
+        self.ui.spin_left_padding.setValue(float(options.settings.value("textgridexport_left_padding", 0)))
+        self.ui.spin_right_padding.setValue(float(options.settings.value("textgridexport_right_padding", 0)))
 
     def check_gui(self, *args, **kwargs):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
@@ -104,6 +107,8 @@ class TextgridExportDialog(QtGui.QDialog):
         options.settings.setValue("textgridexport_check_extract_sound", bool(self.ui.check_copy_sounds.checkState()))
         options.settings.setValue("textgridexport_sound_path", utf8(self.ui.edit_sound_path.text()))
         options.settings.setValue("textgridexport_output_path", utf8(self.ui.edit_output_path.text()))
+        options.settings.setValue("textgridexport_left_padding", float(self.ui.spin_left_padding.value()))
+        options.settings.setValue("textgridexport_right_padding", float(self.ui.spin_right_padding.value()))
 
     def exec_(self):
         result = super(TextgridExportDialog, self).exec_()
@@ -116,7 +121,9 @@ class TextgridExportDialog(QtGui.QDialog):
                     "columns": columns,
                     "one_grid_per_match": self.ui.radio_one_per_match.isChecked(),
                     "sound_path": ("" if self.ui.check_copy_sounds.checkState() == QtCore.Qt.Unchecked else
-                                   utf8(self.ui.edit_sound_path.text()))}
+                                   utf8(self.ui.edit_sound_path.text())),
+                    "left_padding": float(self.ui.spin_left_padding.value()),
+                    "right_padding": float(self.ui.spin_right_padding.value())}
         else:
             return None
 

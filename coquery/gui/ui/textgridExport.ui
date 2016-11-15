@@ -64,7 +64,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QGroupBox" name="">
+    <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string>Column selection</string>
      </property>
@@ -72,38 +72,48 @@
       <item>
        <widget class="QListWidget" name="list_columns"/>
       </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Text grid creation</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QGroupBox" name="">
-        <property name="title">
-         <string>Text grid creation</string>
+       <widget class="QRadioButton" name="radio_one_per_match">
+        <property name="text">
+         <string>Create one text grid for each &amp;match</string>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
-         <item>
-          <widget class="QRadioButton" name="radio_one_per_match">
-           <property name="text">
-            <string>Create one text grid for each match</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="radio_one_per_file">
-           <property name="text">
-            <string>Create one text grid for each source file</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radio_one_per_file">
+        <property name="text">
+         <string>Create one text grid for each source &amp;file</string>
+        </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="">
+    <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string>Copy sound files</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="1">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>&amp;Copy matching sound files to output path</string>
+        </property>
+        <property name="buddy">
+         <cstring>check_copy_sounds</cstring>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="0">
        <widget class="QCheckBox" name="check_copy_sounds">
         <property name="text">
@@ -111,12 +121,94 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>Copy matching sound files to output path</string>
-        </property>
-       </widget>
+      <item row="2" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Include audio context:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="spin_left_padding">
+          <property name="suffix">
+           <string> seconds</string>
+          </property>
+          <property name="decimals">
+           <number>3</number>
+          </property>
+          <property name="maximum">
+           <double>999.999000000000024</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>&amp;before</string>
+          </property>
+          <property name="buddy">
+           <cstring>spin_left_padding</cstring>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="spin_right_padding">
+          <property name="suffix">
+           <string> seconds</string>
+          </property>
+          <property name="decimals">
+           <number>3</number>
+          </property>
+          <property name="maximum">
+           <double>999.999000000000024</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>&amp;after</string>
+          </property>
+          <property name="buddy">
+           <cstring>spin_right_padding</cstring>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item row="1" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_2">

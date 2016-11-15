@@ -285,7 +285,7 @@ class TextgridWriter(object):
 
         return grids
     
-    def write_grids(self, output_path, columns, one_grid_per_match, sound_path):
+    def write_grids(self, output_path, columns, one_grid_per_match, sound_path, left_padding, right_padding):
         self.output_path = output_path
         grids = self.fill_grids(columns, one_grid_per_match, sound_path)
         print(self._offsets)
@@ -313,7 +313,6 @@ class TextgridWriter(object):
             tgt.write_to_file(grid, os.path.join(output_path, "{}.TextGrid".format(filename)))
             textgrids[basename].append((grid, filename, self._offsets[x]))
             
-        print(textgrids)
         sound_files = {}
         if sound_path:
             import wave
