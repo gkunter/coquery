@@ -32,22 +32,23 @@ class Filter(CoqObject):
         self.feature = feature
         self.operator = operator
         self.value = value
+        self.dtype = None
         
     def __repr__(self):
-        return "Filter(feature='{}', operator={}, value={})".format(
+        return "Filter(feature='{}', operator={}, value={}, dtype={})".format(
             self.feature, 
             [x for x in globals() if eval(x) == self.operator][0], 
-            "'{}'".format(self.value) if isinstance(self.value, string_types) else self.value)
+            "'{}'".format(self.value) if isinstance(self.value, string_types) else self.value,
+            self.dtype)
         
-    @staticmethod
-    def fix(x):
+    def fix(self, x):
         """
         Fixes the value x so it can be used in a Pandas query() call.
         
         A fixed string is enclosed in simple quotation marks. Quotation 
         marks inside the string are escaped.
         """
-        if isinstance(x, string_types):                
+        if self.dtype == object:
             if "'" in x:
                 val = x.replace("'", "\\'")
             else:
@@ -79,29 +80,35 @@ class Filter(CoqObject):
         if self.value is None or self.value is pd.np.nan:
             if self.operator not in [OP_NE, OP_EQ]:
                 raise ValueError("Only OP_EQ and OP_NE are allowed with NA values")
-        
+
         if self.value is None or self.value is pd.np.nan:
             val = self.feature
             if self.operator == OP_EQ:
                 self.operator = OP_NE
             else:
                 self.operator = OP_EQ
+                
         elif isinstance(self.value, list):
             if self.operator == OP_RANGE:
                 return "{} <= {} < {}".format(
                                             self.fix(min(self.value)), 
                                             self.feature, 
-                                            self.fix(max(self.value)))                
+                                            self.fix(max(self.value)))
             else:
-                val = "[{}]".format(", ".join([self.fix(x) for x in self.value]))
+                val = "[{}]".format(", ".join([self.fix(x, dtype) for x in self.value]))
         else:
             val = self.fix(self.value)
 
         return "{} {} {}".format(self.feature, OPERATOR_STRINGS[self.operator], val)
         
     def apply(self, df):
+        # ignore filters that refer to non-existing columns:
+        if self.feature not in df.columns:
+            return df
+        
+        self.dtype = df.dtypes[self.feature]
         if self.operator in (OP_MATCH, OP_NMATCH):
-            if df[self.feature].dropna().dtype == object:
+            if self.dtype == object:
                 col = df[self.feature].dropna()
             else:
                 # coerce non-string columns to string:
