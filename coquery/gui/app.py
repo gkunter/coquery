@@ -321,6 +321,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
         self.ui.action_settings.triggered.connect(self.settings)
         self.ui.action_connection_settings.triggered.connect(self.connection_settings)
+        self.ui.action_reference_corpus.triggered.connect(self.set_reference_corpus)
         self.ui.action_statistics.triggered.connect(self.run_statistics)
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         self.ui.action_available_modules.triggered.connect(self.show_available_modules)
@@ -470,6 +471,10 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.action_corpus_documentation.setEnabled(False)
             self.ui.action_statistics.setEnabled(False)
+        if options.cfg.reference_corpus:
+            self.ui.action_reference_corpus.setText("Change &reference corpus... ({})".format(options.cfg.reference_corpus))
+        else:
+            self.ui.action_reference_corpus.setText("Set &reference corpus...")
 
     def show_results_menu(self):
         self.ui.menu_Results.clear()
@@ -775,6 +780,18 @@ class CoqueryApp(QtGui.QMainWindow):
             self.enable_corpus_widgets()
         else:
             self.disable_corpus_widgets()
+
+    def set_reference_corpus(self):
+        from . import linkselect
+
+        current_corpus = utf8(self.ui.combo_corpus.currentText())
+        resource, _, _ = options.get_resource(current_corpus)
+
+        link = linkselect.LinkSelect.get_resource(corpus_omit=[current_corpus],
+                                        parent=self)
+        
+        if link:
+            options.cfg.reference_corpus = link
 
     def column_moved(self):
         pass
@@ -2229,6 +2246,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 print(e)
 
             if options.cfg.context_font != old_context_font:
+                import contextviewer
                 for widget in self.widget_list:
                     if isinstance(widget, contextviewer.ContextView):
                         widget.update_context()
@@ -2567,6 +2585,9 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.FilteredRows, functions.PassingRows,
                          functions.Freq, functions.FreqNorm,
                          functions.FreqPTW, functions.FreqPMW,
+                         functions.ReferenceCorpusFrequency,
+                         functions.ReferenceCorpusFrequencyPTW,
+                         functions.ReferenceCorpusFrequencyPMW,
                          functions.RowNumber, 
                          functions.Entropy, functions.Percent, 
                          functions.Proportion, functions.Tokens, 
@@ -2579,6 +2600,9 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.Entropy, 
                          functions.Freq, functions.FreqNorm,
                          functions.FreqPTW, functions.FreqPMW,
+                         functions.ReferenceCorpusFrequency,
+                         functions.ReferenceCorpusFrequencyPTW,
+                         functions.ReferenceCorpusFrequencyPMW,
                          functions.RowNumber, 
                          functions.Percent, functions.Proportion, 
                          functions.Tokens, functions.Types, 
