@@ -591,7 +591,7 @@ class BaseResource(object):
         -------
         l : list or None
             A list of the resource table names that lead from resource 
-            feature 'start' to resource feature'end'. The list contains 
+            feature 'start' to resource feature 'end'. The list contains 
             start and end as the first and the last element if such a path
             exists. If no path exists, the method returns None.
         """
@@ -712,13 +712,15 @@ class BaseResource(object):
         lexicon_tables = cls.get_table_tree(getattr(cls, "lexicon_root_table", "word"))
 
         corpus_variables = []
+        cls_lexical_features = getattr(cls, "lexical_features", [])
         for x in table_dict:
             if x not in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
-                    if y == "corpus_id":
-                        corpus_variables.append((y, cls.corpus_id))    
-                    elif not y.endswith("_id") and not y.startswith("{}_table".format(x)):
-                        corpus_variables.append((y, getattr(cls, y)))
+                    if not y in cls_lexical_features:
+                        if y == "corpus_id":
+                            corpus_variables.append((y, cls.corpus_id))    
+                        elif not y.endswith("_id") and not y.startswith("{}_table".format(x)):
+                            corpus_variables.append((y, getattr(cls, y)))
         return corpus_variables
     
     @classmethod
@@ -730,11 +732,16 @@ class BaseResource(object):
         table_dict = cls.get_table_dict()
         lexicon_tables = cls.get_table_tree(getattr(cls, "lexicon_root_table", "word"))
         lexicon_variables = []
+        l = []
         for x in table_dict:
             if x in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
                     if not y.endswith("_id") and not y.startswith("{}_table".format(x)):
-                        lexicon_variables.append((y, getattr(cls, y)))    
+                        lexicon_variables.append((y, getattr(cls, y))) 
+                        l.append(y)
+        for y in getattr(cls, "lexical_features", []):
+            if y not in l:
+                lexicon_variables.append((y, getattr(cls, y)))
         return lexicon_variables
     
     @staticmethod
@@ -1251,7 +1258,8 @@ class SQLResource(BaseResource):
         return select_list
     
 class CorpusClass(object):
-    
+    """
+    """
     _frequency_cache = {}
     _corpus_size_cache = {}
     _context_cache = {}
@@ -1539,8 +1547,6 @@ class CorpusClass(object):
             word_pos_column = None
         try:
             where_clauses = self.get_whereclauses(token, self.resource.word_id, word_pos_column)
-        except CompleteLexiconRequestedError:
-            where_clauses = []
         except WordNotInLexiconError:
             freq = 0
         else:
@@ -1872,6 +1878,16 @@ class CorpusClass(object):
         # FIXME: Why is this needed?
         requested_features.append("corpus_word_id")
 
+        # Add hack that accounts for segments. The way this hack works is that 
+        # it constructs a normal query string (ignoring segments), and then
+        # joins that query with a query to segments.
+        # In order for this to work, the corpus times need to be included as 
+        # selected features.
+        
+        add_segments = False
+        self.segment_features = [x for x in options.cfg.selected_features if x.startswith("segment_")]
+        requested_features = [x for x in requested_features if not x.startswith("segment_")]
+        
         try:
             pos_feature = getattr(self.resource, QUERY_ITEM_POS)
         except AttributeError:
@@ -1955,6 +1971,8 @@ class CorpusClass(object):
         # create a list of the tables 
         select_list = set([])
 
+        self.lexicon.table_list = []
+
         for rc_table in required_tables:
             func, hashed, table, feature = self.resource.split_resource_feature(rc_table)
 
@@ -2028,12 +2046,17 @@ class CorpusClass(object):
             else:
                 rc_tab = rc_table.split("_")[0]
                 sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
+                
                 try:
                     parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree) 
                 except TypeError as e:
-                    print(sub_tree)
-                    print(rc_table)
-                    raise e
+                    print("----", e)
+                    print("sub_tree:", sub_tree)
+                    print("requested_features:", requested_features)
+                    print("rc_table:", rc_table)
+                    print("required_tables:", required_tables)
+                    print("----", e)
+                    parent_tree = None
                 table = getattr(self.resource, rc_table)
                 if parent_tree:
                     rc_parent = parent_tree["rc_table_name"]
@@ -2041,18 +2064,19 @@ class CorpusClass(object):
                     rc_parent = None
 
                 column_list = set()
-                for rc_feature in sub_tree["rc_requested_features"]:
-                    if rc_feature.startswith("func."):
-                        name = "coq_{}_{}".format(
-                            rc_feature.split("func.")[-1], number+1)
-                    else:
-                        name = "coq_{}_{}".format(rc_feature, number+1)
+                if sub_tree:
+                    for rc_feature in sub_tree["rc_requested_features"]:
+                        if rc_feature.startswith("func."):
+                            name = "coq_{}_{}".format(
+                                rc_feature.split("func.")[-1], number+1)
+                        else:
+                            name = "coq_{}_{}".format(rc_feature, number+1)
 
-                    variable_string = "{} AS {}".format(
-                        getattr(self.resource, rc_feature.split("func.")[-1]),
-                        name)
-                    column_list.add(variable_string)
-                    select_list.add(name)
+                        variable_string = "{} AS {}".format(
+                            getattr(self.resource, rc_feature.split("func.")[-1]),
+                            name)
+                        column_list.add(variable_string)
+                        select_list.add(name)
                     
                 columns = ", ".join(column_list)
                 where_string = ""
@@ -2076,6 +2100,12 @@ class CorpusClass(object):
                         parent_id = parent_id,
                         child_id = child_id)
                 else:
+                    # corpus table
+                    if self.segment_features:
+                        columns += ", {} AS coquery_invisible_corpus_starttime_{}".format(
+                            self.resource.corpus_starttime, number+1)
+                        columns += ", {} AS coquery_invisible_corpus_endtime_{}".format(
+                            self.resource.corpus_endtime, number+1)
                     join_strings[rc_table] = "(SELECT {columns} FROM {table} {where}) AS COQ_{rc_table}".format(
                         columns = columns, 
                         table = table,
@@ -2104,6 +2134,12 @@ class CorpusClass(object):
         # and only if the gui is used:
         if (to_file or options.cfg.to_file) and number == 0 and options.cfg.token_origin_id:
             select_list.add("coq_{}_1".format(options.cfg.token_origin_id))
+
+        if self.segment_features:
+            select_list.add("coquery_invisible_corpus_starttime_{}".format(number+1))
+            select_list.add("coquery_invisible_corpus_endtime_{}".format(number+1))
+
+        print("-------", select_list, "-------")
 
         S = "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
         return S
@@ -2508,7 +2544,8 @@ class CorpusClass(object):
         final_select = []        
         for rc_feature in self.resource.get_preferred_output_order():
             if rc_feature in options.cfg.selected_features:
-                if rc_feature in [x for x, _ in lexicon_features] or self.resource.is_tokenized(rc_feature):
+                if (not rc_feature.startswith("segment_") and 
+                    (rc_feature in [x for x, _ in lexicon_features] or self.resource.is_tokenized(rc_feature))):
                     for i in range(max_token_count):
                         if options.cfg.align_quantified:
                             last_offset = 0
@@ -2521,6 +2558,9 @@ class CorpusClass(object):
                                 final_select.append("coq_{}_{}".format(rc_feature, i+1))
                             else:
                                 final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
+                if (rc_feature.startswith("segment_")):
+                    final_select.append("coquery_invisible_corpus_starttime_1")
+                    final_select.append("coquery_invisible_corpus_endtime_{}".format(max_token_count))
 
         # add any external feature that is not a function:
         for link, rc_feature in options.cfg.external_links:
@@ -2696,9 +2736,27 @@ class CorpusClass(object):
             query_string_part.append(token_query_list[referent_id])
 
         final_select = self.get_select_columns(Query, token_list, to_file)
+        segment_columns = [x for x in final_select if x.startswith("coq_segment_")]
+        final_select = [x for x in final_select if not x.startswith("coq_segment_")]
         # construct the query string from the token query parts:
         query_string = " ".join(query_string_part)
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(set(final_select)))
+        
+        if segment_columns:
+            query_string = """
+            SELECT * FROM ({s}) as results
+            INNER JOIN
+                {segment_table} 
+            WHERE 
+                {segment_table}.{segment_end} - coquery_invisible_corpus_starttime_1 > 0.001 AND
+                coquery_invisible_corpus_endtime_{N} - {segment_table}.{segment_start} > 0.001  AND
+                {segment_table}.{segment_source} = coquery_invisible_origin_id                
+            """.format(s=query_string,
+                       segment_table=self.resource.segment_table,
+                       segment_start=self.resource.segment_starttime,
+                       segment_end=self.resource.segment_endtime,
+                       segment_source=self.resource.segment_origin_id,
+                       N=len(token_list))
         
         # add LIMIT clause if necessary:
         if options.cfg.number_of_tokens:
