@@ -662,6 +662,7 @@ class Options(object):
     def read_configuration(self):
         defaults = {
             "default_corpus": "",
+            "reference_corpus": "",
             "query_mode": QUERY_MODE_TOKENS,
             "query_string": "",
             "query_cache_size": 500 * 1024 * 1024,
@@ -754,8 +755,10 @@ class Options(object):
         if self.args.gui:
             # Read MAIN section:
             self.args.corpus = config_file.str("main", "default_corpus", d=defaults)
+            self.args.reference_corpus = config_file.str("main", "reference_corpus", d=defaults)
             self.args.MODE = config_file.str("main", "query_mode", d=defaults)
             last_query = config_file.str("main", "query_string", d=defaults)
+            
             try:
                 self.args.query_list = decode_query_string(last_query)
             except (ValueError):
@@ -918,6 +921,7 @@ def save_configuration():
     if not "main" in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
+    config.set("main", "reference_corpus", cfg.reference_corpus)
     config.set("main", "query_mode", cfg.MODE)
     if cfg.query_list and cfg.save_query_string:
         config.set("main", "query_string", encode_query_string("\n".join(cfg.query_list)))
@@ -1363,7 +1367,7 @@ def get_available_resources(configuration):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
 
-def get_resource(name, connection= None):
+def get_resource(name, connection=None):
     """
     Return a tuple containing the Resource, Corpus, and Lexicon of the 
     corpus module specified by 'name'.
