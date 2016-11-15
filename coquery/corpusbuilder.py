@@ -554,7 +554,6 @@ class Table(object):
 
         return dt_type
 
-        
     def get_create_string(self, db_type):
         """
         Generates the SQL command required to create the table.
@@ -622,7 +621,8 @@ class Table(object):
                         str_list.append("{} {}".format(
                             column.name, data_type))
                     columns_added.add(column.name)
-
+            else:
+                logger.warn("Column {} already added to table {}".format(column.name, self.name))
         if db_type == SQL_SQLITE:
             # make SQLite columns case-insensitive by default
             for i, x in enumerate(list(str_list)):
@@ -659,6 +659,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     file_filter = None
     encoding = "utf-8"
     expected_files = []
+    lexical_features = []
     # special files are expected files that will not be stored in the file 
     # table. For example, a corpus may include a file with speaker 
     # information which needs to be evaluated during installation, and which
@@ -674,6 +675,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.module_code = module_code
         self.table_description = {}
         self._time_features = []
+        self._lexical_features = []
         self._id_count = {}
         self._primary_keys = {}
         self._interrupted = False
@@ -1020,6 +1022,18 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         self._time_features.append(rc_feature)
     
+    def add_lexical_feature(self, rc_feature):
+        """
+        Add the resource feature to the list of lexical features.
+        
+        Any feature that comes from a ``word'' table or its descendants
+        are considered lexical features. If the corpus stores lexical 
+        features directly in the ``corpus'' table, these features are
+        therefore not automatically recognized as lexical. This method is
+        used to register them so that they are treated as lexically.
+        """
+        self._lexical_features.append(rc_feature)
+    
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
         the class attribute self._lexicon_code. This function is needed
@@ -1041,6 +1055,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
         lines.insert(0, "    time_features = {}".format(
             "[{}]".format(", ".join(['"{}"'.format(x) for x in self._time_features]))))
         lines.insert(0, "    number_of_tokens = {}\n".format(self._corpus_id))
+        lines.insert(0, "    lexical_features = {}\n".format(
+            "[{}]".format(", ".join(['"{}"'.format(x) for x in self._lexical_features]))))
         return "".join(lines)
     
     def get_method_code(self, method):
