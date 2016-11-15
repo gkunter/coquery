@@ -42,7 +42,6 @@ from .defines import *
 from .errors import *
 from .links import get_by_hash
 from .general import *
-from . import corpus
 from . import tokens
 from . import options
 from . import managers
@@ -78,6 +77,7 @@ class TokenQuery(object):
         """
         Return a list with the column names that are currently visible.
         """
+        print("TokenQuery.get_visible_columns() is deprecated.")
         if ignore_hidden:
             return [x for x in list(df.columns.values) if (
                 not x.startswith("coquery_invisible") and 
@@ -631,155 +631,8 @@ class StatisticsQuery(TokenQuery):
         self.results_frame.columns = self.Session.output_order
         return self.results_frame
 
-class CollocationQuery(TokenQuery):
-    
-    @staticmethod
-    def mutual_information(f_1, f_2, f_coll, size, span):
-        """ Calculate the Mutual Information for two words. f_1 and f_2 are
-        the frequencies of the two words, f_coll is the frequency of 
-        word 2 in the neighbourhood of word 1, size is the corpus size, and
-        span is the size of the neighbourhood in words to the left and right
-        of word 2.
-        
-        Following http://corpus.byu.edu/mutualinformation.asp, MI is 
-        calculated as:
-
-            MI = log ( (f_coll * size) / (f_1 * f_2 * span) ) / log (2)
-        
-        """
-        try:
-            MI = math.log((f_coll * size) / (f_1 * f_2 * span)) / math.log(2)
-        except (ZeroDivisionError, TypeError, Exception) as e:
-            logger.error("Error while calculating mutual information: f1={} f2={} fcol={} size={} span={}".format(f_1, f_2, f_coll, size, span))
-            return None
-        return MI
-
-    @staticmethod
-    def conditional_probability(freq_left, freq_total):
-        """ Calculate the conditional probability Pcond to encounter the query 
-        token given that the collocate occurred in the left neighbourhood of
-        the token.
-
-        Pcond(q | c) = P(c, q) / P(c) = f(c, q) / f(c),
-        
-        where f(c, q) is the number of occurrences of word c as a left 
-        collocate of query token q, and f(c) is the total number of 
-        occurrences of c in the corpus. """
-        return float(freq_left) / float(freq_total)
-
-    @classmethod
-    def aggregate_data(cls, df, corpus, **kwargs):
-        session = kwargs.get("session")
-        if options.cfg.context_mode != CONTEXT_NONE:
-            count_left = collections.Counter()
-            count_right = collections.Counter()
-            count_total = collections.Counter()
-            
-            left_span = options.cfg.context_left
-            right_span = options.cfg.context_right
-
-            features = []
-            lexicon_features = corpus.resource.get_lexicon_features()
-            for rc_feature in options.cfg.selected_features:
-                if rc_feature in [x for x, _ in lexicon_features]:
-                    features.append("coq_{}".format(rc_feature))
-                
-            corpus_size = corpus.get_corpus_size(filters=session.filter_list)
-            query_freq = 0
-            context_info = {}
-
-            fix_col = ["coquery_invisible_corpus_id"]
-
-            # FIXME: Be more generic than always using coq_word_label!
-            left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
-            # FIXME: currently, the token number is set to 1, because this class 
-            # method doesn't know about the maximum token number in this query.
-            # Somehow, get_max_tokens() needs to be passed to this method to 
-            # effect something like max_tokens = cls.get_max_tokens(cls)
-
-            max_tokens = 1 + left_span + right_span
-            right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
-            
-            node_cols = [x for x in df.columns if x.startswith("coq_word_label")]
-            node_cols = []
-
-            left_context_span = df[fix_col + left_cols + node_cols]
-            right_context_span = df[fix_col + right_cols + node_cols]
-
-            if not options.cfg.output_case_sensitive:
-                if options.cfg.output_to_lower:
-                    for column in left_cols:
-                        left_context_span[column] = left_context_span[column].apply(lambda x: x.lower())
-                    for column in right_cols:
-                        right_context_span[column] = right_context_span[column].apply(lambda x: x.lower())
-                else:
-                    for column in left_cols:
-                        left_context_span[column] = left_context_span[column].apply(lambda x: x.upper())
-                    for column in right_cols:
-                        right_context_span[column] = right_context_span[column].apply(lambda x: x.upper())
-
-            left = left_context_span[left_cols + node_cols].stack().value_counts()
-            right = right_context_span[right_cols + node_cols].stack().value_counts()
-
-            all_words = set(list(left.index) + list(right.index))
-        else:
-            all_words = []
-        
-        engine = corpus.resource.get_engine()
-        if all_words and options.cfg.context_mode != CONTEXT_NONE:
-            
-            left = left.reindex(all_words).fillna(0).astype(int)
-            right = right.reindex(all_words).fillna(0).astype(int)
-            #node = node.reindex(all_words).fillna(0).astype(int)
-            
-            collocates = pd.concat([left, right], axis=1)
-            collocates = collocates.reset_index()
-            collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
-            collocates["coq_collocate_frequency"] = collocates.sum(axis=1)
-            collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(
-                corpus.get_frequency, engine=engine, filters=session.filter_list)
-            
-            collocates["coq_conditional_probability_left"] = collocates.apply(
-                lambda x: cls.conditional_probability(
-                    x["coq_collocate_frequency_left"],
-                    x["statistics_frequency"]) if x["statistics_frequency"] else None, 
-                axis=1)
-            collocates["coq_conditional_probability_right"] = collocates.apply(
-                lambda x: cls.conditional_probability(
-                    x["coq_collocate_frequency_right"],
-                    x["statistics_frequency"]) if x["statistics_frequency"] else None, 
-                axis=1)
-            
-            collocates["coq_mutual_information"] = collocates.apply(
-                lambda x: cls.mutual_information(
-                        f_1=len(df.index),
-                        f_2=x["statistics_frequency"], 
-                        f_coll=x["coq_collocate_frequency"],
-                        size=corpus_size, 
-                        span=left_span + right_span),
-                axis=1)
-            aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
-        else:
-            aggregate = pd.DataFrame(columns=["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability_left", "coq_conditional_probability_right", "coq_mutual_information"])
-        engine.dispose()
-        return aggregate
-
-    @staticmethod
-    def add_output_columns(session):
-        session._old_output_order = session.output_order
-        session.output_order = []
-        for label in ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right", "coq_collocate_frequency", "statistics_frequency", "coq_conditional_probability_left", "coq_conditional_probability_right", "coq_mutual_information", "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens"]:
-            if label not in session.output_order:
-                session.output_order.append(label)
-
-    @staticmethod
-    def remove_output_columns(session):
-        session.output_order = session._old_output_order
-
 def get_query_type(MODE):
-    if MODE == QUERY_MODE_COLLOCATIONS:
-        return CollocationQuery
-    elif MODE == QUERY_MODE_CONTRASTS:
+    if MODE == QUERY_MODE_CONTRASTS:
         return ContrastQuery
     elif MODE == QUERY_MODE_STATISTICS:
         return StatisticsQuery
