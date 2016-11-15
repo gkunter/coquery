@@ -502,7 +502,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1117, 24))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1117, 23))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -703,6 +703,8 @@ class Ui_MainWindow(object):
         self.actionSelect_group_functions.setObjectName(_fromUtf8("actionSelect_group_functions"))
         self.actionContext_options = QtGui.QAction(MainWindow)
         self.actionContext_options.setObjectName(_fromUtf8("actionContext_options"))
+        self.action_reference_corpus = QtGui.QAction(MainWindow)
+        self.action_reference_corpus.setObjectName(_fromUtf8("action_reference_corpus"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -716,6 +718,7 @@ class Ui_MainWindow(object):
         self.menuHilfe.addAction(self.action_available_modules)
         self.menuHilfe.addAction(self.action_about_coquery)
         self.menuCorpus.addAction(self.action_manage_corpus)
+        self.menuCorpus.addAction(self.action_reference_corpus)
         self.menuCorpus.addSeparator()
         self.menuCorpus.addAction(self.action_statistics)
         self.menuCorpus.addAction(self.action_corpus_documentation)
@@ -802,8 +805,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">No match.</span></p></body></html>", None))
+"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:11pt; font-weight:600;\">No match.</span></p></body></html>", None))
         self.menuFile.setTitle(_translate("MainWindow", "&File", None))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help", None))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus", None))
@@ -890,6 +893,7 @@ class Ui_MainWindow(object):
         self.actionAdd_edit_or_remove_group_filters.setText(_translate("MainWindow", "Add, edit or remove group filters...", None))
         self.actionSelect_group_functions.setText(_translate("MainWindow", "Select group functions...", None))
         self.actionContext_options.setText(_translate("MainWindow", "Context options...", None))
+        self.action_reference_corpus.setText(_translate("MainWindow", "&Reference corpus:", None))
 
 from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
 from ..resultstable import CoqResultsTable
