@@ -1413,7 +1413,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.textgrid_writer = TextgridWriter(tab, self.Session.Resource)
 
             self.start_progress_indicator()
-            self.textgrid_thread = classes.CoqThread(self.textgrid_writer.write_grids, **result, parent=self)
+            result[parent] = self
+            self.textgrid_thread = classes.CoqThread(self.textgrid_writer.write_grids, **result)
             self.textgrid_thread.taskException.connect(self.exception_during_textgrid)
             self.textgrid_thread.taskFinished.connect(self.finalize_textgrid)
             self.textgrid_thread.start()
