@@ -463,7 +463,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         return hostname
 
     def create_user(self):
-        import createuser
+        from . import createuser
         name = str(self.ui.user.text())
         password = str(self.ui.password.text())
         create_data = createuser.CreateUser.get(name, password, self)
