@@ -146,11 +146,11 @@ class TokenQuery(object):
                 # This list is filled by get_query_string().
             
             query_string = self.Resource.get_query_string(self, self._sub_query, to_file)
-            md5 = hashlib.md5("".join(sorted(query_string)).encode()).hexdigest()
             
             df = None
-            if options.cfg.use_cache:
+            if options.cfg.use_cache and query_string:
                 try:
+                    md5 = hashlib.md5("".join(sorted(query_string)).encode()).hexdigest()
                     df = options.cfg.query_cache.get((self.Resource.name, manager_hash, md5))
                 except KeyError:
                     pass
@@ -241,7 +241,8 @@ class TokenQuery(object):
                     #print(dtype_list)
 
                     self.results_frame = self.results_frame.append(df)
-                    
+        
+        self.results_frame.reset_index(drop=True)
         return self.results_frame
     
     def get_max_tokens(self):
