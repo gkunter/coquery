@@ -459,6 +459,7 @@ class Manager(CoqObject):
 
     def process(self, df, session, recalculate=True):
         print("process()")
+        df = df.reset_index(drop=True)
         self.drop_on_na = None
         self._main_functions = []
         self._group_functions = []
@@ -641,6 +642,9 @@ class Collocations(Manager):
         # context, the program should alert the user somehow.
         return [ContextColumns()]
     
+    def filter(self, df, session):
+        return df
+    
     def summarize(self, df, session):
         """
         This returns a completely different data frame than the argument.
@@ -698,15 +702,24 @@ class Collocations(Manager):
                             freq_cond="coq_collocate_frequency_right",
                             freq_total="statistics_frequency")
         
-        func = MutualInformation()
-        collocates["coq_mutual_information"] = func.evaluate(collocates,
-                            f_1 = len(df),
-                            f_2 = "statistics_frequency",
-                            f_coll = "coq_collocate_frequency",
-                            size = corpus_size,
-                            span=len(left_cols) + len(right_cols))
+        #func = MutualInformation()
+        #collocates["coq_mutual_information"] = func.evaluate(collocates,
+                            #f_1 = len(df),
+                            #f_2 = "statistics_frequency",
+                            #f_coll = "coq_collocate_frequency",
+                            #size = corpus_size,
+                            #span=len(left_cols) + len(right_cols))
 
         aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
+        
+        # FIXME:
+        # now that we have the collocations table, the summarize filters
+        # should be applied, and perhaps also summarize functions?
+
+        for filt in self._filters:
+            aggregate = filt.apply(aggregate)
+        aggregate = aggregate.reset_index(drop=True)
+        
         return aggregate
 
 
