@@ -178,7 +178,10 @@ class TextgridWriter(object):
             
             for tier in grid.tiers:
                 tier.start_time = 0
-                tier.end_time = end_time
+                try:
+                    tier.end_time = end_time
+                except tgt.core.TextGridToolsException:
+                    pass
             
             for col in self.df.columns:
                 # add the corpus IDs if no real feature is selected:
@@ -232,7 +235,9 @@ class TextgridWriter(object):
                             tier_name = rc_feat
                             
                         if not rc_feat.endswith(("_starttime", "_endtime")):
-                            if rc_feat in [x for x, _ in self.resource.get_corpus_features()] and not self.resource.is_tokenized(rc_feat):
+                            if (not rc_feat.startswith("segment") and
+                                rc_feat in [x for x, _ in self.resource.get_corpus_features()] and 
+                                not self.resource.is_tokenized(rc_feat)):
                                 # corpus feature -- add one interval that 
                                 # covers the whole text grid
                                 tier = grid.get_tier_by_name(tier_name)
