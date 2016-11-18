@@ -860,7 +860,7 @@ class ContextColumns(Function):
                 elif hasattr(session.Resource, "corpus_sentence"):
                     self._sentence_column = session.Resource.corpus_sentence
                 if self._sentence_column:
-                    self._sentence_column = "coq_{}_1".format(sentence_col)
+                    self._sentence_column = "coq_{}_1".format(self._sentence_column)
                     if self._sentence_column not in df.columns:
                         val = SentenceId(session=session).evaluate(df, session=session)
                         df["coquery_invisible_sentence_id"] = val
