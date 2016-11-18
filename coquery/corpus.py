@@ -1114,7 +1114,6 @@ class SQLResource(BaseResource):
         engine = self.get_engine()
         df = pd.read_sql(S, engine)
         engine.dispose()
-        
         try:
             df = df.sort_values(by=[self.corpus_id])
             id_list = id_list.sort_values()
@@ -1884,7 +1883,6 @@ class CorpusClass(object):
         # In order for this to work, the corpus times need to be included as 
         # selected features.
         
-        add_segments = False
         self.segment_features = [x for x in options.cfg.selected_features if x.startswith("segment_")]
         requested_features = [x for x in requested_features if not x.startswith("segment_")]
         
@@ -2138,8 +2136,6 @@ class CorpusClass(object):
         if self.segment_features:
             select_list.add("coquery_invisible_corpus_starttime_{}".format(number+1))
             select_list.add("coquery_invisible_corpus_endtime_{}".format(number+1))
-
-        print("-------", select_list, "-------")
 
         S = "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
         return S
@@ -2742,16 +2738,21 @@ class CorpusClass(object):
         query_string = " ".join(query_string_part)
         query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(set(final_select)))
         
+        segment_columns = [x for x in options.cfg.selected_features if x.startswith("segment_")]
+        
+        
         if segment_columns:
+            columns = set(["{} AS coq_{}_1".format(getattr(self.resource, x), x) for x in segment_columns] + [x.rpartition(" AS ")[-1] for x in final_select])
             query_string = """
-            SELECT * FROM ({s}) as results
+            SELECT {columns} FROM ({s}) as results
             INNER JOIN
                 {segment_table} 
             WHERE 
                 {segment_table}.{segment_end} - coquery_invisible_corpus_starttime_1 > 0.001 AND
                 coquery_invisible_corpus_endtime_{N} - {segment_table}.{segment_start} > 0.001  AND
                 {segment_table}.{segment_source} = coquery_invisible_origin_id                
-            """.format(s=query_string,
+            """.format(columns=", ".join(columns),
+                       s=query_string,
                        segment_table=self.resource.segment_table,
                        segment_start=self.resource.segment_starttime,
                        segment_end=self.resource.segment_endtime,
@@ -2771,6 +2772,7 @@ class CorpusClass(object):
             query_string = query_string.replace("SELECT ", "SELECT \n\t")
             query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
             query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
+        
         return query_string
 
     def sql_string_get_wordid_in_range(self, start, end, origin_id, sentence_id=None):
