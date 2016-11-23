@@ -91,7 +91,7 @@
       <item>
        <widget class="QRadioButton" name="radio_one_per_file">
         <property name="text">
-         <string>Create one text grid for each source &amp;file</string>
+         <string>Create one &amp;text grid for each source file</string>
         </property>
        </widget>
       </item>
@@ -258,6 +258,13 @@
          </widget>
         </item>
        </layout>
+      </item>
+      <item row="3" column="1">
+       <widget class="QCheckBox" name="check_remember">
+        <property name="text">
+         <string>&amp;Remember original time in a point tier</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

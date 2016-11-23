@@ -134,6 +134,9 @@ class Ui_TextgridExport(object):
         self.button_sound_path.setObjectName(_fromUtf8("button_sound_path"))
         self.horizontalLayout_2.addWidget(self.button_sound_path)
         self.gridLayout.addLayout(self.horizontalLayout_2, 1, 1, 1, 1)
+        self.check_remember = QtGui.QCheckBox(self.groupBox2)
+        self.check_remember.setObjectName(_fromUtf8("check_remember"))
+        self.gridLayout.addWidget(self.check_remember, 3, 1, 1, 1)
         self.verticalLayout_3.addWidget(self.groupBox2)
         self.buttonBox = QtGui.QDialogButtonBox(TextgridExport)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
@@ -159,7 +162,7 @@ class Ui_TextgridExport(object):
         self.groupBox.setTitle(_translate("TextgridExport", "Column selection", None))
         self.groupBox1.setTitle(_translate("TextgridExport", "Text grid creation", None))
         self.radio_one_per_match.setText(_translate("TextgridExport", "Create one text grid for each &match", None))
-        self.radio_one_per_file.setText(_translate("TextgridExport", "Create one text grid for each source &file", None))
+        self.radio_one_per_file.setText(_translate("TextgridExport", "Create one &text grid for each source file", None))
         self.groupBox2.setTitle(_translate("TextgridExport", "Copy sound files", None))
         self.label_4.setText(_translate("TextgridExport", "&Copy matching sound files to output path", None))
         self.label_2.setText(_translate("TextgridExport", "Include audio context:", None))
@@ -171,5 +174,6 @@ class Ui_TextgridExport(object):
         self.edit_sound_path.setPlaceholderText(_translate("TextgridExport", "Input path name", None))
         self.button_sound_path.setText(_translate("TextgridExport", "&Browse", None))
         self.button_sound_path.setShortcut(_translate("TextgridExport", "Alt+B", None))
+        self.check_remember.setText(_translate("TextgridExport", "&Remember original time in a point tier", None))
 
 

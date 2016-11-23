@@ -52,6 +52,11 @@ class TextgridExportDialog(QtGui.QDialog):
             self.ui.check_copy_sounds.setCheckState(QtCore.Qt.Checked)
         else:
             self.ui.check_copy_sounds.setCheckState(QtCore.Qt.Unchecked)
+        val = options.settings.value("textgridexport_check_remember", False)
+        if val == "true" or val == True:
+            self.ui.check_remember.setCheckState(QtCore.Qt.Checked)
+        else:
+            self.ui.check_remember.setCheckState(QtCore.Qt.Unchecked)
         self.ui.edit_output_path.setText(options.settings.value("textgridexport_output_path", 
                                                                 os.path.expanduser("~")))
         self.ui.edit_sound_path.setText(options.settings.value("textgridexport_sound_path", ""))
@@ -109,6 +114,7 @@ class TextgridExportDialog(QtGui.QDialog):
         options.settings.setValue("textgridexport_output_path", utf8(self.ui.edit_output_path.text()))
         options.settings.setValue("textgridexport_left_padding", float(self.ui.spin_left_padding.value()))
         options.settings.setValue("textgridexport_right_padding", float(self.ui.spin_right_padding.value()))
+        options.settings.setValue("textgridexport_check_remember", bool(self.ui.check_remember.checkState()))
 
     def exec_(self):
         result = super(TextgridExportDialog, self).exec_()
@@ -116,10 +122,11 @@ class TextgridExportDialog(QtGui.QDialog):
             columns = []
             for col in range(self.ui.list_columns.count()):
                 if self.ui.list_columns.item(col).checkState() == QtCore.Qt.Checked:
-                    columns.append(self.ui.list_columns.item(col).data(QtCore.Qt.UserRole))
+                    columns.append(utf8(self.ui.list_columns.item(col).data(QtCore.Qt.UserRole)))
             return {"output_path": utf8(self.ui.edit_output_path.text()),
                     "columns": columns,
                     "one_grid_per_match": self.ui.radio_one_per_match.isChecked(),
+                    "remember_time": self.ui.check_remember.checkState() != QtCore.Qt.Unchecked,
                     "sound_path": ("" if self.ui.check_copy_sounds.checkState() == QtCore.Qt.Unchecked else
                                    utf8(self.ui.edit_sound_path.text())),
                     "left_padding": float(self.ui.spin_left_padding.value()),
