@@ -800,7 +800,7 @@ class BaseResource(object):
             return False
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         resource = cls.get_referent_feature(rc_feature)
-        return resource in lexicon_features
+        return resource in lexicon_features or cls.is_tokenized(resource)
     
     @classmethod
     def is_tokenized(cls, rc_feature):
@@ -2743,6 +2743,8 @@ class CorpusClass(object):
         
         if segment_columns:
             columns = set(["{} AS coq_{}_1".format(getattr(self.resource, x), x) for x in segment_columns] + [x.rpartition(" AS ")[-1] for x in final_select])
+            columns.add("coquery_invisible_corpus_starttime_1")
+            columns.add("coquery_invisible_corpus_endtime_{N}".format(N=len(token_list)))
             query_string = """
             SELECT {columns} FROM ({s}) as results
             INNER JOIN
