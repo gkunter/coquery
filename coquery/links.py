@@ -10,9 +10,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 from __future__ import unicode_literals
 
-import hashlib
-
-from .defines import *
 from .general import CoqObject
 
 
