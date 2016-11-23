@@ -17,6 +17,7 @@ import logging
 
 import tgt
 
+from .defines import NAME
 from . import options
 from .links import get_by_hash
 from .unicode import utf8
@@ -367,4 +368,4 @@ class TextgridWriter(object):
 
         self.n = len(grids)
 
-logger = logging.getLogger("Coquery")
+logger = logging.getLogger(NAME)
