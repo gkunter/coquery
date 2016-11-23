@@ -30,7 +30,7 @@ class LinkSelect(QtGui.QDialog):
         
         self.ui = Ui_LinkSelect()
         self.ui.setupUi(self)
-        if res_from and res_to:
+        if res_from and rc_from:
             self.ui.label.setText(str(self.ui.label.text()).format(
                 resource_feature=getattr(res_from, rc_from), 
                 corpus=res_from.name))
@@ -38,7 +38,7 @@ class LinkSelect(QtGui.QDialog):
             self.ui.label.setText("Select a corpus:")
 
         self.insert_data(only_resources)
-        self.ui.treeWidget.itemActivated.connect(self.selected)
+        self.ui.treeWidget.currentItemChanged.connect(self.selected)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
 
         try:
@@ -81,7 +81,7 @@ class LinkSelect(QtGui.QDialog):
             return None
 
     def selected(self):
-        item = self.ui.treeWidget.selectedItems()[0]
+        item = self.ui.treeWidget.currentItem()
         if item.childCount():
             item.setExpanded(True)
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
