@@ -1,4 +1,4 @@
-#fef # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 managers.py is part of Coquery.
 
@@ -490,7 +490,6 @@ class Manager(CoqObject):
                         self.user_summary_functions.get_list())
 
         print("done")
-        print(df.head())
         return df
 
 class FrequencyList(Manager):
