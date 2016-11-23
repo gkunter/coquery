@@ -234,8 +234,8 @@ class Settings(QtGui.QDialog):
         else:
             self.ui.spin_cache_size.setValue(int(self._options.query_cache_size // (1024 * 1024)))
             self.ui.check_use_cache.setChecked(self._options.use_cache)
-            self.ui.progress_used.setValue(options.cfg.query_cache.size() // (1024*1024))
             self.ui.progress_used.setMaximum(self.ui.spin_cache_size.value())
+            self.ui.progress_used.setValue(options.cfg.query_cache.size() // (1024*1024))
         try:
             if self._options.number_of_tokens > 0:
                 self.ui.spin_maximum_tokens.setValue(int(self._options.number_of_tokens))
