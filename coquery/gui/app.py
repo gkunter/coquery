@@ -1403,8 +1403,16 @@ class CoqueryApp(QtGui.QMainWindow):
         if result:
             from coquery.textgrids import TextgridWriter
 
-            tab = self.table_model.content[ordered_headers]
-            tab["coquery_invisible_corpus_id"] = self.table_model.invisible_content["coquery_invisible_corpus_id"]
+            for x in ordered_headers:
+                if "_starttime_" in x or "_endtime_" in x:
+                    result["columns"].append(x)
+
+            tab = self.table_model.content[result["columns"]]
+            for x in self.table_model.invisible_content.columns:
+                if x.startswith(("coquery_invisible_corpus_id",
+                                 "coquery_invisible_corpus_starttime",
+                                 "coquery_invisible_corpus_endtime")):
+                    tab[x] = self.table_model.invisible_content[x]
 
             ## restrict to visible rows:
             # FIXME: reimplement row visibility
