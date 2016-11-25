@@ -694,20 +694,26 @@ class Collocations(Manager):
             session.Resource.corpus.get_frequency, engine=session.db_engine)
         # calculate conditional probabilities:
         func = ConditionalProbability()
-        collocates["coq_conditional_probability_left"] = func.evaluate(collocates, 
-                            freq_cond="coq_collocate_frequency_left",
-                            freq_total="statistics_frequency")
-        collocates["coq_conditional_probability_right"] = func.evaluate(collocates, 
-                            freq_cond="coq_collocate_frequency_right",
-                            freq_total="statistics_frequency")
+        collocates["coq_conditional_probability"] = func.evaluate(
+            collocates,
+            freq_cond="coq_collocate_frequency",
+            freq_total="statistics_frequency")
+        collocates["coq_conditional_probability_left"] = func.evaluate(
+            collocates,
+            freq_cond="coq_collocate_frequency_left",
+            freq_total="statistics_frequency")
+        collocates["coq_conditional_probability_right"] = func.evaluate(
+            collocates,
+            freq_cond="coq_collocate_frequency_right",
+            freq_total="statistics_frequency")
         
-        #func = MutualInformation()
-        #collocates["coq_mutual_information"] = func.evaluate(collocates,
-                            #f_1 = len(df),
-                            #f_2 = "statistics_frequency",
-                            #f_coll = "coq_collocate_frequency",
-                            #size = corpus_size,
-                            #span=len(left_cols) + len(right_cols))
+        func = MutualInformation()
+        collocates["coq_mutual_information"] = func.evaluate(collocates,
+                            f_1 = len(df),
+                            f_2 = "statistics_frequency",
+                            f_coll = "coq_collocate_frequency",
+                            size = corpus_size,
+                            span=len(left_cols) + len(right_cols))
 
         aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
         
@@ -718,8 +724,19 @@ class Collocations(Manager):
         for filt in self._filters:
             aggregate = filt.apply(aggregate)
         aggregate = aggregate.reset_index(drop=True)
+
+        order = ["coq_collocate_label",
+                 "statistics_frequency",
+                 "coq_collocate_frequency",
+                 "coq_collocate_frequency_left",
+                 "coq_collocate_frequency_right",
+                 "coq_conditional_probability",
+                 "coq_conditional_probability_left",
+                 "coq_conditional_probability_right",
+                 "coq_mutual_information"]
+
         
-        return aggregate
+        return aggregate[order]
 
 
 def manager_factory(manager):
