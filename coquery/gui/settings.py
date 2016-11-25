@@ -5,7 +5,7 @@ settings.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -281,7 +281,7 @@ class Settings(QtGui.QDialog):
 
         self._options.digits = int(self.ui.spin_digits.value())
         self._options.align_quantified = bool(self.ui.check_align_quantified.isChecked())
-        self._options.word_wrap = [0, int(QtCore.Qt.TextWordWrap)][bool(self.ui.check_word_wrap.isChecked())]
+        self._options.word_wrap = bool([0, int(QtCore.Qt.TextWordWrap)][bool(self.ui.check_word_wrap.isChecked())])
         self._options.float_format = "{:.%if}" % self._options.digits
         remove_source_path(self._options.custom_installer_path)
         self._options.custom_installer_path = utf8(self.ui.edit_installer_path.text())        
