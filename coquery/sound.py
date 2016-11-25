@@ -113,9 +113,9 @@ if _ALSA:
 
         return thread
 
-    play = _playALSA
+    play_wav = _playALSA
 else:
-    def play(data, start=0, end=None, block=True):
+    def play_wav(data, start=0, end=None, block=True):
         warnings.warn("No supported sound system detected.")
         pass
 
