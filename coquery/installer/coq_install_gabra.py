@@ -17,6 +17,7 @@ from coquery.errors import *
 from coquery.bibliography import *
 
 class BuilderClass(BaseCorpusBuilder):
+    default_view_mode = VIEW_MODE_TABLES
     file_filter = "*.bson"
     expected_files = [
         "lexemes.bson", "roots.bson", "sources.bson", "wordforms.bson"]

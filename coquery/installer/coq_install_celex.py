@@ -60,6 +60,8 @@ def dia_to_unicode(s):
     return unicode_string
 
 class BuilderClass(BaseCorpusBuilder):
+    default_view_mode = VIEW_MODE_TABLES
+
     file_filter = "e??.cd"
 
     corpus_table = "Ortho_Words"
