@@ -108,6 +108,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.Session = None
         
         self.selected_features = set()
+        self._forgotten_features = set()
         
         self._first_corpus = False
         if options.cfg.first_run and not options.cfg.current_resources:
@@ -1140,7 +1141,15 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.column_tree.clear()
 
-        self.column_tree.select(self.selected_features)
+        # try to transfer as many features from previous selections to the
+        # new resource tree:
+        self.column_tree.select(self._forgotten_features.union(self.selected_features))
+        # remember the currently selected features, but remember those that
+        # were selected but could not be selected anymore:
+        currently_selected = self.column_tree.selected()
+        self._forgotten_features.update(self.selected_features.difference(currently_selected))
+        self.selected_features = currently_selected
+
         options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
         
         # Enable "Restrict to sentences" checkbox if corpus
@@ -1151,7 +1160,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.check_restrict.setEnabled(True)
         else:
             self.ui.check_restrict.setEnabled(False)
-            
 
     def toggle_selected_feature(self, item):
         is_checked = (item.checkState(0) == QtCore.Qt.Checked)
@@ -2255,7 +2263,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 print(e)
 
             if options.cfg.context_font != old_context_font:
-                import contextviewer
+                from . import contextviewer
                 for widget in self.widget_list:
                     if isinstance(widget, contextviewer.ContextView):
                         widget.update_context()
