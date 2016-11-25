@@ -5,7 +5,7 @@ resourcetree.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -20,60 +20,69 @@ from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtGui
 from . import classes
 
+
 class CoqResourceTree(classes.CoqTreeWidget):
     def __init__(self, parent=None, *args, **kwargs):
         super(CoqResourceTree, self).__init__(*args, **kwargs)
-        self.selected = []
         self.setParent(parent)
 
         self.setColumnCount(1)
         self.setHeaderHidden(True)
         self.setRootIsDecorated(True)
 
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtGui.QSizePolicy(
+            QtGui.QSizePolicy.Minimum,
+            QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.setSizePolicy(sizePolicy)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        
+
     def setParent(self, parent):
         self.parent = parent
         if self.parent != None:
-            self.customContextMenuRequested.connect(self.parent.get_output_column_menu)
-            
+            self.customContextMenuRequested.connect(
+                self.parent.get_output_column_menu)
+
     def setup_resource(self, resource):
-        """ 
-        Construct a new output option tree.
-        
-        The content of the tree depends on the features that are available in
-        the current resource. All features that were checked in the old output 
-        option tree will also be checked in the new one. In this way, users 
-        can easily change between corpora without loosing their output column 
-        selections.        
         """
-        
+        Construct a new output option tree.
+
+        The content of the tree depends on the features that are available in
+        the current resource. All features that were checked in the old output
+        option tree will also be checked in the new one. In this way, users
+        can easily change between corpora without loosing their output column
+        selections.
+        """
+
         def create_root(table):
             """
             Create a CoqTreeItem object that acts as a table root for the 
             given table.
             """
-            if table != "coquery":
-                label = getattr(resource, "{}_table".format(table))
-            else:
-                label = "Query"
+
+            try:
+                if table != "coquery":
+                    label = getattr(resource, "{}_table".format(table))
+                else:
+                    label = "Query"
+            except AttributeError:
+                label = table
 
             root = classes.CoqTreeItem()
             root.setObjectName("{}_table".format(table))
-            root.setFlags(root.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
+            root.setFlags(root.flags() |
+                          QtCore.Qt.ItemIsUserCheckable |
+                          QtCore.Qt.ItemIsSelectable)
             root.setText(0, label)
             root.setCheckState(0, QtCore.Qt.Unchecked)
-            return root            
-        
-        def create_item(rc_feature):
+            return root
+
+        def create_item(rc_feature, root=None):
             """
-            Creates a CoqTreeItem object that acts as a table node for the 
-            given resource feature. The item contains the appropriate 
+            Creates a CoqTreeItem object that acts as a table node for the
+            given resource feature. The item contains the appropriate
             decorations (tags and labels).
             """
             leaf = classes.CoqTreeItem()
@@ -96,52 +105,101 @@ class CoqResourceTree(classes.CoqTreeWidget):
             leaf.setText(0, label)
             if label != getattr(resource, rc_feature):
                 leaf.setIcon(0, self.parent.get_icon("tag"))
-                root.setIcon(0, self.parent.get_icon("tag"))
-            
+                if root:
+                    root.setIcon(0, self.parent.get_icon("tag"))
+
             return leaf
-        
+
+        def fill_grouped():
+            lexicon_features = [x for x, _ in resource.get_lexicon_features()]
+            corpus_features = [x for x, _ in resource.get_corpus_features()]
+            segment_features = [x for x in lexicon_features + corpus_features if x.startswith("segment_")]
+            file_features = [x for x in lexicon_features + corpus_features if x.startswith("file_")]
+
+            lexicon_root = create_root("Tokens")
+            source_root = create_root("Texts")
+            file_root = create_root("Files")
+            segment_root = create_root("Segments")
+
+            for rc_feature in lexicon_features + corpus_features:
+                leaf = create_item(rc_feature)
+
+                if rc_feature in segment_features:
+                    segment_root.addChild(leaf)
+                elif (rc_feature in lexicon_features or
+                    resource.is_tokenized(rc_feature)):
+                    lexicon_root.addChild(leaf)
+                elif rc_feature in file_features:
+                    file_root.addChild(leaf)
+                else:
+                    source_root.addChild(leaf)
+
+            if lexicon_root.childCount():
+                self.addTopLevelItem(lexicon_root)
+                lexicon_root.sortChildren(0, QtCore.Qt.AscendingOrder)
+            if segment_root.childCount():
+                self.addTopLevelItem(segment_root)
+                segment_root.sortChildren(0, QtCore.Qt.AscendingOrder)
+            if source_root.childCount():
+                self.addTopLevelItem(source_root)
+                source_root.sortChildren(0, QtCore.Qt.AscendingOrder)
+            if file_root.childCount():
+                self.addTopLevelItem(file_root)
+                file_root.sortChildren(0, QtCore.Qt.AscendingOrder)
+
+        def fill_tables():
+            table_dict = resource.get_table_dict()
+            # Ignore denormalized tables:
+            tables = [x for x in table_dict.keys() if not x.startswith("corpusngram")]
+            # ignore internal  variables of the form {table}_id, {table}_table,
+            # {table}_table_{other}
+            for table in tables:
+                for var in list(table_dict[table]):
+                    if var == "corpus_id":
+                        continue
+                    if (var.endswith(("_table", "_id")) or
+                        var.startswith(("{}_table".format(table), "corpusngram_"))):
+                        table_dict[table].remove(var)
+
+            # Rearrange table names so that they occur in a sensible order:
+            for x in reversed(["word", "meta", "lemma", "corpus",
+                            "speaker", "source", "file"]):
+                if x in tables:
+                    tables.remove(x)
+                    tables.insert(0, x)
+            tables.remove("coquery")
+            tables.append("coquery")
+
+            # populate the tree with a root for each table, and nodes for each
+            # resource in the tables:
+            for table in tables:
+                if table != "coquery":
+                    resource_list = sorted(table_dict[table], key=lambda x: getattr(resource, x))
+                else:
+                    resource_list = table_dict[table]
+
+                if resource_list:
+                    root = create_root(table)
+                    self.addTopLevelItem(root)
+                    for rc_feature in resource_list:
+                        root.addChild(create_item(rc_feature, root))
+
         self.blockSignals(True)
         self.clear()
-        
-        table_dict = resource.get_table_dict()
-        # Ignore denormalized tables:
-        tables = [x for x in table_dict.keys() if not x.startswith("corpusngram")]
-        # ignore internal  variables of the form {table}_id, {table}_table,
-        # {table}_table_{other}
-        for table in tables:
-            for var in list(table_dict[table]):
-                if var == "corpus_id":
-                    continue
-                if (var.endswith(("_table", "_id")) or 
-                    var.startswith(("{}_table".format(table), "corpusngram_"))):
-                    table_dict[table].remove(var)
-                    
-        # Rearrange table names so that they occur in a sensible order:
-        for x in reversed(["word", "meta", "lemma", "corpus", "speaker", "source", "file"]):
-            if x in tables:
-                tables.remove(x)
-                tables.insert(0, x)
-        tables.remove("coquery")
-        tables.append("coquery")
-        
-        # populate the with a root for each table, and nodes for each 
-        # resource in the tables:
-        for table in tables:
-            if table != "coquery":
-                resource_list = sorted(table_dict[table], key=lambda x: getattr(resource, x))
-            else:
-                resource_list = table_dict[table]
-            
-            if resource_list:
-                root = create_root(table)
-                self.addTopLevelItem(root)
-                for rc_feature in resource_list:
-                    root.addChild(create_item(rc_feature))
 
+        view_mode = getattr(resource, "default_view_mode", VIEW_MODE_GROUPED)
+        if view_mode == VIEW_MODE_GROUPED:
+            fill_grouped()
+        elif view_mode == VIEW_MODE_TABLES:
+            fill_tables()
+
+        # restore external links:
         for link in options.cfg.table_links[options.cfg.current_server]:
             if link.res_from == resource.name:
                 self.add_external_link(self.getItem(link.rc_from), link)
 
+        # remove from the group list those features that are not available in
+        # the current resource:
         for _, group_column in self.parent.ui.list_group_columns.columns:
             if not hasattr(resource, group_column):
                 self.parent.ui.list_group_columns.remove_resource(group_column)
@@ -204,24 +262,24 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 if utf8(child.objectName()) in selected:
                     child.setCheckState(0, QtCore.Qt.Checked)
                     child.update_checkboxes(0, expand=True)
-                    traverse(child)
+
         for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
             traverse(root)
 
     def selected(self):
         def traverse(node):
-            checked = []
+            checked = set()
             for child in [node.child(i) for i in range(node.childCount())]:
-                if child.checkState() != QtCore.Qt.Unchecked:
+                if child.checkState(0) != QtCore.Qt.Unchecked:
                     resource = utf8(child.objectName())
                     if not resource.endswith("_table"):
-                        checked.append(resource)
-                    checked += traverse(child)
+                        checked.add(resource)
+                    checked.update(traverse(child))
             return checked
         
-        l = []
+        l = set()
         for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
-            l += traverse(root)
+            l.update(traverse(root))
         return l
             
 logger = logging.getLogger(NAME)
