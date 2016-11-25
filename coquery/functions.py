@@ -688,7 +688,7 @@ class Tokens(Function):
     no_column_labels = True
     
     def evaluate(self, df, *args, **kwargs):
-        return pd.Series([len(df.dropna())] * len(df), index=df.index)
+        return pd.Series([len(df.dropna(how="all"))] * len(df), index=df.index)
 
 class Types(Function):
     _name = "statistics_types"
