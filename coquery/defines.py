@@ -52,8 +52,6 @@ SUMMARY_MODES = [
     QUERY_MODE_CONTRASTS
     ]
 
-
-
 _OPERATORS = list(range(11))
 (OP_EQ,
 OP_LE,
@@ -108,6 +106,9 @@ CONTEXT_STRING = "String"
 CONTEXT_COLUMNS = "Columns"
 CONTEXT_SENTENCE = "Sentence"
 
+VIEW_MODE_TABLES = 0
+VIEW_MODE_GROUPED = 1
+
 (TOOLBOX_CONTEXT, TOOLBOX_STOPWORDS, TOOLBOX_GROUPING, 
 TOOLBOX_AGGREGATE, TOOLBOX_SUMMARY) = range(5)
 
@@ -122,12 +123,12 @@ COLUMN_NAMES = {
     "coq_context_right": "Right context",
     "coq_context_string": "Context",
     "coq_collocate_label": "Collocate",
-    #"coq_collocate_lemma_label": "Collocate lemma",
     "coq_collocate_frequency": "Collocate frequency",
     "coq_collocate_frequency_left": "Left context frequency",
     "coq_collocate_frequency_right": "Right context frequency",
     "coq_collocate_node": "Node",
     "coq_mutual_information": "Mutual information",
+    "coq_conditional_probability": "Pc(total)",
     "coq_conditional_probability_left": "Pc(left)",
     "coq_conditional_probability_right": "Pc(right)",
 
