@@ -215,45 +215,61 @@ class LexiconClass(object):
             last_table = table
 
     def sql_string_get_matching_wordids(self, token):
-        """ returns a string that may be used to query all word_ids that
-        match the token specification."""       
-        
+        """
+        Return a string that may be used to query all word_ids that match the
+        token specification.
+
+        Raises ValueError if the resource does not provide a word id. This
+        indicates that the words are stored directly in the corpus table.
+        """
+
         word_feature = getattr(self.resource, QUERY_ITEM_WORD)
         _, _, table, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(table))
         word_id = getattr(self.resource, "{}_id".format(table))
-        
+
+        if word_id == self.resource.corpus_id:
+            raise ValueError("This resource does not provide word ids.")
+
         if hasattr(self.resource, "word_table"):
             start_table = self.resource.word_table
         else:
             start_table = self.resource.corpus_table
-        
+
         self.joined_tables = []
         self.table_list = [start_table]
-        
+
         if word_table != start_table:
-            # this happens if there is a meta table between corpus and 
-            # lexicon, e.g. in the Buckeye corpus:
+            # this happens if the lexicon table is not immediately linked to
+            # the corpus table:
             self.add_table_path("word_id", getattr(self.resource, QUERY_ITEM_WORD))
             _, _, table, _ = self.resource.split_resource_feature("word_id")
             word_table = getattr(self.resource, "{}_table".format(table))
             word_id = getattr(self.resource, "{}_id".format(table))            
-        
+
         if token.lemma_specifiers:
-            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_LEMMA))
+            self.add_table_path(word_feature,
+                                getattr(self.resource, QUERY_ITEM_LEMMA))
 
         if token.class_specifiers:
-            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_POS))
+            self.add_table_path(word_feature,
+                                getattr(self.resource, QUERY_ITEM_POS))
 
         if token.transcript_specifiers:
-            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_TRANSCRIPT))
+            self.add_table_path(word_feature,
+                                getattr(self.resource, QUERY_ITEM_TRANSCRIPT))
 
         if token.gloss_specifiers:
-            self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_GLOSS))
-            
+            self.add_table_path(word_feature,
+                                getattr(self.resource, QUERY_ITEM_GLOSS))
+
+        if word_table == "corpus":
+            where_string = "{} LIKE {}"
+
         where_string = self.sql_string_get_wordid_list_where(token)
         S = "SELECT {}.{} FROM {} WHERE {}".format(
                 word_table, word_id, " ".join(self.table_list), where_string)
+
         return S
 
     def sql_string_get_lemmatized_wordids(self, token):
@@ -341,6 +357,9 @@ class LexiconClass(object):
         """
         Return a list of word ids that match the tokens. This takes the 
         entries from the stopword list into account.
+
+        Raises ValueError if the resource does not provide a word id because
+        the word labels are stored directly in the corpus table.
         """
         if token.S == "%" or token.S == "":
             return []
@@ -819,7 +838,7 @@ class BaseResource(object):
     def translate_filters(cls, filters):
         """ Return a translation list that contains the corpus feature names
         of the variables used in the filter texts. """
-        print("translate_filters")
+        #print("translate_filters")
         corpus_variables = cls.get_corpus_features()
         filter_list = []
         for filt in filters:
@@ -1518,44 +1537,47 @@ class CorpusClass(object):
             The number of tokens that match the query item specification after
             the filter list is applied.
         """
-        
+
         # FIXME: an engine is passed to this method. This is probably not 
         # a good idea.
-        
+
         filter_list = self.resource.translate_filters(filters)
 
         if s in ["%", "_"]:
             s = "\\" + s
-        
+
         tup = s, tuple([str(filt) for filt in filters])
-        
+
         if tup in self._frequency_cache:
             return self._frequency_cache[tup]
-        
+
         if not s:
             return 0
-        
+
         token = tokens.COCAToken(s, self, False)
 
+        word_pos_column = getattr(self.resource, QUERY_ITEM_POS, None)
+
+        if hasattr(self.resource, "corpus_word_id"):
+            word_id_column = self.resource.corpus_word_id
+        elif hasattr(self.resource, "corpus_word"):
+            word_id_column = self.resource.corpus_id
+        else:
+            word_id_column = None
+
         try:
-            if "pos_table" not in dir(self.resource):
-                word_pos_column = self.resource.word_pos
-            else:
-                word_pos_column = self.resource.word_pos_id
-        except AttributeError:
-            word_pos_column = None
-        try:
-            where_clauses = self.get_whereclauses(token, self.resource.word_id, word_pos_column)
+            where_clauses = self.get_whereclauses(token,
+                                                  word_id_column,
+                                                  word_pos_column)
         except WordNotInLexiconError:
             freq = 0
         else:
-
             self.lexicon.table_list = []
             self.lexicon.joined_tables = []
 
-            filter_strings = ["{}.{} {} '{}'".format(
-                tab, col, op, val[0]) for col, _, tab, op, val, _ in filter_list]
-                
+            S = "{}.{} {} '{}'"
+            filter_strings = [S.format(tab, col, op, val[0]) for col, _, tab, op, val, _ in filter_list]
+            assert filter_list == []
             if filter_list:
                 for column, corpus_feature, table, operator, value_list, val_range in filter_list:
                     self.lexicon.add_table_path("corpus_id", corpus_feature)
@@ -1565,7 +1587,6 @@ class CorpusClass(object):
 
             S = "SELECT COUNT(*) FROM {} WHERE {}".format(
                 from_str, " AND ".join(where_clauses + filter_strings))
-
             if not engine:
                 tmp_engine = self.resource.get_engine()
                 df = pd.read_sql(S.replace("%", "%%"), tmp_engine)
@@ -1605,29 +1626,33 @@ class CorpusClass(object):
         # specification, then get the list of matching word_ids from the 
         # lexicon:
         else:
-            if token.lemmatize:
-                L = set(self.lexicon.get_lemmatized_wordids(token))
-            else:
-                L = set(self.lexicon.get_matching_wordids(token))
-                
-            if L:
-                if hasattr(self.resource, "word_id"):
-                    L = [str(x) for x in L]
+            try:
+                if token.lemmatize:
+                    L = set(self.lexicon.get_lemmatized_wordids(token))
                 else:
-                    L = ["'{}'".format(x) for x in L]
-                where_clauses.append("{} IN ({})".format(
-                    WordTarget, ", ".join(L)))
+                    L = set(self.lexicon.get_matching_wordids(token))
+            except ValueError:
+                # this resource does not provide word ids.
+                L = []
+                S = self.lexicon.sql_string_get_wordid_list_where(token)
+                where_clauses.append(S)
             else:
-                # no word ids were available for this token. this can happen 
-                # if (a) there is no word in the lexicon that matches the 
-                # specification, or (b) the word is blocked by the stopword 
-                # list.
-               
-                if token.S not in ("%", ""):
-                    if token.negated:
-                        return []
+                if L:
+                    if hasattr(self.resource, "word_id"):
+                        L = [str(x) for x in L]
                     else:
-                        raise WordNotInLexiconError
+                        L = ["'{}'".format(x) for x in L]
+                    where_clauses.append("{} IN ({})".format(
+                        WordTarget, ", ".join(L)))
+                else:
+                    # no word ids were available for this token. this can
+                    # happen if there is no word in the lexicon that matches
+                    # the specification.
+                    if token.S not in ("%", ""):
+                        if token.negated:
+                            return []
+                        else:
+                            raise WordNotInLexiconError
         return where_clauses
     
     def get_token_query_order(self, token_list):
@@ -1905,7 +1930,7 @@ class CorpusClass(object):
             word_id_column = self.resource.corpus_id
         else:
             word_id_column = None
-            
+
         where_clauses = self.get_whereclauses(
             current_token, 
             word_id_column,
@@ -1946,9 +1971,13 @@ class CorpusClass(object):
 
             if hashed != None:
                 required_tables["{}.{}_table".format(hashed, tab)].append(rc_feature)
-                link, _ = get_by_hash(hashed)
-                if link.rc_from not in requested_features:
-                    requested_features.append(link.rc_from)
+                try:
+                    link, _ = get_by_hash(hashed)
+                except ValueError:
+                    pass
+                else:
+                    if link.rc_from not in requested_features:
+                        requested_features.append(link.rc_from)
             else:
                 rc_table = "{}_table".format(tab)
                 if rc_table not in required_tables:
@@ -2905,7 +2934,7 @@ class CorpusClass(object):
             word_feature = self.resource.surface_feature
         else:
             word_feature = getattr(self.resource, QUERY_ITEM_WORD)
-            
+
         if hasattr(self.resource, "corpus_word_id"):
             corpus_word_id = self.resource.corpus_word_id
         else:
