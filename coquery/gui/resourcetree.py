@@ -111,17 +111,20 @@ class CoqResourceTree(classes.CoqTreeWidget):
             return leaf
 
         def fill_grouped():
-            lexicon_features = [x for x, _ in resource.get_lexicon_features()]
-            corpus_features = [x for x, _ in resource.get_corpus_features()]
-            segment_features = [x for x in lexicon_features + corpus_features if x.startswith("segment_")]
-            file_features = [x for x in lexicon_features + corpus_features if x.startswith("file_")]
+            rc_features = [x for x in resource.get_resource_features() if not x.endswith(("_id", "_table"))]
+            print(rc_features)
+            segment_features = [x for x in rc_features if x.startswith("segment_")]
+            file_features = [x for x in rc_features if x.startswith("file_")]
+            lexicon_features = [x for x, _ in resource.get_lexicon_features() if x not in segment_features]
+            corpus_features = [x for x, _ in resource.get_corpus_features() if x not in file_features]
 
             lexicon_root = create_root("Tokens")
             source_root = create_root("Texts")
             file_root = create_root("Files")
             segment_root = create_root("Segments")
+            query_root = create_root("Query string")
 
-            for rc_feature in lexicon_features + corpus_features:
+            for rc_feature in rc_features:
                 leaf = create_item(rc_feature)
 
                 if rc_feature in segment_features:
@@ -131,6 +134,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
                     lexicon_root.addChild(leaf)
                 elif rc_feature in file_features:
                     file_root.addChild(leaf)
+                elif rc_feature.startswith("coquery_"):
+                    query_root.addChild(leaf)
                 else:
                     source_root.addChild(leaf)
 
@@ -146,6 +151,9 @@ class CoqResourceTree(classes.CoqTreeWidget):
             if file_root.childCount():
                 self.addTopLevelItem(file_root)
                 file_root.sortChildren(0, QtCore.Qt.AscendingOrder)
+            if query_root.childCount():
+                self.addTopLevelItem(query_root)
+                query_root.sortChildren(0, QtCore.Qt.AscendingOrder)
 
         def fill_tables():
             table_dict = resource.get_table_dict()
