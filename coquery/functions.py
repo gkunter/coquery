@@ -747,9 +747,10 @@ class MutualInformation(Proportion):
 
     def evaluate(self, df, f_1, f_2, f_coll, size, span, *args, **kwargs):
         try:
-            val = pd.np.log((df[f_coll] * size) / (df[f_1] * df[f_2] * span)) / pd.np.log(2)
+            val = pd.np.log((df[f_coll] * size) / (f_1 * df[f_2] * span)) / pd.np.log(2)
         except (ZeroDivisionError, TypeError, Exception) as e:
-            print("Error while calculating mutual information: f1={} f2={} fcol={} size={} span={}".format(f_1, f_2, f_coll, size, span))
+            print("Error while calculating mutual information:\nf1={} f2='{}' fcol='{}' size={} span={}".format(f_1, f_2, f_coll, size, span))
+            print(df.head())
             print(e)
             return None
         return val
