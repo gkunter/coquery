@@ -41,7 +41,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
 
     def setParent(self, parent):
         self.parent = parent
-        if self.parent != None:
+        if self.parent is not None:
             self.customContextMenuRequested.connect(
                 self.parent.get_output_column_menu)
 
@@ -58,7 +58,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
 
         def create_root(table):
             """
-            Create a CoqTreeItem object that acts as a table root for the 
+            Create a CoqTreeItem object that acts as a table root for the
             given table.
             """
 
@@ -90,7 +90,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
             leaf.setCheckState(0, QtCore.Qt.Unchecked)
             label = getattr(resource, rc_feature)
             # Add labels if this feature is mapped to a query item type
-            
+
             if rc_feature == getattr(resource, "query_item_word", None):
                 label = "{} [Word]".format(label)
             if rc_feature == getattr(resource, "query_item_lemma", None):
@@ -111,12 +111,13 @@ class CoqResourceTree(classes.CoqTreeWidget):
             return leaf
 
         def fill_grouped():
-            rc_features = [x for x in resource.get_resource_features() if not x.endswith(("_id", "_table"))]
-            print(rc_features)
-            segment_features = [x for x in rc_features if x.startswith("segment_")]
+            rc_features = [x for x in resource.get_resource_features()
+                           if not x.endswith(("_id", "_table"))]
+            segment_features = [x for x in rc_features
+                                if x.startswith("segment_")]
             file_features = [x for x in rc_features if x.startswith("file_")]
-            lexicon_features = [x for x, _ in resource.get_lexicon_features() if x not in segment_features]
-            corpus_features = [x for x, _ in resource.get_corpus_features() if x not in file_features]
+            lexicon_features = [x for x, _ in resource.get_lexicon_features()
+                                if x not in segment_features]
 
             lexicon_root = create_root("Tokens")
             source_root = create_root("Texts")
@@ -130,7 +131,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 if rc_feature in segment_features:
                     segment_root.addChild(leaf)
                 elif (rc_feature in lexicon_features or
-                    resource.is_tokenized(rc_feature)):
+                      resource.is_tokenized(rc_feature)):
                     lexicon_root.addChild(leaf)
                 elif rc_feature in file_features:
                     file_root.addChild(leaf)
@@ -158,20 +159,22 @@ class CoqResourceTree(classes.CoqTreeWidget):
         def fill_tables():
             table_dict = resource.get_table_dict()
             # Ignore denormalized tables:
-            tables = [x for x in table_dict.keys() if not x.startswith("corpusngram")]
+            tables = [x for x in
+                      table_dict.keys() if not x.startswith("corpusngram")]
             # ignore internal  variables of the form {table}_id, {table}_table,
             # {table}_table_{other}
             for table in tables:
+                rc_tab = "{}_table".format(table)
                 for var in list(table_dict[table]):
                     if var == "corpus_id":
                         continue
                     if (var.endswith(("_table", "_id")) or
-                        var.startswith(("{}_table".format(table), "corpusngram_"))):
+                            var.startswith((rc_tab, "corpusngram_"))):
                         table_dict[table].remove(var)
 
             # Rearrange table names so that they occur in a sensible order:
             for x in reversed(["word", "meta", "lemma", "corpus",
-                            "speaker", "source", "file"]):
+                               "speaker", "source", "file"]):
                 if x in tables:
                     tables.remove(x)
                     tables.insert(0, x)
@@ -182,7 +185,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
             # resource in the tables:
             for table in tables:
                 if table != "coquery":
-                    resource_list = sorted(table_dict[table], key=lambda x: getattr(resource, x))
+                    resource_list = sorted(table_dict[table],
+                                           key=lambda x: getattr(resource, x))
                 else:
                     resource_list = table_dict[table]
 
@@ -224,14 +228,15 @@ class CoqResourceTree(classes.CoqTreeWidget):
         except KeyError:
             # external resource does not exist (anymore), return
             return
-        
+
         _, _, tab, feat = ext_res.split_resource_feature(link.rc_to)
         ext_table = "{}_table".format(tab)
-        
+
         tree = classes.CoqTreeLinkItem()
         tree.setCheckState(0, QtCore.Qt.Unchecked)
         tree.setLink(link)
-        tree.setText(0, "{}.{}".format(link.res_to, getattr(ext_res, ext_table)))
+        tree.setText(0, "{}.{}".format(link.res_to,
+                                       getattr(ext_res, ext_table)))
 
         table = ext_res.get_table_dict()[tab]
         table = sorted(table, key=lambda x: getattr(ext_res, x))
@@ -245,18 +250,19 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 new_item = classes.CoqTreeItem()
                 new_item.setText(0, getattr(ext_res, rc_feature))
                 new_item.rc_feature = rc_feature
-                new_item.setObjectName("{}.{}".format(link.get_hash(), rc_feature))
+                new_item.setObjectName("{}.{}".format(link.get_hash(),
+                                                      rc_feature))
                 new_item.setCheckState(0, QtCore.Qt.Unchecked)
                 tree.addChild(new_item)
 
-        ## Insert newly created table as a child of the linked item:
+        # Insert newly created table as a child of the linked item:
         item.addChild(tree)
         item.setExpanded(True)
 
     def remove_external_link(self, item):
         """
-        Remove either a link from the column tree.        
-        
+        Remove either a link from the column tree.
+
         Parameters
         ----------
         item : CoqTreeItem
@@ -271,7 +277,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
                     child.setCheckState(0, QtCore.Qt.Checked)
                     child.update_checkboxes(0, expand=True)
 
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
+        for root in [self.topLevelItem(i) for i in
+                     range(self.topLevelItemCount())]:
             traverse(root)
 
     def selected(self):
@@ -284,10 +291,11 @@ class CoqResourceTree(classes.CoqTreeWidget):
                         checked.add(resource)
                     checked.update(traverse(child))
             return checked
-        
+
         l = set()
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
+        for root in [self.topLevelItem(i) for i in
+                     range(self.topLevelItemCount())]:
             l.update(traverse(root))
         return l
-            
+
 logger = logging.getLogger(NAME)
