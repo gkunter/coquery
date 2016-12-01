@@ -35,9 +35,9 @@ class Visualizer(vis.BaseVisualizer):
             self.cumulative = kwargs.pop("cumulative")
         except KeyError:
             self.cumulative = False
-        self.set_data_table(options.cfg.main_window.Session.output_object)
         self._plot_frequency = True
         super(Visualizer, self).__init__(*args, **kwargs)
+        self.set_data_table(options.cfg.main_window.Session.output_object)
 
     def set_defaults(self):
         self.options["color_palette"] = "Paired"
