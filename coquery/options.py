@@ -671,7 +671,6 @@ class Options(object):
             "output_case_sensitive": False,
             "output_to_lower": True,
             "drop_duplicates": True,
-            "selected_aggregate": QUERY_MODE_FREQUENCIES,
             "na_string": DEFAULT_MISSING_VALUE,
             "custom_installer_path": os.path.join(self.args.coquery_home, "installer"),
             "csv_file": "",
@@ -837,8 +836,6 @@ class Options(object):
             self.args.use_context = config_file.bool("gui", "use_context", fallback=True)
             self.args.use_stopwords = config_file.bool("gui", "use_stopwords", fallback=False)
             self.args.use_group_filters = config_file.bool("gui", "use_group_filters", fallback=False)
-            self.args.use_aggregate = config_file.bool("gui", "use_aggregate", fallback=False)
-            self.args.selected_aggregate = config_file.str("gui", "selected_aggregate", fallback=QUERY_MODE_FREQUENCIES)
             self.args.use_summarize_filters = config_file.bool("gui", "use_summarize_filters", fallback=False)
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
             # FIXME: number_of_tokens should not be stored in options.cfg!
@@ -1012,14 +1009,12 @@ def save_configuration():
         if cfg.stopword_list:
             config.set("gui", "stopword_list", 
                        encode_query_string("\n".join(cfg.stopword_list)))
-        config.set("gui", "selected_aggregate", cfg.selected_aggregate)
         config.set("gui", "show_data_management", cfg.show_data_management)
         config.set("gui", "show_output_columns", cfg.show_output_columns)
         config.set("gui", "last_toolbox", cfg.last_toolbox)
         config.set("gui", "use_context", cfg.use_context)
         config.set("gui", "use_stopwords", cfg.use_stopwords)
         config.set("gui", "use_group_filters", cfg.use_group_filters)
-        config.set("gui", "use_aggregate", cfg.use_aggregate)
         config.set("gui", "use_summarize_filters", cfg.use_summarize_filters)        
         config.set("gui", "drop_duplicates", cfg.drop_duplicates)
 
