@@ -5,23 +5,20 @@ managers.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
 
-import hashlib
 import logging
 import collections
 
-from .defines import *
-from .errors import *
 from .functions import *
 from .functionlist import FunctionList
-from . import filters
 from .general import CoqObject, get_visible_columns
 from . import options
+
 
 class Sorter(CoqObject):
     def __init__(self, column, ascending=True, reverse=False, position=0):
@@ -30,9 +27,10 @@ class Sorter(CoqObject):
         self.reverse = reverse
         self.position = position
 
+
 class Manager(CoqObject):
     name = "RESULTS"
-    
+
     def __init__(self):
         self._functions = []
         self.sorters = []
@@ -43,7 +41,7 @@ class Manager(CoqObject):
         self._len_post_group_filter = {}
         self.drop_on_na = None
         self.stopwords_failed = False
-        
+
         self.manager_group_functions = FunctionList()
         self.manager_summary_functions = FunctionList()
         self.user_summary_functions = FunctionList()
@@ -53,35 +51,33 @@ class Manager(CoqObject):
 
     def hide_column(self, column):
         self.hidden_columns.add(column)
-        
+
     def show_column(self, column):
         self.hidden_columns.remove(column)
-        
+
     def is_hidden_column(self, column):
         return column in self.hidden_columns
-        
+
     def get_function(self, id):
         for fun in self._functions:
             if type(fun) == type:
                 logger.warning("Function {} not found in manager".format(fun))
                 return None
             if fun.get_id() == id:
-                return fun 
-    
+                return fun
+
     def set_filters(self, filter_list):
         self._filters = filter_list
-    
+
     def set_group_filters(self, filter_list):
         self._group_filters = filter_list
-    
+
     def _get_main_functions(self, df, session):
         """
-        Returns a list of functions that are provided by this manager. They
-        will be executed after user functions.
+        Returns a list of functions that are provided by this manager.
+        They will be executed after user functions.
         """
         l = []
-        vis_cols = get_visible_columns(df, manager=self, session=session)
-        
         if options.cfg.use_context:
             if options.cfg.context_mode == CONTEXT_COLUMNS:
                 l.append(ContextColumns())
@@ -91,10 +87,10 @@ class Manager(CoqObject):
                 l.append(ContextString())
 
         return l
-    
+
     def _get_group_functions(self, df, session):
         return self.manager_group_functions.get_list() + session.group_functions.get_list()
-    
+
     @staticmethod
     def _apply_function(df, fun, session):
         try:
@@ -107,7 +103,7 @@ class Manager(CoqObject):
         except Exception as e:
             print(e)
             raise e
-        
+
     def get_group_columns(self, df, session):
         columns = []
         # use group columns as sorters
@@ -117,20 +113,29 @@ class Manager(CoqObject):
                 if x in df.columns:
                     columns.append(x)
         return columns
-    
+
     def mutate_groups(self, df, session):
+
         if len(df) == 0 or len(options.cfg.group_columns) == 0:
             return df
         print("\tmutate_groups({})".format(options.cfg.group_columns))
         group_functions = self._get_group_functions(df, session)
-        
-        vis_cols = get_visible_columns(df, manager=self, session=session, hidden=True)
-        l = session.group_functions.get_list()
-        l = [fun(columns=vis_col, connection=session.db_connection) if type(fun) == type else fun for fun in l]
+
+        kwargs = {"columns": get_visible_columns(df,
+                                                 manager=self,
+                                                 session=session,
+                                                 hidden=True),
+                  "connection": session.db_connection}
+        l = []
+        for fun in session.group_functions.get_list():
+            if type(fun) == type:
+                l.append(fun(**kwargs))
+            else:
+                l.append(fun)
         session.group_functions = FunctionList(l)
-    
+
         columns = self.get_group_columns(df, session)
-    
+
         if len(columns) == 0:
             return df
 
@@ -141,9 +146,9 @@ class Manager(CoqObject):
                 val = fun.evaluate(df.iloc[grouped.groups[x]], session=session, manager=self, key=x)
                 l = l.append(val)
             df[fun.get_id()] = l
-            
+
         return df
-    
+
     def mutate(self, df, session):
         """
         Modify the transformed data frame by applying all needed functions.
@@ -151,28 +156,31 @@ class Manager(CoqObject):
         if len(df) == 0:
             return df
         print("\tmutate()")
+        # apply manager functions, including context functions:
         df = FunctionList(self._get_main_functions(df, session)).apply(df, session=session, manager=self)
+        # apply user functions, i.e. functions that were added to
+        # individual columns:
         df = FunctionList(session.column_functions).apply(df, session=session, manager=self)
         df = df.reset_index(drop=True)
         print("\tdone")
         return df
-    
+
     def remove_sorter(self, column):
         self.sorters.remove(self.get_sorter(column))
         for i, x in enumerate(self.sorters):
             x.position = i
-        
+
     def add_sorter(self, column, ascending=True, reverse=False):
         if self.get_sorter(column):
             self.remove_sorter(column)
         self.sorters.append(Sorter(column, ascending, reverse, len(self.sorters)))
-    
+
     def get_sorter(self, column):
         for x in self.sorters:
             if x.column == column:
                 return x
         return None
-    
+
     def arrange_groups(self, df, session):
         if len(df) == 0 or len(options.cfg.group_columns) == 0:
             return df
@@ -183,15 +191,15 @@ class Manager(CoqObject):
         columns += ["coquery_invisible_corpus_id"]
         directions = [True] * len(columns)
 
-        # filter columns that should be in the data frame, but which aren't 
-        # (this may happen for example with the contingency table which 
+        # filter columns that should be in the data frame, but which aren't
+        # (this may happen for example with the contingency table which
         # takes one column and rearranges it)
         column_check = [x in df.columns for x in columns]
         for i, col in enumerate(column_check):
             if not col:
                 directions.pop(i)
                 columns.pop(i)
-                
+
         if COLUMN_NAMES["statistics_column_total"] in df.index:
             # make sure that the row containing the totals is the last row:
             df_data = df[df.index != COLUMN_NAMES["statistics_column_total"]]
@@ -202,16 +210,16 @@ class Manager(CoqObject):
         # always sort by coquery_invisible_corpus_id if there is no other
         # sorter -- but not if the session covered multiple queries.
 
-        # sort the data frame (excluding a totals row) with backward 
+        # sort the data frame (excluding a totals row) with backward
         # compatibility:
         try:
             # pandas <= 0.16.2:
-            df_data = df_data.sort(columns=columns, 
+            df_data = df_data.sort(columns=columns,
                             ascending=directions,
                             axis="index")[df.columns]
         except AttributeError:
             # pandas >= 0.17.0
-            df_data = df_data.sort_values(by=columns, 
+            df_data = df_data.sort_values(by=columns,
                                     ascending=directions,
                                     axis="index")[df.columns]
         if COLUMN_NAMES["statistics_column_total"] in df.index:
@@ -222,19 +230,19 @@ class Manager(CoqObject):
         df = df.reset_index(drop=True)
         print("\tdone")
         return df
-    
+
     def arrange(self, df, session):
         if len(df) == 0:
             print("exit arrange")
             return df
-        
+
         print("\tarrange()")
 
         original_columns = df.columns
         columns = []
         directions = []
-        
-        # list that stores unusuable sorters (e.g. because the sorter 
+
+        # list that stores unusuable sorters (e.g. because the sorter
         # refers to a function column and the function has been deleted):
         drop_list = []
         if self.sorters:
@@ -246,7 +254,7 @@ class Manager(CoqObject):
                     df[target] = (df[sorter.column].apply(lambda x: x[::-1]))
                 else:
                     target = sorter.column
-                
+
                 if target not in df.columns:
                     drop_list.append(target)
                 else:
@@ -254,17 +262,17 @@ class Manager(CoqObject):
                     directions.append(sorter.ascending)
 
         # drop illegal sorters:
-        self.sorters = [x for x in self.sorters if not x in drop_list]
+        self.sorters = [x for x in self.sorters if x not in drop_list]
 
-        # filter columns that should be in the data frame, but which aren't 
-        # (this may happen for example with the contingency table which 
+        # filter columns that should be in the data frame, but which aren't
+        # (this may happen for example with the contingency table which
         # takes one column and rearranges it)
         column_check = [x in original_columns for x in columns]
         for i, col in enumerate(column_check):
             if not col and not columns[i].endswith("__rev"):
                 directions.pop(i)
                 columns.pop(i)
-        
+
         if COLUMN_NAMES["statistics_column_total"] in df.index:
             # make sure that the row containing the totals is the last row:
             df_data = df[df.index != COLUMN_NAMES["statistics_column_total"]]
@@ -275,16 +283,16 @@ class Manager(CoqObject):
         if len(columns) == 0:
             return df
 
-        # sort the data frame (excluding a totals row) with backward 
+        # sort the data frame (excluding a totals row) with backward
         # compatibility:
         try:
             # pandas <= 0.16.2:
-            df_data = df_data.sort(columns=columns, 
+            df_data = df_data.sort(columns=columns,
                             ascending=directions,
                             axis="index")[original_columns]
         except AttributeError:
             # pandas >= 0.17.0
-            df_data = df_data.sort_values(by=columns, 
+            df_data = df_data.sort_values(by=columns,
                                     ascending=directions,
                                     axis="index")[original_columns]
         except Exception as e:
@@ -303,12 +311,10 @@ class Manager(CoqObject):
 
         df = df[[x for x in df.columns if not x.endswith("__rev")]]
         return df
-        
+
     def summarize(self, df, session):
-        #if len(df) == 0:
-            #return df
-        vis_cols = get_visible_columns(df, manager=self, session=session)
         print("\tsummarize()")
+        vis_cols = get_visible_columns(df, manager=self, session=session)
         df = self.manager_summary_functions.apply(df, session=session, manager=self)
         df = self.user_summary_functions.apply(df, session=session, manager=self)
 
@@ -318,7 +324,7 @@ class Manager(CoqObject):
 
         if options.cfg.drop_duplicates:
             df = self.distinct(df, session)
-                          
+
         print("\tdone")
         return df
 
@@ -345,10 +351,10 @@ class Manager(CoqObject):
         df = df.reset_index(drop=True)
         self._len_post_filter = len(df)
         return df
-    
+
     def get_available_columns(self, session):
         pass
-    
+
     def reset_filter_statistics(self):
         self._len_pre_filter = None
         self._len_post_filter = None
@@ -356,7 +362,7 @@ class Manager(CoqObject):
     def reset_group_filter_statistics(self):
         self._len_pre_group_filter = {}
         self._len_post_group_filter = {}
-    
+
     def filter_groups(self, df, session):
         if len(df) == 0 or len(options.cfg.group_columns) == 0 or not options.cfg.use_group_filters or len(self._group_filters) == 0:
             print("filter_groups exit")
@@ -364,10 +370,10 @@ class Manager(CoqObject):
 
         print("\tfilter_groups()")
         self.reset_group_filter_statistics()
-        
+
         columns = self.get_group_columns(df, session)
         grouped = df.groupby(columns)
-        new_df = pd.DataFrame(columns = df.columns)
+        new_df = pd.DataFrame(columns=df.columns)
         for x in grouped.groups:
             _df = df.iloc[grouped.groups[x]]
             _df = _df.reset_index(drop=True)
@@ -382,12 +388,12 @@ class Manager(CoqObject):
 
     def select(self, df, session):
         """
-        Select the columns that will appear in the final output. Also, put 
+        Select the columns that will appear in the final output. Also, put
         them into the preferred order.
         """
         print("\tselect()")
 
-        # 'coquery_dummy' is used to manage frequency queries with zero 
+        # 'coquery_dummy' is used to manage frequency queries with zero
         # matches. It is never displayed:
         vis_cols = [x for x in df.columns if x != "coquery_dummy"]
         vis_cols = sorted(vis_cols)
@@ -395,9 +401,7 @@ class Manager(CoqObject):
         resource = session.Resource
 
         lexical_features = []
-        db_lexical_features = []
         corpus_features = []
-        db_corpus_features = []
         functions = []
         others = []
 
@@ -430,7 +434,7 @@ class Manager(CoqObject):
             for lex in lex_list:
                 lexical_features.remove(lex)
                 lexical_features.insert(0, lex)
-                
+
         vis_cols = lexical_features + corpus_features + others + functions
         print("\tdone")
         return df[vis_cols]
@@ -450,7 +454,7 @@ class Manager(CoqObject):
         if columns == []:
             self.stopwords_failed = True
             return df
-        
+
         stopwords = [x.lower() for x in options.cfg.stopword_list]
         valid = ~(df[columns].apply(lambda x: x.str.lower())
                              .isin(stopwords)).apply(any, axis="columns")
@@ -470,13 +474,13 @@ class Manager(CoqObject):
         df = df[[x for x in df.columns if not x.startswith("func_")]]
         self._main_functions = self._get_main_functions(df, session)
         df = self.mutate(df, session)
-        
+
         if options.cfg.group_columns:
             if options.cfg.use_group_filters:
                 df = self.filter_groups(df, session)
             df = self.arrange_groups(df, session)
             df = self.mutate_groups(df, session)
-                
+
         if options.cfg.use_summarize_filters:
             df = self.filter(df, session)
         df = self.summarize(df, session)
@@ -484,31 +488,33 @@ class Manager(CoqObject):
         df = self.select(df, session)
 
         self._functions = (self._main_functions + self._group_functions +
-                        session.column_functions.get_list() + 
-                        self._get_group_functions(df, session) + 
-                        self.manager_summary_functions.get_list() + 
+                        session.column_functions.get_list() +
+                        self._get_group_functions(df, session) +
+                        self.manager_summary_functions.get_list() +
                         self.user_summary_functions.get_list())
 
         print("done")
         return df
 
+
 class FrequencyList(Manager):
     name = "FREQUENCY"
-    
+
     def __init__(self, *args, **kwargs):
         super(FrequencyList, self).__init__(*args, **kwargs)
-    
+
     def summarize(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
         freq_function = Freq(columns=vis_cols)
-        
+
         if not self.user_summary_functions.has_function(freq_function):
             self.manager_summary_functions = FunctionList([freq_function])
         return super(FrequencyList, self).summarize(df, session)
-        
+
+
 class ContingencyTable(FrequencyList):
     name = "CONTINGENCY"
-    
+
     def select(self, df, session):
         l = list(super(ContingencyTable, self).select(df, session).columns)
         for col in [x for x in df.columns if x != "coquery_dummy"]:
@@ -526,7 +532,6 @@ class ContingencyTable(FrequencyList):
 
     def summarize(self, df, session):
         def _get_column_label(row):
-            col_label = session.translate_header(row[0])
             if row[1] == "All":
                 if agg_fnc[row[0]] == sum:
                     s = "{}(TOTAL)"
@@ -536,7 +541,7 @@ class ContingencyTable(FrequencyList):
                     s = "{}({}=ANY)"
                 return s.format(row[0], row.index[1])
             elif row[1]:
-                return "{}({}='{}')".format(row[0], 
+                return "{}({}='{}')".format(row[0],
                                             session.translate_header(row.index[1]),
                                             row[1].replace("'", "''"))
             else:
@@ -549,12 +554,12 @@ class ContingencyTable(FrequencyList):
 
         cat_col = list(df[vis_cols].select_dtypes(include=[object]).columns.values)
         num_col = list(df[vis_cols].select_dtypes(include=[np.number]).columns.values) + ["coquery_invisible_number_of_tokens", "coquery_invisible_corpus_id"]
-        
+
         # determine appropriate aggregation functions:
-        # - internal columns that are needed for context look-up take 
+        # - internal columns that are needed for context look-up take
         #   the first value (so clicking on a cell in the contingency
         #   table returns the first matching context)
-        # - frequency functions return the sum 
+        # - frequency functions return the sum
         # - all other numeric columns return the mean
         agg_fnc = {}
         for col in num_col:
@@ -566,20 +571,20 @@ class ContingencyTable(FrequencyList):
                 agg_fnc[col] = np.mean
 
         # Create pivot table:
-        piv = df.pivot_table(index=cat_col[:-1], 
-                             columns=[cat_col[-1]], 
-                             values=num_col, 
+        piv = df.pivot_table(index=cat_col[:-1],
+                             columns=[cat_col[-1]],
+                             values=num_col,
                              aggfunc=agg_fnc,
                              fill_value=0)
         piv = piv.reset_index()
 
         # handle the multi-index that pivot_table() creates:
         l1 = pd.Series(piv.columns.levels[-2][piv.columns.labels[-2]])
-        l2 = pd.Series(piv.columns.levels[-1][piv.columns.labels[-1]]) 
+        l2 = pd.Series(piv.columns.levels[-1][piv.columns.labels[-1]])
 
         piv.columns = pd.concat([l1, l2], axis=1).apply(_get_column_label, axis="columns")
-        
-        # Ensure that the pivot columns have the same dtype as the original 
+
+        # Ensure that the pivot columns have the same dtype as the original
         # column:
         for x in piv.columns:
             match = re.search("(.*)\(.*\)", x)
@@ -598,37 +603,35 @@ class ContingencyTable(FrequencyList):
             # pandas >= 0.17.0
             piv = piv.sort_values(by=columns, axis="index")
 
-        #piv = Manager.summarize(self, piv, session)
-
         bundles = collections.defaultdict(list)
-
         d = {}
 
         # row-wise apply the aggregate function
         for x in piv.columns[(len(cat_col)-1):]:
             col = x.rpartition("(")[0]
-            if col: 
+            if col:
                 bundles[col].append(x)
         for col in bundles:
             piv[col] = piv[bundles[col]].apply(agg_fnc[col], axis="columns")
         # add summary row:
         for x in piv.columns[(len(cat_col)-1):]:
             d[x] = agg_fnc[col](piv[x])
-        row_total = pd.DataFrame([pd.Series(d)], 
+        row_total = pd.DataFrame([pd.Series(d)],
                                  columns=piv.columns,
                                  index=[COLUMN_NAMES["statistics_column_total"]]).fillna("")
 
         piv = piv.append(row_total)
         return piv
 
+
 class Collocations(Manager):
     """
-    Manager class which calculates the collocation measures for the 
-    current results table. 
-    
-    The basic algorithm works like this: 
+    Manager class which calculates the collocation measures for the
+    current results table.
+
+    The basic algorithm works like this:
     (1) Get a list of all words in the left and right context
-    (2) Count how often each word occurs (separately either in the 
+    (2) Count how often each word occurs (separately either in the
         left or in the right context)
     """
 
@@ -640,27 +643,25 @@ class Collocations(Manager):
         # If the context span is zero (i.e. neither a left nor a right
         # context, the program should alert the user somehow.
         return [ContextColumns()]
-    
+
     def filter(self, df, session):
         return df
-    
+
     def summarize(self, df, session):
         """
         This returns a completely different data frame than the argument.
         """
 
-        # FIXME: reimplement a function that returns the corpus 
+        # FIXME: reimplement a function that returns the corpus
         # size taking current filters into account.
-        # Alternatively, get rid of this function call if the 
+        # Alternatively, get rid of this function call if the
         # corpus size can be handled correctly by an appropriate
         # function
         corpus_size = session.Resource.corpus.get_corpus_size()
 
-        fix_col = ["coquery_invisible_corpus_id"]
-
         left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
         right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
-        
+
         left_context_span = df[left_cols]
         right_context_span = df[right_cols]
 
@@ -678,10 +679,10 @@ class Collocations(Manager):
         right = right_context_span.stack().value_counts()
 
         all_words = [x for x in set(list(left.index) + list(right.index)) if x]
-    
+
         left = left.reindex(all_words).fillna(0).astype(int)
         right = right.reindex(all_words).fillna(0).astype(int)
-        
+
         collocates = pd.concat([left, right], axis=1)
         collocates = collocates.reset_index()
         collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
@@ -706,17 +707,17 @@ class Collocations(Manager):
             collocates,
             freq_cond="coq_collocate_frequency_right",
             freq_total="statistics_frequency")
-        
+
         func = MutualInformation()
         collocates["coq_mutual_information"] = func.evaluate(collocates,
-                            f_1 = len(df),
-                            f_2 = "statistics_frequency",
-                            f_coll = "coq_collocate_frequency",
-                            size = corpus_size,
+                            f_1=len(df),
+                            f_2="statistics_frequency",
+                            f_coll="coq_collocate_frequency",
+                            size=corpus_size,
                             span=len(left_cols) + len(right_cols))
 
         aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
-        
+
         # FIXME:
         # now that we have the collocations table, the summarize filters
         # should be applied, and perhaps also summarize functions?
@@ -735,7 +736,6 @@ class Collocations(Manager):
                  "coq_conditional_probability_right",
                  "coq_mutual_information"]
 
-        
         return aggregate[order]
 
 
@@ -749,9 +749,10 @@ def manager_factory(manager):
     else:
         return Manager()
 
+
 def get_manager(manager, resource):
     """
-    Returns a data manager 
+    Returns a data manager
     """
     try:
         return options.cfg.managers[resource][manager]

@@ -2119,7 +2119,18 @@ class CorpusClass(object):
                         rc_table.split("_")[0],
                         number+1)
                     
-                    join_strings[rc_table] = "LEFT JOIN (SELECT {columns} FROM {table} {where}) AS COQ_{rc_table} ON {parent_id} = {child_id}".format(
+                    if self.resource.is_lexical(rc_feature):
+                        join_type = "INNER"
+                    else:
+                        join_type = "LEFT"
+
+                    sql_template = """
+                    {join_type} JOIN (SELECT {columns} FROM {table} {where})
+                    AS COQ_{rc_table}
+                    ON {parent_id} = {child_id}
+                    """
+                    join_strings[rc_table] = sql_template.format(
+                        join_type = join_type,
                         columns = columns, 
                         table = table,
                         rc_table = rc_table.upper(),
