@@ -140,6 +140,13 @@
            </property>
           </spacer>
          </item>
+         <item>
+          <widget class="QDialogButtonBox" name="buttonbox_io">
+           <property name="standardButtons">
+            <set>QDialogButtonBox::Open|QDialogButtonBox::Save</set>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>
@@ -152,7 +159,7 @@
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok|QDialogButtonBox::Open|QDialogButtonBox::Reset|QDialogButtonBox::Save</set>
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok|QDialogButtonBox::Reset</set>
      </property>
      <property name="centerButtons">
       <bool>false</bool>
