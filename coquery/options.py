@@ -105,7 +105,6 @@ import logging
 import warnings
 import codecs
 import ast
-import collections
 import inspect
 import glob
 import importlib
@@ -122,8 +121,6 @@ from collections import defaultdict
 
 from coquery import general
 from coquery import filters
-from . import tokens
-from .links import Link
 from .unicode import utf8
 from .defines import *
 from .errors import *
@@ -1400,7 +1397,6 @@ def decode_query_string(s):
     escape = False
     l = []
     char_list = []
-    last_ch = None
     for ch in s:
         if escape:
             char_list.append(ch)
