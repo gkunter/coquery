@@ -5,7 +5,7 @@ corpusbuilder_interface.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -19,37 +19,37 @@ import logging
 
 from coquery import options
 from coquery import sqlhelper
-from coquery import sqlwrap
-from coquery.defines import * 
+from coquery.defines import *
 from coquery.errors import *
 from coquery.unicode import utf8
 
 from . import classes
 from . import errorbox
 from . import csvoptions
-from .pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from .pyqt_compat import QtCore, QtGui
 from .ui.corpusInstallerUi import Ui_CorpusInstaller
+
 
 class InstallerGui(QtGui.QDialog):
     button_label = "&Install"
     window_title = "Corpus installer – Coquery"
-    
+
     installStarted = QtCore.Signal()
     showNLTKDownloader = QtCore.Signal(str)
-    
+
     progressSet = QtCore.Signal(int, str)
     labelSet = QtCore.Signal(str)
-    progressUpdate = QtCore.Signal(int)    
+    progressUpdate = QtCore.Signal(int)
     generalUpdate = QtCore.Signal(int)
-    
+
     def __init__(self, builder_class, parent=None):
         super(InstallerGui, self).__init__(parent)
 
-        self.logger = logging.getLogger(NAME)        
+        self.logger = logging.getLogger(NAME)
 
         self.state = None
         self._onefile = False
-        
+
         self.ui = Ui_CorpusInstaller()
         self.ui.setupUi(self)
         self.ui.label_pos_tagging.hide()
@@ -64,19 +64,26 @@ class InstallerGui(QtGui.QDialog):
 
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setText(self.button_label)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).clicked.connect(self.start_install)
-        
+
         self.ui.verticalLayout_3.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
-        
+
+        # Add auto complete to file name edit:
+        completer = QtGui.QCompleter()
+        model = QtGui.QDirModel(completer)
+        model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.NoDotAndDotDot)
+        completer.setModel(model)
+        self.ui.input_path.setCompleter(completer)
+
         self.installStarted.connect(self.show_progress)
         self.progressSet.connect(self.set_progress)
         self.labelSet.connect(self.set_label)
         self.progressUpdate.connect(self.update_progress)
-        
+
         self.generalUpdate.connect(self.general_update)
-        
+
         if options.cfg.corpus_source_path != os.path.expanduser("~"):
             self.ui.input_path.setText(options.cfg.corpus_source_path)
-        
+
         self.accepted = False
         try:
             self.builder_class = builder_class
@@ -87,19 +94,19 @@ class InstallerGui(QtGui.QDialog):
                 code=sys.exc_info()[1])
             logger.error(msg)
             QtGui.QMessageBox.critical(
-                None, "Corpus error – Coquery", 
+                None, "Corpus error – Coquery",
                 msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
             return
 
         self.ui.corpus_description.setText(
                 utf8(self.ui.corpus_description.text()).format(
                     utf8(builder_class.get_title()), utf8(options.cfg.current_server)))
-        
+
         self.ui.label_ngram_info.setText("")
         self.ui.label_ngram_info.setPixmap(self.parent().get_icon("sign-info").pixmap(
             QtCore.QSize(self.ui.spin_n.sizeHint().height(),
                          self.ui.spin_n.sizeHint().height())))
-        
+
         notes = builder_class.get_installation_note()
         if notes:
             self.ui.notes_box = classes.CoqDetailBox("Installation notes")
@@ -107,23 +114,23 @@ class InstallerGui(QtGui.QDialog):
 
             self.ui.notes_label = QtGui.QLabel(notes)
             self.ui.notes_label.setWordWrap(True)
-            self.ui.notes_label.setOpenExternalLinks(True)            
+            self.ui.notes_label.setOpenExternalLinks(True)
             try:
                 self.ui.notes_label.setBackgroundRole(QtGui.QPalette.ColorRole.Base)
             except:
                 print(dir(QtGui.QPalette.ColorRole), type(QtGui.QPalette.ColorRole))
             self.ui.notes_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
 
-            self.ui.notes_scroll = QtGui.QScrollArea()                                                                                      
+            self.ui.notes_scroll = QtGui.QScrollArea()
             self.ui.notes_scroll.setWidgetResizable(True)
             self.ui.notes_scroll.setWidget(self.ui.notes_label)
-                                                                                                                                        
+
             self.ui.notes_box.replaceBox(self.ui.notes_scroll)
         try:
             self.resize(options.settings.value("corpusinstaller_size"))
         except TypeError:
             pass
-        
+
         if not options.cfg.experimental:
             try:
                 self.ui.widget_ngram.hide()
@@ -131,7 +138,7 @@ class InstallerGui(QtGui.QDialog):
             except AttributeError:
                 # ignore exceptions raised if widgets do not exist
                 pass
-            
+
     def closeEvent(self, event):
         options.settings.setValue("corpusinstaller_size", self.size())
 
@@ -145,11 +152,11 @@ class InstallerGui(QtGui.QDialog):
             if not path:
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
                 return
-            if ((self._onefile and not os.path.isfile(path)) or 
+            if ((self._onefile and not os.path.isfile(path)) or
                 (not self._onefile and not os.path.isdir(path))):
                 self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
-                return            
+                return
 
     def display(self):
         self.exec_()
@@ -165,12 +172,16 @@ class InstallerGui(QtGui.QDialog):
         self.ui.progress_bar.setFormat(s)
         self.ui.progress_bar.setMaximum(vmax)
         self.ui.progress_bar.setValue(0)
-        
+
     def update_progress(self, i):
         self.ui.progress_bar.setValue(i)
 
     def select_path(self):
-        name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.corpus_source_path, options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+        name = QtGui.QFileDialog.getExistingDirectory(
+            directory=options.cfg.corpus_source_path,
+            options=(QtGui.QFileDialog.ReadOnly |
+                     QtGui.QFileDialog.ShowDirsOnly |
+                     QtGui.QFileDialog.HideNameFilterDetails))
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -180,20 +191,18 @@ class InstallerGui(QtGui.QDialog):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
-            
+
     def changed_radio(self):
         if self.ui.radio_complete.isChecked():
             self.ui.box_build_options.setEnabled(True)
-            #self.check_input()
         else:
             self.ui.box_build_options.setEnabled(False)
-            #self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
         self.validate_dialog()
 
     def show_progress(self):
         self.ui.progress_box.show()
         self.ui.progress_box.update()
-            
+
     def do_install(self):
         self.builder.build()
 
@@ -216,7 +225,7 @@ class InstallerGui(QtGui.QDialog):
             self.parent().showMessage(S)
             self.accept()
         self.parent().showMessage(S)
-        
+
     def install_exception(self):
         self.state = "failed"
         if isinstance(self.exception, RuntimeError):
@@ -234,7 +243,7 @@ class InstallerGui(QtGui.QDialog):
                 self.accept()
             elif self.install_thread:
                 response = QtGui.QMessageBox.warning(self,
-                    "Aborting installation", 
+                    "Aborting installation",
                     msg_install_abort,
                     QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
                 if response:
@@ -242,7 +251,7 @@ class InstallerGui(QtGui.QDialog):
                     super(InstallerGui, self).reject()
         except AttributeError:
             super(InstallerGui, self).reject()
-            
+
     def check_input(self):
         if self.ui.radio_only_module.isChecked():
             self.ui.input_path.setStyleSheet('')
@@ -255,39 +264,39 @@ class InstallerGui(QtGui.QDialog):
             else:
                 self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
-        
+
     def start_install(self):
         """
         Launches the installation.
-        
+
         This method starts a new thread that runs the do_install() method.
-        
+
         If this is a full install, i.e. the data base containing the
         corpus is to be created, a call to validate_files() is made first
-        to check whether the input path is valid. The thread is only 
+        to check whether the input path is valid. The thread is only
         started if the path is valid, or if the user decides to ignore
         the invalid path.
         """
-        
+
         if self.ui.radio_complete.isChecked():
             l = self.builder_class.get_file_list(
-                    str(self.ui.input_path.text()), self.builder_class.file_filter)                   
+                    str(self.ui.input_path.text()), self.builder_class.file_filter)
             try:
                 self.builder_class.validate_files(l)
             except RuntimeError as e:
                 reply = QtGui.QMessageBox.question(
                     None, "Corpus path not valid – Coquery",
                     msg_corpus_path_not_valid.format(e),
-                    QtGui.QMessageBox.Ignore|QtGui.QMessageBox.Discard)
+                    QtGui.QMessageBox.Ignore | QtGui.QMessageBox.Discard)
                 if reply == QtGui.QMessageBox.Discard:
                     return
 
         self.installStarted.emit()
         self.accepted = True
-        
+
         if self._onefile:
             self.builder = self.builder_class(
-                gui=self, 
+                gui=self,
                 mapping=self._table_options.mapping,
                 dtypes=self._table_options.dtypes,
                 table_options=self._table_options)
@@ -309,12 +318,12 @@ class InstallerGui(QtGui.QDialog):
         self.install_thread.taskFinished.connect(self.finish_install)
         self.install_thread.taskException.connect(self.install_exception)
         self.install_thread.start()
-    
+
     def get_arguments_from_gui(self):
         namespace = argparse.Namespace()
         namespace.verbose = False
         namespace.use_nltk = False
-        
+
         if self.ui.radio_only_module.isChecked():
             namespace.o = False
             namespace.i = False
@@ -337,7 +346,7 @@ class InstallerGui(QtGui.QDialog):
                 namespace.lookup_ngram = False
 
         namespace.encoding = self.builder_class.encoding
-        
+
         namespace.name = self.builder_class.get_name()
         namespace.path = str(self.ui.input_path.text())
 
@@ -347,11 +356,12 @@ class InstallerGui(QtGui.QDialog):
         except ValueError:
             raise SQLNoConfigurationError
         namespace.current_server = options.cfg.current_server
-        
+
         return namespace
 
+
 class BuilderGui(InstallerGui):
-    
+
     button_label = "&Build"
     window_title = "Corpus builder – Coquery"
 
@@ -359,7 +369,7 @@ class BuilderGui(InstallerGui):
         super(BuilderGui, self).__init__(builder_class, parent)
         self.ui.input_path.textChanged.disconnect()
 
-        self.logger = logging.getLogger(NAME)        
+        self.logger = logging.getLogger(NAME)
 
         self._nltk_lemmatize = False
         self._nltk_tokenize = False
@@ -373,12 +383,12 @@ class BuilderGui(InstallerGui):
             skip_lines=options.cfg.skip_lines,
             encoding=options.cfg.input_encoding,
             selected_column=None)
-        
+
         if self._onefile:
             self.ui.corpus_description.setText("""
                 <p><span style='font-weight:600;'>Corpus builder</span></p>
                 <p>You have requested to create a new corpus from a single
-                file containing tabular data using the database connection 
+                file containing tabular data using the database connection
                 '{}'.</p>
                 """.format(options.cfg.current_server))
             self.ui.label_5.setText("Build corpus from data file and install corpus module")
@@ -401,16 +411,16 @@ class BuilderGui(InstallerGui):
         else:
             self.ui.corpus_description.setText("""
                 <p><span style='font-weight:600;'>Corpus builder</span></p>
-                <p>You have requested to create a new corpus from a selection 
+                <p>You have requested to create a new corpus from a selection
                 of text files using the database connection '{}'.</p>
                 """.format(options.cfg.current_server))
             self.ui.label_5.setText("Build corpus from local text files and install corpus module")
             self.ui.label_8.setText("Path to text files:")
-        
+
         self.setWindowTitle(self.window_title)
-        
+
         self.ui.issue_layout = QtGui.QVBoxLayout()
-        
+
         self.ui.name_layout = QtGui.QHBoxLayout()
         self.ui.name_label = QtGui.QLabel("&Name of new corpus:")
         self.ui.issue_label = QtGui.QLabel("")
@@ -451,7 +461,7 @@ class BuilderGui(InstallerGui):
                 size = QtGui.QCheckBox().sizeHint()
                 self.ui.icon_nltk_check = classes.CoqSpinner(size)
                 self.ui.layout_nltk.addWidget(self.ui.icon_nltk_check)
-                
+
             self.ui.label_pos_tagging.setText(" ".join(label_text))
 
         if self._onefile:
@@ -461,7 +471,7 @@ class BuilderGui(InstallerGui):
                 self.ui.input_path.setText(options.cfg.text_source_path)
             else:
                 self.ui.input_path.setText("")
-            
+
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
         self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=False))
         self.ui.corpus_name.textChanged.connect(lambda: self.validate_dialog(check_path=False))
@@ -491,7 +501,7 @@ class BuilderGui(InstallerGui):
             self.test_thread.taskFinished.connect(self.test_nltk_results)
             self.test_thread.taskException.connect(self.test_nltk_exception)
             self._label_text = str(self.ui.label_pos_tagging.text())
-            
+
             self.ui.icon_nltk_check.start()
             self.ui.label_pos_tagging.setText("Testing NLTK components, please wait...")
             self.ui.label_pos_tagging.setDisabled(True)
@@ -553,7 +563,7 @@ class BuilderGui(InstallerGui):
             raise e
         else:
             self._nltk_tagging = True
-        
+
     def test_nltk_results(self):
         def pass_check():
             return self._nltk_lemmatize and self._nltk_tokenize and self._nltk_tagging
@@ -586,7 +596,7 @@ class BuilderGui(InstallerGui):
     def closeEvent(self, event):
         options.settings.setValue("corpusbuilder_size", self.size())
         options.settings.setValue("corpusbuilder_nltk", str(self.ui.use_pos_tagging.isChecked()))
-    
+
     def validate_dialog(self, check_path=True):
         if hasattr(self.ui, "corpus_name"):
             self.ui.corpus_name.setStyleSheet("")
@@ -633,7 +643,7 @@ class BuilderGui(InstallerGui):
             if not word_specified:
                 self.ui.issue_label.setText("You need to specify at least a Word column in the 'Corpus table options' dialog.")
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
-    
+
     def select_path(self):
         if self._onefile:
             if not options.cfg.corpus_table_source_path:
@@ -663,7 +673,7 @@ class BuilderGui(InstallerGui):
 
     def finish_install(self, *args, **kwargs):
         super(BuilderGui, self).finish_install(*args, **kwargs)
-        
+
         options.settings.setValue("corpusbuilder_size", self.size())
         options.settings.setValue("corpusbuilder_nltk", str(self.ui.use_pos_tagging.isChecked()))
 
@@ -675,7 +685,7 @@ class BuilderGui(InstallerGui):
             with codecs.open(path, "w", encoding="utf-8") as output_file:
                 for line in self.builder.create_installer_module():
                     output_file.write(utf8(line))
-    
+
     def get_arguments_from_gui(self):
         namespace = super(BuilderGui, self).get_arguments_from_gui()
 
