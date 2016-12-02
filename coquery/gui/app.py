@@ -412,7 +412,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
 
         self.ui.check_group_filters.stateChanged.connect(self.change_grouping)
-        
+
         self.ui.check_drop_duplicates.stateChanged.connect(self.change_summarize)
         self.ui.check_summarize_filters.stateChanged.connect(self.change_summarize_filters)
 
@@ -915,7 +915,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.aggr_thread.terminate()
         self.finalize_reaggregation()
         self.enable_apply_button()
-        
+
     def reaggregate(self, recalculate=True, start=False):
         """
         Reaggregate the current data table when changing the visibility of
@@ -940,7 +940,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_apply_management.setFlat(True)
         self.ui.button_cancel_management.setDisabled(False)
         self.ui.button_cancel_management.setFlat(False)
-        
+
         self.Session.group_functions = self._group_functions
         self.Session._column_functions = self._column_functions
 
@@ -1237,7 +1237,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def display_results(self, drop=True):
         from coquery import session
-        if len(self.Session.output_object) == 0:
+        if len(self.Session.output_object.dropna(how="all")) == 0:
             self.ui.text_no_match.show()
             # disable menu entries:
             self.ui.action_save_results.setEnabled(False)
@@ -1430,7 +1430,7 @@ class CoqueryApp(QtGui.QMainWindow):
         header = self.ui.data_preview.horizontalHeader()
         ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
 
-        result = textgridexport.TextgridExportDialog.manage(columns=ordered_headers)
+        result = textgridexport.TextgridExportDialog.manage(columns=ordered_headers, parent=self)
         if result:
             from coquery.textgrids import TextgridWriter
 
@@ -1482,7 +1482,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_query_button(True)
         self.set_stop_button(False)
         self.stop_progress_indicator()
-        
+
     def _display_progress(self, n=None):
         self.ui.status_progress.setRange(0, 0)
         self.ui.status_progress.show()
@@ -1529,7 +1529,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_stop_button(False)
         self.stop_progress_indicator()
 
-        # Create an alert in the system taskbar to indicate that the query has 
+        # Create an alert in the system taskbar to indicate that the query has
         # completed:
         options.cfg.app.alert(self, 0)
         logger.info("Done")
