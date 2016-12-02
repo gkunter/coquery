@@ -14,7 +14,6 @@ try:
 except ImportError:
     from io import StringIO
 import codecs
-import sys
 import pandas as pd
 import numpy as np
 
@@ -22,6 +21,7 @@ from coquery import options
 from coquery.errors import *
 from .pyqt_compat import QtGui, QtCore
 from .ui.csvOptionsUi import Ui_FileOptions
+
 
 class CSVOptions(object):
     def __init__(self, file_name="", sep=",", header=True, quote_char='"', skip_lines=0,
@@ -40,6 +40,7 @@ class CSVOptions(object):
         return "CSVOptions(sep='{}', header={}, quote_char='{}', skip_lines={}, encoding='{}', selected_column={}, mapping={}, dtypes={})".format(
             self.sep, self.header, self.quote_char.replace("'", "\'"), self.skip_lines,
             self.encoding, self.selected_column, self.mapping, self.dtypes)
+
 
 class MyTableModel(QtCore.QAbstractTableModel):
     """
@@ -70,7 +71,6 @@ class MyTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ForegroundRole:
             c_role = QtGui.QPalette.Text
         elif role == QtCore.Qt.DisplayRole:
-            column = self.header[index.column()]
             value = self.df.iloc[index.row()][index.column()]
             if isinstance(value, np.int64):
                 value = int(value)
@@ -111,10 +111,12 @@ class MyTableModel(QtCore.QAbstractTableModel):
                     return None
 
         return None
+
 quote_chars = {
     '"': 'Double quote (")',
     "'": "Single quote (')",
     "": "None"}
+
 
 class CSVOptionDialog(QtGui.QDialog):
     def __init__(self, default=None, parent=None, icon=None, ui=None):
@@ -149,7 +151,7 @@ class CSVOptionDialog(QtGui.QDialog):
         else:
             self.ui.separate_char.setEditText(default.sep)
 
-        if default.selected_column == None:
+        if default.selected_column is None:
             self.ui.query_column.hide()
             self.ui.label_query_column.hide()
             self.ui.query_column.setValue(1)
@@ -326,7 +328,7 @@ class CSVOptionDialog(QtGui.QDialog):
         if encoding == "ascii":
             encoding = "utf-8"
         self._last_encoding = encoding
-        if header == None:
+        if header is None:
             self.file_table.columns = ["X{}".format(x) for x in range(len(self.file_table.columns))]
 
     def select_file(self):
@@ -383,4 +385,3 @@ class CSVOptionDialog(QtGui.QDialog):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
-
