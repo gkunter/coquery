@@ -78,13 +78,13 @@ class Manager(CoqObject):
         They will be executed after user functions.
         """
         l = []
-        if options.cfg.use_context:
-            if options.cfg.context_mode == CONTEXT_COLUMNS:
-                l.append(ContextColumns())
-            elif options.cfg.context_mode == CONTEXT_KWIC:
-                l.append(ContextKWIC())
-            elif options.cfg.context_mode == CONTEXT_STRING:
-                l.append(ContextString())
+        print(options.cfg.context_mode)
+        if options.cfg.context_mode == CONTEXT_COLUMNS:
+            l.append(ContextColumns())
+        elif options.cfg.context_mode == CONTEXT_KWIC:
+            l.append(ContextKWIC())
+        elif options.cfg.context_mode == CONTEXT_STRING:
+            l.append(ContextString())
 
         return l
 
@@ -465,14 +465,12 @@ class Manager(CoqObject):
         print("process()")
         df = df.reset_index(drop=True)
         self.drop_on_na = None
-        self._main_functions = []
         self._group_functions = []
 
         if options.cfg.use_stopwords:
             df = self.filter_stopwords(df, session)
 
         df = df[[x for x in df.columns if not x.startswith("func_")]]
-        self._main_functions = self._get_main_functions(df, session)
         df = self.mutate(df, session)
 
         if options.cfg.group_columns:
@@ -487,7 +485,7 @@ class Manager(CoqObject):
 
         df = self.select(df, session)
 
-        self._functions = (self._main_functions + self._group_functions +
+        self._functions = (self._group_functions +
                         session.column_functions.get_list() +
                         self._get_group_functions(df, session) +
                         self.manager_summary_functions.get_list() +
