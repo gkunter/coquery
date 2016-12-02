@@ -5,7 +5,7 @@ queries.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -35,7 +35,7 @@ except (ImportError, OSError):
             return f(*args)
         return lambda *args: inner(f, *args)
 
-import numpy as np        
+import numpy as np
 import pandas as pd
 
 from .defines import *
@@ -47,11 +47,11 @@ from . import options
 from . import managers
 
 class TokenQuery(object):
-    """ 
-    This class manages the query string, and is responsible for the output 
-    of the query results. 
     """
-    
+    This class manages the query string, and is responsible for the output
+    of the query results.
+    """
+
     def __init__(self, S, Session):
         try:
             self.query_list = tokens.preprocess_query(S)
@@ -80,59 +80,59 @@ class TokenQuery(object):
         print("TokenQuery.get_visible_columns() is deprecated.")
         if ignore_hidden:
             return [x for x in list(df.columns.values) if (
-                not x.startswith("coquery_invisible") and 
+                not x.startswith("coquery_invisible") and
                 x in session.output_order)]
         else:
         # FIXME: use manager for column visibility
             return [x for x in list(df.columns.values) if (
-                not x.startswith("coquery_invisible") and 
+                not x.startswith("coquery_invisible") and
                 x in session.output_order)]
 
             #return [x for x in list(df.columns.values) if (
-                #not x.startswith("coquery_invisible") and 
+                #not x.startswith("coquery_invisible") and
                 #x in session.output_order and
                 #options.cfg.column_visibility.get(x, True))]
 
 
     @staticmethod
     def aggregate_data(df, corpus, **kwargs):
-        """ 
-        Aggregate the data frame. 
-        
+        """
+        Aggregate the data frame.
+
         For a TokenQuery, aggregating means that any statistics column is
-        discarded.        
+        discarded.
         """
         columns = [x for x in df.columns if not x.startswith("statistics_")]
         return df[columns]
-    
+
     @staticmethod
     def filter_data(df, filter_list):
         """ Apply filters to the data frame. """
         return df
-    
+
     def run(self, connection=None, to_file=False):
         """
         Run the query, and store the results in an internal data frame.
-        
+
         This method runs all required subqueries for the query string, e.g.
-        the quantified queries if quantified tokens are used. The results are 
+        the quantified queries if quantified tokens are used. The results are
         stored in self.results_frame.
-        
+
         Parameters
         ----------
         to_file : bool
-            True if the query results are directly written to a file, and 
+            True if the query results are directly written to a file, and
             False if they will be displayed in the GUI. Data that is written
-            directly to a file contains less information, e.g. it doesn't 
+            directly to a file contains less information, e.g. it doesn't
             contain an origin ID or a corpus ID (unless requested).
         """
         manager_hash = managers.get_manager(options.cfg.MODE, self.Resource.name).get_hash()
         self.results_frame = pd.DataFrame()
-        
+
         self._max_number_of_tokens = 0
         for x in self.query_list:
             self._max_number_of_tokens = max(self._max_number_of_tokens, len(x))
-        
+
         for i, self._sub_query in enumerate(self.query_list):
             self._current_number_of_tokens = len(self._sub_query)
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
@@ -141,12 +141,12 @@ class TokenQuery(object):
                 logger.info("Subquery #{} of {}: {}".format(i+1, len(self.query_list), self._current_subquery_string))
 
             if self.Resource.db_type == SQL_SQLITE:
-                # SQLite: keep track of databases that need to be attached. 
+                # SQLite: keep track of databases that need to be attached.
                 self.Resource.attach_list = set([])
                 # This list is filled by get_query_string().
-            
+
             query_string = self.Resource.get_query_string(self, self._sub_query, to_file)
-            
+
             df = None
             if options.cfg.use_cache and query_string:
                 try:
@@ -178,7 +178,7 @@ class TokenQuery(object):
                         raise e
 
                     df = pd.DataFrame(list(iter(results)), columns=results.keys())
-                    
+
                     if len(df) == 0:
                         df = pd.DataFrame(columns=results.keys())
 
@@ -191,7 +191,7 @@ class TokenQuery(object):
                 word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
                 lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
                 for x in df.columns:
-                    if ((word_column and word_column in x) or 
+                    if ((word_column and word_column in x) or
                         (lemma_column and lemma_column in x)):
                         try:
                             if options.cfg.output_to_lower:
@@ -208,21 +208,21 @@ class TokenQuery(object):
                 if self.results_frame.empty:
                     self.results_frame = df
                 else:
-                    # apply clumsy hack that tries to make sure that the dtypes of 
+                    # apply clumsy hack that tries to make sure that the dtypes of
                     # data frames containing NaNs or empty strings does not change
                     # when appending the new data frame to the previous.
 
                     if df.dtypes.tolist() != self.results_frame.dtypes.tolist():
                         print("DIFFERENT DTYPES!")
-                    
+
                     ## The same hack is also needed in session.run_queries().
                     #if len(self.results_frame) > 0 and df.dtypes.tolist() != dtype_list.tolist():
                         #for x in df.columns:
-                            ## the idea is that pandas/numpy use the 'object' 
+                            ## the idea is that pandas/numpy use the 'object'
                             ## dtype as a fall-back option for strange results,
-                            ## including those with NaNs. 
+                            ## including those with NaNs.
                             ## One problem is that integer columns become floats
-                            ## in the process. This is so because Pandas does not 
+                            ## in the process. This is so because Pandas does not
                             ## have an integer NA type:
                             ## http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
 
@@ -241,19 +241,19 @@ class TokenQuery(object):
                     #print(dtype_list)
 
                     self.results_frame = self.results_frame.append(df)
-        
+
         self.results_frame.reset_index(drop=True)
         return self.results_frame
-    
+
     def get_max_tokens(self):
         """
         Return the maximum number of tokens that this query produces.
-        
+
         The maximum number of tokens is determined by the number of token
-        strings, modified by the quantifiers. For each query, query_list 
+        strings, modified by the quantifiers. For each query, query_list
         contains the quantified sub-queries. The maximum number of tokens is
         the maximum of number_of_tokens for these sub-queris.
-        
+
         Returns
         -------
         maximum : int
@@ -263,7 +263,7 @@ class TokenQuery(object):
         for token_list in self.query_list:
             maximum = max(maximum, len(token_list))
         return maximum
-    
+
     def get_token_numbering(self, n):
         """
         Create a suitable number label for the nth lexical column.
@@ -271,18 +271,18 @@ class TokenQuery(object):
         If the specified column was not created by a quantified query token,
         or if the maximum quantificatin of that query token was 1, the label
         will correspond to the query token number. Otherwise, it will take
-        the form "x.y", where x is the query token number, and y is the 
+        the form "x.y", where x is the query token number, and y is the
         repetition number of that query token.
-        
-        If the quantified columns are not aligned (i.e. if 
-        options.cfg.align_quantified is not set), this function simply 
+
+        If the quantified columns are not aligned (i.e. if
+        options.cfg.align_quantified is not set), this function simply
         returns a string representation of n.
-        
+
         Parameters
         ----------
-        n : int 
+        n : int
             An lexical output column number
-        
+
         Returns
         -------
         s : string
@@ -302,27 +302,27 @@ class TokenQuery(object):
         if n > len(L) - 1:
             return n + 1
         return L[n]
-    
+
     def insert_static_data(self, df):
-        """ 
+        """
         Insert columns that are constant for each query result in the query.
-        
+
         Static data is the data that is not obtained from the database, but
-        is derived from external sources, e.g. the current system time, 
-        the other columns in the input file, the query string, etc. 
-        
+        is derived from external sources, e.g. the current system time,
+        the other columns in the input file, the query string, etc.
+
         Parameters
         ----------
         df : DataFrame
             The data frame into which the static data is inserted.
-        
+
         Returns
         -------
         df : DataFrame
             The data frame containing also the static data.
         """
-        
-        # if df is empty, a dummy data frame is created with NAs in all 
+
+        # if df is empty, a dummy data frame is created with NAs in all
         # content columns. This is needed so that frequency queries with empty
         # results can be displayed as 0.
         if (len(df) == 0):
@@ -333,7 +333,7 @@ class TokenQuery(object):
                 else:
                     col += [y for y in self.Resource.format_resource_feature(x, self._max_number_of_tokens) if y not in col]
             col.append("coquery_dummy")
-            if options.cfg.use_context:
+            if options.cfg.context_mode != CONTEXT_NONE:
                 col.append("coquery_invisible_corpus_id")
                 col.append("coquery_invisible_origin_id")
             df = pd.DataFrame([[pd.np.nan] * len(col)], columns=col)
@@ -341,22 +341,22 @@ class TokenQuery(object):
         else:
             df["coquery_dummy"] = 0
             self.empty_query = False
-        
+
         columns = self.Session.output_order
         group_functions = self.Session.group_functions
         if group_functions or options.cfg.use_group_filters:
             columns += options.cfg.group_columns
-        
+
         for column in columns:
             if column == "coquery_query_string":
                 df[column] = self.query_string
             elif column == "coquery_expanded_query_string":
                 df[column] = self._current_subquery_string
             elif column.startswith("coquery_query_token"):
-                token_list = self.query_string.split() 
+                token_list = self.query_string.split()
                 n = int(column.rpartition("_")[-1])
                 # construct a list with the maximum number of quantified
-                # token repetitions. This is used to look up the query token 
+                # token repetitions. This is used to look up the query token
                 # string.
                 L = []
                 for x in token_list:
@@ -380,9 +380,9 @@ class TokenQuery(object):
     @staticmethod
     def add_output_columns(session):
         """
-        Add any column that is specific to this query type to the list of 
+        Add any column that is specific to this query type to the list of
         output columns in Session.output_order.
-        
+
         This is needed, for example, to add the frequency column in
         FrequencyQuery.
         """
@@ -401,11 +401,11 @@ class TokenQuery(object):
         #"""
         #Remove any column that was added by add_output_columns from the
         #current session's output_order list.
-        
+
         #This is needed when changing the aggregation mode.
         #"""
         #return
- 
+
     @classmethod
     def aggregate_it(cls, df, corpus, **kwargs):
         agg = cls.aggregate_data(df, corpus, **kwargs)
@@ -420,16 +420,16 @@ class TokenQuery(object):
 class ContrastQuery(TokenQuery):
     """
     ContrastQuery is a subclass of TokenQuery.
-    
-    In this subclass, :func:`aggregate_data` creates a square matrix with all 
+
+    In this subclass, :func:`aggregate_data` creates a square matrix with all
     occurring combinations of output columns in the result data frame as rows
-    columns. Each cell contains the log likelihood that the query frequency 
-    in the subcorpus that is defined by the row is statistically different 
+    columns. Each cell contains the log likelihood that the query frequency
+    in the subcorpus that is defined by the row is statistically different
     from the token frequency in the subcorpus that is defined by the column.
-    
+
     Calculations are based on http://ucrel.lancs.ac.uk/llwizard.html.
-    
-    Clicking on a contrast cell opens a dialog that gives further statistical 
+
+    Clicking on a contrast cell opens a dialog that gives further statistical
     details.
     """
 
@@ -438,12 +438,12 @@ class ContrastQuery(TokenQuery):
     @classmethod
     def collapse_columns(cls, df, session):
         """
-        Return a list of strings. Each string contains the concatinated 
+        Return a list of strings. Each string contains the concatinated
         content of the feature cells in each row of the data frame.
         """
         # FIXME: columns should be processed in the order that they appear in
         # the None results table view.
-        
+
         # FIXME: use manager for column visibility
         vis_cols = [x for x in cls.get_visible_columns(df, session) if not x.startswith("statistics")]
         return df.apply(lambda x: ":".join([x[col] for col in vis_cols]), axis=1).unique()
@@ -471,20 +471,20 @@ class ContrastQuery(TokenQuery):
         """
         This method calculates the G test statistic as described here:
         http://ucrel.lancs.ac.uk/llwizard.html
-        
+
         For a formal description of the G² test, see Agresti (2013: 76).
         """
         if (freq_1, freq_2, total_1, total_2) not in ContrastQuery._ll_cache:
             exp1 = total_1 * (freq_1 + freq_2) / (total_1 + total_2)
             exp2 = total_2 * (freq_1 + freq_2) / (total_1 + total_2)
-            
+
             G = 2 * (
-                (freq_1 * math.log(freq_1 / exp1)) + 
+                (freq_1 * math.log(freq_1 / exp1)) +
                 (freq_2 * math.log(freq_2 / exp2)))
 
             #obs = [ [freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
-            #exp = 
-            
+            #exp =
+
             #total_1 * (total_1 + freq_1)/(total_1 + total_2)
             #total_2 * (total_1 + total_2)/(total_1 + total_2)
 
@@ -495,8 +495,8 @@ class ContrastQuery(TokenQuery):
 
 #e11 = (freq_1 + freq_2)*total_1/(total_1 + total_2)
 #e21 = (freq_1 + freq_2)*total_2/(total_1 + total_2)
-#e12 = (not_1 + not_2) * total_1/(total_1 + total_2)         
-#e22 = (not_1 + not_2) * total_2/(total_1 + total_2)         
+#e12 = (not_1 + not_2) * total_1/(total_1 + total_2)
+#e22 = (not_1 + not_2) * total_2/(total_1 + total_2)
 
 #l11 = freq_1 * math.log(freq_1)
 #l21 = freq_2 * math.log(freq_2)
@@ -504,8 +504,8 @@ class ContrastQuery(TokenQuery):
 #l22 = not_2 * math.log(not_2)
 
 #G2 = 2 * (
-    #sum(c(l11, l12, l21, l22, math.log(total_1))) - 
-    #sum(c((not_1 + not_2) * math.log(not_1 + not_2), 
+    #sum(c(l11, l12, l21, l22, math.log(total_1))) -
+    #sum(c((not_1 + not_2) * math.log(not_1 + not_2),
         #(freq_1 + freq_2) * math.log(freq_1 + freq_2),
         #total_1 * log(total_1),
         #total_2 * log(total_2))))
@@ -514,7 +514,7 @@ class ContrastQuery(TokenQuery):
           #- sum((total_1 + total_2
 
             ContrastQuery._ll_cache[(freq_1, freq_2, total_1, total_2)] = G
-        return ContrastQuery._ll_cache[(freq_1, freq_2, total_1, total_2)]        
+        return ContrastQuery._ll_cache[(freq_1, freq_2, total_1, total_2)]
 
     @classmethod
     def retrieve_loglikelihood(cls, *args, **kwargs):
@@ -524,10 +524,10 @@ class ContrastQuery(TokenQuery):
         label = kwargs["label"]
         df = kwargs["df"]
         row = args[0]
-        
+
         freq_1 = row.statistics_frequency
         total_1 = row.statistics_subcorpus_size
-        
+
         freq_2 = df[df._row_id == label].statistics_frequency.values[0]
         total_2 = df[df._row_id == label].statistics_subcorpus_size.values[0]
 
@@ -543,28 +543,28 @@ class ContrastQuery(TokenQuery):
             print(df)
             print(obs)
             return None
-        
+
     @classmethod
     def get_cell_content(cls, index, df, session):
         """
-        Return that content for the indexed cell that is needed to handle 
+        Return that content for the indexed cell that is needed to handle
         a click on it for the current aggregation.
         """
         # FIXME: use manager for column visibility
         vis_col = cls.get_visible_columns(session.output_object, session, ignore_hidden=True)
-        
+
         row = df.iloc[index.row()]
         column = df.iloc[index.column() - len(vis_col)]
 
         freq_1 = row.statistics_frequency
         total_1 = row.statistics_subcorpus_size
         label_1 = row._row_id
-        
+
         freq_2 = column.statistics_frequency
         total_2 = column.statistics_subcorpus_size
         label_2 = column._row_id
 
-        return {"freq_row": freq_1, "freq_col": freq_2, 
+        return {"freq_row": freq_1, "freq_col": freq_2,
                 "total_row": total_1, "total_col": total_2,
                 "label_row": label_1, "label_col": label_2}
 
@@ -580,7 +580,7 @@ class ContrastQuery(TokenQuery):
         ----------
         df : DataFrame
             The data frame to be aggregated
-            
+
         Returns
         -------
         result : DataFrame
@@ -588,7 +588,7 @@ class ContrastQuery(TokenQuery):
         session = kwargs["session"]
         if not len(df.index):
             return pd.DataFrame(columns=session.output_order)
-        
+
         labels = cls.collapse_columns(df, session)
         freq = super(ContrastQuery, cls).aggregate_data(df, corpus, contrasts=True, **kwargs)
         # FIXME: use manager for column visibility
@@ -603,19 +603,19 @@ class ContrastQuery(TokenQuery):
 class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session)
-        
+
     def insert_static_data(self, df):
         return df
-        
+
     def append_results(self, df):
         """
         Append the last results to the data frame.
-        
+
         Parameters
         ----------
         df : pandas.DataFrame
             The data frame to which the last query results will be added.
-            
+
         Returns
         -------
         df : pandas.DataFrame
@@ -639,5 +639,5 @@ def get_query_type(MODE):
         return StatisticsQuery
     else:
         return TokenQuery
-        
+
 logger = logging.getLogger(NAME)
