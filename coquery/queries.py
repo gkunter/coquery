@@ -15,17 +15,12 @@ from __future__ import division
 from __future__ import absolute_import
 
 import math
-import re
-import decimal
 import hashlib
 
 try:
     range = xrange
 except NameError:
     pass
-
-import collections
-import datetime
 
 try:
     from numba import jit
@@ -35,16 +30,15 @@ except (ImportError, OSError):
             return f(*args)
         return lambda *args: inner(f, *args)
 
-import numpy as np
 import pandas as pd
 
 from .defines import *
 from .errors import *
-from .links import get_by_hash
 from .general import *
 from . import tokens
 from . import options
 from . import managers
+
 
 class TokenQuery(object):
     """
@@ -92,7 +86,6 @@ class TokenQuery(object):
                 #not x.startswith("coquery_invisible") and
                 #x in session.output_order and
                 #options.cfg.column_visibility.get(x, True))]
-
 
     @staticmethod
     def aggregate_data(df, corpus, **kwargs):
@@ -170,8 +163,8 @@ class TokenQuery(object):
 
                     try:
                         results = (connection
-                                    .execution_options(stream_results=True)
-                                    .execute(query_string.replace("%", "%%")))
+                                   .execution_options(stream_results=True)
+                                   .execute(query_string.replace("%", "%%")))
                     except Exception as e:
                         print(query_string)
                         print(e)
@@ -192,7 +185,7 @@ class TokenQuery(object):
                 lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
                 for x in df.columns:
                     if ((word_column and word_column in x) or
-                        (lemma_column and lemma_column in x)):
+                            (lemma_column and lemma_column in x)):
                         try:
                             if options.cfg.output_to_lower:
                                 df[x] = df[x].apply(lambda x: x.lower() if x else x)
@@ -291,7 +284,6 @@ class TokenQuery(object):
         if not options.cfg.align_quantified:
             return "{}".format(n + 1)
         L = []
-        current_pos = 0
         for i, x in enumerate(self.query_string.split(" ")):
             _, _, length = tokens.get_quantifiers(x)
             if length == 1:
@@ -417,6 +409,7 @@ class TokenQuery(object):
         agg = agg[agg_cols]
         return agg
 
+
 class ContrastQuery(TokenQuery):
     """
     ContrastQuery is a subclass of TokenQuery.
@@ -531,7 +524,7 @@ class ContrastQuery(TokenQuery):
         freq_2 = df[df._row_id == label].statistics_frequency.values[0]
         total_2 = df[df._row_id == label].statistics_subcorpus_size.values[0]
 
-        obs = [ [freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
+        obs = [[freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
         try:
             if options.use_scipy:
                 g2, p_g2, _, _ = stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
@@ -600,6 +593,7 @@ class ContrastQuery(TokenQuery):
             freq["statistics_g_test_{}".format(x)] = freq.apply(cls.retrieve_loglikelihood, axis=1, label=x, df=freq)
         return freq
 
+
 class StatisticsQuery(TokenQuery):
     def __init__(self, corpus, session):
         super(StatisticsQuery, self).__init__("", session)
@@ -631,6 +625,7 @@ class StatisticsQuery(TokenQuery):
             "coquery_invisible_rc_feature"]
         self.results_frame.columns = self.Session.output_order
         return self.results_frame
+
 
 def get_query_type(MODE):
     if MODE == QUERY_MODE_CONTRASTS:
