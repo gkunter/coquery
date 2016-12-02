@@ -40,6 +40,15 @@ class TextgridExportDialog(QtGui.QDialog):
         self.ui.button_output_path.setIcon(parent.get_icon("folder"))
         self.ui.button_sound_path.setIcon(parent.get_icon("folder"))
 
+        # Add auto complete to file name edit:
+        completer = QtGui.QCompleter()
+        model = QtGui.QDirModel(completer)
+        model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.NoDotAndDotDot)
+        completer.setModel(model)
+        self.ui.edit_output_path.setCompleter(completer)
+        self.ui.edit_sound_path.setCompleter(completer)
+
+
     def restore_settings(self):
         try:
             self.resize(options.settings.value("textgridexport_size"))
