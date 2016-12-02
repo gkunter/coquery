@@ -5,25 +5,25 @@ options.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
-# Python 3.x: import configparser 
+# Python 3.x: import configparser
 # Python 2.x: import ConfigParser as configparser
 try:
     from ConfigParser import ConfigParser as _configparser, RawConfigParser
     from ConfigParser import NoOptionError, ParsingError, NoSectionError
-    
+
 except ImportError:
     from configparser import ConfigParser as _configparser, RawConfigParser
     from configparser import NoOptionError, ParsingError, NoSectionError
 
 class CoqConfigParser(_configparser, object):
-    
+
     def items(self, section):
         try:
             return super(CoqConfigParser, self).items(section)
@@ -128,14 +128,14 @@ from .unicode import utf8
 from .defines import *
 from .errors import *
 
-# Define a HelpFormatter class that works with Unicode corpus names both in 
+# Define a HelpFormatter class that works with Unicode corpus names both in
 # Python 2.7 and Python 3.x:
 if sys.version_info < (3, 0):
     class CoqHelpFormatter(argparse.HelpFormatter):
         """
         A HelpFormatter class that is able to handle Unicode argument options.
-        
-        The code for _format_actions_usage() is a copy from 
+
+        The code for _format_actions_usage() is a copy from
         python2.7/argparse.py, with the addition of the utf8() conversion in
         one space.
         """
@@ -245,7 +245,7 @@ else:
 class Options(object):
     def __init__(self):
         self.args = argparse.Namespace()
-        
+
         self.args.coquery_home = general.get_home_dir(create=True)
         if getattr(sys, "frozen", None):
             self.args.base_path = os.path.dirname(sys.executable)
@@ -267,16 +267,16 @@ class Options(object):
         self.args.number_of_tokens = 0
         self.args.last_number_of_tokens = 0
         self.args.output_separator = ","
-        
+
         self.args.table_links = defaultdict(list)
-        
+
         self.args.installer_path = os.path.join(self.args.base_path, "installer")
         self.args.connections_path = os.path.join(self.args.coquery_home, "connections")
         self.args.cache_path = os.path.join(self.args.coquery_home, "cache")
         self.args.stopword_path = os.path.join(self.args.base_path, "stopwords")
 
         self.args.use_mysql = True
-        
+
         try:
             self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
         except AttributeError:
@@ -299,15 +299,15 @@ class Options(object):
     @property
     def cfg(self):
         return self.args
-        
+
     def setup_parser(self):
         self.parser.add_argument("MODE", help="determine the query mode (default: TOKEN)", choices=QUERY_MODES.keys(), type=str, nargs="?")
 
-        # If Qt is available, the GUI is used by default. The command line 
+        # If Qt is available, the GUI is used by default. The command line
         # interface can be selected by using the --con option:
         if use_qt:
             self.parser.add_argument("--con", help="Run Coquery as a console program", dest="gui", action="store_false")
-        
+
         # General options:
         self.parser.add_argument("-o", "--outputfile", help="write results to OUTPUTFILE (default: write to console)", type=str, dest="output_path")
         group = self.parser.add_mutually_exclusive_group()
@@ -347,7 +347,7 @@ class Options(object):
         # Output options:
         group = self.parser.add_argument_group("Output options")
         group.add_argument("--suppress_header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
-        
+
         group.add_argument("--context_mode", help="specify the way the context is included in the output", choices=[CONTEXT_KWIC, CONTEXT_STRING, CONTEXT_COLUMNS], type=str)
         group.add_argument("-c", "--context_span", help="include context with N words to the left and the right of the keyword, or with N words to the left and M words to the right if the notation '-c N, M' is used", default=0, type=int, dest="context_span")
         group.add_argument("--sentence", help="include the sentence of the token as a context (not supported by all corpora, currently not implemented)", dest="context_sentence", action="store_true")
@@ -361,17 +361,17 @@ class Options(object):
         group.add_argument("--no_align", help="Control if quantified token columns are aligned. If not set (the default), the columns in the result table are aligned so that row cells belonging to the same query token are placed in the same column. If set, this alignment is disabled. In that case, row cells are padded to the right.", action="store_false", dest="align_quantified")
 
     def get_options(self):
-        """ 
-        Read the values from the configuration file, and merge them with 
+        """
+        Read the values from the configuration file, and merge them with
         the command-line options. Values set in the configuration file are
-        overwritten by command-line arguments. 
-        
-        If a GUI is used, no corpus needs to be specified, and all values 
-        from the configuration file are used. If the command-line interface 
-        is used, both a corpus and a query mode have to be specified, and 
+        overwritten by command-line arguments.
+
+        If a GUI is used, no corpus needs to be specified, and all values
+        from the configuration file are used. If the command-line interface
+        is used, both a corpus and a query mode have to be specified, and
         only the database settings from the configuration file are used.
         """
-        
+
         def add_shorthand(group, d, shorthand, resource_list, description):
             """
             Add the suitable shorthand from the resource list to the group.
@@ -382,7 +382,7 @@ class Options(object):
                     try:
                         d[shorthand] = getattr(resource, rc_feature)
                     except AttributeError:
-                        continue    
+                        continue
                     else:
                         break
                 elif hasattr(resource, rc_feature):
@@ -392,14 +392,14 @@ class Options(object):
                 _, _, tab, _ = resource.split_resource_feature(d[shorthand])
                 table = getattr(resource, "{}_table".format(tab))
                 feature = getattr(resource, d[shorthand])
-                group.add_argument(shorthand, 
+                group.add_argument(shorthand,
                     help="{}, equivalent to '-{} {}'".format(description, table, feature),
                     action="store_true")
-                          
+
         self.setup_parser()
-        
-        # Do a first argument parse to get the corpus to be used, and 
-        # whether a GUI is requested. This parse doesn't raise an argument 
+
+        # Do a first argument parse to get the corpus to be used, and
+        # whether a GUI is requested. This parse doesn't raise an argument
         # error.
         args, unknown = self.parser.parse_known_args()
         if use_qt:
@@ -408,7 +408,7 @@ class Options(object):
         else:
             self.args.gui = False
             self.args.to_file = True
-        
+
         match = re.search("--connection\s+(.+)", self.args.parameter_string)
         if match:
             self.args.current_server = match.group(1)
@@ -418,23 +418,23 @@ class Options(object):
         self.read_configuration()
         self.setup_default_connection()
 
-        # create a dictionary that contains the corpora available for the 
+        # create a dictionary that contains the corpora available for the
         # current connection:
         if sys.version_info < (3, 0):
             self.corpus_argument_dict = {
-                "help": "specify the corpus to use", 
-                "choices": sorted([x.encode("utf-8") for x in get_available_resources(self.args.current_server).keys()]), 
+                "help": "specify the corpus to use",
+                "choices": sorted([x.encode("utf-8") for x in get_available_resources(self.args.current_server).keys()]),
                 "type": type(str(""))}
         else:
             self.corpus_argument_dict = {
-                "help": "specify the corpus to use", 
-                "choices": sorted([utf8(x) for x in get_available_resources(self.args.current_server).keys()]), 
+                "help": "specify the corpus to use",
+                "choices": sorted([utf8(x) for x in get_available_resources(self.args.current_server).keys()]),
                 "type": type(str(""))}
 
         # add the corpus names as possible values for the argument parser:
         self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
         args, unknown = self.parser.parse_known_args()
-        
+
         try:
             if args.corpus:
                 self.args.corpus = args.corpus
@@ -443,7 +443,7 @@ class Options(object):
         except AttributeError:
             self.args.corpus = ""
 
-            
+
         self.args.corpus = utf8(self.args.corpus)
         # if no corpus is selected and no GUI is requested, display the help
         # and exit.
@@ -451,12 +451,12 @@ class Options(object):
             self.parser.print_help()
             sys.exit(1)
         D = {}
-        
-        shorthands = {}            
+
+        shorthands = {}
 
         if self.args.corpus:
             try:
-                # build a dictionary D for the selected corpus that contains as 
+                # build a dictionary D for the selected corpus that contains as
                 # values the features provided by each of the tables defined in
                 # the resource. The features are included as tuples, with first,
                 # the display name and second, the resource feature name.
@@ -469,7 +469,7 @@ class Options(object):
                         if table not in D:
                             D[table] = set([])
                         D[table].add((column, rc_feature))
-            
+
                 if self.args.corpus == "COCA":
                     group = self.parser.add_argument_group("COCA compatibility", "These options apply only to the COCA corpus module, and are unsupported by any other corpus.")
                     # COCA compatibility options
@@ -477,7 +477,7 @@ class Options(object):
                     group.add_argument("-@", "--use-pos-diacritics", help="use undocumented characters '@' and '%%' in queries using part-of-speech tags (default: be COCA-compatible and ignore these characters in part-of-speech tags)", action="store_true", dest="ignore_pos_chars")
             except KeyError:
                 pass
-        
+
         if D:
             # add choice arguments for the available table columns:
             for rc_table in D.keys():
@@ -494,35 +494,35 @@ class Options(object):
 
             # add output column shorthand options
             group = self.parser.add_argument_group("Output column shorthands", "These options are shorthand forms that select some commonly used output columns. The equivalent shows the corresponding longer output option.")
-               
-            add_shorthand(group, shorthands, "-U", ["corpus_id"], "show the corpus ID of each token") 
-            
-            add_shorthand(group, shorthands, "-O", 
+
+            add_shorthand(group, shorthands, "-U", ["corpus_id"], "show the corpus ID of each token")
+
+            add_shorthand(group, shorthands, "-O",
                           ["query_item_word", "word_label", "corpus_word"],
                           "show the orthographic form of each token")
 
-            add_shorthand(group, shorthands, "-L", 
+            add_shorthand(group, shorthands, "-L",
                           ["query_item_lemma", "lemma_label", "word_lemma", "corpus_lemma"],
                           "show the lemma of each token")
 
-            add_shorthand(group, shorthands, "-P", 
+            add_shorthand(group, shorthands, "-P",
                           ["query_item_pos", "pos_label", "word_pos", "corpus_pos"],
                           "show the part-of-speech tag of each token")
-            
-            add_shorthand(group, shorthands, "-T", 
+
+            add_shorthand(group, shorthands, "-T",
                           ["query_item_transcript", "transcript_label", "word_transcript", "corpus_transcript"],
                           "show the transcription of each token")
-            
-            add_shorthand(group, shorthands, "-G", 
+
+            add_shorthand(group, shorthands, "-G",
                           ["query_item_gloss", "gloss_label", "word_gloss", "corpus_gloss"],
                           "show the gloss of each token")
-            
-            add_shorthand(group, shorthands, "-F", 
+
+            add_shorthand(group, shorthands, "-F",
                           ["file_name", "file_label", "corpus_file"],
                           "show the name of the file containing each token")
-            
+
         self.parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
-        
+
         # reparse the arguments, this time with options that allow feature
         # selection based on the table structure of the corpus
         args, unknown = self.parser.parse_known_args()
@@ -537,44 +537,44 @@ class Options(object):
             self.args.input_path_provided = True
         else:
             self.args.input_path_provided = False
-        
+
         # merge the newly-parsed command-line arguments with those read from
         # the configation file.
         for command_argument in vars(args).keys():
             if command_argument in vars(self.args) and not vars(args)[command_argument]:
-                # do not overwrite the command argument if it was set in the 
-                # config file stored self.args, but not set at the command 
+                # do not overwrite the command argument if it was set in the
+                # config file stored self.args, but not set at the command
                 # line
-                continue 
+                continue
             else:
                 # overwrite the setting from the configuration file with the
                 # command-line setting:
                 vars(self.args)[command_argument] = vars(args)[command_argument]
-        
+
         try:
             self.args.MODE = QUERY_MODES[self.args.MODE]
         except KeyError:
             if self.args.MODE not in QUERY_MODES.values():
                 self.args.MODE = QUERY_MODE_TOKENS
-            
-        # evaluate the shorthand options. If set, add the corresponding 
+
+        # evaluate the shorthand options. If set, add the corresponding
         # resource feature to the list of selected features
         for key in shorthands:
             if vars(self.args)[key.strip("-")]:
                 self.args.selected_features.append(shorthands[key])
-            
+
         try:
             if self.args.show_query:
                 self.args.selected_features.append("coquery_query_string")
         except AttributeError:
             pass
-        
+
         #if self.args.source_filter:
             #Genres, Years, Negated = tokens.COCATextToken(self.args.source_filter, None).get_parse()
-            
+
             #date_label = ""
             #genre_label = ""
-            
+
             #if Genres:
                 #if "corpus_genre" in dir(resource):
                     #genre_label = resource.corpus_genre
@@ -593,33 +593,33 @@ class Options(object):
                     #date_label = resource.source_year
                 #elif "source_date" in dir(resource):
                     #date_label = resource.source_date
-            
+
             #if date_label:
                 #for year in Years:
                     #self.args.filter_list.append("{} = {}".format(date_label,  year))
             #if genre_label:
                 #for genre in Genres:
                     #self.args.filter_list.append("{} = {}".format(genre_label,  genre))
-                    
-        # Go through the table dictionary D, and add the resource features 
-        # to the list of selected features if the corresponding choice 
+
+        # Go through the table dictionary D, and add the resource features
+        # to the list of selected features if the corresponding choice
         # parameter was set:
         for rc_table in D:
             argument_list = vars(self.args)[rc_table]
             if argument_list:
                 # if ALL was selected, all resource features for the current
-                # table are added to the list of selected features:                
+                # table are added to the list of selected features:
                 if "ALL" in argument_list:
                     self.args.selected_features += [x for _, x in D[rc_table] if x]
                 else:
-                    # otherwise, go through each argument, and find the 
-                    # resource feature for which the display name matches 
+                    # otherwise, go through each argument, and find the
+                    # resource feature for which the display name matches
                     # the argument:
                     for arg in argument_list:
                         for column, rc_feature in D[rc_table]:
                             if column == arg:
                                 self.args.selected_features.append(rc_feature)
-        
+
         self.args.selected_features = set(self.args.selected_features)
 
         # the following lines are deprecated and should be removed once
@@ -637,7 +637,7 @@ class Options(object):
             self.args.input_separator = self.args.input_separator.decode('string_escape')
         except AttributeError:
             self.args.input_separator = codecs.getdecoder("unicode_escape") (self.args.input_separator) [0]
-        
+
         # make sure that a command query consisting of one string is still
         # stored as a list:
         if self.args.query_list:
@@ -648,7 +648,7 @@ class Options(object):
             except AttributeError:
                 pass
         logger.info("Command line parameters: " + self.args.parameter_string)
-        
+
     def setup_default_connection(self):
         """
         Create the default SQLite connection.
@@ -677,20 +677,20 @@ class Options(object):
             "csv_separator": ",",
             "csv_column": 1,
             "csv_has_header": False,
-            "csv_line_skip": 0, 
+            "csv_line_skip": 0,
             "csv_quote_char": '"',
             "context_mode": CONTEXT_KWIC,
             "context_left": 3,
             "context_right": 3,
             "context_restrict": False,
-            "show_log_messages": ["ERROR", "WARNING", "INFO"],
+            "show_log_messages": "ERROR,WARNING,INFO",
             "decimal_digits": 3,
             "drop_on_na": False,
             }
-        
+
         self.args.first_run = True
         config_file = CoqConfigParser()
-        
+
         if os.path.exists(self.cfg.config_path):
             logger.info("Using configuration file %s" % self.cfg.config_path)
             try:
@@ -700,7 +700,7 @@ class Options(object):
                 warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
             else:
                 self.args.first_run = False
-        
+
         for x in ["main", "sql", "gui", "output", "filter", "context", "links"]:
             if x not in config_file.sections():
                 config_file.add_section(x)
@@ -748,8 +748,8 @@ class Options(object):
         except (NoOptionError, ValueError):
             self.args.current_server = "Default"
             self.args.current_resources = get_available_resources(self.args.current_server)
-        
-        # only use the other settings from the configuration file if a 
+
+        # only use the other settings from the configuration file if a
         # GUI is used:
         if self.args.gui:
             # Read MAIN section:
@@ -757,7 +757,7 @@ class Options(object):
             self.args.reference_corpus = config_file.str("main", "reference_corpus", d=defaults)
             self.args.MODE = config_file.str("main", "query_mode", d=defaults)
             last_query = config_file.str("main", "query_string", d=defaults)
-            
+
             try:
                 self.args.query_list = decode_query_string(last_query)
             except (ValueError):
@@ -817,7 +817,7 @@ class Options(object):
             self.args.word_wrap = config_file.bool("gui", "word_wrap", fallback=False)
             self.args.save_query_string = config_file.bool("gui", "save_query_string", fallback=True)
             self.args.save_query_file = config_file.bool("gui", "save_query_file", fallback=True)
-            
+
             # various paths:
             self.args.query_file_path = config_file.str("gui", "query_file_path", fallback=os.path.expanduser("~"))
             self.args.textgrids_file_path = config_file.str("gui", "textgrids_file_path", fallback=os.path.expanduser("~"))
@@ -833,21 +833,24 @@ class Options(object):
             self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=False)
             self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=False)
 
-            self.args.use_context = config_file.bool("gui", "use_context", fallback=True)
             self.args.use_stopwords = config_file.bool("gui", "use_stopwords", fallback=False)
             self.args.use_group_filters = config_file.bool("gui", "use_group_filters", fallback=False)
             self.args.use_summarize_filters = config_file.bool("gui", "use_summarize_filters", fallback=False)
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
             # FIXME: number_of_tokens should not be stored in options.cfg!
             self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)
-            self.args.show_log_messages = [x.strip() for x in config_file.str("gui", "show_log_messages", d=defaults).split(",") if x]
+            s = config_file.str("gui", "show_log_messages", d=defaults)
+            try:
+                self.args.show_log_messages = [x.strip() for x in s.split(",") if x]
+            except:
+                s = defaults["show_log_messages"]
             self.args.digits = config_file.int("gui", "decimal_digits", d=defaults)
             self.args.float_format = config_file.str("gui", "float_format", fallback="{:.%if}" % self.args.digits)
 
             # read FILTER section
-            
+
             # getting the filters from the configuration is
-            # somewhat complicated. Each filter has three 
+            # somewhat complicated. Each filter has three
             # configuration variables:
             # filter_N_column, filter_N_operator, filter_N_value,
             # where N is the number of the filter.
@@ -857,7 +860,7 @@ class Options(object):
             group_filt_columns = {}
             group_filt_operators = {}
             group_filt_values = {}
-            
+
             for var, value in config_file.items("filter"):
                 parsed = var.split("_")
                 if len(parsed) == 3:
@@ -902,8 +905,8 @@ class Options(object):
                 elif x.startswith("column_color_"):
                     _, _, column = x.partition("column_color_")
                     self.args.column_color[column] = settings.value(x)
-                    
-            
+
+
 cfg = None
 settings = None
 
@@ -942,10 +945,10 @@ def save_configuration():
         config.set("main", "xkcd", cfg.xkcd)
     config.set("main", "query_cache_size", cfg.query_cache_size)
     config.set("main", "use_cache", bool(cfg.use_cache))
-    
+
     if cfg.custom_installer_path:
         config.set("main", "custom_installer_path", cfg.custom_installer_path)
-        
+
     if not "sql" in config.sections():
         config.add_section("sql")
     if cfg.current_server:
@@ -961,7 +964,7 @@ def save_configuration():
             required_vars = []
         for x in required_vars:
             config.set("sql", "config_{}_{}".format(i, x), d[x])
-    
+
     if cfg.selected_features:
         if not "output" in config.sections():
             config.add_section("output")
@@ -979,15 +982,15 @@ def save_configuration():
         config.set("filter", "groupfilter_{}_column".format(i), filt.feature)
         config.set("filter", "groupfilter_{}_operator".format(i), filt.operator)
         config.set("filter", "groupfilter_{}_value".format(i), filt.value)
-    
+
     if cfg.table_links:
         if not "links" in config.sections():
             config.add_section("links")
         for i, link in enumerate(cfg.table_links[cfg.current_server]):
-            config.set("links", 
-                       "link{}".format(i+1), 
+            config.set("links",
+                       "link{}".format(i+1),
                        '{},{}'.format(cfg.current_server, link))
-    
+
     if not "context" in config.sections():
         config.add_section("context")
     config.set("context", "context_mode", cfg.context_mode)
@@ -1007,15 +1010,14 @@ def save_configuration():
             config.add_section("gui")
 
         if cfg.stopword_list:
-            config.set("gui", "stopword_list", 
+            config.set("gui", "stopword_list",
                        encode_query_string("\n".join(cfg.stopword_list)))
         config.set("gui", "show_data_management", cfg.show_data_management)
         config.set("gui", "show_output_columns", cfg.show_output_columns)
         config.set("gui", "last_toolbox", cfg.last_toolbox)
-        config.set("gui", "use_context", cfg.use_context)
         config.set("gui", "use_stopwords", cfg.use_stopwords)
         config.set("gui", "use_group_filters", cfg.use_group_filters)
-        config.set("gui", "use_summarize_filters", cfg.use_summarize_filters)        
+        config.set("gui", "use_summarize_filters", cfg.use_summarize_filters)
         config.set("gui", "drop_duplicates", cfg.drop_duplicates)
 
         try:
@@ -1088,7 +1090,7 @@ def save_configuration():
             config.set("gui", "save_query_string", cfg.save_query_string)
         except AttributeError:
             config.set("gui", "save_query_string", True)
-            
+
         if cfg.show_log_messages:
             config.set("gui", "show_log_messages", ",".join(cfg.show_log_messages))
         else:
@@ -1100,16 +1102,16 @@ def save_configuration():
 def get_con_configuration():
     """
     Returns a tuple containing the currently active connection configuration.
-    
-    The method uses the configuration name stored in the attribute 
+
+    The method uses the configuration name stored in the attribute
     'current_server' to retrieve the configuration values from the
     dictionary 'server_configuration'.
-    
+
     Returns
     -------
     tup : tuple or None
         If there is a configuration for the currently selected server,
-        the method returns the tuple (db_host, db_port, db_name, 
+        the method returns the tuple (db_host, db_port, db_name,
         db_password). If no configuration is available, the method
         returns None.
     """
@@ -1141,41 +1143,41 @@ def process_options():
         cfg.query_cache = cache.CoqQueryCache()
 
     add_source_path(cfg.custom_installer_path)
-        
+
 def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
     """
-    Read the Python code from path, and validate that it contains only 
+    Read the Python code from path, and validate that it contains only
     the required class definitions and whitelisted module imports.
-    
-    The corpus modules are plain Python code, which opens an attack 
+
+    The corpus modules are plain Python code, which opens an attack
     vector for people who want to compromise the system: if an attacker
-    managed to plant a Python file in the corpus module directory, this 
-    file wouldbe processed automatically, and without validation, the 
-    content would also be executed. 
-    
-    This method raises an exception if the Python file in the specified 
+    managed to plant a Python file in the corpus module directory, this
+    file wouldbe processed automatically, and without validation, the
+    content would also be executed.
+
+    This method raises an exception if the Python file in the specified
     path contains unexpected code.
     """
-    
+
     return hashlib.md5(utf8("Dummy").encode("utf-8"))
-    
+
     allowed_parents = (ast.If, ast.FunctionDef, ast.TryExcept, ast.TryFinally, ast.While, ast.For,
                        ast.With)
 
     if sys.version_info < (3, 0):
-        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign, 
-                              ast.Return, ast.TryExcept, ast.TryFinally, 
+        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign,
+                              ast.Return, ast.TryExcept, ast.TryFinally,
                               ast.Pass, ast.Raise, ast.Assert, ast.Print)
     else:
-        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign, 
-                              ast.Return, ast.TryExcept, ast.TryFinally, 
+        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign,
+                              ast.Return, ast.TryExcept, ast.TryFinally,
                               ast.Pass, ast.Raise, ast.Assert)
 
     def validate_node(node, parent):
         if isinstance(node, ast.ClassDef):
             if node.name in expected_classes:
                 expected_classes.remove(node.name)
-        
+
         elif isinstance(node, ast.ImportFrom):
             if whitelisted_modules != "all" and node.module not in whitelisted_modules:
                 raise IllegalImportInModuleError(corpus_name, cfg.current_server, node.module, node.lineno)
@@ -1184,17 +1186,17 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
             for element in node.names:
                 if whitelisted_modules != "all" and element not in whitelisted_modules:
                     raise IllegalImportInModuleError(corpus_name, cfg.current_server, element, node.lineno)
-        
+
         elif isinstance(node, allowed_statements):
             pass
-        
+
         elif isinstance(node, ast.Expr):
             if isinstance(node.value, ast.Str):
                 pass
             else:
                 if not isinstance(parent, allowed_parents):
                     raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-        
+
         elif isinstance(node, ast.If):
             if parent == None:
                 if not allow_if:
@@ -1202,9 +1204,9 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                     raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
             elif not isinstance(parent, allowed_parents):
                 raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-        
+
         elif isinstance(node, (ast.While, ast.For, ast.With, ast.Continue, ast.Break)):
-            # these types are only allowed if the node is nested in 
+            # these types are only allowed if the node is nested in
             # a legal node type:
             if not isinstance(parent, allowed_parents):
                 raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
@@ -1216,13 +1218,13 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
         if hasattr(node, "body"):
             for child in node.body:
                 validate_node(child, node)
-    
+
     corpus_name = os.path.splitext(os.path.basename(path))[0]
     try:
         with codecs.open(path, "r") as module_file:
             content = module_file.read()
             tree = ast.parse(content)
-            
+
             for node in tree.body:
                 validate_node(node, None)
     except Exception as e:
@@ -1236,22 +1238,22 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
 
 def set_current_server(name):
     """
-    Changes the current server name. Also, update the currently available 
+    Changes the current server name. Also, update the currently available
     resources.
-    
-    This method changes the content of the configuration variable 
-    'current_server' to the content of the argument 'name'. It also calls the 
-    method get_available_resources() for this configuration, and stores the 
-    result in the configuration variable 'current_resources'.    
-    
+
+    This method changes the content of the configuration variable
+    'current_server' to the content of the argument 'name'. It also calls the
+    method get_available_resources() for this configuration, and stores the
+    result in the configuration variable 'current_resources'.
+
     Parameters
     ----------
-    name : str 
+    name : str
         The name of the MySQL configuration
     """
     global cfg
     cfg.current_server = name
-    
+
     if name:
         cfg.current_resources = get_available_resources(name)
     else:
@@ -1270,7 +1272,7 @@ def set_current_server(name):
     cfg.adhoc_path = os.path.join(path, "adhoc")
     if not os.path.exists(cfg.adhoc_path):
         os.makedirs(cfg.adhoc_path)
-    
+
     if cfg.server_configuration[name]["type"] == SQL_SQLITE:
         cfg.database_path = os.path.join(path, "databases")
         if not os.path.exists(cfg.database_path):
@@ -1287,21 +1289,21 @@ def get_resource_of_database(db_name):
     return None
 
 def get_available_resources(configuration):
-    """ 
+    """
     Return a dictionary with the available corpus module resource classes
     as values, and the corpus module names as keys.
-    
+
     This method scans the content of the sub-directory 'corpora' for valid
-    corpus modules. This directory has additional subdirectories for each 
-    MySQL configuration. If a corpus module is found, the three resource 
+    corpus modules. This directory has additional subdirectories for each
+    MySQL configuration. If a corpus module is found, the three resource
     classes Resource, Corpus, and Lexicon are retrieved from the module.
-    
+
     Parameters
     ----------
     configuration : str
-        The name of the MySQL configuration, which corresponds to the 
+        The name of the MySQL configuration, which corresponds to the
         directory name in which the resources are stored.
-    
+
     Returns
     -------
     d : dict
@@ -1309,7 +1311,7 @@ def get_available_resources(configuration):
         classes as values:
         (module.Resource, module.Corpus, module.Lexicon, module_name)
     """
-    
+
     def ensure_init_file(path):
         """
         Creates an empty file __init__.py in the given path if necessary.
@@ -1318,7 +1320,7 @@ def get_available_resources(configuration):
             os.makedirs(path)
         if not os.path.exists(os.path.join(path, "__init__.py")):
             open(os.path.join(path, "__init__.py"), "a").close()
-        
+
     d  = {}
     if configuration == None:
         return d
@@ -1327,19 +1329,19 @@ def get_available_resources(configuration):
     # that location:
     corpora_path = os.path.join(general.get_home_dir(), "connections", configuration, "corpora")
 
-    # create the directory if it doesn't exist yet: 
+    # create the directory if it doesn't exist yet:
     # cycle through the modules in the corpus path:
     for module_name in glob.glob(os.path.join(corpora_path, "*.py")):
         corpus_name, ext = os.path.splitext(os.path.basename(module_name))
         corpus_name = utf8(corpus_name)
         #try:
             #validate_module(
-                #module_name, 
+                #module_name,
                 #expected_classes = ["Resource", "Corpus", "Lexicon"],
                 #whitelisted_modules = ["corpus", "__future__"],
                 #allow_if = False,
                 #hash = False)
-        #except (ModuleIncompleteError, 
+        #except (ModuleIncompleteError,
                 #IllegalImportInModuleError, IllegalFunctionInModuleError,
                 #IllegalCodeInModuleError) as e:
             #warnings.warn(str(e))
@@ -1349,7 +1351,7 @@ def get_available_resources(configuration):
         #except IndentationError as e:
             #warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
             #continue
-        
+
         try:
             find = imp.find_module(corpus_name, [corpora_path])
             module = imp.load_module(corpus_name, *find)
@@ -1364,9 +1366,9 @@ def get_available_resources(configuration):
 
 def get_resource(name, connection=None):
     """
-    Return a tuple containing the Resource, Corpus, and Lexicon of the 
+    Return a tuple containing the Resource, Corpus, and Lexicon of the
     corpus module specified by 'name'.
-    
+
     Arguments
     ---------
     name : str
@@ -1374,11 +1376,11 @@ def get_resource(name, connection=None):
     connection : str or None
         The name of the database connection. If None, the current connection
         is used.
-        
+
     Returns
     -------
     res : tuple
-        A tuple consisting of the Resource class, Corpus class, and Lexicon 
+        A tuple consisting of the Resource class, Corpus class, and Lexicon
         class defined in the corpus module
     """
     if not connection:
@@ -1389,9 +1391,9 @@ def get_resource(name, connection=None):
 def decode_query_string(s):
     """
     Decode a query string that has been read from the configuration file.
-    
-    This method is the inverse of encode_query_string(). It takes a 
-    comma-separated, quoted and escaped string and transforms it into 
+
+    This method is the inverse of encode_query_string(). It takes a
+    comma-separated, quoted and escaped string and transforms it into
     a newline-separated string without unneeded quotes and escapes.
     """
     in_quote = False
@@ -1422,10 +1424,10 @@ def decode_query_string(s):
 def encode_query_string(s):
     """
     Encode a query string that has can be written to a configuration file.
-    
+
     This method is the inverse of decode_query_string(). It takes a newline-
     separated strinbg as read from the query string field, and transformes it
-    into a comma-separated, quoted and escaped string that can be passed on 
+    into a comma-separated, quoted and escaped string that can be passed on
     to the configuration file.
     """
     l = s.split("\n")
@@ -1435,19 +1437,19 @@ def encode_query_string(s):
         s = s.replace('"', '\\"')
         str_list.append(s)
     return ",".join(['"{}"'.format(x) for x in str_list])
-        
+
 def has_module(name):
     """
     Check if the Python module 'name' is available.
-    
+
     Parameters
     ----------
-    name : str 
+    name : str
         The name of the Python module, as used in an import instruction.
-        
+
     This function uses ideas from this Stack Overflow question:
     http://stackoverflow.com/questions/14050281/
-        
+
     Returns
     -------
     b : bool
