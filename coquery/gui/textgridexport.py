@@ -5,7 +5,7 @@ textgridexport.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -30,14 +30,16 @@ class TextgridExportDialog(QtGui.QDialog):
             item = CoqListItem(session.translate_header(col))
             item.setData(QtCore.Qt.UserRole, col)
             item.setCheckState(QtCore.Qt.Checked)
-            self.ui.list_columns.addItem(item)        
+            self.ui.list_columns.addItem(item)
         self.restore_settings()
         self.ui.button_output_path.clicked.connect(self.set_output_path)
         self.ui.button_sound_path.clicked.connect(self.set_sound_path)
         self.ui.edit_output_path.textChanged.connect(self.check_gui)
         self.ui.edit_sound_path.textChanged.connect(self.check_gui)
         self.ui.list_columns.itemClicked.connect(self.check_gui)
-        
+        self.ui.button_output_path.setIcon(parent.get_icon("folder"))
+        self.ui.button_sound_path.setIcon(parent.get_icon("folder"))
+
     def restore_settings(self):
         try:
             self.resize(options.settings.value("textgridexport_size"))
@@ -57,7 +59,7 @@ class TextgridExportDialog(QtGui.QDialog):
             self.ui.check_remember.setCheckState(QtCore.Qt.Checked)
         else:
             self.ui.check_remember.setCheckState(QtCore.Qt.Unchecked)
-        self.ui.edit_output_path.setText(options.settings.value("textgridexport_output_path", 
+        self.ui.edit_output_path.setText(options.settings.value("textgridexport_output_path",
                                                                 os.path.expanduser("~")))
         self.ui.edit_sound_path.setText(options.settings.value("textgridexport_sound_path", ""))
         self.ui.spin_left_padding.setValue(float(options.settings.value("textgridexport_left_padding", 0)))
@@ -78,7 +80,7 @@ class TextgridExportDialog(QtGui.QDialog):
             else:
                 S = "QLineEdit {{ background-color: {} }} ".format(options.cfg.app.palette().color(QtGui.QPalette.Base).name())
             self.ui.edit_sound_path.setStyleSheet(S)
-        
+
         checked = [x for x in range(self.ui.list_columns.count()) if self.ui.list_columns.item(x).checkState()]
         if not checked:
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setDisabled(True)
@@ -138,5 +140,5 @@ class TextgridExportDialog(QtGui.QDialog):
     def manage(*args, **kwargs):
         dialog = TextgridExportDialog(*args, **kwargs)
         dialog.setVisible(True)
-        
+
         return dialog.exec_()
