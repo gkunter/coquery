@@ -22,7 +22,7 @@ from scipy import stats
 
 from . import options
 from .defines import *
-from .general import CoqObject
+from .general import CoqObject, collapse_words
 
 
 try:
