@@ -124,6 +124,14 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.table_font = options.settings.value("table_font", QtGui.QLabel().font())
         options.cfg.context_font = options.settings.value("context_font", QtGui.QLabel().font())
 
+        # ensure that the fonts are always set:
+        if not utf8(options.cfg.figure_font.family()):
+            options.cfg.figure_font = QtGui.QLabel().font()
+        if not utf8(options.cfg.table_font.family()):
+            options.cfg.table_font = QtGui.QLabel().font()
+        if not utf8(options.cfg.context_font.family()):
+            options.cfg.context_font = QtGui.QLabel().font()
+
         if size.width() < 800 or size.height() < 600:
             self.ui = coqueryTinyUi.Ui_MainWindow()
         else:
