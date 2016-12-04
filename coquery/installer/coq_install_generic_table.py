@@ -187,6 +187,7 @@ class BuilderClass(BaseCorpusBuilder):
             print(e)
         finally:
             sys.stderr = old_stderr
+
         try:
             warn_string = eval(err.getvalue()).decode("utf-8")
         except:
@@ -196,6 +197,8 @@ class BuilderClass(BaseCorpusBuilder):
             if x:
                 logger.warn("File {} – {}".format(self.arguments.path, x))
 
+        if not self._table_options.header:
+            df.columns = ["X{}".format(x) for x in df.columns]
         df[self.corpus_file_id] = 1
         self.DB.load_dataframe(df, self.corpus_table, self.corpus_id)
 
