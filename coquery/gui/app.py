@@ -202,11 +202,17 @@ class CoqueryApp(QtGui.QMainWindow):
         if index > -1:
             self.ui.combo_corpus.setCurrentIndex(index)
 
-        height = QtGui.QLabel().sizeHint().height() + 2
-        box_height = self.ui.list_toolbox.rowCount() * height + 7
-        self.ui.list_toolbox.verticalHeader().setDefaultSectionSize(height)
-        self.ui.list_toolbox.setMaximumHeight(box_height)
-        self.ui.list_toolbox.setMinimumHeight(box_height)
+        self.ui.list_toolbox.verticalHeader().setDefaultSectionSize(
+            self.ui.list_toolbox.verticalHeader().minimumSectionSize())
+
+        box_height = 0
+        for i in range(self.ui.list_toolbox.rowCount()):
+            box_height += (self.ui.list_toolbox.visualItemRect(
+                            self.ui.list_toolbox.item(i, 0))).height()
+        self.ui.list_toolbox.setMaximumHeight(
+            box_height + 2 * self.ui.list_toolbox.frameWidth())
+        self.ui.list_toolbox.setMinimumHeight(
+            box_height + 2 * self.ui.list_toolbox.frameWidth())
 
         self.change_toolbox(options.cfg.last_toolbox)
         self.ui.list_toolbox.resizeColumnsToContents()
@@ -214,9 +220,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.list_toolbox.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Interactive)
         self.ui.list_toolbox.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Interactive)
 
-        height = QtGui.QLabel().sizeHint().height() + 2
-        self.ui.list_group_columns.setMaximumHeight(height * 5)
-        self.ui.list_group_columns.setMinimumHeight(height * 3)
+        height = QtGui.QLabel().sizeHint().height() + 1
+        self.ui.list_group_columns.setMaximumHeight(
+            height * 5 + 2 * self.ui.list_group_columns.frameWidth())
+        self.ui.list_group_columns.setMinimumHeight(
+            height * 3 + 2 * self.ui.list_group_columns.frameWidth())
 
 
         # use a file system model for the file name auto-completer::
