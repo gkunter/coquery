@@ -203,7 +203,7 @@ class CSVOptionDialog(QtGui.QDialog):
                 utf8(dialog.ui.quote_char.currentText())]
 
             return CSVOptions(
-                sep=utf8(dialog.ui.separate_char.currentText()),
+                sep=self.separator,
                 selected_column=dialog.ui.query_column.value(),
                 header=dialog.ui.file_has_headers.isChecked(),
                 skip_lines=dialog.ui.ignore_lines.value(),
@@ -247,7 +247,7 @@ class CSVOptionDialog(QtGui.QDialog):
         a working encoding.
         """
         quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
-            str(self.ui.quote_char.currentText())]
+            utf8(self.ui.quote_char.currentText())]
         if self.ui.file_has_headers.isChecked():
             header = 0
         else:
@@ -258,7 +258,7 @@ class CSVOptionDialog(QtGui.QDialog):
             self.file_table = pd.read_table(
                 self.file_name,
                 header=header,
-                sep=str(self.separator),
+                sep=utf8(self.separator),
                 quoting=3 if not quote else 0,
                 quotechar=quote if quote else "#",
                 nrows=100,
@@ -278,7 +278,7 @@ class CSVOptionDialog(QtGui.QDialog):
                     content = open(self.file_name, "rb").read()
                     detection = chardet.detect(content[:32000])
                     encoding = detection["encoding"]
-                    file_buffer = StringIO(codecs.decode(content, encoding=encoding))
+                    file_buffer = StringIO(codecs.decode(content, encoding))
                 else:
                     # dumb detection. First try utf-8, then latin-1.
                     try:
@@ -292,7 +292,7 @@ class CSVOptionDialog(QtGui.QDialog):
                     self.file_table = pd.read_table(
                         self.file_name,
                         header=header,
-                        sep=str(self.separator),
+                        sep=utf8(self.separator),
                         quoting=3 if not quote else 0,
                         quotechar=quote if quote else "#",
                         na_filter=False,
@@ -361,7 +361,7 @@ class CSVOptionDialog(QtGui.QDialog):
         self.ui.FilePreviewArea.resizeColumnsToContents()
 
     def set_new_separator(self):
-        sep = str(self.ui.separate_char.currentText())
+        sep = utf8(self.ui.separate_char.currentText())
         if not sep:
             return
         if sep == "{space}":
