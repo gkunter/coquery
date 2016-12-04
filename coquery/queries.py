@@ -103,7 +103,7 @@ class TokenQuery(object):
         """ Apply filters to the data frame. """
         return df
 
-    def run(self, connection=None, to_file=False):
+    def run(self, connection=None, to_file=False, **kwargs):
         """
         Run the query, and store the results in an internal data frame.
 
@@ -601,29 +601,8 @@ class StatisticsQuery(TokenQuery):
     def insert_static_data(self, df):
         return df
 
-    def append_results(self, df):
-        """
-        Append the last results to the data frame.
-
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            The data frame to which the last query results will be added.
-
-        Returns
-        -------
-        df : pandas.DataFrame
-        """
-        self.results_frame = self.Session.Resource.get_statistics()
-        self.Session.output_order = [
-            "coq_statistics_table",
-            "coq_statistics_column",
-            "coq_statistics_entries",
-            "coq_statistics_uniques",
-            "coq_statistics_uniquenessratio",
-            "coq_statistics_averagefrequency",
-            "coquery_invisible_rc_feature"]
-        self.results_frame.columns = self.Session.output_order
+    def run(self, connection=None, to_file=False, **kwargs):
+        self.results_frame = self.Session.Resource.get_statistics(connection, **kwargs)
         return self.results_frame
 
 
