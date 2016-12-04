@@ -916,16 +916,17 @@ class SQLResource(BaseResource):
             sqlhelper.sql_url(options.cfg.current_server, cls.db_name),
             *args, **kwargs)
 
-    def get_statistics(self):
+    def get_statistics(self, db_connection, signal=None, s=None):
         stats = []
         # determine table size for all columns
         table_sizes = {}
-        engine = self.get_engine()
         for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table") and not x.startswith("tag_")]:
             table = getattr(self, rc_table)
             S = "SELECT COUNT(*) FROM {}".format(table)
-            df = pd.read_sql(S, engine)
+            df = pd.DataFrame(db_connection.execute(S).fetchall())
             table_sizes[table] = df.values.ravel()[0]
+            if signal:
+                signal.emit(s.format(rc_table))
 
         # get distinct values for each feature:
         for rc_feature in dir(self):
@@ -948,8 +949,11 @@ class SQLResource(BaseResource):
                 #S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
                 #df = pd.read_sql(S, engine)
                 S = "SELECT {} FROM {}".format(column, table)
-                df = pd.read_sql(S, engine)
+                df = pd.DataFrame(db_connection.execute(S).fetchall(),
+                                  columns=[column])
                 stats.append([table, column, table_sizes[table], len(df[column].unique()), 0, 0, rc_feature])
+                if signal:
+                    signal.emit(s.format(rc_table))
 
         df = pd.DataFrame(stats)
 
@@ -957,12 +961,19 @@ class SQLResource(BaseResource):
         df[4] = df[3] / df[2]
         df[5] = df[2] / df[3]
 
+        df.columns = [
+            "coq_statistics_table",
+            "coq_statistics_column",
+            "coq_statistics_entries",
+            "coq_statistics_uniques",
+            "coq_statistics_uniquenessratio",
+            "coq_statistics_averagefrequency",
+            "coquery_invisible_rc_feature"]
+
         try:
             df.sort_values(by=list(df.columns)[:2], inplace=True)
         except AttributeError:
             df.sort(columns=list(df.columns)[:2], inplace=True)
-
-        engine.dispose()
         return df
 
     def get_query_string(self, Query, token_list, to_file=False):
