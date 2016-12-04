@@ -109,11 +109,11 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
-                str(dialog.ui.quote_char.currentText())]
+                utf8(dialog.ui.quote_char.currentText())]
 
             return CSVOptions(
                 file_name=utf8(dialog.ui.edit_file_name.text()),
-                sep=utf8(dialog.ui.separate_char.currentText()),
+                sep=dialog.separator,
                 selected_column=dialog.ui.query_column.value(),
                 header=dialog.ui.file_has_headers.isChecked(),
                 skip_lines=dialog.ui.ignore_lines.value(),
