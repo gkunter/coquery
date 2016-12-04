@@ -849,10 +849,19 @@ class CoqueryApp(QtGui.QMainWindow):
                                         uniques=column != "coq_statistics_entries")
             else:
                 try:
-                    token_id = meta_data["coquery_invisible_corpus_id"]
+                    if options.cfg.MODE == QUERY_MODE_CONTINGENCY:
+                        if meta_data.index[index.column()].startswith("coquery_invisible_corpus_id"):
+                            token_id = int(meta_data[index.column()])
+                        else:
+                            token_id = meta_data["coquery_invisible_corpus_id"]
+                        if not token_id:
+                            raise KeyError
+                    else:
+                        token_id = meta_data["coquery_invisible_corpus_id"]
                     token_width = meta_data["coquery_invisible_number_of_tokens"]
                 except KeyError:
                     QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
+                    return
 
         origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
 
