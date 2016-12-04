@@ -23,7 +23,7 @@ from . import classes
 
 
 class CoqResultsTable(classes.CoqTableView):
-    
+
     def __init__(self, *args, **kwargs):
         super(CoqResultsTable, self).__init__(*args, **kwargs)
 
@@ -47,10 +47,11 @@ class CoqResultsTable(classes.CoqTableView):
 
     def setDelegates(self):
         h_header = self.horizontalHeader()
+        session = options.cfg.main_window.Session
         for i in range(h_header.count()):
             column = self.model().header[h_header.logicalIndex(i)]
             if column.startswith("func_"):
-                manager = managers.get_manager(options.cfg.MODE, options.cfg.main_window.Session.Resource.name)
+                manager = managers.get_manager(options.cfg.MODE, session)
                 fun = manager.get_function(column)
                 try:
                     retranslate = dict(zip(COLUMN_NAMES.values(), COLUMN_NAMES.keys()))[fun.get_name()]
@@ -58,12 +59,12 @@ class CoqResultsTable(classes.CoqTableView):
                     pass
                 else:
                     column = retranslate
-            if column in ("statistics_proportion", 
+            if column in ("statistics_proportion",
                       "statistics_normalized", "statistics_ttr",
                       "statistics_group_proportion", "statistics_group_ttr",
                       "coq_conditional_probability",
-                      "coq_conditional_probability_left", 
-                      "coq_conditional_probability_right",  
+                      "coq_conditional_probability_left",
+                      "coq_conditional_probability_right",
                       "coq_statistics_uniquenessratio"):
                 deleg = classes.CoqProbabilityDelegate(self)
             elif column in ("statistics_percent", "statistics_group_percent"):
@@ -83,9 +84,10 @@ class CoqResultsTable(classes.CoqTableView):
             del self._old_row_delegate
 
         # set row delegate for ALL row of Contingency aggregates:
-        if options.cfg.MODE == QUERY_MODE_CONTINGENCY:
+        if (options.cfg.MODE == QUERY_MODE_CONTINGENCY and
+            not session.is_statistics_session()):
             row = self.model().rowCount() - 1
             self._old_row_delegate = (row, self.itemDelegateForRow(row))
             self.setItemDelegateForRow(row, classes.CoqTotalDelegate(self))
-        
+
 
