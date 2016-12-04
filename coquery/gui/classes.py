@@ -152,10 +152,14 @@ class CoqInfoLabel(QtGui.QLabel):
 
 class CoqClickableLabel(QtGui.QLabel):
     clicked = QtCore.Signal()
+    textChanged = QtCore.Signal()
 
     def mousePressEvent(self, ev):
         self.clicked.emit()
 
+    def setText(self, s):
+        super(CoqClickableLabel, self).setText(s)
+        self.textChanged.emit()
 
 class CoqSwitch(QtGui.QWidget):
     toggled = QtCore.Signal()
