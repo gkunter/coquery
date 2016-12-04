@@ -213,6 +213,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.list_toolbox.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Interactive)
         self.ui.list_toolbox.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Interactive)
 
+        height = QtGui.QLabel().sizeHint().height() + 2
+        self.ui.list_group_columns.setMaximumHeight(height * 5)
+        self.ui.list_group_columns.setMinimumHeight(height * 3)
+
+
         # use a file system model for the file name auto-completer::
         self.dirModel = QtGui.QFileSystemModel(parent=self)
         # make sure that the model is updated on changes to the file system:
@@ -419,10 +424,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.check_stopwords.stateChanged.connect(self.change_stopwords)
         self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
 
-        self.ui.check_group_filters.stateChanged.connect(self.change_grouping)
-
         self.ui.check_drop_duplicates.stateChanged.connect(self.change_summarize)
-        self.ui.check_summarize_filters.stateChanged.connect(self.change_summarize_filters)
 
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         self.ui.button_filters.clicked.connect(self.manage_filters)
@@ -651,7 +653,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.activate_group_column_buttons()
         if old_list != set(options.cfg.group_columns):
             self.enable_apply_button()
-        self.set_toolbox_appearance(TOOLBOX_GROUPING)
 
     def uncheck_grouped_feature(self, rc_feature):
         if self.column_tree.getCheckState(rc_feature) == QtCore.Qt.PartiallyChecked:
@@ -671,14 +672,11 @@ class CoqueryApp(QtGui.QMainWindow):
         if old_list != set(options.cfg.group_columns):
             self.enable_apply_button()
 
-        self.set_toolbox_appearance(TOOLBOX_GROUPING)
-
     def change_context(self):
         """
         Enable or disable contexts.
         """
         self.enable_apply_button()
-        self.set_toolbox_appearance(TOOLBOX_CONTEXT)
 
     def change_stopwords(self):
         """
@@ -686,15 +684,12 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         options.cfg.use_stopwords = self.ui.check_stopwords.isChecked()
         self.enable_apply_button()
-        self.set_toolbox_appearance(TOOLBOX_STOPWORDS)
 
     def change_grouping(self):
         """
         Enable or disable grouping.
         """
-        options.cfg.use_group_filters = self.ui.check_group_filters.isChecked()
         self.enable_apply_button()
-        self.set_toolbox_appearance(TOOLBOX_GROUPING)
 
     def set_aggregate(self):
         for radio in self.ui.aggregate_radio_list:
@@ -702,7 +697,6 @@ class CoqueryApp(QtGui.QMainWindow):
                 options.cfg.MODE = utf8(radio.text())
                 break
         self.enable_apply_button()
-        self.set_toolbox_appearance(TOOLBOX_AGGREGATE)
 
     def get_aggregate(self):
         for radio in self.ui.aggregate_radio_list:
@@ -711,12 +705,6 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def change_summarize(self):
         options.cfg.drop_duplicates = self.ui.check_drop_duplicates.isChecked()
-        self.set_toolbox_appearance(TOOLBOX_SUMMARY)
-        self.enable_apply_button()
-
-    def change_summarize_filters(self):
-        options.cfg.use_summarize_filters = self.ui.check_summarize_filters.isChecked()
-        self.set_toolbox_appearance(TOOLBOX_SUMMARY)
         self.enable_apply_button()
 
     def find_context_radio(self, context_mode):
@@ -781,8 +769,6 @@ class CoqueryApp(QtGui.QMainWindow):
         if (options.cfg.use_stopwords and
             set(old_list) != set(options.cfg.stopword_list)):
             self.enable_apply_button()
-
-        self.set_toolbox_appearance(TOOLBOX_STOPWORDS)
 
     def enable_corpus_widgets(self):
         self.ui.options_area.setEnabled(True)
@@ -906,6 +892,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_apply_management.setFlat(True)
         self.ui.button_cancel_management.setDisabled(True)
         self.ui.button_cancel_management.setFlat(True)
+        for i in range(self.ui.list_toolbox.rowCount()):
+            self.set_toolbox_appearance(i)
+
         print("reaggregation: done")
 
         if options.cfg.use_stopwords and manager.stopwords_failed:
@@ -923,6 +912,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.aggr_thread.terminate()
         self.finalize_reaggregation()
         self.enable_apply_button()
+        for i in range(self.ui.list_toolbox.rowCount()):
+            self.set_toolbox_appearance(i)
 
     def reaggregate(self, recalculate=True, start=False):
         """
@@ -1064,10 +1055,11 @@ class CoqueryApp(QtGui.QMainWindow):
                 _set_icon(2, "lightning")
             else:
                 _set_icon(2, None)
-            if self.ui.check_group_filters.isChecked():
-                active = (self.ui.list_group_columns.columns and
-                          options.cfg.group_filter_list)
-                _set_icon(1, "filter" if active else "sign-question")
+            if options.cfg.group_filter_list:
+                if self.ui.list_group_columns.columns:
+                    _set_icon(1, "filter")
+                else:
+                    _set_icon(1, "sign-question")
             else:
                 _set_icon(1, None)
 
@@ -1084,12 +1076,8 @@ class CoqueryApp(QtGui.QMainWindow):
             l = manager.user_summary_functions.get_list()
 
             active = (self.ui.check_drop_duplicates.isChecked() or l)
+            _set_icon(1, "filter" if options.cfg.filter_list else None)
             _set_icon(2, "lightning" if active else None)
-
-            if self.ui.check_summarize_filters.isChecked():
-                _set_icon(1, "filter" if options.cfg.filter_list else "sign-question")
-            else:
-                _set_icon(1, None)
 
     def toggle_toolbox(self, row, col):
         """
@@ -1098,21 +1086,17 @@ class CoqueryApp(QtGui.QMainWindow):
         if col == 0:
             return
 
+        check = None
         if row == TOOLBOX_STOPWORDS:
             check = self.ui.check_stopwords
-        elif row == TOOLBOX_GROUPING:
-            check = None
         elif row == TOOLBOX_SUMMARY:
-            if col == 1:
-                check = self.ui.check_summarize_filters
-            else:
+            if col == 2:
                 check = self.ui.check_drop_duplicates
 
         if row == TOOLBOX_STOPWORDS:
             checked = not self.ui.check_stopwords.isChecked()
             self.ui.check_stopwords.setChecked(checked)
             options.cfg.use_stopwords = checked
-            self.set_toolbox_appearance(row)
             return
 
         # Toggle activation:
@@ -1135,18 +1119,6 @@ class CoqueryApp(QtGui.QMainWindow):
             elif check:
                 checked = not check.isChecked()
                 check.setChecked(checked)
-
-        elif col == 1:
-            if row == TOOLBOX_GROUPING:
-                checked = not self.ui.check_group_filters.isChecked()
-                self.ui.check_group_filters.setChecked(checked)
-                options.cfg.use_group_filters = checked
-            elif row == TOOLBOX_SUMMARY:
-                checked = not self.ui.check_summarize_filters.isChecked()
-                self.ui.check_summarize_filters.setChecked(checked)
-                options.cfg.use_summarize_filters = checked
-
-        self.set_toolbox_appearance(row)
 
     def change_corpus(self):
         """
@@ -1341,10 +1313,8 @@ class CoqueryApp(QtGui.QMainWindow):
             s1 = {x.get_hash() for x in old_list}
             s2 = {x.get_hash() for x in result}
 
-            if (options.cfg.use_summarize_filters and s1 != s2):
+            if (s1 != s2):
                 self.enable_apply_button()
-
-            self.set_toolbox_appearance(TOOLBOX_SUMMARY)
 
     def manage_group_filters(self):
         from . import addfilters
@@ -1366,10 +1336,8 @@ class CoqueryApp(QtGui.QMainWindow):
             s1 = {x.get_hash() for x in old_list}
             s2 = {x.get_hash() for x in result}
 
-            if (options.cfg.use_group_filters and s1 != s2):
+            if (s1 != s2):
                 self.enable_apply_button()
-
-            self.set_toolbox_appearance(TOOLBOX_GROUPING)
 
     def save_results(self, selection=False, clipboard=False):
         if not clipboard:
@@ -2508,9 +2476,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_context_values()
 
         self.ui.check_stopwords.setChecked(options.cfg.use_stopwords)
-        self.ui.check_group_filters.setChecked(options.cfg.use_group_filters)
         self.ui.check_drop_duplicates.setChecked(options.cfg.drop_duplicates)
-        self.ui.check_summarize_filters.setChecked(options.cfg.use_summarize_filters)
 
         for radio in self.ui.aggregate_radio_list:
             if utf8(radio.text()) == options.cfg.MODE:
@@ -2666,11 +2632,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if group:
             self._group_functions.set_list([x(sweep=True, hidden=True, group=True) for x in response])
-            self.set_toolbox_appearance(TOOLBOX_GROUPING)
             self.enable_apply_button()
         elif summary:
             manager.user_summary_functions.set_list([x(sweep=True) for x in response])
-            self.set_toolbox_appearance(TOOLBOX_SUMMARY)
             self.enable_apply_button()
         else:
             fun_type, value, aggr, label = response
