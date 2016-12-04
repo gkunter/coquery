@@ -35,6 +35,8 @@ from . import functionlist
 from . import tokens
 
 class Session(object):
+    _is_statistics = False
+
     def __init__(self):
         self.header = None
         self.max_number_of_input_columns = 0
@@ -138,7 +140,7 @@ class Session(object):
         output_file.flush()
         self._first_saved_dataframe = False
 
-    def run_queries(self, to_file=False):
+    def run_queries(self, to_file=False, **kwargs):
         """
         Run each query in the query list, and append the results to the
         output object. Afterwards, apply all filters, and aggregate the data.
@@ -183,7 +185,7 @@ class Session(object):
             else:
                 logger.info("Start query: '{}'".format(current_query.query_string))
 
-            df = current_query.run(connection=self.db_connection, to_file=to_file)
+            df = current_query.run(connection=self.db_connection, to_file=to_file, **kwargs)
 
             # apply clumsy hack that tries to make sure that the dtypes of
             # data frames containing NaNs or empty strings does not change
@@ -278,6 +280,10 @@ class Session(object):
     def has_cached_data(self):
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
         return (self, manager) in self._manager_cache
+
+    @classmethod
+    def is_statistics_session(cls):
+        return cls._is_statistics
 
     def aggregate_data(self, recalculate=True):
         """
@@ -479,6 +485,7 @@ class Session(object):
         return header
 
 class StatisticsSession(Session):
+    _is_statistics = True
     def __init__(self):
         super(StatisticsSession, self).__init__()
         self.query_list.append(queries.StatisticsQuery(self.Corpus, self))
