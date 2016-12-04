@@ -338,7 +338,7 @@ class Manager(CoqObject):
         return df.reset_index(drop=True)
 
     def filter(self, df, session):
-        if len(df) == 0 or not options.cfg.use_summarize_filters:
+        if (len(df) == 0 or not self._filters):
             return df
 
         self.reset_group_filter_statistics()
@@ -364,8 +364,9 @@ class Manager(CoqObject):
         self._len_post_group_filter = {}
 
     def filter_groups(self, df, session):
-        if len(df) == 0 or len(options.cfg.group_columns) == 0 or not options.cfg.use_group_filters or len(self._group_filters) == 0:
-            print("filter_groups exit")
+        if (len(df) == 0 or
+                len(options.cfg.group_columns) == 0 or
+                len(self._group_filters) == 0):
             return df
 
         print("\tfilter_groups()")
@@ -474,13 +475,11 @@ class Manager(CoqObject):
         df = self.mutate(df, session)
 
         if options.cfg.group_columns:
-            if options.cfg.use_group_filters:
-                df = self.filter_groups(df, session)
+            df = self.filter_groups(df, session)
             df = self.arrange_groups(df, session)
             df = self.mutate_groups(df, session)
 
-        if options.cfg.use_summarize_filters:
-            df = self.filter(df, session)
+        df = self.filter(df, session)
         df = self.summarize(df, session)
 
         df = self.select(df, session)
