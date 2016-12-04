@@ -549,8 +549,13 @@ class ContingencyTable(FrequencyList):
 
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
-        cat_col = list(df[vis_cols].select_dtypes(include=[object]).columns.values)
-        num_col = list(df[vis_cols].select_dtypes(include=[np.number]).columns.values) + ["coquery_invisible_number_of_tokens", "coquery_invisible_corpus_id"]
+        cat_col = list(df[vis_cols]
+                       .select_dtypes(include=[object]).columns.values)
+        num_col = (list(df[vis_cols]
+                        .select_dtypes(include=[np.number]).columns.values) +
+                   ["coquery_invisible_number_of_tokens",
+                    "coquery_invisible_corpus_id",
+                    "coquery_invisible_origin_id"])
 
         # determine appropriate aggregation functions:
         # - internal columns that are needed for context look-up take
@@ -567,19 +572,22 @@ class ContingencyTable(FrequencyList):
             else:
                 agg_fnc[col] = np.mean
 
-        # Create pivot table:
-        piv = df.pivot_table(index=cat_col[:-1],
-                             columns=[cat_col[-1]],
-                             values=num_col,
-                             aggfunc=agg_fnc,
-                             fill_value=0)
-        piv = piv.reset_index()
+        if len(cat_col) > 1:
+            # Create pivot table:
+            piv = df.pivot_table(index=cat_col[:-1],
+                                columns=[cat_col[-1]],
+                                values=num_col,
+                                aggfunc=agg_fnc,
+                                fill_value=0)
+            piv = piv.reset_index()
 
-        # handle the multi-index that pivot_table() creates:
-        l1 = pd.Series(piv.columns.levels[-2][piv.columns.labels[-2]])
-        l2 = pd.Series(piv.columns.levels[-1][piv.columns.labels[-1]])
+            # handle the multi-index that pivot_table() creates:
+            l1 = pd.Series(piv.columns.levels[-2][piv.columns.labels[-2]])
+            l2 = pd.Series(piv.columns.levels[-1][piv.columns.labels[-1]])
 
-        piv.columns = pd.concat([l1, l2], axis=1).apply(_get_column_label, axis="columns")
+            piv.columns = pd.concat([l1, l2], axis=1).apply(_get_column_label, axis="columns")
+        else:
+            piv = df
 
         # Ensure that the pivot columns have the same dtype as the original
         # column:
@@ -592,13 +600,14 @@ class ContingencyTable(FrequencyList):
             if piv.dtypes[x] != df.dtypes[name]:
                 piv[x] = piv[x].astype(df.dtypes[name])
 
-        # Sort the pivot table
-        try:
-            # pandas <= 0.16.2:
-            piv = piv.sort(columns=cat_col[:-1], axis="index")
-        except AttributeError:
-            # pandas >= 0.17.0
-            piv = piv.sort_values(by=columns, axis="index")
+        if len(cat_col) > 1:
+            # Sort the pivot table
+            try:
+                # pandas <= 0.16.2:
+                piv = piv.sort(columns=cat_col[:-1], axis="index")
+            except AttributeError:
+                # pandas >= 0.17.0
+                piv = piv.sort_values(by=cat_col[:-1], axis="index")
 
         bundles = collections.defaultdict(list)
         d = {}
@@ -612,11 +621,13 @@ class ContingencyTable(FrequencyList):
             piv[col] = piv[bundles[col]].apply(agg_fnc[col], axis="columns")
         # add summary row:
         for x in piv.columns[(len(cat_col)-1):]:
-            d[x] = agg_fnc[col](piv[x])
+            rc_feature = x.partition("(")[0]
+            if rc_feature in agg_fnc:
+                fnc = agg_fnc[rc_feature]
+                d[x] = fnc(piv[x])
         row_total = pd.DataFrame([pd.Series(d)],
-                                 columns=piv.columns,
-                                 index=[COLUMN_NAMES["statistics_column_total"]]).fillna("")
-
+                                columns=piv.columns,
+                                index=[COLUMN_NAMES["statistics_column_total"]]).fillna("")
         piv = piv.append(row_total)
         return piv
 
