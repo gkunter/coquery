@@ -55,7 +55,6 @@ class InstallerGui(QtGui.QDialog):
         self.ui.label_pos_tagging.hide()
         self.ui.use_pos_tagging.hide()
         self.ui.progress_box.hide()
-        self.ui.button_options.hide()
         self.ui.button_input_path.clicked.connect(self.select_path)
         self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=True))
         self.ui.radio_complete.toggled.connect(self.changed_radio)
@@ -66,13 +65,6 @@ class InstallerGui(QtGui.QDialog):
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).clicked.connect(self.start_install)
 
         self.ui.verticalLayout_3.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
-
-        # Add auto complete to file name edit:
-        completer = QtGui.QCompleter()
-        model = QtGui.QDirModel(completer)
-        model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.NoDotAndDotDot)
-        completer.setModel(model)
-        self.ui.input_path.setCompleter(completer)
 
         self.installStarted.connect(self.show_progress)
         self.progressSet.connect(self.set_progress)
@@ -396,18 +388,12 @@ class BuilderGui(InstallerGui):
             self.ui.label_pos_tagging.hide()
             self.ui.use_pos_tagging.hide()
             self.ui.widget_ngram.hide()
-            self.ui.button_options.show()
             self.ui.use_pos_tagging.setChecked(False)
             self.ui.check_ngram.setChecked(False)
 
-            # make all buttons the same size:
-            max_width = 0
-            for button in [self.ui.button_options, self.ui.button_input_path]:
-                max_width = max(max_width, button.sizeHint().width())
-            for button in [self.ui.button_options, self.ui.button_input_path]:
-                button.setMinimumWidth(max_width)
-
-            self.ui.button_options.clicked.connect(self.file_options)
+            self.ui.button_input_path.clicked.disconnect(self.select_path)
+            self.ui.button_input_path.clicked.connect(self.file_options)
+            self.ui.input_path.clicked.connect(self.file_options)
         else:
             self.ui.corpus_description.setText("""
                 <p><span style='font-weight:600;'>Corpus builder</span></p>
@@ -416,6 +402,7 @@ class BuilderGui(InstallerGui):
                 """.format(options.cfg.current_server))
             self.ui.label_5.setText("Build corpus from local text files and install corpus module")
             self.ui.label_8.setText("Path to text files:")
+            self.ui.input_path.clicked.connect(self.select_path)
 
         self.setWindowTitle(self.window_title)
 
@@ -590,6 +577,7 @@ class BuilderGui(InstallerGui):
             self._table_options, self, options.cfg.icon)
         if result:
             self._table_options = result
+            self.ui.input_path.setText(result.file_name)
 
         self.validate_dialog()
 
