@@ -173,6 +173,7 @@ class CSVOptionDialog(QtGui.QDialog):
         self.ui.quote_char.currentIndexChanged.connect(self.update_content)
         self.ui.combo_encoding.currentIndexChanged.connect(self.update_content)
         self.ui.FilePreviewArea.clicked.connect(self.click_column)
+        self.ui.FilePreviewArea.horizontalHeader().sectionClicked.connect(self.click_column)
         self.ui.edit_file_name.textChanged.connect(self.update_content)
         self.ui.button_browse_file.clicked.connect(self.select_file)
 
@@ -375,12 +376,18 @@ class CSVOptionDialog(QtGui.QDialog):
         self.update_content()
 
     def set_query_column(self):
+        self.ui.FilePreviewArea.blockSignals(True)
         self.ui.FilePreviewArea.selectColumn(self.ui.query_column.value() - 1)
+        self.ui.FilePreviewArea.blockSignals(False)
 
     def click_column(self, index):
+        if type(index) == int:
+            i = index
+        else:
+            i = index.column()
         if hasattr(self.ui, "query_column"):
-            self.ui.query_column.setValue(index.column()+1)
-        self._col_select = index.column()
+            self.ui.query_column.setValue(i+1)
+        self._col_select = i
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
