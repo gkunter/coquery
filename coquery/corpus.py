@@ -953,7 +953,7 @@ class SQLResource(BaseResource):
                                   columns=[column])
                 stats.append([table, column, table_sizes[table], len(df[column].unique()), 0, 0, rc_feature])
                 if signal:
-                    signal.emit(s.format(rc_table))
+                    signal.emit(s.format(rc_feature))
 
         df = pd.DataFrame(stats)
 
