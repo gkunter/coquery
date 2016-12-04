@@ -51,8 +51,6 @@ class Ui_MainWindow(object):
         self.box_corpus_select.setSizePolicy(sizePolicy)
         self.box_corpus_select.setObjectName(_fromUtf8("box_corpus_select"))
         self.output_columns = QtGui.QVBoxLayout(self.box_corpus_select)
-        self.output_columns.setMargin(6)
-        self.output_columns.setSpacing(6)
         self.output_columns.setObjectName(_fromUtf8("output_columns"))
         self.horizontalLayout_2 = QtGui.QHBoxLayout()
         self.horizontalLayout_2.setSpacing(10)
@@ -435,7 +433,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 951, 30))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 951, 24))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -639,10 +637,26 @@ class Ui_MainWindow(object):
         self.actionContext_options.setObjectName(_fromUtf8("actionContext_options"))
         self.action_reference_corpus = QtGui.QAction(MainWindow)
         self.action_reference_corpus.setObjectName(_fromUtf8("action_reference_corpus"))
+        self.action_save_query = QtGui.QAction(MainWindow)
+        icon = QtGui.QIcon.fromTheme(_fromUtf8("document-save"))
+        self.action_save_query.setIcon(icon)
+        self.action_save_query.setObjectName(_fromUtf8("action_save_query"))
+        self.action_load_query = QtGui.QAction(MainWindow)
+        icon = QtGui.QIcon.fromTheme(_fromUtf8("document-open"))
+        self.action_load_query.setIcon(icon)
+        self.action_load_query.setObjectName(_fromUtf8("action_load_query"))
+        self.action_share_query = QtGui.QAction(MainWindow)
+        icon = QtGui.QIcon.fromTheme(_fromUtf8("document-share"))
+        self.action_share_query.setIcon(icon)
+        self.action_share_query.setObjectName(_fromUtf8("action_share_query"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
         self.menuFile.addAction(self.action_copy_to_clipboard)
+        self.menuFile.addSeparator()
+        self.menuFile.addAction(self.action_save_query)
+        self.menuFile.addAction(self.action_load_query)
+        self.menuFile.addAction(self.action_share_query)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.action_view_log)
         self.menuFile.addSeparator()
@@ -740,8 +754,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>", None))
+"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">No match.</span></p></body></html>", None))
         self.menuFile.setTitle(_translate("MainWindow", "&File", None))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help", None))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus", None))
@@ -829,6 +843,9 @@ class Ui_MainWindow(object):
         self.actionSelect_group_functions.setText(_translate("MainWindow", "Select group functions...", None))
         self.actionContext_options.setText(_translate("MainWindow", "Context options...", None))
         self.action_reference_corpus.setText(_translate("MainWindow", "&Reference corpus:", None))
+        self.action_save_query.setText(_translate("MainWindow", "Save query...", None))
+        self.action_load_query.setText(_translate("MainWindow", "Load query...", None))
+        self.action_share_query.setText(_translate("MainWindow", "Share query...", None))
 
 from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
 from ..resultstable import CoqResultsTable
