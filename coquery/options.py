@@ -808,7 +808,9 @@ class Options(object):
             self.args.last_toolbox = config_file.int("gui", "last_toolbox", fallback=0)
             self.args.select_radio_query_file = config_file.bool("gui", "select_radio_query_file", fallback=False)
             stopwords = config_file.str("gui", "stopword_list", fallback="")
-            self.args.stopword_list = decode_query_string(stopwords).split("\n")
+            self.args.stopword_list = [x for x
+                                       in decode_query_string(stopwords).split("\n")
+                                       if x]
             group = config_file.str("gui", "group_columns", fallback="")
             self.args.ask_on_quit = config_file.bool("gui", "ask_on_quit", fallback=True)
             self.args.word_wrap = config_file.bool("gui", "word_wrap", fallback=False)
