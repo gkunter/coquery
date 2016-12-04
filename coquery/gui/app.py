@@ -87,6 +87,7 @@ class CoqueryApp(QtGui.QMainWindow):
     columnVisibilityChanged = QtCore.Signal()
     rowVisibilityChanged = QtCore.Signal()
     updateMultiProgress = QtCore.Signal(int)
+    updateStatusMessage = QtCore.Signal(str)
     abortRequested = QtCore.Signal()
 
     def __init__(self, parent=None):
@@ -273,6 +274,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.multi_query_progress.hide()
         self.updateMultiProgress.connect(self.ui.multi_query_progress.setValue)
         self.updateMultiProgress.connect(lambda n: self.ui.status_progress.setValue(0))
+        self.updateStatusMessage.connect(lambda s: self.ui.status_message.setText(s))
 
         self.statusBar().layout().setContentsMargins(0, 0, 4, 0)
         self.statusBar().setMinimumHeight(QtGui.QProgressBar().sizeHint().height())
@@ -841,7 +843,7 @@ class CoqueryApp(QtGui.QMainWindow):
             data = self.table_model.content.iloc[row]
             meta_data = self.table_model.invisible_content.iloc[row]
 
-            if isinstance(self.Session, session.StatisticsSession):
+            if self.Session.is_statistics_session():
                 column = data.index[model_index.column()]
                 self.show_unique_values(rc_feature=meta_data["coquery_invisible_rc_feature"],
                                         uniques=column != "coq_statistics_entries")
@@ -1216,7 +1218,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.resize_thread.start()
 
     def display_results(self, drop=True):
-        from coquery import session
         if len(self.Session.output_object.dropna(how="all")) == 0:
             self.ui.text_no_match.show()
             # disable menu entries:
@@ -1230,7 +1231,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_copy_to_clipboard.setEnabled(True)
 
         # Visualizations menu is disabled for corpus statistics:
-        if isinstance(self.Session, session.StatisticsSession):
+        if self.Session.is_statistics_session():
             self.ui.menuAnalyse.setEnabled(False)
         else:
             self.ui.menuAnalyse.setEnabled(True)
@@ -1481,8 +1482,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.multi_query_progress.hide()
 
     def finalize_query(self, to_file=False):
-        from coquery import session
-
         self.query_thread = None
         if to_file:
             self.showMessage("Query results written to {}.".format(options.cfg.output_path))
@@ -1496,7 +1495,7 @@ class CoqueryApp(QtGui.QMainWindow):
             del self.new_session
             self.reaggregate()
 
-            if isinstance(self.Session, session.StatisticsSession):
+            if self.Session.is_statistics_session():
                 self.ui.tool_widget.widget(TOOLBOX_GROUPING).setDisabled(True)
             else:
                 self.ui.tool_widget.widget(TOOLBOX_GROUPING).setEnabled(True)
@@ -1911,7 +1910,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.stop_progress_indicator()
 
     def run_query(self):
-        from coquery import session
+        from coquery.session import SessionCommandLine, SessionInputFile
 
         shift_pressed = options.cfg.app.keyboardModifiers() & QtCore.Qt.ShiftModifier
         options.cfg.to_file = shift_pressed
@@ -1934,12 +1933,12 @@ class CoqueryApp(QtGui.QMainWindow):
         try:
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = options.cfg.query_list[0].splitlines()
-                self.new_session = session.SessionCommandLine()
+                self.new_session = SessionCommandLine()
             else:
                 if not self.verify_file_name():
                     QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     return
-                self.new_session = session.SessionInputFile()
+                self.new_session = SessionInputFile()
         except TokenParseError as e:
             QtGui.QMessageBox.critical(self, "Query string parsing error – Coquery", e.par, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
         except SQLNoConfigurationError:
@@ -1974,6 +1973,8 @@ class CoqueryApp(QtGui.QMainWindow):
             self.query_thread.start()
 
     def run_statistics(self):
+        from coquery.session import StatisticsSession
+
         if not self.last_results_saved:
             response = QtGui.QMessageBox.warning(
                 self, "Discard unsaved data", msg_warning_statistics,
@@ -1985,7 +1986,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.new_session = StatisticsSession()
         self.showMessage("Gathering corpus statistics...")
         self.start_progress_indicator()
-        self.query_thread = classes.CoqThread(self.new_session.run_queries, parent=self)
+        self.query_thread = classes.CoqThread(self.new_session.run_queries, parent=self,
+                                              signal=self.updateStatusMessage,
+                                              s="Gathering corpus statistics ({})...")
         self.query_thread.taskFinished.connect(self.finalize_query)
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
