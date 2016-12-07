@@ -42,7 +42,7 @@ class Manager(CoqObject):
         self.drop_on_na = None
         self.stopwords_failed = False
 
-        self.manager_group_functions = FunctionList()
+        self.group_functions = FunctionList()
         self.manager_summary_functions = FunctionList()
         self.user_summary_functions = FunctionList()
 
@@ -78,7 +78,6 @@ class Manager(CoqObject):
         They will be executed after user functions.
         """
         l = []
-        print(options.cfg.context_mode)
         if options.cfg.context_mode == CONTEXT_COLUMNS:
             l.append(ContextColumns())
         elif options.cfg.context_mode == CONTEXT_KWIC:
@@ -87,9 +86,6 @@ class Manager(CoqObject):
             l.append(ContextString())
 
         return l
-
-    def _get_group_functions(self, df, session):
-        return self.manager_group_functions.get_list() + session.group_functions.get_list()
 
     @staticmethod
     def _apply_function(df, fun, session):
@@ -115,39 +111,25 @@ class Manager(CoqObject):
         return columns
 
     def mutate_groups(self, df, session):
-
-        if len(df) == 0 or len(options.cfg.group_columns) == 0:
+        if (len(df) == 0 or
+                len(options.cfg.group_columns) == 0 or
+                len(self.group_functions.get_list()) == 0):
             return df
         print("\tmutate_groups({})".format(options.cfg.group_columns))
-        group_functions = self._get_group_functions(df, session)
 
-        kwargs = {"columns": get_visible_columns(df,
-                                                 manager=self,
-                                                 session=session,
-                                                 hidden=True),
-                  "connection": session.db_connection}
-        l = []
-        for fun in session.group_functions.get_list():
-            if type(fun) == type:
-                l.append(fun(**kwargs))
+        grouped = df.groupby(self.get_group_columns(df, session))
+        df_new = None
+        for dsub in grouped.groups:
+            dsub = FunctionList(self.group_functions).apply(
+                df.iloc[grouped.groups[dsub]], session=session, manager=self)
+            if df_new is None:
+                df_new = dsub
             else:
-                l.append(fun)
-        session.group_functions = FunctionList(l)
+                df_new = pd.concat([df_new, dsub], axis=0)
 
-        columns = self.get_group_columns(df, session)
-
-        if len(columns) == 0:
-            return df
-
-        grouped = df.groupby(columns)
-        for fun in group_functions:
-            l = pd.Series()
-            for x in grouped.groups:
-                val = fun.evaluate(df.iloc[grouped.groups[x]], session=session, manager=self, key=x)
-                l = l.append(val)
-            df[fun.get_id()] = l
-
-        return df
+        print(df_new)
+        print("\tDone mutate_groups")
+        return df_new
 
     def mutate(self, df, session):
         """
@@ -486,7 +468,7 @@ class Manager(CoqObject):
 
         self._functions = (self._group_functions +
                         session.column_functions.get_list() +
-                        self._get_group_functions(df, session) +
+                        self.group_functions.get_list() +
                         self.manager_summary_functions.get_list() +
                         self.user_summary_functions.get_list())
 
