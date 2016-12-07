@@ -29,10 +29,18 @@ except NameError:
 
 class Filter(CoqObject):
     def __init__(self, feature, operator, value):
+        if operator not in OPERATOR_STRINGS:
+            raise ValueError("Invalid filter operator '{}'".format(operator))
+        if not feature:
+            raise ValueError("No filter column specified")
+        if not value:
+            raise ValueError("No filter value specified")
+
         self.feature = feature
         self.operator = operator
         self.value = value
         self.dtype = None
+
         
     def __repr__(self):
         return "Filter(feature='{}', operator={}, value={}, dtype={})".format(
