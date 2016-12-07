@@ -22,7 +22,7 @@ from scipy import stats
 
 from . import options
 from .defines import *
-from .general import CoqObject, collapse_words
+from .general import CoqObject, collapse_words, get_visible_columns
 
 
 try:
