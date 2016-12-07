@@ -67,7 +67,8 @@ class FilterDialog(QtGui.QDialog):
         for radio in [x for x in dir(self.ui) if x.startswith("radio_OP_")]:
             getattr(self.ui, radio).toggled.connect(self.update_filter)
 
-        self.ui.table_filters.selectRow(0)
+        #self.ui.table_filters.selectRow(0)
+        self.ui.table_filters.selectRow(self.ui.table_filters.rowCount()-1)
         self.update_values()
 
         try:
