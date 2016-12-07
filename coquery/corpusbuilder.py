@@ -304,7 +304,7 @@ class Table(object):
     def setDB(self, db):
         self._DB = db
 
-    def commit(self, strange_check=False):
+    def commit(self):
         """
         Commit the table content to the data base.
         
@@ -729,9 +729,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.create_table_description(self.tag_table,
                 [Identifier(self.tag_id, "MEDIUMINT UNSIGNED NOT NULL"),
                 Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
-                Column(self.tag_label, "TINYTEXT NOT NULL"),
+                Column(self.tag_label, "VARCHAR(1024) NOT NULL"),
                 Link(self.tag_corpus_id, self.corpus_table),
-                Column(self.tag_attribute, "TINYTEXT NOT NULL")])
+                Column(self.tag_attribute, "VARCHAR(4048) NOT NULL")])
 
     def interrupt(self):
         """
@@ -778,7 +778,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             return
 
         for table in self._new_tables:
-            self._new_tables[table].commit(strange_check=True)
+            self._new_tables[table].commit()
 
         if self._corpus_buffer:
             df = pd.DataFrame(self._corpus_buffer)
@@ -1078,74 +1078,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
             The id of the file in the table, or None if the file is a special
             file
         """
-        if file_name in self.special_files:
-            return None
         self._file_name = file_name
         self._value_file_name = os.path.basename(file_name)
         self._value_file_path = os.path.split(file_name)[0]
 
-        self._file_id = self.table(self.file_table).get_or_insert(
-            {self.file_name: self._value_file_name,
-             self.file_path: self._value_file_path})
-
-    #def get_lemma(self, word):
-        #""" Return a lemma for the word. By default, this is simply the
-        #word in lower case, but this method can be overloaded with methods
-        #that use e.g. lemma dictionaries. 
-        #The method is used by the default file processing methods. If your
-        #corpus implements a specific file processing method, get_lemma() may
-        #be obsolete. """
-        #return word.lower()
-    
-    #def get_lemma_id(self, word):
-        #""" Return a lemma identifier for the word. If there is a separate 
-        #lemma table, the identifier is an index to that table. Otherwise, 
-        #the identifier is the lemma label."""
-        #try:
-            #return self.table_get(self.lemma_table, 
-                #{self.lemma_label: self.get_lemma(word)})
-        #else:
-            #return self.get_lemma(word)
-    
-    #def get_pos(self, word):
-        #""" Return the part-of-speech for the word. By default, an empty
-        #string is returned, but this method may be overloaded with methods
-        #that use for example a pos-tagged dictionary.
-        #The method is used by the default file processing methods. If your
-        #corpus implements a specific file processing method, get_lemma() may
-        #be obsolete. """
-        #return ""
-    
-    #def get_pos_id(self, word):
-        #""" Return a part-of-speech identifier for the word. If there is a 
-        #separate part-of-speech table, the identifier is an index to that 
-        #table. Otherwise, the identifier is the part-of-speech label."""
-        
-        #if "pos_table" in self.table_description:
-            #return self.table_get(self.pos_table, 
-                #{self.pos_label: self.get_pos(word)})
-        #else:
-            #return self.get_pos(word)        
-
-    #def get_transcript(self, word):
-        #""" Return the phonemic transcript for the word. By default, an 
-        #empty string is returned, but this method may be overloaded with 
-        #methods that use for example a pronunciation dictionary.
-        #The method is used by the default file processing methods. If your
-        #corpus implements a specific file processing method, get_lemma() may
-        #be obsolete. """
-        #return ""
-    
-    #def get_transcript_id(self, word):
-        #""" Return a transcription identifier for the word. If there is a 
-        #separate transcription table, the identifier is an index to that 
-        #table. Otherwise, the identifier is the transcript label."""
-        
-        #if "transcript_table" in self.table_description:
-            #return self.table_get(self.transcript_table, 
-                #{self.transcript_label: self.get_transcript(word)})
-        #else:
-            #return self.get_transcript(word)        
+        if self._value_file_name not in self.special_files:
+            self._file_id = self.table(self.file_table).get_or_insert(
+                {self.file_name: self._value_file_name,
+                 self.file_path: self._value_file_path})
 
     def process_xlabel_file(self, file_name):
         """ 
