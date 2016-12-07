@@ -281,7 +281,7 @@ class BuilderClass(BaseCorpusBuilder):
             [Identifier(self.file_id, "TINYINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "VARCHAR(18) NOT NULL"),
              Column(self.file_duration, "REAL NOT NULL"),
-             Column(self.file_path, "TINYTEXT NOT NULL")])
+             Column(self.file_path, "VARCHAR(2048) NOT NULL")])
 
         self.create_table_description(self.speaker_table,
             [Identifier(self.speaker_id, "TINYINT(2) UNSIGNED NOT NULL"),
@@ -308,8 +308,8 @@ class BuilderClass(BaseCorpusBuilder):
             [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Link(self.corpus_file_id, self.file_table),
              Link(self.corpus_speaker_id, self.speaker_table),
-             Column(self.corpus_word, "VARCHAR(40) NOT NULL"),
-             Column(self.corpus_pos, "ENUM('CC','CD','DT','DT_VBZ','EX','EX_VBZ','FW','IN','JJ','JJR','JJS','LS','MD','MD_RB','NN','NNP','NNPS','NNS','null','PDT','PRP','PRP_MD','PRP_VBP','PRP_VBZ','PRP$','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBG_TO','VBN','VBP','VBP_RB','VBP_TO','VBZ','VBZ_RB','WDT','WP','WP_VBZ','WP$','WRB') NOT NULL"),
+             Column(self.corpus_word, "VARCHAR(1028) NOT NULL"),
+             Column(self.corpus_pos, "VARCHAR(13) NOT NULL"),
              Column(self.corpus_transcript, "VARCHAR(41) NOT NULL"),
              Column(self.corpus_lemmatranscript, "VARCHAR(41) NOT NULL"),
              Column(self.corpus_starttime, "REAL(17,6) NOT NULL"),
@@ -478,6 +478,8 @@ class BuilderClass(BaseCorpusBuilder):
         # first element, and as the second element a dictionary with the 
         # label, POS, transcript, # and canonical transcript as values.
         tokens = []
+
+
         for row in input_data:
             row = re.sub("\s+", " ", row)
 
@@ -565,9 +567,9 @@ class BuilderClass(BaseCorpusBuilder):
                             self._value_corpus_transcript = split_values[1]
 
                 if regex.match(self._value_corpus_word):
-                    self._value_corpus_pos = "<UNDEFINED>"
-                    self._value_corpus_transcript = "<UNDEFINED>"
-                    self._value_corpus_lemmatranscript = "<UNDEFINED>"
+                    self._value_corpus_pos = "null"
+                    self._value_corpus_transcript = ""
+                    self._value_corpus_lemmatranscript = ""
 
                 if self._value_corpus_time >= 0:
                     tokens.append(
@@ -576,7 +578,7 @@ class BuilderClass(BaseCorpusBuilder):
                             self.corpus_pos: self._value_corpus_pos,
                             self.corpus_transcript: self._value_corpus_transcript,
                             self.corpus_lemmatranscript: self._value_corpus_lemmatranscript}))
-        
+
         # Now, go through the tokens in order to add them to the corpus,
         # and to link them to their segments via the meta table.
         segment_index = 0
