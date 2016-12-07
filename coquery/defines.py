@@ -53,7 +53,8 @@ SUMMARY_MODES = [
     QUERY_MODE_CONTRASTS
     ]
 
-_OPERATORS = list(range(11))
+_OPERATORS = ["OP_EQ", "OP_LE", "OP_LT", "OP_GE", "OP_GT", "OP_NE", "OP_IN",
+              "OP_NIN", "OP_RANGE", "OP_MATCH", "OP_NMATCH"]
 (OP_EQ,
 OP_LE,
 OP_LT,
@@ -95,11 +96,11 @@ OPERATOR_LABELS = {
     }
 
 
-SORT_NONE = 0
-SORT_INC = 1
-SORT_DEC = 2
-SORT_REV_INC = 3
-SORT_REV_DEC = 4
+SORT_NONE = "sort_none"
+SORT_INC = "sort_inc"
+SORT_DEC = "sort_dec"
+SORT_REV_INC = "sort_rev_inc"
+SORT_REV_DEC = "sort_rev_dec"
 
 CONTEXT_NONE = "None"
 CONTEXT_KWIC = "KWIC"
