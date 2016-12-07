@@ -1949,7 +1949,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
         try:
             if self.ui.radio_query_string.isChecked():
-                options.cfg.query_list = options.cfg.query_list[0].splitlines()
+                options.cfg.query_list = [x.strip() for x
+                                          in options.cfg.query_list[0].splitlines()
+                                          if x.strip()]
                 self.new_session = SessionCommandLine()
             else:
                 if not self.verify_file_name():
