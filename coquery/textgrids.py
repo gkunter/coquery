@@ -83,25 +83,30 @@ class TextgridWriter(object):
             _, hashed, tab, feature = (
                 self.resource.split_resource_feature(rc_feature))
 
-            # determine the table that contains timing information by
-            # following the table path:
-            self.resource.lexicon.joined_tables = ["corpus"]
-            self.resource.lexicon.table_list = ["corpus"]
-            self.resource.lexicon.add_table_path("corpus_id",
-                                                 "{}_id".format(tab))
+            if tab == "segment":
+                # the segment table is hard-wired:
+                start_label = "{}_starttime".format(tab)
+                end_label = "{}_endtime".format(tab)
+                self.feature_timing[rc_feature] = (start_label, end_label)
+            else:
+                # determine the table that contains timing information by
+                # following the table path:
+                self.resource.lexicon.joined_tables = ["corpus"]
+                self.resource.lexicon.table_list = ["corpus"]
+                self.resource.lexicon.add_table_path("corpus_id",
+                                                    "{}_id".format(tab))
+                for current_tab in self.resource.lexicon.joined_tables:
+                    # check if timing information has been selected for the
+                    # current table from the table path:
+                    start_label = "{}_starttime".format(current_tab)
+                    end_label = "{}_endtime".format(current_tab)
 
-            for current_tab in self.resource.lexicon.joined_tables:
-                # check if timing information has been selected for the
-                # current table from the table path:
-                start_label = "{}_starttime".format(current_tab)
-                end_label = "{}_endtime".format(current_tab)
-
-                # if so, set the timing entry for the current feature
-                # to these timings:
-                if (start_label in options.cfg.selected_features and
-                    end_label in options.cfg.selected_features) and not (
-                        rc_feature.endswith(("endtime", "starttime"))):
-                    self.feature_timing[rc_feature] = (start_label, end_label)
+                    # if so, set the timing entry for the current feature
+                    # to these timings:
+                    if (start_label in options.cfg.selected_features and
+                        end_label in options.cfg.selected_features) and not (
+                            rc_feature.endswith(("endtime", "starttime"))):
+                        self.feature_timing[rc_feature] = (start_label, end_label)
 
             rc_feat = "{}_{}".format(tab, feature)
             if hashed is not None:
@@ -304,7 +309,8 @@ class TextgridWriter(object):
         return grids
 
     def write_grids(self, output_path, columns, one_grid_per_match,
-                    sound_path, left_padding, right_padding, remember_time):
+                    sound_path, left_padding, right_padding, remember_time,
+                    file_prefix):
         self.output_path = output_path
         grids = self.fill_grids(columns, one_grid_per_match, sound_path,
                                 left_padding, right_padding, remember_time)
@@ -337,7 +343,8 @@ class TextgridWriter(object):
                 match_fn, = x
                 basename, _ = os.path.splitext(os.path.basename(match_fn))
                 filename = basename
-            target = os.path.join(output_path, "{}.TextGrid".format(filename))
+            target = os.path.join(output_path, "{}{}.TextGrid".format(
+                file_prefix, filename))
             tgt.write_to_file(grid, target)
             textgrids[basename].append((grid, filename, self._offsets[x]))
 
@@ -357,7 +364,9 @@ class TextgridWriter(object):
                         for grid, grid_name, offset in textgrids[basename]:
                             target = os.path.join(
                                         output_path,
-                                        "{}.wav".format(grid_name))
+                                        "{}{}.wav".format(
+                                            file_prefix,
+                                            grid_name))
                             start = max(0, offset - left_padding)
                             end = offset + grid.end_time + right_padding
 
