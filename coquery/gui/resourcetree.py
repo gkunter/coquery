@@ -224,7 +224,6 @@ class CoqResourceTree(classes.CoqTreeWidget):
         """
         Adds an external link to the given item.
         """
-        print("add_external_link({}, {})".format(item, link))
         try:
             ext_res, _, _, _ = options.cfg.current_resources[link.res_to]
         except KeyError:
