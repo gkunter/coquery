@@ -62,6 +62,13 @@ class Filter(CoqObject):
             else:
                 val = x
             val = "'{}'".format(val)
+        elif self.dtype == bool:
+            if x.lower() in ["yes", "y", "1", "true", "t"]:
+                val = True
+            elif x.lower() in ["no", "n", "0", "false", "f"]:
+                val = False
+            else:
+                raise ValueError("Filter value has to be either 'yes' or 'no'")
         else:
             val = str(x)
         return val
@@ -114,7 +121,7 @@ class Filter(CoqObject):
         if self.feature not in df.columns:
             return df
         
-        self.dtype = df.dtypes[self.feature]
+        self.dtype = pd.Series(list(df[self.feature].dropna())).dtype
         if self.operator in (OP_MATCH, OP_NMATCH):
             if self.dtype == object:
                 col = df[self.feature].dropna()
