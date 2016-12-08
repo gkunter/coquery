@@ -2653,7 +2653,7 @@ class CoqueryApp(QtGui.QMainWindow):
             return
 
         if group:
-            self._group_functions.set_list([x(sweep=True, hidden=True, group=True) for x in response])
+            manager.group_functions.set_list([x(sweep=True, hidden=True, group=True) for x in response])
             self.enable_apply_button()
         elif summary:
             manager.user_summary_functions.set_list([x(sweep=True) for x in response])
