@@ -162,6 +162,7 @@ class TextgridWriter(object):
         max_stop = end_time + left_padding + right_padding
 
         for col in data_columns:
+            interval = None
             # add the corpus IDs if no real feature is selected:
             if col == "coquery_invisible_corpus_id":
                 if self._artificial_corpus_id:
@@ -242,6 +243,10 @@ class TextgridWriter(object):
                             logger.warn("{}: {} ({})".format(
                                 session.translate_header(tier.name),
                                 e, grid_id))
+            if interval:
+                # make sure that the tier is always correctly padded to the
+                # right:
+                tier.end_time = max(tier.end_time, interval.end_time + right_padding)
 
         if remember_time:
             tier = grid.get_tier_by_name("Original timing")
@@ -368,7 +373,7 @@ class TextgridWriter(object):
                                             file_prefix,
                                             grid_name))
                             start = max(0, offset - left_padding)
-                            end = offset + grid.end_time + right_padding
+                            end = offset - left_padding + grid.end_time
 
                             try:
                                 extract_sound(source, target, start, end)
