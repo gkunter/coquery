@@ -112,12 +112,14 @@ class CoqResourceTree(classes.CoqTreeWidget):
 
         def fill_grouped():
             rc_features = [x for x in resource.get_resource_features()
-                           if not x.endswith(("_id", "_table"))]
+                           if (not x.endswith(("_id", "_table")) and
+                               not x.startswith(("tag_")))]
             segment_features = [x for x in rc_features
                                 if x.startswith("segment_")]
             file_features = [x for x in rc_features if x.startswith("file_")]
             lexicon_features = [x for x, _ in resource.get_lexicon_features()
-                                if x not in segment_features]
+                                if (x not in segment_features and
+                                    not x.startswith(("tag_")))]
 
             lexicon_root = create_root("Tokens")
             source_root = create_root("Texts")

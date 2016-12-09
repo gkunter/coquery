@@ -105,8 +105,8 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.file_table,
             [Identifier(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-            Column(self.file_name, "TINYTEXT NOT NULL"),
-            Column(self.file_path, "TINYTEXT NOT NULL")])
+            Column(self.file_name, "VARCHAR(2048) NOT NULL"),
+            Column(self.file_path, "VARCHAR(2048) NOT NULL")])
 
         # Add the main corpus table. Each row in this table represents a
         # token in the corpus. It has the following columns:

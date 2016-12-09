@@ -1949,7 +1949,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
         try:
             if self.ui.radio_query_string.isChecked():
-                options.cfg.query_list = options.cfg.query_list[0].splitlines()
+                options.cfg.query_list = [x.strip() for x
+                                          in options.cfg.query_list[0].splitlines()
+                                          if x.strip()]
                 self.new_session = SessionCommandLine()
             else:
                 if not self.verify_file_name():
@@ -2651,7 +2653,7 @@ class CoqueryApp(QtGui.QMainWindow):
             return
 
         if group:
-            self._group_functions.set_list([x(sweep=True, hidden=True, group=True) for x in response])
+            manager.group_functions.set_list([x(sweep=True, hidden=True, group=True) for x in response])
             self.enable_apply_button()
         elif summary:
             manager.user_summary_functions.set_list([x(sweep=True) for x in response])

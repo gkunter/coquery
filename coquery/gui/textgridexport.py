@@ -70,6 +70,7 @@ class TextgridExportDialog(QtGui.QDialog):
             self.ui.check_remember.setCheckState(QtCore.Qt.Unchecked)
         self.ui.edit_output_path.setText(options.settings.value("textgridexport_output_path",
                                                                 os.path.expanduser("~")))
+        self.ui.edit_file_prefix.setText(options.settings.value("textgridexport_file_prefix", ""))
         self.ui.edit_sound_path.setText(options.settings.value("textgridexport_sound_path", ""))
         self.ui.spin_left_padding.setValue(float(options.settings.value("textgridexport_left_padding", 0)))
         self.ui.spin_right_padding.setValue(float(options.settings.value("textgridexport_right_padding", 0)))
@@ -126,6 +127,7 @@ class TextgridExportDialog(QtGui.QDialog):
         options.settings.setValue("textgridexport_left_padding", float(self.ui.spin_left_padding.value()))
         options.settings.setValue("textgridexport_right_padding", float(self.ui.spin_right_padding.value()))
         options.settings.setValue("textgridexport_check_remember", bool(self.ui.check_remember.checkState()))
+        options.settings.setValue("textgridexport_file_prefix", utf8(self.ui.edit_file_prefix.text()))
 
     def exec_(self):
         result = super(TextgridExportDialog, self).exec_()
@@ -140,6 +142,7 @@ class TextgridExportDialog(QtGui.QDialog):
                     "remember_time": self.ui.check_remember.checkState() != QtCore.Qt.Unchecked,
                     "sound_path": ("" if self.ui.check_copy_sounds.checkState() == QtCore.Qt.Unchecked else
                                    utf8(self.ui.edit_sound_path.text())),
+                    "file_prefix": utf8(self.ui.edit_file_prefix.text()),
                     "left_padding": float(self.ui.spin_left_padding.value()),
                     "right_padding": float(self.ui.spin_right_padding.value())}
         else:

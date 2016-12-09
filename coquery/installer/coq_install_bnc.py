@@ -775,7 +775,7 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.file_table,
             [Identifier(self.file_id, "SMALLINT(4) UNSIGNED NOT NULL"),
-             Column(self.file_path, "TINYTEXT NOT NULL"),
+             Column(self.file_path, "VARCHAR(2048) NOT NULL"),
              Column(self.file_name, "CHAR(7) NOT NULL")])
 
         # Add the speaker table. Each row in this table represents a speaker
@@ -827,8 +827,8 @@ class BuilderClass(BaseCorpusBuilder):
         self.sentence_label = "Sentence"
 
         self.create_table_description(self.sentence_table,
-            [Identifier(self.sentence_id, "INT UNSIGNED NOT NULL"),
-             Column(self.sentence_label, "VARCHAR(7) NOT NULL")])
+            [Identifier(self.sentence_id, "MEDIUMINT UNSIGNED NOT NULL"),
+             Column(self.sentence_label, "VARCHAR(10) NOT NULL")])
 
         # Add the source table. Each row in this table represents a BNC 
         # source. Each sentence from the sentence table is linked to exactly

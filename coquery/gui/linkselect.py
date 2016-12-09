@@ -75,7 +75,6 @@ class LinkSelect(QtGui.QDialog):
         result = dialog.exec_()
         if result == QtGui.QDialog.Accepted:
             x = dialog.ui.treeWidget.selectedItems()[0]
-            print(x)
             return x.objectName()
         else:
             return None

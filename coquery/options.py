@@ -862,30 +862,36 @@ class Options(object):
             group_filt_values = {}
 
             for var, value in config_file.items("filter"):
-                parsed = var.split("_")
-                if len(parsed) == 3:
-                    f_type, s_num, cat = parsed
-                    try:
-                        num = int(s_num)
-                    except ValueError:
-                        continue
-                    if f_type == "filter":
-                        if cat == "column":     filt_columns[num] = value
-                        elif cat == "operator": filt_operators[num] = int(value)
-                        elif cat == "value":    filt_values[num] = value
-                    elif f_type == "groupfilter":
-                        if cat == "column":     group_filt_columns[num] = value
-                        elif cat == "operator": group_filt_operators[num] = int(value)
-                        elif cat == "value":    group_filt_values[num] = value
-
+                try:
+                    parsed = var.split("_")
+                    if len(parsed) == 3:
+                        f_type, s_num, cat = parsed
+                        try:
+                            num = int(s_num)
+                        except ValueError:
+                            continue
+                        if f_type == "filter":
+                            if cat == "column":     filt_columns[num] = value
+                            elif cat == "operator": filt_operators[num] = int(value)
+                            elif cat == "value":    filt_values[num] = value
+                        elif f_type == "groupfilter":
+                            if cat == "column":     group_filt_columns[num] = value
+                            elif cat == "operator": group_filt_operators[num] = int(value)
+                            elif cat == "value":    group_filt_values[num] = value
+                except:
+                    pass
             max_filt = max(len(filt_columns), len(filt_operators), len(filt_values))
             for i in range(max_filt):
                 col = filt_columns.get(i, None)
                 op = filt_operators.get(i, None)
                 val = filt_values.get(i, None)
                 if all([col, op, val]):
-                    filt = filters.Filter(col, op, val)
-                    self.args.filter_list.append(filt)
+                    try:
+                        filt = filters.Filter(col, op, val)
+                    except ValueError:
+                        pass
+                    else:
+                        self.args.filter_list.append(filt)
 
             max_group_filt = max(len(group_filt_columns), len(group_filt_operators), len(group_filt_values))
             for i in range(max_group_filt):
@@ -893,8 +899,12 @@ class Options(object):
                 op = group_filt_operators.get(i, None)
                 val = group_filt_values.get(i, None)
                 if all([col, op, val]):
-                    filt = filters.Filter(col, op, val)
-                    self.args.group_filter_list.append(filt)
+                    try:
+                        filt = filters.Filter(col, op, val)
+                    except ValueError:
+                        pass
+                    else:
+                        self.args.group_filter_list.append(filt)
 
         # Use QSettings?
         if settings:
