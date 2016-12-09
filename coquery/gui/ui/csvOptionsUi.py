@@ -159,6 +159,7 @@ class Ui_FileOptions(object):
         self.buttonBox.setCenterButtons(False)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.verticalLayout_2.addWidget(self.buttonBox)
+        self.verticalLayout_2.setStretch(1, 1)
         self.label_4.setBuddy(self.edit_file_name)
         self.label.setBuddy(self.file_has_headers)
         self.label_3.setBuddy(self.combo_encoding)
@@ -174,7 +175,7 @@ class Ui_FileOptions(object):
 
     def retranslateUi(self, FileOptions):
         FileOptions.setWindowTitle(_translate("FileOptions", "Input file options", None))
-        self.label_4.setText(_translate("FileOptions", "&File name:", None))
+        self.label_4.setText(_translate("FileOptions", "File na&me:", None))
         self.edit_file_name.setPlaceholderText(_translate("FileOptions", "Input file name", None))
         self.button_browse_file.setText(_translate("FileOptions", "&Browse", None))
         self.button_browse_file.setShortcut(_translate("FileOptions", "Alt+B", None))
@@ -184,11 +185,11 @@ class Ui_FileOptions(object):
         self.separate_char.setItemText(3, _translate("FileOptions", "#", None))
         self.separate_char.setItemText(4, _translate("FileOptions", "{tab}", None))
         self.separate_char.setItemText(5, _translate("FileOptions", "{space}", None))
-        self.label.setText(_translate("FileOptions", "File contains &header:", None))
-        self.label_3.setText(_translate("FileOptions", "Character &encoding:", None))
-        self.label_6.setText(_translate("FileOptions", "Text lines to &ignore after header:", None))
+        self.label.setText(_translate("FileOptions", "Fi&le contains header:", None))
+        self.label_3.setText(_translate("FileOptions", "&Character encoding:", None))
+        self.label_6.setText(_translate("FileOptions", "&Text lines to ignore after header:", None))
         self.label_2.setText(_translate("FileOptions", "&Quote character:", None))
-        self.label_query_column.setText(_translate("FileOptions", "Read &queries from column number:", None))
+        self.label_query_column.setText(_translate("FileOptions", "&Read queries from column number:", None))
         self.label_10.setText(_translate("FileOptions", "Character that &separates columns:", None))
 
 
