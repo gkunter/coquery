@@ -798,6 +798,9 @@ class Options(object):
                     pass
                 else:
                     # FIXME: this is a bit insecure!
+                    # FIXME: not only is it insecure, it's also horribly
+                    # obscure...
+                    from .links import Link
                     link = eval(link_text)
                     self.args.table_links[connection].append(link)
 
