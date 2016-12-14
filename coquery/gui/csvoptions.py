@@ -344,6 +344,7 @@ class CSVOptionDialog(QtGui.QDialog):
             self.file_name = utf8(name)
             options.cfg.query_file_path = os.path.dirname(self.file_name)
             self.ui.edit_file_name.setText(self.file_name)
+        return name
 
     def update_content(self):
         if not os.path.exists(utf8(self.ui.edit_file_name.text())):
