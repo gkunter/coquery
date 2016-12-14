@@ -342,6 +342,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
+        def _set_number_of_tokens():
+            options.cfg.number_of_tokens = int(self.ui.spin_query_limit.value())
+
         self.ui.action_save_results.triggered.connect(self.save_results)
         self.ui.action_save_selection.triggered.connect(lambda: self.save_results(selection=True))
         self.ui.action_copy_to_clipboard.triggered.connect(lambda: self.save_results(selection=True, clipboard=True))
@@ -388,6 +391,28 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
         self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
+
+        # add match limit widget to settings menu:
+        self.ui.menuSettings.addSeparator()
+        _widget = QtGui.QWidget()
+        _hlayout = QtGui.QHBoxLayout(_widget)
+        _limit_action = QtGui.QWidgetAction(self)
+        _label = QtGui.QLabel("Limit matches: ")
+        self.ui.spin_query_limit = QtGui.QSpinBox()
+        self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
+        self.ui.spin_query_limit.valueChanged.connect(_set_number_of_tokens)
+        self.ui.spin_query_limit.setSpecialValueText("all")
+        self.ui.spin_query_limit.setMaximum(9999)
+        self.ui.spin_query_limit.editingFinished.connect(
+            lambda: self.ui.menuSettings.hide())
+
+        _hlayout.addWidget(_label)
+        _hlayout.addWidget(self.ui.spin_query_limit)
+        _hlayout.addWidget(QtGui.QLabel("per query"))
+
+        _action = QtGui.QWidgetAction(self)
+        _action.setDefaultWidget(_widget)
+        self.ui.menuSettings.addAction(_action)
 
     def setup_hooks(self):
         """
@@ -454,7 +479,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
 
         self.corpusListUpdated.connect(self.check_corpus_widgets)
-        self.columnVisibilityChanged.connect(lambda: self.reaggregate(recalculate=True, start=True))
+        self.columnVisibilityChanged.connect(lambda: self.reaggregate(start=True))
 
         self.column_tree.itemChanged.connect(self.toggle_selected_feature)
 
@@ -2662,7 +2687,7 @@ class CoqueryApp(QtGui.QMainWindow):
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             self._column_functions.add_function(fun)
-            self.reaggregate(recalculate=False, start=True)
+            self.reaggregate(start=True)
 
         self.set_function_button_labels()
         self.enable_apply_button()
