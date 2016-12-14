@@ -236,15 +236,7 @@ class Settings(QtGui.QDialog):
             self.ui.check_use_cache.setChecked(self._options.use_cache)
             self.ui.progress_used.setMaximum(self.ui.spin_cache_size.value())
             self.ui.progress_used.setValue(options.cfg.query_cache.size() // (1024*1024))
-        try:
-            if self._options.number_of_tokens > 0:
-                self.ui.spin_maximum_tokens.setValue(int(self._options.number_of_tokens))
-                self.ui.check_limit_tokens.setChecked(True)
-            else:
-                self.ui.spin_maximum_tokens.setValue(int(self._options.last_number_of_tokens))
-        except AttributeError:
-            pass
-        
+
     def change_options(self):
         self._options.output_case_sensitive = bool(self.ui.radio_output_case_leave.isChecked())
         self._options.output_to_lower = bool(self.ui.radio_output_case_lower.isChecked())
@@ -268,12 +260,6 @@ class Settings(QtGui.QDialog):
                 else:
                     self._options.cache_path = new_cache_path
                     
-        if self.ui.check_limit_tokens.isChecked():
-            self._options.number_of_tokens = int(self.ui.spin_maximum_tokens.value())
-        else:
-            self._options.number_of_tokens = 0
-        self._options.last_number_of_tokens = int(self.ui.spin_maximum_tokens.value())
-
         # Quitting options
         self._options.ask_on_quit = bool(self.ui.check_ask_on_quit.isChecked())
         self._options.save_query_file = bool(self.ui.check_save_query_file.isChecked())

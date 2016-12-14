@@ -20,15 +20,6 @@
    <string>Settings – Coquery</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
-   <property name="spacing">
-    <number>8</number>
-   </property>
-   <property name="leftMargin">
-    <number>4</number>
-   </property>
-   <property name="rightMargin">
-    <number>4</number>
-   </property>
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
@@ -55,7 +46,7 @@
           <item>
            <widget class="QRadioButton" name="radio_output_case_lower">
             <property name="text">
-             <string>&amp;Lower case</string>
+             <string>Lower &amp;case</string>
             </property>
            </widget>
           </item>
@@ -178,13 +169,6 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="check_align_quantified">
-         <property name="text">
-          <string>Align &amp;quantified token columns</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <spacer name="verticalSpacer_2">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -205,128 +189,25 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <item>
-          <widget class="QCheckBox" name="check_ignore_case_query">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_2">
-           <property name="text">
-            <string>&amp;Ignore case in query strings</string>
-           </property>
-           <property name="buddy">
-            <cstring>check_ignore_case_query</cstring>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_3">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
+        <widget class="QCheckBox" name="check_ignore_case_query">
+         <property name="text">
+          <string>Ignore &amp;case in query strings</string>
+         </property>
+        </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_6">
-         <item>
-          <widget class="QCheckBox" name="check_drop_empty_queries">
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_12">
-           <property name="text">
-            <string>&amp;Discard rows with only empty cells</string>
-           </property>
-           <property name="buddy">
-            <cstring>check_drop_empty_queries</cstring>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_5">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
+        <widget class="QCheckBox" name="check_drop_empty_queries">
+         <property name="text">
+          <string>Discard rows with only em&amp;pty cells</string>
+         </property>
+        </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <item>
-          <widget class="QCheckBox" name="check_limit_tokens">
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Limit &amp;maximum number of matches per query:</string>
-           </property>
-           <property name="buddy">
-            <cstring>spin_maximum_tokens</cstring>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="spin_maximum_tokens">
-           <property name="minimum">
-            <number>1</number>
-           </property>
-           <property name="maximum">
-            <number>999999999</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
+        <widget class="QCheckBox" name="check_align_quantified">
+         <property name="text">
+          <string>Align &amp;quantified token columns</string>
+         </property>
+        </widget>
        </item>
        <item>
         <widget class="Line" name="line">
@@ -338,6 +219,21 @@
        <item>
         <widget class="QWidget" name="widget_cache" native="true">
          <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
           <item>
            <widget class="QCheckBox" name="check_use_cache">
             <property name="text">
@@ -635,7 +531,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Corpus &amp;installers: </string>
+             <string>Cor&amp;pus installers: </string>
             </property>
             <property name="buddy">
              <cstring>edit_installer_path</cstring>
@@ -658,8 +554,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -698,8 +593,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -738,8 +632,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
