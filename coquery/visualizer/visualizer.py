@@ -277,14 +277,16 @@ class BaseVisualizer(QtCore.QObject):
 
             # FIXME: reimplement row visibility
             #self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
+        dtypes = session.output_object[column_order].dropna().dtypes
         self._table = CoqTableModel.format_content(
             source=session.output_object[column_order])
         self._table.columns = [session.translate_header(x) for x in self._table.columns]
+        dtypes.index = self._table.columns.values
 
         # in order to prepare the layout of the figure, first determine
         # how many dimensions the data table has.
         self._factor_columns = [x for x in self._table.columns if (
-            self._table.dtypes[x] in (bool, object) and
+            dtypes[x] in (bool, object) and
             x in view_columns and
             x not in self._time_columns and
             not x.startswith("func_DECAT"))]
