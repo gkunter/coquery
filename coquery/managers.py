@@ -48,6 +48,12 @@ class Manager(CoqObject):
 
         self._group_filters = []
         self._filters = []
+        self._last_query_id = None
+        self.reset_context_cache()
+
+    def reset_context_cache(self):
+        self._context_cache = collections.defaultdict(
+            lambda: (None, None, None))
 
     def hide_column(self, column):
         self.hidden_columns.add(column)
@@ -78,12 +84,23 @@ class Manager(CoqObject):
         They will be executed after user functions.
         """
         l = []
-        if options.cfg.context_mode == CONTEXT_COLUMNS:
-            l.append(ContextColumns())
-        elif options.cfg.context_mode == CONTEXT_KWIC:
-            l.append(ContextKWIC())
-        elif options.cfg.context_mode == CONTEXT_STRING:
-            l.append(ContextString())
+
+        if options.cfg.context_mode != CONTEXT_NONE:
+            # the context columns are only retrieved if there is no cached
+            # context for the current context mode and the current query.
+            if self._last_query_id != session.query_id:
+                self.reset_context_cache()
+                self._last_query_id = session.query_id
+            (left, right, cached_context) = self._context_cache[options.cfg.context_mode]
+            if (left != options.cfg.context_left or
+                right != options.cfg.context_right or
+                cached_context is None):
+                if options.cfg.context_mode == CONTEXT_COLUMNS:
+                    l.append(ContextColumns())
+                elif options.cfg.context_mode == CONTEXT_KWIC:
+                    l.append(ContextKWIC())
+                elif options.cfg.context_mode == CONTEXT_STRING:
+                    l.append(ContextString())
 
         return l
 
@@ -127,7 +144,6 @@ class Manager(CoqObject):
             else:
                 df_new = pd.concat([df_new, dsub], axis=0)
 
-        print(df_new)
         print("\tDone mutate_groups")
         return df_new
 
@@ -137,9 +153,28 @@ class Manager(CoqObject):
         """
         if len(df) == 0:
             return df
+
         print("\tmutate()")
         # apply manager functions, including context functions:
-        df = FunctionList(self._get_main_functions(df, session)).apply(df, session=session, manager=self)
+        manager_functions = FunctionList(self._get_main_functions(df, session))
+        df = manager_functions.apply(df, session=session, manager=self)
+
+        if options.cfg.context_mode != CONTEXT_NONE:
+            (_, _, cached_context) = self._context_cache[options.cfg.context_mode]
+            if cached_context is not None:
+                # use the cached context columns if available:
+                df = pd.concat([df, cached_context], axis=1)
+            else:
+                # take the context columns from the data frame if there is no
+                # cached context for the current context mode, and store them
+                # in the context cache:
+                context_columns = [x for x in df.columns
+                                   if x.startswith(("coq_context"))]
+                self._context_cache[options.cfg.context_mode] = (
+                    options.cfg.context_left,
+                    options.cfg.context_right,
+                    df[context_columns])
+
         # apply user functions, i.e. functions that were added to
         # individual columns:
         df = FunctionList(session.column_functions).apply(df, session=session, manager=self)
