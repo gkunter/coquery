@@ -213,6 +213,7 @@ class Ui_MainWindow(object):
         self.widget_context.setObjectName(_fromUtf8("widget_context"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.widget_context)
         self.verticalLayout_2.setMargin(0)
+        self.verticalLayout_2.setSpacing(6)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.radio_context_mode_none = QtGui.QRadioButton(self.widget_context)
         self.radio_context_mode_none.setObjectName(_fromUtf8("radio_context_mode_none"))
@@ -408,7 +409,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 925, 24))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 925, 30))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -691,7 +692,7 @@ class Ui_MainWindow(object):
         self.button_change_file.setShortcut(_translate("MainWindow", "Alt+B", None))
         self.button_run_query.setText(_translate("MainWindow", "&Query", None))
         self.button_stop_query.setText(_translate("MainWindow", "&Stop", None))
-        self.group_management.setTitle(_translate("MainWindow", "Result table &management", None))
+        self.group_management.setTitle(_translate("MainWindow", "Data &management", None))
         __sortingEnabled = self.list_toolbox.isSortingEnabled()
         self.list_toolbox.setSortingEnabled(False)
         item = self.list_toolbox.item(0, 0)
@@ -725,8 +726,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">No match.</span></p></body></html>", None))
+"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>", None))
         self.menuFile.setTitle(_translate("MainWindow", "&File", None))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help", None))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus", None))
@@ -814,9 +815,9 @@ class Ui_MainWindow(object):
         self.actionSelect_group_functions.setText(_translate("MainWindow", "Select group functions...", None))
         self.actionContext_options.setText(_translate("MainWindow", "Context options...", None))
         self.action_reference_corpus.setText(_translate("MainWindow", "&Reference corpus:", None))
-        self.action_save_query.setText(_translate("MainWindow", "Save query...", None))
-        self.action_load_query.setText(_translate("MainWindow", "Load query...", None))
-        self.action_share_query.setText(_translate("MainWindow", "Share query...", None))
+        self.action_save_query.setText(_translate("MainWindow", "S&ave query...", None))
+        self.action_load_query.setText(_translate("MainWindow", "L&oad query...", None))
+        self.action_share_query.setText(_translate("MainWindow", "S&hare query...", None))
 
 from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
 from ..resultstable import CoqResultsTable
