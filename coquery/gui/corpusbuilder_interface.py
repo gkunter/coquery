@@ -49,22 +49,30 @@ class InstallerGui(QtGui.QDialog):
 
         self.state = None
         self._onefile = False
+        self.builder_class = builder_class
 
         self.ui = Ui_CorpusInstaller()
         self.ui.setupUi(self)
         self.ui.label_pos_tagging.hide()
         self.ui.use_pos_tagging.hide()
         self.ui.progress_box.hide()
+
         self.ui.button_input_path.clicked.connect(self.select_path)
-        self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=True))
-        self.ui.radio_complete.toggled.connect(self.changed_radio)
-        self.ui.radio_only_module.toggled.connect(self.changed_radio)
-        self.ui.input_path.textChanged.connect(self.check_input)
+        self.ui.button_metafile.clicked.connect(self.select_metafile)
+        self.ui.label_metafile.clicked.connect(self.select_metafile)
+
+        self.ui.group_read_files.toggled.connect(lambda x: self.activate_read(True))
+        self.ui.group_only_module.toggled.connect(lambda x: self.activate_read(False))
+        self.ui.check_use_metafile.toggled.connect(self.toggle_use_metafile)
 
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setText(self.button_label)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).clicked.connect(self.start_install)
 
-        self.ui.verticalLayout_3.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
+        self.ui.corpus_name.setText(builder_class.get_name())
+        self.ui.corpus_name.setReadOnly(True)
+        self.ui.button_metafile.hide()
+        self.ui.label_metafile.hide()
+        self.ui.check_use_metafile.hide()
 
         self.installStarted.connect(self.show_progress)
         self.progressSet.connect(self.set_progress)
@@ -72,27 +80,6 @@ class InstallerGui(QtGui.QDialog):
         self.progressUpdate.connect(self.update_progress)
 
         self.generalUpdate.connect(self.general_update)
-
-        if options.cfg.corpus_source_path != os.path.expanduser("~"):
-            self.ui.input_path.setText(options.cfg.corpus_source_path)
-
-        self.accepted = False
-        try:
-            self.builder_class = builder_class
-        except Exception as e:
-            msg = msg_corpus_broken.format(
-                name=basename,
-                type=sys.exc_info()[0],
-                code=sys.exc_info()[1])
-            logger.error(msg)
-            QtGui.QMessageBox.critical(
-                None, "Corpus error – Coquery",
-                msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
-            return
-
-        self.ui.corpus_description.setText(
-                utf8(self.ui.corpus_description.text()).format(
-                    utf8(builder_class.get_title()), utf8(options.cfg.current_server)))
 
         self.ui.label_ngram_info.setText("")
         self.ui.label_ngram_info.setPixmap(self.parent().get_icon("sign-info").pixmap(
@@ -118,10 +105,6 @@ class InstallerGui(QtGui.QDialog):
             self.ui.notes_scroll.setWidget(self.ui.notes_label)
 
             self.ui.notes_box.replaceBox(self.ui.notes_scroll)
-        try:
-            self.resize(options.settings.value("corpusinstaller_size"))
-        except TypeError:
-            pass
 
         if not options.cfg.experimental:
             try:
@@ -131,16 +114,62 @@ class InstallerGui(QtGui.QDialog):
                 # ignore exceptions raised if widgets do not exist
                 pass
 
-    def closeEvent(self, event):
+        self.restore_settings()
+        self.ui.issue_label.setText("")
+        self.ui.corpus_name.setStyleSheet("")
+
+    def restore_settings(self):
+        self.ui.group_read_files.blockSignals(True)
+        self.ui.group_only_module.blockSignals(True)
+        try:
+            self.resize(options.settings.value("corpusinstaller_size"))
+        except TypeError:
+            pass
+
+        if isinstance(self, InstallerGui):
+            target = "corpusinstaller_corpus_source"
+        else:
+            target = "corpusinstaller_data_path"
+        self.ui.input_path.setText(utf8(options.settings.value(target, "")))
+
+        val = options.settings.value("corpusinstaller_read_files", "true")
+        self.activate_read(val == "true" or val == True)
+        val = options.settings.value("corpusinstaller_use_metafile", "false")
+        self.ui.check_use_metafile.setChecked(val == "true" or val == True)
+        val = options.settings.value("corpusinstaller_use_nltk", "false")
+        self.ui.use_pos_tagging.setChecked(val == "true" or val == True)
+        val = options.settings.value("corpusinstaller_use_ngram_table", "false")
+        self.ui.check_ngram.setChecked(val == "true" or val == True)
+        self.ui.spin_n.setValue(
+            int(options.settings.value("corpusinstaller_n_gram_width", 2)))
+        self.ui.group_read_files.blockSignals(False)
+        self.ui.group_only_module.blockSignals(False)
+
+    def accept(self):
+        super(InstallerGui, self).accept()
         options.settings.setValue("corpusinstaller_size", self.size())
+        if isinstance(self, InstallerGui):
+            target = "corpusinstaller_corpus_source"
+        else:
+            target = "corpusinstaller_data_path"
+        options.settings.setValue(target, utf8(self.ui.input_path.text()))
+        options.settings.setValue("corpusinstaller_read_files",
+                                  self.ui.group_read_files.isChecked())
+        options.settings.setValue("corpusinstaller_use_metafile",
+                                  self.ui.check_use_metafile.isChecked())
+        options.settings.setValue("corpusinstaller_use_nltk",
+                                  self.ui.use_pos_tagging.isChecked())
+        options.settings.setValue("corpusinstaller_use_ngram_table",
+                                  self.ui.check_ngram.isChecked())
+        options.settings.setValue("corpusinstaller_ngram_width",
+                                  self.ui.spin_n.value())
 
     def validate_dialog(self, check_path=True):
         self.ui.input_path.setStyleSheet("")
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
-        if self.ui.radio_only_module.isChecked():
-            return
-        if check_path:
-            path = str(self.ui.input_path.text())
+
+        if self.ui.group_read_files.isChecked() and check_path:
+            path = utf8(self.ui.input_path.text())
             if not path:
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
                 return
@@ -169,27 +198,65 @@ class InstallerGui(QtGui.QDialog):
         self.ui.progress_bar.setValue(i)
 
     def select_path(self):
+        path = utf8(self.ui.input_path.text())
+        if not path:
+            path = os.path.join(options.cfg.base_path, "texts")
         name = QtGui.QFileDialog.getExistingDirectory(
-            directory=options.cfg.corpus_source_path,
+            directory=path,
             options=(QtGui.QFileDialog.ReadOnly |
                      QtGui.QFileDialog.ShowDirsOnly |
                      QtGui.QFileDialog.HideNameFilterDetails))
         if type(name) == tuple:
             name = name[0]
         if name:
-            options.cfg.corpus_source_path = name
             self.ui.input_path.setText(name)
+            self.validate_dialog()
+
+    def select_metafile(self):
+        path = os.path.split(utf8(self.ui.label_metafile.text()))[0]
+        if not path:
+            path = utf8(self.ui.input_path.text())
+        if not path:
+            path = os.path.expanduser("~")
+
+        name = QtGui.QFileDialog.getOpenFileName(directory=path)
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            if not self.builder_class.probe_metadata(name):
+                QtGui.QMessageBox.critical(self,
+                                           "Invalid meta data file – Coquery",
+                                           msg_invalid_metadata,
+                                           QtGui.QMessageBox.Yes)
+            else:
+                self.ui.label_metafile.setText(name)
+                self.ui.check_use_metafile.setChecked(True)
+
+    def toggle_use_metafile(self):
+        self.ui.check_use_metafile.blockSignals(True)
+        if not self.ui.check_use_metafile.isChecked():
+            self.ui.label_metafile.setText("")
+        elif self.ui.label_metafile.text() == "":
+            self.select_metafile()
+            if self.ui.label_metafile.text() == "":
+                self.ui.check_use_metafile.setChecked(False)
+        self.ui.check_use_metafile.blockSignals(False)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
 
-    def changed_radio(self):
-        if self.ui.radio_complete.isChecked():
-            self.ui.box_build_options.setEnabled(True)
+    def activate_read(self, activate):
+        self.ui.group_read_files.blockSignals(True)
+        self.ui.group_only_module.blockSignals(True)
+        self.ui.group_read_files.setChecked(activate)
+        self.ui.group_only_module.setChecked(not activate)
+        if activate:
+            self.validate_dialog()
         else:
-            self.ui.box_build_options.setEnabled(False)
-        self.validate_dialog()
+            self.ui.issue_label.setText("")
+        self.ui.group_read_files.blockSignals(False)
+        self.ui.group_only_module.blockSignals(False)
 
     def show_progress(self):
         self.ui.progress_box.show()
@@ -203,7 +270,7 @@ class InstallerGui(QtGui.QDialog):
             S = "Installation of {} failed.".format(self.builder.name)
             self.ui.progress_box.hide()
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
-            self.ui.frame.setEnabled(True)
+            self.ui.widget_options.setEnabled(True)
         else:
             self.state = "finished"
             S = "Finished installing {}.".format(self.builder.name)
@@ -245,7 +312,7 @@ class InstallerGui(QtGui.QDialog):
             super(InstallerGui, self).reject()
 
     def check_input(self):
-        if self.ui.radio_only_module.isChecked():
+        if self.ui.group_only_module.isChecked():
             self.ui.input_path.setStyleSheet('')
             self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
         else:
@@ -270,7 +337,7 @@ class InstallerGui(QtGui.QDialog):
         the invalid path.
         """
 
-        if self.ui.radio_complete.isChecked():
+        if self.ui.group_read_files.isChecked():
             l = self.builder_class.get_file_list(
                     str(self.ui.input_path.text()), self.builder_class.file_filter)
             try:
@@ -284,7 +351,6 @@ class InstallerGui(QtGui.QDialog):
                     return
 
         self.installStarted.emit()
-        self.accepted = True
 
         if self._onefile:
             self.builder = self.builder_class(
@@ -303,7 +369,7 @@ class InstallerGui(QtGui.QDialog):
         self.builder.name = self.builder.arguments.name
 
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
-        self.ui.frame.setEnabled(False)
+        self.ui.widget_options.setEnabled(False)
 
         self.install_thread = classes.CoqThread(self.do_install, self)
         self.install_thread.setInterrupt(self.builder.interrupt)
@@ -315,8 +381,9 @@ class InstallerGui(QtGui.QDialog):
         namespace = argparse.Namespace()
         namespace.verbose = False
         namespace.use_nltk = False
+        namespace.metadata = utf8(self.ui.label_metafile.text())
 
-        if self.ui.radio_only_module.isChecked():
+        if self.ui.group_only_module.isChecked():
             namespace.o = False
             namespace.i = False
             namespace.l = False
@@ -340,7 +407,7 @@ class InstallerGui(QtGui.QDialog):
         namespace.encoding = self.builder_class.encoding
 
         namespace.name = self.builder_class.get_name()
-        namespace.path = str(self.ui.input_path.text())
+        namespace.path = utf8(self.ui.input_path.text())
 
         namespace.db_name = self.builder_class.get_db_name()
         try:
@@ -353,13 +420,11 @@ class InstallerGui(QtGui.QDialog):
 
 
 class BuilderGui(InstallerGui):
-
     button_label = "&Build"
     window_title = "Corpus builder – Coquery"
 
     def __init__(self, builder_class, onefile=False, parent=None):
         super(BuilderGui, self).__init__(builder_class, parent)
-        self.ui.input_path.textChanged.disconnect()
 
         self.logger = logging.getLogger(NAME)
 
@@ -377,55 +442,38 @@ class BuilderGui(InstallerGui):
             selected_column=None)
 
         if self._onefile:
-            self.ui.corpus_description.setText("""
-                <p><span style='font-weight:600;'>Corpus builder</span></p>
-                <p>You have requested to create a new corpus from a single
-                file containing tabular data using the database connection
-                '{}'.</p>
-                """.format(options.cfg.current_server))
-            self.ui.label_5.setText("Build corpus from data file and install corpus module")
-            self.ui.label_8.setText("File name:")
-            self.ui.label_pos_tagging.hide()
-            self.ui.use_pos_tagging.hide()
-            self.ui.widget_ngram.hide()
-            self.ui.use_pos_tagging.setChecked(False)
-            self.ui.check_ngram.setChecked(False)
-
+            self.ui.group_read_files.setTitle("Build new corpus from data table")
+            self.ui.label_input_path.setText("Use table file:")
+            self.ui.button_input_path.setIcon(self.ui.button_metafile.icon())
+            self.ui.button_input_path.setText("Change")
             self.ui.button_input_path.clicked.disconnect(self.select_path)
             self.ui.button_input_path.clicked.connect(self.file_options)
             self.ui.input_path.clicked.connect(self.file_options)
+            self.ui.widget_ngram.hide()
+            self.ui.group_only_module.hide()
+            self.ui.group_read_files.setChecked(True)
         else:
-            self.ui.corpus_description.setText("""
-                <p><span style='font-weight:600;'>Corpus builder</span></p>
-                <p>You have requested to create a new corpus from a selection
-                of text files using the database connection '{}'.</p>
-                """.format(options.cfg.current_server))
-            self.ui.label_5.setText("Build corpus from local text files and install corpus module")
-            self.ui.label_8.setText("Path to text files:")
+            self.ui.group_read_files.setTitle("Build new corpus from text files")
+            self.ui.label_input_path.setText("Path to text files:")
             self.ui.input_path.clicked.connect(self.select_path)
+            self.ui.label_pos_tagging.show()
+            self.ui.use_pos_tagging.show()
+            self.ui.label_metafile.show()
+            self.ui.check_use_metafile.show()
+            self.ui.button_metafile.show()
 
         self.setWindowTitle(self.window_title)
 
         self.ui.issue_layout = QtGui.QVBoxLayout()
-
         self.ui.name_layout = QtGui.QHBoxLayout()
-        self.ui.name_label = QtGui.QLabel("&Name of new corpus:")
-        self.ui.issue_label = QtGui.QLabel("")
         self.ui.issue_label.setStyleSheet("QLabel { color: red; }")
-        self.ui.corpus_name = QtGui.QLineEdit()
-        self.ui.corpus_name.setMaxLength(32)
+
+        self.ui.corpus_name.setReadOnly(False)
+        self.ui.corpus_name.setText("")
         self.ui.corpus_name.setValidator(QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
         self.ui.name_label.setBuddy(self.ui.corpus_name)
-        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
 
-        self.ui.name_layout.addWidget(self.ui.name_label)
-        self.ui.name_layout.addWidget(self.ui.corpus_name)
-        self.ui.name_layout.addItem(spacerItem)
-
-        self.ui.issue_layout.addWidget(self.ui.issue_label)
-        self.ui.issue_layout.addLayout(self.ui.name_layout)
-
-        self.ui.verticalLayout.insertLayout(1, self.ui.issue_layout)
+        self.ui.verticalLayout.insertLayout(0, self.ui.issue_layout)
 
         if not self._onefile:
             self.ui.label_pos_tagging.show()
@@ -460,7 +508,6 @@ class BuilderGui(InstallerGui):
                 self.ui.input_path.setText("")
 
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
-        self.ui.input_path.textChanged.connect(lambda: self.validate_dialog(check_path=False))
         self.ui.corpus_name.textChanged.connect(lambda: self.validate_dialog(check_path=False))
         self.ui.corpus_name.setFocus()
         try:
@@ -507,14 +554,12 @@ class BuilderGui(InstallerGui):
             nltk.stem.wordnet.WordNetLemmatizer().lemmatize("Test")
         except LookupError as e:
             s = str(e).replace("\n", "").strip("*")
-            print(s)
             match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
             if match:
                 self.nltk_exceptions.append(match.group(1))
             self._nltk_lemmatize = False
         except Exception as e:
             self.nltk_exceptions.append("An unexpected error occurred when testing the lemmatizer:\n{}".format(sys.exc_info()))
-            print(s)
             raise e
         else:
             self._nltk_lemmatize = True
@@ -523,14 +568,12 @@ class BuilderGui(InstallerGui):
             nltk.sent_tokenize("test")
         except LookupError as e:
             s = str(e).replace("\n", "")
-            print(s)
             match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
             if match:
                 self.nltk_exceptions.append(match.group(1))
             self._nltk_tokenize = False
         except Exception as e:
             self.nltk_exceptions.append("An unexpected error occurred when testing the tokenizer:\n{}".format(sys.exc_info()))
-            print(s)
             raise e
         else:
             self._nltk_tokenize = True
@@ -539,14 +582,12 @@ class BuilderGui(InstallerGui):
             nltk.pos_tag("test")
         except LookupError as e:
             s = str(e).replace("\n", "")
-            print(s)
             match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
             if match:
                 self.nltk_exceptions.append(match.group(1))
             self._nltk_tagging = False
         except Exception as e:
             self.nltk_exceptions.append("An unexpected error occurred when testing the POS tagger:\n{}".format(sys.exc_info()))
-            print(s)
             raise e
         else:
             self._nltk_tagging = True
@@ -581,14 +622,11 @@ class BuilderGui(InstallerGui):
 
         self.validate_dialog()
 
-    def closeEvent(self, event):
-        options.settings.setValue("corpusbuilder_size", self.size())
-        options.settings.setValue("corpusbuilder_nltk", str(self.ui.use_pos_tagging.isChecked()))
-
     def validate_dialog(self, check_path=True):
         if hasattr(self.ui, "corpus_name"):
             self.ui.corpus_name.setStyleSheet("")
         super(BuilderGui, self).validate_dialog()
+
         if hasattr(self.ui, "corpus_name"):
             self.ui.issue_label.setText("")
             try:
@@ -613,24 +651,16 @@ class BuilderGui(InstallerGui):
             else:
                 # make sure that the database exists if only the module
                 # install is requested:
-                if self.ui.radio_only_module.isChecked() and not db_exists:
+                if self.ui.group_only_module.isChecked() and not db_exists:
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("There is no database that uses this name.")
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
                 # make sure that no database exists if the complete
                 # install is requested:
-                elif self.ui.radio_complete.isChecked() and db_exists:
+                elif self.ui.group_read_files.isChecked() and db_exists:
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("There is already another database that uses this name.")
                     self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
-        if self._onefile:
-            if not self._table_options:
-                word_specified = False
-            else:
-                word_specified = "word" in self._table_options.mapping
-            if not word_specified:
-                self.ui.issue_label.setText("You need to specify at least a Word column in the 'Corpus table options' dialog.")
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
 
     def select_path(self):
         if self._onefile:
