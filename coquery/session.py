@@ -36,6 +36,7 @@ from . import tokens
 
 class Session(object):
     _is_statistics = False
+    query_id = 0
 
     def __init__(self):
         self.header = None
@@ -162,6 +163,7 @@ class Session(object):
 
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
+        Session.query_id += 1
 
         number_of_queries = len(self.query_list)
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
@@ -211,11 +213,11 @@ class Session(object):
                         _working = None
                         if df.dtypes[x] == object:
                             if not df[x].any():
-                                df[x] = [np.nan] * len(df)
+                                df[x] = [pd.np.nan] * len(df)
                                 dtype_list[x] = self.data_table[x].dtype
                         elif dtype_list[x] == object:
                             if not self.data_table[x].any():
-                                self.data_table[x] = [np.nan] * len(self.data_table)
+                                self.data_table[x] = [pd.np.nan] * len(self.data_table)
                                 dtype_list[x] = df[x].dtype
             else:
                 dtype_list = df.dtypes
@@ -295,13 +297,8 @@ class Session(object):
         manager.set_filters(options.cfg.filter_list)
         manager.set_group_filters(options.cfg.group_filter_list)
 
-        if not recalculate:
-            df = self.output_object
-        else:
-            df = self.data_table
-            recalculate = True
+        self.output_object = manager.process(self.data_table, self, recalculate)
 
-        self.output_object = manager.process(df, self, recalculate)
         #self._manager_cache[(self, manager)] = self.output_object
 
     def drop_cached_aggregates(self):
