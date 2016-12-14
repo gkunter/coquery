@@ -739,9 +739,10 @@ class TypeTokenRatio(Types):
     def evaluate(self, df, *args, **kwargs):
         types = super(TypeTokenRatio, self).evaluate(df, *args, **kwargs)
         tokens = Tokens(group=self.group, columns=self.column_list, hidden=self._hidden).evaluate(df, *args, **kwargs)
-        return (pd.DataFrame(data={"types": types, "tokens": tokens},
-                             index=df.index)
-                    .apply(lambda row: row.types / row.tokens, axis="columns"))
+        df = pd.DataFrame(data={"types": types, "tokens": tokens},
+                          index=df.index)
+        val = df.apply(lambda row: row.types / row.tokens, axis="columns")
+        return val
 
 
 class ConditionalProbability(Proportion):
