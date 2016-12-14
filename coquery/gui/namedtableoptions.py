@@ -27,6 +27,7 @@ class NamedTableOptionsDialog(CSVOptionDialog):
 
         fields : dictionary
         """
+        self._last_header = None
         super(NamedTableOptionsDialog, self).__init__(default=default,
                                                       parent=parent,
                                                       icon=icon,
@@ -79,14 +80,34 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         except TypeError:
             pass
 
-    def update_content(self):
-        super(NamedTableOptionsDialog, self).update_content()
+    def validate_dialog(self):
+        try:
+            has_word = "word" in self.map
+        except:
+            has_word = False
+        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(has_word)
+
+    def select_file(self):
+        name = super(NamedTableOptionsDialog, self).select_file()
+        if name:
+            self.reset_mapping()
+            self.validate_dialog()
+        return name
+
+    def reset_mapping(self):
         self.map = dict()
         self.ui.edit_word.setText("")
         self.ui.edit_lemma.setText("")
         self.ui.edit_pos.setText("")
         self.ui.edit_transcript.setText("")
         self.ui.edit_gloss.setText("")
+
+    def update_content(self):
+        super(NamedTableOptionsDialog, self).update_content()
+        if self.ui.file_has_headers != self._last_header:
+            self.reset_mapping()
+        self.validate_dialog()
+        self._last_header = self.ui.file_has_headers.isChecked()
 
     def closeEvent(self, event):
         options.settings.setValue("namedtableoptions_size", self.size())
@@ -102,6 +123,7 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         self.map[label] = self._col_select
         line_edit = getattr(self.ui, "edit_{}".format(label))
         line_edit.setText(header)
+        self.validate_dialog()
 
     @staticmethod
     def getOptions(path, fields=[], default=None, parent=None, icon=None):
