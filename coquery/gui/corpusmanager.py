@@ -120,8 +120,8 @@ class CoqAccordionEntry(QtGui.QWidget):
         entry_widget.header_layout.addLayout(self.widget_layout)
 
         button_build = QtGui.QPushButton()
-        button_build.setIcon(self._stack.parent().get_icon("cone"))
-        button_build.setText("Read")
+        button_build.setIcon(self._stack.parent().get_icon("cog_green"))
+        button_build.setText("Build")
         button_build.setToolTip("Build new corpus")
         button_remove = QtGui.QPushButton()
         button_remove.setIcon(self._stack.parent().get_icon("sign-delete"))
@@ -467,11 +467,11 @@ class CorpusManager(QtGui.QDialog):
                     l.append("HTML")
                 entry = CoqAccordionEntry(stack=self)
                 entry._is_builder = True
-                entry.setTitle("Build a new corpus from text files")
+                entry.setTitle("Build new user corpus from text files")
                 entry.setDescription(msg_adhoc_builder_texts.format(
                     list="".join(["<li>{}</li>".format(x) for x in l])))
 
-                self.detail_box = classes.CoqDetailBox("Read text files into new user corpus...", entry)
+                self.detail_box = classes.CoqDetailBox("Build new user corpus from text files...", entry)
                 entry.setup_buttons(False, self.detail_box)
                 self.ui.list_layout.insertWidget(0, self.detail_box)
                 count += 1
@@ -481,7 +481,7 @@ class CorpusManager(QtGui.QDialog):
                 entry._build_from_table = True
                 entry.setTitle("Build a new corpus from table file")
                 entry.setDescription(msg_adhoc_builder_table)
-                self.detail_box = classes.CoqDetailBox("Read data table into new user corpus...", entry)
+                self.detail_box = classes.CoqDetailBox("Build a new user corpus from table file...", entry)
                 entry.setup_buttons(False, self.detail_box)
                 self.ui.list_layout.insertWidget(1, self.detail_box)
                 count += 1
