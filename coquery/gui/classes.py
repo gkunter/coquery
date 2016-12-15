@@ -659,11 +659,17 @@ class CoqDetailBox(QtGui.QWidget):
         self.update()
 
     def update(self):
+        try:
+            up = options.cfg.main_window.get_icon("Up Squared")
+            down = options.cfg.main_window.get_icon("Down Squared")
+        except AttributeError:
+            up = None
+            down = None
         if self._expanded:
             self.box.show()
             self.header.setFlat(False)
             self.header.setText(self._alternative)
-            icon = options.cfg.main_window.get_icon("Up Squared")
+            icon = up
         else:
             try:
                 self.header.setText(self._text)
@@ -673,8 +679,9 @@ class CoqDetailBox(QtGui.QWidget):
                 # harmless RuntimeError
                 pass
             self.header.setFlat(True)
-            icon = options.cfg.main_window.get_icon("Down Squared")
-        self.header.setIcon(icon)
+            icon = down
+        if icon:
+            self.header.setIcon(icon)
 
     def setExpanded(self, b):
         self._expanded = b
