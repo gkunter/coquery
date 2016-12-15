@@ -82,7 +82,7 @@ class InstallerGui(QtGui.QDialog):
         self.generalUpdate.connect(self.general_update)
 
         self.ui.label_ngram_info.setText("")
-        self.ui.label_ngram_info.setPixmap(self.parent().get_icon("sign-info").pixmap(
+        self.ui.label_ngram_info.setPixmap(self.parent().get_icon("Info").pixmap(
             QtCore.QSize(self.ui.spin_n.sizeHint().height(),
                          self.ui.spin_n.sizeHint().height())))
 
@@ -126,10 +126,10 @@ class InstallerGui(QtGui.QDialog):
         except TypeError:
             pass
 
-        if isinstance(self, InstallerGui):
-            target = "corpusinstaller_corpus_source"
-        else:
+        if isinstance(self, BuilderGui):
             target = "corpusinstaller_data_path"
+        else:
+            target = "corpusinstaller_corpus_source"
         self.ui.input_path.setText(utf8(options.settings.value(target, "")))
 
         val = options.settings.value("corpusinstaller_read_files", "true")
@@ -148,10 +148,10 @@ class InstallerGui(QtGui.QDialog):
     def accept(self):
         super(InstallerGui, self).accept()
         options.settings.setValue("corpusinstaller_size", self.size())
-        if isinstance(self, InstallerGui):
-            target = "corpusinstaller_corpus_source"
-        else:
+        if isinstance(self, BuilderGui):
             target = "corpusinstaller_data_path"
+        else:
+            target = "corpusinstaller_corpus_source"
         options.settings.setValue(target, utf8(self.ui.input_path.text()))
         options.settings.setValue("corpusinstaller_read_files",
                                   self.ui.group_read_files.isChecked())
@@ -167,6 +167,7 @@ class InstallerGui(QtGui.QDialog):
     def validate_dialog(self, check_path=True):
         self.ui.input_path.setStyleSheet("")
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+        self.ui.issue_label.setText("")
 
         if self.ui.group_read_files.isChecked() and check_path:
             path = utf8(self.ui.input_path.text())
@@ -175,6 +176,7 @@ class InstallerGui(QtGui.QDialog):
                 return
             if ((self._onefile and not os.path.isfile(path)) or
                 (not self._onefile and not os.path.isdir(path))):
+                self.ui.issue_label.setText("Illegal data source path.")
                 self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                 self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
                 return
