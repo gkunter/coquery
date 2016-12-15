@@ -5,7 +5,7 @@ defines.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -17,7 +17,7 @@ DATE = "2016"
 
 DEFAULT_MISSING_VALUE = "<NA>"
 
-# The following labels are used to refer to the different types of query 
+# The following labels are used to refer to the different types of query
 # tokens, e.g. in corpusbuilder.py when mapping the different query item
 # types to different fields in the data base:
 QUERY_ITEM_WORD = "query_item_word"
@@ -43,7 +43,7 @@ QUERY_MODES = {
     "CONT": QUERY_MODE_CONTINGENCY
     }
 
-# this list is used to populate and query the summary mode combo box in the 
+# this list is used to populate and query the summary mode combo box in the
 # user # interface
 SUMMARY_MODES = [
     QUERY_MODE_TOKENS,
@@ -111,7 +111,7 @@ CONTEXT_SENTENCE = "Sentence"
 VIEW_MODE_TABLES = 0
 VIEW_MODE_GROUPED = 1
 
-(TOOLBOX_CONTEXT, TOOLBOX_STOPWORDS, TOOLBOX_GROUPING, 
+(TOOLBOX_CONTEXT, TOOLBOX_STOPWORDS, TOOLBOX_GROUPING,
 TOOLBOX_AGGREGATE, TOOLBOX_SUMMARY) = range(5)
 
 # These labels are used in the corpus manager:
@@ -144,7 +144,7 @@ COLUMN_NAMES = {
     "statistics_row_number": "Row number",
     "statistics_percent": "Percentage",
     "statistics_entropy": "Entropy",
-    "statistics_frequency": "Frequency", 
+    "statistics_frequency": "Frequency",
     "statistics_corpus_size": "Corpus size: Total",
     "statistics_subcorpus_size": "Corpus size: Subcorpus",
     "statistics_per_million_words": "Frequency pmw",
@@ -189,10 +189,10 @@ FUNCTION_DESC = {
     "statistics_types": "Count the number of types",
     "statistics_ttr": "Calculate the type-token ratio"}
 
-PREFERRED_ORDER = ["corpus_word", "word_label", 
-                   "corpus_pos", "word_pos", "pos_label", 
-                   "corpus_transcript", "word_transcript", "transcript_label", 
-                   "corpus_lemma", "word_lemma", "lemma_label", 
+PREFERRED_ORDER = ["corpus_word", "word_label",
+                   "corpus_pos", "word_pos", "pos_label",
+                   "corpus_transcript", "word_transcript", "transcript_label",
+                   "corpus_lemma", "word_lemma", "lemma_label",
                    "lemma_pos",
                    "corpus_gloss", "word_gloss", "gloss_label"]
 
@@ -229,9 +229,9 @@ MODULE_INFORMATION = {
               "0.13.0",
               "Offer tests like the log-likelihood test",
               "https://www.scipy.org/scipylib/index.html"),
-    "NLTK": ("The Natural Language Toolkit", 
+    "NLTK": ("The Natural Language Toolkit",
              "3.2.1",
-            "Lemmatization and tagging when building your own corpora", 
+            "Lemmatization and tagging when building your own corpora",
             "http://www.nltk.org"),
     "PyMySQL": ("A pure-Python MySQL client library",
             "0.6.4",
@@ -276,7 +276,7 @@ MODULE_INFORMATION = {
     "statsmodels": ("statsmodels — Statistical computations and models for use with SciPy",
             "0.7.0",
             "Plot estimated cumulative distributions",
-            "http://www.statsmodels.org/stable/"), 
+            "http://www.statsmodels.org/stable/"),
     }
 
 # for Python 3 compatibility:
@@ -298,8 +298,8 @@ the columns following the first to the other meta data values.</p>
 
 msg_no_word_information = """
 <p><b>Your stopword filters could not be applied to the results table.</b></p>
-<p>In order to be able to use stopword filtering, the results table must 
-contain the orthographic representation of the matches. However, this 
+<p>In order to be able to use stopword filtering, the results table must
+contain the orthographic representation of the matches. However, this
 information was not selected as an output column in the last query.</p>
 <p>Please activate the output column '<b>{}</b>' and run the query again
 in order to be able to use stopword filtering.</p>
@@ -311,36 +311,36 @@ msg_column_not_in_data = """
 """
 
 msg_adhoc_builder_texts = """
-<p>You can build a new corpus by storing the words from a selection of text 
-files in a database that can be queried by Coquery. Your installation of 
-Coquery will recognize the following text file formats (more file formats 
-may be available if you install one of the optional modules, see 
+<p>You can build a new corpus by storing the words from a selection of text
+files in a database that can be queried by Coquery. Your installation of
+Coquery will recognize the following text file formats (more file formats
+may be available if you install one of the optional modules, see
 <a href='http://www.coquery.org/download/index.html#optional-python-modules'>
 http://www.coquery.org/download</a>):</p>
 <p><ul>{list}</uk></p>
 <p>If the Natural Language Toolkit NLTK (<a href='http://www.nltk.org'>
-http://www.nltk.org</a>) is installed on your computer, you can use it to 
+http://www.nltk.org</a>) is installed on your computer, you can use it to
 automatically lemmatize and POS-tag your new corpus.</p>"""
 
 msg_adhoc_builder_table = """
-<p>You can build a new corpus by storing the rows from a table in a database 
+<p>You can build a new corpus by storing the rows from a table in a database
 that can be queried by Coquery.</p>"""
 
 msg_token_dangling_open = """
-<p><b>Your query string <code style='color: #aa0000'>{str}</code> misses a 
+<p><b>Your query string <code style='color: #aa0000'>{str}</code> misses a
 closing character.</b></p>
-<p>There is no matching closing character <code style='color: 
-#aa0000'>{close}</code> for the opening character <code style='color: 
+<p>There is no matching closing character <code style='color:
+#aa0000'>{close}</code> for the opening character <code style='color:
 #aa0000'>{open}</code>.</p>
 <p>Please fix your query string by supplying the closing character. If you
-want to query for the opening character, try to escape it by using 
+want to query for the opening character, try to escape it by using
 <code style='color: #aa0000'>\\{open}</code> instead.</p>
 """
 
 msg_invalid_filter = """
 <p><b>The corpus filter '{}' is not valid.</b></p>
 <p>One of your filters is not not valid for the currently selected corpus.
-Please either disable using corpus filter from the Preferences menu, or 
+Please either disable using corpus filter from the Preferences menu, or
 delete the invalid filter from the filter list.</p>
 """
 msg_clear_filters = """
@@ -355,7 +355,7 @@ or <b>No</b> if you want to leave the stop word list unchanged.</p>
 """
 msg_missing_modules = """
 <p><b>Not all required Python modules could be found.</b></p>
-<p>Some of the Python modules that are required to run and use Coquery could 
+<p>Some of the Python modules that are required to run and use Coquery could
 not be located on your system. The missing modules are:</p>
 <p><code>\t{}</code></p>
 <p>Please refer to the <a href="http://coquery.org/doc/">Coquery documentation</a>
@@ -363,10 +363,10 @@ for instructions on how to install the required modules.</p>
 """
 msg_missing_module = """
 <p><b>The optional Python module '<code>{name}</code>' could not be loaded.</b></p>
-<p>The Python module called '{name}' is not installed on this computer. 
+<p>The Python module called '{name}' is not installed on this computer.
 Without this module, the following function is not available:</p>
 <p>{function}</p>
-<p>Please refer to the <a href="http://coquery.org/download/index.html#optional-python-modules">Coquery website</a> or 
+<p>Please refer to the <a href="http://coquery.org/download/index.html#optional-python-modules">Coquery website</a> or
 the module website for installation instructions: <a href="{url}">{url}</a>.</p>
 """
 msg_visualization_error = """
@@ -377,43 +377,43 @@ msg_visualization_error = """
 """
 msg_no_lemma_information = """
 <p><b>The current resource does not provide lemma information.</b></p>
-<p>Your last query makes use of the lemma search syntax by enclosing query 
-tokens in square brackets <code>[...]</code>, but the current resource does 
+<p>Your last query makes use of the lemma search syntax by enclosing query
+tokens in square brackets <code>[...]</code>, but the current resource does
 not provide lemmatized word entries.</p>
-<p>Please change your query, for example by removing the square brackets 
+<p>Please change your query, for example by removing the square brackets
 around the query token.</p>
 """
 msg_corpus_path_not_valid = """
 <p><b>The corpus data path does not seem to be valid.</b></p>
 <p>{}</p>
-<p>If you choose to <b>ignore</b> that the corpus data path is invalid, 
-Coquery will start the corpus installation using this directiory. After the 
-installation, you may still be able to use the corpus, but it will be 
+<p>If you choose to <b>ignore</b> that the corpus data path is invalid,
+Coquery will start the corpus installation using this directiory. After the
+installation, you may still be able to use the corpus, but it will be
 incomplete, or in an unusuable state.</p>
-<p>If you choose to <b>discard</b> the invalid corpus data path, you can 
-enter the correct data path in the previous dialog, or cancel the corpus 
+<p>If you choose to <b>discard</b> the invalid corpus data path, you can
+enter the correct data path in the previous dialog, or cancel the corpus
 installation altogether.</p>
 <p>Do you wish to ignore or to discard the invalid corpus data path?</p>
 """
 msg_mysql_no_configuration = """
 <p><b>No database server configuration is available.</b></p>
 <p>You haven't specified the configuration for your database server yet.
-Please call 'Database servers...' from the Preferences menu, and set up a 
+Please call 'Database servers...' from the Preferences menu, and set up a
 configuration for your MySQL database server.</p>
 <p>If you need assistance setting up your database server, call 'MySQL
 server help' from the Help menu.</p>
 """
 msg_warning_statistics = """
 <p><b>You have unsaved data in the results table.</b></p>
-<p>The corpus statistics will discard the results table from your last 
+<p>The corpus statistics will discard the results table from your last
 query.</p>
-<p>If you want to retrieve that results table later, you will have to 
+<p>If you want to retrieve that results table later, you will have to
 run the query again.</p>
 <p>Do you wish to continue?</p>
 """
 msg_no_context_available = """
 <p><b>Context information is not available.</b></p>
-<p>There is no context information available for the item that you have 
+<p>There is no context information available for the item that you have
 selected.</p>"""
 msg_corpus_no_documentation = """
 <p><b>Corpus documentation for corpus '{corpus}' is not available.</b></p>
@@ -422,27 +422,27 @@ documentation. You may find help on how the corpus is structured by using an
 internet search engine.</p>"""
 msg_install_abort = """
 <p><b>You have requested to abort the installation.</b></p>
-<p>The installation has not been completed yet. If you abort now, the data 
-installed so far will be discarded, and the corpus will still not be 
+<p>The installation has not been completed yet. If you abort now, the data
+installed so far will be discarded, and the corpus will still not be
 available for queries.</p>"""
 msg_invalid_installer = """
 <p><b>The corpus installer '{name}' contains invalid code.</b></p>
 <p>{code}</p>
-<p>Please note that running an invalid corpus installer can potentially be 
+<p>Please note that running an invalid corpus installer can potentially be
 a security risk. For this reason, the corpus installer was disabled.</p>
 """
 
 msg_validated_install = """
 <p><b>You have requested the installation of the corpus '{corpus}'.</b></p>
-<p>The Coquery website stores validation codes for all corpus installers that 
-have passed a security screening. During this screening, the installer code is 
-manually scanned for instructions that may be harmful to your computer, 
+<p>The Coquery website stores validation codes for all corpus installers that
+have passed a security screening. During this screening, the installer code is
+manually scanned for instructions that may be harmful to your computer,
 software, or privacy.</p>
-<p>The installer '{corpus}' has been validated. This means that the Coquery 
-maintainers do not consider it to be a security risk, but please note that 
+<p>The installer '{corpus}' has been validated. This means that the Coquery
+maintainers do not consider it to be a security risk, but please note that
 the Coquery maintainers cannot be held liable for damages arising out of the
-use of this installer. See Section 16 of the 
-<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+use of this installer. See Section 16 of the
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License
 </a> for details.</p>
 <p>Click <b>Yes</b> to proceed with the installation, or <b>No</b> to abort it.
 </p>
@@ -450,36 +450,36 @@ use of this installer. See Section 16 of the
 
 msg_failed_validation_install = """
 <p><b>The validation of the corpus installer '{corpus}' failed.</b></p>
-<p>The Coquery website stores validation codes for all corpus installers that 
-have passed a security screening. During this screening, the installer code is 
-manually scanned for instructions that may be harmful to your computer, 
+<p>The Coquery website stores validation codes for all corpus installers that
+have passed a security screening. During this screening, the installer code is
+manually scanned for instructions that may be harmful to your computer,
 software, or privacy.</p>
-<p>The validation of the installer '{corpus}' failed. This means that your 
-copy of the installer does not match any copy of the installer that has been 
-validated by the Coquery maintainers. Please note that 
+<p>The validation of the installer '{corpus}' failed. This means that your
+copy of the installer does not match any copy of the installer that has been
+validated by the Coquery maintainers. Please note that
 the Coquery maintainers cannot be held liable for damages arising out of the
-use of this installer. See Section 16 of the 
-<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+use of this installer. See Section 16 of the
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License
 </a> for details.</p>
-<p><b>You are advised to proceed with the installation only if you are certain 
+<p><b>You are advised to proceed with the installation only if you are certain
 that the installer is from a trustworthy source.</b></p>
 <p>Click <b>Yes</b> to proceed with the installation, or <b>No</b> to abort it.
 </p>
 """
 msg_unvalidated_install = """
 <p><b>The corpus installer '{corpus}' could not be validated.</b></p>
-<p>The Coquery website stores validation codes for all corpus installers that 
-have passed a security screening. During this screening, the installer code is 
-manually scanned for instructions that may be harmful to your computer, 
+<p>The Coquery website stores validation codes for all corpus installers that
+have passed a security screening. During this screening, the installer code is
+manually scanned for instructions that may be harmful to your computer,
 software, or privacy.</p>
-<p>For the installer '{corpus}', no validation code is available. This means 
-either that the installer has not yet been submitted to the screening process, 
-or that no validation code could be fetched from the Coquery website. Please 
-note that the Coquery maintainers cannot be held liable for damages arising 
-out of the use of this installer. See Section 16 of the 
-<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+<p>For the installer '{corpus}', no validation code is available. This means
+either that the installer has not yet been submitted to the screening process,
+or that no validation code could be fetched from the Coquery website. Please
+note that the Coquery maintainers cannot be held liable for damages arising
+out of the use of this installer. See Section 16 of the
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License
 </a> for details.</p>
-<p><b>You are advised to proceed with the installation only if you are certain 
+<p><b>You are advised to proceed with the installation only if you are certain
 that the installer is from a trustworthy source.</b></p>
 <p>Click <b>Yes</b> to proceed with the installation, or <b>No</b> to abort it.
 </p>
@@ -487,46 +487,46 @@ that the installer is from a trustworthy source.</b></p>
 
 msg_rejected_install = """
 <p><b>The corpus installer '{corpus}' may be a security risk.</b></p>
-<p>The Coquery website stores validation codes for all corpus installers that 
-have passed a security screening. During this screening, the installer code is 
-manually scanned for instructions that may be harmful to your computer, 
+<p>The Coquery website stores validation codes for all corpus installers that
+have passed a security screening. During this screening, the installer code is
+manually scanned for instructions that may be harmful to your computer,
 software, or privacy.</p>
-<p>The corpus installer '{corpus}' has been <b>rejected</b> during this 
-screening process. This means that the Coquery maintainers considered the 
-installer to be potentially harmful. Please note that 
+<p>The corpus installer '{corpus}' has been <b>rejected</b> during this
+screening process. This means that the Coquery maintainers considered the
+installer to be potentially harmful. Please note that
 the Coquery maintainers cannot be held liable for damages arising out of the
-use of this installer. See Section 16 of the 
-<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License 
+use of this installer. See Section 16 of the
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html">GNU General Public License
 </a> for details.</p>
-<p><b>You are strongly advised not to continue with the installation of this 
+<p><b>You are strongly advised not to continue with the installation of this
 corpus.</b></p>
-<p>If you with to ignore this warning, click <b>Yes</b> to continue with the 
+<p>If you with to ignore this warning, click <b>Yes</b> to continue with the
 istallation. Click <b>No</b> if you wish to abort the installation of this
 corpus.</p>
 """
 
 msg_corpus_broken = """
 <p><b>An error occurred while reading the installer '{name}'</b></p>
-<p>The corpus installer stored in the file {name} could not be read. Most 
-likely, there is a programming error in the installer, or the file could 
+<p>The corpus installer stored in the file {name} could not be read. Most
+likely, there is a programming error in the installer, or the file could
 not be read.</p>
-<p>Please inform the maintainer of this corpus installer of your problem. 
+<p>Please inform the maintainer of this corpus installer of your problem.
 When doing so, include the following information in your message:</p>
 {type}
 {code}"""
 msg_disk_error = """
 <p><b>An error occurred while accessing the disk storage.</b></p>
-<p>The results have not been saved. Please try again. If the error persists, 
+<p>The results have not been saved. Please try again. If the error persists,
 try saving to a different location</p>"""
 msg_encoding_error = """
 <p><b>An encoding error occurred while trying to save the results.</b></p>
 <p><span color="darkred">The save file is probably incomplete.</span></p>
-<p>At least one column contains special characters which could not be 
-translated to a format that can be written to a file. You may try to work 
-around this issue by reducing the number of output columns so that the 
+<p>At least one column contains special characters which could not be
+translated to a format that can be written to a file. You may try to work
+around this issue by reducing the number of output columns so that the
 offending character is not in the output anymore.</p>
-<p>We apologize for this problem. Please do not hesitate to contact the 
-authors about it so that the problem may be fixed in a future 
+<p>We apologize for this problem. Please do not hesitate to contact the
+authors about it so that the problem may be fixed in a future
 version.</p>"""
 msg_query_running = """
 <p><b>The last query is still running.</b></p>
@@ -534,7 +534,7 @@ msg_query_running = """
 <p>Do you really want to interrupt this query?</p>"""
 msg_csv_encoding_error = """
 <p><b>Illegal character encoding encountered.</b></p>
-<p>An error occurred while trying to open the file {file} with the character 
+<p>An error occurred while trying to open the file {file} with the character
 encoding <code>{encoding}</code>. Choose a different encoding from the list.</p>
 """
 msg_csv_file_error = """
@@ -549,8 +549,8 @@ one of the supported character encodings. Unicode/UTF-8 is strongly recommended.
 """
 msg_filename_error = """
 <p><b>The file name is not valid.</b></p>
-<p>You have chosen to read the query strings from a file, but the query file 
-name that you have entered is not valid. Please enter a valid query file 
+<p>You have chosen to read the query strings from a file, but the query file
+name that you have entered is not valid. Please enter a valid query file
 name, or select a file by pressing the Open button.</p>"""
 msg_initialization_error = """
 <p><b>An error occurred while initializing the database {code}.</b></p>
@@ -562,12 +562,12 @@ privileges.</li>
 <li>You are trying to access a local database on a remote server, or vice
 versa.</li>
 </ul></p>
-<p>Open <b>Database connections </b> in the Preferences menu to check whether 
-the connection to the database server is working, and if the settings are 
+<p>Open <b>Database connections </b> in the Preferences menu to check whether
+the connection to the database server is working, and if the settings are
 correct.</p>"""
 msg_corpus_remove = """
 <p><b>You have requested to remove the corpus '{corpus}'.</b></p>
-<p>This step cannot be reverted. If you proceed, the corpus will not be 
+<p>This step cannot be reverted. If you proceed, the corpus will not be
 available for further queries before you install it again.</p>
 <p>Removing '{corpus}' will free approximately {size:.1S} of disk space.</p>
 <p>Do you really want to remove the corpus?</p>"""
@@ -581,7 +581,7 @@ delete databases.</p>
 """
 msg_remove_corpus_disk_error = """
 <p><b>A disk error occurred while deleting the corpus database.</b></p>
-<p>Please try removing the corpus another time. If the problem persists, 
+<p>Please try removing the corpus another time. If the problem persists,
 use your system tools to ensure that the storage device is fully
 operational.</p>"""
 msg_unsaved_data = """
@@ -589,19 +589,29 @@ msg_unsaved_data = """
 <p>If you quit now, they will be lost.</p>
 <p>Do you really want to quit?</p>"""
 msg_no_corpus = """
-<p>Coquery could not find a corpus module. Without a corpus module, you cannot 
+<p>Coquery could not find a corpus module. Without a corpus module, you cannot
 run any query.</p>"""
 msg_details = """
-<p>To build a new corpus module from a selection of text files, select 
+<p>To build a new corpus module from a selection of text files, select
 <b>Build new corpus...</b> from the Corpus menu.</p>
 <p>To install the corpus module for one of the corpora that are supported by
 Coquery, select <b>Manage corpora...</b> from the Corpus menu.</p>"""
+msg_orphanaged_databases = """
+<p>An orphanaged database is a database file in Coquery's corpus folder that
+is not associated with a corpus module. Therefore, this database cannot be
+queried by Coquery.</p>
+<p>Orphanaged databases are usually remains from previous failed attempts to
+build a user corpus. If an error occurs during the corpus building procedure,
+sometimes an incomplete database is created.</p>
+<p>In general, it is save to delete orphanaged databases. Yet, as as this
+step cannot be undone, you should carefully check the list of orphans.</p>
+"""
 
 gui_label_query_button = "&Query"
 gui_label_stop_button = "&Stop"
 
-# this is a list of all character encodings understood by Python, straight 
-# from the 
+# this is a list of all character encodings understood by Python, straight
+# from the
 CHARACTER_ENCODINGS = ["ascii",
     "big5",
     "big5hkscs",
