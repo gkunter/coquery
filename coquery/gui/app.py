@@ -2212,6 +2212,7 @@ class CoqueryApp(QtGui.QMainWindow):
             errorbox.ErrorBox.show(sys.exc_info())
         if result:
             options.set_current_server(options.cfg.current_server)
+
         self.fill_combo_corpus()
         self.change_corpus()
         self.corpusListUpdated.emit()
@@ -2226,6 +2227,7 @@ class CoqueryApp(QtGui.QMainWindow):
             errorbox.ErrorBox.show(sys.exc_info())
         if result:
             options.set_current_server(options.cfg.current_server)
+
         self.fill_combo_corpus()
         self.change_corpus()
         self.corpusListUpdated.emit()
@@ -2415,6 +2417,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
             if active_widget:
                 active_widget.setFocus()
+
+        from .orphanageddatabases import OrphanagedDatabasesDialog
+        OrphanagedDatabasesDialog.display(self)
 
         return state
 
