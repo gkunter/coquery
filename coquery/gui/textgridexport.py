@@ -37,8 +37,8 @@ class TextgridExportDialog(QtGui.QDialog):
         self.ui.edit_output_path.textChanged.connect(self.check_gui)
         self.ui.edit_sound_path.textChanged.connect(self.check_gui)
         self.ui.list_columns.itemClicked.connect(self.check_gui)
-        self.ui.button_output_path.setIcon(parent.get_icon("folder"))
-        self.ui.button_sound_path.setIcon(parent.get_icon("folder"))
+        self.ui.button_output_path.setIcon(parent.get_icon("Folder"))
+        self.ui.button_sound_path.setIcon(parent.get_icon("Folder"))
 
         # Add auto complete to file name edit:
         completer = QtGui.QCompleter()

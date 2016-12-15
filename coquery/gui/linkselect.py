@@ -97,7 +97,7 @@ class LinkSelect(QtGui.QDialog):
             corpusItem.setText(0, corpus)
             corpusItem.setObjectName(corpus)
             if self.parent():
-                corpusItem.setIcon(0, self.parent().get_icon("database"))
+                corpusItem.setIcon(0, self.parent().get_icon("Database"))
             if not only_resources:
                 for table in [x for x in table_dict if x not in self.res_from.special_table_list]:
                     table_string = getattr(resource, "{}_table".format(table))
@@ -105,14 +105,14 @@ class LinkSelect(QtGui.QDialog):
                     tableItem.setText(0, table_string)
                     tableItem.setObjectName(table)
                     if self.parent():
-                        tableItem.setIcon(0, self.parent().get_icon("table"))
+                        tableItem.setIcon(0, self.parent().get_icon("Table"))
                     for feature in [x for x in table_dict[table] if not x.rpartition("_")[-1] in ("table", "id")]:
                         featureItem = CoqTreeItem()
                         featureItem.setText(0, getattr(resource, feature))
                         featureItem.setObjectName(feature)
                         tableItem.addChild(featureItem)
                         if feature in list(tag_list.values()) and self.parent():
-                            featureItem.setIcon(0, self.parent().get_icon("tag"))
+                            featureItem.setIcon(0, self.parent().get_icon("Price Tag"))
                         
                     if tableItem.childCount():
                         corpusItem.addChild(tableItem)

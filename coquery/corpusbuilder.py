@@ -630,7 +630,7 @@ class Table(object):
                 if "VARCHAR" in field_type.upper() or "TEXT" in field_type.upper():
                     str_list[i] = "{} COLLATE NOCASE".format(x)
 
-        S = ", ".join(str_list)
+        S = ",\n\t".join(str_list)
         command_list.insert(0, S)
         table_str = "; ".join(command_list)
         if db_type == SQL_SQLITE:
@@ -668,6 +668,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
     # source file.
     special_files = []
     __version__ = "1.0"
+    # file that contains meta data (only applicable in user corpora):
+    meta_data = ""
     
     _read_file_formatter = "Reading {file} (%v of %m)..."
     
@@ -785,6 +787,18 @@ class BaseCorpusBuilder(corpus.BaseResource):
             df.to_sql(self.corpus_table, self.DB.engine, if_exists="append", index=False)
             self._corpus_buffer = []             
 
+    @classmethod
+    def probe_metadata(cls, path):
+        """
+        Check whether the file 'path' is a meta data file.
+
+        Parameters
+        ----------
+        path : str
+            The path to a file that is to be probed.
+        """
+        return os.path.basename(path) == cls.meta_data
+
     def create_table_description(self, table_name, column_list):
         """
         Create the description of a MySQL table. The MySQL table described
@@ -868,10 +882,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
 
         for i, current_table in enumerate(self._new_tables):
+            S = self._new_tables[current_table].get_create_string(self.arguments.db_type)
             self._new_tables[current_table].setDB(self.DB)
-            self.DB.create_table(
-                current_table, 
-                self._new_tables[current_table].get_create_string(self.arguments.db_type))
+            self.DB.create_table(current_table, S)
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
             if self.interrupted:
@@ -1801,6 +1814,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     self.query_item_gloss = x
                     break
 
+    def store_metadata(self):
+        pass
+
+    def insert_metadata(self, *args):
+        pass
+
     def set_surface_feature(self, rc_feature):
         """
         Set the surface feature, i.e. the one that is used to display the 
@@ -2124,6 +2143,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             try:
                 if self.arguments.c and not self.interrupted:
+                    if self.arguments.metadata:
+                        self.add_metadata(self.arguments.metadata)
                     current = progress_next(current)
                     self.build_create_tables()
                     progress_done()
@@ -2134,6 +2155,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
             
                 if self.arguments.l and not self.interrupted:
                     current = progress_next(current)
+                    if self.arguments.metadata:
+                        self.store_metadata()
                     self.build_load_files()
                     self.commit_data()
                     progress_done()

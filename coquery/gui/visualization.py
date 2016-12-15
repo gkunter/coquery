@@ -83,14 +83,14 @@ class CoqNavigationToolbar(NavigationToolbar):
             if isinstance(x, QtGui.QToolButton):
                 self._buttons[str(x.text())] = x
 
-        self._buttons["Forward"].setIcon(options.cfg.main_window.get_icon("sign-right"))
-        self._buttons["Back"].setIcon(options.cfg.main_window.get_icon("sign-left"))
-        self._buttons["Home"].setIcon(options.cfg.main_window.get_icon("sign-up"))
-        self._buttons["Zoom"].setIcon(options.cfg.main_window.get_icon("search"))
-        self._buttons["Save"].setIcon(options.cfg.main_window.get_icon("floppy"))
-        self._buttons["Customize"].setIcon(options.cfg.main_window.get_icon("pencil"))
-        self._buttons["Pan"].setIcon(options.cfg.main_window.get_icon("pan"))
-        self._buttons["Subplots"].setIcon(options.cfg.main_window.get_icon("scale"))
+        self._buttons["Forward"].setIcon(options.cfg.main_window.get_icon("Right Squared"))
+        self._buttons["Back"].setIcon(options.cfg.main_window.get_icon("Left Squared"))
+        self._buttons["Home"].setIcon(options.cfg.main_window.get_icon("Up Squared"))
+        self._buttons["Zoom"].setIcon(options.cfg.main_window.get_icon("Resize"))
+        self._buttons["Save"].setIcon(options.cfg.main_window.get_icon("Save"))
+        self._buttons["Customize"].setIcon(options.cfg.main_window.get_icon("Edit"))
+        self._buttons["Pan"].setIcon(options.cfg.main_window.get_icon("Resize Four Directions"))
+        self._buttons["Subplots"].setIcon(options.cfg.main_window.get_icon("Crop"))
         
         self._buttons["Subplots"].setToolTip("Adjust figure margins")
         self._buttons["Customize"].setToolTip("Edit labels, colors, and fonts")

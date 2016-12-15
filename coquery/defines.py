@@ -287,6 +287,15 @@ except NameError:
     unicode = str
     long = int
 
+msg_invalid_metadata = """
+<p><b>The file that you selected does not appear to contain valid meta data.</b></p>
+<p>A valid meta data file is a CSV file, i.e. a text file in which the
+column values are separated by commas.</p>
+<p>The first row of the meta data file contains the column names. The first
+column has to be named <code>File</code> or <code>Filename</code>. It links
+the columns following the first to the other meta data values.</p>
+"""
+
 msg_no_word_information = """
 <p><b>Your stopword filters could not be applied to the results table.</b></p>
 <p>In order to be able to use stopword filtering, the results table must 

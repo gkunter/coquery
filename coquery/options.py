@@ -828,7 +828,6 @@ class Options(object):
             self.args.stopwords_file_path = config_file.str("gui", "stopwords_file_path", fallback=os.path.expanduser("~"))
             self.args.filter_file_path = config_file.str("gui", "filter_file_path", fallback=os.path.expanduser("~"))
             self.args.uniques_file_path = config_file.str("gui", "uniques_file_path", fallback=os.path.expanduser("~"))
-            self.args.corpus_source_path = config_file.str("gui", "corpus_source_path", fallback=os.path.expanduser("~"))
             self.args.corpus_table_source_path = config_file.str("gui", "corpus_table_source_path", fallback="")
             self.args.text_source_path = config_file.str("gui", "text_source_path", fallback="")
 
@@ -1077,10 +1076,6 @@ def save_configuration():
             config.set("gui", "uniques_file_path", cfg.uniques_file_path)
         except AttributeError:
             config.set("gui", "uniques_file_path", os.path.expanduser("~"))
-        try:
-            config.set("gui", "corpus_source_path", cfg.corpus_source_path)
-        except AttributeError:
-            config.set("gui", "corpus_source_path", os.path.expanduser("~"))
         try:
             config.set("gui", "corpus_table_source_path", cfg.corpus_table_source_path)
         except AttributeError:

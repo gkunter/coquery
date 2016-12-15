@@ -289,54 +289,37 @@ class SqlDB (object):
                   index=bool(index_label), 
                   index_label=index_label)
 
-    def load_infile(self, 
-                    file_name, 
-                    table_name, 
-                    target, 
-                    sep=None, 
-                    skip=0, 
-                    quoting=None,
-                    term=None,
-                    engine="python"):
+    def load_infile(self, file_name, table_name, fillna=None, drop_duplicate=None, engine="c", **kwargs):
         """
         Bulk-load a text file into a table.
-        
+
         Parameters
         ----------
-        file_name : string
-            The name of the text file to load
-        table_name : string
-            The name of the table to load into
-        target : tuple
-            A tuples containing the column names to read into
-        sep : character 
-            The character that delimits the columns in the text file
-        skip : int 
-            The number of lines to skip from the beginning of the file
-        term : character 
-            The character that terminates lines in the text file
+            fillna : used to fill missing values
+            kwargs : dictionary of pandas.read_csv arguments
+
         """
         old_stderr = sys.stderr
         err = io.StringIO()
         sys.stderr = err
         
-        df = pd.read_csv(file_name, 
-                            sep=sep, 
-                            names=target,
-                            quoting=quoting,
-                            header=skip, 
-                            error_bad_lines=False,
-                            engine=engine)
+        df = pd.read_csv(file_name, **kwargs, engine="c")
+
+        if fillna is not None:
+            df = df.fillna(fillna)
+
+        if drop_duplicate:
+            df = df[~df.duplicated(drop_duplicate)]
 
         sys.stderr = old_stderr
-            
         try:
             warn_string = eval(err.getvalue()).decode("utf-8")
         except:
             warn_string = err.getvalue()
         for x in warn_string.split("\n"):
             if x:
-                logger.warn("File {} – {}".format(self.arguments.path, x))
+                logger.warn("File {} – {}".format(file_name, x))
+                print("File {} – {}".format(file_name, x))
 
         self.load_dataframe(df, table_name, None)
         return

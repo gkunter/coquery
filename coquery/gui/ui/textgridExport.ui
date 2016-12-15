@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>526</height>
+    <height>568</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_4">
    <item>
-    <widget class="QGroupBox" name="">
+    <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string>Text grid files</string>
      </property>
@@ -26,6 +26,9 @@
          <widget class="QLabel" name="label">
           <property name="text">
            <string>&amp;Output path:</string>
+          </property>
+          <property name="buddy">
+           <cstring>edit_output_path</cstring>
           </property>
          </widget>
         </item>
@@ -72,6 +75,9 @@
          <widget class="QLabel" name="label_7">
           <property name="text">
            <string>Fi&amp;le prefix</string>
+          </property>
+          <property name="buddy">
+           <cstring>edit_file_prefix</cstring>
           </property>
          </widget>
         </item>

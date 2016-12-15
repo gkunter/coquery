@@ -319,29 +319,32 @@ class CoqueryApp(QtGui.QMainWindow):
         self._resizing_column = False
 
     def setup_icons(self):
-        self.ui.action_help.setIcon(self.get_icon("life-buoy"))
-        self.ui.action_connection_settings.setIcon(self.get_icon("database"))
-        self.ui.action_settings.setIcon(self.get_icon("wrench-screwdriver"))
-        self.ui.action_build_corpus.setIcon(self.get_icon("sign-add"))
-        self.ui.action_manage_corpus.setIcon(self.get_icon("database_2"))
-        self.ui.action_corpus_documentation.setIcon(self.get_icon("sign-info"))
-        self.ui.action_statistics.setIcon(self.get_icon("monitor"))
-        self.ui.action_quit.setIcon(self.get_icon("sign-error"))
-        self.ui.action_view_log.setIcon(self.get_icon("calendar-clock"))
-        self.ui.action_save_results.setIcon(self.get_icon("floppy"))
-        self.ui.action_save_selection.setIcon(self.get_icon("floppy"))
-        self.ui.button_change_file.setIcon(self.get_icon("folder"))
-        self.ui.button_remove_group.setIcon(self.get_icon("sign-delete"))
+        self.ui.action_help.setIcon(self.get_icon("Lifebuoy"))
+        self.ui.action_connection_settings.setIcon(self.get_icon("Data Configuration"))
+        self.ui.action_settings.setIcon(self.get_icon("Maintenance"))
+        self.ui.action_build_corpus.setIcon(self.get_icon("Add Database"))
+        self.ui.action_manage_corpus.setIcon(self.get_icon("Database"))
+        self.ui.action_corpus_documentation.setIcon(self.get_icon("Info"))
+        self.ui.action_statistics.setIcon(self.get_icon("Table"))
+        self.ui.action_quit.setIcon(self.get_icon("Exit"))
+        self.ui.action_view_log.setIcon(self.get_icon("List"))
+        self.ui.action_save_results.setIcon(self.get_icon("Save"))
+        self.ui.action_save_selection.setIcon(self.get_icon("Save"))
+        self.ui.button_change_file.setIcon(self.get_icon("Open Folder"))
+        self.ui.button_remove_group.setIcon(self.get_icon("Delete"))
         #self.ui.button_add_group.setIcon(self.get_icon("sign-add"))
-        self.ui.button_group_up.setIcon(self.get_icon("sign-up"))
-        self.ui.button_group_down.setIcon(self.get_icon("sign-down"))
-        self.ui.button_run_query.setIcon(self.get_icon("go"))
-        self.ui.button_stop_query.setIcon(self.get_icon("stop"))
-        self.ui.button_apply_management.setIcon(self.get_icon("sign-sync"))
-        self.ui.button_cancel_management.setIcon(self.get_icon("sign-ban"))
+        self.ui.button_group_up.setIcon(self.get_icon("Circled Chevron Up"))
+        self.ui.button_group_down.setIcon(self.get_icon("Circled Chevron Down"))
+        self.ui.button_run_query.setIcon(self.get_icon("Circled Play"))
+        self.ui.button_stop_query.setIcon(self.get_icon("Cancel"))
+        self.ui.button_apply_management.setIcon(self.get_icon("Process"))
+        self.ui.button_cancel_management.setIcon(self.get_icon("Stop"))
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
+        def _set_number_of_tokens():
+            options.cfg.number_of_tokens = int(self.ui.spin_query_limit.value())
+
         self.ui.action_save_results.triggered.connect(self.save_results)
         self.ui.action_save_selection.triggered.connect(lambda: self.save_results(selection=True))
         self.ui.action_copy_to_clipboard.triggered.connect(lambda: self.save_results(selection=True, clipboard=True))
@@ -388,6 +391,28 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
         self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
+
+        # add match limit widget to settings menu:
+        self.ui.menuSettings.addSeparator()
+        _widget = QtGui.QWidget()
+        _hlayout = QtGui.QHBoxLayout(_widget)
+        _limit_action = QtGui.QWidgetAction(self)
+        _label = QtGui.QLabel("Limit matches: ")
+        self.ui.spin_query_limit = QtGui.QSpinBox()
+        self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
+        self.ui.spin_query_limit.valueChanged.connect(_set_number_of_tokens)
+        self.ui.spin_query_limit.setSpecialValueText("all")
+        self.ui.spin_query_limit.setMaximum(9999)
+        self.ui.spin_query_limit.editingFinished.connect(
+            lambda: self.ui.menuSettings.hide())
+
+        _hlayout.addWidget(_label)
+        _hlayout.addWidget(self.ui.spin_query_limit)
+        _hlayout.addWidget(QtGui.QLabel("per query"))
+
+        _action = QtGui.QWidgetAction(self)
+        _action.setDefaultWidget(_widget)
+        self.ui.menuSettings.addAction(_action)
 
     def setup_hooks(self):
         """
@@ -454,7 +479,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
 
         self.corpusListUpdated.connect(self.check_corpus_widgets)
-        self.columnVisibilityChanged.connect(lambda: self.reaggregate(recalculate=True, start=True))
+        self.columnVisibilityChanged.connect(lambda: self.reaggregate(start=True))
 
         self.column_tree.itemChanged.connect(self.toggle_selected_feature)
 
@@ -590,7 +615,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def check_group_items(self):
         for item, group_column in self.ui.list_group_columns.columns:
             if group_column not in options.cfg.selected_features:
-                item.setIcon(self.get_icon("sign-warning"))
+                item.setIcon(self.get_icon("Error"))
                 item.setToolTip(msg_column_not_in_data)
             else:
                 item.setIcon(QtGui.QIcon())
@@ -994,7 +1019,11 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         icon = QtGui.QIcon()
         if small_n_flat:
-            path = os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s))
+            path = os.path.join(options.cfg.base_path, "icons", "Icons8", "PNG", "24x24", "{}.png".format(s))
+            if not os.path.exists(path):
+                path = os.path.join(options.cfg.base_path, "icons", "Essential_Collection", "PNG", "16x16", "{}.png".format(s))
+            if not os.path.exists(path):
+                path = os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s))
         else:
             path = os.path.join(options.cfg.base_path, "icons", "artwork", s)
         icon.addFile(path)
@@ -1042,6 +1071,11 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 self.ui.list_toolbox.item(row, col).setIcon(QtGui.QIcon())
 
+        active_icon = "Active State"
+        filter_icon = "Filter"
+        error_icon = "Error"
+        problem_icon = "Questions"
+
         if row == TOOLBOX_CONTEXT:
             radio = self.active_context_radio()
             if radio == self.ui.radio_context_mode_none:
@@ -1050,40 +1084,40 @@ class CoqueryApp(QtGui.QMainWindow):
             elif (options.cfg.context_left != 0 or
                 options.cfg.context_right != 0):
                 # valid context mode
-                val = "lightning"
+                val = active_icon
             else:
                 # context requested, but no context span
-                val = "sign-question"
+                val = "info"
             _set_icon(2, val)
 
         elif row == TOOLBOX_STOPWORDS:
             if options.cfg.stopword_list:
-                _set_icon(1, "filter" if self.ui.check_stopwords.isChecked() else None)
-                _set_icon(2, "lightning" if self.ui.check_stopwords.isChecked() else None)
+                _set_icon(1, filter_icon if self.ui.check_stopwords.isChecked() else None)
+                _set_icon(2, active_icon if self.ui.check_stopwords.isChecked() else None)
             else:
-                _set_icon(1, "sign-question" if self.ui.check_stopwords.isChecked() else None)
+                _set_icon(1, problem_icon if self.ui.check_stopwords.isChecked() else None)
                 _set_icon(2, None)
             if self.Session:
                 manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
                 if manager.stopwords_failed:
-                    _set_icon(2, "warning" if self.ui.check_stopwords.isChecked() else None)
+                    _set_icon(2, error_icon if self.ui.check_stopwords.isChecked() else None)
                     _set_icon(1, None)
 
         elif row == TOOLBOX_GROUPING:
             if self._group_functions.get_list():
-                _set_icon(2, "lightning")
+                _set_icon(2, active_icon)
             else:
                 _set_icon(2, None)
             if options.cfg.group_filter_list:
                 if self.ui.list_group_columns.columns:
-                    _set_icon(1, "filter")
+                    _set_icon(1, filter_icon)
                 else:
-                    _set_icon(1, "sign-question")
+                    _set_icon(1, problem_icon)
             else:
                 _set_icon(1, None)
 
         elif row == TOOLBOX_AGGREGATE:
-            val = None if self.ui.aggregate_radio_list[0].isChecked() else "lightning"
+            val = None if self.ui.aggregate_radio_list[0].isChecked() else active_icon
             _set_icon(2, val)
 
         elif row == TOOLBOX_SUMMARY:
@@ -1095,8 +1129,8 @@ class CoqueryApp(QtGui.QMainWindow):
             l = manager.user_summary_functions.get_list()
 
             active = (self.ui.check_drop_duplicates.isChecked() or l)
-            _set_icon(1, "filter" if options.cfg.filter_list else None)
-            _set_icon(2, "lightning" if active else None)
+            _set_icon(1, filter_icon if options.cfg.filter_list else None)
+            _set_icon(2, active_icon if active else None)
 
     def toggle_toolbox(self, row, col):
         """
@@ -2351,9 +2385,9 @@ class CoqueryApp(QtGui.QMainWindow):
 
             # Choose a suitable icon for the connection combo box:
             if state:
-                icon = self.get_icon("sign-check")
+                icon = self.get_icon("Ok")
             else:
-                icon = self.get_icon("sign-error")
+                icon = self.get_icon("Error")
 
             # Disconnect the currentIndexChanged signal to avoid infinite
             # recursive loop:
@@ -2662,7 +2696,7 @@ class CoqueryApp(QtGui.QMainWindow):
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             self._column_functions.add_function(fun)
-            self.reaggregate(recalculate=False, start=True)
+            self.reaggregate(start=True)
 
         self.set_function_button_labels()
         self.enable_apply_button()

@@ -16,7 +16,7 @@
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1,0">
    <property name="leftMargin">
     <number>4</number>
    </property>
@@ -26,7 +26,16 @@
    <item>
     <widget class="QGroupBox" name="OptionsBox">
      <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="margin">
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
        <number>10</number>
       </property>
       <item>
@@ -34,7 +43,7 @@
         <item>
          <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>&amp;File name:</string>
+           <string>File na&amp;me:</string>
           </property>
           <property name="buddy">
            <cstring>edit_file_name</cstring>
@@ -126,7 +135,7 @@
         <item row="3" column="0">
          <widget class="QLabel" name="label">
           <property name="text">
-           <string>File contains &amp;header:</string>
+           <string>Fi&amp;le contains header:</string>
           </property>
           <property name="buddy">
            <cstring>file_has_headers</cstring>
@@ -168,7 +177,7 @@
         <item row="6" column="0">
          <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>Character &amp;encoding:</string>
+           <string>&amp;Character encoding:</string>
           </property>
           <property name="buddy">
            <cstring>combo_encoding</cstring>
@@ -181,7 +190,7 @@
         <item row="4" column="0">
          <widget class="QLabel" name="label_6">
           <property name="text">
-           <string>Text lines to &amp;ignore after header:</string>
+           <string>&amp;Text lines to ignore after header:</string>
           </property>
           <property name="buddy">
            <cstring>ignore_lines</cstring>
@@ -211,7 +220,7 @@
         <item row="1" column="0">
          <widget class="QLabel" name="label_query_column">
           <property name="text">
-           <string>Read &amp;queries from column number:</string>
+           <string>&amp;Read queries from column number:</string>
           </property>
           <property name="buddy">
            <cstring>query_column</cstring>
