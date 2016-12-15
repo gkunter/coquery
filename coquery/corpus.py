@@ -3054,7 +3054,10 @@ class CorpusClass(object):
             """
             Based on http://stackoverflow.com/questions/2077283/
             """
-            return "".join(html_escape_table.get(c, c) for c in s)
+            try:
+                return "".join(html_escape_table.get(c, c) for c in s)
+            except:
+                return s
 
         if not hasattr(self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
