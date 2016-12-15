@@ -104,9 +104,9 @@ class CoqResourceTree(classes.CoqTreeWidget):
 
             leaf.setText(0, label)
             if label != getattr(resource, rc_feature):
-                leaf.setIcon(0, self.parent.get_icon("tag"))
+                leaf.setIcon(0, self.parent.get_icon("Price Tag"))
                 if root:
-                    root.setIcon(0, self.parent.get_icon("tag"))
+                    root.setIcon(0, self.parent.get_icon("Price Tag"))
 
             return leaf
 

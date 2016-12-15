@@ -112,8 +112,8 @@ class CoqColumnMenu(QtGui.QMenu):
         #edit_function = QtGui.QAction("&Edit function...", parent)
         remove_function = QtGui.QAction("&Remove function{}".format(suffix), parent)
 
-        show_column.setIcon(parent.get_icon("sign-maximize"))
-        hide_column.setIcon(parent.get_icon("sign-minimize"))
+        show_column.setIcon(parent.get_icon("Expand Arrow"))
+        hide_column.setIcon(parent.get_icon("Collapse Arrow"))
 
         if not all_columns_visible:
             show_column.triggered.connect(lambda: self.showColumnRequested.emit(columns))

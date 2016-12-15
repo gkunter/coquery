@@ -24,7 +24,7 @@ from .ui.stopwordsUi import Ui_Stopwords
 class CoqStopWord(QtGui.QListWidgetItem):
     def __init__(self, *args):
         super(CoqStopWord, self).__init__(*args)
-        icon = options.cfg.main_window.get_icon("sign-ban")
+        icon = options.cfg.main_window.get_icon("Delete")
         self.setIcon(icon)
         brush = QtGui.QBrush(QtGui.QColor("lightcyan"))
         self.setBackground(brush)

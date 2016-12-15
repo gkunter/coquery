@@ -94,10 +94,10 @@ class FunctionDialog(QtGui.QDialog):
         self.ui = Ui_FunctionsDialog()
         self.ui.setupUi(self)
 
-        self.ui.button_up.setIcon(options.cfg.main_window.get_icon("sign-up"))
-        self.ui.button_down.setIcon(options.cfg.main_window.get_icon("sign-down"))
-        self.ui.button_add.setIcon(options.cfg.main_window.get_icon("sign-left"))
-        self.ui.button_remove.setIcon(options.cfg.main_window.get_icon("sign-right"))
+        self.ui.button_up.setIcon(options.cfg.main_window.get_icon("Circled Chevron Up"))
+        self.ui.button_down.setIcon(options.cfg.main_window.get_icon("Circled Chevron Down"))
+        self.ui.button_add.setIcon(options.cfg.main_window.get_icon("Circled Chevron Left"))
+        self.ui.button_remove.setIcon(options.cfg.main_window.get_icon("Circled Chevron Right"))
 
         self.session = options.cfg.main_window.Session
         for x in available_columns:

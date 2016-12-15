@@ -76,11 +76,11 @@ class Settings(QtGui.QDialog):
     def setup_cache_button(self):
         self.ui.button_clear_cache.setText("Clear cache")
         self.ui.button_clear_cache.setEnabled(True)
-        icon = self._options.main_window.get_icon("sign-delete")
+        icon = self._options.main_window.get_icon("Delete")
         if options.cfg.use_cache:
             if options.cfg.query_cache.has_backup():
                 self.ui.button_clear_cache.setText("Restore cache")
-                icon = self._options.main_window.get_icon("trashcan-full")
+                icon = self._options.main_window.get_icon("Recycling symbol")
             else:
                 self.ui.button_clear_cache.setEnabled(options.cfg.query_cache.size() > 0)
         self.ui.button_clear_cache.setIcon(icon)

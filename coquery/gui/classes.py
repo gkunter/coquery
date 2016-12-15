@@ -663,7 +663,7 @@ class CoqDetailBox(QtGui.QWidget):
             self.box.show()
             self.header.setFlat(False)
             self.header.setText(self._alternative)
-            icon = options.cfg.main_window.get_icon("sign-minimize")
+            icon = options.cfg.main_window.get_icon("Up Squared")
         else:
             try:
                 self.header.setText(self._text)
@@ -673,7 +673,7 @@ class CoqDetailBox(QtGui.QWidget):
                 # harmless RuntimeError
                 pass
             self.header.setFlat(True)
-            icon = options.cfg.main_window.get_icon("sign-maximize")
+            icon = options.cfg.main_window.get_icon("Down Squared")
         self.header.setIcon(icon)
 
     def setExpanded(self, b):
@@ -1161,7 +1161,7 @@ class CoqTextTag(QtGui.QFrame):
 
         self.horizontalLayout.addWidget(self.close_button)
 
-        icon = options.cfg.main_window.get_icon("sign-ban")
+        icon = options.cfg.main_window.get_icon("Delete")
 
         height = self.fontMetrics().height()
         new_height = int(height * 0.75)
@@ -1803,9 +1803,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             try:
                 # add arrows as sorting direction indicators if necessary:
                 if not sorter.ascending:
-                    return options.cfg.main_window.get_icon("sign-up")
+                    return options.cfg.main_window.get_icon("Descending Sorting")
                 else:
-                    return options.cfg.main_window.get_icon("sign-down")
+                    return options.cfg.main_window.get_icon("Ascending Sorting")
             except AttributeError:
                 return None
 

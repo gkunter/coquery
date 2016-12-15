@@ -59,9 +59,9 @@ class AvailableModulesDialog(QtGui.QDialog):
             self._links[id(name_item)] = url
             
             if flag:
-                status_item.setIcon(options.cfg.main_window.get_icon("sign-check"))
+                status_item.setIcon(options.cfg.main_window.get_icon("Okay"))
             else:
-                status_item.setIcon(options.cfg.main_window.get_icon("sign-error"))
+                status_item.setIcon(options.cfg.main_window.get_icon("Minus"))
 
             
             self.ui.table_modules.setItem(i, 0, name_item)
