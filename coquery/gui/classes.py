@@ -25,7 +25,8 @@ from coquery.errors import *
 from coquery.defines import *
 from coquery.unicode import utf8
 
-from .pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from .pyqt_compat import (QtCore, QtGui, frameShadow, frameShape,
+                          get_toplevel_window)
 
 from xml.sax.saxutils import escape
 
@@ -145,7 +146,7 @@ class CoqInfoLabel(QtGui.QLabel):
         self.setCursor(QtCore.Qt.WhatsThisCursor)
 
         self.setText("")
-        self.setPixmap(options.cfg.main_window.get_icon("sign-info").pixmap(
+        self.setPixmap(get_toplevel_window().get_icon("sign-info").pixmap(
             QtCore.QSize(QtGui.QSpinBox().sizeHint().height(),
                          QtGui.QSpinBox().sizeHint().height())))
 
@@ -660,8 +661,8 @@ class CoqDetailBox(QtGui.QWidget):
 
     def update(self):
         try:
-            up = options.cfg.main_window.get_icon("Up Squared")
-            down = options.cfg.main_window.get_icon("Down Squared")
+            up = get_toplevel_window().get_icon("Up Squared")
+            down = get_toplevel_window().get_icon("Down Squared")
         except AttributeError:
             up = None
             down = None
@@ -1168,7 +1169,7 @@ class CoqTextTag(QtGui.QFrame):
 
         self.horizontalLayout.addWidget(self.close_button)
 
-        icon = options.cfg.main_window.get_icon("Delete")
+        icon = get_toplevel_window().get_icon("Delete")
 
         height = self.fontMetrics().height()
         new_height = int(height * 0.75)
@@ -1267,7 +1268,7 @@ class CoqListWidget(QtGui.QListWidget):
         rc_feature = utf8(rc_feature)
         if self.get_item(rc_feature) is not None:
             return
-        label = getattr(options.cfg.main_window.resource, rc_feature)
+        label = getattr(get_toplevel_window().resource, rc_feature)
         new_item = QtGui.QListWidgetItem(label)
 
         self.columns.append((new_item, rc_feature))
@@ -1280,7 +1281,7 @@ class CoqListWidget(QtGui.QListWidget):
         rc_feature = utf8(rc_feature)
         if self.get_item(rc_feature) is not None:
             return
-        label = getattr(options.cfg.main_window.resource, rc_feature)
+        label = getattr(get_toplevel_window().resource, rc_feature)
         new_item = QtGui.QListWidgetItem(label)
         self.columns.insert(i, (new_item, rc_feature))
         self.insertItem(i, new_item)
@@ -1810,9 +1811,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             try:
                 # add arrows as sorting direction indicators if necessary:
                 if not sorter.ascending:
-                    return options.cfg.main_window.get_icon("Descending Sorting")
+                    return get_toplevel_window().get_icon("Descending Sorting")
                 else:
-                    return options.cfg.main_window.get_icon("Ascending Sorting")
+                    return get_toplevel_window().get_icon("Ascending Sorting")
             except AttributeError:
                 return None
 
@@ -1833,7 +1834,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     def __init__(self, *args, **kwargs):
         super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
         CoqResultCellDelegate._app = options.cfg.app
-        CoqResultCellDelegate._table = options.cfg.main_window.table_model
+        CoqResultCellDelegate._table = get_toplevel_window().table_model
         CoqResultCellDelegate.standard_bg = {
             True: [
                 CoqResultCellDelegate._app.palette().color(
