@@ -94,20 +94,11 @@ class FunctionDialog(QtGui.QDialog):
         self.ui = Ui_FunctionsDialog()
         self.ui.setupUi(self)
 
-        self.ui.button_up.setIcon(options.cfg.main_window.get_icon("Circled Chevron Up"))
-        self.ui.button_down.setIcon(options.cfg.main_window.get_icon("Circled Chevron Down"))
-        self.ui.button_add.setIcon(options.cfg.main_window.get_icon("Circled Chevron Left"))
-        self.ui.button_remove.setIcon(options.cfg.main_window.get_icon("Circled Chevron Right"))
-
         self.session = options.cfg.main_window.Session
-        for x in available_columns:
-            item = CoqListItem(self.session.translate_header(x))
-            item.setObjectName(x)
-            self.ui.list_available_columns.addItem(item)        
-        for x in columns:
-            item = CoqListItem(self.session.translate_header(x))
-            item.setObjectName(x)
-            self.ui.list_selected_columns.addItem(item)        
+
+        self.ui.widget_selection.setSelectedList(columns, self.session.translate_header)
+        self.ui.widget_selection.setAvailableList(
+            available_columns, self.session.translate_header)
 
         max_width = 0
         for x in functions.combine_map:
@@ -126,15 +117,13 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.edit_function_value.textChanged.connect(lambda: self.check_gui())
         self.ui.edit_label.textEdited.connect(self.check_label)
 
-        self.ui.button_add.clicked.connect(self.add_selected)
-        self.ui.button_remove.clicked.connect(self.remove_selected)
-        self.ui.button_up.clicked.connect(self.selected_up)
-        self.ui.button_down.clicked.connect(self.selected_down)
-
         self.function_types = function_types
         self._func = []
 
         self.ui.list_functions.currentRowChanged.connect(lambda: self.check_gui())
+
+        self.ui.widget_selection.itemSelectionChanged.connect(self.change_columns)
+        self.ui.widget_selection.setMinimumItems(1)
 
         if max_parameters == 0:
             self.ui.parameter_box.hide()
@@ -186,6 +175,11 @@ class FunctionDialog(QtGui.QDialog):
         except TypeError:
             pass
 
+    def change_columns(self, *args):
+        self.columns = [x.data(QtCore.Qt.UserRole) for x
+                        in self.ui.widget_selection.selectedItems()]
+        self.check_gui()
+
     def set_function_group(self, i):
         self.function_list = [x for x in self._func[i] if x._name != "virtual"]
         self.ui.list_functions.blockSignals(True)
@@ -202,30 +196,6 @@ class FunctionDialog(QtGui.QDialog):
         self.ui.list_classes.blockSignals(False)
         self.ui.list_functions.setCurrentRow(0)
 
-    def add_selected(self):
-        selected = self.ui.list_available_columns.selectedItems()
-        for x in selected:
-            i = self.ui.list_available_columns.row(x)
-            self.ui.list_available_columns.takeItem(i)
-            self.ui.list_selected_columns.insertItem(self.ui.list_selected_columns.count(), x)
-            self.columns.append(x.objectName())
-        self.check_gui()
-        
-    def remove_selected(self):
-        selected = self.ui.list_selected_columns.selectedItems()
-        for x in selected:
-            i = self.ui.list_selected_columns.row(x)
-            self.ui.list_selected_columns.takeItem(i)
-            self.ui.list_available_columns.insertItem(self.ui.list_available_columns.count(), x)
-            self.columns.remove(x.objectName())
-        self.check_gui()
-        
-    def selected_up(self):
-        pass
-    
-    def selected_down(self):
-        pass
-    
     def select_function(self, func):
         self.columns = func.columns()
         try:
