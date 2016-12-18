@@ -2645,7 +2645,7 @@ class CoqueryApp(QtGui.QMainWindow):
             label_stopwords.format(get_str(l)))
 
     def add_function(self, columns=[], summary=False, group=False, **kwargs):
-        from . import functionapply
+        from . import addfunction
 
         session = self.Session
         if session is not None:
@@ -2703,7 +2703,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 kwargs.update({"function_class": tuple()})
             if "available_columns" not in kwargs:
                 kwargs.update({"available_columns": [x for x in self.table_model.content.columns if x not in columns]})
-        response = functionapply.FunctionDialog.set_function(parent=self, columns=columns, **kwargs)
+        response = addfunction.FunctionDialog.set_function(parent=self, columns=columns, **kwargs)
 
         if response is None:
             return
@@ -2723,7 +2723,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.enable_apply_button()
 
     def edit_function(self, column):
-        from . import functionapply
+        from . import addfunction
         func = self._column_functions.find_function(column)
 
         dtypes = pd.Series([self.table_model.get_dtype(x) for x in func.columns(self.table_model.content)])
@@ -2738,7 +2738,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         print("----")
         print(func, func.columns(self.table_model.content), d)
-        response = functionapply.FunctionDialog.edit_function(func, parent=self, **d)
+        response = addfunction.FunctionDialog.edit_function(func, parent=self, **d)
         if response:
             fun_type, value, aggr, label = response
             new_func = fun_type(columns=func.columns(self.table_model.content), value=value, aggr=aggr, label=label)
