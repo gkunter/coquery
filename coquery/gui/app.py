@@ -143,8 +143,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.setup_app()
         self.show()
 
-        options.cfg.main_window = self
-
         try:
             self.restoreState(options.settings.value("main_state"))
         except TypeError:
@@ -897,7 +895,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
                     return
 
-        origin_id = options.cfg.main_window.Session.Corpus.get_source_id(token_id)
+        origin_id = self.Session.Corpus.get_source_id(token_id)
 
         from . import contextviewer
         viewer = contextviewer.ContextView(
@@ -1434,13 +1432,13 @@ class CoqueryApp(QtGui.QMainWindow):
                 cb.setText(
                     tab.to_csv(sep=str("\t"),
                                index=False,
-                               header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
+                               header=[self.Session.translate_header(x) for x in tab.columns],
                                encoding=options.cfg.output_encoding), mode=cb.Clipboard)
             else:
                 tab.to_csv(name,
                            sep=options.cfg.output_separator,
                            index=False,
-                           header=[options.cfg.main_window.Session.translate_header(x) for x in tab.columns],
+                           header=[self.Session.translate_header(x) for x in tab.columns],
                            encoding=options.cfg.output_encoding)
         except IOError:
             QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
@@ -1789,7 +1787,7 @@ class CoqueryApp(QtGui.QMainWindow):
             A list of column names.
         """
         manager = managers.get_manager(options.cfg.MODE,
-                                       options.cfg.main_window.Session.Resource.name)
+                                       self.Session.Resource.name)
         for column in selection:
             manager.hide_column(column)
         self.update_columns()
@@ -1804,7 +1802,7 @@ class CoqueryApp(QtGui.QMainWindow):
             A list of column names.
         """
         manager = managers.get_manager(options.cfg.MODE,
-                                       options.cfg.main_window.Session.Resource.name)
+                                       self.Session.Resource.name)
         for column in selection:
             manager.show_column(column)
         self.update_columns()
@@ -1896,7 +1894,7 @@ class CoqueryApp(QtGui.QMainWindow):
     def change_sorting_order(self, tup):
         column, ascending, reverse = tup
         manager = managers.get_manager(options.cfg.MODE,
-                                      options.cfg.main_window.Session.Resource.name)
+                                      self.Session.Resource.name)
         if ascending is None:
             manager.remove_sorter(column)
         else:
