@@ -18,13 +18,13 @@ from coquery.defines import *
 from coquery.general import is_language_code, language_by_code, code_by_language
 from coquery.unicode import utf8
 from . import classes
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from .ui.stopwordsUi import Ui_Stopwords
 
 class CoqStopWord(QtGui.QListWidgetItem):
     def __init__(self, *args):
         super(CoqStopWord, self).__init__(*args)
-        icon = options.cfg.main_window.get_icon("Delete")
+        icon = get_toplevel_window().get_icon("Delete")
         self.setIcon(icon)
         brush = QtGui.QBrush(QtGui.QColor("lightcyan"))
         self.setBackground(brush)

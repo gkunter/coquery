@@ -17,7 +17,7 @@ from coquery import functions
 from coquery import managers
 from coquery.defines import *
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from .ui.addFunctionUi import Ui_FunctionsDialog
 from .classes import CoqListItem
 
@@ -94,7 +94,7 @@ class FunctionDialog(QtGui.QDialog):
         self.ui = Ui_FunctionsDialog()
         self.ui.setupUi(self)
 
-        self.session = options.cfg.main_window.Session
+        self.session = get_toplevel_window().Session
 
         self.ui.widget_selection.setSelectedList(columns, self.session.translate_header)
         self.ui.widget_selection.setAvailableList(
@@ -289,7 +289,7 @@ class FunctionDialog(QtGui.QDialog):
         if aggr == "":
             aggr = func.default_aggr
         
-        session = options.cfg.main_window.Session
+        session = get_toplevel_window().Session
         tmp_func = func(
             columns = self.columns,
             value = utf8(self.ui.edit_function_value.text()),

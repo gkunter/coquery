@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 from coquery import options
 from coquery.defines import *
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from .ui.addFilterUi import Ui_FiltersDialog
 from .classes import CoqTableItem, CoqListItem
 from coquery.filters import Filter
@@ -27,8 +27,8 @@ class FilterDialog(QtGui.QDialog):
         self.ui = Ui_FiltersDialog()
         self.ui.setupUi(self)
 
-        self.ui.button_add.setIcon(options.cfg.main_window.get_icon("sign-add"))
-        self.ui.button_remove.setIcon(options.cfg.main_window.get_icon("sign-delete"))
+        self.ui.button_add.setIcon(get_toplevel_window().get_icon("sign-add"))
+        self.ui.button_remove.setIcon(get_toplevel_window().get_icon("sign-delete"))
 
         for x in columns:
             item = CoqListItem(session.translate_header(x))
@@ -150,7 +150,7 @@ class FilterDialog(QtGui.QDialog):
             getattr(self.ui,
                     self.radio_operators[filt.operator]).setChecked(True)
             self.ui.edit_value.setText(utf8(filt.value))
-            column_label = options.cfg.main_window.Session.translate_header(
+            column_label = get_toplevel_window().Session.translate_header(
                 filt.feature)
             for i in range(self.ui.list_columns.count()):
                 if utf8(self.ui.list_columns.item(i).text()) == column_label:
@@ -161,7 +161,7 @@ class FilterDialog(QtGui.QDialog):
         """
         Return a string containing a visual representation of the filter.
         """
-        col = options.cfg.main_window.Session.translate_header(filt.feature)
+        col = get_toplevel_window().Session.translate_header(filt.feature)
         value = filt.fix(filt.value)
         op = OPERATOR_LABELS[filt.operator]
         return "{} {} {}".format(col, op, value)

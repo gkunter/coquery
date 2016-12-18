@@ -7,7 +7,7 @@ from coquery.defines import *
 from coquery.unicode import utf8
 from coquery import managers
 
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from . import classes
 
 class CoqResourceMenu(QtGui.QMenu):
@@ -87,7 +87,7 @@ class CoqColumnMenu(QtGui.QMenu):
         super(CoqColumnMenu, self).__init__(title, parent, *args, **kwargs)
         self.columns = columns
 
-        session = options.cfg.main_window.Session
+        session = get_toplevel_window().Session
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
 
         suffix = "s" if len(columns) > 1 else ""

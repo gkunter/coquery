@@ -14,7 +14,7 @@ import sys
 from coquery import options
 from coquery.errors import remove_source_path, add_source_path
 from coquery.unicode import utf8
-from .pyqt_compat import QtGui, QtCore
+from .pyqt_compat import QtGui, QtCore, get_toplevel_window
 from .ui.settingsUi import Ui_SettingsDialog
 
 class Settings(QtGui.QDialog):
@@ -76,11 +76,11 @@ class Settings(QtGui.QDialog):
     def setup_cache_button(self):
         self.ui.button_clear_cache.setText("Clear cache")
         self.ui.button_clear_cache.setEnabled(True)
-        icon = self._options.main_window.get_icon("Delete")
+        icon = get_toplevel_window().get_icon("Delete")
         if options.cfg.use_cache:
             if options.cfg.query_cache.has_backup():
                 self.ui.button_clear_cache.setText("Restore cache")
-                icon = self._options.main_window.get_icon("Recycling symbol")
+                icon = get_toplevel_window().get_icon("Recycling symbol")
             else:
                 self.ui.button_clear_cache.setEnabled(options.cfg.query_cache.size() > 0)
         self.ui.button_clear_cache.setIcon(icon)

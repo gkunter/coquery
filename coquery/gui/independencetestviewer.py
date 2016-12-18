@@ -19,7 +19,7 @@ from coquery import options
 from coquery.unicode import utf8
 from coquery.queries import ContrastQuery
 
-from .pyqt_compat import QtGui, QtCore
+from .pyqt_compat import QtGui, QtCore, get_toplevel_window
 from .ui.independenceTestViewerUi import Ui_IndependenceTestViewer
 
 import numpy as np
@@ -188,17 +188,17 @@ class IndependenceTestViewer(QtGui.QDialog):
             chi2_op, p_chi2 = estimate_p(chi2).split()
             p_chi2 = float(p_chi2)
         
-        if options.cfg.main_window.Session.filter_list:
+        if get_toplevel_window().Session.filter_list:
             filter_html = """
             <p>Active filters:<br/>
             {}
             </p>
-            """.format("<br/>".join(["<code>{}</code>".format(x) for x in options.cfg.main_window.Session.filter_list]))
+            """.format("<br/>".join(["<code>{}</code>".format(x) for x in get_toplevel_window().Session.filter_list]))
             filter_latex = """
             <p>Active filters:\\\\
             {}
             </p>
-            """.format("\\\\".join(["\\texttt{{{}}}".format(x) for x in options.cfg.main_window.Session.filter_list]))
+            """.format("\\\\".join(["\\texttt{{{}}}".format(x) for x in get_toplevel_window().Session.filter_list]))
         else:
             filter_html = ""
             filter_latex = ""
@@ -247,7 +247,7 @@ class IndependenceTestViewer(QtGui.QDialog):
                 label_1=label_1, label_2=label_2)
         
         self._html = utf8(self.html_template.format(
-            corpus=utf8(options.cfg.main_window.ui.combo_corpus.currentText()),
+            corpus=utf8(get_toplevel_window().ui.combo_corpus.currentText()),
             filters=filter_html,
             label_1=label_1, label_2=label_2,
             freq_1=freq_1, freq_2=freq_2,
@@ -271,7 +271,7 @@ class IndependenceTestViewer(QtGui.QDialog):
             yates=yates))
  
         self._latex = utf8(self.latex_template.format(
-            corpus=utf8(options.cfg.main_window.ui.combo_corpus.currentText()),
+            corpus=utf8(get_toplevel_window().ui.combo_corpus.currentText()),
             filters=filter_html,
             label_1=label_1, label_2=label_2,
             freq_1=freq_1, freq_2=freq_2,

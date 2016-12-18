@@ -19,7 +19,7 @@ import numpy as np
 
 from coquery import options
 from coquery.errors import *
-from .pyqt_compat import QtGui, QtCore
+from .pyqt_compat import QtGui, QtCore, get_toplevel_window
 from .ui.csvOptionsUi import Ui_FileOptions
 
 
@@ -129,7 +129,7 @@ class CSVOptionDialog(QtGui.QDialog):
         else:
             self.ui = Ui_FileOptions()
         self.ui.setupUi(self)
-        icon = options.cfg.main_window.get_icon("Folder")
+        icon = get_toplevel_window().get_icon("Folder")
         self.ui.button_browse_file.setIcon(icon)
 
         self.ui.edit_file_name.setText(default.file_name)

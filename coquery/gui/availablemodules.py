@@ -17,7 +17,7 @@ import sys
 from coquery import options
 from coquery.defines import * 
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from .ui.availableModulesUi import Ui_AvailableModules
 
 class AvailableModulesDialog(QtGui.QDialog):
@@ -59,9 +59,9 @@ class AvailableModulesDialog(QtGui.QDialog):
             self._links[id(name_item)] = url
             
             if flag:
-                status_item.setIcon(options.cfg.main_window.get_icon("Okay"))
+                status_item.setIcon(get_toplevel_window().get_icon("Okay"))
             else:
-                status_item.setIcon(options.cfg.main_window.get_icon("Minus"))
+                status_item.setIcon(get_toplevel_window().get_icon("Minus"))
 
             
             self.ui.table_modules.setItem(i, 0, name_item)

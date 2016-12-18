@@ -18,7 +18,7 @@ from coquery.defines import *
 from coquery.unicode import utf8
 from coquery import managers
 
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from . import classes
 
 
@@ -47,7 +47,7 @@ class CoqResultsTable(classes.CoqTableView):
 
     def setDelegates(self):
         h_header = self.horizontalHeader()
-        session = options.cfg.main_window.Session
+        session = get_toplevel_window().Session
         for i in range(h_header.count()):
             column = self.model().header[h_header.logicalIndex(i)]
             if column.startswith("func_"):

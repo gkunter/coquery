@@ -15,7 +15,7 @@ import os
 
 from coquery import options
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from .classes import CoqListItem
 from .ui.textgridExportUi import Ui_TextgridExport
 
@@ -24,7 +24,7 @@ class TextgridExportDialog(QtGui.QDialog):
         super(TextgridExportDialog, self).__init__(parent)
         self.ui = Ui_TextgridExport()
         self.ui.setupUi(self)
-        session = options.cfg.main_window.Session
+        session = get_toplevel_window().Session
         for col in [x for x in columns if "_endtime_" not in x and
                                           "_starttime_" not in x]:
             item = CoqListItem(session.translate_header(col))

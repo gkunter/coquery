@@ -51,7 +51,7 @@ from coquery.errors import *
 
 from . import classes
 from .ui.visualizerUi import Ui_Visualizer
-from .pyqt_compat import QtGui, QtCore, pyside
+from .pyqt_compat import QtGui, QtCore, pyside, get_toplevel_window
 
 # Tell matplotlib whether PySide or PyQt4 is used:
 if pyside:
@@ -83,14 +83,14 @@ class CoqNavigationToolbar(NavigationToolbar):
             if isinstance(x, QtGui.QToolButton):
                 self._buttons[str(x.text())] = x
 
-        self._buttons["Forward"].setIcon(options.cfg.main_window.get_icon("Right Squared"))
-        self._buttons["Back"].setIcon(options.cfg.main_window.get_icon("Left Squared"))
-        self._buttons["Home"].setIcon(options.cfg.main_window.get_icon("Up Squared"))
-        self._buttons["Zoom"].setIcon(options.cfg.main_window.get_icon("Resize"))
-        self._buttons["Save"].setIcon(options.cfg.main_window.get_icon("Save"))
-        self._buttons["Customize"].setIcon(options.cfg.main_window.get_icon("Edit"))
-        self._buttons["Pan"].setIcon(options.cfg.main_window.get_icon("Resize Four Directions"))
-        self._buttons["Subplots"].setIcon(options.cfg.main_window.get_icon("Crop"))
+        self._buttons["Forward"].setIcon(get_toplevel_window().get_icon("Right Squared"))
+        self._buttons["Back"].setIcon(get_toplevel_window().get_icon("Left Squared"))
+        self._buttons["Home"].setIcon(get_toplevel_window().get_icon("Up Squared"))
+        self._buttons["Zoom"].setIcon(get_toplevel_window().get_icon("Resize"))
+        self._buttons["Save"].setIcon(get_toplevel_window().get_icon("Save"))
+        self._buttons["Customize"].setIcon(get_toplevel_window().get_icon("Edit"))
+        self._buttons["Pan"].setIcon(get_toplevel_window().get_icon("Resize Four Directions"))
+        self._buttons["Subplots"].setIcon(get_toplevel_window().get_icon("Crop"))
         
         self._buttons["Subplots"].setToolTip("Adjust figure margins")
         self._buttons["Customize"].setToolTip("Edit labels, colors, and fonts")
@@ -138,7 +138,7 @@ class CoqNavigationToolbar(NavigationToolbar):
         self.margin_dialog.resetbutton.hide()
         self.margin_dialog.tightlayout.setText("&Reset")
         self.margin_dialog.show()
-        options.cfg.main_window.widget_list.append(self.margin_dialog)
+        get_toplevel_window().widget_list.append(self.margin_dialog)
         
 class VisualizerDialog(QtGui.QWidget):
     """ Defines a QDialog that is used to visualize the data in the main 
@@ -206,7 +206,7 @@ class VisualizerDialog(QtGui.QWidget):
         if hasattr(self.toolbar, "margin_dialog"):
             self.toolbar.margin_dialog.hide()
             self.toolbar.margin_dialog.close()
-            options.cfg.main_window.widget_list.remove(self.toolbar.margin_dialog)
+            get_toplevel_window().widget_list.remove(self.toolbar.margin_dialog)
             del self.toolbar.margin_dialog
             
         if self.smooth:
@@ -309,7 +309,7 @@ class VisualizerDialog(QtGui.QWidget):
         self.remove_matplot()
         super(VisualizerDialog, self).close()
         try:
-            options.cfg.main_window.widget_list.remove(self)
+            get_toplevel_window().widget_list.remove(self)
         except ValueError:
             pass
         try:
@@ -341,8 +341,8 @@ class VisualizerDialog(QtGui.QWidget):
         content of the results table changes, or the columns are moved."""
         if not options.cfg.experimental:
             return
-        options.cfg.main_window.table_model.dataChanged.connect(self.update_plot)
-        options.cfg.main_window.table_model.layoutChanged.connect(self.update_plot)
+        get_toplevel_window().table_model.dataChanged.connect(self.update_plot)
+        get_toplevel_window().table_model.layoutChanged.connect(self.update_plot)
         self.visualizer._view.horizontalHeader().sectionMoved.connect(self.update_plot)
 
     def disconnect_signals(self):
@@ -352,8 +352,8 @@ class VisualizerDialog(QtGui.QWidget):
         results table changes or the columns are moved."""
         if not options.cfg.experimental:
             return
-        options.cfg.main_window.table_model.dataChanged.disconnect(self.update_plot)
-        options.cfg.main_window.table_model.layoutChanged.disconnect(self.update_plot)
+        get_toplevel_window().table_model.dataChanged.disconnect(self.update_plot)
+        get_toplevel_window().table_model.layoutChanged.disconnect(self.update_plot)
         self.visualizer._view.horizontalHeader().sectionMoved.disconnect(self.update_plot)
         
     def toggle_freeze(self):
@@ -385,7 +385,7 @@ class VisualizerDialog(QtGui.QWidget):
         try:
             self.combo_x_function.addItems([fnc.get_name() for fnc in self._function_list])
             for x in self.visualizer._number_columns:
-                if x not in [fnc(columns=self.visualizer._group_by, session=options.cfg.main_window.Session).get_id() for fnc in self._function_list]:
+                if x not in [fnc(columns=self.visualizer._group_by, session=get_toplevel_window().Session).get_id() for fnc in self._function_list]:
                     self.combo_x_function.addItem(x)
             self.combo_x_function.currentIndexChanged.connect(self.update_plot)
         except AttributeError:
@@ -399,7 +399,7 @@ class VisualizerDialog(QtGui.QWidget):
         if not self.visualizer._table.empty:
             self.setVisible(True)
             self.connect_signals()
-            options.cfg.main_window.widget_list.append(self)
+            get_toplevel_window().widget_list.append(self)
             self.add_matplot()
             self.thread = classes.CoqThread(self.visualizer.draw, 
                                             parent=self)
