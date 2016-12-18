@@ -65,4 +65,12 @@ else:
     frameShadow = QtGui.QFrame.Raised
     frameShape = QtGui.QFrame.StyledPanel
     
-    
+def get_toplevel_window(name="MainWindow"):
+    """
+    Retrieves the top-level widget with the given name. By default, retrieve
+    the main window.
+    """
+    for widget in QtGui.qApp.topLevelWidgets():
+        if widget.objectName() == "MainWindow":
+            return widget
+    return None
