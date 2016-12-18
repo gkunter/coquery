@@ -262,7 +262,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.set_query_button(True)
         self.set_stop_button(False)
 
-        self.set_function_button_labels()
+        self.set_button_labels()
 
         self.ui.data_preview.setEnabled(False)
         self.ui.text_no_match.hide()
@@ -667,6 +667,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.button_apply_management.setFlat(True)
             self.ui.button_cancel_management.setDisabled(True)
             self.ui.button_cancel_management.setFlat(True)
+        self.set_button_labels()
 
     def apply_management(self):
         self.reaggregate(start=True)
@@ -932,6 +933,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.resize_rows()
         self.show_query_status()
         self.check_group_items()
+        self.set_button_labels()
         self.ui.button_apply_management.setDisabled(True)
         self.ui.button_apply_management.setFlat(True)
         self.ui.button_cancel_management.setDisabled(True)
@@ -2604,28 +2606,43 @@ class CoqueryApp(QtGui.QMainWindow):
         self.column_tree.remove_external_link(item)
         options.cfg.table_links[options.cfg.current_server].remove(item.link)
 
-    def set_function_button_labels(self):
-        l = self._group_functions.get_list()
-        label = _translate("MainWindow", "Group functions{}...", None)
-
-        if len(l) == 0:
-            mark = ""
-        else:
-            mark = " ({})".format(len(l))
-        self.ui.button_add_group_function.setText(label.format(mark))
+    def set_button_labels(self):
+        def get_str(l):
+            return (" ({})".format(len(l)) if l and self.Session != None
+                    else "")
 
         try:
             session = self.Session
             manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         except:
             manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
+
+        label_group_functions = _translate("MainWindow", "Group &functions{}...", None)
+        label_group_filters = _translate("MainWindow", "Group fi&lters{}...", None)
+        label_summary_functions = _translate("MainWindow", "Summary &functions{}...", None)
+        label_summary_filters = _translate("MainWindow", "Result fi&lters{}...", None)
+        label_stopwords = _translate("MainWindow", "Stop &word list{}...", None)
+
+        # grouping button labels:
+        l = manager.group_functions.get_list()
+        self.ui.button_add_group_function.setText(
+            label_group_functions.format(get_str(l)))
+        l = options.cfg.group_filter_list
+        self.ui.button_group_filters.setText(
+            label_group_filters.format(get_str(l)))
+
+        # summary button labels:
         l = manager.user_summary_functions.get_list()
-        label = _translate("MainWindow", "Summary functions{}...", None)
-        if len(l) == 0:
-            mark = ""
-        else:
-            mark = " ({})".format(len(l))
-        self.ui.button_add_summary_function.setText(label.format(mark))
+        self.ui.button_add_summary_function.setText(
+            label_summary_functions.format(get_str(l)))
+        l = options.cfg.filter_list
+        self.ui.button_filters.setText(
+            label_summary_filters.format(get_str(l)))
+
+        # stop word button label:
+        l = options.cfg.stopword_list
+        self.ui.button_stopwords.setText(
+            label_stopwords.format(get_str(l)))
 
     def add_function(self, columns=[], summary=False, group=False, **kwargs):
         from . import functionapply
@@ -2703,7 +2720,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self._column_functions.add_function(fun)
             self.reaggregate(start=True)
 
-        self.set_function_button_labels()
         self.enable_apply_button()
 
     def edit_function(self, column):
@@ -2753,6 +2769,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.update_columns()
 
 def _translate(x, text, y):
-    return utf8(text)
+    return utf8(options.cfg.app.translate(x, text, y))
 
 logger = logging.getLogger(NAME)
