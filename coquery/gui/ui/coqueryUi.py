@@ -409,7 +409,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 925, 30))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 925, 24))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -679,7 +679,7 @@ class Ui_MainWindow(object):
         self.label_2.setBuddy(self.combo_corpus)
 
         self.retranslateUi(MainWindow)
-        self.tool_widget.setCurrentIndex(2)
+        self.tool_widget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -714,20 +714,20 @@ class Ui_MainWindow(object):
         self.context_right_span.setPrefix(_translate("MainWindow", "Right: ", None))
         self.check_restrict.setText(_translate("MainWindow", "&Restrict to sentences", None))
         self.check_stopwords.setText(_translate("MainWindow", "Filter stop words", None))
-        self.button_stopwords.setText(_translate("MainWindow", "Stop &word list...", None))
+        self.button_stopwords.setText(_translate("MainWindow", "Stop &word list{}...", None))
         self.button_remove_group.setText(_translate("MainWindow", "Remove", None))
         self.button_add_group_function.setText(_translate("MainWindow", "Group functions{}...", None))
-        self.button_group_filters.setText(_translate("MainWindow", "Group filters...", None))
+        self.button_group_filters.setText(_translate("MainWindow", "Group filters{}...", None))
         self.button_add_summary_function.setText(_translate("MainWindow", "Summary functions{}...", None))
-        self.button_filters.setText(_translate("MainWindow", "Filter results...", None))
+        self.button_filters.setText(_translate("MainWindow", "Filter results{}...", None))
         self.check_drop_duplicates.setText(_translate("MainWindow", "&Drop duplicate rows", None))
         self.button_apply_management.setText(_translate("MainWindow", "&Apply", None))
         self.button_cancel_management.setText(_translate("MainWindow", "Cancel", None))
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>", None))
+"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">No match.</span></p></body></html>", None))
         self.menuFile.setTitle(_translate("MainWindow", "&File", None))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help", None))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus", None))
