@@ -24,9 +24,10 @@ from .unicode import utf8
 
 
 class TextgridWriter(object):
-    def __init__(self, df, resource):
+    def __init__(self, df, session):
         self.df = df
-        self.resource = resource
+        self.resource = session.Resource
+        self.session = session
         self._artificial_corpus_id = False
         self._offsets = {}
 
@@ -122,13 +123,12 @@ class TextgridWriter(object):
                     grids[x].add_tier(tgt.IntervalTier(name=tier_name))
                     tiers.add(tier_name)
 
-        session = options.cfg.main_window.Session
         for col in [x for x in features if x.startswith(
                                             ("func", "coquery", "db"))]:
             # FIXME:
             # db and func columns are never treated as lexicalized columns.
             # The fix for this is probably not quite trivial.
-            tier_name = session.translate_header(col)
+            tier_name = self.session.translate_header(col)
             for x in grids:
                 grids[x].add_tier(tgt.IntervalTier(name=tier_name))
                 tiers.add(tier_name)
@@ -153,7 +153,6 @@ class TextgridWriter(object):
         """
         Fill the grid by using the content of the data frame.
         """
-        session = options.cfg.main_window.Session
         corpus_features = [x for x, _ in self.resource.get_corpus_features()]
 
         data_columns = [x for x in df.columns if (
@@ -172,7 +171,7 @@ class TextgridWriter(object):
             elif col.startswith("coquery_invisible"):
                 continue
             elif col.startswith(("func", "coquery", "db")):
-                tier_name = session.translate_header(col)
+                tier_name = self.session.translate_header(col)
             else:
                 s = col.partition("coq_")[-1]
                 rc_feature, _, number = s.rpartition("_")
