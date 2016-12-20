@@ -43,6 +43,7 @@ class CoqListSelect(QtGui.QWidget):
         self.ui.list_selected.itemSelectionChanged.connect(self.check_buttons)
         self.ui.list_available.itemSelectionChanged.connect(self.check_buttons)
         self._minimum = 0
+        self._moveAvailable = True
 
     @staticmethod
     def _fill_list_widget(w, l, translate):
@@ -54,11 +55,26 @@ class CoqListSelect(QtGui.QWidget):
                 item = translate(x)
             w.addItem(item)
 
+    def setMoveAvailable(self, b):
+        if b:
+            self.ui.button_up.show()
+            self.ui.button_down.show()
+        else:
+            self.ui.button_up.hide()
+            self.ui.button_down.hide()
+        self._moveAvailable = b
+
+    def _moveAvailable(self):
+        return self._moveAvailable
+
     def minimumItems(self):
         return self._minimum
 
     def setMinimumItems(self, i):
         self._minimum = i
+
+    def count(self):
+        return self.ui.list_selected.count()
 
     def selectedItems(self):
         return [self.ui.list_selected.item(i) for i
@@ -108,15 +124,17 @@ class CoqListSelect(QtGui.QWidget):
             self.ui.list_selected.insertItem(new_pos, x)
             x.setSelected(True)
             self.ui.list_selected.setCurrentItem(x)
+        self.check_buttons()
 
     def check_buttons(self):
-        row = self.ui.list_selected.currentRow()
-        self.ui.button_up.setEnabled(row > 0)
-        self.ui.button_down.setEnabled(row + 1 < self.ui.list_selected.count())
+        selected_row = self.ui.list_selected.currentRow()
+        selected_count = self.ui.list_selected.count()
+        available_count = self.ui.list_available.count()
 
-        self.ui.button_remove.setEnabled(row > self.minimumItems())
-        available_row = self.ui.list_available.currentRow()
-        self.ui.button_add.setEnabled(available_row != -1)
+        self.ui.button_up.setEnabled(selected_row > 0)
+        self.ui.button_down.setEnabled(selected_row + 1 < selected_count)
+        self.ui.button_remove.setEnabled(selected_count > self.minimumItems())
+        self.ui.button_add.setEnabled(available_count > 0)
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Left:
