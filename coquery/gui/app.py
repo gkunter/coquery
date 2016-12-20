@@ -95,7 +95,7 @@ class CoqueryApp(QtGui.QMainWindow):
         spetial care, and also sets up some special attributes that relate
         to the GUI, including default appearances of the columns."""
         QtGui.QMainWindow.__init__(self, parent)
-
+        options.cfg.main_window = self
         self.file_content = None
         self.csv_options = None
         self.query_thread = None
@@ -1477,7 +1477,7 @@ class CoqueryApp(QtGui.QMainWindow):
             # FIXME: reimplement row visibility
             #tab = tab[self.Session.row_visibility[self.Session.query_type]]
 
-            self.textgrid_writer = TextgridWriter(tab, self.Session.Resource)
+            self.textgrid_writer = TextgridWriter(tab, self.Session)
 
             self.start_progress_indicator()
             result["parent"] = self
