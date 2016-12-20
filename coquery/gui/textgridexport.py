@@ -25,18 +25,18 @@ class TextgridExportDialog(QtGui.QDialog):
         self.ui = Ui_TextgridExport()
         self.ui.setupUi(self)
         session = get_toplevel_window().Session
+        l = []
         for col in [x for x in columns if "_endtime_" not in x and
                                           "_starttime_" not in x]:
-            item = CoqListItem(session.translate_header(col))
-            item.setData(QtCore.Qt.UserRole, col)
-            item.setCheckState(QtCore.Qt.Checked)
-            self.ui.list_columns.addItem(item)
+            l.append(col)
+        self.ui.list_columns.setSelectedList(l, session.translate_header)
+        self.ui.list_columns.setMinimumItems(1)
+        self.ui.list_columns.setMoveAvailable(False)
         self.restore_settings()
         self.ui.button_output_path.clicked.connect(self.set_output_path)
         self.ui.button_sound_path.clicked.connect(self.set_sound_path)
         self.ui.edit_output_path.textChanged.connect(self.check_gui)
         self.ui.edit_sound_path.textChanged.connect(self.check_gui)
-        self.ui.list_columns.itemClicked.connect(self.check_gui)
         self.ui.button_output_path.setIcon(parent.get_icon("Folder"))
         self.ui.button_sound_path.setIcon(parent.get_icon("Folder"))
 
@@ -91,10 +91,6 @@ class TextgridExportDialog(QtGui.QDialog):
                 S = "QLineEdit {{ background-color: {} }} ".format(options.cfg.app.palette().color(QtGui.QPalette.Base).name())
             self.ui.edit_sound_path.setStyleSheet(S)
 
-        checked = [x for x in range(self.ui.list_columns.count()) if self.ui.list_columns.item(x).checkState()]
-        if not checked:
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setDisabled(True)
-
     def set_output_path(self):
         name = self.select_file(self.ui.edit_output_path.text())
         if name:
@@ -133,9 +129,8 @@ class TextgridExportDialog(QtGui.QDialog):
         result = super(TextgridExportDialog, self).exec_()
         if result == QtGui.QDialog.Accepted:
             columns = []
-            for col in range(self.ui.list_columns.count()):
-                if self.ui.list_columns.item(col).checkState() == QtCore.Qt.Checked:
-                    columns.append(utf8(self.ui.list_columns.item(col).data(QtCore.Qt.UserRole)))
+            columns = [x.data(QtCore.Qt.UserRole) for x
+                       in self.ui.list_columns.selectedItems()]
             return {"output_path": utf8(self.ui.edit_output_path.text()),
                     "columns": columns,
                     "one_grid_per_match": self.ui.radio_one_per_match.isChecked(),
