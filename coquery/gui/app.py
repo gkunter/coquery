@@ -95,6 +95,7 @@ class CoqueryApp(QtGui.QMainWindow):
         spetial care, and also sets up some special attributes that relate
         to the GUI, including default appearances of the columns."""
         QtGui.QMainWindow.__init__(self, parent)
+        options.cfg.main_window = self
 
         self.file_content = None
         self.csv_options = None
@@ -454,21 +455,20 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_add_summary_function.clicked.connect(lambda: self.add_function(summary=True))
         self.ui.button_add_group_function.clicked.connect(lambda: self.add_function(group=True))
 
-        self.ui.check_stopwords.stateChanged.connect(self.change_stopwords)
+        # connect widgets that enable the Apply button:
+        self.ui.check_stopwords.stateChanged.connect(self.enable_apply_button)
         self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
-
-        self.ui.check_drop_duplicates.stateChanged.connect(self.change_summarize)
+        self.ui.check_drop_duplicates.stateChanged.connect(self.enable_apply_button)
+        self.ui.radio_context_mode_none.toggled.connect(self.enable_apply_button)
+        self.ui.radio_context_mode_kwic.toggled.connect(self.enable_apply_button)
+        self.ui.radio_context_mode_string.toggled.connect(self.enable_apply_button)
+        self.ui.radio_context_mode_columns.toggled.connect(self.enable_apply_button)
+        self.ui.context_left_span.valueChanged.connect(self.enable_apply_button)
+        self.ui.context_right_span.valueChanged.connect(self.enable_apply_button)
 
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         self.ui.button_filters.clicked.connect(self.manage_filters)
         self.ui.button_group_filters.clicked.connect(self.manage_group_filters)
-
-        self.ui.radio_context_mode_none.toggled.connect(self.change_context)
-        self.ui.radio_context_mode_kwic.toggled.connect(self.change_context)
-        self.ui.radio_context_mode_string.toggled.connect(self.change_context)
-        self.ui.radio_context_mode_columns.toggled.connect(self.change_context)
-        self.ui.context_left_span.valueChanged.connect(self.change_context)
-        self.ui.context_right_span.valueChanged.connect(self.change_context)
 
         self.ui.data_preview.horizontalHeader().sectionFinallyResized.connect(self.result_column_resize)
         self.ui.data_preview.horizontalHeader().customContextMenuRequested.connect(self.show_header_menu)
@@ -706,19 +706,6 @@ class CoqueryApp(QtGui.QMainWindow):
         if old_list != set(options.cfg.group_columns):
             self.enable_apply_button()
 
-    def change_context(self):
-        """
-        Enable or disable contexts.
-        """
-        self.enable_apply_button()
-
-    def change_stopwords(self):
-        """
-        Enable or disable stopword filtering.
-        """
-        options.cfg.use_stopwords = self.ui.check_stopwords.isChecked()
-        self.enable_apply_button()
-
     def change_grouping(self):
         """
         Enable or disable grouping.
@@ -726,20 +713,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.enable_apply_button()
 
     def set_aggregate(self):
-        for radio in self.ui.aggregate_radio_list:
-            if radio.isChecked():
-                options.cfg.MODE = utf8(radio.text())
-                break
         self.enable_apply_button()
 
     def get_aggregate(self):
         for radio in self.ui.aggregate_radio_list:
             if radio.isChecked():
                 return utf8(radio.text())
-
-    def change_summarize(self):
-        options.cfg.drop_duplicates = self.ui.check_drop_duplicates.isChecked()
-        self.enable_apply_button()
 
     def find_context_radio(self, context_mode):
         """
@@ -2440,7 +2419,6 @@ class CoqueryApp(QtGui.QMainWindow):
     def getGuiValues(self):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
-
         if options.cfg:
             options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
             options.cfg.MODE = self.get_aggregate()
@@ -2462,6 +2440,8 @@ class CoqueryApp(QtGui.QMainWindow):
             # FIXME: eventually, selected_features should be a session variable
             options.cfg.selected_features = self.selected_features
             options.cfg.group_columns = self.get_group_columns()
+            options.cfg.use_stopwords = self.ui.check_stopwords.isChecked()
+            options.cfg.drop_duplicates = self.ui.check_drop_duplicates.isChecked()
             self.get_context_values()
 
     def get_external_links(self):
