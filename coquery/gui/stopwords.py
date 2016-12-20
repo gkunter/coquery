@@ -126,16 +126,10 @@ class Stopwords(QtGui.QDialog):
         self.ui.combo_language.setCurrentIndex(lang.index("English"))
         self.ui.button_add_list.clicked.connect(self.add_stopword_list)
 
-        self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
-        self.ui.stopword_list.close()
-        #self.ui.stopword_list = CoqStopwordList()
-        self.ui.stopword_list = classes.CoqTagBox(label="Add stop word:")
-        self.ui.horizontalLayout.insertWidget(0, self.ui.stopword_list)
-
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Reset).clicked.connect(self.reset_list)
         self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
         self.ui.buttonbox_io.button(QtGui.QDialogButtonBox.Save).clicked.connect(self.save_list)
         self.ui.buttonbox_io.button(QtGui.QDialogButtonBox.Open).clicked.connect(self.open_list)
+        self.ui.buttonbox_io.button(QtGui.QDialogButtonBox.Reset).clicked.connect(self.reset_list)
 
         try:
             self.resize(options.settings.value("stopwords_size"))
