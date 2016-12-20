@@ -411,7 +411,6 @@ class ContrastQuery(TokenQuery):
             #not_2 = total_2 - freq_2
 
 
-
 #e11 = (freq_1 + freq_2)*total_1/(total_1 + total_2)
 #e21 = (freq_1 + freq_2)*total_2/(total_1 + total_2)
 #e12 = (not_1 + not_2) * total_1/(total_1 + total_2)
@@ -510,8 +509,6 @@ class ContrastQuery(TokenQuery):
 
         labels = cls.collapse_columns(df, session)
         freq = super(ContrastQuery, cls).aggregate_data(df, corpus, contrasts=True, **kwargs)
-        # FIXME: use manager for column visibility
-        vis_col = cls.get_visible_columns(df, session)
         freq["_row_id"] = labels
         session.output_order = session.output_order + ["statistics_g_test_{}".format(x) for x in labels]
 
