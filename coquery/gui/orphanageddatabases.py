@@ -91,8 +91,9 @@ def check_orphans():
     except AttributeError:
         path = ""
     l = []
-    for x in glob.glob(os.path.join(path, "*.*")):
-        file_name, _ = os.path.splitext(os.path.basename(x))
-        if not options.get_resource_of_database(file_name):
-            l.append(os.path.basename(x))
+    if path:
+        for x in glob.glob(os.path.join(path, "*.db")):
+            file_name, _ = os.path.splitext(os.path.basename(x))
+            if not options.get_resource_of_database(file_name):
+                l.append(os.path.basename(x))
     return l
