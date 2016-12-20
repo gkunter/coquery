@@ -19,20 +19,18 @@ import fileinput
 import codecs
 import logging
 import collections
+import sqlalchemy
 
 import pandas as pd
 
 from . import options
 from .errors import *
-from .corpus import *
 from .defines import *
 from .general import *
+from . import sqlhelper
 from . import queries
-from . import filters
 from . import managers
-from . import functions
 from . import functionlist
-from . import tokens
 
 class Session(object):
     _is_statistics = False
@@ -210,7 +208,6 @@ class Session(object):
                         continue
 
                     if df.dtypes[x] != dtype_list[x]:
-                        _working = None
                         if df.dtypes[x] == object:
                             if not df[x].any():
                                 df[x] = [pd.np.nan] * len(df)
@@ -271,13 +268,6 @@ class Session(object):
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
             output_file.flush()
-
-    def get_frequency_table(self):
-        frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, session=self)
-        frequency_table.fillna("", inplace=True)
-        frequency_table.index = range(1, len(frequency_table.index) + 1)
-
-        return frequency_table
 
     def has_cached_data(self):
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)

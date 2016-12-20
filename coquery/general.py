@@ -14,8 +14,8 @@ from __future__ import division
 
 import hashlib
 import sys
-import platform
 import os
+import tempfile
 
 from .unicode import utf8
 from .defines import LANGUAGES
@@ -82,6 +82,13 @@ def collapse_words(word_list):
             last_token = current_token
     return utf8("").join(token_list)
 
+def check_fs_case_sensitive(path):
+    """
+    Check if the file system is case-sensitive.
+    """
+    with tempfile.NamedTemporaryFile(prefix="tMp", dir=path) as temp_path:
+        return not os.path.exists(temp_path.lower())
+
 def get_home_dir(create=True):
     """
     Return the path to the Coquery home directory. Also, create all required
@@ -107,19 +114,22 @@ def get_home_dir(create=True):
     Mac OS X        ~/Library/Application Support/Coquery
     """
 
-    if platform.system() == "Linux":
+    if sys.platform.startswith("linux"):
         try:
             basepath = os.environ["XDG_CONFIG_HOME"]
         except KeyError:
             basepath = os.path.expanduser("~/.config")
-    elif platform.system() == "Windows":
+    elif sys.platform in set("win32", "cygwin"):
         try:
             basepath = os.environ["APPDATA"]
         except KeyError:
             basepath = os.path.expanduser("~")
-    elif platform.system() == "Darwin":
+    elif sys.platform == "darwin":
         basepath = os.path.expanduser("~/Library/Application Support")
-        
+    else:
+        raise RuntimeError("Unsupported operating system: {}".format(
+            sys.platform))
+
     coquery_home = os.path.join(basepath, "Coquery")
     connections_path = os.path.join(coquery_home, "connections")
     custom_installer_path = os.path.join(coquery_home, "installer")

@@ -87,22 +87,6 @@ class TokenQuery(object):
                 #x in session.output_order and
                 #options.cfg.column_visibility.get(x, True))]
 
-    @staticmethod
-    def aggregate_data(df, corpus, **kwargs):
-        """
-        Aggregate the data frame.
-
-        For a TokenQuery, aggregating means that any statistics column is
-        discarded.
-        """
-        columns = [x for x in df.columns if not x.startswith("statistics_")]
-        return df[columns]
-
-    @staticmethod
-    def filter_data(df, filter_list):
-        """ Apply filters to the data frame. """
-        return df
-
     def run(self, connection=None, to_file=False, **kwargs):
         """
         Run the query, and store the results in an internal data frame.
@@ -369,46 +353,6 @@ class TokenQuery(object):
                     df[df_col] = self.input_frame[input_col][0]
         return df
 
-    @staticmethod
-    def add_output_columns(session):
-        """
-        Add any column that is specific to this query type to the list of
-        output columns in Session.output_order.
-
-        This is needed, for example, to add the frequency column in
-        FrequencyQuery.
-        """
-        for x in options.cfg.selected_features:
-            if x.startswith("statistics_") and x in session.output_order:
-                session.output_order.remove(x)
-
-    @staticmethod
-    def remove_output_columns(session):
-        for x in options.cfg.selected_features:
-            if x.startswith("statistics_") and x not in session.output_order:
-                session.output_order.append(x)
-
-    #@staticmethod
-    #def remove_output_columns(session):
-        #"""
-        #Remove any column that was added by add_output_columns from the
-        #current session's output_order list.
-
-        #This is needed when changing the aggregation mode.
-        #"""
-        #return
-
-    @classmethod
-    def aggregate_it(cls, df, corpus, **kwargs):
-        agg = cls.aggregate_data(df, corpus, **kwargs)
-        agg_cols = list(agg.columns.values)
-        for col in list(agg_cols):
-            if col.startswith("coquery_invisible"):
-                agg_cols.remove(col)
-                agg_cols.append(col)
-        agg = agg[agg_cols]
-        return agg
-
 
 class ContrastQuery(TokenQuery):
     """
@@ -442,24 +386,6 @@ class ContrastQuery(TokenQuery):
         return df.apply(lambda x: ":".join([x[col] for col in vis_cols]), axis=1).unique()
 
     @staticmethod
-    def add_output_columns(session):
-        if not hasattr(session, "_old_output_order"):
-            session._old_output_order = list(session.output_order)
-
-        #for x in options.cfg.selected_features:
-            #if x.startswith("statistics_"):
-                #if not x.startswith("statistics_query"):
-                    #session.output_order.append(x)
-
-        if hasattr(session, "_contrast_order"):
-            session.output_order = list(session._contrast_order)
-
-    @staticmethod
-    def remove_output_columns(session):
-        session._contrast_order = list(session.output_order)
-        session.output_order = list(session._old_output_order)
-
-    @staticmethod
     def g_test(freq_1, freq_2, total_1, total_2):
         """
         This method calculates the G test statistic as described here:
@@ -483,7 +409,6 @@ class ContrastQuery(TokenQuery):
 
             #not_1 = total_1 - freq_1
             #not_2 = total_2 - freq_2
-
 
 
 #e11 = (freq_1 + freq_2)*total_1/(total_1 + total_2)
@@ -584,8 +509,6 @@ class ContrastQuery(TokenQuery):
 
         labels = cls.collapse_columns(df, session)
         freq = super(ContrastQuery, cls).aggregate_data(df, corpus, contrasts=True, **kwargs)
-        # FIXME: use manager for column visibility
-        vis_col = cls.get_visible_columns(df, session)
         freq["_row_id"] = labels
         session.output_order = session.output_order + ["statistics_g_test_{}".format(x) for x in labels]
 
