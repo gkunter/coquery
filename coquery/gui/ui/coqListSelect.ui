@@ -2,10 +2,33 @@
 <ui version="4.0">
  <class>CoqListSelect</class>
  <widget class="QWidget" name="CoqListSelect">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>652</width>
+    <height>230</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item>
     <layout class="QGridLayout" name="layout">
      <item row="1" column="1">
@@ -90,7 +113,7 @@
      <item row="0" column="2">
       <widget class="QLabel" name="label_available">
        <property name="text">
-        <string>&amp;Available</string>
+        <string>&amp;Available:</string>
        </property>
        <property name="buddy">
         <cstring>list_available</cstring>
@@ -100,7 +123,7 @@
      <item row="0" column="0">
       <widget class="QLabel" name="label_select_list">
        <property name="text">
-        <string>&amp;Selected:</string>
+        <string>Se&amp;lected:</string>
        </property>
        <property name="buddy">
         <cstring>list_selected</cstring>
@@ -123,11 +146,16 @@
     </layout>
    </item>
   </layout>
-  <zorder>list_selected</zorder>
   <zorder></zorder>
-  <zorder>list_available</zorder>
-  <zorder>list_available</zorder>
  </widget>
+ <tabstops>
+  <tabstop>list_selected</tabstop>
+  <tabstop>list_available</tabstop>
+  <tabstop>button_up</tabstop>
+  <tabstop>button_add</tabstop>
+  <tabstop>button_remove</tabstop>
+  <tabstop>button_down</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

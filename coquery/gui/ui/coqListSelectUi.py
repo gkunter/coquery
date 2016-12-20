@@ -25,7 +25,10 @@ except AttributeError:
 class Ui_CoqListSelect(object):
     def setupUi(self, CoqListSelect):
         CoqListSelect.setObjectName(_fromUtf8("CoqListSelect"))
+        CoqListSelect.resize(652, 230)
         self.verticalLayout_2 = QtGui.QVBoxLayout(CoqListSelect)
+        self.verticalLayout_2.setMargin(0)
+        self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.layout = QtGui.QGridLayout()
         self.layout.setObjectName(_fromUtf8("layout"))
@@ -83,18 +86,20 @@ class Ui_CoqListSelect(object):
         self.list_selected.setObjectName(_fromUtf8("list_selected"))
         self.layout.addWidget(self.list_selected, 1, 0, 1, 1)
         self.verticalLayout_2.addLayout(self.layout)
-        self.list_selected.raise_()
-        self.list_available.raise_()
-        self.list_available.raise_()
         self.label_available.setBuddy(self.list_available)
         self.label_select_list.setBuddy(self.list_selected)
 
         self.retranslateUi(CoqListSelect)
         QtCore.QMetaObject.connectSlotsByName(CoqListSelect)
+        CoqListSelect.setTabOrder(self.list_selected, self.list_available)
+        CoqListSelect.setTabOrder(self.list_available, self.button_up)
+        CoqListSelect.setTabOrder(self.button_up, self.button_add)
+        CoqListSelect.setTabOrder(self.button_add, self.button_remove)
+        CoqListSelect.setTabOrder(self.button_remove, self.button_down)
 
     def retranslateUi(self, CoqListSelect):
         CoqListSelect.setWindowTitle(_translate("CoqListSelect", "Form", None))
-        self.label_available.setText(_translate("CoqListSelect", "&Available", None))
-        self.label_select_list.setText(_translate("CoqListSelect", "&Selected:", None))
+        self.label_available.setText(_translate("CoqListSelect", "&Available:", None))
+        self.label_select_list.setText(_translate("CoqListSelect", "Se&lected:", None))
 
 
