@@ -317,6 +317,10 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self._resizing_column = False
 
+        from . import textgridviewer
+        self.tgv = textgridviewer.TextgridViewer(None, os.path.expanduser("~/sample.wav"))
+        self.tgv.show()
+
     def setup_icons(self):
         self.ui.action_help.setIcon(self.get_icon("Lifebuoy"))
         self.ui.action_connection_settings.setIcon(self.get_icon("Data Configuration"))
