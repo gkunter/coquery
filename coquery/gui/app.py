@@ -2397,8 +2397,8 @@ class CoqueryApp(QtGui.QMainWindow):
             if active_widget:
                 active_widget.setFocus()
 
-        from .orphanageddatabases import OrphanagedDatabasesDialog
-        OrphanagedDatabasesDialog.display(self)
+        #from .orphanageddatabases import OrphanagedDatabasesDialog
+        #OrphanagedDatabasesDialog.display(self)
 
         return state
 
