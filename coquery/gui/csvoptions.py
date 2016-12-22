@@ -194,23 +194,27 @@ class CSVOptionDialog(QtGui.QDialog):
     def closeEvent(self, event):
         options.settings.setValue("csvoptions_size", self.size())
 
+    def exec_(self, *args, **kwargs):
+        result = super(CSVOptionDialog, self).exec_(*args, **kwargs)
+        if result:
+            quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
+                utf8(self.ui.quote_char.currentText())]
+            return CSVOptions(
+                sep=self.separator,
+                selected_column=self.ui.query_column.value(),
+                header=self.ui.file_has_headers.isChecked(),
+                skip_lines=int(self.ui.ignore_lines.value()),
+                encoding=utf8(self.ui.combo_encoding.currentText()),
+                quote_char=quote,
+                file_name=utf8(self.ui.edit_file_name.text()),
+                dtypes=self.file_table.dtypes)
+
     @staticmethod
     def getOptions(default=None, parent=None, icon=None):
         dialog = CSVOptionDialog(default=default, parent=parent, icon=icon)
-        result = dialog.exec_()
+        return dialog.exec_()
         if result == QtGui.QDialog.Accepted:
-            quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
-                utf8(dialog.ui.quote_char.currentText())]
-
-            return CSVOptions(
-                sep=self.separator,
-                selected_column=dialog.ui.query_column.value(),
-                header=dialog.ui.file_has_headers.isChecked(),
-                skip_lines=dialog.ui.ignore_lines.value(),
-                encoding=utf8(dialog.ui.combo_encoding.currentText()),
-                quote_char=quote,
-                file_name=utf8(dialog.ui.edit_file_name.text()),
-                dtypes=dialog.file_table.dtypes)
+            return result
         else:
             return None
 
