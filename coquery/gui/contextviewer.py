@@ -21,7 +21,6 @@ from coquery.unicode import utf8
 from . import classes
 from .pyqt_compat import QtCore, QtGui
 from .ui.contextViewerUi import Ui_ContextView
-from .ui.textgridViewUi import Ui_Form
 
 class ContextView(QtGui.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, icon=None, parent=None):
@@ -46,8 +45,6 @@ class ContextView(QtGui.QWidget):
         self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", utf8(not self.ui.button_ids.isExpanded())))
         self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
         self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
-
-        self.ui.textgrid_area.showWave("/home/kunter/Lehre/2016 WS Phonetics_Phonology/2016-12-19-phonemes/christmas_s0204b_id10652.wav")
 
         L = self.corpus.get_origin_data(token_id)
         for table, fields in sorted(L):
