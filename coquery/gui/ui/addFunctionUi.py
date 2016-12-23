@@ -106,6 +106,8 @@ class Ui_FunctionsDialog(object):
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.verticalLayout_2.addWidget(self.buttonBox)
+        self.verticalLayout_2.setStretch(1, 1)
+        self.verticalLayout_2.setStretch(3, 1)
         self.label.setBuddy(self.edit_label)
         self.label_5.setBuddy(self.edit_function_value)
         self.label_4.setBuddy(self.combo_combine)

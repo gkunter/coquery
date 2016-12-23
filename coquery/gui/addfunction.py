@@ -129,7 +129,7 @@ class FunctionDialog(QtGui.QDialog):
             self.ui.parameter_box.hide()
         
         if available_columns == []:
-            self.ui.widget_column_select.hide()
+            self.ui.widget_selection.hide()
             sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
             sizePolicy.setHorizontalStretch(0)
             sizePolicy.setVerticalStretch(0)
