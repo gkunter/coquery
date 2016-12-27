@@ -834,7 +834,6 @@ class Options(object):
             self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=False)
             self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=False)
 
-            self.args.use_stopwords = config_file.bool("gui", "use_stopwords", fallback=False)
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
             # FIXME: number_of_tokens should not be stored in options.cfg!
             self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)
@@ -1024,7 +1023,6 @@ def save_configuration():
         config.set("gui", "show_data_management", cfg.show_data_management)
         config.set("gui", "show_output_columns", cfg.show_output_columns)
         config.set("gui", "last_toolbox", cfg.last_toolbox)
-        config.set("gui", "use_stopwords", cfg.use_stopwords)
         config.set("gui", "drop_duplicates", cfg.drop_duplicates)
 
         try:

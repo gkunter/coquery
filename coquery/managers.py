@@ -414,7 +414,6 @@ class Manager(CoqObject):
         # 'coquery_dummy' is used to manage frequency queries with zero
         # matches. It is never displayed:
         vis_cols = [x for x in df.columns if x != "coquery_dummy"]
-        vis_cols = sorted(vis_cols)
 
         resource = session.Resource
 
@@ -422,6 +421,8 @@ class Manager(CoqObject):
         corpus_features = []
         functions = []
         others = []
+
+        print(vis_cols)
 
         for col in list(vis_cols):
             if col.startswith("coq_"):
@@ -445,7 +446,6 @@ class Manager(CoqObject):
                 corpus_features.append(col)
 
         resource_order = resource.get_preferred_output_order()
-
         for feature in resource_order[::-1]:
             lex_list = [col for col in lexical_features if feature in col]
             lex_list = sorted(lex_list)[::-1]
@@ -485,7 +485,7 @@ class Manager(CoqObject):
         self.drop_on_na = None
         self._group_functions = []
 
-        if options.cfg.use_stopwords:
+        if options.cfg.stopword_list:
             df = self.filter_stopwords(df, session)
 
         df = df[[x for x in df.columns if not x.startswith("func_")]]

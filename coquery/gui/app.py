@@ -456,7 +456,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_add_group_function.clicked.connect(lambda: self.add_function(group=True))
 
         # connect widgets that enable the Apply button:
-        self.ui.check_stopwords.stateChanged.connect(self.enable_apply_button)
         self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
         self.ui.check_drop_duplicates.stateChanged.connect(self.enable_apply_button)
         self.ui.radio_context_mode_none.toggled.connect(self.enable_apply_button)
@@ -779,6 +778,9 @@ class CoqueryApp(QtGui.QMainWindow):
         if result is not None:
             options.cfg.stopword_list = result
 
+        if set(old_list) != set(options.cfg.stopword_list):
+            self.set_button_labels()
+
         if (options.cfg.use_stopwords and
             set(old_list) != set(options.cfg.stopword_list)):
             self.enable_apply_button()
@@ -1053,7 +1055,7 @@ class CoqueryApp(QtGui.QMainWindow):
         active_icon = "Active State"
         filter_icon = "Filter"
         error_icon = "Error"
-        problem_icon = "Questions"
+        problem_icon = "Attention"
 
         if row == TOOLBOX_CONTEXT:
             radio = self.active_context_radio()
@@ -1071,15 +1073,15 @@ class CoqueryApp(QtGui.QMainWindow):
 
         elif row == TOOLBOX_STOPWORDS:
             if options.cfg.stopword_list:
-                _set_icon(1, filter_icon if self.ui.check_stopwords.isChecked() else None)
-                _set_icon(2, active_icon if self.ui.check_stopwords.isChecked() else None)
+                _set_icon(1, filter_icon)
+                _set_icon(2, active_icon)
             else:
-                _set_icon(1, problem_icon if self.ui.check_stopwords.isChecked() else None)
+                _set_icon(1, None)
                 _set_icon(2, None)
             if self.Session:
                 manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
                 if manager.stopwords_failed:
-                    _set_icon(2, error_icon if self.ui.check_stopwords.isChecked() else None)
+                    _set_icon(2, error_icon)
                     _set_icon(1, None)
 
         elif row == TOOLBOX_GROUPING:
@@ -1119,17 +1121,9 @@ class CoqueryApp(QtGui.QMainWindow):
             return
 
         check = None
-        if row == TOOLBOX_STOPWORDS:
-            check = self.ui.check_stopwords
-        elif row == TOOLBOX_SUMMARY:
+        if row == TOOLBOX_SUMMARY:
             if col == 2:
                 check = self.ui.check_drop_duplicates
-
-        if row == TOOLBOX_STOPWORDS:
-            checked = not self.ui.check_stopwords.isChecked()
-            self.ui.check_stopwords.setChecked(checked)
-            options.cfg.use_stopwords = checked
-            return
 
         # Toggle activation:
         if col == 2:
@@ -2440,7 +2434,6 @@ class CoqueryApp(QtGui.QMainWindow):
             # FIXME: eventually, selected_features should be a session variable
             options.cfg.selected_features = self.selected_features
             options.cfg.group_columns = self.get_group_columns()
-            options.cfg.use_stopwords = self.ui.check_stopwords.isChecked()
             options.cfg.drop_duplicates = self.ui.check_drop_duplicates.isChecked()
             self.get_context_values()
 
@@ -2516,7 +2509,6 @@ class CoqueryApp(QtGui.QMainWindow):
         # Set context widgets
         self.set_context_values()
 
-        self.ui.check_stopwords.setChecked(options.cfg.use_stopwords)
         self.ui.check_drop_duplicates.setChecked(options.cfg.drop_duplicates)
 
         for radio in self.ui.aggregate_radio_list:
