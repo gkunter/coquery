@@ -277,6 +277,10 @@ MODULE_INFORMATION = {
             "0.7.0",
             "Plot estimated cumulative distributions",
             "http://www.statsmodels.org/stable/"),
+    "alsaaudio": ("alsaaudio – A package containing wrappers for accessing the ALSA API from Python",
+            "0.8.2",
+            "Audio support under Linux",
+            "https://github.com/larsimmisch/pyalsaaudio/")
     }
 
 # for Python 3 compatibility:
