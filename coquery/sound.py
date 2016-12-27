@@ -22,6 +22,21 @@ try:
 except ImportError:
     import io as io
 
+# pyaudio library dependencies:
+# sudo apt-get install portaudio19-dev libjack-dev libjack0
+# Anaconda:
+# conda install portaudio
+# This doesn't seem to work with some installations of
+# Anaconda...
+
+# Try to import alsaaudio.
+# The module alsaaudio is provided by pyalsaaudio:
+# https://pypi.python.org/pypi/pyalsaaudio
+# To install, either use
+# sudo apt-get install python-alsaaudio
+# or
+# pip install pyalsaaudio
+# (requires packages libasound2 and libasound2-dev)
 try:
     import alsaaudio
 except ImportError:
@@ -56,7 +71,7 @@ class Sound(object):
         """
         Return the length of the sound in frames
         """
-        return len(self.raw)
+        return int(len(self.raw) / self.samplewidth)
 
     def to_index(self, t):
         return int(self.framerate * t * self.samplewidth)
