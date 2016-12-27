@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(925, 822)
+        MainWindow.resize(925, 854)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.verticalLayout_4 = QtGui.QVBoxLayout(self.centralwidget)
@@ -269,6 +269,9 @@ class Ui_MainWindow(object):
         self.verticalLayout_5 = QtGui.QVBoxLayout(self.tool_widget_page_stopwords)
         self.verticalLayout_5.setMargin(0)
         self.verticalLayout_5.setObjectName(_fromUtf8("verticalLayout_5"))
+        self.label_stopwords = QtGui.QLabel(self.tool_widget_page_stopwords)
+        self.label_stopwords.setObjectName(_fromUtf8("label_stopwords"))
+        self.verticalLayout_5.addWidget(self.label_stopwords)
         self.button_stopwords = QtGui.QPushButton(self.tool_widget_page_stopwords)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -373,7 +376,11 @@ class Ui_MainWindow(object):
         self.layoutWidget.setObjectName(_fromUtf8("layoutWidget"))
         self.verticalLayout_15 = QtGui.QVBoxLayout(self.layoutWidget)
         self.verticalLayout_15.setObjectName(_fromUtf8("verticalLayout_15"))
-        self.data_preview = CoqResultsTable(self.layoutWidget)
+        self.splitter_columns = QtGui.QSplitter(self.layoutWidget)
+        self.splitter_columns.setOrientation(QtCore.Qt.Horizontal)
+        self.splitter_columns.setChildrenCollapsible(False)
+        self.splitter_columns.setObjectName(_fromUtf8("splitter_columns"))
+        self.data_preview = CoqResultsTable(self.splitter_columns)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -387,7 +394,30 @@ class Ui_MainWindow(object):
         self.data_preview.setVerticalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
         self.data_preview.setHorizontalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
         self.data_preview.setObjectName(_fromUtf8("data_preview"))
-        self.verticalLayout_15.addWidget(self.data_preview)
+        self.widget_hidden_columns = QtGui.QTabWidget(self.splitter_columns)
+        self.widget_hidden_columns.setTabPosition(QtGui.QTabWidget.West)
+        self.widget_hidden_columns.setObjectName(_fromUtf8("widget_hidden_columns"))
+        self.tab = QtGui.QWidget()
+        self.tab.setObjectName(_fromUtf8("tab"))
+        self.verticalLayout_3 = QtGui.QVBoxLayout(self.tab)
+        self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
+        self.hidden_columns = CoqHiddenResultsTable(self.tab)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.hidden_columns.sizePolicy().hasHeightForWidth())
+        self.hidden_columns.setSizePolicy(sizePolicy)
+        self.hidden_columns.setEditTriggers(QtGui.QAbstractItemView.SelectedClicked)
+        self.hidden_columns.setAlternatingRowColors(True)
+        self.hidden_columns.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        self.hidden_columns.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        self.hidden_columns.setTextElideMode(QtCore.Qt.ElideRight)
+        self.hidden_columns.setVerticalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
+        self.hidden_columns.setHorizontalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
+        self.hidden_columns.setObjectName(_fromUtf8("hidden_columns"))
+        self.verticalLayout_3.addWidget(self.hidden_columns)
+        self.widget_hidden_columns.addTab(self.tab, _fromUtf8(""))
+        self.verticalLayout_15.addWidget(self.splitter_columns)
         self.text_no_match = QtGui.QTextEdit(self.layoutWidget)
         self.text_no_match.setEnabled(True)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
@@ -671,7 +701,7 @@ class Ui_MainWindow(object):
         self.label_2.setBuddy(self.combo_corpus)
 
         self.retranslateUi(MainWindow)
-        self.tool_widget.setCurrentIndex(0)
+        self.tool_widget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -705,7 +735,8 @@ class Ui_MainWindow(object):
         self.context_left_span.setPrefix(_translate("MainWindow", "Left: ", None))
         self.context_right_span.setPrefix(_translate("MainWindow", "Right: ", None))
         self.check_restrict.setText(_translate("MainWindow", "&Restrict to sentences", None))
-        self.button_stopwords.setText(_translate("MainWindow", "Stop &word list{}...", None))
+        self.label_stopwords.setText(_translate("MainWindow", "Number of stop words: {}", None))
+        self.button_stopwords.setText(_translate("MainWindow", "Change stop &words...", None))
         self.button_remove_group.setText(_translate("MainWindow", "Remove", None))
         self.button_add_group_function.setText(_translate("MainWindow", "Group functions{}...", None))
         self.button_group_filters.setText(_translate("MainWindow", "Group filters{}...", None))
@@ -714,6 +745,7 @@ class Ui_MainWindow(object):
         self.check_drop_duplicates.setText(_translate("MainWindow", "&Drop duplicate rows", None))
         self.button_apply_management.setText(_translate("MainWindow", "&Apply", None))
         self.button_cancel_management.setText(_translate("MainWindow", "Cancel", None))
+        self.widget_hidden_columns.setTabText(self.widget_hidden_columns.indexOf(self.tab), _translate("MainWindow", "Hidden columns", None))
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -811,5 +843,5 @@ class Ui_MainWindow(object):
         self.action_share_query.setText(_translate("MainWindow", "S&hare query...", None))
 
 from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
-from ..resultstable import CoqResultsTable
+from ..resultstable import CoqHiddenResultsTable, CoqResultsTable
 

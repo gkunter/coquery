@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>925</width>
-    <height>822</height>
+    <height>854</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -391,7 +391,7 @@
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="tool_widget_page_context">
               <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -523,6 +523,13 @@
                 <number>0</number>
                </property>
                <item>
+                <widget class="QLabel" name="label_stopwords">
+                 <property name="text">
+                  <string>Number of stop words: {}</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QPushButton" name="button_stopwords">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -531,7 +538,7 @@
                   </sizepolicy>
                  </property>
                  <property name="text">
-                  <string>Stop &amp;word list{}...</string>
+                  <string>Change stop &amp;words...</string>
                  </property>
                 </widget>
                </item>
@@ -734,34 +741,85 @@
       <widget class="QWidget" name="layoutWidget">
        <layout class="QVBoxLayout" name="verticalLayout_15">
         <item>
-         <widget class="CoqResultsTable" name="data_preview">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+         <widget class="QSplitter" name="splitter_columns">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
-          <property name="editTriggers">
-           <set>QAbstractItemView::SelectedClicked</set>
+          <property name="childrenCollapsible">
+           <bool>false</bool>
           </property>
-          <property name="alternatingRowColors">
-           <bool>true</bool>
-          </property>
-          <property name="selectionMode">
-           <enum>QAbstractItemView::ExtendedSelection</enum>
-          </property>
-          <property name="selectionBehavior">
-           <enum>QAbstractItemView::SelectRows</enum>
-          </property>
-          <property name="textElideMode">
-           <enum>Qt::ElideRight</enum>
-          </property>
-          <property name="verticalScrollMode">
-           <enum>QAbstractItemView::ScrollPerPixel</enum>
-          </property>
-          <property name="horizontalScrollMode">
-           <enum>QAbstractItemView::ScrollPerPixel</enum>
-          </property>
+          <widget class="CoqResultsTable" name="data_preview">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="editTriggers">
+            <set>QAbstractItemView::SelectedClicked</set>
+           </property>
+           <property name="alternatingRowColors">
+            <bool>true</bool>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
+           <property name="selectionBehavior">
+            <enum>QAbstractItemView::SelectRows</enum>
+           </property>
+           <property name="textElideMode">
+            <enum>Qt::ElideRight</enum>
+           </property>
+           <property name="verticalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
+           <property name="horizontalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
+          </widget>
+          <widget class="QTabWidget" name="widget_hidden_columns">
+           <property name="tabPosition">
+            <enum>QTabWidget::West</enum>
+           </property>
+           <widget class="QWidget" name="tab">
+            <attribute name="title">
+             <string>Hidden columns</string>
+            </attribute>
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+             <item>
+              <widget class="CoqHiddenResultsTable" name="hidden_columns">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="editTriggers">
+                <set>QAbstractItemView::SelectedClicked</set>
+               </property>
+               <property name="alternatingRowColors">
+                <bool>true</bool>
+               </property>
+               <property name="selectionMode">
+                <enum>QAbstractItemView::ExtendedSelection</enum>
+               </property>
+               <property name="selectionBehavior">
+                <enum>QAbstractItemView::SelectRows</enum>
+               </property>
+               <property name="textElideMode">
+                <enum>Qt::ElideRight</enum>
+               </property>
+               <property name="verticalScrollMode">
+                <enum>QAbstractItemView::ScrollPerPixel</enum>
+               </property>
+               <property name="horizontalScrollMode">
+                <enum>QAbstractItemView::ScrollPerPixel</enum>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </widget>
          </widget>
         </item>
         <item>
@@ -1419,6 +1477,11 @@ p, li { white-space: pre-wrap; }
    <class>CoqResultsTable</class>
    <extends>QTableView</extends>
    <header location="global">..resultstable</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqHiddenResultsTable</class>
+   <extends>QTableView</extends>
+   <header>..resultstable</header>
   </customwidget>
  </customwidgets>
  <resources/>
