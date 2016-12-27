@@ -865,7 +865,7 @@ class ContextColumns(Function):
 
     def __init__(self, *args):
         super(ContextColumns, self).__init__(*args)
-        self.left_cols = ["coq_context_lc{}".format(i+1) for i in range(options.cfg.context_left)][::-1]
+        self.left_cols = ["coq_context_lc{}".format(options.cfg.context_left - i) for i in range(options.cfg.context_left)]
         self.right_cols = ["coq_context_rc{}".format(i+1) for i in range(options.cfg.context_right)]
 
     def get_id(self):
@@ -884,9 +884,11 @@ class ContextColumns(Function):
             row["coquery_invisible_number_of_tokens"],
             session.db_connection,
             sentence_id=sentence_id)
-        return pd.Series(
+
+        val = pd.Series(
             data=left + right,
             index=self.left_cols + self.right_cols)
+        return val
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
