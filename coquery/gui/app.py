@@ -35,7 +35,7 @@ from . import errorbox
 from .pyqt_compat import QtCore, QtGui
 from .ui import coqueryUi, coqueryTinyUi
 from .resourcetree import CoqResourceTree
-from .menus import CoqResourceMenu, CoqColumnMenu
+from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
 
 
 # add path required for visualizers::
@@ -271,6 +271,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.splitter.setStretchFactor(0, 0)
         self.ui.splitter.setStretchFactor(1, 1)
 
+        self.set_columns_widget()
+
+
         self.ui.status_message = QtGui.QLabel("{} {}".format(NAME, VERSION))
         self.ui.status_progress = QtGui.QProgressBar()
         self.ui.status_progress.hide()
@@ -474,6 +477,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.horizontalHeader().sectionMoved.connect(self.column_moved)
         self.ui.data_preview.verticalHeader().customContextMenuRequested.connect(self.show_row_header_menu)
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
+
+        self.ui.hidden_columns.horizontalHeader().customContextMenuRequested.connect(
+            lambda x: self.show_header_menu(point=x, hidden=True))
 
         self.corpusListUpdated.connect(self.check_corpus_widgets)
         self.columnVisibilityChanged.connect(lambda: self.reaggregate(start=True))
@@ -780,9 +786,6 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if set(old_list) != set(options.cfg.stopword_list):
             self.set_button_labels()
-
-        if (options.cfg.use_stopwords and
-            set(old_list) != set(options.cfg.stopword_list)):
             self.enable_apply_button()
 
     def enable_corpus_widgets(self):
@@ -922,7 +925,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         print("reaggregation: done")
 
-        if options.cfg.use_stopwords and manager.stopwords_failed:
+        if options.cfg.stopword_list and manager.stopwords_failed:
             rc_feature = getattr(self.Session.Resource,
                                  getattr(self.Session.Resource,
                                          QUERY_ITEM_WORD))
@@ -1241,6 +1244,39 @@ class CoqueryApp(QtGui.QMainWindow):
         print("resize: start")
         self.resize_thread.start()
 
+    def update_table_models(self):
+        manager = managers.get_manager(
+            options.cfg.MODE,
+            self.Session.Resource.name)
+        hidden_columns = pd.Index(manager.hidden_columns)
+        vis_cols = self.Session.output_object.columns
+        self.table_model = classes.CoqTableModel(
+            self.Session.output_object[
+                vis_cols.difference(hidden_columns)],
+            session=self.Session)
+        self.hidden_model = classes.CoqHiddenTableModel(
+            self.Session.output_object[hidden_columns],
+            session=self.Session)
+        self.set_columns_widget()
+
+    def set_columns_widget(self):
+        def hide():
+            self.ui.widget_hidden_columns.hide()
+            self.ui.splitter_columns.setStyleSheet("QSplitter::handle { image: url(dummyurl); }")
+        def show():
+            self.ui.widget_hidden_columns.show()
+            self.ui.splitter_columns.setStyleSheet("")
+
+        if self.Session is None:
+            hide()
+        else:
+            manager = managers.get_manager(options.cfg.MODE,
+                                        self.Session.Resource.name)
+            if len(manager.hidden_columns) == 0:
+                hide()
+            else:
+                show()
+
     def display_results(self, drop=True):
         if len(self.Session.output_object.dropna(how="all")) == 0:
             self.ui.text_no_match.show()
@@ -1260,12 +1296,15 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             self.ui.menuAnalyse.setEnabled(True)
 
-        self.table_model = classes.CoqTableModel(self.Session.output_object, session=self.Session)
+        self.update_table_models()
+
         if self.table_model.rowCount():
             self.last_results_saved = False
 
         self.ui.data_preview.setModel(self.table_model)
         self.ui.data_preview.setDelegates()
+        self.ui.hidden_columns.setModel(self.hidden_model)
+        self.ui.hidden_columns.setDelegates()
 
         #if drop:
             ## drop row colors and row visibility:
@@ -1577,7 +1616,7 @@ class CoqueryApp(QtGui.QMainWindow):
             "{}_{}".format(table, feature),
             db_name, uniques=uniques, parent=self)
 
-    def get_column_submenu(self, selection=[], point=None):
+    def get_column_submenu(self, selection=[], point=None, hidden=False):
         """
         Create a submenu for one or more columns.
 
@@ -1597,25 +1636,38 @@ class CoqueryApp(QtGui.QMainWindow):
             A list of column names
         point : QPoint
             The screen position for which the context menu is requested
+        hidden : bool
+            True if a header from the hidden column panel is clicked, or
+            False if a header from the data table is clicked.
         """
 
         if point:
-            header = self.ui.data_preview.horizontalHeader()
+            if hidden:
+                model = self.ui.hidden_columns
+                table = self.hidden_model
+            else:
+                model = self.ui.data_preview
+                table = self.table_model
+
+            header = model.horizontalHeader()
             index = header.logicalIndexAt(point.x())
-            column = self.table_model.header[index]
+            column = table.header[index]
             if column not in selection:
                 selection = [column]
 
-        menu = CoqColumnMenu(columns=selection, parent=self)
-        menu.showColumnRequested.connect(self.show_columns)
-        menu.hideColumnRequested.connect(self.hide_columns)
-        menu.renameColumnRequested.connect(self.rename_column)
-        menu.resetColorRequested.connect(self.reset_colors)
-        menu.changeColorRequested.connect(self.change_colors)
-        menu.addFunctionRequested.connect(self.add_function)
-        menu.removeFunctionRequested.connect(self.remove_functions)
-        menu.editFunctionRequested.connect(self.edit_function)
-        menu.changeSortingRequested.connect(self.change_sorting_order)
+        if hidden:
+            menu = CoqHiddenColumnMenu(columns=selection, parent=self)
+            menu.showColumnRequested.connect(self.show_columns)
+        else:
+            menu = CoqColumnMenu(columns=selection, parent=self)
+            menu.hideColumnRequested.connect(self.hide_columns)
+            menu.renameColumnRequested.connect(self.rename_column)
+            menu.resetColorRequested.connect(self.reset_colors)
+            menu.changeColorRequested.connect(self.change_colors)
+            menu.addFunctionRequested.connect(self.add_function)
+            menu.removeFunctionRequested.connect(self.remove_functions)
+            menu.editFunctionRequested.connect(self.edit_function)
+            menu.changeSortingRequested.connect(self.change_sorting_order)
 
         return menu
 
@@ -1701,17 +1753,24 @@ class CoqueryApp(QtGui.QMainWindow):
             menu.addAction(action)
         return menu
 
-    def show_header_menu(self, point=None):
+    def show_header_menu(self, point=None, hidden=False):
         """
         Show a context menu for the current column selection. If no column is
         selected, show a context menu for the column that has been clicked on.
         """
-        selection = []
-        for x in self.ui.data_preview.selectionModel().selectedColumns():
-            selection.append(self.table_model.header[x.column()])
+        if hidden:
+            model = self.ui.hidden_columns
+            table = self.hidden_model
+        else:
+            model = self.ui.data_preview
+            table = self.table_model
 
-        header = self.ui.data_preview.horizontalHeader()
-        self.menu = self.get_column_submenu(selection=selection, point=point)
+        header = model.horizontalHeader()
+        selection = []
+        for x in model.selectionModel().selectedColumns():
+            selection.append(table.header[x.column()])
+
+        self.menu = self.get_column_submenu(selection=selection, point=point, hidden=hidden)
         self.menu.popup(header.mapToGlobal(point))
 
     def show_row_header_menu(self, point=None):
@@ -1763,6 +1822,7 @@ class CoqueryApp(QtGui.QMainWindow):
                                        self.Session.Resource.name)
         for column in selection:
             manager.hide_column(column)
+        self.update_table_models()
         self.update_columns()
 
     def show_columns(self, selection):
@@ -1778,6 +1838,7 @@ class CoqueryApp(QtGui.QMainWindow):
                                        self.Session.Resource.name)
         for column in selection:
             manager.show_column(column)
+        self.update_table_models()
         self.update_columns()
 
     def update_columns(self):
@@ -1788,6 +1849,9 @@ class CoqueryApp(QtGui.QMainWindow):
         columnVisibilityChanged signals, and also resorts the table if
         necessary.
         """
+        manager = managers.get_manager(options.cfg.MODE,
+                                       self.Session.Resource.name)
+
         self.table_model.layoutChanged.emit()
         self.columnVisibilityChanged.emit()
         self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
@@ -2591,7 +2655,7 @@ class CoqueryApp(QtGui.QMainWindow):
         label_group_filters = _translate("MainWindow", "Group fi&lters{}...", None)
         label_summary_functions = _translate("MainWindow", "Summary &functions{}...", None)
         label_summary_filters = _translate("MainWindow", "Result fi&lters{}...", None)
-        label_stopwords = _translate("MainWindow", "Stop &word list{}...", None)
+        label_stopwords = _translate("MainWindow", "Active stop words: {}", None)
 
         # grouping button labels:
         l = manager.group_functions.get_list()
@@ -2609,10 +2673,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_filters.setText(
             label_summary_filters.format(get_str(l)))
 
-        # stop word button label:
+        # stop word label:
         l = options.cfg.stopword_list
-        self.ui.button_stopwords.setText(
-            label_stopwords.format(get_str(l)))
+        self.ui.label_stopwords.setText(
+            label_stopwords.format(len(l)))
 
     def add_function(self, columns=[], summary=False, group=False, **kwargs):
         from . import addfunction
