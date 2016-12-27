@@ -1828,6 +1828,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         return self.content.columns.size
 
 
+class CoqHiddenTableModel(CoqTableModel):
+    def data(self, index, role):
+        if role == QtCore.Qt.DisplayRole:
+            return self.formatted.values[index.row()][index.column()]
+        else:
+            return super(CoqHiddenTableModel, self).data(index, role)
+
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     fill = False
 
