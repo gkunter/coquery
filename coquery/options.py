@@ -1482,6 +1482,9 @@ use_bs4 = has_module("bs4")
 use_scipy = has_module("scipy")
 use_cachetools = has_module("cachetools")
 use_statsmodels = has_module("statsmodels")
+use_alsaaudio = has_module("alsaaudio")
+use_winsound = has_module("winsound")
+
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:
