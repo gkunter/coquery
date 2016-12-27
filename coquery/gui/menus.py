@@ -94,14 +94,7 @@ class CoqColumnMenu(QtGui.QMenu):
         all_columns_visible = all([x not in manager.hidden_columns for x in columns])
         some_columns_visible = not all([x in manager.hidden_columns for x in columns])
 
-        # Add menu header:
-        display_name = "<br/>".join([session.translate_header(x) for x in columns])
-        action = QtGui.QWidgetAction(parent)
-        label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
-        label.setAlignment(QtCore.Qt.AlignCenter)
-        action.setDefaultWidget(label)
-        self.addAction(action)
-        self.addSeparator()
+        self.add_header(columns)
 
         show_column = QtGui.QAction("&Show column{}".format(suffix), parent)
         hide_column = QtGui.QAction("&Hide column{}".format(suffix), parent)
@@ -194,3 +187,31 @@ class CoqColumnMenu(QtGui.QMenu):
                             sort_desc.setChecked(True)
                 except AttributeError:
                     sort_none.setChecked(True)
+
+    def add_header(self, columns):
+        # Add menu header:
+        session = get_toplevel_window().Session
+        display_name = "<br/>".join([session.translate_header(x) for x
+                                     in columns])
+        action = QtGui.QWidgetAction(self.parent())
+        label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        action.setDefaultWidget(label)
+        self.addAction(action)
+        self.addSeparator()
+
+
+class CoqHiddenColumnMenu(CoqColumnMenu):
+    showColumnRequested = QtCore.Signal(list)
+
+    def __init__(self, columns=[], title="", parent=None, *args, **kwargs):
+        super(CoqColumnMenu, self).__init__(title, parent, *args, **kwargs)
+        self.columns = columns
+
+        self.add_header(columns)
+
+        suffix = "s" if len(columns) > 1 else ""
+        show_column = QtGui.QAction("&Show column{}".format(suffix), parent)
+        show_column.setIcon(parent.get_icon("Collapse Arrow"))
+        show_column.triggered.connect(lambda: self.showColumnRequested.emit(columns))
+        self.addAction(show_column)
