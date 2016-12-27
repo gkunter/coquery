@@ -91,3 +91,6 @@ class CoqResultsTable(classes.CoqTableView):
             self.setItemDelegateForRow(row, classes.CoqTotalDelegate(self))
 
 
+class CoqHiddenResultsTable(CoqResultsTable):
+    def setDelegates(self):
+        pass
