@@ -537,6 +537,19 @@ class CoqueryApp(QtGui.QMainWindow):
     def show_results_menu(self):
         self.ui.menu_Results.clear()
 
+        self.ui.action_column_properties = QtGui.QAction(self.ui.menu_Results)
+        self.ui.action_column_properties.setText(_translate("MainWindow", "Column properties", None))
+        self.ui.menu_Results.addAction(self.ui.action_column_properties)
+        self.ui.action_column_properties.triggered.connect(self.column_properties)
+
+        self.ui.action_show_hidden = QtGui.QAction(self.ui.menu_Results)
+        self.ui.action_show_hidden.setText(_translate("MainWindow", "Show hidden columns", None))
+        self.ui.menu_Results.addAction(self.ui.action_show_hidden)
+        self.ui.action_show_hidden.triggered.connect(self.show_hidden_columns)
+
+        self.ui.menu_Results.addSeparator()
+
+
         # FIXME:
         # The menu should always display the available options so that users
         # can use it to explore the program (cf. Cooper et al. 2014. About
@@ -588,6 +601,30 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.menuRows = self.get_row_submenu(selection=selection)
             self.ui.menu_Results.insertMenu(self.ui.menuNoRows, self.ui.menuRows)
             self.ui.menu_Results.removeAction(self.ui.menuNoRows)
+
+    def column_properties(self, columns=[]):
+        from .columnproperties import ColumnPropertiesDialog
+
+        old_result = options.cfg.column_properties
+        result = ColumnPropertiesDialog.manage(self.Session.output_object,
+                                               options.cfg.column_properties,
+                                               columns,
+                                               self)
+        if old_result != result:
+            options.cfg.column_properties = result
+            if result["hidden"] is not old_result["hidden"]:
+                manager = managers.get_manager(options.cfg.MODE,
+                                               self.Session.Resource.name)
+                manager.reset_hidden_columns()
+                self.hide_columns(result["hidden"])
+        print(options.cfg.column_properties)
+
+    def show_hidden_columns(self):
+        manager = managers.get_manager(options.cfg.MODE,
+                                       self.Session.Resource.name)
+        manager.reset_hidden_columns()
+        self.update_table_models()
+        self.update_columns()
 
     def set_main_screen_appearance(self):
         if options.cfg.show_data_management:
@@ -1660,10 +1697,8 @@ class CoqueryApp(QtGui.QMainWindow):
             menu.showColumnRequested.connect(self.show_columns)
         else:
             menu = CoqColumnMenu(columns=selection, parent=self)
+            menu.propertiesRequested.connect(self.column_properties)
             menu.hideColumnRequested.connect(self.hide_columns)
-            menu.renameColumnRequested.connect(self.rename_column)
-            menu.resetColorRequested.connect(self.reset_colors)
-            menu.changeColorRequested.connect(self.change_colors)
             menu.addFunctionRequested.connect(self.add_function)
             menu.removeFunctionRequested.connect(self.remove_functions)
             menu.editFunctionRequested.connect(self.edit_function)
