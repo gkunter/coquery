@@ -12,6 +12,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
+import collections
+
 # Python 3.x: import configparser
 # Python 2.x: import ConfigParser as configparser
 try:
@@ -289,6 +291,7 @@ class Options(object):
         self.args.column_color = {}
         self.args.column_names = {}
         self.args.row_color = {}
+        self.args.column_properties = collections.defaultdict(dict)
 
         self.args.managers = {}
 
