@@ -1827,6 +1827,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         """ Return the number of columns. """
         return self.content.columns.size
 
+class CoqTabBar(QtGui.QTabBar):
+    def __init__(self, *args, **kwargs):
+        super(CoqTabBar, self).__init__(*args, **kwargs)
+        self.addTab("Disactivated columns")
+        self.setShape(self.RoundedWest)
+        self.show()
+
 
 class CoqHiddenTableModel(CoqTableModel):
     def data(self, index, role):
