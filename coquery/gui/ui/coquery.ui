@@ -778,6 +778,9 @@
            </property>
           </widget>
           <widget class="QTabWidget" name="widget_hidden_columns">
+           <property name="styleSheet">
+            <string notr="true">QTabWidget::pane { border: 0; }</string>
+           </property>
            <property name="tabPosition">
             <enum>QTabWidget::West</enum>
            </property>
@@ -786,6 +789,9 @@
              <string>Hidden columns</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_3">
+             <property name="margin">
+              <number>0</number>
+             </property>
              <item>
               <widget class="CoqHiddenResultsTable" name="hidden_columns">
                <property name="sizePolicy">
@@ -962,6 +968,8 @@ p, li { white-space: pre-wrap; }
     <property name="title">
      <string>&amp;Output</string>
     </property>
+    <addaction name="action_column_properties"/>
+    <addaction name="actionShow_all_columns"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1454,6 +1462,16 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="text">
     <string>S&amp;hare query...</string>
+   </property>
+  </action>
+  <action name="action_column_properties">
+   <property name="text">
+    <string>Column properties</string>
+   </property>
+  </action>
+  <action name="actionShow_all_columns">
+   <property name="text">
+    <string>Show all columns</string>
    </property>
   </action>
  </widget>
