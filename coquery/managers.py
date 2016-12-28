@@ -34,13 +34,13 @@ class Manager(CoqObject):
     def __init__(self):
         self._functions = []
         self.sorters = []
-        self.hidden_columns = set([])
         self._len_pre_filter = None
         self._len_post_filter = None
         self._len_pre_group_filter = {}
         self._len_post_group_filter = {}
         self.drop_on_na = None
         self.stopwords_failed = False
+        self.reset_hidden_columns()
 
         self.group_functions = FunctionList()
         self.manager_summary_functions = FunctionList()
@@ -54,6 +54,9 @@ class Manager(CoqObject):
     def reset_context_cache(self):
         self._context_cache = collections.defaultdict(
             lambda: (None, None, None))
+
+    def reset_hidden_columns(self):
+        self.hidden_columns = set([])
 
     def hide_column(self, column):
         self.hidden_columns.add(column)
