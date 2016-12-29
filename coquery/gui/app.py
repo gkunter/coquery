@@ -33,7 +33,7 @@ from coquery.links import get_by_hash
 from . import classes
 from . import errorbox
 from .pyqt_compat import QtCore, QtGui
-from .ui import coqueryUi, coqueryTinyUi
+from .ui import coqueryUi
 from .resourcetree import CoqResourceTree
 from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
 
@@ -134,10 +134,8 @@ class CoqueryApp(QtGui.QMainWindow):
         if not utf8(options.cfg.context_font.family()):
             options.cfg.context_font = QtGui.QLabel().font()
 
-        if size.width() < 800 or size.height() < 600:
-            self.ui = coqueryTinyUi.Ui_MainWindow()
-        else:
-            self.ui = coqueryUi.Ui_MainWindow()
+        self.ui = coqueryUi.Ui_MainWindow()
+
         self.ui.setupUi(self)
         self.setMenuBar(self.ui.menubar)
 
