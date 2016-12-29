@@ -366,6 +366,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_view_log.triggered.connect(self.show_log)
         self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
 
+        self.ui.action_column_properties.triggered.connect(self.column_properties)
+        self.ui.action_show_hidden.triggered.connect(self.show_hidden_columns)
+
         self.ui.action_barcode_plot.triggered.connect(lambda: self.visualize_data("barcodeplot"))
         self.ui.action_beeswarm_plot.triggered.connect(lambda: self.visualize_data("beeswarmplot"))
 
@@ -535,6 +538,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_reference_corpus.setText("Set &reference corpus...")
 
     def show_results_menu(self):
+        return
         self.ui.menu_Results.clear()
 
         self.ui.action_column_properties = QtGui.QAction(self.ui.menu_Results)
@@ -605,19 +609,38 @@ class CoqueryApp(QtGui.QMainWindow):
     def column_properties(self, columns=[]):
         from .columnproperties import ColumnPropertiesDialog
 
-        old_result = options.cfg.column_properties
+        old_result = options.settings.value("column_properties")
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
                                                options.cfg.column_properties,
                                                columns,
                                                self)
-        if old_result != result:
-            options.cfg.column_properties = result
+        if result:
+            manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+            options.settings.setValue("column_properties", result)
+
             if result["hidden"] is not old_result["hidden"]:
-                manager = managers.get_manager(options.cfg.MODE,
-                                               self.Session.Resource.name)
                 manager.reset_hidden_columns()
                 self.hide_columns(result["hidden"])
-        print(options.cfg.column_properties)
+
+            # set column names
+            for col in result["alias"]:
+                name = result["alias"][col]
+                if col.startswith("func_"):
+                    fun = manager.get_function(col)
+                    fun.set_label(name)
+                else:
+                    options.cfg.column_names[col] = name
+
+            # reset column colors if necessary:
+            for x in [x for x in self.Session.output_object.columns
+                      if x in options.cfg.column_color]:
+                if x not in result["colors"]:
+                    options.cfg.column_color.pop(x)
+
+            # set column colors:
+            if result["colors"]:
+                for column, color in result["colors"].items():
+                    options.cfg.column_color[column] = color
 
     def show_hidden_columns(self):
         manager = managers.get_manager(options.cfg.MODE,
@@ -1884,9 +1907,6 @@ class CoqueryApp(QtGui.QMainWindow):
         columnVisibilityChanged signals, and also resorts the table if
         necessary.
         """
-        manager = managers.get_manager(options.cfg.MODE,
-                                       self.Session.Resource.name)
-
         self.table_model.layoutChanged.emit()
         self.columnVisibilityChanged.emit()
         self.ui.data_preview.horizontalHeader().geometriesChanged.emit()
