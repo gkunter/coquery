@@ -106,12 +106,10 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         self.ui.edit_column_name.textChanged.connect(self.change_alias)
         self.ui.table_substitutions.cellChanged.connect(
             self.change_substitution)
-        button = self.ui.buttonbox_label.button(
-            QtGui.QDialogButtonBox.RestoreDefaults)
+        button = self.ui.buttonbox_label.button(QtGui.QDialogButtonBox.Reset)
         button.clicked.connect(lambda: self.ui.edit_column_name.setText(""))
         self.ui.button_change_color.clicked.connect(self.set_color)
-        button = self.ui.buttonbox_color.button(
-            QtGui.QDialogButtonBox.RestoreDefaults)
+        button = self.ui.buttonbox_color.button(QtGui.QDialogButtonBox.Reset)
         button.clicked.connect(self.reset_color)
 
     def reset_color(self):
@@ -158,6 +156,12 @@ class ColumnPropertiesDialog(QtGui.QDialog):
             self.ui.edit_column_name.setText(utf8(current_item.text()))
         else:
             self.ui.edit_column_name.setText(s)
+
+        try:
+            s = "QLabel {{ color: {};}}".format(self.colors[col])
+        except:
+            s = ""
+        self.ui.label_example.setStyleSheet(s)
 
         # set substitution table
         self.ui.table_substitutions.blockSignals(True)

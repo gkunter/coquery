@@ -102,7 +102,7 @@
          <enum>Qt::Vertical</enum>
         </property>
         <property name="standardButtons">
-         <set>QDialogButtonBox::RestoreDefaults</set>
+         <set>QDialogButtonBox::Reset</set>
         </property>
         <property name="centerButtons">
          <bool>false</bool>
@@ -115,7 +115,7 @@
          <enum>Qt::Vertical</enum>
         </property>
         <property name="standardButtons">
-         <set>QDialogButtonBox::RestoreDefaults</set>
+         <set>QDialogButtonBox::Reset</set>
         </property>
        </widget>
       </item>
