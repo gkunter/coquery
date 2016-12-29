@@ -2235,6 +2235,14 @@ class CoqueryApp(QtGui.QMainWindow):
 
             if rm_database and database and sqlhelper.has_database(options.cfg.current_server, database):
                 try:
+                    connected = True
+                    self.Session.db_connection.close()
+                except AttributeError:
+                    connected = False
+                except Exception as e:
+                    print(e)
+                    warning.warn(e)
+                try:
                     sqlhelper.drop_database(options.cfg.current_server, database)
                 except Exception as e:
                     raise e
@@ -2244,6 +2252,9 @@ class CoqueryApp(QtGui.QMainWindow):
                         msg_remove_corpus_error.format(corpus=resource.name, code=e),
                         QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     success = False
+                finally:
+                    if connected:
+                        self.Session.db_connection = self.Session.db_engine.connect()
 
             # Remove the corpus module:
             if rm_module and success and module:
@@ -2315,6 +2326,15 @@ class CoqueryApp(QtGui.QMainWindow):
     def install_corpus(self, builder_class):
         from .corpusbuilder_interface import InstallerGui
 
+        try:
+            connected = True
+            self.Session.db_connection.close()
+        except AttributeError:
+            connected = False
+        except Exception as e:
+            print(e)
+            warning.warn(e)
+
         builder = InstallerGui(builder_class, self)
         try:
             result = builder.display()
@@ -2322,6 +2342,9 @@ class CoqueryApp(QtGui.QMainWindow):
             errorbox.ErrorBox.show(sys.exc_info())
         if result:
             options.set_current_server(options.cfg.current_server)
+
+        if connected:
+            self.Session.db_connection = self.Session.db_engine.connect()
 
         self.fill_combo_corpus()
         self.change_corpus()
