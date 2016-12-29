@@ -2,7 +2,6 @@ from __future__ import division
 
 import types
 import numpy as np
-import struct
 import sys
 
 from .pyqt_compat import QtGui, pyside
@@ -102,32 +101,9 @@ class CoqTextgridView(QtGui.QWidget):
         layout.setMargin(0)
         layout.setSpacing(0)
 
-        control_layout = QtGui.QHBoxLayout()
-
-        self.spin_dynamic_range = QtGui.QSpinBox()
-        self.spin_dynamic_range.setValue(self._dynamic_range)
-        self.spin_dynamic_range.valueChanged.connect(self.change_dynamic_range)
-        self.label_dynamic_range = QtGui.QLabel("&Dynamic range:")
-        self.label_dynamic_range.setBuddy(self.spin_dynamic_range)
-
-        control_layout.addWidget(self.label_dynamic_range)
-        control_layout.addWidget(self.spin_dynamic_range)
-
-        self.spin_window_length = QtGui.QDoubleSpinBox()
-        self.spin_window_length.setDecimals(4)
-        self.spin_window_length.setValue(self._window_length)
-        self.spin_window_length.valueChanged.connect(self.change_window_length)
-        self.label_window_length = QtGui.QLabel("&Window length:")
-        self.label_window_length.setBuddy(self.spin_window_length)
-
-        control_layout.addWidget(self.label_window_length)
-        control_layout.addWidget(self.spin_window_length)
-
-
         self.setLayout(layout)
         self.layout().addWidget(self.toolbar)
         self.layout().addWidget(self.canvas)
-        self.layout().addLayout(control_layout)
 
     def on_key_press(self, *args, **kwargs):
         pass
@@ -153,7 +129,7 @@ class CoqTextgridView(QtGui.QWidget):
         NFFT = int(self.sound().framerate * self.windowLength())
         noverlap = kwargs.get("noverlap", int(NFFT / 2))
         data, ybins, xbins, im = self.ax_spectrogram.specgram(
-            self._raw,
+            self.sound().astype(np.int32),
             NFFT=NFFT,
             Fs=self.sound().framerate,
             noverlap=noverlap,
@@ -182,27 +158,11 @@ class CoqTextgridView(QtGui.QWidget):
     def setWindowLength(self, x):
         self._window_length = x
 
-    def setSound(self, sound):
-        self._sound = sound
-
-        print(type(sound.raw))
-        if sound.samplewidth == 2:
-            c_type = "h"
-        else:
-            c_type = "b"
-        if "little" in sys.byteorder:
-            frm = "<{}".format(c_type)
-        else:
-            frm = ">{}".format(c_type)
-
-        S = struct.Struct(frm)
-        _raw = np.array([S.unpack(sound.raw[x * sound.samplewidth:
-                                            (x+1)*sound.samplewidth])[0]
-                            for x in range(len(sound))])
-        self._raw = _raw / max(abs(_raw))
-
     def sound(self):
         return self._sound
+
+    def setSound(self, s):
+        self._sound = s
 
     def setTextgrid(self, textgrid):
         self._textgrid = textgrid
@@ -222,10 +182,9 @@ class CoqTextgridView(QtGui.QWidget):
         self.canvas.draw()
 
     def plotWave(self):
-        t = np.linspace(0.0,
-                        len(self._raw) / self.sound().framerate,
-                        len(self._raw))
-        self.ax_waveform.plot(t, self._raw)
+        t = np.linspace(0.0, self.sound().duration(), len(self.sound()))
+        amp = self.sound().astype(np.int32)
+        self.ax_waveform.plot(t, amp / abs(max(amp)))
 
     def plotTextgrid(self):
         tier_labels = []
@@ -237,12 +196,12 @@ class CoqTextgridView(QtGui.QWidget):
             for interval in tier.intervals:
                 patch = Rectangle(
                     (interval.start_time, y_start),
-                    interval.duration,
+                    interval.duration(),
                     y_end - y_start,
                     fill=False)
                 self.ax_textgrid.add_patch(patch)
                 self.ax_textgrid.text(
-                    interval.start_time + 0.5 * (interval.duration),
+                    interval.start_time + 0.5 * (interval.duration()),
                     y_start + 0.5 * (y_end - y_start),
                     interval.text,
                     verticalalignment="center",
@@ -258,7 +217,6 @@ class CoqTextgridView(QtGui.QWidget):
 
     def display(self, **kwargs):
         if self.sound():
-            self._duration = len(self.sound()) / self.sound().framerate
             self.plotWave()
             self.plotSpectrogram()
 
