@@ -1655,8 +1655,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     @staticmethod
     def format_content(source):
         try:
-            subst = options.cfg.column_properties["substitutions"]
-        except (KeyError, AttributeError):
+            subst = options.cfg.column_substitutions
+        except AttributeError:
             subst = {}
 
         df = pd.DataFrame(index=source.index)

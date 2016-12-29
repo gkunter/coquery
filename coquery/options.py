@@ -291,7 +291,6 @@ class Options(object):
         self.args.column_color = {}
         self.args.column_names = {}
         self.args.row_color = {}
-        self.args.column_properties = collections.defaultdict(dict)
 
         self.args.managers = {}
 

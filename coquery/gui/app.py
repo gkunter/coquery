@@ -640,6 +640,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 for column, color in result["colors"].items():
                     options.cfg.column_color[column] = color
 
+            options.cfg.column_substitutions = result["substitutions"]
+
     def show_hidden_columns(self):
         manager = managers.get_manager(options.cfg.MODE,
                                        self.Session.Resource.name)
