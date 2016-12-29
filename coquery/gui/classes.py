@@ -1658,6 +1658,11 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
     @staticmethod
     def format_content(source):
+        try:
+            subst = options.cfg.column_properties["substitutions"]
+        except (KeyError, AttributeError):
+            subst = {}
+
         df = pd.DataFrame(index=source.index)
 
         for col in source.columns:
@@ -1707,6 +1712,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             # unknown column type
             else:
                 raise TypeError
+
+        if subst:
+            df = df.replace(subst)
+
         df = df.fillna(options.cfg.na_string)
         return df
 
