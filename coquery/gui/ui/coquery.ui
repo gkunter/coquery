@@ -969,7 +969,7 @@ p, li { white-space: pre-wrap; }
      <string>&amp;Output</string>
     </property>
     <addaction name="action_column_properties"/>
-    <addaction name="actionShow_all_columns"/>
+    <addaction name="action_show_hidden"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1466,10 +1466,10 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_column_properties">
    <property name="text">
-    <string>Column properties</string>
+    <string>Column properties...</string>
    </property>
   </action>
-  <action name="actionShow_all_columns">
+  <action name="action_show_hidden">
    <property name="text">
     <string>Show all columns</string>
    </property>

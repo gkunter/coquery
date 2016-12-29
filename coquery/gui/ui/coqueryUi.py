@@ -651,8 +651,8 @@ class Ui_MainWindow(object):
         self.action_share_query.setObjectName(_fromUtf8("action_share_query"))
         self.action_column_properties = QtGui.QAction(MainWindow)
         self.action_column_properties.setObjectName(_fromUtf8("action_column_properties"))
-        self.actionShow_all_columns = QtGui.QAction(MainWindow)
-        self.actionShow_all_columns.setObjectName(_fromUtf8("actionShow_all_columns"))
+        self.action_show_hidden = QtGui.QAction(MainWindow)
+        self.action_show_hidden.setObjectName(_fromUtf8("action_show_hidden"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -699,7 +699,7 @@ class Ui_MainWindow(object):
         self.menuAnalyse.addAction(self.menuFrequency_maps.menuAction())
         self.menuAnalyse.addAction(self.menuDensity_plots.menuAction())
         self.menu_Results.addAction(self.action_column_properties)
-        self.menu_Results.addAction(self.actionShow_all_columns)
+        self.menu_Results.addAction(self.action_show_hidden)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuCorpus.menuAction())
         self.menubar.addAction(self.menu_Results.menuAction())
@@ -849,8 +849,8 @@ class Ui_MainWindow(object):
         self.action_save_query.setText(_translate("MainWindow", "S&ave query...", None))
         self.action_load_query.setText(_translate("MainWindow", "L&oad query...", None))
         self.action_share_query.setText(_translate("MainWindow", "S&hare query...", None))
-        self.action_column_properties.setText(_translate("MainWindow", "Column properties", None))
-        self.actionShow_all_columns.setText(_translate("MainWindow", "Show all columns", None))
+        self.action_column_properties.setText(_translate("MainWindow", "Column properties...", None))
+        self.action_show_hidden.setText(_translate("MainWindow", "Show all columns", None))
 
 from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
 from ..resultstable import CoqHiddenResultsTable, CoqResultsTable
