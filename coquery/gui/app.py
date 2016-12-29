@@ -609,7 +609,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         old_result = options.settings.value("column_properties")
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
-                                               options.cfg.column_properties,
+                                               old_result,
                                                columns,
                                                self)
         if result:
@@ -1308,6 +1308,9 @@ class CoqueryApp(QtGui.QMainWindow):
         manager = managers.get_manager(
             options.cfg.MODE,
             self.Session.Resource.name)
+        for x in list(manager.hidden_columns):
+            if x not in self.Session.output_object.columns:
+                manager.hidden_columns.remove(x)
         hidden_columns = pd.Index(manager.hidden_columns)
         vis_cols = self.Session.output_object.columns
         self.table_model = classes.CoqTableModel(
@@ -1720,12 +1723,12 @@ class CoqueryApp(QtGui.QMainWindow):
             menu.showColumnRequested.connect(self.show_columns)
         else:
             menu = CoqColumnMenu(columns=selection, parent=self)
-            menu.propertiesRequested.connect(self.column_properties)
-            menu.hideColumnRequested.connect(self.hide_columns)
-            menu.addFunctionRequested.connect(self.add_function)
-            menu.removeFunctionRequested.connect(self.remove_functions)
-            menu.editFunctionRequested.connect(self.edit_function)
-            menu.changeSortingRequested.connect(self.change_sorting_order)
+        menu.hideColumnRequested.connect(self.hide_columns)
+        menu.addFunctionRequested.connect(self.add_function)
+        menu.removeFunctionRequested.connect(self.remove_functions)
+        menu.editFunctionRequested.connect(self.edit_function)
+        menu.changeSortingRequested.connect(self.change_sorting_order)
+        menu.propertiesRequested.connect(self.column_properties)
 
         return menu
 
