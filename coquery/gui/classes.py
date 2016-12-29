@@ -879,10 +879,6 @@ class CoqTreeWidget(QtGui.QTreeWidget):
     Define a tree widget that stores the available output columns in a tree
     with check boxes for each variable.
     """
-    addLink = QtCore.Signal(CoqTreeItem)
-    addFunction = QtCore.Signal(CoqTreeItem)
-    removeItem = QtCore.Signal(CoqTreeItem)
-
     def __init__(self, *args):
         super(CoqTreeWidget, self).__init__(*args)
         self.itemChanged.connect(self.update)
