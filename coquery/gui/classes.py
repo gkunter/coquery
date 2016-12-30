@@ -1653,11 +1653,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         return self._dtypes[list(self.header).index(column)]
 
     @staticmethod
-    def format_content(source):
-        try:
-            subst = options.cfg.column_substitutions
-        except AttributeError:
-            subst = {}
+    def format_content(source, num_to_str=True):
+        column_properties = options.settings.value("column_properties", {})
+        current_properties = column_properties.get(options.cfg.corpus, {})
+        subst = current_properties.get("substitutions", {})
 
         df = pd.DataFrame(index=source.index)
 
@@ -1673,7 +1672,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 continue
 
             dtype = pd.Series(source[col].dropna().tolist()).dtype
-
             # float
             if dtype == float:
                 # try to force floats to int:
@@ -1682,20 +1680,30 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 except (ValueError, TypeError):
                     as_int = pd.Series(index=source[col].index)
 
-                if all(as_int == source[col]):
-                    df[col] = as_int.apply(lambda x: str(x) if (
-                                                x is not None and
-                                                x is not pd.np.nan) else None)
+                if num_to_str:
+                    if all(as_int == source[col]):
+                        df[col] = as_int.apply(lambda x: str(x) if (
+                                                    x is not None and
+                                                    x is not pd.np.nan) else None)
+                    else:
+                        df[col] = source[col].apply(lambda x: options.cfg.float_format.format(x) if (
+                                                    x is not None and
+                                                    x is not pd.np.nan) else None)
                 else:
-                    df[col] = source[col].apply(lambda x: options.cfg.float_format.format(x) if (
-                                                x is not None and
-                                                x is not pd.np.nan) else None)
-
+                    if all(as_int == source[col]):
+                        df[col] = as_int.apply(lambda x: int(x) if (
+                                                    x is not None and
+                                                    x is not pd.np.nan) else None)
+                    else:
+                        df[col] = source[col]
             # int
             elif dtype == int:
-                df[col] = source[col].apply(lambda x: str(x) if (
-                                                x is not None and
-                                                x is not pd.np.nan) else None)
+                if num_to_str:
+                    df[col] = source[col].apply(lambda x: str(x) if (
+                                                    x is not None and
+                                                    x is not pd.np.nan) else None)
+                else:
+                    df[col] = source[col]
 
             # bool
             elif dtype == bool:
@@ -1814,11 +1822,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
             sorter = self._manager.get_sorter(column)
             try:
-                # add arrows as sorting direction indicators if necessary:
-                if not sorter.ascending:
-                    return get_toplevel_window().get_icon("Descending Sorting")
-                else:
-                    return get_toplevel_window().get_icon("Ascending Sorting")
+                icon = {(False, False): "Descending Sorting",
+                        (True, False): "Ascending Sorting",
+                        (False, True): "Descending Reverse Sorting",
+                        (True, True): "Ascending Reverse Sorting"}[
+                            sorter.ascending,
+                            sorter.reverse]
+                return get_toplevel_window().get_icon(icon)
             except AttributeError:
                 return None
 
