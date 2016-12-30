@@ -338,10 +338,9 @@ class Manager(CoqObject):
         df = self.manager_summary_functions.apply(df, session=session, manager=self)
         df = self.user_summary_functions.apply(df, session=session, manager=self)
 
-        if options.cfg.drop_on_na:
+        if options.cfg.drop_on_na and vis_cols:
             ix = df[vis_cols].dropna(axis="index", how="all").index
             df = df.iloc[ix]
-
         if options.cfg.drop_duplicates:
             df = self.distinct(df, session)
 
@@ -425,8 +424,6 @@ class Manager(CoqObject):
         functions = []
         others = []
 
-        print(vis_cols)
-
         for col in list(vis_cols):
             if col.startswith("coq_"):
                 this_res = resource
@@ -501,9 +498,7 @@ class Manager(CoqObject):
 
         df = self.filter(df, session)
         df = self.summarize(df, session)
-
         df = self.select(df, session)
-
         self._functions = (self._group_functions +
                         session.column_functions.get_list() +
                         self.group_functions.get_list() +
