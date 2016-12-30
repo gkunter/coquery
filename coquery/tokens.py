@@ -63,7 +63,8 @@ class QueryToken(object):
             # This happens in Python 3.x, because unicode strings don't have 
             # decode() any more.
             pass
-        assert type(S) == type(u"")
+        assert type(S) == type(u""), "'{}': Expected type {}, got {}".format(
+            S, type(u""), type(S))
         
         self.S = S.strip()
         if replace:
