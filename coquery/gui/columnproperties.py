@@ -20,7 +20,9 @@ from .ui.columnPropertiesUi import Ui_ColumnProperties
 
 
 class ColumnPropertiesDialog(QtGui.QDialog):
-    def __init__(self, df, preset, columns, parent=None):
+    _color_map = {QtGui.QColor(name).name().lower(): name for name
+                  in QtGui.QColor.colorNames()}
+    def __init__(self, df, preset, columns=None, parent=None):
         super(ColumnPropertiesDialog, self).__init__(parent)
 
         self.ui = Ui_ColumnProperties()
@@ -31,24 +33,35 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         try:
             self.alias = preset["alias"]
         except:
-            self.alias = collections.defaultdict(str)
+            self.alias = {}
         try:
             self.substitutions = preset["substitutions"]
         except:
-            self.substitutions = collections.defaultdict(dict)
+            self.substitutions = {}
         try:
             self.colors = preset["colors"]
         except:
-            self.colors = collections.defaultdict(str)
+            self.colors = {}
         try:
             self.hidden = preset["hidden"]
         except:
-            self.hidden = collections.defaultdict(str)
+            self.hidden = {}
 
         self.setup_data()
 
         if columns:
             self.ui.widget_selection.setCurrentItem(columns[0])
+        else:
+            try:
+                self.ui.widget_selection.setCurrentItem(
+                    options.settings.value("columnproperties_column"))
+            except TypeError:
+                pass
+        try:
+            self.ui.tab_widget.setCurrentIndex(
+                options.settings.value("columnproperties_index"))
+        except TypeError:
+            pass
 
         try:
             self.resize(options.settings.value("columnproperties_size"))
@@ -80,8 +93,11 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         else:
             return None
 
-    def closeEvent(self, event):
+    def accept(self, *args):
+        super(ColumnPropertiesDialog, self).accept(*args)
         options.settings.setValue("columnproperties_size", self.size())
+        options.settings.setValue("columnproperties_column", self.ui.widget_selection.currentItem().data(QtCore.Qt.UserRole))
+        options.settings.setValue("columnproperties_index", self.ui.tab_widget.currentIndex())
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
@@ -110,8 +126,20 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         button = self.ui.buttonbox_label.button(QtGui.QDialogButtonBox.Reset)
         button.clicked.connect(lambda: self.ui.edit_column_name.setText(""))
         self.ui.button_change_color.clicked.connect(self.set_color)
+        self.ui.label_example.clicked.connect(self.set_color)
         button = self.ui.buttonbox_color.button(QtGui.QDialogButtonBox.Reset)
         button.clicked.connect(self.reset_color)
+        button = self.ui.buttonbox_substitution.button(QtGui.QDialogButtonBox.Reset)
+        button.clicked.connect(self.reset_substitution)
+
+    def reset_substitution(self):
+        current_item = self.ui.widget_selection.currentItem()
+        column = current_item.data(QtCore.Qt.UserRole)
+        for i in range(self.ui.table_substitutions.rowCount()):
+            key = utf8(self.ui.table_substitutions.item(i, 0).text())
+            value = None
+            self.ui.table_substitutions.item(i, 1).setText(value)
+            self.substitutions[column][key] = value
 
     def reset_color(self):
         current_item = self.ui.widget_selection.currentItem()
@@ -120,19 +148,35 @@ class ColumnPropertiesDialog(QtGui.QDialog):
             self.colors.pop(col)
         except KeyError:
             pass
-        self.ui.label_example.setStyleSheet("")
+        self.set_example(None)
+
+    def set_example(self, color):
+        if color:
+            if color.red() + color.green() + color.blue() > 127 * 3:
+                fg = "black"
+            else:
+                fg = "white"
+            S = "QLabel {{background-color: {}; color: {}; }}".format(
+                color.name(), fg)
+            label = color.name()
+            if label.lower() in self._color_map:
+                label = "{} ({})".format(label, self._color_map[label])
+        else:
+            S = ""
+            label = "(default color)"
+        self.ui.label_example.setText(label)
+        self.ui.label_example.setStyleSheet(S)
 
     def set_color(self):
         current_item = self.ui.widget_selection.currentItem()
         column = current_item.data(QtCore.Qt.UserRole)
         try:
-            color = QtGui.QColorDialog.getColor(self.colors[column])
+            color = QtGui.QColorDialog.getColor(QtGui.QColor(self.colors[column]))
         except KeyError:
             color = QtGui.QColorDialog.getColor()
 
         if color.isValid():
-            S = "QLabel {{color: {};}}".format(color.name())
-            self.ui.label_example.setStyleSheet(S)
+            self.set_example(color)
             self.colors[column] = color.name()
 
     def change_substitution(self, i, j):
@@ -158,11 +202,10 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         else:
             self.ui.edit_column_name.setText(s)
 
-        try:
-            s = "QLabel {{ color: {};}}".format(self.colors[col])
-        except:
-            s = ""
-        self.ui.label_example.setStyleSheet(s)
+        if col in self.colors:
+            self.set_example(QtGui.QColor(self.colors[col]))
+        else:
+            self.set_example(None)
 
         # set substitution table
         self.ui.table_substitutions.blockSignals(True)
