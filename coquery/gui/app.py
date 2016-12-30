@@ -271,7 +271,6 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.set_columns_widget()
 
-
         self.ui.status_message = QtGui.QLabel("{} {}".format(NAME, VERSION))
         self.ui.status_progress = QtGui.QProgressBar()
         self.ui.status_progress.hide()
@@ -309,12 +308,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.connection_timer.timeout.connect(self.test_mysql_connection)
         self.connection_timer.start(10000)
 
-        # the dictionaries column_width and column_color store default
+        # the dictionary column_width stores default
         # attributes of the columns by display name. This means that problems
         # may arise if several columns have the same name!
         # FIXME: Make sure that the columns are identified correctly.
         self.column_width = {}
-        self.column_color = {}
 
         self._resizing_column = False
 
@@ -608,16 +606,18 @@ class CoqueryApp(QtGui.QMainWindow):
     def column_properties(self, columns=[]):
         from .columnproperties import ColumnPropertiesDialog
 
-        old_result = options.settings.value("column_properties")
+        properties = options.settings.value("column_properties", {})
+        current_properties = properties.get(options.cfg.corpus, {})
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
-                                               old_result,
+                                               current_properties,
                                                columns,
                                                self)
         if result:
             manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
-            options.settings.setValue("column_properties", result)
+            properties[options.cfg.corpus] = result
+            options.settings.setValue("column_properties", properties)
 
-            if result["hidden"] is not old_result["hidden"]:
+            if result["hidden"] != current_properties.get("hidden", set()):
                 manager.reset_hidden_columns()
                 self.hide_columns(result["hidden"])
 
@@ -630,18 +630,12 @@ class CoqueryApp(QtGui.QMainWindow):
                 else:
                     options.cfg.column_names[col] = name
 
-            # reset column colors if necessary:
-            for x in [x for x in self.Session.output_object.columns
-                      if x in options.cfg.column_color]:
-                if x not in result["colors"]:
-                    options.cfg.column_color.pop(x)
-
             # set column colors:
-            if result["colors"]:
-                for column, color in result["colors"].items():
-                    options.cfg.column_color[column] = color
+            options.cfg.column_color = result.get("colors", {})
 
-            options.cfg.column_substitutions = result["substitutions"]
+            if current_properties["substitutions"] != result["substitutions"]:
+                self.table_model.formatted = self.table_model.format_content(
+                    self.table_model.content)
 
     def show_hidden_columns(self):
         manager = managers.get_manager(options.cfg.MODE,
@@ -970,7 +964,6 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def finalize_reaggregation(self):
         manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
-        self._sort(manager=manager)
         self.display_results(drop=False)
         self.stop_progress_indicator()
         self.resize_rows()
@@ -1149,21 +1142,21 @@ class CoqueryApp(QtGui.QMainWindow):
                     _set_icon(1, None)
 
         elif row == TOOLBOX_GROUPING:
-            if self._group_functions.get_list():
-                _set_icon(2, active_icon)
-            else:
-                _set_icon(2, None)
-            if options.cfg.group_filter_list:
-                if self.ui.list_group_columns.columns:
+            _set_icon(1, None)
+            _set_icon(2, None)
+            if self.ui.list_group_columns.columns:
+                if options.cfg.group_functions:
+                    _set_icon(2, active_icon)
+                if options.cfg.group_filter_list:
                     _set_icon(1, filter_icon)
-                else:
-                    _set_icon(1, problem_icon)
-            else:
-                _set_icon(1, None)
+            elif options.cfg.group_functions or options.cfg.group_filter_list:
+                _set_icon(2, problem_icon)
 
         elif row == TOOLBOX_AGGREGATE:
-            val = None if self.ui.aggregate_radio_list[0].isChecked() else active_icon
-            _set_icon(2, val)
+            if self.ui.aggregate_radio_list[0].isChecked():
+                _set_icon(2, None)
+            else:
+                _set_icon(2, active_icon)
 
         elif row == TOOLBOX_SUMMARY:
             try:
@@ -1367,6 +1360,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if self.table_model.rowCount():
             self.last_results_saved = False
+
+        # make sure that the right column colors are used
+        properties = options.settings.value("column_properties", {})
+        current_properties = properties.get(options.cfg.corpus, {})
+        options.cfg.column_color = current_properties.get("colors", {})
 
         self.ui.data_preview.setModel(self.table_model)
         self.ui.data_preview.setDelegates()
@@ -1617,7 +1615,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.showMessage("Query results written to {}.".format(options.cfg.output_path))
         else:
             try:
-                self.Session.db_connection.close()
                 self.Session.db_engine.dispose()
             except Exception as e:
                 print(e)
@@ -1945,37 +1942,6 @@ class CoqueryApp(QtGui.QMainWindow):
         #self.table_model.rowVisibilityChanged.emit()
         #self.table_model.layoutChanged.emit()
 
-    def reset_colors(self, selection):
-        """
-        Reset the colors of the columns in the selection.
-
-        Parameters
-        ----------
-        selection : list
-            A list of column names.
-        """
-        for column in selection:
-            try:
-                options.cfg.column_color.pop(column)
-                self.table_model.layoutChanged.emit()
-            except KeyError:
-                pass
-
-    def change_colors(self, selection):
-        """
-        Change the colors of the columns in the selection to one
-        selected from a dialog.
-
-        Parameters
-        ----------
-        selection : list
-            A list of column names.
-        """
-        col = QtGui.QColorDialog.getColor()
-        if col.isValid():
-            for column in selection:
-                options.cfg.column_color[column] = col.name()
-
     def reset_row_color(self, selection):
         for x in selection:
             try:
@@ -2116,7 +2082,6 @@ class CoqueryApp(QtGui.QMainWindow):
 
             self.new_session.group_functions = self._group_functions
             self.new_session.column_functions = self._column_functions
-
             self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
             self.query_thread.taskFinished.connect(lambda: self.finalize_query(options.cfg.to_file))
@@ -2727,8 +2692,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def set_button_labels(self):
         def get_str(l):
-            return (" ({})".format(len(l)) if l and self.Session != None
-                    else "")
+            return (" ({})".format(len(l)) if l else "")
 
         try:
             session = self.Session
@@ -2743,7 +2707,7 @@ class CoqueryApp(QtGui.QMainWindow):
         label_stopwords = _translate("MainWindow", "Active stop words: {}", None)
 
         # grouping button labels:
-        l = manager.group_functions.get_list()
+        l = options.cfg.group_functions
         self.ui.button_add_group_function.setText(
             label_group_functions.format(get_str(l)))
         l = options.cfg.group_filter_list
@@ -2751,7 +2715,7 @@ class CoqueryApp(QtGui.QMainWindow):
             label_group_filters.format(get_str(l)))
 
         # summary button labels:
-        l = manager.user_summary_functions.get_list()
+        l = options.cfg.summary_functions
         self.ui.button_add_summary_function.setText(
             label_summary_functions.format(get_str(l)))
         l = options.cfg.filter_list
@@ -2785,8 +2749,7 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.Entropy, functions.Percent,
                          functions.Proportion, functions.Tokens,
                          functions.Types, functions.TypeTokenRatio]
-                checked = [type(x) for x in self._group_functions.get_list()]
-
+                checked = options.cfg.group_functions
             else:
                 types = [
                          functions.FilteredRows, functions.PassingRows,
@@ -2801,7 +2764,7 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.Tokens, functions.Types,
                          functions.TypeTokenRatio,
                          functions.CorpusSize, functions.SubcorpusSize]
-                checked = [type(x) for x in manager.user_summary_functions.get_list()]
+                checked = options.cfg.summary_functions
 
             kwargs.update({
                 "function_types": types,
@@ -2829,9 +2792,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if group:
             manager.group_functions.set_list([x(sweep=True, hidden=True, group=True) for x in response])
+            options.cfg.group_functions = [type(x) for x in manager.group_functions.get_list()]
             self.enable_apply_button()
         elif summary:
-            manager.user_summary_functions.set_list([x(sweep=True) for x in response])
+            manager.set_summary_functions(response)
+            options.cfg.summary_functions = [type(x) for x in manager.user_summary_functions.get_list()]
             self.enable_apply_button()
         else:
             fun_type, value, aggr, label = response
