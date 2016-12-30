@@ -172,7 +172,12 @@ class Session(object):
 
         self.queries = {}
 
+        _queried = []
+
         for i, current_query in enumerate(self.query_list):
+            if current_query.query_string in _queried:
+                continue
+            _queried.append(current_query.query_string)
             self.queries[i] = current_query
 
             if options.cfg.gui and number_of_queries > 1:
