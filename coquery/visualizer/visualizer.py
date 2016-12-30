@@ -290,10 +290,15 @@ class BaseVisualizer(QtCore.QObject):
             x in view_columns and
             x not in self._time_columns and
             not x.startswith("func_DECAT"))]
-        self._number_columns = [x for x in self._table.select_dtypes(include=["int", "float"]).columns if (
-            not x.startswith("coquery_invisible") and
-            x in view_columns)]
-
+        if options.cfg.verbose:
+            print("DTYPES")
+            print("output_object ", dtypes)
+            print("_table        ", self._table.dtypes)
+        self._number_columns = [x for x in self._table.columns if (
+            dtypes[x] in (int, float) and
+            x in view_columns and
+            x not in self._time_columns and
+            not x.startswith("coquery_invisible"))]
         if self.dimensionality:
             self._groupby = self._factor_columns[-self.dimensionality:]
         else:
@@ -318,13 +323,14 @@ class BaseVisualizer(QtCore.QObject):
                 self._col_wrap = None
 
         if options.cfg.verbose:
-            print("factors:      ", self._factor_columns)
-            print("grouping:     ", self._groupby)
-            print("levels:       ", self._levels)
-            print("col_wrap:     ", self._col_wrap)
-            print("col_factor:   ", self._col_factor)
-            print("row_factor:   ", self._row_factor)
-            print("time_columns: ", self._time_columns)
+            print("factors:        ", self._factor_columns)
+            print("grouping:       ", self._groupby)
+            print("levels:         ", self._levels)
+            print("col_wrap:       ", self._col_wrap)
+            print("col_factor:     ", self._col_factor)
+            print("row_factor:     ", self._row_factor)
+            print("time_columns:   ", self._time_columns)
+            print("number_columns: ", self._number_columns)
 
     def add_legend(self, levels=None, loc="lower left"):
         """
