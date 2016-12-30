@@ -139,6 +139,12 @@ class Session(object):
         output_file.flush()
         self._first_saved_dataframe = False
 
+    def connect_to_db(self):
+        self.db_connection = self.db_engine.connect()
+
+    def disconnect_from_db(self):
+        self.db_connection.close()
+
     def run_queries(self, to_file=False, **kwargs):
         """
         Run each query in the query list, and append the results to the
@@ -154,10 +160,9 @@ class Session(object):
             directly to a file contains less information, e.g. it doesn't
             contain an origin ID or a corpus ID (unless requested).
         """
-
-        self.db_connection = self.db_engine.connect()
-
         self.start_timer()
+
+        self.connect_to_db()
 
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
@@ -167,6 +172,8 @@ class Session(object):
         manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
         manager.set_filters(options.cfg.filter_list)
         manager.set_group_filters(options.cfg.group_filter_list)
+        manager.set_summary_functions(options.cfg.summary_functions)
+        manager.set_group_functions(options.cfg.group_functions)
 
         dtype_list = []
 
@@ -174,67 +181,71 @@ class Session(object):
 
         _queried = []
 
-        for i, current_query in enumerate(self.query_list):
-            if current_query.query_string in _queried:
-                continue
-            _queried.append(current_query.query_string)
-            self.queries[i] = current_query
+        try:
+            for i, current_query in enumerate(self.query_list):
+                if current_query.query_string in _queried:
+                    continue
+                _queried.append(current_query.query_string)
+                self.queries[i] = current_query
 
-            if options.cfg.gui and number_of_queries > 1:
-                options.cfg.main_window.updateMultiProgress.emit(i+1)
-            if not self.quantified_number_labels:
-                self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
-            start_time = time.time()
-            if number_of_queries > 1:
-                logger.info("Start query ({} of {}): '{}'".format(i+1, number_of_queries, current_query.query_string))
-            else:
-                logger.info("Start query: '{}'".format(current_query.query_string))
+                if options.cfg.gui and number_of_queries > 1:
+                    options.cfg.main_window.updateMultiProgress.emit(i+1)
+                if not self.quantified_number_labels:
+                    self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
+                start_time = time.time()
+                if number_of_queries > 1:
+                    logger.info("Start query ({} of {}): '{}'".format(i+1, number_of_queries, current_query.query_string))
+                else:
+                    logger.info("Start query: '{}'".format(current_query.query_string))
 
-            df = current_query.run(connection=self.db_connection, to_file=to_file, **kwargs)
+                df = current_query.run(connection=self.db_connection, to_file=to_file, **kwargs)
 
-            # apply clumsy hack that tries to make sure that the dtypes of
-            # data frames containing NaNs or empty strings does not change
-            # when appending the new data frame to the previous.
+                # apply clumsy hack that tries to make sure that the dtypes of
+                # data frames containing NaNs or empty strings does not change
+                # when appending the new data frame to the previous.
 
-            # The same hack is also needed in queries.run().
-            if len(self.data_table) > 0 and df.dtypes.tolist() != dtype_list.tolist():
-                for x in df.columns:
-                    # the idea is that pandas/numpy use the 'object'
-                    # dtype as a fall-back option for strange results,
-                    # including those with NaNs.
-                    # One problem is that integer columns become floats
-                    # in the process. This is so because Pandas does not
-                    # have an integer NA type:
-                    # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
+                # The same hack is also needed in queries.run().
+                if len(self.data_table) > 0 and df.dtypes.tolist() != dtype_list.tolist():
+                    for x in df.columns:
+                        # the idea is that pandas/numpy use the 'object'
+                        # dtype as a fall-back option for strange results,
+                        # including those with NaNs.
+                        # One problem is that integer columns become floats
+                        # in the process. This is so because Pandas does not
+                        # have an integer NA type:
+                        # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
 
-                    try:
-                        dtype_changed = df.dtypes[x] != dtype_list[x]
-                    except (IndexError, KeyError):
-                        continue
+                        try:
+                            dtype_changed = df.dtypes[x] != dtype_list[x]
+                        except (IndexError, KeyError):
+                            continue
 
-                    if df.dtypes[x] != dtype_list[x]:
-                        if df.dtypes[x] == object:
-                            if not df[x].any():
-                                df[x] = [pd.np.nan] * len(df)
-                                dtype_list[x] = self.data_table[x].dtype
-                        elif dtype_list[x] == object:
-                            if not self.data_table[x].any():
-                                self.data_table[x] = [pd.np.nan] * len(self.data_table)
-                                dtype_list[x] = df[x].dtype
-            else:
-                dtype_list = df.dtypes
+                        if df.dtypes[x] != dtype_list[x]:
+                            if df.dtypes[x] == object:
+                                if not df[x].any():
+                                    df[x] = [pd.np.nan] * len(df)
+                                    dtype_list[x] = self.data_table[x].dtype
+                            elif dtype_list[x] == object:
+                                if not self.data_table[x].any():
+                                    self.data_table[x] = [pd.np.nan] * len(self.data_table)
+                                    dtype_list[x] = df[x].dtype
+                else:
+                    dtype_list = df.dtypes
 
-            df = current_query.insert_static_data(df)
-            #df["coquery_invisible_query_number"] = i
+                df = current_query.insert_static_data(df)
+                #df["coquery_invisible_query_number"] = i
 
-            if not to_file:
-                self.data_table = self.data_table.append(df)
-            else:
-                df = manager.process(df, session=self)
-                self.save_dataframe(df, append=True)
+                if not to_file:
+                    self.data_table = self.data_table.append(df)
+                else:
+                    df = manager.process(df, session=self)
+                    self.save_dataframe(df, append=True)
 
-            logger.info("Query executed ({:.3f} seconds, {} match{})".format(
-                time.time() - start_time, len(df), "es" if len(df) != 1 else ""))
+                logger.info("Query executed ({:.3f} seconds, {} match{})".format(
+                    time.time() - start_time, len(df), "es" if len(df) != 1 else ""))
+
+        finally:
+            self.disconnect_from_db()
 
         for col in self.data_table.columns:
             if self.data_table.dtypes[col] == object:
