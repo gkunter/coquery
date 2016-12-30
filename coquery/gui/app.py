@@ -377,6 +377,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menuDensity_plots.setEnabled(True)
         self.ui.action_kde_plot.triggered.connect(lambda: self.visualize_data("densityplot"))
         self.ui.action_ecd_plot.triggered.connect(lambda: self.visualize_data("densityplot", cumulative=True))
+        self.ui.action_scatter_plot.triggered.connect(lambda: self.visualize_data("scatterplot"))
 
         self.ui.action_barchart_plot.triggered.connect(lambda: self.visualize_data("barplot"))
         self.ui.action_percentage_bars.triggered.connect(lambda: self.visualize_data("barplot_perc", percentage=True, stacked=True))
@@ -1313,12 +1314,15 @@ class CoqueryApp(QtGui.QMainWindow):
                 manager.hidden_columns.remove(x)
         hidden_columns = pd.Index(manager.hidden_columns)
         vis_cols = self.Session.output_object.columns
+
+        to_show = self.Session.output_object[
+                        vis_cols.difference(hidden_columns)]
+        to_hide = self.Session.output_object[hidden_columns]
         self.table_model = classes.CoqTableModel(
-            self.Session.output_object[
-                vis_cols.difference(hidden_columns)],
+            to_show,
             session=self.Session)
         self.hidden_model = classes.CoqHiddenTableModel(
-            self.Session.output_object[hidden_columns],
+            to_hide,
             session=self.Session)
         self.set_columns_widget()
 
@@ -2774,9 +2778,9 @@ class CoqueryApp(QtGui.QMainWindow):
                          functions.FilteredRows, functions.PassingRows,
                          functions.Freq, functions.FreqNorm,
                          functions.FreqPTW, functions.FreqPMW,
-                         functions.ReferenceCorpusFrequency,
-                         functions.ReferenceCorpusFrequencyPTW,
-                         functions.ReferenceCorpusFrequencyPMW,
+                         #functions.ReferenceCorpusFrequency,
+                         #functions.ReferenceCorpusFrequencyPTW,
+                         #functions.ReferenceCorpusFrequencyPMW,
                          functions.RowNumber,
                          functions.Entropy, functions.Percent,
                          functions.Proportion, functions.Tokens,
