@@ -279,7 +279,8 @@ class BaseVisualizer(QtCore.QObject):
             #self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
         dtypes = session.output_object[column_order].dropna().dtypes
         self._table = CoqTableModel.format_content(
-            source=session.output_object[column_order])
+            source=session.output_object[column_order].dropna(),
+            num_to_str=False)
         self._table.columns = [session.translate_header(x) for x in self._table.columns]
         dtypes.index = self._table.columns.values
 
