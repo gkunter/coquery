@@ -457,7 +457,7 @@ class Ui_MainWindow(object):
         self.menuCorpus_locations = QtGui.QMenu(self.menuAnalyse)
         self.menuCorpus_locations.setObjectName(_fromUtf8("menuCorpus_locations"))
         self.menuDensity_plots = QtGui.QMenu(self.menuAnalyse)
-        self.menuDensity_plots.setEnabled(False)
+        self.menuDensity_plots.setEnabled(True)
         self.menuDensity_plots.setObjectName(_fromUtf8("menuDensity_plots"))
         self.menuTime_data = QtGui.QMenu(self.menuAnalyse)
         self.menuTime_data.setObjectName(_fromUtf8("menuTime_data"))
@@ -658,6 +658,8 @@ class Ui_MainWindow(object):
         self.action_column_properties.setObjectName(_fromUtf8("action_column_properties"))
         self.action_show_hidden = QtGui.QAction(MainWindow)
         self.action_show_hidden.setObjectName(_fromUtf8("action_show_hidden"))
+        self.action_scatter_plot = QtGui.QAction(MainWindow)
+        self.action_scatter_plot.setObjectName(_fromUtf8("action_scatter_plot"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -695,6 +697,7 @@ class Ui_MainWindow(object):
         self.menuCorpus_locations.addAction(self.action_beeswarm_plot)
         self.menuDensity_plots.addAction(self.action_kde_plot)
         self.menuDensity_plots.addAction(self.action_ecd_plot)
+        self.menuDensity_plots.addAction(self.action_scatter_plot)
         self.menuTime_data.addAction(self.action_percentage_area_plot)
         self.menuTime_data.addAction(self.action_stacked_area_plot)
         self.menuTime_data.addAction(self.action_line_plot)
@@ -772,7 +775,7 @@ class Ui_MainWindow(object):
         self.menuFrequencies.setTitle(_translate("MainWindow", "&Bar charts", None))
         self.menuFrequency_maps.setTitle(_translate("MainWindow", "&Frequency maps", None))
         self.menuCorpus_locations.setTitle(_translate("MainWindow", "&Corpus locations", None))
-        self.menuDensity_plots.setTitle(_translate("MainWindow", "&Density plots", None))
+        self.menuDensity_plots.setTitle(_translate("MainWindow", "&Numeric plots", None))
         self.menuTime_data.setTitle(_translate("MainWindow", "&Time data", None))
         self.menu_Results.setTitle(_translate("MainWindow", "&Output", None))
         self.action_open_input_file.setText(_translate("MainWindow", "&Open input file...", None))
@@ -856,6 +859,7 @@ class Ui_MainWindow(object):
         self.action_share_query.setText(_translate("MainWindow", "S&hare query...", None))
         self.action_column_properties.setText(_translate("MainWindow", "Column properties...", None))
         self.action_show_hidden.setText(_translate("MainWindow", "Show all columns", None))
+        self.action_scatter_plot.setText(_translate("MainWindow", "&Scatter plot", None))
 
 from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
 from ..resultstable import CoqHiddenResultsTable, CoqResultsTable

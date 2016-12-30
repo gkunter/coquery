@@ -948,13 +948,14 @@ p, li { white-space: pre-wrap; }
     </widget>
     <widget class="QMenu" name="menuDensity_plots">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="title">
-      <string>&amp;Density plots</string>
+      <string>&amp;Numeric plots</string>
      </property>
      <addaction name="action_kde_plot"/>
      <addaction name="action_ecd_plot"/>
+     <addaction name="action_scatter_plot"/>
     </widget>
     <widget class="QMenu" name="menuTime_data">
      <property name="title">
@@ -1478,6 +1479,11 @@ p, li { white-space: pre-wrap; }
   <action name="action_show_hidden">
    <property name="text">
     <string>Show all columns</string>
+   </property>
+  </action>
+  <action name="action_scatter_plot">
+   <property name="text">
+    <string>&amp;Scatter plot</string>
    </property>
   </action>
  </widget>
