@@ -347,6 +347,16 @@ class Manager(CoqObject):
         print("\tdone")
         return df
 
+    def set_summary_functions(self, l):
+        if l is None:
+            l = []
+        self.user_summary_functions.set_list([x(sweep=True) for x in l])
+
+    def set_group_functions(self, l):
+        if l is None:
+            l = []
+        self.group_functions.set_list([x(sweep=True) for x in l])
+
     def distinct(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
         try:
