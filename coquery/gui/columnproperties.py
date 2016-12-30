@@ -65,7 +65,8 @@ class ColumnPropertiesDialog(QtGui.QDialog):
             subst = {}
             for key in self.substitutions:
                 tmp = {k: v for k, v in self.substitutions[key].items()
-                       if v is not None}
+                       if v not in [None, ""] and
+                       v not in self.substitutions[key]}
                 if tmp:
                     subst[key] = tmp
             d["substitutions"] = subst
