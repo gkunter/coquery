@@ -3067,7 +3067,7 @@ class CorpusClass(object):
         df = self._context_cache[(token_id, source_id, token_width)]
 
         context_start = max(0, token_id - context_width)
-        context_end = token_id + token_width + context_width - 1
+        context_end = token_id + token_width + context_width
 
         # create a list of all token ids that are also listed in the results
         # table:
