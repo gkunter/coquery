@@ -32,29 +32,26 @@ class Visualizer(vis.BaseVisualizer):
         super(Visualizer, self).__init__(*args, **kwargs)
         #self.set_data_table(options.cfg.main_window.Session.output_object)
 
-    #def set_defaults(self):
-        #self.options["color_palette"] = "Paired"
-        #if self._levels:
-            #self.options["color_number"] = len(self._levels[-1])
-        #else:
-            #self.options["color_number"] = 1
+    def set_defaults(self):
+        self.options["color_palette"] = "Paired"
+        if self._levels:
+            self.options["color_number"] = len(self._levels[-1])
+        else:
+            self.options["color_number"] = 1
 
-        #if len(self._number_columns) == 0:
-            #raise VisualizationInvalidDataError
+        if len(self._number_columns) == 0:
+            raise VisualizationInvalidDataError
 
-        #if len(self._number_columns) == 1:
-            #if self.cumulative:
-                #self.options["label_y_axis"] = "Cumulative probability"
-            #else:
-                #self.options["label_y_axis"] = "Density"
-        #else:
-            #self.options["label_y_axis"] = self._number_columns[-2]
-        #self.options["label_x_axis"] = self._number_columns[-1]
+        if len(self._number_columns) == 1:
+            self.options["label_x_axis"] = "Index"
+        else:
+            self.options["label_x_axis"] = self._number_columns[-2]
+        self.options["label_y_axis"] = self._number_columns[-1]
         
-        #if len(self._groupby) == 1:
-            #self.options["label_legend"] = self._groupby[-1]
+        if len(self._groupby) == 1:
+            self.options["label_legend"] = self._groupby[-1]
             
-        #super(Visualizer, self).set_defaults()
+        super(Visualizer, self).set_defaults()
 
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
