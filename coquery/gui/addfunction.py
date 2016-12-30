@@ -291,10 +291,10 @@ class FunctionDialog(QtGui.QDialog):
         
         session = get_toplevel_window().Session
         tmp_func = func(
-            columns = self.columns,
-            value = utf8(self.ui.edit_function_value.text()),
-            aggr = aggr,
-            session = session)
+            columns=self.columns,
+            value=utf8(self.ui.edit_function_value.text()),
+            aggr=aggr,
+            session=session)
         
         if self._auto_label:
             try:
