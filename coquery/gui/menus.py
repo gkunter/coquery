@@ -186,6 +186,15 @@ class CoqHiddenColumnMenu(CoqColumnMenu):
 
         self.add_header(columns)
 
+        #column_properties = QtGui.QAction("&Properties...", parent)
+        #column_properties.triggered.connect(lambda: self.propertiesRequested.emit(columns))
+        #self.addAction(column_properties)
+
+        ## add 'add function'
+        #add_function = QtGui.QAction("&Add function...", parent)
+        #add_function.triggered.connect(lambda: self.addFunctionRequested.emit(columns))
+        #self.addAction(add_function)
+
         suffix = "s" if len(columns) > 1 else ""
         show_column = QtGui.QAction("&Show column{}".format(suffix), parent)
         show_column.setIcon(parent.get_icon("Back"))
