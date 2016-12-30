@@ -131,6 +131,9 @@ class CoqColumnMenu(QtGui.QMenu):
             sort_none = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
             sort_asc = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
             sort_desc = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
+            sort_asc.setIcon(parent.get_icon("Ascending Sorting"))
+            sort_desc.setIcon(parent.get_icon("Descending Sorting"))
+
 
             sort_none.triggered.connect(lambda: self.changeSortingRequested.emit((column, None, None)))
             sort_asc.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, False)))
@@ -143,6 +146,8 @@ class CoqColumnMenu(QtGui.QMenu):
             if parent.table_model.content[[column]].dtypes[0] == "object":
                 sort_asc_rev = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
                 sort_desc_rev = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
+                sort_asc_rev.setIcon(parent.get_icon("Ascending Reverse Sorting"))
+                sort_desc_rev.setIcon(parent.get_icon("Descending Reverse Sorting"))
                 sort_asc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, True)))
                 sort_desc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, False, True)))
                 self.addAction(sort_asc_rev)
