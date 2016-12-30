@@ -169,7 +169,7 @@ class Session(object):
         Session.query_id += 1
 
         number_of_queries = len(self.query_list)
-        manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
+        manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
         manager.set_group_filters(options.cfg.group_filter_list)
         manager.set_summary_functions(options.cfg.summary_functions)
@@ -285,9 +285,11 @@ class Session(object):
                 index=False)
             output_file.flush()
 
+    def get_manager(self):
+        return managers.get_manager(options.cfg.MODE, self.Resource.name)
+
     def has_cached_data(self):
-        manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
-        return (self, manager) in self._manager_cache
+        return (self, self.get_manager()) in self._manager_cache
 
     @classmethod
     def is_statistics_session(cls):
@@ -299,7 +301,7 @@ class Session(object):
         a cached table (e.g. for sorting when no recalculation is needed).
         """
 
-        manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
+        manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
         manager.set_group_filters(options.cfg.group_filter_list)
 
@@ -403,8 +405,7 @@ class Session(object):
 
         # deal with function headers:
         if header.startswith("func_"):
-            manager = managers.get_manager(options.cfg.MODE,
-                                           self.Resource.name)
+            manager = self.get_manager()
             match = re.search("(.*)\((.*)\)", header)
             if match:
                 s = match.group(1)
