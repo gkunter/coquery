@@ -908,14 +908,20 @@ class Options(object):
 
         # Use QSettings?
         if settings:
+            column_properties = settings.value("column_properties", {})
+            current_properties = column_properties.get(self.args.corpus, {})
+            self.args.column_color = current_properties.get("colors", {})
+
             for x in [str(x) for x in settings.allKeys()]:
                 if x.startswith("column_width_"):
                     _, _, column = x.partition("column_width_")
                     self.args.column_width[column] = settings.value(x, int)
-                elif x.startswith("column_color_"):
-                    _, _, column = x.partition("column_color_")
-                    self.args.column_color[column] = settings.value(x)
-
+            self.args.summary_functions = settings.value("summary_functions", [])
+            if type(self.args.summary_functions) != list:
+                self.args.summary_functions = []
+            self.args.group_functions = settings.value("group_functions", [])
+            if type(self.args.group_functions) != list:
+                self.args.group_functions = []
 
 cfg = None
 settings = None
@@ -1013,8 +1019,16 @@ def save_configuration():
         for x in cfg.column_width:
             if not x.startswith("coquery_invisible") and cfg.column_width[x] and x:
                 settings.setValue("column_width_{}".format(x), cfg.column_width[x])
-        for x in cfg.column_color:
-            settings.setValue("column_color_{}".format(x), cfg.column_color[x])
+        try:
+            f = cfg.summary_functions
+        except AttributeError:
+            f = {}
+        settings.setValue("summary_functions", f)
+        try:
+            f = cfg.group_functions
+        except AttributeError:
+            f = {}
+        settings.setValue("group_functions", f)
 
         if not "gui" in config.sections():
             config.add_section("gui")
@@ -1101,6 +1115,7 @@ def save_configuration():
 
     with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)
+
 
 def get_con_configuration():
     """
