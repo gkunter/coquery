@@ -1475,6 +1475,9 @@ p, li { white-space: pre-wrap; }
    <property name="text">
     <string>Column properties...</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
   </action>
   <action name="action_show_hidden">
    <property name="text">
