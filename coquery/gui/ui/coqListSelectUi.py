@@ -85,6 +85,8 @@ class Ui_CoqListSelect(object):
         self.list_selected.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
         self.list_selected.setObjectName(_fromUtf8("list_selected"))
         self.layout.addWidget(self.list_selected, 1, 0, 1, 1)
+        self.layout.setColumnStretch(0, 1)
+        self.layout.setColumnStretch(2, 1)
         self.verticalLayout_2.addLayout(self.layout)
         self.label_available.setBuddy(self.list_available)
         self.label_select_list.setBuddy(self.list_selected)
