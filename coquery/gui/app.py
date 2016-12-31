@@ -68,6 +68,10 @@ class clickFilter(QtCore.QObject):
 
 
 class GuiHandler(logging.StreamHandler):
+    """
+    This class is used by the logger to capture logging messages so that
+    they can be displayed in a dialog.
+    """
     def __init__(self, *args):
         super(GuiHandler, self).__init__(*args)
         self.log_data = []
@@ -92,7 +96,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
         """ Initialize the main window. This sets up any widget that needs
-        spetial care, and also sets up some special attributes that relate
+        special care, and also sets up some special attributes that relate
         to the GUI, including default appearances of the columns."""
         QtGui.QMainWindow.__init__(self, parent)
         options.cfg.main_window = self
@@ -185,7 +189,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.aggregate_radio_list = []
         for label in SUMMARY_MODES:
             radio = QtGui.QRadioButton(label)
-            radio.toggled.connect(self.set_aggregate)
+            radio.toggled.connect(self.enable_apply_button)
             ix = SUMMARY_MODES.index(label)
             self.ui.layout_aggregate.addWidget(radio)
             self.ui.aggregate_radio_list.append(radio)
@@ -441,11 +445,9 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_stop_query.clicked.connect(self.stop_query)
 
         self.ui.list_toolbox.currentCellChanged.connect(lambda x, _1, _2, _3: self.change_toolbox(x))
-        # disable toolbox toggling (which doesn't seem to really # work from
-        # a UX perspective):
-        # self.ui.list_toolbox.cellClicked.connect(lambda row, col: self.toggle_toolbox(row, col))
 
-        self.ui.button_apply_management.clicked.connect(self.apply_management)
+        self.ui.button_apply_management.clicked.connect(
+            lambda: self.reaggregate(start=True))
         self.ui.button_cancel_management.clicked.connect(lambda: self.abortRequested.emit())
 
         # set up hooks for the group column list:
@@ -613,7 +615,7 @@ class CoqueryApp(QtGui.QMainWindow):
                                                columns,
                                                self)
         if result:
-            manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+            manager = self.Session.get_manager()
             properties[options.cfg.corpus] = result
             options.settings.setValue("column_properties", properties)
 
@@ -638,8 +640,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     self.table_model.content)
 
     def show_hidden_columns(self):
-        manager = managers.get_manager(options.cfg.MODE,
-                                       self.Session.Resource.name)
+        manager = self.Session.get_manager()
         manager.reset_hidden_columns()
         self.update_table_models()
         self.update_columns()
@@ -727,9 +728,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.button_cancel_management.setFlat(True)
         self.set_button_labels()
 
-    def apply_management(self):
-        self.reaggregate(start=True)
-
     def add_group_column(self, rc_feature=None, item=None):
         old_list = set(options.cfg.group_columns)
         if not item:
@@ -765,15 +763,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.activate_group_column_buttons()
         if old_list != set(options.cfg.group_columns):
             self.enable_apply_button()
-
-    def change_grouping(self):
-        """
-        Enable or disable grouping.
-        """
-        self.enable_apply_button()
-
-    def set_aggregate(self):
-        self.enable_apply_button()
 
     def get_aggregate(self):
         for radio in self.ui.aggregate_radio_list:
@@ -897,7 +886,7 @@ class CoqueryApp(QtGui.QMainWindow):
         token_width = 1
 
         # FIXME: these imports feels utterly misplaced.
-        from coquery import queries, session
+        from coquery import queries
 
         if index is not None:
             if self.Session.query_type == queries.ContrastQuery:
@@ -963,7 +952,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_query_string.setChecked(True)
 
     def finalize_reaggregation(self):
-        manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+        manager = self.Session.get_manager()
         self.display_results(drop=False)
         self.stop_progress_indicator()
         self.resize_rows()
@@ -1136,7 +1125,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 _set_icon(1, None)
                 _set_icon(2, None)
             if self.Session:
-                manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
+                manager = self.Session.get_manager()
                 if manager.stopwords_failed:
                     _set_icon(2, error_icon)
                     _set_icon(1, None)
@@ -1169,39 +1158,6 @@ class CoqueryApp(QtGui.QMainWindow):
             active = (self.ui.check_drop_duplicates.isChecked() or l)
             _set_icon(1, filter_icon if options.cfg.filter_list else None)
             _set_icon(2, active_icon if active else None)
-
-    def toggle_toolbox(self, row, col):
-        """
-        Toggle the toolbox 'n' from the data management widget.
-        """
-        if col == 0:
-            return
-
-        check = None
-        if row == TOOLBOX_SUMMARY:
-            if col == 2:
-                check = self.ui.check_drop_duplicates
-
-        # Toggle activation:
-        if col == 2:
-            if row == TOOLBOX_CONTEXT:
-                if self.active_context_radio() != self.ui.radio_context_mode_none:
-                    self._last_context_mode = options.cfg.context_mode
-                    self.ui.radio_context_mode_none.setChecked(True)
-                else:
-                    self.find_context_radio(self._last_context_mode).setChecked(True)
-                    self.get_context_values()
-            elif row == TOOLBOX_AGGREGATE:
-                if options.cfg.MODE != QUERY_MODE_TOKENS:
-                    self._last_aggregate = options.cfg.MODE
-                    self.ui.aggregate_radio_list[0].setChecked(True)
-                else:
-                    ix = SUMMARY_MODES.index(self._last_aggregate)
-                    self.ui.aggregate_radio_list[ix].setChecked(True)
-
-            elif check:
-                checked = not check.isChecked()
-                check.setChecked(checked)
 
     def change_corpus(self):
         """
@@ -1299,24 +1255,19 @@ class CoqueryApp(QtGui.QMainWindow):
         self.resize_thread.start()
 
     def update_table_models(self):
-        manager = managers.get_manager(
-            options.cfg.MODE,
-            self.Session.Resource.name)
+        manager = self.Session.get_manager()
         for x in list(manager.hidden_columns):
             if x not in self.Session.output_object.columns:
                 manager.hidden_columns.remove(x)
-        hidden_columns = pd.Index(manager.hidden_columns)
-        vis_cols = self.Session.output_object.columns
+        hidden_cols = pd.Index(manager.hidden_columns)
+        vis_cols = self.Session.output_object.columns.difference(hidden_cols)
 
-        to_show = self.Session.output_object[
-                        vis_cols.difference(hidden_columns)]
-        to_hide = self.Session.output_object[hidden_columns]
+        to_show = self.Session.output_object[vis_cols]
+        to_hide = self.Session.output_object[hidden_cols]
         self.table_model = classes.CoqTableModel(
-            to_show,
-            session=self.Session)
+            to_show, session=self.Session)
         self.hidden_model = classes.CoqHiddenTableModel(
-            to_hide,
-            session=self.Session)
+            to_hide, session=self.Session)
         self.set_columns_widget()
 
     def set_columns_widget(self):
@@ -1398,8 +1349,7 @@ class CoqueryApp(QtGui.QMainWindow):
             header=options.cfg.file_has_headers,
             quote_char=options.cfg.quote_char,
             skip_lines=options.cfg.skip_lines,
-            #encoding=options.cfg.input_encoding,
-            encoding="utf-16",
+            encoding=options.cfg.input_encoding,
             file_name=utf8(self.ui.edit_file_name.text()),
             selected_column=options.cfg.query_column_number)
 
@@ -1848,29 +1798,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.menu = self.get_row_submenu(selection=selection, point=point)
         self.menu.popup(header.mapToGlobal(point))
 
-    def rename_column(self, column):
-        """
-        Open a dialog in which the column name can be changed.
-
-        Parameters
-        ----------
-        column : column index
-        """
-        from .renamecolumn import RenameColumnDialog
-
-        if column.startswith("func_"):
-            manager = managers.get_manager(options.cfg.MODE, self.Session.Resource.name)
-            fun = manager.get_function(column)
-            column_name = fun.get_label(self.Session, manager, unlabel=True)
-            current_name = fun.get_label(self.Session, manager, unlabel=False)
-            name = RenameColumnDialog.get_name(column_name, current_name)
-            fun.set_label(name)
-        else:
-            column_name = self.Session.translate_header(column, ignore_alias=True)
-            current_name = options.cfg.column_names.get(column, column_name)
-            name = RenameColumnDialog.get_name(column_name, current_name)
-            options.cfg.column_names[column] = name
-
     def hide_columns(self, selection):
         """
         Show the columns in the selection.
@@ -1964,9 +1891,6 @@ class CoqueryApp(QtGui.QMainWindow):
             manager.remove_sorter(column)
         else:
             manager.add_sorter(column, ascending, reverse)
-        # FIXME: Make sure that changing the sorting order does not cause
-        # a recalculation!
-
         self.sort_content(manager, True)
 
     def sort_content(self, manager, start=False):
@@ -1985,8 +1909,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.sort_thread.start()
 
     def _sort(self, manager):
-        df = self.Session.output_object
-        df = manager.arrange(df, session=self.Session)
+        df = manager.arrange(self.Session.output_object,
+                             session=self.Session)
         self.Session.output_object = df
 
     def finalize_sort(self):
@@ -2360,6 +2284,8 @@ class CoqueryApp(QtGui.QMainWindow):
             options.settings.setValue("context_font", options.cfg.context_font)
             x = self.ui.splitter.saveState()
             options.settings.setValue("splitter", x)
+
+            # FIXME: use topLevelWidget() instead
             while self.widget_list:
                 x = self.widget_list.pop(0)
                 x.close()
@@ -2830,8 +2756,7 @@ class CoqueryApp(QtGui.QMainWindow):
             self.update_columns()
 
     def remove_functions(self, columns):
-        session = self.Session
-        manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+        manager = self.Session.get_manager()
         for col in columns:
             func = self._column_functions.find_function(col)
             if func:
