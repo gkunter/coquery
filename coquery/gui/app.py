@@ -605,45 +605,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.menu_Results.insertMenu(self.ui.menuNoRows, self.ui.menuRows)
             self.ui.menu_Results.removeAction(self.ui.menuNoRows)
 
-    def column_properties(self, columns=[]):
-        from .columnproperties import ColumnPropertiesDialog
-
-        properties = options.settings.value("column_properties", {})
-        current_properties = properties.get(options.cfg.corpus, {})
-        result = ColumnPropertiesDialog.manage(self.Session.output_object,
-                                               current_properties,
-                                               columns,
-                                               self)
-        if result:
-            manager = self.Session.get_manager()
-            properties[options.cfg.corpus] = result
-            options.settings.setValue("column_properties", properties)
-
-            if result["hidden"] != current_properties.get("hidden", set()):
-                manager.reset_hidden_columns()
-                self.hide_columns(result["hidden"])
-
-            # set column names
-            for col in result["alias"]:
-                name = result["alias"][col]
-                if col.startswith("func_"):
-                    fun = manager.get_function(col)
-                    fun.set_label(name)
-                else:
-                    options.cfg.column_names[col] = name
-
-            # set column colors:
-            options.cfg.column_color = result.get("colors", {})
-
-            if current_properties["substitutions"] != result["substitutions"]:
-                self.table_model.formatted = self.table_model.format_content(
-                    self.table_model.content)
-
-    def show_hidden_columns(self):
-        manager = self.Session.get_manager()
-        manager.reset_hidden_columns()
-        self.update_table_models()
-        self.update_columns()
+    ###
+    ### widget appearance methods
+    ###
 
     def set_main_screen_appearance(self):
         if options.cfg.show_data_management:
@@ -671,50 +635,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.tool_widget.setCurrentIndex(i)
         options.cfg.last_toolbox = i
 
-    def check_group_items(self):
-        for item, group_column in self.ui.list_group_columns.columns:
-            if group_column not in options.cfg.selected_features:
-                item.setIcon(self.get_icon("Error"))
-                item.setToolTip(msg_column_not_in_data)
-            else:
-                item.setIcon(QtGui.QIcon())
-                item.setToolTip("")
-
-    def activate_group_column_buttons(self):
-        selected = self.ui.list_group_columns.selectedItems()
-        self.ui.button_remove_group.setEnabled(selected != [])
-        try:
-            pos_first = self.ui.list_group_columns.row(selected[0])
-            pos_last = self.ui.list_group_columns.row(selected[-1])
-        except IndexError:
-            pos_first = 0
-            pos_last = len(self.ui.list_group_columns.columns)
-        self.ui.button_group_up.setEnabled(pos_first > 0)
-        self.ui.button_group_down.setEnabled(pos_last < len(self.ui.list_group_columns.columns)-1)
-
-    def move_group_column(self, direction, rc_feature=None):
-        if rc_feature:
-            selected = [self.ui.list_group_columns.get_item(rc_feature)]
-        else:
-            selected = self.ui.list_group_columns.selectedItems()
-
-        pos_first = self.ui.list_group_columns.row(selected[0])
-        if direction == "up":
-            start = pos_first - 1
-        else:
-            start = pos_first + 1
-
-        features = [self.ui.list_group_columns.get_feature(x) for x in selected]
-
-        for i, rc_feature in enumerate(features):
-            self.ui.list_group_columns.remove_resource(rc_feature)
-            self.ui.list_group_columns.insert_resource(start + i, rc_feature)
-
-        self.activate_group_column_buttons()
-        self.enable_apply_button()
-
     def enable_apply_button(self):
-        # disable buttons if there is no results table:
         active = (hasattr(self, "table_model"))
         if active:
             self.ui.button_apply_management.setDisabled(False)
@@ -722,115 +643,12 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.button_cancel_management.setDisabled(True)
             self.ui.button_cancel_management.setFlat(True)
         else:
+            # disable buttons if there is no results table:
             self.ui.button_apply_management.setDisabled(True)
             self.ui.button_apply_management.setFlat(True)
             self.ui.button_cancel_management.setDisabled(True)
             self.ui.button_cancel_management.setFlat(True)
         self.set_button_labels()
-
-    def add_group_column(self, rc_feature=None, item=None):
-        old_list = set(options.cfg.group_columns)
-        if not item:
-            if rc_feature:
-                selected = [rc_feature]
-            else:
-                selected = [x.objectName() for x in self.column_tree.selectedItems()]
-            for col in selected:
-                self.ui.list_group_columns.add_resource(col)
-
-        if self.column_tree.getCheckState(rc_feature) == QtCore.Qt.Unchecked:
-            self.column_tree.setCheckState(rc_feature, QtCore.Qt.PartiallyChecked)
-
-        options.cfg.group_columns = self.get_group_columns()
-        self.activate_group_column_buttons()
-        if old_list != set(options.cfg.group_columns):
-            self.enable_apply_button()
-
-    def uncheck_grouped_feature(self, rc_feature):
-        if self.column_tree.getCheckState(rc_feature) == QtCore.Qt.PartiallyChecked:
-            self.column_tree.setCheckState(rc_feature, QtCore.Qt.Unchecked)
-
-    def remove_group_column(self, rc_feature=None):
-        old_list = set(options.cfg.group_columns)
-        if rc_feature:
-            selected = [self.ui.list_group_columns.get_item(rc_feature)]
-        else:
-            selected = self.ui.list_group_columns.selectedItems()
-        for item in selected:
-            self.ui.list_group_columns.remove_item(item)
-        options.cfg.group_columns = self.get_group_columns()
-
-        self.activate_group_column_buttons()
-        if old_list != set(options.cfg.group_columns):
-            self.enable_apply_button()
-
-    def get_aggregate(self):
-        for radio in self.ui.aggregate_radio_list:
-            if radio.isChecked():
-                return utf8(radio.text())
-
-    def find_context_radio(self, context_mode):
-        """
-        Return the context radio widget that is currently selected.
-        """
-        if context_mode == CONTEXT_STRING:
-            return self.ui.radio_context_mode_string
-        elif context_mode == CONTEXT_COLUMNS:
-            return self.ui.radio_context_mode_columns
-        elif context_mode == CONTEXT_SENTENCE:
-            return self.ui.radio_context_mode_sentence
-        elif context_mode == CONTEXT_KWIC:
-            return self.ui.radio_context_mode_kwic
-        else:
-            return self.ui.radio_context_mode_none
-
-    def active_context_radio(self):
-        for radio in (self.ui.radio_context_mode_none,
-                      self.ui.radio_context_mode_kwic,
-                      self.ui.radio_context_mode_string,
-                      self.ui.radio_context_mode_columns):
-            if radio.isChecked():
-                return radio
-        return self.ui.radio_context_mode_none
-
-    def set_context_values(self):
-        self.ui.widget_context.blockSignals(True)
-        self.ui.tool_widget.blockSignals(True)
-        self._last_context_mode = options.cfg.context_mode
-        context_radio = self.find_context_radio(options.cfg.context_mode)
-        context_radio.setChecked(True)
-        self.ui.context_left_span.setValue(options.cfg.context_left)
-        self.ui.context_right_span.setValue(options.cfg.context_right)
-        self.ui.check_restrict.setChecked(options.cfg.context_restrict)
-        self.ui.widget_context.blockSignals(False)
-        self.ui.tool_widget.blockSignals(False)
-
-    def get_context_values(self):
-        # determine context mode:
-        if self.ui.radio_context_mode_none.isChecked():
-            options.cfg.context_mode = CONTEXT_NONE
-        if self.ui.radio_context_mode_kwic.isChecked():
-            options.cfg.context_mode = CONTEXT_KWIC
-        if self.ui.radio_context_mode_string.isChecked():
-            options.cfg.context_mode = CONTEXT_STRING
-        if self.ui.radio_context_mode_columns.isChecked():
-            options.cfg.context_mode = CONTEXT_COLUMNS
-
-        # get context options:
-        options.cfg.context_left = self.ui.context_left_span.value()
-        options.cfg.context_right = self.ui.context_right_span.value()
-        options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
-
-    def manage_stopwords(self):
-        from . import stopwords
-        old_list = options.cfg.stopword_list
-        result = stopwords.Stopwords.manage(options.cfg.stopword_list, options.cfg.icon)
-        if result is not None:
-            options.cfg.stopword_list = result
-
-        if set(old_list) != set(options.cfg.stopword_list):
-            self.set_button_labels()
-            self.enable_apply_button()
 
     def enable_corpus_widgets(self):
         self.ui.options_area.setEnabled(True)
@@ -847,90 +665,6 @@ class CoqueryApp(QtGui.QMainWindow):
             self.enable_corpus_widgets()
         else:
             self.disable_corpus_widgets()
-
-    def set_reference_corpus(self):
-        from . import linkselect
-
-        current_corpus = utf8(self.ui.combo_corpus.currentText())
-        resource, _, _ = options.get_resource(current_corpus)
-
-        link = linkselect.LinkSelect.get_resource(corpus_omit=[current_corpus],
-                                                  parent=self)
-
-        if link:
-            options.cfg.reference_corpus = link
-
-    def column_moved(self):
-        pass
-        #self.reaggregate()
-        #if self.Session.query_type == queries.ContingencyQuery:
-            #self.reaggregate(query_type=queries.ContingencyQuery, recalculate=True)
-
-    def result_column_resize(self, index, old, new):
-        #header = self.table_model.header[index].lower()
-        #options.cfg.column_width[header.replace(" ", "_").replace(":", "_")] = new
-        ## notify the GUI that the whole data frame has changed:
-        #self.table_model.dataChanged.emit(
-            #self.table_model.createIndex(0, 0),
-            #self.table_model.createIndex(self.table_model.rowCount(), self.table_model.columnCount()))
-
-        #self.ui.data_preview.setTextElideMode(QtCore.Qt.ElideMiddle)
-        #self.ui.data_preview.setHorizontalScrollMode(self.ui.data_preview.ScrollPerPixel)
-        if options.cfg.word_wrap:
-            self.resize_rows()
-
-    def result_cell_clicked(self, index=None, token_id=None):
-        """
-        Launch the context viewer.
-        """
-        token_width = 1
-
-        # FIXME: these imports feels utterly misplaced.
-        from coquery import queries
-
-        if index is not None:
-            if self.Session.query_type == queries.ContrastQuery:
-                from . import independencetestviewer
-                if self.ui.data_preview.model().data(index, QtCore.Qt.DisplayRole):
-                    data = self.ui.data_preview.model().data(index, QtCore.Qt.UserRole)
-                    viewer = independencetestviewer.IndependenceTestViewer(data, icon=options.cfg.icon)
-                    viewer.show()
-                    self.widget_list.append(viewer)
-                return
-
-            model_index = index
-            row = model_index.row()
-            data = self.table_model.content.iloc[row]
-            meta_data = self.table_model.invisible_content.iloc[row]
-
-            if self.Session.is_statistics_session():
-                column = data.index[model_index.column()]
-                self.show_unique_values(rc_feature=meta_data["coquery_invisible_rc_feature"],
-                                        uniques=column != "coq_statistics_entries")
-            else:
-                try:
-                    if options.cfg.MODE == QUERY_MODE_CONTINGENCY:
-                        if meta_data.index[index.column()].startswith("coquery_invisible_corpus_id"):
-                            token_id = int(meta_data[index.column()])
-                        else:
-                            token_id = meta_data["coquery_invisible_corpus_id"]
-                        if not token_id:
-                            raise KeyError
-                    else:
-                        token_id = meta_data["coquery_invisible_corpus_id"]
-                    token_width = meta_data["coquery_invisible_number_of_tokens"]
-                except KeyError:
-                    QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
-                    return
-
-        origin_id = self.Session.Corpus.get_source_id(token_id)
-
-        from . import contextviewer
-        viewer = contextviewer.ContextView(
-            self.Session.Corpus, int(token_id), int(origin_id), int(token_width),
-            icon=options.cfg.icon)
-        viewer.show()
-        self.widget_list.append(viewer)
 
     def verify_file_name(self):
         file_name = str(self.ui.edit_file_name.text())
@@ -950,84 +684,6 @@ class CoqueryApp(QtGui.QMainWindow):
     def switch_to_query(self):
         """ Toggle to query string input. """
         self.ui.radio_query_string.setChecked(True)
-
-    def finalize_reaggregation(self):
-        manager = self.Session.get_manager()
-        self.display_results(drop=False)
-        self.stop_progress_indicator()
-        self.resize_rows()
-        self.show_query_status()
-        self.check_group_items()
-        self.set_button_labels()
-        self.ui.button_apply_management.setDisabled(True)
-        self.ui.button_apply_management.setFlat(True)
-        self.ui.button_cancel_management.setDisabled(True)
-        self.ui.button_cancel_management.setFlat(True)
-        for i in range(self.ui.list_toolbox.rowCount()):
-            self.set_toolbox_appearance(i)
-
-        print("reaggregation: done")
-
-        if options.cfg.stopword_list and manager.stopwords_failed:
-            rc_feature = getattr(self.Session.Resource,
-                                 getattr(self.Session.Resource,
-                                         QUERY_ITEM_WORD))
-            msg = msg_no_word_information.format(rc_feature)
-            QtGui.QMessageBox.warning(self,
-                                      "No word information available for stopwords – Coquery",
-                                      msg,
-                                      QtGui.QMessageBox.Ok,
-                                      QtGui.QMessageBox.Ok)
-
-    def kill_reaggregation(self):
-        self.aggr_thread.terminate()
-        self.finalize_reaggregation()
-        self.enable_apply_button()
-        for i in range(self.ui.list_toolbox.rowCount()):
-            self.set_toolbox_appearance(i)
-
-    def reaggregate(self, recalculate=True, start=False):
-        """
-        Reaggregate the current data table when changing the visibility of
-        the table columns.
-
-        Parameters
-        ----------
-        recalculate : bool
-            True if the manager should reevaluate all functions
-
-        start : bool
-            True if the start timer should be reset when starting the
-            reaggregation
-        """
-
-        self.getGuiValues()
-
-        if not self.Session:
-            return
-
-        self.ui.button_apply_management.setDisabled(True)
-        self.ui.button_apply_management.setFlat(True)
-        self.ui.button_cancel_management.setDisabled(False)
-        self.ui.button_cancel_management.setFlat(False)
-
-        self.Session.group_functions = self._group_functions
-        self.Session._column_functions = self._column_functions
-
-        if start:
-            self.Session.start_timer()
-        self.showMessage("Managing data...")
-        self.unfiltered_tokens = len(self.Session.data_table.index)
-        self.aggr_thread = classes.CoqThread(lambda: self.Session.aggregate_data(recalculate), parent=self)
-        self.aggr_thread.taskException.connect(self.exception_during_query)
-        self.aggr_thread.taskFinished.connect(self.finalize_reaggregation)
-        self.abortRequested.connect(self.kill_reaggregation)
-
-        if not self.Session.has_cached_data():
-            self.start_progress_indicator()
-
-        print("reaggregate")
-        self.aggr_thread.start()
 
     @staticmethod
     def get_icon(s, small_n_flat=True):
@@ -1158,6 +814,374 @@ class CoqueryApp(QtGui.QMainWindow):
             active = (self.ui.check_drop_duplicates.isChecked() or l)
             _set_icon(1, filter_icon if options.cfg.filter_list else None)
             _set_icon(2, active_icon if active else None)
+
+    ###
+    ### interface status and interface interaction methods
+    ###
+
+    def get_aggregate(self):
+        for radio in self.ui.aggregate_radio_list:
+            if radio.isChecked():
+                return utf8(radio.text())
+
+    def find_context_radio(self, context_mode):
+        """
+        Return the context radio widget that is currently selected.
+        """
+        if context_mode == CONTEXT_STRING:
+            return self.ui.radio_context_mode_string
+        elif context_mode == CONTEXT_COLUMNS:
+            return self.ui.radio_context_mode_columns
+        elif context_mode == CONTEXT_SENTENCE:
+            return self.ui.radio_context_mode_sentence
+        elif context_mode == CONTEXT_KWIC:
+            return self.ui.radio_context_mode_kwic
+        else:
+            return self.ui.radio_context_mode_none
+
+    def active_context_radio(self):
+        for radio in (self.ui.radio_context_mode_none,
+                      self.ui.radio_context_mode_kwic,
+                      self.ui.radio_context_mode_string,
+                      self.ui.radio_context_mode_columns):
+            if radio.isChecked():
+                return radio
+        return self.ui.radio_context_mode_none
+
+    def set_context_values(self):
+        self.ui.widget_context.blockSignals(True)
+        self.ui.tool_widget.blockSignals(True)
+        self._last_context_mode = options.cfg.context_mode
+        context_radio = self.find_context_radio(options.cfg.context_mode)
+        context_radio.setChecked(True)
+        self.ui.context_left_span.setValue(options.cfg.context_left)
+        self.ui.context_right_span.setValue(options.cfg.context_right)
+        self.ui.check_restrict.setChecked(options.cfg.context_restrict)
+        self.ui.widget_context.blockSignals(False)
+        self.ui.tool_widget.blockSignals(False)
+
+    def get_context_values(self):
+        # determine context mode:
+        if self.ui.radio_context_mode_none.isChecked():
+            options.cfg.context_mode = CONTEXT_NONE
+        if self.ui.radio_context_mode_kwic.isChecked():
+            options.cfg.context_mode = CONTEXT_KWIC
+        if self.ui.radio_context_mode_string.isChecked():
+            options.cfg.context_mode = CONTEXT_STRING
+        if self.ui.radio_context_mode_columns.isChecked():
+            options.cfg.context_mode = CONTEXT_COLUMNS
+
+        # get context options:
+        options.cfg.context_left = self.ui.context_left_span.value()
+        options.cfg.context_right = self.ui.context_right_span.value()
+        options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+
+    ###
+    ### action methods
+    ###
+
+    def column_properties(self, columns=[]):
+        from .columnproperties import ColumnPropertiesDialog
+
+        properties = options.settings.value("column_properties", {})
+        current_properties = properties.get(options.cfg.corpus, {})
+        result = ColumnPropertiesDialog.manage(self.Session.output_object,
+                                               current_properties,
+                                               columns,
+                                               self)
+        if result:
+            manager = self.Session.get_manager()
+            properties[options.cfg.corpus] = result
+            options.settings.setValue("column_properties", properties)
+
+            if result["hidden"] != current_properties.get("hidden", set()):
+                manager.reset_hidden_columns()
+                self.hide_columns(result["hidden"])
+
+            # set column names
+            for col in result["alias"]:
+                name = result["alias"][col]
+                if col.startswith("func_"):
+                    fun = manager.get_function(col)
+                    fun.set_label(name)
+                else:
+                    options.cfg.column_names[col] = name
+
+            # set column colors:
+            options.cfg.column_color = result.get("colors", {})
+
+            if current_properties["substitutions"] != result["substitutions"]:
+                self.table_model.formatted = self.table_model.format_content(
+                    self.table_model.content)
+
+    def show_hidden_columns(self):
+        manager = self.Session.get_manager()
+        manager.reset_hidden_columns()
+        self.update_table_models()
+        self.update_columns()
+
+    def manage_stopwords(self):
+        from . import stopwords
+        old_list = options.cfg.stopword_list
+        result = stopwords.Stopwords.manage(options.cfg.stopword_list, options.cfg.icon)
+        if result is not None:
+            options.cfg.stopword_list = result
+
+        if set(old_list) != set(options.cfg.stopword_list):
+            self.set_button_labels()
+            self.enable_apply_button()
+
+    def set_reference_corpus(self):
+        from . import linkselect
+
+        current_corpus = utf8(self.ui.combo_corpus.currentText())
+        resource, _, _ = options.get_resource(current_corpus)
+
+        link = linkselect.LinkSelect.get_resource(corpus_omit=[current_corpus],
+                                                  parent=self)
+
+        if link:
+            options.cfg.reference_corpus = link
+
+    ###
+    ### group columns methods
+    ###
+    ### FIXME: group column methods should be part of a special widget
+    ### subclass
+
+    def check_group_items(self):
+        for item, group_column in self.ui.list_group_columns.columns:
+            if group_column not in options.cfg.selected_features:
+                item.setIcon(self.get_icon("Error"))
+                item.setToolTip(msg_column_not_in_data)
+            else:
+                item.setIcon(QtGui.QIcon())
+                item.setToolTip("")
+
+    def activate_group_column_buttons(self):
+        selected = self.ui.list_group_columns.selectedItems()
+        self.ui.button_remove_group.setEnabled(selected != [])
+        try:
+            pos_first = self.ui.list_group_columns.row(selected[0])
+            pos_last = self.ui.list_group_columns.row(selected[-1])
+        except IndexError:
+            pos_first = 0
+            pos_last = len(self.ui.list_group_columns.columns)
+        self.ui.button_group_up.setEnabled(pos_first > 0)
+        self.ui.button_group_down.setEnabled(pos_last < len(self.ui.list_group_columns.columns)-1)
+
+    def move_group_column(self, direction, rc_feature=None):
+        if rc_feature:
+            selected = [self.ui.list_group_columns.get_item(rc_feature)]
+        else:
+            selected = self.ui.list_group_columns.selectedItems()
+
+        pos_first = self.ui.list_group_columns.row(selected[0])
+        if direction == "up":
+            start = pos_first - 1
+        else:
+            start = pos_first + 1
+
+        features = [self.ui.list_group_columns.get_feature(x) for x in selected]
+
+        for i, rc_feature in enumerate(features):
+            self.ui.list_group_columns.remove_resource(rc_feature)
+            self.ui.list_group_columns.insert_resource(start + i, rc_feature)
+
+        self.activate_group_column_buttons()
+        self.enable_apply_button()
+
+    def add_group_column(self, rc_feature=None, item=None):
+        old_list = set(options.cfg.group_columns)
+        if not item:
+            if rc_feature:
+                selected = [rc_feature]
+            else:
+                selected = [x.objectName() for x in self.column_tree.selectedItems()]
+            for col in selected:
+                self.ui.list_group_columns.add_resource(col)
+
+        if self.column_tree.getCheckState(rc_feature) == QtCore.Qt.Unchecked:
+            self.column_tree.setCheckState(rc_feature, QtCore.Qt.PartiallyChecked)
+
+        options.cfg.group_columns = self.get_group_columns()
+        self.activate_group_column_buttons()
+        if old_list != set(options.cfg.group_columns):
+            self.enable_apply_button()
+
+    def uncheck_grouped_feature(self, rc_feature):
+        if self.column_tree.getCheckState(rc_feature) == QtCore.Qt.PartiallyChecked:
+            self.column_tree.setCheckState(rc_feature, QtCore.Qt.Unchecked)
+
+    def remove_group_column(self, rc_feature=None):
+        old_list = set(options.cfg.group_columns)
+        if rc_feature:
+            selected = [self.ui.list_group_columns.get_item(rc_feature)]
+        else:
+            selected = self.ui.list_group_columns.selectedItems()
+        for item in selected:
+            self.ui.list_group_columns.remove_item(item)
+        options.cfg.group_columns = self.get_group_columns()
+
+        self.activate_group_column_buttons()
+        if old_list != set(options.cfg.group_columns):
+            self.enable_apply_button()
+
+    ###
+    ### slots
+    ###
+
+    def column_moved(self):
+        pass
+        #self.reaggregate()
+        #if self.Session.query_type == queries.ContingencyQuery:
+            #self.reaggregate(query_type=queries.ContingencyQuery, recalculate=True)
+
+    def result_column_resize(self, index, old, new):
+        #header = self.table_model.header[index].lower()
+        #options.cfg.column_width[header.replace(" ", "_").replace(":", "_")] = new
+        ## notify the GUI that the whole data frame has changed:
+        #self.table_model.dataChanged.emit(
+            #self.table_model.createIndex(0, 0),
+            #self.table_model.createIndex(self.table_model.rowCount(), self.table_model.columnCount()))
+
+        #self.ui.data_preview.setTextElideMode(QtCore.Qt.ElideMiddle)
+        #self.ui.data_preview.setHorizontalScrollMode(self.ui.data_preview.ScrollPerPixel)
+        if options.cfg.word_wrap:
+            self.resize_rows()
+
+    def result_cell_clicked(self, index=None, token_id=None):
+        """
+        Launch the context viewer.
+        """
+        token_width = 1
+
+        # FIXME: these imports feels utterly misplaced.
+        from coquery import queries
+
+        if index is not None:
+            if self.Session.query_type == queries.ContrastQuery:
+                from . import independencetestviewer
+                if self.ui.data_preview.model().data(index, QtCore.Qt.DisplayRole):
+                    data = self.ui.data_preview.model().data(index, QtCore.Qt.UserRole)
+                    viewer = independencetestviewer.IndependenceTestViewer(data, icon=options.cfg.icon)
+                    viewer.show()
+                    self.widget_list.append(viewer)
+                return
+
+            model_index = index
+            row = model_index.row()
+            data = self.table_model.content.iloc[row]
+            meta_data = self.table_model.invisible_content.iloc[row]
+
+            if self.Session.is_statistics_session():
+                column = data.index[model_index.column()]
+                self.show_unique_values(rc_feature=meta_data["coquery_invisible_rc_feature"],
+                                        uniques=column != "coq_statistics_entries")
+            else:
+                try:
+                    if options.cfg.MODE == QUERY_MODE_CONTINGENCY:
+                        if meta_data.index[index.column()].startswith("coquery_invisible_corpus_id"):
+                            token_id = int(meta_data[index.column()])
+                        else:
+                            token_id = meta_data["coquery_invisible_corpus_id"]
+                        if not token_id:
+                            raise KeyError
+                    else:
+                        token_id = meta_data["coquery_invisible_corpus_id"]
+                    token_width = meta_data["coquery_invisible_number_of_tokens"]
+                except KeyError:
+                    QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
+                    return
+
+        origin_id = self.Session.Corpus.get_source_id(token_id)
+
+        from . import contextviewer
+        viewer = contextviewer.ContextView(
+            self.Session.Corpus, int(token_id), int(origin_id), int(token_width),
+            icon=options.cfg.icon)
+        viewer.show()
+        self.widget_list.append(viewer)
+
+    def reaggregate(self, recalculate=True, start=False):
+        """
+        Reaggregate the current data table when changing the visibility of
+        the table columns.
+
+        Parameters
+        ----------
+        recalculate : bool
+            True if the manager should reevaluate all functions
+
+        start : bool
+            True if the start timer should be reset when starting the
+            reaggregation
+        """
+
+        self.getGuiValues()
+
+        if not self.Session:
+            return
+
+        self.ui.button_apply_management.setDisabled(True)
+        self.ui.button_apply_management.setFlat(True)
+        self.ui.button_cancel_management.setDisabled(False)
+        self.ui.button_cancel_management.setFlat(False)
+
+        self.Session.group_functions = self._group_functions
+        self.Session._column_functions = self._column_functions
+
+        if start:
+            self.Session.start_timer()
+        self.showMessage("Managing data...")
+        self.unfiltered_tokens = len(self.Session.data_table.index)
+        self.aggr_thread = classes.CoqThread(lambda: self.Session.aggregate_data(recalculate), parent=self)
+        self.aggr_thread.taskException.connect(self.exception_during_query)
+        self.aggr_thread.taskFinished.connect(self.finalize_reaggregation)
+        self.abortRequested.connect(self.kill_reaggregation)
+
+        if not self.Session.has_cached_data():
+            self.start_progress_indicator()
+
+        print("reaggregate")
+        self.aggr_thread.start()
+
+    def finalize_reaggregation(self):
+        manager = self.Session.get_manager()
+        self.display_results(drop=False)
+        self.stop_progress_indicator()
+        self.resize_rows()
+        self.show_query_status()
+        self.check_group_items()
+        self.set_button_labels()
+        self.ui.button_apply_management.setDisabled(True)
+        self.ui.button_apply_management.setFlat(True)
+        self.ui.button_cancel_management.setDisabled(True)
+        self.ui.button_cancel_management.setFlat(True)
+        for i in range(self.ui.list_toolbox.rowCount()):
+            self.set_toolbox_appearance(i)
+
+        print("reaggregation: done")
+
+        if options.cfg.stopword_list and manager.stopwords_failed:
+            rc_feature = getattr(self.Session.Resource,
+                                 getattr(self.Session.Resource,
+                                         QUERY_ITEM_WORD))
+            msg = msg_no_word_information.format(rc_feature)
+            QtGui.QMessageBox.warning(self,
+                                      "No word information available for stopwords – Coquery",
+                                      msg,
+                                      QtGui.QMessageBox.Ok,
+                                      QtGui.QMessageBox.Ok)
+
+    def kill_reaggregation(self):
+        self.aggr_thread.terminate()
+        self.finalize_reaggregation()
+        self.enable_apply_button()
+        for i in range(self.ui.list_toolbox.rowCount()):
+            self.set_toolbox_appearance(i)
+
+    ### FIXME: continue module reorganization from here
 
     def change_corpus(self):
         """
