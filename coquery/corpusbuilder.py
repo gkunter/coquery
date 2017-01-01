@@ -199,6 +199,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.table_description = {}
         self._time_features = []
         self._lexical_features = []
+        self._speaker_features = []
         self._id_count = {}
         self._primary_keys = {}
         self._interrupted = False
@@ -568,6 +569,17 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         self._lexical_features.append(rc_feature)
     
+    def add_speaker_feature(self, rc_feature):
+        """
+        Add the resource feature to the list of speaker features.
+
+        Any feature that refers to the speaker of a token that is not stored
+        in a dedicated speaker table can be marked as a speaker feature by
+        using this method. The feature will then be listed in the resource
+        feature tree under the root node 'Speakers'.
+        """
+        self._speaker_features.append(rc_feature)
+
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
         the class attribute self._lexicon_code. This function is needed
@@ -590,7 +602,11 @@ class BaseCorpusBuilder(corpus.BaseResource):
             "[{}]".format(", ".join(['"{}"'.format(x) for x in self._time_features]))))
         lines.insert(0, "    number_of_tokens = {}\n".format(self._corpus_id))
         lines.insert(0, "    lexical_features = {}\n".format(
-            "[{}]".format(", ".join(['"{}"'.format(x) for x in self._lexical_features]))))
+            "[{}]".format(", ".join(
+                ['"{}"'.format(x) for x in self._lexical_features]))))
+        lines.insert(0, "    speaker_features = {}\n".format(
+            "[{}]".format(", ".join(
+                ['"{}"'.format(x) for x in self._speaker_features]))))
         return "".join(lines)
     
     def get_method_code(self, method):

@@ -123,6 +123,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
 
             lexicon_root = create_root("Tokens")
             source_root = create_root("Texts")
+            speaker_root = create_root("Speakers")
             file_root = create_root("Files")
             segment_root = create_root("Segments")
             query_root = create_root("Query string")
@@ -139,6 +140,9 @@ class CoqResourceTree(classes.CoqTreeWidget):
                     file_root.addChild(leaf)
                 elif rc_feature.startswith("coquery_"):
                     query_root.addChild(leaf)
+                elif (rc_feature.startswith("speaker_") or
+                      rc_feature in resource.speaker_features):
+                    speaker_root.addChild(leaf)
                 else:
                     source_root.addChild(leaf)
 
@@ -151,6 +155,9 @@ class CoqResourceTree(classes.CoqTreeWidget):
             if source_root.childCount():
                 self.addTopLevelItem(source_root)
                 source_root.sortChildren(0, QtCore.Qt.AscendingOrder)
+            if speaker_root.childCount():
+                self.addTopLevelItem(speaker_root)
+                speaker_root.sortChildren(0, QtCore.Qt.AscendingOrder)
             if file_root.childCount():
                 self.addTopLevelItem(file_root)
                 file_root.sortChildren(0, QtCore.Qt.AscendingOrder)
