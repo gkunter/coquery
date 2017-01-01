@@ -910,7 +910,8 @@ class CoqueryApp(QtGui.QMainWindow):
             # set column colors:
             options.cfg.column_color = result.get("colors", {})
 
-            if current_properties["substitutions"] != result["substitutions"]:
+            if ("substitutions" not in current_properties or
+                current_properties["substitutions"] != result["substitutions"]):
                 self.table_model.formatted = self.table_model.format_content(
                     self.table_model.content)
 
