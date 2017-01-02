@@ -1772,15 +1772,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.TextAlignmentRole:
             return self._align[index.column()]
 
-        #elif role == QtCore.Qt.UserRole:
-            ## The UserRole is used when clicking on a cell in the results
-            ## table. It is handled differently depending on the query type
-            ## that produced the table.
-            #if session.query_type == queries.ContrastQuery:
-                #return queries.ContrastQuery.get_cell_content(
-                    #index,
-                    #session.output_object,
-                    #session)
+        elif role == QtCore.Qt.UserRole:
+            # The UserRole is used when clicking on a cell in the results
+            # table. It is handled differently depending on the query type
+            # that produced the table.
+            manager = self._session.get_manager()
+            if isinstance(manager, managers.ContrastMatrix):
+                return manager.get_cell_content(
+                    index,
+                    self._session.output_object,
+                    self._session)
         return None
 
     def headerData(self, index, orientation, role):

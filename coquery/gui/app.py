@@ -1032,8 +1032,9 @@ class CoqueryApp(QtGui.QMainWindow):
     ### slots
     ###
 
-    def column_moved(self):
-        pass
+    def column_moved(self, *args, **kwargs):
+        section, last, new = args
+
         #self.reaggregate()
         #if self.Session.query_type == queries.ContingencyQuery:
             #self.reaggregate(query_type=queries.ContingencyQuery, recalculate=True)
@@ -1061,7 +1062,8 @@ class CoqueryApp(QtGui.QMainWindow):
         from coquery import queries
 
         if index is not None:
-            if self.Session.query_type == queries.ContrastQuery:
+            manager = self.Session.get_manager()
+            if isinstance(manager, managers.ContrastMatrix):
                 from . import independencetestviewer
                 if self.ui.data_preview.model().data(index, QtCore.Qt.DisplayRole):
                     data = self.ui.data_preview.model().data(index, QtCore.Qt.UserRole)
