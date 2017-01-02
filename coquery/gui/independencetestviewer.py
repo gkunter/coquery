@@ -17,7 +17,6 @@ import math
 
 from coquery import options
 from coquery.unicode import utf8
-from coquery.queries import ContrastQuery
 
 from .pyqt_compat import QtGui, QtCore, get_toplevel_window
 from .ui.independenceTestViewerUi import Ui_IndependenceTestViewer
@@ -130,6 +129,8 @@ class IndependenceTestViewer(QtGui.QDialog):
                     return "≥ 0.05"
  
         def estimate_strength(phi):
+            if phi <= 0.01:
+                return "negligible"
             if phi <= 0.1:
                 return "small"
             elif phi <= 0.3:
@@ -142,7 +143,7 @@ class IndependenceTestViewer(QtGui.QDialog):
         self.parent = parent
         self.ui = Ui_IndependenceTestViewer()
         self.ui.setupUi(self)
-        
+
         freq_1 = data["freq_row"]
         freq_2 = data["freq_col"]
         total_1 = data["total_row"]
@@ -153,7 +154,6 @@ class IndependenceTestViewer(QtGui.QDialog):
         obs = np.array([ [freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]])
 
         str_flt = "{{:0.{digits}f}}".format(digits=options.cfg.digits)
-
 
         if options.use_scipy:
             from scipy import stats
