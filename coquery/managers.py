@@ -791,7 +791,7 @@ class ContrastMatrix(Manager):
 
     def summarize(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
-        self.p_correction = math.factorial(vis_cols)
+        self.p_correction = math.factorial(len(vis_cols))
         self._freq_function = Freq(columns=vis_cols, alias="coquery_invisible_count")
         self._subcorpus_size = SubcorpusSize(columns=vis_cols, alias="coquery_invisible_size")
 
@@ -878,10 +878,6 @@ class ContrastMatrix(Manager):
         Return that content for the indexed cell that is needed to handle
         a click on it for the current aggregation.
         """
-        print(df)
-        print(index.row())
-        print(index.column())
-
         row = df.iloc[index.row()]
         column = df.iloc[index.column() - self._start_pos]
 
