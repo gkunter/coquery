@@ -903,6 +903,8 @@ p, li { white-space: pre-wrap; }
      <string>&amp;Corpus</string>
     </property>
     <addaction name="action_manage_corpus"/>
+    <addaction name="separator"/>
+    <addaction name="action_link_external"/>
     <addaction name="action_reference_corpus"/>
     <addaction name="separator"/>
     <addaction name="action_statistics"/>
@@ -1322,6 +1324,9 @@ p, li { white-space: pre-wrap; }
    <property name="text">
     <string>Create te&amp;xtgrids...</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
+   </property>
   </action>
   <action name="action_available_modules">
    <property name="text">
@@ -1440,7 +1445,10 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_reference_corpus">
    <property name="text">
-    <string>&amp;Reference corpus:</string>
+    <string>Set &amp;reference corpus:</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
   <action name="action_save_query">
@@ -1502,6 +1510,14 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="action_link_external">
+   <property name="text">
+    <string>Link e&amp;xternal corpus</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
    </property>
   </action>
  </widget>

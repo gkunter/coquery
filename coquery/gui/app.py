@@ -177,6 +177,8 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Initialize all widgets with suitable data """
 
         self.column_tree = CoqResourceTree(parent=self)
+        self.column_tree.customContextMenuRequested.connect(
+            self.get_output_column_menu)
 
         self.ui.options_tree = self.column_tree
         self.ui.output_columns.insertWidget(1, self.column_tree)
@@ -360,6 +362,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_build_corpus.triggered.connect(self.build_corpus)
         self.ui.action_manage_corpus.triggered.connect(self.manage_corpus)
         self.ui.action_remove_corpus.triggered.connect(self.remove_corpus)
+        self.ui.action_link_external.triggered.connect(self.add_link)
         self.ui.action_settings.triggered.connect(self.settings)
         self.ui.action_connection_settings.triggered.connect(self.connection_settings)
         self.ui.action_reference_corpus.triggered.connect(self.set_reference_corpus)
@@ -2653,15 +2656,17 @@ class CoqueryApp(QtGui.QMainWindow):
         current_corpus = utf8(self.ui.combo_corpus.currentText())
         resource, _, _ = options.get_resource(current_corpus)
 
-        link = linkselect.LinkSelect.pick(
-                                        res_from=resource,
-                                        rc_from=item.objectName(),
-                                        corpus_omit=[current_corpus],
-                                        parent=self)
-
+        if item:
+            rc_from = utf8(item.objectName())
+        else:
+            rc_from = None
+        link = linkselect.LinkSelect.pick(res_from=resource,
+                                          rc_from=rc_from,
+                                          corpus_omit=[current_corpus],
+                                          parent=self)
         if link:
             options.cfg.table_links[options.cfg.current_server].append(link)
-            self.column_tree.add_external_link(item, link)
+            self.column_tree.add_external_link(link)
 
     def remove_link(self, item):
         self.column_tree.remove_external_link(item)
