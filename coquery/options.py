@@ -25,7 +25,9 @@ except ImportError:
     from configparser import NoOptionError, ParsingError, NoSectionError
 
 class CoqConfigParser(_configparser, object):
-
+    """
+    A config parser with enhanced type methods
+    """
     def items(self, section):
         try:
             return super(CoqConfigParser, self).items(section)
