@@ -232,7 +232,7 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         if column in self.unique_cache:
             val = self.unique_cache[column]
         else:
-            val = self.df[column].unique()
+            val = self.df[column].dropna().unique()
             self.unique_cache[column] = val
         return val
 
