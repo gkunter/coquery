@@ -22,10 +22,11 @@ from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from . import classes
 
 
-class CoqResultsTable(classes.CoqTableView):
+class CoqResultsTableView(classes.CoqTableView):
 
     def __init__(self, *args, **kwargs):
-        super(CoqResultsTable, self).__init__(*args, **kwargs)
+        super(CoqResultsTableView, self).__init__(*args, **kwargs)
+        self.next_ix = None
 
         self.setWordWrap(options.cfg.word_wrap)
         self.setFont(options.cfg.table_font)
@@ -91,6 +92,6 @@ class CoqResultsTable(classes.CoqTableView):
             self.setItemDelegateForRow(row, classes.CoqTotalDelegate(self))
 
 
-class CoqHiddenResultsTable(CoqResultsTable):
+class CoqHiddenResultsTable(CoqResultsTableView):
     def setDelegates(self):
         pass
