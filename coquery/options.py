@@ -1117,6 +1117,10 @@ def save_configuration():
         config.write(output_file)
 
 
+def get_column_properties():
+    column_properties = settings.value("column_properties", {})
+    return column_properties.get(cfg.corpus, {})
+
 def get_con_configuration():
     """
     Returns a tuple containing the currently active connection configuration.
