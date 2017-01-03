@@ -129,21 +129,24 @@ class CoqResourceTree(classes.CoqTreeWidget):
             query_root = create_root("Query string")
 
             for rc_feature in rc_features:
-                leaf = create_item(rc_feature)
+                try:
+                    leaf = create_item(rc_feature)
 
-                if rc_feature in segment_features:
-                    segment_root.addChild(leaf)
-                elif (rc_feature in lexicon_features or
-                      resource.is_tokenized(rc_feature)):
-                    lexicon_root.addChild(leaf)
-                elif rc_feature in file_features:
-                    file_root.addChild(leaf)
-                elif rc_feature.startswith("coquery_"):
-                    query_root.addChild(leaf)
-                elif (rc_feature.startswith("speaker_") or
-                      rc_feature in resource.speaker_features):
-                    speaker_root.addChild(leaf)
-                else:
+                    if rc_feature in segment_features:
+                        segment_root.addChild(leaf)
+                    elif (rc_feature in lexicon_features or
+                        resource.is_tokenized(rc_feature)):
+                        lexicon_root.addChild(leaf)
+                    elif rc_feature in file_features:
+                        file_root.addChild(leaf)
+                    elif rc_feature.startswith("coquery_"):
+                        query_root.addChild(leaf)
+                    elif (rc_feature.startswith("speaker_") or
+                        rc_feature in resource.speaker_features):
+                        speaker_root.addChild(leaf)
+                    else:
+                        source_root.addChild(leaf)
+                except:
                     source_root.addChild(leaf)
 
             if lexicon_root.childCount():
