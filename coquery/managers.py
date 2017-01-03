@@ -337,12 +337,19 @@ class Manager(CoqObject):
     def summarize(self, df, session):
         print("\tsummarize()")
         vis_cols = get_visible_columns(df, manager=self, session=session)
+
         df = self.manager_summary_functions.apply(df, session=session, manager=self)
         if not self.ignore_user_functions:
-            df = self.user_summary_functions.apply(df, session=session, manager=self)
+            df = self.user_summary_functions.apply(df,
+                                                   session=session,
+                                                   manager=self)
 
-        if options.cfg.drop_on_na and vis_cols:
-            ix = df[vis_cols].dropna(axis="index", how="all").index
+        cols = [x for x in vis_cols if x.startswith("coq_")]
+
+        if options.cfg.drop_on_na and cols:
+            ix = df[vis_cols].dropna(axis="index",
+                                     subset=cols,
+                                     how="all").index
             df = df.iloc[ix]
         if options.cfg.drop_duplicates:
             df = self.distinct(df, session)
@@ -791,6 +798,8 @@ class ContrastMatrix(Manager):
 
     def summarize(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
+        #df = df.drop_duplicates(subset=vis_cols)
+
         self.p_correction = math.factorial(len(vis_cols))
         self._freq_function = Freq(columns=vis_cols, alias="coquery_invisible_count")
         self._subcorpus_size = SubcorpusSize(columns=vis_cols, alias="coquery_invisible_size")
