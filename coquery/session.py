@@ -382,6 +382,9 @@ class Session(object):
             # if options.cfg.verbose: print(6)
             return "G²('{}', y)".format(label)
 
+        if header.startswith("coq_userdata"):
+            return "Userdata{}".format(header.rpartition("_")[-1])
+
         if header.startswith("coq_context"):
             if header == "coq_context_left":
                 s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_left)

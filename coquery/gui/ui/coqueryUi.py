@@ -385,16 +385,16 @@ class Ui_MainWindow(object):
         self.splitter_columns.setOrientation(QtCore.Qt.Horizontal)
         self.splitter_columns.setChildrenCollapsible(False)
         self.splitter_columns.setObjectName(_fromUtf8("splitter_columns"))
-        self.data_preview = CoqResultsTable(self.splitter_columns)
+        self.data_preview = CoqResultsTableView(self.splitter_columns)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.data_preview.sizePolicy().hasHeightForWidth())
         self.data_preview.setSizePolicy(sizePolicy)
-        self.data_preview.setEditTriggers(QtGui.QAbstractItemView.SelectedClicked)
+        self.data_preview.setEditTriggers(QtGui.QAbstractItemView.AnyKeyPressed|QtGui.QAbstractItemView.DoubleClicked|QtGui.QAbstractItemView.EditKeyPressed|QtGui.QAbstractItemView.SelectedClicked)
         self.data_preview.setAlternatingRowColors(True)
         self.data_preview.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-        self.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        self.data_preview.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
         self.data_preview.setTextElideMode(QtCore.Qt.ElideRight)
         self.data_preview.setVerticalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
         self.data_preview.setHorizontalScrollMode(QtGui.QAbstractItemView.ScrollPerPixel)
@@ -660,6 +660,8 @@ class Ui_MainWindow(object):
         self.action_show_hidden.setObjectName(_fromUtf8("action_show_hidden"))
         self.action_scatter_plot = QtGui.QAction(MainWindow)
         self.action_scatter_plot.setObjectName(_fromUtf8("action_scatter_plot"))
+        self.action_add_column = QtGui.QAction(MainWindow)
+        self.action_add_column.setObjectName(_fromUtf8("action_add_column"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -708,6 +710,7 @@ class Ui_MainWindow(object):
         self.menuAnalyse.addAction(self.menuDensity_plots.menuAction())
         self.menu_Results.addAction(self.action_column_properties)
         self.menu_Results.addAction(self.action_show_hidden)
+        self.menu_Results.addAction(self.action_add_column)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuCorpus.menuAction())
         self.menubar.addAction(self.menu_Results.menuAction())
@@ -717,7 +720,7 @@ class Ui_MainWindow(object):
         self.label_2.setBuddy(self.combo_corpus)
 
         self.retranslateUi(MainWindow)
-        self.tool_widget.setCurrentIndex(1)
+        self.tool_widget.setCurrentIndex(4)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -758,7 +761,7 @@ class Ui_MainWindow(object):
         self.button_group_filters.setText(_translate("MainWindow", "Group filters{}...", None))
         self.button_add_summary_function.setText(_translate("MainWindow", "Summary functions{}...", None))
         self.button_filters.setText(_translate("MainWindow", "Filter results{}...", None))
-        self.check_drop_duplicates.setText(_translate("MainWindow", "&Drop duplicate rows", None))
+        self.check_drop_duplicates.setText(_translate("MainWindow", "Drop duplicate &rows", None))
         self.button_apply_management.setText(_translate("MainWindow", "&Apply", None))
         self.button_cancel_management.setText(_translate("MainWindow", "Cancel", None))
         self.widget_hidden_columns.setTabText(self.widget_hidden_columns.indexOf(self.tab), _translate("MainWindow", "Hidden columns", None))
@@ -857,11 +860,12 @@ class Ui_MainWindow(object):
         self.action_save_query.setText(_translate("MainWindow", "S&ave query...", None))
         self.action_load_query.setText(_translate("MainWindow", "L&oad query...", None))
         self.action_share_query.setText(_translate("MainWindow", "S&hare query...", None))
-        self.action_column_properties.setText(_translate("MainWindow", "Column properties...", None))
+        self.action_column_properties.setText(_translate("MainWindow", "Column &properties...", None))
         self.action_column_properties.setShortcut(_translate("MainWindow", "Ctrl+I", None))
-        self.action_show_hidden.setText(_translate("MainWindow", "Show all columns", None))
+        self.action_show_hidden.setText(_translate("MainWindow", "Show &all columns", None))
         self.action_scatter_plot.setText(_translate("MainWindow", "&Scatter plot", None))
+        self.action_add_column.setText(_translate("MainWindow", "Add &user data column", None))
 
 from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
-from ..resultstable import CoqHiddenResultsTable, CoqResultsTable
+from ..resultstable import CoqHiddenResultsTable, CoqResultsTableView
 

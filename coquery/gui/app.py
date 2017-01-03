@@ -107,10 +107,12 @@ class CoqueryApp(QtGui.QMainWindow):
         self.last_results_saved = True
         self.last_connection = None
         self.last_connection_state = None
+        self.user_columns = False
         self.last_index = None
         self.corpus_manager = None
         self._group_functions = functionlist.FunctionList()
         self._column_functions = functionlist.FunctionList()
+        self._target_label = None
 
         self.widget_list = []
         self.Session = None
@@ -328,6 +330,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_manage_corpus.setIcon(self.get_icon("Database"))
         self.ui.action_corpus_documentation.setIcon(self.get_icon("Info"))
         self.ui.action_statistics.setIcon(self.get_icon("Table"))
+
+        self.ui.action_add_column.setIcon(self.get_icon("Add Column"))
+        self.ui.action_column_properties.setIcon(self.get_icon("Edit Column"))
+
         self.ui.action_quit.setIcon(self.get_icon("Exit"))
         self.ui.action_view_log.setIcon(self.get_icon("List"))
         self.ui.action_save_results.setIcon(self.get_icon("Save"))
@@ -368,6 +374,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.action_column_properties.triggered.connect(self.column_properties)
         self.ui.action_show_hidden.triggered.connect(self.show_hidden_columns)
+        self.ui.action_add_column.triggered.connect(self.add_column)
 
         self.ui.action_barcode_plot.triggered.connect(lambda: self.visualize_data("barcodeplot"))
         self.ui.action_beeswarm_plot.triggered.connect(lambda: self.visualize_data("beeswarmplot"))
@@ -921,6 +928,30 @@ class CoqueryApp(QtGui.QMainWindow):
         self.update_table_models()
         self.update_columns()
 
+    def add_column(self):
+        if not self.Session or len(self.Session.data_table.columns) == 0:
+            return
+        max_user_column = 0
+        for col in self.Session.data_table.columns:
+            if col.startswith("coq_userdata"):
+                max_user_column = max(max_user_column,
+                                      int(col.rpartition("_")[-1]))
+        N = max_user_column + 1
+        label = "coq_userdata_{}".format(N)
+        self.Session.data_table[label] = [None] * len(self.Session.data_table)
+        self.reaggregate(recalculate=False, start=False)
+        self.update_columns()
+        self._target_label = label
+
+    def jump_to_column(self, col):
+        if not col:
+            return
+        x = list(self.Session.output_object.columns).index(col)
+        h = self.ui.data_preview.horizontalHeader()
+        columnIndexes = [h.logicalIndex(i) for i in range(h.count())]
+        self.ui.data_preview.setCurrentIndex(
+            self.table_model.createIndex(0, columnIndexes[x]))
+
     def manage_stopwords(self):
         from . import stopwords
         old_list = options.cfg.stopword_list
@@ -1074,11 +1105,12 @@ class CoqueryApp(QtGui.QMainWindow):
 
             model_index = index
             row = model_index.row()
+            col = model_index.column()
             data = self.table_model.content.iloc[row]
             meta_data = self.table_model.invisible_content.iloc[row]
 
             if self.Session.is_statistics_session():
-                column = data.index[model_index.column()]
+                column = data.index[col]
                 self.show_unique_values(rc_feature=meta_data["coquery_invisible_rc_feature"],
                                         uniques=column != "coq_statistics_entries")
             else:
@@ -1096,6 +1128,11 @@ class CoqueryApp(QtGui.QMainWindow):
                 except KeyError:
                     QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
                     return
+
+            # do not show contexts if the user clicks on user data columns
+            # because the cell editor should open
+            if data.index[col].startswith("coq_userdata"):
+                return
 
         origin_id = self.Session.Corpus.get_source_id(token_id)
 
@@ -1154,6 +1191,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.display_results(drop=False)
         self.stop_progress_indicator()
         self.resize_rows()
+
         self.show_query_status()
         self.check_group_items()
         self.set_button_labels()
@@ -1176,6 +1214,11 @@ class CoqueryApp(QtGui.QMainWindow):
                                       msg,
                                       QtGui.QMessageBox.Ok,
                                       QtGui.QMessageBox.Ok)
+
+        self.ui.data_preview.setFocus()
+        if self._target_label:
+            self.jump_to_column(self._target_label)
+            self._target_label = None
 
     def kill_reaggregation(self):
         self.aggr_thread.terminate()
@@ -1296,6 +1339,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.hidden_model = classes.CoqHiddenTableModel(
             to_hide, session=self.Session)
         self.set_columns_widget()
+        self.table_model.dataChanged.connect(self.change_userdata)
 
     def set_columns_widget(self):
         def hide():
@@ -1314,6 +1358,11 @@ class CoqueryApp(QtGui.QMainWindow):
                 hide()
             else:
                 show()
+
+    def change_userdata(self):
+        self.user_columns = True
+        self.enable_apply_button()
+        #self.reaggregate(start=True)
 
     def display_results(self, drop=True):
         if len(self.Session.output_object.dropna(how="all")) == 0:
@@ -1344,8 +1393,16 @@ class CoqueryApp(QtGui.QMainWindow):
         current_properties = properties.get(options.cfg.corpus, {})
         options.cfg.column_color = current_properties.get("colors", {})
 
+
+        old_row, old_col = (self.ui.data_preview.currentIndex().row(),
+                            self.ui.data_preview.currentIndex().column())
         self.ui.data_preview.setModel(self.table_model)
         self.ui.data_preview.setDelegates()
+        try:
+            self.ui.data_preview.setCurrentIndex(
+                self.table_model.createIndex(old_row, old_col))
+        except:
+            pass
         self.ui.hidden_columns.setModel(self.hidden_model)
         self.ui.hidden_columns.setDelegates()
 
@@ -1597,6 +1654,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 print(e)
             self.Session = self.new_session
             del self.new_session
+            self.user_columns = False
             self.reaggregate()
 
             if self.Session.is_statistics_session():
@@ -1993,6 +2051,12 @@ class CoqueryApp(QtGui.QMainWindow):
                 return
             options.cfg.output_file_path = name
             options.cfg.output_path = name
+        if self.user_columns:
+            response = QtGui.QMessageBox.warning(
+                self, "You have entered user data", msg_userdata_warning,
+                QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+            if response == QtGui.QMessageBox.No:
+                return
 
         self.getGuiValues()
         self.showMessage("Preparing query...")

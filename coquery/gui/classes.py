@@ -1649,15 +1649,31 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
         self.formatted = self.format_content(self.content)
 
+    def flags(self, index):
+        if self.content.columns[index.column()].startswith("coq_userdata"):
+            return super(CoqTableModel, self).flags(index) | QtCore.Qt.ItemIsEditable
+        else:
+            return super(CoqTableModel, self).flags(index)
+
     def get_dtype(self, column):
         return self._dtypes[list(self.header).index(column)]
 
+    def setData(self, index, value, role):
+        col = self.content.columns[index.column()]
+        row = self.content.index[index.row()]
+        if (role == QtCore.Qt.EditRole and
+            col.startswith("coq_userdata")):
+            self.content[col][row] = value
+            self.formatted[col][row] = value
+            corpus_id = self.invisible_content.iloc[index.row()]["coquery_invisible_corpus_id"]
+            which = self._session.data_table.coquery_invisible_corpus_id == corpus_id
+            self._session.data_table[col][which] = value
+            self.dataChanged.emit(index, index)
+            return True
+        return False
+
     @staticmethod
     def format_content(source, num_to_str=True):
-        column_properties = options.settings.value("column_properties", {})
-        current_properties = column_properties.get(options.cfg.corpus, {})
-        subst = current_properties.get("substitutions", {})
-
         df = pd.DataFrame(index=source.index)
 
         for col in source.columns:
@@ -1717,6 +1733,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             else:
                 raise TypeError
 
+        # apply value substitutions:
+        subst = options.get_column_properties().get("substitutions", {})
         if subst:
             df = df.replace(subst)
 
@@ -1754,6 +1772,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 return self.formatted.values[index.row()][ix]
             else:
                 return "[hidden]"
+
+        elif role == QtCore.Qt.EditRole:
+            ix = index.column()
+            return self.formatted.values[index.row()][ix]
 
         # ToolTipRole: return the content as a tooltip:
         elif role == QtCore.Qt.ToolTipRole:

@@ -397,7 +397,7 @@
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>1</number>
+              <number>4</number>
              </property>
              <widget class="QWidget" name="tool_widget_page_context">
               <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -689,7 +689,7 @@
                <item>
                 <widget class="QCheckBox" name="check_drop_duplicates">
                  <property name="text">
-                  <string>&amp;Drop duplicate rows</string>
+                  <string>Drop duplicate &amp;rows</string>
                  </property>
                 </widget>
                </item>
@@ -754,7 +754,7 @@
           <property name="childrenCollapsible">
            <bool>false</bool>
           </property>
-          <widget class="CoqResultsTable" name="data_preview">
+          <widget class="CoqResultsTableView" name="data_preview">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -762,7 +762,7 @@
             </sizepolicy>
            </property>
            <property name="editTriggers">
-            <set>QAbstractItemView::SelectedClicked</set>
+            <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
            </property>
            <property name="alternatingRowColors">
             <bool>true</bool>
@@ -771,7 +771,7 @@
             <enum>QAbstractItemView::ExtendedSelection</enum>
            </property>
            <property name="selectionBehavior">
-            <enum>QAbstractItemView::SelectRows</enum>
+            <enum>QAbstractItemView::SelectItems</enum>
            </property>
            <property name="textElideMode">
             <enum>Qt::ElideRight</enum>
@@ -977,6 +977,7 @@ p, li { white-space: pre-wrap; }
     </property>
     <addaction name="action_column_properties"/>
     <addaction name="action_show_hidden"/>
+    <addaction name="action_add_column"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1473,7 +1474,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_column_properties">
    <property name="text">
-    <string>Column properties...</string>
+    <string>Column &amp;properties...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
@@ -1481,12 +1482,17 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_show_hidden">
    <property name="text">
-    <string>Show all columns</string>
+    <string>Show &amp;all columns</string>
    </property>
   </action>
   <action name="action_scatter_plot">
    <property name="text">
     <string>&amp;Scatter plot</string>
+   </property>
+  </action>
+  <action name="action_add_column">
+   <property name="text">
+    <string>Add &amp;user data column</string>
    </property>
   </action>
  </widget>
@@ -1507,7 +1513,7 @@ p, li { white-space: pre-wrap; }
    <header location="global">..classes</header>
   </customwidget>
   <customwidget>
-   <class>CoqResultsTable</class>
+   <class>CoqResultsTableView</class>
    <extends>QTableView</extends>
    <header location="global">..resultstable</header>
   </customwidget>

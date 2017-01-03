@@ -291,6 +291,13 @@ except NameError:
     unicode = str
     long = int
 
+msg_userdata_warning = """
+<p><b>Your results table contains user data.</b></p>
+<p>If you start a new query, the user data that you have manually entered
+will be lost.</p>
+<p>Do you really want to start a new query?</p>
+"""
+
 msg_invalid_metadata = """
 <p><b>The file that you selected does not appear to contain valid meta data.</b></p>
 <p>A valid meta data file is a CSV file, i.e. a text file in which the
