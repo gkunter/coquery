@@ -375,6 +375,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_column_properties.triggered.connect(self.column_properties)
         self.ui.action_show_hidden.triggered.connect(self.show_hidden_columns)
         self.ui.action_add_column.triggered.connect(self.add_column)
+        self.ui.action_add_function.triggered.connect(self.menu_add_function)
 
         self.ui.action_barcode_plot.triggered.connect(lambda: self.visualize_data("barcodeplot"))
         self.ui.action_beeswarm_plot.triggered.connect(lambda: self.visualize_data("beeswarmplot"))
@@ -2743,6 +2744,15 @@ class CoqueryApp(QtGui.QMainWindow):
         l = options.cfg.stopword_list
         self.ui.label_stopwords.setText(
             label_stopwords.format(len(l)))
+
+    def menu_add_function(self):
+        header = self.ui.data_preview.horizontalHeader()
+        columns = []
+        for x in self.ui.data_preview.selectionModel().selectedColumns():
+            columns .append(self.table_model.header[x.column()])
+        if not columns:
+            columns.append(self.table_model.header[0])
+        self.add_function(columns)
 
     def add_function(self, columns=[], summary=False, group=False, **kwargs):
         from . import addfunction

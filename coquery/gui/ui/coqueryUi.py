@@ -662,6 +662,8 @@ class Ui_MainWindow(object):
         self.action_scatter_plot.setObjectName(_fromUtf8("action_scatter_plot"))
         self.action_add_column = QtGui.QAction(MainWindow)
         self.action_add_column.setObjectName(_fromUtf8("action_add_column"))
+        self.action_add_function = QtGui.QAction(MainWindow)
+        self.action_add_function.setObjectName(_fromUtf8("action_add_function"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -711,6 +713,7 @@ class Ui_MainWindow(object):
         self.menu_Results.addAction(self.action_column_properties)
         self.menu_Results.addAction(self.action_show_hidden)
         self.menu_Results.addAction(self.action_add_column)
+        self.menu_Results.addAction(self.action_add_function)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuCorpus.menuAction())
         self.menubar.addAction(self.menu_Results.menuAction())
@@ -761,7 +764,7 @@ class Ui_MainWindow(object):
         self.button_group_filters.setText(_translate("MainWindow", "Group filters{}...", None))
         self.button_add_summary_function.setText(_translate("MainWindow", "Summary functions{}...", None))
         self.button_filters.setText(_translate("MainWindow", "Filter results{}...", None))
-        self.check_drop_duplicates.setText(_translate("MainWindow", "Drop duplicate &rows", None))
+        self.check_drop_duplicates.setText(_translate("MainWindow", "Drop duplicate ro&ws", None))
         self.button_apply_management.setText(_translate("MainWindow", "&Apply", None))
         self.button_cancel_management.setText(_translate("MainWindow", "Cancel", None))
         self.widget_hidden_columns.setTabText(self.widget_hidden_columns.indexOf(self.tab), _translate("MainWindow", "Hidden columns", None))
@@ -780,7 +783,7 @@ class Ui_MainWindow(object):
         self.menuCorpus_locations.setTitle(_translate("MainWindow", "&Corpus locations", None))
         self.menuDensity_plots.setTitle(_translate("MainWindow", "&Numeric plots", None))
         self.menuTime_data.setTitle(_translate("MainWindow", "&Time data", None))
-        self.menu_Results.setTitle(_translate("MainWindow", "&Output", None))
+        self.menu_Results.setTitle(_translate("MainWindow", "&Results", None))
         self.action_open_input_file.setText(_translate("MainWindow", "&Open input file...", None))
         self.action_open_input_file.setShortcut(_translate("MainWindow", "Ctrl+O", None))
         self.action_help.setText(_translate("MainWindow", "&Help", None))
@@ -865,6 +868,8 @@ class Ui_MainWindow(object):
         self.action_show_hidden.setText(_translate("MainWindow", "Show &all columns", None))
         self.action_scatter_plot.setText(_translate("MainWindow", "&Scatter plot", None))
         self.action_add_column.setText(_translate("MainWindow", "Add &user data column", None))
+        self.action_add_function.setText(_translate("MainWindow", "Add &function...", None))
+        self.action_add_function.setShortcut(_translate("MainWindow", "Ctrl+F", None))
 
 from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
 from ..resultstable import CoqHiddenResultsTable, CoqResultsTableView

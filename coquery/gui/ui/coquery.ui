@@ -689,7 +689,7 @@
                <item>
                 <widget class="QCheckBox" name="check_drop_duplicates">
                  <property name="text">
-                  <string>Drop duplicate &amp;rows</string>
+                  <string>Drop duplicate ro&amp;ws</string>
                  </property>
                 </widget>
                </item>
@@ -973,11 +973,12 @@ p, li { white-space: pre-wrap; }
    </widget>
    <widget class="QMenu" name="menu_Results">
     <property name="title">
-     <string>&amp;Output</string>
+     <string>&amp;Results</string>
     </property>
     <addaction name="action_column_properties"/>
     <addaction name="action_show_hidden"/>
     <addaction name="action_add_column"/>
+    <addaction name="action_add_function"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1493,6 +1494,14 @@ p, li { white-space: pre-wrap; }
   <action name="action_add_column">
    <property name="text">
     <string>Add &amp;user data column</string>
+   </property>
+  </action>
+  <action name="action_add_function">
+   <property name="text">
+    <string>Add &amp;function...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
    </property>
   </action>
  </widget>
