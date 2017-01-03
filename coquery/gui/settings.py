@@ -171,10 +171,6 @@ class Settings(QtGui.QDialog):
         except AttributeError:
             pass
         #try:
-            #self.ui.check_server_side.setChecked(bool(self._options.server_side))
-        #except AttributeError:
-            #pass
-        #try:
             #self.ui.check_ignore_punctuation.setChecked(bool(self._options.ignore_punctuation))
         #except AttributeError:
             #pass
