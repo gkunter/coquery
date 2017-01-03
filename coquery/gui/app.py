@@ -269,7 +269,6 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.data_preview.setEnabled(False)
         self.ui.text_no_match.hide()
-        self.ui.menuAnalyse.setEnabled(False)
 
         ## set vertical splitter: top: no stretch, bottom: full stretch
         self.ui.splitter.setStretchFactor(0, 0)
@@ -402,6 +401,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_toggle_management.setChecked(options.cfg.show_data_management)
         self.ui.action_toggle_columns.setChecked(options.cfg.show_output_columns)
 
+        self.ui.menuAnalyse.aboutToShow.connect(self.show_visualizations_menu)
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
         self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
@@ -513,6 +513,10 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         Enables or disables entries in the file menu if needed.
         """
+        self.ui.action_save_query.setVisible(False)
+        self.ui.action_load_query.setVisible(False)
+        self.ui.action_share_query.setVisible(False)
+
         # leave if the results table is empty:
         if not self.ui.data_preview.isEnabled() or len(self.table_model.content) == 0:
             # disable the result-related menu entries:
@@ -545,73 +549,30 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_reference_corpus.setText("Set &reference corpus...")
 
     def show_results_menu(self):
-        return
-        self.ui.menu_Results.clear()
+        enable = hasattr(self, "table_model")
+        self.ui.action_add_column.setEnabled(enable)
+        self.ui.action_add_function.setEnabled(enable)
+        self.ui.action_column_properties.setEnabled(enable)
+        self.ui.action_show_hidden.setEnabled(enable)
 
-        self.ui.action_column_properties = QtGui.QAction(self.ui.menu_Results)
-        self.ui.action_column_properties.setText(_translate("MainWindow", "Column properties", None))
-        self.ui.menu_Results.addAction(self.ui.action_column_properties)
-        self.ui.action_column_properties.triggered.connect(self.column_properties)
+    def show_visualizations_menu(self):
+        enable = hasattr(self, "table_model")
+        self.ui.action_barchart_plot.setEnabled(enable)
+        self.ui.action_barcode_plot.setEnabled(enable)
+        self.ui.action_beeswarm_plot.setEnabled(enable)
+        self.ui.action_bubble_chart.setEnabled(enable)
+        self.ui.action_ecd_plot.setEnabled(enable)
+        self.ui.action_heat_map.setEnabled(enable)
+        self.ui.action_kde_plot.setEnabled(enable)
+        self.ui.action_line_plot.setEnabled(enable)
+        self.ui.action_percentage_area_plot.setEnabled(enable)
+        self.ui.action_percentage_bars.setEnabled(enable)
+        self.ui.action_scatter_plot.setEnabled(enable)
+        self.ui.action_stacked_area_plot.setEnabled(enable)
+        self.ui.action_stacked_bars.setEnabled(enable)
 
-        self.ui.action_show_hidden = QtGui.QAction(self.ui.menu_Results)
-        self.ui.action_show_hidden.setText(_translate("MainWindow", "Show hidden columns", None))
-        self.ui.menu_Results.addAction(self.ui.action_show_hidden)
-        self.ui.action_show_hidden.triggered.connect(self.show_hidden_columns)
-
-        self.ui.menu_Results.addSeparator()
-
-
-        # FIXME:
-        # The menu should always display the available options so that users
-        # can use it to explore the program (cf. Cooper et al. 2014. About
-        # Face. 4th edition. Wiley: ch. 18 'the main justification of [menus']
-        # existence is to teach us about what is available')
-
-        # Add Output column entry:
-        if self.column_tree.selectedItems():
-            self.ui.menuOutputOptions = self.get_output_column_menu(selection=self.column_tree.selectedItems())
-            self.ui.menu_Results.addMenu(self.ui.menuOutputOptions)
-        else:
-            self.ui.action_output_options = QtGui.QAction(self.ui.menu_Results)
-            self.ui.menu_Results.addAction(self.ui.action_output_options)
-            self.ui.action_output_options.setDisabled(True)
-            self.ui.action_output_options.setText(_translate("MainWindow", "No output column selected.", None))
-
-        self.ui.menu_Results.addSeparator()
-
-        self.ui.menuNoColumns = QtGui.QAction(self.ui.menu_Results)
-        self.ui.menuNoColumns.setText(_translate("MainWindow", "No columns selected.", None))
-        self.ui.menuNoColumns.setDisabled(True)
-        self.ui.menu_Results.addAction(self.ui.menuNoColumns)
-
-        self.ui.menuNoRows = QtGui.QAction(self.ui.menu_Results)
-        self.ui.menuNoRows.setText(_translate("MainWindow", "No rows selected.", None))
-        self.ui.menuNoRows.setDisabled(True)
-        self.ui.menu_Results.addAction(self.ui.menuNoRows)
-
-        select = self.ui.data_preview.selectionModel()
-
-        if select:
-            # Check if columns are selected
-            selection = []
-            if select and select.selectedColumns():
-                # Add column submenu
-                for x in self.ui.data_preview.selectionModel().selectedColumns():
-                    selection.append(self.table_model.header[x.column()])
-
-            self.ui.menuColumns = self.get_column_submenu(selection=selection)
-            self.ui.menu_Results.insertMenu(self.ui.menuNoColumns, self.ui.menuColumns)
-            self.ui.menu_Results.removeAction(self.ui.menuNoColumns)
-
-            selection = []
-            # Check if rows are selected
-            if select and select.selectedRows():
-                # Add rows submenu
-                selection = self.table_model.content.index[[x.row() for x in self.ui.data_preview.selectionModel().selectedRows()]]
-
-            self.ui.menuRows = self.get_row_submenu(selection=selection)
-            self.ui.menu_Results.insertMenu(self.ui.menuNoRows, self.ui.menuRows)
-            self.ui.menu_Results.removeAction(self.ui.menuNoRows)
+        self.ui.action_tree_map.setVisible(False)
+        self.ui.action_word_cloud.setVisible(False)
 
     ###
     ### widget appearance methods
@@ -1378,11 +1339,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_save_results.setEnabled(True)
             self.ui.action_copy_to_clipboard.setEnabled(True)
 
-        # Visualizations menu is disabled for corpus statistics:
-        if self.Session.is_statistics_session():
-            self.ui.menuAnalyse.setEnabled(False)
-        else:
-            self.ui.menuAnalyse.setEnabled(True)
+        # Results and Visualizations menu are disabled for corpus statistics:
+        self.ui.menuAnalyse.setDisabled(self.Session.is_statistics_session())
+        self.ui.menu_Results.setDisabled(self.Session.is_statistics_session())
 
         self.update_table_models()
 

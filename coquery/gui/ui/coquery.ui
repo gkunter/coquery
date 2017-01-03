@@ -1483,7 +1483,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_show_hidden">
    <property name="text">
-    <string>Show &amp;all columns</string>
+    <string>Show &amp;hidden columns</string>
    </property>
   </action>
   <action name="action_scatter_plot">

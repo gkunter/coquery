@@ -865,7 +865,7 @@ class Ui_MainWindow(object):
         self.action_share_query.setText(_translate("MainWindow", "S&hare query...", None))
         self.action_column_properties.setText(_translate("MainWindow", "Column &properties...", None))
         self.action_column_properties.setShortcut(_translate("MainWindow", "Ctrl+I", None))
-        self.action_show_hidden.setText(_translate("MainWindow", "Show &all columns", None))
+        self.action_show_hidden.setText(_translate("MainWindow", "Show &hidden columns", None))
         self.action_scatter_plot.setText(_translate("MainWindow", "&Scatter plot", None))
         self.action_add_column.setText(_translate("MainWindow", "Add &user data column", None))
         self.action_add_function.setText(_translate("MainWindow", "Add &function...", None))
