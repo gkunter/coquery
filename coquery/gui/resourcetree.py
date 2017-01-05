@@ -11,7 +11,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import logging
+import warnings
+
 
 from coquery import options
 from coquery.defines import *
@@ -152,26 +153,31 @@ class CoqResourceTree(classes.CoqTreeWidget):
             query_root = create_root("Query string")
 
             for rc_feature in rc_features:
+                leaf = create_item(rc_feature)
                 try:
-                    leaf = create_item(rc_feature)
+                    target_root = source_root
 
                     if rc_feature in segment_features:
-                        segment_root.addChild(leaf)
+                        target_root = segment_root
                     elif (rc_feature in lexicon_features or
                         resource.is_tokenized(rc_feature)):
-                        lexicon_root.addChild(leaf)
+                        target_root = lexicon_root
                     elif rc_feature in file_features:
-                        file_root.addChild(leaf)
-                    elif rc_feature.startswith("coquery_"):
-                        query_root.addChild(leaf)
-                    elif (rc_feature.startswith("speaker_") or
+                        target_root = file_root
+
+                    if rc_feature.startswith("coquery_"):
+                        target_root = query_root
+
+                    if rc_feature.startswith("speaker_"):
+                        target_root = speaker_root
+                    if (hasattr(resource, "speaker_features") and
                         rc_feature in resource.speaker_features):
-                        speaker_root.addChild(leaf)
-                    else:
-                        source_root.addChild(leaf)
+                        target_root = speaker_root
                 except Exception as e:
+                    warnings.warn(str(e))
                     print(e)
-                    source_root.addChild(leaf)
+                finally:
+                    target_root.addChild(leaf)
 
             if lexicon_root.childCount():
                 self.addTopLevelItem(lexicon_root)
@@ -215,8 +221,11 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 if x in tables:
                     tables.remove(x)
                     tables.insert(0, x)
-            tables.remove("coquery")
-            tables.append("coquery")
+            try:
+                tables.remove("coquery")
+                tables.append("coquery")
+            except ValueError:
+                pass
 
             # populate the tree with a root for each table, and nodes for each
             # resource in the tables:
@@ -343,5 +352,3 @@ class CoqResourceTree(classes.CoqTreeWidget):
         for root in self.rootItems():
             l.update(traverse(root))
         return l
-
-logger = logging.getLogger(NAME)
