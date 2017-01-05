@@ -36,7 +36,7 @@ from .pyqt_compat import QtCore, QtGui
 from .ui import coqueryUi
 from .resourcetree import CoqResourceTree
 from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
-
+from .search import Search
 
 # add path required for visualizers::
 if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
@@ -44,8 +44,10 @@ if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
 
 
 class focusFilter(QtCore.QObject):
-    """ Define an event filter that reacts to focus events. This filter is
-    used to toggle the query selection radio buttons. """
+    """
+    Define an event filter that emits a focus signal whenever the widget
+    receives focus.
+    """
     focus = QtCore.Signal()
 
     def eventFilter(self, obj, event):
@@ -56,8 +58,10 @@ class focusFilter(QtCore.QObject):
 
 
 class clickFilter(QtCore.QObject):
-    """ Define an event filter that reacts to click events. This filter is
-    used to toggle the query selection radio buttons. """
+    """
+    Define an event filter that emits a CLICKED signal whenever a mouse
+    button is released within the widget.
+    """
     clicked = QtCore.Signal()
 
     def eventFilter(self, obj, event):
@@ -65,6 +69,27 @@ class clickFilter(QtCore.QObject):
             self.clicked.emit()
             return super(clickFilter, self).eventFilter(obj, event)
         return super(clickFilter, self).eventFilter(obj, event)
+
+
+class keyFilter(QtCore.QObject):
+    """
+    Define an event filter that emits a keyPressed signal whenever one of the
+    specified keys is pressed from within the widget.
+    """
+    keyPressed = QtCore.Signal()
+
+    def __init__(self, k, *args, **kwargs):
+        super(keyFilter, self).__init__(*args, **kwargs)
+        if not hasattr(k, "__iter__"):
+            k = set([k])
+        self.keys = k
+
+    def eventFilter(self, obj, event):
+        if (event.type() == QtCore.QEvent.KeyPress and
+            event.key() in self.keys):
+            self.keyPressed.emit()
+            return True
+        return False
 
 
 class GuiHandler(logging.StreamHandler):
@@ -113,6 +138,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self._group_functions = functionlist.FunctionList()
         self._column_functions = functionlist.FunctionList()
         self._target_label = None
+        self.reaggregating = False
 
         self.widget_list = []
         self.Session = None
@@ -144,7 +170,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.setupUi(self)
         self.setMenuBar(self.ui.menubar)
-
+        self.search = Search(self.ui.data_preview)
         self.setup_app()
         self.show()
 
@@ -258,6 +284,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_cancel_management.setDisabled(True)
         self.ui.button_cancel_management.setFlat(True)
 
+        self.set_find_widget(show=False)
+
         self.setup_hooks()
         self.setup_menu_actions()
         self.setup_icons()
@@ -334,6 +362,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.action_add_column.setIcon(self.get_icon("Add Column"))
         self.ui.action_column_properties.setIcon(self.get_icon("Edit Column"))
+        self.ui.action_find.setIcon(self.get_icon("View File"))
 
         self.ui.action_quit.setIcon(self.get_icon("Exit"))
         self.ui.action_view_log.setIcon(self.get_icon("List"))
@@ -378,6 +407,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_show_hidden.triggered.connect(self.show_hidden_columns)
         self.ui.action_add_column.triggered.connect(self.add_column)
         self.ui.action_add_function.triggered.connect(self.menu_add_function)
+        self.ui.action_find.triggered.connect(lambda: self.set_find_widget(show=True))
 
         self.ui.action_barcode_plot.triggered.connect(lambda: self.visualize_data("barcodeplot"))
         self.ui.action_beeswarm_plot.triggered.connect(lambda: self.visualize_data("beeswarmplot"))
@@ -444,11 +474,32 @@ class CoqueryApp(QtGui.QMainWindow):
         # between either query from file or query from string:
         self.focus_to_file = focusFilter()
         self.ui.edit_file_name.installEventFilter(self.focus_to_file)
-
         self.ui.edit_file_name.clicked.connect(self.switch_to_file)
+
         self.focus_to_query = focusFilter()
-        self.focus_to_query.focus.connect(self.switch_to_query)
         self.ui.edit_query_string.installEventFilter(self.focus_to_query)
+        self.focus_to_query.focus.connect(self.switch_to_query)
+
+        self.close_find_widget = keyFilter(QtCore.Qt.Key_Escape)
+        self.ui.widget_find.installEventFilter(self.close_find_widget)
+        self.close_find_widget.keyPressed.connect(
+            lambda: self.set_find_widget(show=False))
+
+        # bind Enter and Return keys within the find edit to 'Find next':
+        self.next_find = keyFilter([QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return])
+        self.ui.widget_find.installEventFilter(self.next_find)
+        self.next_find.keyPressed.connect(self.search.go_to_next)
+
+        self.find_next = QtGui.QShortcut(
+            QtGui.QKeySequence(QtGui.QKeySequence.FindNext), self)
+        self.find_next.activated.connect(self.search.go_to_next)
+        self.find_prev = QtGui.QShortcut(
+            QtGui.QKeySequence(QtGui.QKeySequence.FindPrevious), self)
+        self.find_prev.activated.connect(self.search.go_to_prev)
+
+        if sys.platform != "darwin":
+            self.new_query = QtGui.QShortcut(QtGui.QKeySequence("Alt+N"), self)
+            self.new_query.activated.connect(self.run_query)
 
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
         # hook run query button:
@@ -499,11 +550,18 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.column_tree.itemChanged.connect(self.toggle_selected_feature)
 
+        # find widget:
+        self.ui.edit_find.textChanged.connect(lambda: self.find(self.ui.edit_find.text()))
+        self.ui.button_find_next.clicked.connect(lambda: self.find(self.ui.edit_find.text(), next=True))
+        self.ui.button_find_prev.clicked.connect(lambda: self.find(self.ui.edit_find.text(), prev=True))
+        self.ui.button_find_close.clicked.connect(lambda: self.set_find_widget(show=False))
+
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
 
     def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Escape:
+        if (e.key() == QtCore.Qt.Key_Escape and
+            self.reaggregating):
             self.abortRequested.emit()
 
     def help(self):
@@ -557,6 +615,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_add_function.setEnabled(enable)
         self.ui.action_column_properties.setEnabled(enable)
         self.ui.action_show_hidden.setEnabled(enable)
+        self.ui.action_find.setEnabled(enable)
 
     def show_visualizations_menu(self):
         enable = hasattr(self, "table_model")
@@ -601,6 +660,21 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.show_output_columns = not options.cfg.show_output_columns
         self.ui.action_toggle_columns.setChecked(options.cfg.show_output_columns)
         self.set_main_screen_appearance()
+
+    def set_find_widget(self, show=True):
+        # don't react if there is no results table:
+        if not hasattr(self, "table_model"):
+            show = False
+
+        self.ui.edit_find.setEnabled(show)
+        self.ui.button_find_next.setEnabled(show)
+        self.ui.button_find_prev.setEnabled(show)
+        self.ui.button_find_close.setEnabled(show)
+        if show:
+            self.ui.widget_find.show()
+            self.ui.edit_find.setFocus()
+        else:
+            self.ui.widget_find.hide()
 
     def change_toolbox(self, i):
         self.ui.list_toolbox.selectRow(i)
@@ -851,6 +925,14 @@ class CoqueryApp(QtGui.QMainWindow):
     ###
     ### action methods
     ###
+
+    def find(self, text, columns=[0], next=False, prev=False):
+        if next:
+            self.search.go_to_next()
+        elif prev:
+            self.search.go_to_prev()
+        else:
+            self.search.find(text, columns=columns)
 
     def column_properties(self, columns=[]):
         from .columnproperties import ColumnPropertiesDialog
@@ -1147,11 +1229,13 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if not self.Session.has_cached_data():
             self.start_progress_indicator()
+        self.reaggregating = True
 
         print("reaggregate")
         self.aggr_thread.start()
 
     def finalize_reaggregation(self):
+        self.reaggregating = False
         manager = self.Session.get_manager()
         self.display_results(drop=False)
         self.stop_progress_indicator()

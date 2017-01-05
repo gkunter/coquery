@@ -212,7 +212,10 @@
              <item>
               <widget class="QPushButton" name="button_run_query">
                <property name="text">
-                <string>&amp;Query</string>
+                <string>&amp;New query</string>
+               </property>
+               <property name="shortcut">
+                <string>Ctrl+N</string>
                </property>
                <property name="autoDefault">
                 <bool>true</bool>
@@ -721,6 +724,9 @@
                 <property name="text">
                  <string>&amp;Apply</string>
                 </property>
+                <property name="shortcut">
+                 <string>F5</string>
+                </property>
                 <property name="flat">
                  <bool>true</bool>
                 </property>
@@ -861,6 +867,62 @@ p, li { white-space: pre-wrap; }
       </widget>
      </widget>
     </item>
+    <item>
+     <widget class="QWidget" name="widget_find" native="true">
+      <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,0,1,0,0">
+       <property name="margin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QToolButton" name="button_find_close">
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset theme="window-close"/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Find:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="edit_find">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="button_find_next">
+         <property name="text">
+          <string>Next</string>
+         </property>
+         <property name="icon">
+          <iconset theme="go-down"/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="button_find_prev">
+         <property name="text">
+          <string>Previous</string>
+         </property>
+         <property name="icon">
+          <iconset theme="go-up"/>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -981,6 +1043,8 @@ p, li { white-space: pre-wrap; }
     <addaction name="action_show_hidden"/>
     <addaction name="action_add_column"/>
     <addaction name="action_add_function"/>
+    <addaction name="separator"/>
+    <addaction name="action_find"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1325,7 +1389,7 @@ p, li { white-space: pre-wrap; }
     <string>Create te&amp;xtgrids...</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+G</string>
+    <string>Ctrl+T</string>
    </property>
   </action>
   <action name="action_available_modules">
@@ -1509,7 +1573,7 @@ p, li { white-space: pre-wrap; }
     <string>Add &amp;function...</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+F</string>
+    <string>Ctrl+U</string>
    </property>
   </action>
   <action name="action_link_external">
@@ -1518,6 +1582,14 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="shortcut">
     <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="action_find">
+   <property name="text">
+    <string>Find...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
    </property>
   </action>
  </widget>
