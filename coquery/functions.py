@@ -18,7 +18,6 @@ import re
 import sys
 import pandas as pd
 import numpy as np
-from scipy import stats
 import sqlalchemy
 
 
@@ -33,12 +32,24 @@ try:
 except AttributeError:
     max_int = sys.maxsize
 
+# use stats.iqr() and stats.mode() if possible, otherwise use
+# replacement methods:
 try:
-    _iqr = stats.iqr
-except (AttributeError):
+    from scipy import stats
+    if "iqr" not in dir (stats):
+        # the 'iqr' method is not available in Python 2.7:
+        raise ImportError
+except ImportError:
+    import collections
+
+    def _mode(x):
+        return collections.Counter(x).most_common()[0][0]
+
     def _iqr(x):
         return np.subtract(*np.percentile(x, [75, 25]))
-
+else:
+    _iqr = stats.iqr
+    _mode = stats.mode
 
 def _save_first(x):
     l = [y for y in x if y is not None]
@@ -46,7 +57,6 @@ def _save_first(x):
         return l[0]
     except IndexError:
         return None
-
 
 def _save_last(x):
     l = [y for y in x if y]
@@ -65,7 +75,7 @@ combine_map = {
     "mean": np.mean,
     "sd": np.std,
     "median": np.median,
-    "mode": stats.mode,
+    "mode": _mode,
     "IQR": _iqr,
     "first": _save_first,
     "last": _save_last,
