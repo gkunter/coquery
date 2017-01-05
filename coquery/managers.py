@@ -699,6 +699,14 @@ class Collocations(Manager):
         # Alternatively, get rid of this function call if the
         # corpus size can be handled correctly by an appropriate
         # function
+        # Probably, the best solution is to take the queried corpus
+        # features into account when calculating the collcations.
+        # This would make a comparison of collactions in e.g. COCA across
+        # genres fairly easy. In order to do this, all corpus features
+        # should be included in the aggregation, and the _subcorpus_size()
+        # function should be used to get the correct size.
+        # If no corpus features are selected, the whole corpus will be
+        # used.
         corpus_size = session.Resource.corpus.get_corpus_size()
 
         left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
