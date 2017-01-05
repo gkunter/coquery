@@ -21,7 +21,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,0,0">
    <item>
-    <widget class="QGroupBox" name="groupBox">
+    <widget class="QGroupBox" name="group_current_corpus">
      <property name="title">
       <string>&amp;Current corpus</string>
      </property>
@@ -52,7 +52,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="">
+    <widget class="QGroupBox" name="group_external_corpus">
      <property name="title">
       <string>E&amp;xternal corpus</string>
      </property>
