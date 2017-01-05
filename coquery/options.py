@@ -1153,12 +1153,13 @@ def process_options():
     global settings
 
     try:
-        from .gui.pyqt_compat import QtCore
-        settings = QtCore.QSettings(
+        from .gui.pyqt_compat import QtCore, CoqSettings
+        settings = CoqSettings(
                     os.path.join(general.get_home_dir(), "coquery.ini"),
                     QtCore.QSettings.IniFormat)
     except IOError:
         settings = None
+
     options = Options()
     cfg = options.cfg
     options.get_options()
