@@ -36,7 +36,6 @@ from .pyqt_compat import QtCore, QtGui
 from .ui import coqueryUi
 from .resourcetree import CoqResourceTree
 from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
-from .search import Search
 
 # add path required for visualizers::
 if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
@@ -170,7 +169,6 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.ui.setupUi(self)
         self.setMenuBar(self.ui.menubar)
-        self.search = Search(self.ui.data_preview)
         self.setup_app()
         self.show()
 
@@ -284,7 +282,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_cancel_management.setDisabled(True)
         self.ui.button_cancel_management.setFlat(True)
 
-        self.set_find_widget(show=False)
+        self.ui.widget_find.setTableView(self.ui.data_preview)
+        self.ui.widget_find.hide()
 
         self.setup_hooks()
         self.setup_menu_actions()
@@ -407,7 +406,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_show_hidden.triggered.connect(self.show_hidden_columns)
         self.ui.action_add_column.triggered.connect(self.add_column)
         self.ui.action_add_function.triggered.connect(self.menu_add_function)
-        self.ui.action_find.triggered.connect(lambda: self.set_find_widget(show=True))
+        self.ui.action_find.triggered.connect(lambda: self.ui.widget_find.show())
 
         self.ui.action_barcode_plot.triggered.connect(lambda: self.visualize_data("barcodeplot"))
         self.ui.action_beeswarm_plot.triggered.connect(lambda: self.visualize_data("beeswarmplot"))
@@ -482,20 +481,20 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.close_find_widget = keyFilter(QtCore.Qt.Key_Escape)
         self.ui.widget_find.installEventFilter(self.close_find_widget)
-        self.close_find_widget.keyPressed.connect(
-            lambda: self.set_find_widget(show=False))
+        self.close_find_widget.keyPressed.connect(lambda: self.ui.widget_find.hide())
+        self.close_find_widget.keyPressed.connect(lambda: self.ui.data_preview.setFocus())
 
         # bind Enter and Return keys within the find edit to 'Find next':
         self.next_find = keyFilter([QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return])
         self.ui.widget_find.installEventFilter(self.next_find)
-        self.next_find.keyPressed.connect(self.search.go_to_next)
+        self.next_find.keyPressed.connect(self.ui.widget_find.go_to_next)
 
         self.find_next = QtGui.QShortcut(
             QtGui.QKeySequence(QtGui.QKeySequence.FindNext), self)
-        self.find_next.activated.connect(self.search.go_to_next)
+        self.find_next.activated.connect(self.ui.widget_find.go_to_next)
         self.find_prev = QtGui.QShortcut(
             QtGui.QKeySequence(QtGui.QKeySequence.FindPrevious), self)
-        self.find_prev.activated.connect(self.search.go_to_prev)
+        self.find_prev.activated.connect(self.ui.widget_find.go_to_prev)
 
         if sys.platform != "darwin":
             self.new_query = QtGui.QShortcut(QtGui.QKeySequence("Alt+N"), self)
@@ -549,12 +548,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.columnVisibilityChanged.connect(lambda: self.reaggregate(start=True))
 
         self.column_tree.itemChanged.connect(self.toggle_selected_feature)
-
-        # find widget:
-        self.ui.edit_find.textChanged.connect(lambda: self.find(self.ui.edit_find.text()))
-        self.ui.button_find_next.clicked.connect(lambda: self.find(self.ui.edit_find.text(), next=True))
-        self.ui.button_find_prev.clicked.connect(lambda: self.find(self.ui.edit_find.text(), prev=True))
-        self.ui.button_find_close.clicked.connect(lambda: self.set_find_widget(show=False))
 
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
@@ -660,21 +653,6 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.show_output_columns = not options.cfg.show_output_columns
         self.ui.action_toggle_columns.setChecked(options.cfg.show_output_columns)
         self.set_main_screen_appearance()
-
-    def set_find_widget(self, show=True):
-        # don't react if there is no results table:
-        if not hasattr(self, "table_model"):
-            show = False
-
-        self.ui.edit_find.setEnabled(show)
-        self.ui.button_find_next.setEnabled(show)
-        self.ui.button_find_prev.setEnabled(show)
-        self.ui.button_find_close.setEnabled(show)
-        if show:
-            self.ui.widget_find.show()
-            self.ui.edit_find.setFocus()
-        else:
-            self.ui.widget_find.hide()
 
     def change_toolbox(self, i):
         self.ui.list_toolbox.selectRow(i)
@@ -926,14 +904,6 @@ class CoqueryApp(QtGui.QMainWindow):
     ### action methods
     ###
 
-    def find(self, text, columns=[0], next=False, prev=False):
-        if next:
-            self.search.go_to_next()
-        elif prev:
-            self.search.go_to_prev()
-        else:
-            self.search.find(text, columns=columns)
-
     def column_properties(self, columns=[]):
         from .columnproperties import ColumnPropertiesDialog
 
@@ -1012,15 +982,16 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def set_reference_corpus(self):
         from . import linkselect
-
         current_corpus = utf8(self.ui.combo_corpus.currentText())
-        resource, _, _ = options.get_resource(current_corpus)
-
-        link = linkselect.LinkSelect.get_resource(corpus_omit=[current_corpus],
-                                                  parent=self)
-
-        if link:
-            options.cfg.reference_corpus = link
+        #title = _translate("MainWindow", "Select reference corpus – Coquery", None)
+        title = "Select reference corpus"
+        subtitle = "&Available corpora"
+        corpus = linkselect.CorpusSelect.pick(
+            current=options.cfg.reference_corpus,
+            exclude_corpus=current_corpus,
+            title=title, subtitle=subtitle)
+        if corpus:
+            options.cfg.reference_corpus = corpus
 
     ###
     ### group columns methods
