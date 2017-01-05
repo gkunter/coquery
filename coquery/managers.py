@@ -2,7 +2,7 @@
 """
 managers.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -580,8 +580,7 @@ class ContingencyTable(FrequencyList):
             else:
                 return row[0]
 
-        df = self.distinct(super(ContingencyTable, self).summarize(df, session),
-                           session=session)
+        df = super(ContingencyTable, self).summarize(df, session)
 
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
