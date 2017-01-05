@@ -200,9 +200,12 @@ class TestApply(unittest.TestCase):
         self.assertListEqual(filt12.apply(df).index.tolist(), 
                              df[~df[FLOAT_COLUMN].isnull()].index.tolist())
 
-if __name__ == '__main__':
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestFilterString),
         unittest.TestLoader().loadTestsFromTestCase(TestApply),
         ])
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

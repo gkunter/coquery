@@ -11,8 +11,9 @@ import unittest
 import os.path
 import sys
 import argparse
+import collections
 
-from .mockmodule import setup_module
+from .mockmodule import setup_module, MockOptions
 
 setup_module("sqlalchemy")
 
@@ -20,15 +21,39 @@ from coquery.corpus import CorpusClass, LexiconClass, BaseResource
 from coquery import textgrids
 from coquery import options
 
-def _get_source_id(token_id):
+options.cfg = MockOptions()
+
+options.cfg.current_resources = collections.defaultdict(
+    lambda: (None, None, None, None))
+
+
+class MockSession(object):
+    def __init__(self, resource):
+        self.lexicon = LexiconClass()
+        self.corpus = CorpusClass()
+        self.Resource = resource
+
+        self.corpus.lexicon = self.lexicon
+        self.corpus.resource = resource
+        self.lexicon.corpus = self.corpus
+        self.lexicon.resource = resource
+
+        resource.corpus = self.corpus
+        resource.lexicon = self.lexicon
+
+
+def _get_source_id(_, token_id):
     return [1, 1, 2, 2, 2][token_id-1]
 
-def _get_file_data(token_id, features):
+def _get_file_data(_, token_id, features):
     df = pd.DataFrame({
         "Files.Filename": {0: "File1.txt", 1: "File1.txt", 2: "File2.txt", 3: "File2.txt", 4: "File2.txt"},
         "Files.Duration": {0: 10, 1: 10, 2: 20, 3: 20, 4:20},
         "Corpus.ID": {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}})
     return df
+
+CorpusClass.get_source_id = _get_source_id
+CorpusClass.get_file_data = _get_file_data
 
 # Mock a corpus module:
 BaseResource.corpus_table = "Corpus"
@@ -58,23 +83,9 @@ BaseResource.db_name = "Test"
 class TestModuleMethods(unittest.TestCase):
     
     def setUp(self):
-        self.resource1 = BaseResource()
-        lexicon = LexiconClass()
-        corpus = CorpusClass()
+        self.resource = BaseResource()
+        self.session = MockSession(self.resource)
 
-        corpus.lexicon = lexicon
-
-        lexicon.corpus = corpus
-        lexicon.resource = self.resource1
-
-        corpus.resource = self.resource1
-        corpus.get_source_id = _get_source_id
-        corpus.get_file_data = _get_file_data
-
-        self.resource1.corpus = corpus
-        self.resource1.lexicon = lexicon
-        
-        options.cfg = argparse.Namespace()
         self.selected_features1 = ["corpus_starttime", "corpus_endtime"]
         self.selected_features2 = ["corpus_starttime", "corpus_endtime", "word_label"]
         
@@ -91,13 +102,15 @@ class TestModuleMethods(unittest.TestCase):
 
     def test_get_file_data(self):
         options.cfg.selected_features = self.selected_features1
-        writer = textgrids.TextgridWriter(self.df1, self.resource1)
-        df = _get_file_data([1, 2, 3, 4, 5], [self.resource1.corpus_id, self.resource1.file_name, self.resource1.file_duration])
+        writer = textgrids.TextgridWriter(self.df1, self.session)
+        df = _get_file_data(None, [1, 2, 3, 4, 5], [self.resource.corpus_id,
+                                              self.resource.file_name,
+                                              self.resource.file_duration])
         assert_frame_equal(writer.get_file_data(), df)
 
     def test_prepare_textgrids_number_of_grids(self):
         options.cfg.selected_features = self.selected_features1
-        writer = textgrids.TextgridWriter(self.df1, self.resource1)
+        writer = textgrids.TextgridWriter(self.df1, self.session)
         grids = writer.prepare_textgrids()
         self.assertEqual(len(grids), len(writer.get_file_data()["Files.Filename"].unique()))
             
@@ -110,7 +123,7 @@ class TestModuleMethods(unittest.TestCase):
         the corpus IDs of the tokens.
         """
         options.cfg.selected_features = self.selected_features1
-        writer = textgrids.TextgridWriter(self.df1, self.resource1)
+        writer = textgrids.TextgridWriter(self.df1, self.session)
         grids = writer.prepare_textgrids()
 
         self.assertEqual(list(writer.feature_timing.keys()), ["corpus_id"])
@@ -125,7 +138,7 @@ class TestModuleMethods(unittest.TestCase):
         the word_labels of the tokens.
         """
         options.cfg.selected_features = self.selected_features2
-        writer = textgrids.TextgridWriter(self.df2, self.resource1)
+        writer = textgrids.TextgridWriter(self.df2, self.session)
         grids = writer.prepare_textgrids()
 
         self.assertEqual(list(writer.feature_timing.keys()), ["corpus_id", "word_label"])
@@ -134,7 +147,7 @@ class TestModuleMethods(unittest.TestCase):
 
     def test_fill_grids1(self):
         options.cfg.selected_features = self.selected_features1
-        writer = textgrids.TextgridWriter(self.df1, self.resource1)
+        writer = textgrids.TextgridWriter(self.df1, self.session)
         grids = writer.fill_grids()
         
         grid = grids["File1.txt"]
@@ -180,7 +193,7 @@ class TestModuleMethods(unittest.TestCase):
         
     def test_fill_grids2(self):
         options.cfg.selected_features = self.selected_features2
-        writer = textgrids.TextgridWriter(self.df2, self.resource1)
+        writer = textgrids.TextgridWriter(self.df2, self.session)
         grids = writer.fill_grids()
         
         grid = grids["File1.txt"]
@@ -224,15 +237,12 @@ class TestModuleMethods(unittest.TestCase):
         self.assertEqual(interval3.end_time, 8.5)
         self.assertEqual(interval3.text, "boat")
         
-        
-if __name__ == '__main__':
-    import timeit
-    
+
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestModuleMethods),
         ])
-    
-    print()
-    print(" ----- START ----- ")
-    print()
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

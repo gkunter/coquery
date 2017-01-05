@@ -713,8 +713,7 @@ class TestInCollection(unittest.TestCase):
             pub=coll.get_publishing_information()))
                         
 
-
-if __name__ == '__main__':
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestPerson),
         unittest.TestLoader().loadTestsFromTestCase(TestPersonList),
@@ -725,3 +724,6 @@ if __name__ == '__main__':
         unittest.TestLoader().loadTestsFromTestCase(TestInCollection),
         ])
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

@@ -30,8 +30,11 @@ class TestCELEX(unittest.TestCase):
         self.assertEqual(dia_to_unicode('fa,cade'), "façade")
         self.assertEqual(dia_to_unicode('sm@aland'), "småland")
         
-if __name__ == '__main__':
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestCELEX),
         ])
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()
