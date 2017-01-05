@@ -868,60 +868,7 @@ p, li { white-space: pre-wrap; }
      </widget>
     </item>
     <item>
-     <widget class="QWidget" name="widget_find" native="true">
-      <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,0,1,0,0">
-       <property name="margin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QToolButton" name="button_find_close">
-         <property name="text">
-          <string>...</string>
-         </property>
-         <property name="icon">
-          <iconset theme="window-close"/>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Find:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="edit_find">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="button_find_next">
-         <property name="text">
-          <string>Next</string>
-         </property>
-         <property name="icon">
-          <iconset theme="go-down"/>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="button_find_prev">
-         <property name="text">
-          <string>Previous</string>
-         </property>
-         <property name="icon">
-          <iconset theme="go-up"/>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
+     <widget class="CoqFindWidget" name="widget_find" native="true"/>
     </item>
    </layout>
   </widget>
@@ -1618,6 +1565,12 @@ p, li { white-space: pre-wrap; }
    <class>CoqHiddenResultsTable</class>
    <extends>QTableView</extends>
    <header>..resultstable</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqFindWidget</class>
+   <extends>QWidget</extends>
+   <header>..findwidget</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
