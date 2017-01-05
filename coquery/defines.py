@@ -27,6 +27,7 @@ QUERY_ITEM_POS = "query_item_pos"
 QUERY_ITEM_GLOSS = "query_item_gloss"
 
 QUERY_MODE_TOKENS = "Do not transform"
+QUERY_MODE_TYPES = "Only distinct rows"
 QUERY_MODE_FREQUENCIES = "Frequency list"
 QUERY_MODE_STATISTICS = "Statistics"
 QUERY_MODE_COLLOCATIONS = "Collocation list"
@@ -36,6 +37,7 @@ QUERY_MODE_CONTRASTS = "G-test matrix"
 # this dictionary is used to provide keywords for the command line interface:
 QUERY_MODES = {
     "TOKEN": QUERY_MODE_TOKENS,
+    "TYPES": QUERY_MODE_TYPES,
     "FREQ": QUERY_MODE_FREQUENCIES,
     "STATS": QUERY_MODE_STATISTICS,
     "COLL": QUERY_MODE_COLLOCATIONS,
@@ -47,6 +49,7 @@ QUERY_MODES = {
 # user # interface
 SUMMARY_MODES = [
     QUERY_MODE_TOKENS,
+    QUERY_MODE_TYPES,
     QUERY_MODE_FREQUENCIES,
     QUERY_MODE_COLLOCATIONS,
     QUERY_MODE_CONTINGENCY,

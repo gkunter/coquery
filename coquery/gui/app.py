@@ -214,12 +214,18 @@ class CoqueryApp(QtGui.QMainWindow):
         except AttributeError:
             pass
 
+        separator = QtGui.QFrame()
+        separator.setFrameShape(QtGui.QFrame.HLine)
+        separator.setFrameShadow(QtGui.QFrame.Sunken)
+
         self.ui.aggregate_radio_list = []
         for label in SUMMARY_MODES:
             radio = QtGui.QRadioButton(label)
             radio.toggled.connect(self.enable_apply_button)
             ix = SUMMARY_MODES.index(label)
             self.ui.layout_aggregate.addWidget(radio)
+            if label == QUERY_MODE_TOKENS:
+                self.ui.layout_aggregate.addWidget(separator)
             self.ui.aggregate_radio_list.append(radio)
 
         if options.cfg.current_resources:
@@ -523,7 +529,6 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # connect widgets that enable the Apply button:
         self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
-        self.ui.check_drop_duplicates.stateChanged.connect(self.enable_apply_button)
         self.ui.radio_context_mode_none.toggled.connect(self.enable_apply_button)
         self.ui.radio_context_mode_kwic.toggled.connect(self.enable_apply_button)
         self.ui.radio_context_mode_string.toggled.connect(self.enable_apply_button)
@@ -835,9 +840,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
             l = manager.user_summary_functions.get_list()
 
-            active = (self.ui.check_drop_duplicates.isChecked() or l)
             _set_icon(1, filter_icon if options.cfg.filter_list else None)
-            _set_icon(2, active_icon if active else None)
+            _set_icon(2, active_icon if l else None)
 
     ###
     ### interface status and interface interaction methods
@@ -2583,7 +2587,6 @@ class CoqueryApp(QtGui.QMainWindow):
             # FIXME: eventually, selected_features should be a session variable
             options.cfg.selected_features = self.selected_features
             options.cfg.group_columns = self.get_group_columns()
-            options.cfg.drop_duplicates = self.ui.check_drop_duplicates.isChecked()
             self.get_context_values()
 
     def get_external_links(self):
@@ -2657,8 +2660,6 @@ class CoqueryApp(QtGui.QMainWindow):
 
         # Set context widgets
         self.set_context_values()
-
-        self.ui.check_drop_duplicates.setChecked(options.cfg.drop_duplicates)
 
         for radio in self.ui.aggregate_radio_list:
             if utf8(radio.text()) == options.cfg.MODE:

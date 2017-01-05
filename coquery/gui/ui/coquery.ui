@@ -316,7 +316,7 @@
              <column/>
              <item row="0" column="0">
               <property name="text">
-               <string>Context</string>
+               <string>Add context</string>
               </property>
              </item>
              <item row="0" column="1">
@@ -331,7 +331,7 @@
              </item>
              <item row="1" column="0">
               <property name="text">
-               <string>Stop words</string>
+               <string>Filter stop words</string>
               </property>
              </item>
              <item row="1" column="1">
@@ -346,7 +346,7 @@
              </item>
              <item row="2" column="0">
               <property name="text">
-               <string>Data grouping</string>
+               <string>Group data</string>
               </property>
              </item>
              <item row="2" column="1">
@@ -376,7 +376,7 @@
              </item>
              <item row="4" column="0">
               <property name="text">
-               <string>Summarize</string>
+               <string>Finalize</string>
               </property>
              </item>
              <item row="4" column="1">
@@ -420,6 +420,13 @@
                    <widget class="QRadioButton" name="radio_context_mode_none">
                     <property name="text">
                      <string>No context</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="Line" name="line">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
                     </property>
                    </widget>
                   </item>
@@ -686,13 +693,6 @@
                 <widget class="QPushButton" name="button_filters">
                  <property name="text">
                   <string>Filter results{}...</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="check_drop_duplicates">
-                 <property name="text">
-                  <string>Drop duplicate ro&amp;ws</string>
                  </property>
                 </widget>
                </item>

@@ -351,8 +351,6 @@ class Manager(CoqObject):
                                      subset=cols,
                                      how="all").index
             df = df.iloc[ix]
-        if options.cfg.drop_duplicates:
-            df = self.distinct(df, session)
 
         print("\tdone")
         return df
@@ -528,6 +526,11 @@ class Manager(CoqObject):
         print("done")
         return df
 
+class Types(Manager):
+    def summarize(self, df, session):
+        df = super(Types, self).summarize(df, session)
+        return self.distinct(df, session)
+
 
 class FrequencyList(Manager):
     name = "FREQUENCY"
@@ -538,7 +541,8 @@ class FrequencyList(Manager):
 
         if not self.user_summary_functions.has_function(freq_function):
             self.manager_summary_functions = FunctionList([freq_function])
-        return super(FrequencyList, self).summarize(df, session)
+        df = super(FrequencyList, self).summarize(df, session)
+        return self.distinct(df, session)
 
 
 class ContingencyTable(FrequencyList):
@@ -912,7 +916,9 @@ class ContrastMatrix(Manager):
 
 
 def manager_factory(manager):
-    if manager == QUERY_MODE_FREQUENCIES:
+    if manager == QUERY_MODE_TYPES:
+        return Types()
+    elif manager == QUERY_MODE_FREQUENCIES:
         return FrequencyList()
     elif manager == QUERY_MODE_CONTINGENCY:
         return ContingencyTable()
