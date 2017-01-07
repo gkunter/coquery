@@ -2,7 +2,7 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -79,7 +79,7 @@ class Session(object):
         self.filter_list = []
 
         self.column_functions = functionlist.FunctionList()
-        self.group_functions = functionlist.FunctionList()
+        self.group_functions = []
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
@@ -173,7 +173,6 @@ class Session(object):
         manager.set_filters(options.cfg.filter_list)
         manager.set_group_filters(options.cfg.group_filter_list)
         manager.set_summary_functions(options.cfg.summary_functions)
-        manager.set_group_functions(options.cfg.group_functions)
 
         dtype_list = []
 
@@ -352,6 +351,10 @@ class Session(object):
         s : string
             The display name of the resource string
         """
+
+        if header == None:
+            return header
+
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
         # if options.cfg.verbose: print("translate_header({})".format(header))
