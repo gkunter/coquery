@@ -2,7 +2,7 @@
 """
 app.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -434,6 +434,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_stacked_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=False, smooth=True))
         self.ui.action_line_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=False, percentage=False, smooth=True))
 
+        self.ui.action_visualization_designer.triggered.connect(self.visualization_designer)
+
         self.ui.action_toggle_management.triggered.connect(self.toggle_data_management)
         self.ui.action_toggle_columns.triggered.connect(self.toggle_output_columns)
         self.ui.action_toggle_management.setChecked(options.cfg.show_data_management)
@@ -715,7 +717,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.radio_query_string.setChecked(True)
 
     @staticmethod
-    def get_icon(s, small_n_flat=True):
+    def get_icon(s, small_n_flat=True, size="24x24"):
         """
         Return an icon that matches the given string.
 
@@ -731,12 +733,14 @@ class CoqueryApp(QtGui.QMainWindow):
         """
         icon = QtGui.QIcon()
         if small_n_flat:
-            path = os.path.join(options.cfg.base_path, "icons", "Icons8", "PNG", "24x24", "{}.png".format(s))
+            path = os.path.join(options.cfg.base_path, "icons", "Icons8", "PNG", size, "{}.png".format(s))
             if not os.path.exists(path):
                 path = os.path.join(options.cfg.base_path, "icons", "Essential_Collection", "PNG", "16x16", "{}.png".format(s))
             if not os.path.exists(path):
                 path = os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s))
         else:
+            if not s.lower().endswith(".png"):
+                s = "{}.png".format(s)
             path = os.path.join(options.cfg.base_path, "icons", "artwork", s)
         icon.addFile(path)
         assert os.path.exists(path), "Image not found: {}".format(path)
@@ -1190,7 +1194,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_cancel_management.setDisabled(False)
         self.ui.button_cancel_management.setFlat(False)
 
-        self.Session.group_functions = self._group_functions
         self.Session._column_functions = self._column_functions
 
         if start:
@@ -2117,7 +2120,7 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 self.showMessage("Writing to file...")
 
-            self.new_session.group_functions = self._group_functions
+            self.new_session.group_functions = options.cfg.group_functions
             self.new_session.column_functions = self._column_functions
             self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
@@ -2146,6 +2149,13 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.taskFinished.connect(self.finalize_query)
         self.query_thread.taskException.connect(self.exception_during_query)
         self.query_thread.start()
+
+    def visualization_designer(self):
+        from . import visualizationdesigner
+        dialog = visualizationdesigner.VisualizationDesigner(
+            self.Session.output_object, self.Session)
+        dialog.show()
+        self.widget_list.append(dialog)
 
     def visualize_data(self, name, **kwargs):
         """
@@ -2840,6 +2850,7 @@ class CoqueryApp(QtGui.QMainWindow):
         if group:
             manager.group_functions.set_list([x(sweep=True, hidden=True, group=True) for x in response])
             options.cfg.group_functions = [type(x) for x in manager.group_functions.get_list()]
+            self.Session.group_functions = options.cfg.group_functions
             self.enable_apply_button()
         elif summary:
             manager.set_summary_functions(response)
