@@ -183,6 +183,9 @@ class CoqFeatureTray(CoqFeatureList):
 
     It never shows scrollbars or headers.
     """
+    featureChanged = QtCore.Signal(object)
+    featureCleared = QtCore.Signal()
+
     def __init__(self, parent=None):
         super(CoqFeatureTray, self).__init__(parent)
         self.setEditTriggers(self.NoEditTriggers)
@@ -221,21 +224,16 @@ class CoqFeatureTray(CoqFeatureList):
 
     def send_back(self):
         item = self.takeItem(0)
-        home_address = item.data(QtCore.Qt.UserRole+1)
-        if home_address:
-            # return home
-            home_address.addItem(item)
-        else:
-            # return to sender
-            if self._content_source is not None:
-                self._content_source.addItem(item)
+        # return to sender
+        if self._content_source is not None:
+            self._content_source.addItem(item)
         self._content_source = None
 
-    def clear(self):
-        if self.count():
+    def clear(self, no_return=False):
+        if self.count() and not no_return:
             self.send_back()
         super(CoqFeatureTray, self).clear()
-        self.currentItemChanged.emit(None, None)
+        self.featureCleared.emit()
 
     def setItem(self, item, source):
         if self.count():
@@ -244,12 +242,15 @@ class CoqFeatureTray(CoqFeatureList):
         self.addItem(item)
         item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
         self.setCurrentItem(item)
+        self.featureChanged.emit(item)
 
     def dropEvent(self, e):
         if self.count():
             self.send_back()
+
         if isinstance(e.source(), CoqFeatureTray):
             self._content_source = e.source()._content_source
+            e.source().clear(no_return=True)
         else:
             self._content_source = e.source()
         super(CoqFeatureTray, self).dropEvent(e)
@@ -257,6 +258,7 @@ class CoqFeatureTray(CoqFeatureList):
         self.selectionModel().clear()
         item = self.item(0)
         self.setCurrentItem(item)
+        self.featureChanged.emit(item)
 
 
 class CoqInfoLabel(QtGui.QLabel):
