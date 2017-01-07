@@ -44,7 +44,6 @@ class Manager(CoqObject):
         self.stopwords_failed = False
         self.reset_hidden_columns()
 
-        self.group_functions = FunctionList()
         self.manager_summary_functions = FunctionList()
         self.user_summary_functions = FunctionList()
 
@@ -134,23 +133,28 @@ class Manager(CoqObject):
 
     def mutate_groups(self, df, session):
         if (len(df) == 0 or
-                len(options.cfg.group_columns) == 0 or
-                len(self.group_functions.get_list()) == 0):
+            not options.cfg.group_columns or
+            not session.group_functions):
             return df
         print("\tmutate_groups({})".format(options.cfg.group_columns))
 
-        grouped = df.groupby(self.get_group_columns(df, session))
-        df_new = None
-        for dsub in grouped.groups:
-            dsub = FunctionList(self.group_functions).apply(
-                df.iloc[grouped.groups[dsub]], session=session, manager=self)
-            if df_new is None:
-                df_new = dsub
-            else:
-                df_new = pd.concat([df_new, dsub], axis=0)
+        group_cols = self.get_group_columns(df, session)
+        self.group_functions = FunctionList(
+                [x(sweep=True, group=group_cols) for x
+                 in session.group_functions])
+
+        grouped = df.groupby(group_cols)
+
+        sub_list = []
+        for sub in grouped.groups:
+            sub_list.append(self.group_functions.apply(
+                                df.iloc[grouped.groups[sub]],
+                                session=session, manager=self))
+        df = pd.concat(sub_list, axis=0)
+        df = df.reset_index(drop=True)
 
         print("\tDone mutate_groups")
-        return df_new
+        return df
 
     def mutate(self, df, session):
         """
@@ -360,11 +364,6 @@ class Manager(CoqObject):
             l = []
         self.user_summary_functions.set_list([x(sweep=True) for x in l])
 
-    def set_group_functions(self, l):
-        if l is None:
-            l = []
-        self.group_functions.set_list([x(sweep=True) for x in l])
-
     def distinct(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
         try:
@@ -411,17 +410,21 @@ class Manager(CoqObject):
 
         columns = self.get_group_columns(df, session)
         grouped = df.groupby(columns)
-        new_df = pd.DataFrame(columns=df.columns)
+
+        sub_list = []
         for x in grouped.groups:
-            _df = df.iloc[grouped.groups[x]]
-            _df = _df.reset_index(drop=True)
-            self._len_pre_group_filter[x] = len(_df)
+            dsub = df.iloc[grouped.groups[x]]
+            self._len_pre_group_filter[x] = len(dsub)
             for filt in self._group_filters:
-                _df = filt.apply(_df)
-            new_df = pd.concat([new_df, _df], axis=0)
-            self._len_post_group_filter[x] = len(_df)
+                dsub = filt.apply(dsub)
+
+            sub_list.append(dsub)
+            self._len_post_group_filter[x] = len(dsub)
+
+        df = pd.concat(sub_list, axis=0)
+        df = df.reset_index(drop=True)
+
         print("\tdone")
-        new_df = new_df.reset_index(drop=True)
         return new_df
 
     def select(self, df, session):
@@ -501,7 +504,6 @@ class Manager(CoqObject):
         print("process()")
         df = df.reset_index(drop=True)
         self.drop_on_na = None
-        self._group_functions = []
 
         if options.cfg.stopword_list:
             df = self.filter_stopwords(df, session)
@@ -513,15 +515,13 @@ class Manager(CoqObject):
             df = self.filter_groups(df, session)
             df = self.arrange_groups(df, session)
             df = self.mutate_groups(df, session)
-
         df = self.filter(df, session)
         df = self.summarize(df, session)
         df = self.select(df, session)
-        self._functions = (self._group_functions +
-                        session.column_functions.get_list() +
-                        self.group_functions.get_list() +
-                        self.manager_summary_functions.get_list() +
-                        self.user_summary_functions.get_list())
+        self._functions = (session.column_functions.get_list() +
+                           self.group_functions.get_list() +
+                           self.manager_summary_functions.get_list() +
+                           self.user_summary_functions.get_list())
 
         print("done")
         return df
