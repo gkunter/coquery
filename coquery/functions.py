@@ -2,7 +2,7 @@
 """
 functions.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -146,10 +146,10 @@ class Function(CoqObject):
             return self._label
         else:
             if self.group:
-                template = "{func}(groups={cols})"
+                template = "{func} by {cols}"
                 return template.format(
                     func=self.get_name(),
-                    cols=":".join(["'{}'".format(session.translate_header(x)) for x in options.cfg.group_columns]))
+                    cols="/".join(["{}".format(session.translate_header(x)) for x in self.group]))
 
             if self.no_column_labels:
                 return self.get_name()
