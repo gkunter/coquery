@@ -12,9 +12,13 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import importlib
+import logging
+import sys
 
 from coquery import options
-from coquery.functions import *
+from coquery.defines import NAME
+from coquery.errors import VisualizationModuleError
+from coquery.functions import Freq
 from coquery.unicode import utf8
 
 from .pyqt_compat import QtGui, QtCore, get_toplevel_window, pyside
@@ -35,6 +39,21 @@ from . import classes
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 
 app = get_toplevel_window()
+
+visualizer_mapping = (
+    ("Barcode plot", "Barcode_plot", "barcodeplot"),
+    ("Beeswarm plot", "Beeswarm_plot", "beeswarmplot"),
+    #("Barplot", "Barchart", "barplot"),
+    #("Stacked bars", "Barchart_stacked", "barplot", "Stacked"),
+    #("Percentage bars", "Barchart_percent", "barplot", "Percent"),
+    #("Change over time (lines)", "Lines", "timeseries"),
+    #("Change over time (stacked)", "Areas_stacked", "timeseries"),
+    #("Change over time (percent)", "Areas_percent", "timeseries"),
+    #("Heat map", "Heatmap", "heatmap"),
+    #("Kernel density", "Normal Distribution Histogram", "densityplot"),
+    #("Cumulative distribution", "Positive Dynamic", "densityplot"),
+    #("Scatterplot", "Scatter Plot", "scatterplot"),
+    )
 
 class VisualizationDesigner(QtGui.QDialog):
     visualizers = {}
@@ -100,12 +119,10 @@ class VisualizationDesigner(QtGui.QDialog):
         for col in self.numerical:
             new_item = classes.CoqListItem(self.session.translate_header(col))
             new_item.setData(QtCore.Qt.UserRole, col)
-            print(col)
             self.ui.table_numerical.addItem(new_item)
 
         # add functions
         for func in [Freq]:
-            if func.get_name() not in [x.rpartition(
             new_item = classes.CoqListItem("{} (generated)".format(
                 func.get_name()))
             new_item.setData(QtCore.Qt.UserRole,
@@ -152,15 +169,23 @@ class VisualizationDesigner(QtGui.QDialog):
         Connects the GUI signals to the appropriate slots.
         """
         # hook up figure validation:
-        self.ui.tray_data_x.currentItemChanged.connect(self.check_figure_types)
-        self.ui.tray_data_y.currentItemChanged.connect(self.check_figure_types)
+        self.ui.tray_data_x.featureChanged.connect(self.check_figure_types)
+        self.ui.tray_data_y.featureChanged.connect(self.check_figure_types)
+        self.ui.tray_data_x.featureCleared.connect(self.check_figure_types)
+        self.ui.tray_data_y.featureCleared.connect(self.check_figure_types)
 
         # hook up layout validation
-        self.ui.tray_data_x.currentItemChanged.connect(self.check_layout)
-        self.ui.tray_data_y.currentItemChanged.connect(self.check_layout)
+        self.ui.tray_data_x.featureChanged.connect(self.check_layout)
+        self.ui.tray_data_y.featureChanged.connect(self.check_layout)
+        self.ui.tray_data_x.featureCleared.connect(self.check_layout)
+        self.ui.tray_data_y.featureCleared.connect(self.check_layout)
+        self.ui.tray_columns.featureChanged.connect(self.check_layout)
+        self.ui.tray_rows.featureChanged.connect(self.check_layout)
 
-        self.ui.tray_columns.currentItemChanged.connect(self.check_wrapping)
-        self.ui.tray_rows.currentItemChanged.connect(self.check_wrapping)
+        self.ui.tray_columns.featureChanged.connect(self.check_wrapping)
+        self.ui.tray_columns.featureCleared.connect(self.check_wrapping)
+        self.ui.tray_rows.featureChanged.connect(self.check_wrapping)
+        self.ui.tray_rows.featureCleared.connect(self.check_wrapping)
 
         # hook up clear buttons:
         self.ui.button_clear_x.clicked.connect(
@@ -173,10 +198,16 @@ class VisualizationDesigner(QtGui.QDialog):
             lambda: self.ui.tray_columns.clear())
 
         # hook up to plot_figure():
-        self.ui.tray_data_x.currentItemChanged.connect(self.plot_figure)
-        self.ui.tray_data_y.currentItemChanged.connect(self.plot_figure)
-        self.ui.tray_columns.currentItemChanged.connect(self.plot_figure)
-        self.ui.tray_rows.currentItemChanged.connect(self.plot_figure)
+        self.ui.tray_data_x.featureChanged.connect(self.plot_figure)
+        self.ui.tray_data_y.featureChanged.connect(self.plot_figure)
+        self.ui.tray_data_x.featureCleared.connect(self.plot_figure)
+        self.ui.tray_data_y.featureCleared.connect(self.plot_figure)
+
+        self.ui.tray_columns.featureChanged.connect(self.plot_figure)
+        self.ui.tray_columns.featureCleared.connect(self.plot_figure)
+        self.ui.tray_rows.featureChanged.connect(self.plot_figure)
+        self.ui.tray_rows.featureCleared.connect(self.plot_figure)
+
         self.ui.list_figures.currentItemChanged.connect(self.plot_figure)
         self.ui.check_wrap_layout.toggled.connect(self.plot_figure)
 
@@ -190,6 +221,7 @@ class VisualizationDesigner(QtGui.QDialog):
             self.ui.check_wrap_layout.setChecked(False)
             self.ui.check_wrap_layout.blockSignals(False)
             self.ui.check_wrap_layout.setDisabled(True)
+
         else:
             self.ui.check_wrap_layout.setDisabled(False)
             if hasattr(self, "_last_wrap_state"):
@@ -203,8 +235,10 @@ class VisualizationDesigner(QtGui.QDialog):
             self.ui.group_layout.setEnabled(True)
         else:
             self.ui.group_layout.setEnabled(False)
-            self.ui.tray_columns.clear()
-            self.ui.tray_rows.clear()
+            if self.ui.tray_columns.text():
+                self.ui.tray_columns.clear()
+            if self.ui.tray_rows.text():
+                self.ui.tray_rows.clear()
 
     def restore_settings(self):
         try:
@@ -255,19 +289,7 @@ class VisualizationDesigner(QtGui.QDialog):
         self.ui.spin_columns.setValue(self.legend_columns)
 
     def populate_figure_types(self):
-        for x in (
-                ("Barcode plot", "Barcode_plot", "barcodeplot"),
-                ("Beeswarm plot", "Beeswarm_plot", "beeswarmplot"),
-                ("Barplot", "Barchart", "barplot"),
-                ("Stacked bars", "Barchart_stacked", "barplot", "Stacked"),
-                ("Percentage bars", "Barchart_percent", "barplot", "Percent"),
-                ("Change over time (lines)", "Lines", "timeseries"),
-                ("Change over time (stacked)", "Areas_stacked", "timeseries"),
-                ("Change over time (percent)", "Areas_percent", "timeseries"),
-                ("Heat map", "Heatmap", "heatmap"),
-                ("Kernel density", "Normal Distribution Histogram", "densityplot"),
-                ("Cumulative distribution", "Positive Dynamic", "densityplot"),
-                ("Scatterplot", "Scatter Plot", "scatterplot")):
+        for x in visualizer_mapping:
             if len(x) == 4:
                 label, icon, module_name, vis_class = x
             else:
@@ -292,23 +314,24 @@ class VisualizationDesigner(QtGui.QDialog):
         last_item = self.ui.list_figures.currentItem()
         current_item = None
 
+        data_x = self.ui.tray_data_x.data()
+        data_y = self.ui.tray_data_y.data()
+
         self.ui.list_figures.blockSignals(True)
         for i in range(self.ui.list_figures.count()):
             item = self.ui.list_figures.takeItem(i)
             visualizer = VisualizationDesigner.visualizers[item.text()]
-            if visualizer.validate_data(
-                    self.ui.tray_data_x.data(),
-                    self.ui.tray_data_y.data(),
-                    self.df, self.session):
+            if visualizer.validate_data(data_x, data_y,
+                                        self.df, self.session):
                 item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
                 if item == last_item:
                     current_item = item
             else:
                 item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
             self.ui.list_figures.insertItem(i, item)
-        self.ui.list_figures.blockSignals(False)
         if current_item:
             self.ui.list_figures.setCurrentItem(current_item)
+        self.ui.list_figures.blockSignals(False)
 
     def plot_figure(self):
         figure_type = self.ui.list_figures.currentItem()
@@ -396,7 +419,8 @@ def get_visualizer_module(name):
             type=type(e).__name__, code=sys.exc_info()[1])
         logger.error(msg)
         QtGui.QMessageBox.critical(
-            self, "Visualization error – Coquery",
+            None, "Visualization error – Coquery",
             VisualizationModuleError(name, msg).error_message)
         return
 
+logger = logging.getLogger(NAME)
