@@ -187,7 +187,7 @@ class Function(CoqObject):
         if self.alias:
             return self.alias
         else:
-            return "func_{}_{}".format(self.get_name(), self.get_hash())
+            return "func_{}_{}".format(self._name, self.get_hash())
 
     def find_function(self, df, fun):
         fun_id = fun.get_id()
