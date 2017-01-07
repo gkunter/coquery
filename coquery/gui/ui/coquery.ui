@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>720</width>
-    <height>854</height>
+    <height>868</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -981,6 +981,8 @@ p, li { white-space: pre-wrap; }
     <addaction name="menuTime_data"/>
     <addaction name="menuFrequency_maps"/>
     <addaction name="menuDensity_plots"/>
+    <addaction name="separator"/>
+    <addaction name="action_visualization_designer"/>
    </widget>
    <widget class="QMenu" name="menu_Results">
     <property name="title">
@@ -1537,6 +1539,14 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="action_visualization_designer">
+   <property name="text">
+    <string>Visualization designer...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
    </property>
   </action>
  </widget>

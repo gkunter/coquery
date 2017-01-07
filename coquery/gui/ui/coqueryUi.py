@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(720, 854)
+        MainWindow.resize(720, 868)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.verticalLayout_4 = QtGui.QVBoxLayout(self.centralwidget)
@@ -673,6 +673,8 @@ class Ui_MainWindow(object):
         self.action_link_external.setObjectName(_fromUtf8("action_link_external"))
         self.action_find = QtGui.QAction(MainWindow)
         self.action_find.setObjectName(_fromUtf8("action_find"))
+        self.action_visualization_designer = QtGui.QAction(MainWindow)
+        self.action_visualization_designer.setObjectName(_fromUtf8("action_visualization_designer"))
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -721,6 +723,8 @@ class Ui_MainWindow(object):
         self.menuAnalyse.addAction(self.menuTime_data.menuAction())
         self.menuAnalyse.addAction(self.menuFrequency_maps.menuAction())
         self.menuAnalyse.addAction(self.menuDensity_plots.menuAction())
+        self.menuAnalyse.addSeparator()
+        self.menuAnalyse.addAction(self.action_visualization_designer)
         self.menu_Results.addAction(self.action_column_properties)
         self.menu_Results.addAction(self.action_show_hidden)
         self.menu_Results.addAction(self.action_add_column)
@@ -890,6 +894,8 @@ class Ui_MainWindow(object):
         self.action_link_external.setShortcut(_translate("MainWindow", "Ctrl+E", None))
         self.action_find.setText(_translate("MainWindow", "Find...", None))
         self.action_find.setShortcut(_translate("MainWindow", "Ctrl+F", None))
+        self.action_visualization_designer.setText(_translate("MainWindow", "Visualization designer...", None))
+        self.action_visualization_designer.setShortcut(_translate("MainWindow", "Ctrl+D", None))
 
 from ..classes import CoqClickableLabel, CoqListWidget, CoqTextEdit
 from ..findwidget import CoqFindWidget
