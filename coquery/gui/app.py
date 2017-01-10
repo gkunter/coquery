@@ -2732,7 +2732,6 @@ class CoqueryApp(QtGui.QMainWindow):
             rc_from = None
         link = linkselect.LinkSelect.pick(res_from=resource,
                                           rc_from=rc_from,
-                                          corpus_omit=[current_corpus],
                                           parent=self)
         if link:
             options.cfg.table_links[options.cfg.current_server].append(link)
