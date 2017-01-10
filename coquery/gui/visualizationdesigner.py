@@ -53,7 +53,7 @@ visualizer_mapping = (
     #("Heat map", "Heatmap", "heatmap"),
     #("Kernel density", "Normal Distribution Histogram", "densityplot"),
     #("Cumulative distribution", "Positive Dynamic", "densityplot"),
-    #("Scatterplot", "Scatter Plot", "scatterplot"),
+    ("Scatterplot", "Scatter Plot", "scatterplot", "ScatterPlot"),
     )
 
 class VisualizationDesigner(QtGui.QDialog):
@@ -364,6 +364,8 @@ class VisualizationDesigner(QtGui.QDialog):
         if restored_position != None:
             self.ui.list_figures.setCurrentItem(
                 self.ui.list_figures.item(restored_position))
+        else:
+            self.ui.list_figures.setCurrentItem(None)
         self.ui.list_figures.blockSignals(False)
 
     def change_palette(self, x):
