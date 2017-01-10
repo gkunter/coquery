@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from coquery import options
 
 from coquery.visualizer import visualizer as vis
+from coquery.visualizer import barcodeplot
 
 
 class Visualizer(vis.BaseVisualizer):
@@ -57,7 +58,7 @@ class Visualizer(vis.BaseVisualizer):
 
     def draw(self):
         def plot_facet(data, color):
-            ax = sns.swarmplot(
+            sns.swarmplot(
                 x=data[self._groupby[-1]],
                 y=data["coquery_invisible_corpus_id"],
                 order=sorted(self._levels[-1]),
@@ -70,44 +71,29 @@ class Visualizer(vis.BaseVisualizer):
         self.g.set(ylim=(0, ymax))
         self.g.set_axis_labels(self.options["label_x_axis"],
                                self.options["label_y_axis"])
-        if not hasattr(sns, "swarmplot"):
-            self.g.set(xticklabels=self._levels[-1])
 
-    def plot_facet(data, color, **kwargs):
+
+class BeeswarmPlot(barcodeplot.BarcodePlot):
+    axes_style = "whitegrid"
+
+    def plot_facet(self, data, color,
+                   x=None, y=None, levels_x=None, levels_y=None,
+                   palette=None, **kwargs):
         ax = kwargs.get("ax", plt.gca())
-        x = kwargs.get("x", None)
-        y = kwargs.get("y", None)
-        levels_x = kwargs.get("levels_x", None)
-        levels_y = kwargs.get("levels_y", None)
-        palette = kwargs.get("palette", None)
-
         corpus_id = "coquery_invisible_corpus_id"
 
-        params = {"data": data}
-
+        params = {"data": data, "palette": palette}
+        self.horizontal = True
         if not x and not y:
             params.update({"x": corpus_id}),
         elif x and not y:
-            params.update({"x": x, "y": corpus_id,
-                           "order": sorted(levels_x)})
+            params.update({"x": x, "y": corpus_id, "order": levels_x})
+            self.horizontal = False
         elif y and not x:
-            params.update({"y": y, "x": corpus_id,
-                           "order": sorted(levels_y)})
+            params.update({"y": y, "x": corpus_id, "order": levels_y})
         elif x and y:
-            params.update({"y": corpus_id, "x": x, "hue": y,
-                           "order": sorted(levels_x),
-                           "hue_order": sorted(levels_y)})
+            params.update({"x": corpus_id, "y": y, "hue": x,
+                           "order": levels_y, "hue_order": levels_x})
 
         sns.swarmplot(**params)
         return ax
-
-    @staticmethod
-    def validate_data(data_x, data_y, df, session):
-        if data_x is None and data_y is None:
-            return True
-
-        dtype_x = Visualizer.dtype(data_x, df)
-        dtype_y = Visualizer.dtype(data_y, df)
-
-        return ((dtype_x is None or dtype_x == object) and
-                (dtype_y is None or dtype_y == object))
