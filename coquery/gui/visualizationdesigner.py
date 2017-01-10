@@ -36,16 +36,17 @@ from matplotlib.backends.backend_qt4agg import (
 import seaborn as sns
 
 from . import classes
+from ..visualizer.visualizer import get_grid_layout
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 
 app = get_toplevel_window()
 
 visualizer_mapping = (
-    ("Barcode plot", "Barcode_plot", "barcodeplot"),
-    ("Beeswarm plot", "Beeswarm_plot", "beeswarmplot"),
-    #("Barplot", "Barchart", "barplot"),
-    #("Stacked bars", "Barchart_stacked", "barplot", "Stacked"),
-    #("Percentage bars", "Barchart_percent", "barplot", "Percent"),
+    ("Barcode plot", "Barcode_plot", "barcodeplot", "BarcodePlot"),
+    ("Beeswarm plot", "Beeswarm_plot", "beeswarmplot", "BeeswarmPlot"),
+    ("Barplot", "Barchart", "barplot", "BarPlot"),
+    ("Stacked bars", "Barchart_stacked", "barplot", "Stacked"),
+    ("Percentage bars", "Barchart_percent", "barplot", "Percent"),
     #("Change over time (lines)", "Lines", "timeseries"),
     #("Change over time (stacked)", "Areas_stacked", "timeseries"),
     #("Change over time (percent)", "Areas_percent", "timeseries"),
@@ -58,10 +59,13 @@ visualizer_mapping = (
 class VisualizationDesigner(QtGui.QDialog):
     visualizers = {}
 
-    def __init__(self, df, session, parent=None):
+    def __init__(self, df, dtypes, session, parent=None):
         super(VisualizationDesigner, self).__init__(parent)
         self.session = session
         self.df = df
+        self.dtypes = dtypes
+
+        self._palette_name = "Paired"
 
         self.ui = Ui_VisualizationDesigner()
         self.ui.setupUi(self)
@@ -69,11 +73,15 @@ class VisualizationDesigner(QtGui.QDialog):
 
         self.populate_figure_types()
         self.populate_variable_lists()
-        self.check_figure_types()
-        self.check_wrapping()
-        self.check_layout()
+
         self.restore_settings()
         self.display_values()
+
+        self.check_figure_types()
+        self.check_wrapping()
+        self.check_grid_layout()
+        self.check_clear_buttons()
+        self.check_orientation()
 
         self.setup_connections()
 
@@ -93,8 +101,6 @@ class VisualizationDesigner(QtGui.QDialog):
         self.ui.layout_view.setSpacing(0)
         self.ui.tab_view.setLayout(self.ui.layout_view)
 
-        self.ui.button_data_x.setIcon(app.get_icon("X Coordinate"))
-        self.ui.button_data_y.setIcon(app.get_icon("Y Coordinate"))
         self.ui.button_columns.setIcon(app.get_icon("Select Column"))
         self.ui.button_rows.setIcon(app.get_icon("Select Row"))
 
@@ -103,12 +109,36 @@ class VisualizationDesigner(QtGui.QDialog):
         self.ui.button_clear_columns.setIcon(app.get_icon("Clear Symbol"))
         self.ui.button_clear_rows.setIcon(app.get_icon("Clear Symbol"))
 
+        self.resize_previews()
+
+    def populate_figure_types(self):
+        for x in visualizer_mapping:
+            if len(x) == 4:
+                label, icon, module_name, vis_class = x
+            else:
+                label, icon, module_name = x
+                vis_class = "Visualizer"
+
+            item = QtGui.QListWidgetItem(label)
+            try:
+                item.setIcon(app.get_icon(icon, small_n_flat=False))
+            except Exception as e:
+                item.setIcon(app.get_icon(icon, size="64x64"))
+            item.setSizeHint(QtCore.QSize(180,
+                                          64 + 0 * QtGui.QLabel().sizeHint().height()))
+            self.ui.list_figures.addItem(item)
+
+            if label not in VisualizationDesigner.visualizers:
+                module = get_visualizer_module(module_name)
+                visualizer = getattr(module, vis_class)
+                VisualizationDesigner.visualizers[label] = visualizer
+
     def populate_variable_lists(self):
         self.categorical = [col for col in self.df.columns
-                       if self.df.dtypes[col] == object and not
+                       if self.dtypes[col] == object and not
                        col.startswith(("coquery_invisible"))]
         self.numerical = [col for col in self.df.columns
-                     if self.df.dtypes[col] in (int, float) and not
+                     if self.dtypes[col] in (int, float) and not
                      col.startswith(("coquery_invisible"))]
 
         for col in self.categorical:
@@ -121,16 +151,16 @@ class VisualizationDesigner(QtGui.QDialog):
             new_item.setData(QtCore.Qt.UserRole, col)
             self.ui.table_numerical.addItem(new_item)
 
-        # add functions
-        for func in [Freq]:
-            new_item = classes.CoqListItem("{} (generated)".format(
-                func.get_name()))
-            new_item.setData(QtCore.Qt.UserRole,
-                             "func_{}".format(func._name))
-            new_item.setData(QtCore.Qt.FontRole,
-                             QtGui.QFont(QtGui.QLabel().font().family(),
-                                         italic=True))
-            self.ui.table_numerical.addItem(new_item)
+        ## add functions
+        #for func in [Freq]:
+            #new_item = classes.CoqListItem("{} (generated)".format(
+                #func.get_name()))
+            #new_item.setData(QtCore.Qt.UserRole,
+                             #"func_{}".format(func._name))
+            #new_item.setData(QtCore.Qt.FontRole,
+                             #QtGui.QFont(QtGui.QLabel().font().family(),
+                                         #italic=True))
+            #self.ui.table_numerical.addItem(new_item)
 
     def setup_canvas(self, figure):
         if hasattr(self, "canvas"):
@@ -145,6 +175,9 @@ class VisualizationDesigner(QtGui.QDialog):
             self.ui.layout_preview.removeWidget(self.preview_canvas)
             self.preview_canvas.hide()
             del self.preview_canvas
+            self.ui.layout_preview_colors.removeWidget(self.preview_canvas2)
+            self.preview_canvas2.hide()
+            del self.preview_canvas2
 
         # figure canvas:
         self.canvas = FigureCanvas(figure)
@@ -156,7 +189,7 @@ class VisualizationDesigner(QtGui.QDialog):
         self.ui.layout_view.addWidget(self.toolbar)
         self.ui.layout_view.addWidget(self.canvas)
 
-        # preview canvas:
+        # preview canvases:
         self.preview_canvas = FigureCanvas(figure)
         self.preview_canvas.setParent(self)
         self.preview_canvas.setSizePolicy(QtGui.QSizePolicy.Expanding,
@@ -164,64 +197,125 @@ class VisualizationDesigner(QtGui.QDialog):
         self.preview_canvas.updateGeometry()
         self.ui.layout_preview.addWidget(self.preview_canvas)
 
+        self.preview_canvas2 = FigureCanvas(figure)
+        self.preview_canvas2.setParent(self)
+        self.preview_canvas2.setSizePolicy(QtGui.QSizePolicy.Expanding,
+                                          QtGui.QSizePolicy.Expanding)
+        self.preview_canvas2.updateGeometry()
+        self.ui.layout_preview_colors.addWidget(self.preview_canvas2)
+
     def setup_connections(self):
         """
         Connects the GUI signals to the appropriate slots.
         """
-        # hook up figure validation:
+        # Hook up palette combo boxes:
+        self.ui.combo_qualitative.currentIndexChanged.connect(
+            lambda x: self.change_palette(utf8(self.ui.combo_qualitative.currentText())))
+        self.ui.combo_sequential.currentIndexChanged.connect(
+            lambda x: self.change_palette(utf8(self.ui.combo_sequential.currentText())))
+        self.ui.combo_diverging.currentIndexChanged.connect(
+            lambda x: self.change_palette(utf8(self.ui.combo_diverging.currentText())))
+
+        # Hook up clear buttons.
+        self.ui.button_clear_x.clicked.connect(lambda: self.ui.tray_data_x.clear())
+        self.ui.button_clear_y.clicked.connect(lambda: self.ui.tray_data_y.clear())
+        self.ui.button_clear_rows.clicked.connect(lambda: self.ui.tray_rows.clear())
+        self.ui.button_clear_columns.clicked.connect(lambda: self.ui.tray_columns.clear())
+
+        # Hook up checks for figure type.
+        # The list of available figure types can change if a data tray has
+        # changed, either because a feature was placed in it or if the tray
+        # was cleared.
         self.ui.tray_data_x.featureChanged.connect(self.check_figure_types)
         self.ui.tray_data_y.featureChanged.connect(self.check_figure_types)
         self.ui.tray_data_x.featureCleared.connect(self.check_figure_types)
         self.ui.tray_data_y.featureCleared.connect(self.check_figure_types)
 
-        # hook up layout validation
-        self.ui.tray_data_x.featureChanged.connect(self.check_layout)
-        self.ui.tray_data_y.featureChanged.connect(self.check_layout)
-        self.ui.tray_data_x.featureCleared.connect(self.check_layout)
-        self.ui.tray_data_y.featureCleared.connect(self.check_layout)
-        self.ui.tray_columns.featureChanged.connect(self.check_layout)
-        self.ui.tray_rows.featureChanged.connect(self.check_layout)
+        # Hook up checks for clear button enable state.
+        # The enable state of clear buttons is checked if the feature in the
+        # associated tray has changed or cleared.
+        self.ui.tray_data_x.featureChanged.connect(self.check_clear_buttons)
+        self.ui.tray_data_y.featureChanged.connect(self.check_clear_buttons)
+        self.ui.tray_columns.featureChanged.connect(self.check_clear_buttons)
+        self.ui.tray_rows.featureChanged.connect(self.check_clear_buttons)
+        self.ui.tray_data_x.featureCleared.connect(self.check_clear_buttons)
+        self.ui.tray_data_y.featureCleared.connect(self.check_clear_buttons)
+        self.ui.tray_columns.featureCleared.connect(self.check_clear_buttons)
+        self.ui.tray_rows.featureCleared.connect(self.check_clear_buttons)
 
-        self.ui.tray_columns.featureChanged.connect(self.check_wrapping)
+        # Hook up checks for wrapping checkbox enable state.
+        # The enable state of the wrapping checkbox is checked if there are
+        # changes to the rows and columns tray.
         self.ui.tray_columns.featureCleared.connect(self.check_wrapping)
-        self.ui.tray_rows.featureChanged.connect(self.check_wrapping)
+        self.ui.tray_columns.featureChanged.connect(self.check_wrapping)
         self.ui.tray_rows.featureCleared.connect(self.check_wrapping)
+        self.ui.tray_rows.featureChanged.connect(self.check_wrapping)
 
-        # hook up clear buttons:
-        self.ui.button_clear_x.clicked.connect(
-            lambda: self.ui.tray_data_x.clear())
-        self.ui.button_clear_y.clicked.connect(
-            lambda: self.ui.tray_data_y.clear())
-        self.ui.button_clear_rows.clicked.connect(
-            lambda: self.ui.tray_rows.clear())
-        self.ui.button_clear_columns.clicked.connect(
-            lambda: self.ui.tray_columns.clear())
+        # Hook up checks for grid layout enable state.
+        # The enable state of the grid layout box is checked if there are
+        # changes to the data trays.
+        self.ui.tray_data_x.featureChanged.connect(self.check_grid_layout)
+        self.ui.tray_data_y.featureChanged.connect(self.check_grid_layout)
+        self.ui.tray_data_x.featureCleared.connect(self.check_grid_layout)
+        self.ui.tray_data_y.featureCleared.connect(self.check_grid_layout)
 
-        # hook up to plot_figure():
+        # Hook up figure plotting.
+        # The figure will be plot only upon _explicit_ user actions. User
+        # actions are:
+
+        # (1) placing a feature in a tray
         self.ui.tray_data_x.featureChanged.connect(self.plot_figure)
         self.ui.tray_data_y.featureChanged.connect(self.plot_figure)
-        self.ui.tray_data_x.featureCleared.connect(self.plot_figure)
-        self.ui.tray_data_y.featureCleared.connect(self.plot_figure)
-
         self.ui.tray_columns.featureChanged.connect(self.plot_figure)
-        self.ui.tray_columns.featureCleared.connect(self.plot_figure)
         self.ui.tray_rows.featureChanged.connect(self.plot_figure)
-        self.ui.tray_rows.featureCleared.connect(self.plot_figure)
 
-        self.ui.list_figures.currentItemChanged.connect(self.plot_figure)
+        # (2) clicking a clear button
+        self.ui.button_clear_x.clicked.connect(self.plot_figure)
+        self.ui.button_clear_y.clicked.connect(self.plot_figure)
+        self.ui.button_clear_rows.clicked.connect(self.plot_figure)
+        self.ui.button_clear_columns.clicked.connect(self.plot_figure)
+
+        # (3) changing the wrapping checkbox
         self.ui.check_wrap_layout.toggled.connect(self.plot_figure)
 
+        # (4) selecting a different figure type
+        self.ui.list_figures.currentItemChanged.connect(self.plot_figure)
+
+        # (5) changing the orientation
+        self.ui.radio_horizontal.toggled.connect(self.plot_figure)
+        self.ui.radio_vertical.toggled.connect(self.plot_figure)
+
+    def check_orientation(self):
+        data_x = self.ui.tray_data_x.data()
+        data_y = self.ui.tray_data_y.data()
+
+        if data_x is None or data_y is None:
+            self.ui.radio_horizontal.setDisabled(True)
+            self.ui.radio_vertical.setDisabled(True)
+        else:
+            self.ui.radio_horizontal.setDisabled(False)
+            self.ui.radio_vertical.setDisabled(False)
+
+        if (not self.ui.radio_horizontal.isChecked() and
+            not self.ui.radio_vertical.isChecked()):
+            self.ui.radio_horizontal.blockSignals(True)
+            self.ui.radio_horizontal.setChecked(True)
+            self.ui.radio_horizontal.blockSignals(False)
+
     def check_wrapping(self):
+        """
+        Activate or deactivate the 'Wrap layout' checkbox. If the checkbox
+        is deactivated, also clear the Columns and Rows trays.
+        """
         columns = self.ui.tray_columns.data()
         rows = self.ui.tray_rows.data()
-        if ((columns is None and rows is None) or
+        if ((columns is None) or
             (columns is not None and rows is not None)):
             self._last_wrap_state = self.ui.check_wrap_layout.isChecked()
             self.ui.check_wrap_layout.blockSignals(True)
             self.ui.check_wrap_layout.setChecked(False)
             self.ui.check_wrap_layout.blockSignals(False)
             self.ui.check_wrap_layout.setDisabled(True)
-
         else:
             self.ui.check_wrap_layout.setDisabled(False)
             if hasattr(self, "_last_wrap_state"):
@@ -230,7 +324,14 @@ class VisualizationDesigner(QtGui.QDialog):
                 self.ui.check_wrap_layout.blockSignals(False)
                 del self._last_wrap_state
 
-    def check_layout(self):
+    def check_clear_buttons(self):
+        self.ui.button_clear_x.setEnabled(bool(self.ui.tray_data_x.text()))
+        self.ui.button_clear_y.setEnabled(bool(self.ui.tray_data_y.text()))
+        self.ui.button_clear_columns.setEnabled(bool(self.ui.tray_columns.text()))
+        self.ui.button_clear_rows.setEnabled(bool(self.ui.tray_rows.text()))
+        self.check_orientation()
+
+    def check_grid_layout(self):
         if self.ui.tray_data_x.text() or self.ui.tray_data_y.text():
             self.ui.group_layout.setEnabled(True)
         else:
@@ -239,6 +340,45 @@ class VisualizationDesigner(QtGui.QDialog):
                 self.ui.tray_columns.clear()
             if self.ui.tray_rows.text():
                 self.ui.tray_rows.clear()
+        self.check_orientation()
+
+    def check_figure_types(self):
+        last_item = self.ui.list_figures.currentItem()
+        current_item = None
+
+        data_x = self.ui.tray_data_x.data()
+        data_y = self.ui.tray_data_y.data()
+
+        self.ui.list_figures.blockSignals(True)
+        for i in range(self.ui.list_figures.count()):
+            item = self.ui.list_figures.takeItem(i)
+            visualizer = VisualizationDesigner.visualizers[item.text()]
+            if visualizer.validate_data(data_x, data_y,
+                                        self.df, self.session):
+                item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
+                if item == last_item:
+                    current_item = item
+            else:
+                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
+            self.ui.list_figures.insertItem(i, item)
+        if current_item:
+            self.ui.list_figures.setCurrentItem(current_item)
+        self.ui.list_figures.blockSignals(False)
+
+    def change_palette(self, x):
+        if x != self._palette_name:
+            self._palette_name = x
+            self.plot_figure()
+
+    def resizeEvent(self, new):
+        super(VisualizationDesigner, self).resizeEvent(new)
+        self.resize_previews()
+
+    def resize_previews(self):
+        size = self.ui.group_preview.size()
+        self.ui.group_preview_colors.setMinimumSize(size)
+        self.ui.group_preview_colors.setMaximumSize(size)
+        print(self.ui.group_preview.size(), self.ui.group_preview_colors.size())
 
     def restore_settings(self):
         try:
@@ -288,102 +428,52 @@ class VisualizationDesigner(QtGui.QDialog):
         self.ui.check_show_legend.setChecked(self.show_legend)
         self.ui.spin_columns.setValue(self.legend_columns)
 
-    def populate_figure_types(self):
-        for x in visualizer_mapping:
-            if len(x) == 4:
-                label, icon, module_name, vis_class = x
-            else:
-                label, icon, module_name = x
-                vis_class = "Visualizer"
-
-            item = QtGui.QListWidgetItem(label)
-            try:
-                item.setIcon(app.get_icon(icon, small_n_flat=False))
-            except Exception as e:
-                item.setIcon(app.get_icon(icon, size="64x64"))
-            item.setSizeHint(QtCore.QSize(180,
-                                          64 + 0 * QtGui.QLabel().sizeHint().height()))
-            self.ui.list_figures.addItem(item)
-
-            if label not in VisualizationDesigner.visualizers:
-                module = get_visualizer_module(module_name)
-                visualizer = getattr(module, vis_class)
-                VisualizationDesigner.visualizers[label] = visualizer
-
-    def check_figure_types(self):
-        last_item = self.ui.list_figures.currentItem()
-        current_item = None
-
-        data_x = self.ui.tray_data_x.data()
-        data_y = self.ui.tray_data_y.data()
-
-        self.ui.list_figures.blockSignals(True)
-        for i in range(self.ui.list_figures.count()):
-            item = self.ui.list_figures.takeItem(i)
-            visualizer = VisualizationDesigner.visualizers[item.text()]
-            if visualizer.validate_data(data_x, data_y,
-                                        self.df, self.session):
-                item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
-                if item == last_item:
-                    current_item = item
-            else:
-                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
-            self.ui.list_figures.insertItem(i, item)
-        if current_item:
-            self.ui.list_figures.setCurrentItem(current_item)
-        self.ui.list_figures.blockSignals(False)
-
     def plot_figure(self):
         figure_type = self.ui.list_figures.currentItem()
         if not figure_type:
             return
 
-        visualizer = VisualizationDesigner.visualizers[figure_type.text()]
-
-        self.columns = self.ui.tray_columns.data()
-        self.rows = self.ui.tray_rows.data()
-        self.data_x = self.ui.tray_data_x.data()
-        if self.data_x:
-            self.levels_x = list(self.df[self.data_x].unique())
+        columns = self.ui.tray_columns.data()
+        rows = self.ui.tray_rows.data()
+        data_x = self.ui.tray_data_x.data()
+        data_y = self.ui.tray_data_y.data()
+        if data_x:
+           levels_x = sorted(list(self.df[data_x].unique()))
         else:
-            self.levels_x = []
-        self.data_y = self.ui.tray_data_y.data()
-        if self.data_y:
-            self.levels_y = list(self.df[self.data_y].unique())
+            levels_x = []
+        if data_y:
+            levels_y = sorted(list(self.df[data_y].unique()))
         else:
-            self.levels_y = []
+            levels_y = []
 
-        col_wrap = None
-        # check column wrapping
-        if ((self.columns == self.rows) or
-            self.ui.check_wrap_layout.isChecked()):
-            if self.columns == self.rows:
-                self.rows = None
-            if self.rows and not self.columns:
-                self.columns = self.rows
-                self.rows = None
-            if self.columns:
-                col_wrap, _= visualizer.get_grid_layout(
-                    len(self.df[self.columns].unique()))
+        if (self.ui.check_wrap_layout.isChecked()):
+            col_wrap, _= get_grid_layout(len(self.df[columns].unique()))
+        else:
+            col_wrap = None
 
-        columns = [x for x in [self.data_x, self.data_y,
-                               self.columns, self.rows] if x]
-        columns.append("coquery_invisible_corpus_id")
+        df_columns = [x for x in [data_x, data_y, columns, rows] if x]
+        df_columns.append("coquery_invisible_corpus_id")
 
-        kwargs = {"data": self.df[columns],
-                  "col": self.columns,
-                  "row": self.rows,
-                  "col_wrap": col_wrap,
-                  "sharex": True,
-                  "sharey": True}
+        visualizer_class = VisualizationDesigner.visualizers[figure_type.text()]
 
-        self.grid = visualizer.get_grid(**kwargs)
+        df = self.df[df_columns]
+        df.columns = [self.session.translate_header(x) for x in df.columns]
 
-        self.grid = self.grid.map_dataframe(visualizer.plot_facet,
-                                            x=self.data_x, y=self.data_y,
-                                            levels_x=self.levels_x,
-                                            levels_y=self.levels_y,
-                                            session=self.session)
+        (data_x, data_y, columns, rows) = (self.session.translate_header(x)
+                                           for x in
+                                           (data_x, data_y, columns, rows))
+
+        vis = visualizer_class(df, self.session)
+        self.grid = vis.get_grid(col=columns, row=rows, col_wrap=col_wrap,
+                                 sharex=True, sharey=True)
+
+        self.grid = self.grid.map_dataframe(vis.plot_facet,
+                                            x=data_x, y=data_y,
+                                            levels_x=levels_x,
+                                            levels_y=levels_y,
+                                            session=self.session,
+                                            palette=self._palette_name)
+        vis.set_annotations(self.grid)
         self.setup_canvas(self.grid.fig)
         self.grid.fig.tight_layout()
 
