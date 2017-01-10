@@ -591,7 +591,7 @@ class Visualizer(CoqObject):
             return None
 
     @staticmethod
-    def validate_data(data_x, data_y, df, session):
+    def validate_data(data_x, data_y, data_z, df, session):
         """
         Validate the data types.
 
@@ -626,6 +626,16 @@ class Visualizer(CoqObject):
         """
         return ((data_x or data_y) and (data_x != data_y) and
                 len(df) > 0)
+
+    @staticmethod
+    def count_parameters(data_x, data_y, data_z, df, session):
+        categorical = [x for x in (data_x, data_y, data_z)
+                       if Visualizer.dtype(x, df) == object]
+        numeric = [x for x in (data_x, data_y, data_z)
+                   if Visualizer.dtype(x, df) in (float, int)]
+        empty = [x for x in (data_x, data_y, data_z)
+                 if x is None]
+        return categorical, numeric, empty
 
 
 def get_grid_layout(n):
