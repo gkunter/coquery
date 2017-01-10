@@ -27,7 +27,7 @@ class FunctionItem(QtGui.QWidget):
         self.checkable = checkable
 
         name = func.get_name()
-        desc = FUNCTION_DESC.get(func._name, None)
+        desc = FUNCTION_DESC.get(func._name, "(no description available")
         
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed) 
         sizePolicy.setHorizontalStretch(0) 
