@@ -2,7 +2,7 @@
 """
 visualizer.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -24,8 +24,10 @@ import seaborn as sns
 from coquery.gui.pyqt_compat import QtCore, QtGui
 from coquery import options
 from coquery import managers
-from coquery.defines import *
-from coquery.errors import *
+from coquery.general import CoqObject
+from coquery.defines import NAME
+from coquery.errors import (VisualizationInvalidLayout,
+                            VisualizationNoDataError)
 from coquery.unicode import utf8
 from coquery.gui.classes import CoqTableModel
 
@@ -543,40 +545,107 @@ class BaseVisualizer(QtCore.QObject):
             return "talk"
         return "poster"
 
-    def get_colors_for_factor(self, column, palette, rgb_string=False):
-        """
-        Create a dictionary with colors for each factor level.
 
-        The method assigns each distinct value from a data column to a
-        color from the palette. If there are distinct values than colors,
-        the palette is recycled.
+class Visualizer(CoqObject):
+    axes_style = None
+    plotting_context = "notebook"
+
+    def __init__(self, df, session):
+        self.df = df
+        self.session = session
+
+    def get_grid(self, **kwargs):
+        kwargs["data"] = self.df
+        figure_font = kwargs.get("figure_font", None)
+        if figure_font:
+            sns.set_style(rc={"font.family": figure_font})
+            mpl.rc("font", family=figure_font)
+
+        with sns.axes_style(self.axes_style):
+            with sns.plotting_context(self.plotting_context):
+                grid = sns.FacetGrid(**kwargs)
+        return grid
+
+    def plot_facet(self, data, color,
+                   x=None, y=None, levels_x=None, levels_y=None,
+                   palette=None, **kwargs):
+        pass
+
+    def set_annotations(self, grid):
+        pass
+
+    @staticmethod
+    def dtype(feature, df):
+        if feature:
+            if feature.startswith("func_"):
+                # FIXME: not all functions will return numerical data. At the
+                # time being, only a few functions are included by the
+                # designer, and all of them are in fact numerical, but this
+                # might change at some point.
+                return pd.np.float64
+            try:
+                return df.dtypes[feature]
+            except KeyError:
+                return None
+        else:
+            return None
+
+    @staticmethod
+    def validate_data(data_x, data_y, df, session):
+        """
+        Validate the data types.
+
+        The method returns True if the visualizer can handle an X and a Y
+        variable of the given type. For example, a bar chart can handle
+        two categorical variables, so a call validate_dtypes(object, object)
+        will return True.
+
+        Either argument can be None, which means that the corresponding
+        dimension is not used.
+
+        By default, the data is valid if at least one column name is not
+        empty and both are distinct.
 
         Parameters
         ----------
-        column : string
-            The data column for which colors are requested
-        palette : iterable
-            An iterable containing tuples of three values (R, G, B)
-            representing a color
-        rgb_string : bool
-            A boolean variable that specifies whether the color
-            representations returned by this method should be strings of the
-            form #rrggbb if True. If False, the method returns tuples of
-            three RGB values scaled from 0 to 1 as representations
+        data_x, data_y : str
+            A column name in the data frame, or None if the dimension is not
+            used.
+
+        df : DataFrame
+            The data frame that the column names refer to
+
+        session : Session
+            The session in which the data frame was produced.
 
         Returns
         -------
-        colors : dict
-            A dictionary with a color representation as the value for each
-            factor level
+        valid : bool
+            True if the visualizer can handle these data types, or False
+            otherwise.
         """
-        if rgb_string:
-            S = "#{:02X}{:02X}{:02X}"
-            col = [S.format(r, g, b) for r, g, b in color_categories]
-        else:
-            col = [[x / 255 for x in rgb] for rgb in color_categories]
-        fact = self._table[column].unique()
-        return dict(zip(fact,
-                        (col * (1 + (len(fact) // len(col))))[0:len(fact)]))
+        return ((data_x or data_y) and (data_x != data_y) and
+                len(df) > 0)
+
+
+def get_grid_layout(n):
+    """ Return a tuple containing a nrows, ncols pair that can be used to
+    utilize the screen space more or less nicely for the number of grids
+    n. This function doesn't take the window ratio into account yet, but
+    always assumes a rectangular screen.
+
+    This function is an adaption of the R function n2mfrow. """
+
+    if n <= 3:
+        return (n, 1)
+    elif n <= 6:
+        return ((n + 1) // 2, 2)
+    elif n <= 12:
+        return ((n + 2) // 3, 3)
+    else:
+        nrows = int(math.sqrt(n)) + 1
+        ncols = int(n / nrows) + 1
+        return (nrows, ncols)
+
 
 logger = logging.getLogger(NAME)
