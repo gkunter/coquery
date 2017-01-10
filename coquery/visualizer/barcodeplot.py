@@ -147,14 +147,10 @@ class BarcodePlot(vis.Visualizer):
             grid.set(ylim=lim)
 
     @staticmethod
-    def validate_data(data_x, data_y, df, session):
-        if len(df) == 0:
+    def validate_data(data_x, data_y, data_z, df, session):
+        cat, num, none = vis.Visualizer.count_parameters(
+            data_x, data_y, data_z, df, session)
+
+        if len(num) > 0 or len(cat) > 2:
             return False
-        if data_x is None and data_y is None:
-            return True
-
-        dtype_x = BarcodePlot.dtype(data_x, df)
-        dtype_y = BarcodePlot.dtype(data_y, df)
-
-        return ((dtype_x is None or dtype_x == object) and
-                (dtype_y is None or dtype_y == object))
+        return True

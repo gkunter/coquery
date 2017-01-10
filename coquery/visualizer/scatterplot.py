@@ -187,14 +187,13 @@ class ScatterPlot(vis.Visualizer):
         return grid
 
     @staticmethod
-    def validate_data(data_x, data_y, df, session):
-        if not vis.Visualizer.validate_data(data_x, data_y, df, session):
-            return False
+    def validate_data(data_x, data_y, data_z, df, session):
+        cat, num, none = vis.Visualizer.count_parameters(
+            data_x, data_y, data_z, df, session)
 
-        dtype_x = vis.Visualizer.dtype(data_x, df)
-        dtype_y = vis.Visualizer.dtype(data_y, df)
-        if dtype_x is None and dtype_y is None:
+        if len(num) > 2 or len(num) == 0 or len(cat) > 1:
             return False
-        return not (dtype_x == object and dtype_y == object)
+        else:
+            return True
 
 logger = logging.getLogger(NAME)

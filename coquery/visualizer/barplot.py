@@ -383,20 +383,12 @@ class BarPlot(vis.Visualizer):
         return grid
 
     @staticmethod
-    def validate_data(data_x, data_y, df, session):
-        if not vis.Visualizer.validate_data(data_x, data_y, df, session):
-            return False
+    def validate_data(data_x, data_y, data_z, df, session):
+        cat, num, none = vis.Visualizer.count_parameters(
+            data_x, data_y, data_z, df, session)
 
-        dtype_x = BarPlot.dtype(data_x, df)
-        dtype_y = BarPlot.dtype(data_y, df)
-
-        # at least one data type has to be other than None:
-        if dtype_x is None and dtype_y is None:
+        if len(num) > 1 or len(cat) == 0:
             return False
-        # at least one data type has to be categorical:
-        if dtype_x != object and dtype_y != object:
-            return False
-
         return True
 
 

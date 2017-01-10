@@ -51,6 +51,8 @@ visualizer_mapping = (
     #("Change over time (stacked)", "Areas_stacked", "timeseries"),
     #("Change over time (percent)", "Areas_percent", "timeseries"),
     #("Heat map", "Heatmap", "heatmap"),
+    ("Box-Whisker plot", "Barchart", "boxplot", "BoxPlot"),
+    ("Violin plot", "Normal Distribution Histogram", "boxplot", "ViolinPlot"),
     #("Kernel density", "Normal Distribution Histogram", "densityplot"),
     #("Cumulative distribution", "Positive Dynamic", "densityplot"),
     ("Scatterplot", "Scatter Plot", "scatterplot", "ScatterPlot"),
@@ -106,6 +108,7 @@ class VisualizationDesigner(QtGui.QDialog):
 
         self.ui.button_clear_x.setIcon(app.get_icon("Clear Symbol"))
         self.ui.button_clear_y.setIcon(app.get_icon("Clear Symbol"))
+        self.ui.button_clear_z.setIcon(app.get_icon("Clear Symbol"))
         self.ui.button_clear_columns.setIcon(app.get_icon("Clear Symbol"))
         self.ui.button_clear_rows.setIcon(app.get_icon("Clear Symbol"))
 
@@ -127,7 +130,6 @@ class VisualizationDesigner(QtGui.QDialog):
             item.setSizeHint(QtCore.QSize(180,
                                           64 + 0 * QtGui.QLabel().sizeHint().height()))
             self.ui.list_figures.addItem(item)
-
             if label not in VisualizationDesigner.visualizers:
                 module = get_visualizer_module(module_name)
                 visualizer = getattr(module, vis_class)
@@ -219,6 +221,7 @@ class VisualizationDesigner(QtGui.QDialog):
         # Hook up clear buttons.
         self.ui.button_clear_x.clicked.connect(lambda: self.ui.tray_data_x.clear())
         self.ui.button_clear_y.clicked.connect(lambda: self.ui.tray_data_y.clear())
+        self.ui.button_clear_z.clicked.connect(lambda: self.ui.tray_data_z.clear())
         self.ui.button_clear_rows.clicked.connect(lambda: self.ui.tray_rows.clear())
         self.ui.button_clear_columns.clicked.connect(lambda: self.ui.tray_columns.clear())
 
@@ -228,18 +231,22 @@ class VisualizationDesigner(QtGui.QDialog):
         # was cleared.
         self.ui.tray_data_x.featureChanged.connect(self.check_figure_types)
         self.ui.tray_data_y.featureChanged.connect(self.check_figure_types)
+        self.ui.tray_data_z.featureChanged.connect(self.check_figure_types)
         self.ui.tray_data_x.featureCleared.connect(self.check_figure_types)
         self.ui.tray_data_y.featureCleared.connect(self.check_figure_types)
+        self.ui.tray_data_z.featureCleared.connect(self.check_figure_types)
 
         # Hook up checks for clear button enable state.
         # The enable state of clear buttons is checked if the feature in the
         # associated tray has changed or cleared.
         self.ui.tray_data_x.featureChanged.connect(self.check_clear_buttons)
         self.ui.tray_data_y.featureChanged.connect(self.check_clear_buttons)
+        self.ui.tray_data_z.featureChanged.connect(self.check_clear_buttons)
         self.ui.tray_columns.featureChanged.connect(self.check_clear_buttons)
         self.ui.tray_rows.featureChanged.connect(self.check_clear_buttons)
         self.ui.tray_data_x.featureCleared.connect(self.check_clear_buttons)
         self.ui.tray_data_y.featureCleared.connect(self.check_clear_buttons)
+        self.ui.tray_data_z.featureCleared.connect(self.check_clear_buttons)
         self.ui.tray_columns.featureCleared.connect(self.check_clear_buttons)
         self.ui.tray_rows.featureCleared.connect(self.check_clear_buttons)
 
@@ -256,8 +263,10 @@ class VisualizationDesigner(QtGui.QDialog):
         # changes to the data trays.
         self.ui.tray_data_x.featureChanged.connect(self.check_grid_layout)
         self.ui.tray_data_y.featureChanged.connect(self.check_grid_layout)
+        self.ui.tray_data_z.featureChanged.connect(self.check_grid_layout)
         self.ui.tray_data_x.featureCleared.connect(self.check_grid_layout)
         self.ui.tray_data_y.featureCleared.connect(self.check_grid_layout)
+        self.ui.tray_data_z.featureCleared.connect(self.check_grid_layout)
 
         # Hook up figure plotting.
         # The figure will be plot only upon _explicit_ user actions. User
@@ -266,12 +275,14 @@ class VisualizationDesigner(QtGui.QDialog):
         # (1) placing a feature in a tray
         self.ui.tray_data_x.featureChanged.connect(self.plot_figure)
         self.ui.tray_data_y.featureChanged.connect(self.plot_figure)
+        self.ui.tray_data_z.featureChanged.connect(self.plot_figure)
         self.ui.tray_columns.featureChanged.connect(self.plot_figure)
         self.ui.tray_rows.featureChanged.connect(self.plot_figure)
 
         # (2) clicking a clear button
         self.ui.button_clear_x.clicked.connect(self.plot_figure)
         self.ui.button_clear_y.clicked.connect(self.plot_figure)
+        self.ui.button_clear_z.clicked.connect(self.plot_figure)
         self.ui.button_clear_rows.clicked.connect(self.plot_figure)
         self.ui.button_clear_columns.clicked.connect(self.plot_figure)
 
@@ -288,6 +299,7 @@ class VisualizationDesigner(QtGui.QDialog):
     def check_orientation(self):
         data_x = self.ui.tray_data_x.data()
         data_y = self.ui.tray_data_y.data()
+        data_z = self.ui.tray_data_z.data()
 
         if data_x is None or data_y is None:
             self.ui.radio_horizontal.setDisabled(True)
@@ -327,6 +339,7 @@ class VisualizationDesigner(QtGui.QDialog):
     def check_clear_buttons(self):
         self.ui.button_clear_x.setEnabled(bool(self.ui.tray_data_x.text()))
         self.ui.button_clear_y.setEnabled(bool(self.ui.tray_data_y.text()))
+        self.ui.button_clear_z.setEnabled(bool(self.ui.tray_data_z.text()))
         self.ui.button_clear_columns.setEnabled(bool(self.ui.tray_columns.text()))
         self.ui.button_clear_rows.setEnabled(bool(self.ui.tray_rows.text()))
         self.check_orientation()
@@ -348,19 +361,20 @@ class VisualizationDesigner(QtGui.QDialog):
 
         data_x = self.ui.tray_data_x.data()
         data_y = self.ui.tray_data_y.data()
+        data_z = self.ui.tray_data_z.data()
 
         self.ui.list_figures.blockSignals(True)
         for i in range(self.ui.list_figures.count()):
             item = self.ui.list_figures.takeItem(i)
             visualizer = VisualizationDesigner.visualizers[item.text()]
-            if visualizer.validate_data(data_x, data_y,
+            if visualizer.validate_data(data_x, data_y, data_z,
                                         self.df, self.session):
                 item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
+                if last_item and item.text() == last_item.text():
+                    restored_position = i
             else:
                 item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
             self.ui.list_figures.insertItem(i, item)
-            if last_item and item.text() == last_item.text():
-                restored_position = i
         if restored_position != None:
             self.ui.list_figures.setCurrentItem(
                 self.ui.list_figures.item(restored_position))
@@ -440,6 +454,7 @@ class VisualizationDesigner(QtGui.QDialog):
         rows = self.ui.tray_rows.data()
         data_x = self.ui.tray_data_x.data()
         data_y = self.ui.tray_data_y.data()
+        data_z = self.ui.tray_data_z.data()
         if data_x:
            levels_x = sorted(list(self.df[data_x].unique()))
         else:
@@ -448,13 +463,17 @@ class VisualizationDesigner(QtGui.QDialog):
             levels_y = sorted(list(self.df[data_y].unique()))
         else:
             levels_y = []
+        if data_z:
+            levels_z = sorted(list(self.df[data_z].unique()))
+        else:
+            levels_z = []
 
         if (self.ui.check_wrap_layout.isChecked()):
             col_wrap, _= get_grid_layout(len(self.df[columns].unique()))
         else:
             col_wrap = None
 
-        df_columns = [x for x in [data_x, data_y, columns, rows] if x]
+        df_columns = [x for x in [data_x, data_y, data_z, columns, rows] if x]
         df_columns.append("coquery_invisible_corpus_id")
 
         visualizer_class = VisualizationDesigner.visualizers[figure_type.text()]
@@ -462,18 +481,19 @@ class VisualizationDesigner(QtGui.QDialog):
         df = self.df[df_columns]
         df.columns = [self.session.translate_header(x) for x in df.columns]
 
-        (data_x, data_y, columns, rows) = (self.session.translate_header(x)
-                                           for x in
-                                           (data_x, data_y, columns, rows))
+        (data_x, data_y, data_z, columns, rows) = (
+            self.session.translate_header(x) for x
+            in (data_x, data_y, data_z, columns, rows))
 
         vis = visualizer_class(df, self.session)
         self.grid = vis.get_grid(col=columns, row=rows, col_wrap=col_wrap,
                                  sharex=True, sharey=True)
 
         self.grid = self.grid.map_dataframe(vis.plot_facet,
-                                            x=data_x, y=data_y,
+                                            x=data_x, y=data_y, z=data_z,
                                             levels_x=levels_x,
                                             levels_y=levels_y,
+                                            levels_z=levels_z,
                                             session=self.session,
                                             palette=self._palette_name)
         vis.set_annotations(self.grid)
