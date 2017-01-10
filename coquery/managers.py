@@ -511,6 +511,7 @@ class Manager(CoqObject):
         df = df[[x for x in df.columns if not x.startswith("func_")]]
         df = self.mutate(df, session)
 
+        self.group_functions = FunctionList([])
         if options.cfg.group_columns:
             df = self.filter_groups(df, session)
             df = self.arrange_groups(df, session)
@@ -602,7 +603,7 @@ class ContingencyTable(FrequencyList):
         for col in num_col:
             if col.startswith(("coquery_invisible")):
                 agg_fnc[col] = lambda x: int(x.values[0])
-            elif col.startswith(("func_Freq")):
+            elif col.startswith(("func_statistics_frequency_")):
                 agg_fnc[col] = sum
             else:
                 agg_fnc[col] = np.mean
