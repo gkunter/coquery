@@ -147,6 +147,8 @@ COLUMN_NAMES = {
     "statistics_frequency": "Frequency",
     "statistics_corpus_size": "Corpus size: Total",
     "statistics_subcorpus_size": "Corpus size: Subcorpus",
+    "statistics_subcorpus_range_min": "Subcorpus: Lower boundary",
+    "statistics_subcorpus_range_max": "Subcorpus: Upper boundary",
     "statistics_per_million_words": "Frequency pmw",
     "statistics_per_thousand_words": "Frequency ptw",
     "statistics_normalized": "Normalized frequency",

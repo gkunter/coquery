@@ -90,7 +90,7 @@ class Function(CoqObject):
     default_aggr = "first"
     allow_null = False
     combine_modes = all_combine
-    no_column_labels = False
+    no_column_labels = False # True if the columns appear in the function name
     single_column = True
     drop_on_na = True
 
@@ -839,6 +839,31 @@ class SubcorpusSize(CorpusSize):
                        filters=session.filter_list)
 
         return val
+
+
+class SubcorpusRangeMin(CorpusSize):
+    _name = "statistics_subcorpus_range_min"
+
+    def _func(self, row, session):
+        min_r, max_r = session.Corpus.get_subcorpus_range(row)
+        return min_r
+
+    def evaluate(self, df, *args, **kwargs):
+        session = kwargs["session"]
+
+        corpus_features = [x for x, _ in session.Resource.get_corpus_features()]
+        column_list = [x for x in self.columns(df, **kwargs) if x in
+                       ["coq_{}_1".format(y) for y in corpus_features]]
+        val = df.apply(lambda x: self._func(x[column_list], session), axis=1)
+        return val
+
+
+class SubcorpusRangeMax(SubcorpusRangeMin):
+    _name = "statistics_subcorpus_range_max"
+
+    def _func(self, row, session):
+        min_r, max_r = session.Corpus.get_subcorpus_range(row)
+        return max_r
 
 
 #############################################################################

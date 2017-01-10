@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import warnings
 from collections import *
+import re
 
 try:
     import sqlalchemy
@@ -1291,6 +1292,7 @@ class CorpusClass(object):
     """
     _frequency_cache = {}
     _corpus_size_cache = {}
+    _corpus_range_cache = {}
     _context_cache = {}
 
     def __init__(self):
@@ -1516,6 +1518,57 @@ class CorpusClass(object):
                                         row["coq_{}_1".format(column)])
                 filter_list.append(filt)
         return self.get_corpus_size(filter_list + filters)
+
+    def get_subcorpus_range(self, row=[]):
+        """
+        Return the lowest and the highest corpus id in the subcorpus specified
+        by the values in `row`.
+
+        Parameters
+        ----------
+        row : pandas.Series
+            A Series with corpus feature values
+
+        Returns
+        -------
+        min, max : tuple
+            The lowest and the highest corpus id that share the values in
+            `row'.
+        """
+        cache_key = (tuple(row.index), tuple(row.values))
+        if cache_key in self._corpus_range_cache:
+            return self._corpus_range_cache[cache_key]
+
+        if len(row) == 0:
+            val = 0, self.get_corpus_size()
+        else:
+            self.lexicon.table_list = []
+            self.lexicon.joined_tables = []
+            conditions = []
+            for column in row.index:
+                try:
+                    rc_feature = re.match("coq_(.*)_1", column).group(1)
+                except AttributeError:
+                    print("couldn't split", column)
+                    continue
+                _, _, tab, feat = self.resource.split_resource_feature(rc_feature)
+                self.lexicon.add_table_path("corpus_id", rc_feature)
+                conditions.append("{}.{} = '{}'".format(
+                    getattr(self.resource, "{}_table".format(tab)),
+                    getattr(self.resource, rc_feature),
+                    row[column]))
+            tables = [self.resource.corpus_table] + self.lexicon.table_list
+            from_str = "{} WHERE {}".format(" ".join(tables),
+                                            " AND ".join(conditions))
+
+            S = "SELECT MIN({id}), MAX({id}) FROM {tables}".format(
+                id=self.resource.corpus_id, tables=from_str)
+            engine = self.resource.get_engine()
+            df = pd.read_sql(S.replace("%", "%%"), engine)
+            engine.dispose()
+            val = df.values.ravel()[0:2]
+        self._corpus_range_cache[cache_key] = val
+        return self._corpus_range_cache[cache_key]
 
     def get_frequency(self, s, engine=False, filters=[]):
         """
