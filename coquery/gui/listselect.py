@@ -23,6 +23,7 @@ class CoqListSelect(QtGui.QWidget):
     list of selected items), with controls to move between the two.
     """
     itemSelectionChanged = QtCore.Signal()
+    currentItemChanged = QtCore.Signal(QtGui.QListWidgetItem)
 
     def __init__(self, *args, **kwargs):
         from .ui import coqListSelectUi
@@ -41,9 +42,15 @@ class CoqListSelect(QtGui.QWidget):
         self.ui.button_remove.setIcon(get_toplevel_window().get_icon("Circled Chevron Right"))
 
         self.ui.list_selected.itemSelectionChanged.connect(self.check_buttons)
+        self.ui.list_selected.itemSelectionChanged.connect(
+            lambda: self.currentItemChanged.emit(self.currentItem()))
         self.ui.list_available.itemSelectionChanged.connect(self.check_buttons)
+        self.ui.list_available.itemSelectionChanged.connect(
+            lambda: self.currentItemChanged.emit(self.currentItem()))
+
         self._minimum = 0
-        self._moveAvailable = True
+        self._move_available = True
+        self._track_selected = False
 
     @staticmethod
     def _fill_list_widget(w, l, translate):
@@ -62,10 +69,28 @@ class CoqListSelect(QtGui.QWidget):
         else:
             self.ui.button_up.hide()
             self.ui.button_down.hide()
-        self._moveAvailable = b
+        self._move_available = b
 
-    def _moveAvailable(self):
-        return self._moveAvailable
+    def moveAvailable(self):
+        return self._move_available
+
+    def trackSelected(self):
+        return self._track_selected
+
+    def setTrackSelected(self, b):
+        self._track_selected = b
+
+    def setSelectedLabel(self, s):
+        self.ui.label_select_list.setText(s)
+
+    def selectedLabel(self):
+        return self.ui.label_select_list.text()
+
+    def setAvailableLabel(self, s):
+        self.ui.label_available.setText(s)
+
+    def availableLabel(self):
+        return self.ui.label_available.text()
 
     def minimumItems(self):
         return self._minimum
@@ -95,6 +120,9 @@ class CoqListSelect(QtGui.QWidget):
             self.ui.list_selected.addItem(item)
             self.ui.list_selected.setCurrentItem(item)
             self.itemSelectionChanged.emit()
+        if self.trackSelected():
+            self.ui.list_selected.setFocus()
+            self.ui.list_available.setCurrentItem(None)
 
     def remove_selected(self):
         for x in self.ui.list_selected.selectedItems():
@@ -104,6 +132,29 @@ class CoqListSelect(QtGui.QWidget):
                 self.ui.list_available.addItem(item)
                 self.ui.list_available.setCurrentItem(item)
                 self.itemSelectionChanged.emit()
+        if self.trackSelected():
+            self.ui.list_available.setFocus()
+            self.ui.list_selected.setCurrentItem(None)
+
+    def currentItem(self):
+        if self.ui.list_selected.selectedItems():
+            return self.ui.list_selected.selectedItems()[0]
+        if self.ui.list_available.selectedItems():
+            return self.ui.list_available.selectedItems()[0]
+        else:
+            return None
+
+    def setCurrentItem(self, x):
+        for i in range(self.ui.list_selected.count()):
+            item = self.ui.list_selected.item(i)
+            if utf8(item.data(QtCore.Qt.UserRole)) == x:
+                self.ui.list_selected.setCurrentItem(item)
+                return
+        for i in range(self.ui.list_available.count()):
+            item = self.ui.list_available.item(i)
+            if utf8(item.data(QtCore.Qt.UserRole)) == x:
+                self.ui.list_available.setCurrentItem(item)
+                return
 
     def selected_up(self):
         self.move_selected(up=True)
@@ -133,8 +184,10 @@ class CoqListSelect(QtGui.QWidget):
 
         self.ui.button_up.setEnabled(selected_row > 0)
         self.ui.button_down.setEnabled(selected_row + 1 < selected_count)
-        self.ui.button_remove.setEnabled(selected_count > self.minimumItems())
-        self.ui.button_add.setEnabled(available_count > 0)
+        self.ui.button_remove.setEnabled(selected_count > self.minimumItems() and
+                                         selected_row > -1)
+        self.ui.button_add.setEnabled(available_count > 0 and
+                                      self.ui.list_available.currentRow() > -1)
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Left:

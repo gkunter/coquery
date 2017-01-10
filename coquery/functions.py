@@ -18,9 +18,11 @@ import re
 import sys
 import pandas as pd
 import numpy as np
-from scipy import stats
+import sqlalchemy
+
 
 from . import options
+from . import sqlhelper
 from .defines import *
 from .general import CoqObject, collapse_words, get_visible_columns
 
@@ -30,12 +32,24 @@ try:
 except AttributeError:
     max_int = sys.maxsize
 
+# use stats.iqr() and stats.mode() if possible, otherwise use
+# replacement methods:
 try:
-    _iqr = stats.iqr
-except (AttributeError):
+    from scipy import stats
+    if "iqr" not in dir (stats):
+        # the 'iqr' method is not available in Python 2.7:
+        raise ImportError
+except ImportError:
+    import collections
+
+    def _mode(x):
+        return collections.Counter(x).most_common()[0][0]
+
     def _iqr(x):
         return np.subtract(*np.percentile(x, [75, 25]))
-
+else:
+    _iqr = stats.iqr
+    _mode = stats.mode
 
 def _save_first(x):
     l = [y for y in x if y is not None]
@@ -43,7 +57,6 @@ def _save_first(x):
         return l[0]
     except IndexError:
         return None
-
 
 def _save_last(x):
     l = [y for y in x if y]
@@ -62,7 +75,7 @@ combine_map = {
     "mean": np.mean,
     "sd": np.std,
     "median": np.median,
-    "mode": stats.mode,
+    "mode": _mode,
     "IQR": _iqr,
     "first": _save_first,
     "last": _save_last,
@@ -414,6 +427,13 @@ class Freq(BaseFreq):
         # ignore external columns:
         columns = [x for x in self.columns(df, **kwargs) if not x.startswith("db_")]
 
+        if len(columns) == 0:
+            # if the function is applied over no columns (e.g. because all
+            # columns are hidden), the function returns a Series containing
+            # simply the length of the data frame:
+            val = pd.Series([len(df)] * len(df), index=df.index)
+            return val
+
         # There is an ugly, ugly bug/feature in Pandas up to at least 0.18.0
         # which makes grouping unreliable if there are columns with missing
         # values.
@@ -444,12 +464,6 @@ class Freq(BaseFreq):
                         break
 
                 df[x] = df[x].fillna(replace_dict[x])
-
-        if len(columns) == 0:
-            # if the function is applied over no columns (e.g. because all
-            # columns are hidden), the function returns a Series containing
-            # simply the length of the data frame:
-            return pd.Series([len(df)] * len(df), index=df.index)
 
         d = {columns[0]: "count"}
         d.update(
@@ -557,9 +571,10 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
     single_column = False
 
     def __init__(self, *args, **kwargs):
-        super(ReferenceCorpusFrequency, self).__init__(columns=[], *args, **kwargs)
+        super(ReferenceCorpusFrequency, self).__init__(*args, **kwargs)
 
     def _func(self, x, corpus, engine):
+
         val = x.apply(corpus.get_frequency, engine=engine)
         return val
 
@@ -574,14 +589,22 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
         current_corpus.lexicon = current_lexicon
         current_lexicon.resource = current_resource
 
+        engine = sqlalchemy.create_engine(
+            sqlhelper.sql_url(options.cfg.current_server,
+                              current_resource.db_name))
+
+
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
-        val = df[word_columns].apply(lambda x: self._func(x, current_corpus, session.db_engine), axis="columns")
+        val = df[word_columns].apply(lambda x: self._func(x,
+                                                          current_corpus,
+                                                          engine), axis="columns")
         val.index = df.index
         val.columns = ["{}_{}_{}".format(
             self._name, x, options.cfg.reference_corpus) for x in val.columns]
-
+        engine.dispose()
         return val
+        return pd.Series([0] * len(df), index=df.index)
 
 
 class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
@@ -890,7 +913,7 @@ class ContextColumns(Function):
 
     def __init__(self, *args):
         super(ContextColumns, self).__init__(*args)
-        self.left_cols = ["coq_context_lc{}".format(i+1) for i in range(options.cfg.context_left)][::-1]
+        self.left_cols = ["coq_context_lc{}".format(options.cfg.context_left - i) for i in range(options.cfg.context_left)]
         self.right_cols = ["coq_context_rc{}".format(i+1) for i in range(options.cfg.context_right)]
 
     def get_id(self):
@@ -909,9 +932,11 @@ class ContextColumns(Function):
             row["coquery_invisible_number_of_tokens"],
             session.db_connection,
             sentence_id=sentence_id)
-        return pd.Series(
+
+        val = pd.Series(
             data=left + right,
             index=self.left_cols + self.right_cols)
+        return val
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]

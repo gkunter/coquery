@@ -65,9 +65,10 @@ class TestCorpus(unittest.TestCase):
         #self.assertEqual(table_structure["parent"], None)
 
 
-if __name__ == '__main__':
-    import timeit
-    
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestCorpus)])
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

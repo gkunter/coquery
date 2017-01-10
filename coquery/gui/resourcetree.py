@@ -11,13 +11,14 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import logging
+import warnings
+
 
 from coquery import options
 from coquery.defines import *
 from coquery.unicode import utf8
 
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from . import classes
 
 
@@ -38,14 +39,39 @@ class CoqResourceTree(classes.CoqTreeWidget):
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.setSizePolicy(sizePolicy)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self._items_checkable = True
 
-    def setParent(self, parent):
-        self.parent = parent
-        if self.parent is not None:
-            self.customContextMenuRequested.connect(
-                self.parent.get_output_column_menu)
+    def allSetExpanded(self, b):
+        def traverse(node):
+            for child in self.nodeItems(node):
+                child.setExpanded(b)
 
-    def setup_resource(self, resource):
+        for root in self.rootItems():
+            traverse(root)
+            root.setExpanded(b)
+
+    def setCurrentItemByString(self, s, **kwargs):
+        def traverse(node):
+            if utf8(node.objectName()) == s:
+                return node
+            for child in self.nodeItems(node):
+                found = traverse(child)
+                if found:
+                    return found
+
+        for root in self.rootItems():
+            item = traverse(root)
+            if item:
+                super(CoqResourceTree, self).setCurrentItem(item)
+
+    def rootItems(self):
+        return [self.topLevelItem(i) for i in
+                range(self.topLevelItemCount())]
+
+    def nodeItems(self, node):
+        return [node.child(i) for i in range(node.childCount())]
+
+    def setup_resource(self, resource, skip=(), checkable=True, links=True):
         """
         Construct a new output option tree.
 
@@ -61,22 +87,19 @@ class CoqResourceTree(classes.CoqTreeWidget):
             Create a CoqTreeItem object that acts as a table root for the
             given table.
             """
-
-            try:
-                if table != "coquery":
-                    label = getattr(resource, "{}_table".format(table))
-                else:
-                    label = "Query"
-            except AttributeError:
-                label = table
+            if table != "coquery":
+                label = getattr(resource, "{}_table".format(table), table)
+            else:
+                label = "Query"
 
             root = classes.CoqTreeItem()
             root.setObjectName("{}_table".format(table))
-            root.setFlags(root.flags() |
-                          QtCore.Qt.ItemIsUserCheckable |
-                          QtCore.Qt.ItemIsSelectable)
             root.setText(0, label)
-            root.setCheckState(0, QtCore.Qt.Unchecked)
+            if checkable:
+                root.setFlags(root.flags() |
+                            QtCore.Qt.ItemIsUserCheckable |
+                            QtCore.Qt.ItemIsSelectable)
+                root.setCheckState(0, QtCore.Qt.Unchecked)
             return root
 
         def create_item(rc_feature, root=None):
@@ -87,10 +110,11 @@ class CoqResourceTree(classes.CoqTreeWidget):
             """
             leaf = classes.CoqTreeItem()
             leaf.setObjectName(rc_feature)
-            leaf.setCheckState(0, QtCore.Qt.Unchecked)
+            if checkable:
+                leaf.setCheckState(0, QtCore.Qt.Unchecked)
             label = getattr(resource, rc_feature)
-            # Add labels if this feature is mapped to a query item type
 
+            # Add labels if this feature is mapped to a query item type
             if rc_feature == getattr(resource, "query_item_word", None):
                 label = "{} [Word]".format(label)
             if rc_feature == getattr(resource, "query_item_lemma", None):
@@ -104,16 +128,16 @@ class CoqResourceTree(classes.CoqTreeWidget):
 
             leaf.setText(0, label)
             if label != getattr(resource, rc_feature):
-                leaf.setIcon(0, self.parent.get_icon("Price Tag"))
+                leaf.setIcon(0, get_toplevel_window().get_icon("Price Tag"))
                 if root:
-                    root.setIcon(0, self.parent.get_icon("Price Tag"))
-
+                    root.setIcon(0, get_toplevel_window().get_icon("Price Tag"))
             return leaf
 
         def fill_grouped():
             rc_features = [x for x in resource.get_resource_features()
                            if (not x.endswith(("_id", "_table")) and
-                               not x.startswith(("tag_")))]
+                               not x.startswith(("tag_")) and
+                               not x.startswith(skip))]
             segment_features = [x for x in rc_features
                                 if x.startswith("segment_")]
             file_features = [x for x in rc_features if x.startswith("file_")]
@@ -123,24 +147,37 @@ class CoqResourceTree(classes.CoqTreeWidget):
 
             lexicon_root = create_root("Tokens")
             source_root = create_root("Texts")
+            speaker_root = create_root("Speakers")
             file_root = create_root("Files")
             segment_root = create_root("Segments")
             query_root = create_root("Query string")
 
             for rc_feature in rc_features:
                 leaf = create_item(rc_feature)
+                try:
+                    target_root = source_root
 
-                if rc_feature in segment_features:
-                    segment_root.addChild(leaf)
-                elif (rc_feature in lexicon_features or
-                      resource.is_tokenized(rc_feature)):
-                    lexicon_root.addChild(leaf)
-                elif rc_feature in file_features:
-                    file_root.addChild(leaf)
-                elif rc_feature.startswith("coquery_"):
-                    query_root.addChild(leaf)
-                else:
-                    source_root.addChild(leaf)
+                    if rc_feature in segment_features:
+                        target_root = segment_root
+                    elif (rc_feature in lexicon_features or
+                        resource.is_tokenized(rc_feature)):
+                        target_root = lexicon_root
+                    elif rc_feature in file_features:
+                        target_root = file_root
+
+                    if rc_feature.startswith("coquery_"):
+                        target_root = query_root
+
+                    if rc_feature.startswith("speaker_"):
+                        target_root = speaker_root
+                    if (hasattr(resource, "speaker_features") and
+                        rc_feature in resource.speaker_features):
+                        target_root = speaker_root
+                except Exception as e:
+                    warnings.warn(str(e))
+                    print(e)
+                finally:
+                    target_root.addChild(leaf)
 
             if lexicon_root.childCount():
                 self.addTopLevelItem(lexicon_root)
@@ -151,6 +188,9 @@ class CoqResourceTree(classes.CoqTreeWidget):
             if source_root.childCount():
                 self.addTopLevelItem(source_root)
                 source_root.sortChildren(0, QtCore.Qt.AscendingOrder)
+            if speaker_root.childCount():
+                self.addTopLevelItem(speaker_root)
+                speaker_root.sortChildren(0, QtCore.Qt.AscendingOrder)
             if file_root.childCount():
                 self.addTopLevelItem(file_root)
                 file_root.sortChildren(0, QtCore.Qt.AscendingOrder)
@@ -161,8 +201,9 @@ class CoqResourceTree(classes.CoqTreeWidget):
         def fill_tables():
             table_dict = resource.get_table_dict()
             # Ignore denormalized tables:
-            tables = [x for x in
-                      table_dict.keys() if not x.startswith("corpusngram")]
+            tables = [x for x in table_dict.keys()
+                      if not x.startswith("corpusngram") and
+                      not x.startswith(skip)]
             # ignore internal  variables of the form {table}_id, {table}_table,
             # {table}_table_{other}
             for table in tables:
@@ -180,8 +221,11 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 if x in tables:
                     tables.remove(x)
                     tables.insert(0, x)
-            tables.remove("coquery")
-            tables.append("coquery")
+            try:
+                tables.remove("coquery")
+                tables.append("coquery")
+            except ValueError:
+                pass
 
             # populate the tree with a root for each table, and nodes for each
             # resource in the tables:
@@ -207,20 +251,21 @@ class CoqResourceTree(classes.CoqTreeWidget):
         elif view_mode == VIEW_MODE_TABLES:
             fill_tables()
 
-        # restore external links:
-        for link in options.cfg.table_links[options.cfg.current_server]:
-            if link.res_from == resource.name:
-                self.add_external_link(self.getItem(link.rc_from), link)
+        if links:
+            # restore external links:
+            for link in options.cfg.table_links[options.cfg.current_server]:
+                if link.res_from == resource.name:
+                    self.add_external_link(link)
 
         # remove from the group list those features that are not available in
         # the current resource:
-        for _, group_column in self.parent.ui.list_group_columns.columns:
+        for _, group_column in get_toplevel_window().ui.list_group_columns.columns:
             if not hasattr(resource, group_column):
-                self.parent.ui.list_group_columns.remove_resource(group_column)
+                get_toplevel_window().ui.list_group_columns.remove_resource(group_column)
 
         self.blockSignals(False)
 
-    def add_external_link(self, item, link):
+    def add_external_link(self, link):
         """
         Adds an external link to the given item.
         """
@@ -255,9 +300,15 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 new_item.setCheckState(0, QtCore.Qt.Unchecked)
                 tree.addChild(new_item)
 
+        item = self.getItem(link.rc_from)
+
         # Insert newly created table as a child of the linked item:
-        item.addChild(tree)
-        item.setExpanded(True)
+        try:
+            item.addChild(tree)
+            item.setExpanded(True)
+        except AttributeError as e:
+            print(e)
+            pass
 
     def remove_external_link(self, item):
         """
@@ -268,17 +319,22 @@ class CoqResourceTree(classes.CoqTreeWidget):
         item : CoqTreeItem
             An entry in the output column list representing an external table.
         """
+        def traverse(node):
+            if node.checkState(0) != QtCore.Qt.Unchecked:
+                node.setCheckState(0, QtCore.Qt.Unchecked)
+            for child in self.nodeItems(node):
+                traverse(child)
+        traverse(item)
         item.parent().removeChild(item)
 
     def select(self, selected):
         def traverse(node):
-            for child in [node.child(i) for i in range(node.childCount())]:
+            for child in self.nodeItems(node):
                 if utf8(child.objectName()) in selected:
                     child.setCheckState(0, QtCore.Qt.Checked)
                     child.update_checkboxes(0, expand=True)
 
-        for root in [self.topLevelItem(i) for i in
-                     range(self.topLevelItemCount())]:
+        for root in self.rootItems():
             traverse(root)
 
     def selected(self):
@@ -293,9 +349,6 @@ class CoqResourceTree(classes.CoqTreeWidget):
             return checked
 
         l = set()
-        for root in [self.topLevelItem(i) for i in
-                     range(self.topLevelItemCount())]:
+        for root in self.rootItems():
             l.update(traverse(root))
         return l
-
-logger = logging.getLogger(NAME)

@@ -16,19 +16,22 @@ import sys
 import pandas as pd
 import re
 
-from .mockmodule import MockOptions
+from .mockmodule import MockOptions, MockSettings
 
 from coquery.defines import *
 from coquery.functions import *
+from coquery.functionlist import FunctionList
 from coquery import options
 
-mock_option = MockOptions()
-mock_option.verbose = False
-mock_option.drop_on_na = False
+options.cfg = MockOptions()
+options.settings = MockSettings()
 
-options.cfg = mock_option
+options.cfg.verbose = False
+options.cfg.drop_on_na = False
+options.cfg.column_properties = {}
+options.cfg.corpus = "Test"
 
-df1 = pd.DataFrame({'coquery_invisible_number_of_tokens': {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1, 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 37: 1, 38: 1, 39: 1, 40: 1, 41: 1, 42: 1, 43: 1, 44: 1, 45: 1, 46: 1, 47: 1, 48: 1, 49: 1, 50: 1, 51: 1, 52: 1, 53: 1, 54: 1}, 
+df1 = pd.DataFrame({'coquery_invisible_number_of_tokens': {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1, 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 37: 1, 38: 1, 39: 1, 40: 1, 41: 1, 42: 1, 43: 1, 44: 1, 45: 1, 46: 1, 47: 1, 48: 1, 49: 1, 50: 1, 51: 1, 52: 1, 53: 1, 54: 1},
                    'db_celex_coq_phonoword_phoncvbr_1': {0: None, 1: None, 2: None, 3: None, 4: None, 5: None, 6: None, 7: None, 8: None, 9: None, 10: None, 11: None, 12: None, 13: None, 14: None, 15: None, 16: None, 17: None, 18: None, 19: None, 20: None, 21: None, 22: None, 23: '[CVC][VC][CCVVC]', 24: '[CVC][VC][CCVVC]', 25: '[CVC][VC][CCVVC]', 26: '[CVC][VC][CCVVC]', 27: '[CVC][VC][CCVVC]', 28: '[CVC][VC][CCVVC]', 29: '[CVC][VC][CCVVC]', 30: '[CVC][VC][CCVVC]', 31: '[CVC][VC][CCVVC]', 32: '[CVC][VC][CCVVC]', 33: '[CVC][VC][CCVVC]', 34: '[CVC][VC][CCVVC]', 35: '[CVC][VC][CCVVC]', 36: '[CVC][VC][CCVVC]', 37: '[CVC][VC][CCVVC]', 38: '[CVC][VC][CCVVC]', 39: '[CVC][VC][CCVVC]', 40: '[CVC][VC][CCVVC]', 41: '[CVC][VC][CCVVC]', 42: '[CVC][VC][CCVVC]', 43: '[CVC][VC][CCVVC]', 44: '[CVC][VC][CCVVC]', 45: '[CVC][VC][CCVVC]', 46: '[CVC][VC][CCVVC]', 47: '[CVC][VC][CCVVC]', 48: '[CVC][VC][CCVVC]', 49: '[CVC][VC][CCVVC]', 50: '[CVC][VC][CCVVC]', 51: '[CVC][VC][CCVVC]', 52: '[CVC][VC][CCVVC]', 53: '[CVC][VC][CCVVC]', 54: '[CVC][VC][CCVVC]'}, 'coq_word_lemma_1': {0: 'DISINVEST', 1: 'DISINVEST', 2: 'DISINVEST', 3: 'DISINVEST', 4: 'DISINVEST', 5: 'DISINVEST', 6: 'DISINVEST', 7: 'DISINVEST', 8: 'DISINVEST', 9: 'DISINVEST', 10: 'DISINVEST', 11: 'DISINVEST', 12: 'DISINVEST', 13: 'DISINVEST', 14: 'DISINVEST', 15: 'DISINVEST', 16: 'DISINVEST', 17: 'DISINVEST', 18: 'DISINVEST', 19: 'DISINVEST', 20: 'DISINVEST', 21: 'DISINFORM', 22: 'DISINFORM', 23: 'DISINCLINE', 24: 'DISINCLINE', 25: 'DISINCLINE', 26: 'DISINCLINE', 27: 'DISINCLINE', 28: 'DISINCLINE', 29: 'DISINCLINE', 30: 'DISINCLINE', 31: 'DISINCLINE', 32: 'DISINCLINE', 33: 'DISINCLINE', 34: 'DISINCLINE', 35: 'DISINCLINE', 36: 'DISINCLINE', 37: 'DISINCLINE', 38: 'DISINCLINE', 39: 'DISINCLINE', 40: 'DISINCLINE', 41: 'DISINCLINE', 42: 'DISINCLINE', 43: 'DISINCLINE', 44: 'DISINCLINE', 45: 'DISINCLINE', 46: 'DISINCLINE', 47: 'DISINCLINE', 48: 'DISINCLINE', 49: 'DISINCLINE', 50: 'DISINCLINE', 51: 'DISINCLINE', 52: 'DISINCLINE', 53: 'DISINCLINE', 54: 'DISINCLINE'}, 
                    'coquery_invisible_corpus_id': {0: 209958039, 1: 222147309, 2: 270672183, 3: 273669329, 4: 338252544, 5: 502550702, 6: 674478400, 7: 679851596, 8: 248429324, 9: 297611776, 10: 473032852, 11: 473034740, 12: 571814551, 13: 597679391, 14: 679683583, 15: 681286004, 16: 429535765, 17: 571814444, 18: 571814457, 19: 571814459, 20: 571814461, 21: 284683786, 22: 433840744, 23: 278745314, 24: 278745314, 25: 278745314, 26: 278745314, 27: 278745314, 28: 278745314, 29: 278745314, 30: 278745314, 31: 278745314, 32: 278745314, 33: 278745314, 34: 278745314, 35: 278745314, 36: 278745314, 37: 278745314, 38: 278745314, 39: 519017348, 40: 519017348, 41: 519017348, 42: 519017348, 43: 519017348, 44: 519017348, 45: 519017348, 46: 519017348, 47: 519017348, 48: 519017348, 49: 519017348, 50: 519017348, 51: 519017348, 52: 519017348, 53: 519017348, 54: 519017348}, 
                    'coquery_dummy': {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0, 19: 0, 20: 0, 21: 0, 22: 0, 23: 0, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 0, 30: 0, 31: 0, 32: 0, 33: 0, 34: 0, 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0, 41: 0, 42: 0, 43: 0, 44: 0, 45: 0, 46: 0, 47: 0, 48: 0, 49: 0, 50: 0, 51: 0, 52: 0, 53: 0, 54: 0}, 
@@ -90,29 +93,32 @@ class TestFrequencyFunctions(unittest.TestCase):
     def test_count_with_nan(self):
         df = pd.DataFrame(df1)
         func = StringCount(columns=["db_celex_coq_phonoword_phoncvbr_1"], value="[")
-        df = FunctionList([func]).apply(df, session=None, connection=None)
+        df = FunctionList([func]).apply(df, session=None)
         func = Freq(columns=[x for x in df.columns if not x.startswith("coquery_invisible")])
         func_list = FunctionList([func])
-        val_a = func_list.apply(df, session=None, connection=None)[func.get_id()]
+        val_a = func_list.apply(df, session=None)[func.get_id()]
         #print(df)
 
         df = pd.DataFrame(df1)
         df = df[[x for x in df if x.startswith("coq_")]]
         func = Freq(columns=df.columns)
         func_list = FunctionList([func])
-        val_b = func_list.apply(df, session=None, connection=None)[func.get_id()]
+        val_b = func_list.apply(df, session=None)[func.get_id()]
         
         self.assertListEqual(val_a.tolist(), val_b.tolist())
 
 class TestStringFunctions(unittest.TestCase):
     def test_count(self):
         func = StringCount(columns=["coq_word_label_1"], value="x")
-        val = FunctionList([func]).apply(df0, session=None, connection=None)[func.get_id()]
+        val = FunctionList([func]).apply(df0, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [0, 0, 0, 3, 3])
 
-if __name__ == '__main__':
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestFrequencyFunctions),
         unittest.TestLoader().loadTestsFromTestCase(TestStringFunctions),
         ])
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

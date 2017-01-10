@@ -38,13 +38,10 @@ class TestQueryStringParse(unittest.TestCase):
                   "abc,def", '""', ",,,", "\\?\n\\*"]:
             self.assertEqual(decode_query_string(encode_query_string(S)), S)
 
-if __name__ == '__main__':
-    import timeit
-    
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestQueryStringParse)])
-    
-    print()
-    print(" ----- START ----- ")
-    print()
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

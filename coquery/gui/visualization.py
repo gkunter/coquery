@@ -83,9 +83,9 @@ class CoqNavigationToolbar(NavigationToolbar):
             if isinstance(x, QtGui.QToolButton):
                 self._buttons[str(x.text())] = x
 
-        self._buttons["Forward"].setIcon(get_toplevel_window().get_icon("Right Squared"))
-        self._buttons["Back"].setIcon(get_toplevel_window().get_icon("Left Squared"))
-        self._buttons["Home"].setIcon(get_toplevel_window().get_icon("Up Squared"))
+        self._buttons["Forward"].setIcon(get_toplevel_window().get_icon("Circled Chevron Right Filled"))
+        self._buttons["Back"].setIcon(get_toplevel_window().get_icon("Circled Chevron Left Filled"))
+        self._buttons["Home"].setIcon(get_toplevel_window().get_icon("Circled Chevron Up Filled"))
         self._buttons["Zoom"].setIcon(get_toplevel_window().get_icon("Resize"))
         self._buttons["Save"].setIcon(get_toplevel_window().get_icon("Save"))
         self._buttons["Customize"].setIcon(get_toplevel_window().get_icon("Edit"))

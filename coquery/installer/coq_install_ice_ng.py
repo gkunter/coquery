@@ -572,6 +572,10 @@ class BuilderClass(BaseCorpusBuilder):
         self._corpus_id = 0
         self._corpus_code = corpus_code
         self._sentence_id = 1
+        self.add_speaker_feature("source_age")
+        self.add_speaker_feature("source_gender")
+        self.add_speaker_feature("source_ethnicity")
+
         
 
     def xml_preprocess_tag(self, element):

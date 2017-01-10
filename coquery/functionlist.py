@@ -25,6 +25,10 @@ class FunctionList(CoqObject):
         """
         Apply all functions in the list to the data frame.
         """
+
+        # apply value substitution to df:
+        subst = options.get_column_properties().get("substitutions", {})
+
         # in order to allow zero frequencies for empty result tables, empty
         # data frames can be retained if a function demands it. This is
         # handled by keeping track of the drop_on_na attribute. As soon as
@@ -40,20 +44,28 @@ class FunctionList(CoqObject):
         else:
             drop_on_na = True
 
-        for fun in self._list:
+        for fun in list(self._list):
             if options.cfg.drop_on_na:
                 drop_on_na = True
             else:
                 drop_on_na = drop_on_na and fun.drop_on_na
 
-            # Functions can return either single columns or data frames.
-            # Handle the function result accordingly:
-            if fun.single_column:
-                val = fun.evaluate(df, session=session, manager=manager)
-                df[fun.get_id()] = val
+            try:
+                if subst:
+                    val = fun.evaluate(df.replace(subst), session=session, manager=manager)
+                else:
+                    val = fun.evaluate(df, session=session, manager=manager)
+            except KeyError as e:
+                print(e)
+                self._list.remove(fun)
+                # can be caused by a function applied to a non-existing column
             else:
-                val = fun.evaluate(df, session=session, manager=manager)
-                df = pd.concat([df, val], axis="columns")
+                # Functions can return either single columns or data frames.
+                # Handle the function result accordingly:
+                if fun.single_column:
+                    df[fun.get_id()] = val
+                else:
+                    df = pd.concat([df, val], axis="columns")
 
         # tell the manager whether rows with NA will be dropped:
         if manager:

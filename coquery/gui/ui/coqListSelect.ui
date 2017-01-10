@@ -17,20 +17,11 @@
    <property name="spacing">
     <number>0</number>
    </property>
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
+   <property name="margin">
     <number>0</number>
    </property>
    <item>
-    <layout class="QGridLayout" name="layout">
+    <layout class="QGridLayout" name="layout" columnstretch="1,0,1">
      <item row="1" column="1">
       <layout class="QVBoxLayout" name="verticalLayout_5">
        <item>

@@ -33,7 +33,7 @@ class AvailableModulesDialog(QtGui.QDialog):
         self.ui.setupUi(self)
         self.ui.table_modules.setHorizontalHeaderLabels(["Module", "Available", "Description"])
 
-        modules = (
+        modules = [
                 ("cachetools", options.use_cachetools),
                 ("PyMySQL", options.use_mysql),
                 ("SciPy", options.use_scipy), 
@@ -46,7 +46,9 @@ class AvailableModulesDialog(QtGui.QDialog):
                 ("python-docx", options.use_docx),
                 ("odfpy", options.use_odfpy),
                 ("BeautifulSoup", options.use_bs4),
-                )
+                ]
+        if sys.platform.startswith("linux"):
+            modules.insert(0, ("alsaaudio", options.use_alsaaudio))
         
         self.ui.table_modules.setRowCount(len(modules))
         
@@ -59,9 +61,9 @@ class AvailableModulesDialog(QtGui.QDialog):
             self._links[id(name_item)] = url
             
             if flag:
-                status_item.setIcon(get_toplevel_window().get_icon("Okay"))
+                status_item.setIcon(get_toplevel_window().get_icon("Checked Checkbox"))
             else:
-                status_item.setIcon(get_toplevel_window().get_icon("Minus"))
+                status_item.setIcon(get_toplevel_window().get_icon("Unchecked Checkbox"))
 
             
             self.ui.table_modules.setItem(i, 0, name_item)

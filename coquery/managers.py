@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import logging
 import collections
+import math
 
 from .functions import *
 from .functionlist import FunctionList
@@ -30,17 +31,18 @@ class Sorter(CoqObject):
 
 class Manager(CoqObject):
     name = "RESULTS"
+    ignore_user_functions = False
 
     def __init__(self):
         self._functions = []
         self.sorters = []
-        self.hidden_columns = set([])
         self._len_pre_filter = None
         self._len_post_filter = None
         self._len_pre_group_filter = {}
         self._len_post_group_filter = {}
         self.drop_on_na = None
         self.stopwords_failed = False
+        self.reset_hidden_columns()
 
         self.group_functions = FunctionList()
         self.manager_summary_functions = FunctionList()
@@ -54,6 +56,9 @@ class Manager(CoqObject):
     def reset_context_cache(self):
         self._context_cache = collections.defaultdict(
             lambda: (None, None, None))
+
+    def reset_hidden_columns(self):
+        self.hidden_columns = set([])
 
     def hide_column(self, column):
         self.hidden_columns.add(column)
@@ -332,18 +337,35 @@ class Manager(CoqObject):
     def summarize(self, df, session):
         print("\tsummarize()")
         vis_cols = get_visible_columns(df, manager=self, session=session)
+
         df = self.manager_summary_functions.apply(df, session=session, manager=self)
-        df = self.user_summary_functions.apply(df, session=session, manager=self)
+        if not self.ignore_user_functions:
+            df = self.user_summary_functions.apply(df,
+                                                   session=session,
+                                                   manager=self)
 
-        if options.cfg.drop_on_na:
-            ix = df[vis_cols].dropna(axis="index", how="all").index
+        cols = [x for x in vis_cols if x.startswith("coq_")]
+
+        if options.cfg.drop_on_na and cols:
+            ix = df[vis_cols].dropna(axis="index",
+                                     subset=cols,
+                                     how="all").index
             df = df.iloc[ix]
-
         if options.cfg.drop_duplicates:
             df = self.distinct(df, session)
 
         print("\tdone")
         return df
+
+    def set_summary_functions(self, l):
+        if l is None:
+            l = []
+        self.user_summary_functions.set_list([x(sweep=True) for x in l])
+
+    def set_group_functions(self, l):
+        if l is None:
+            l = []
+        self.group_functions.set_list([x(sweep=True) for x in l])
 
     def distinct(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
@@ -414,7 +436,6 @@ class Manager(CoqObject):
         # 'coquery_dummy' is used to manage frequency queries with zero
         # matches. It is never displayed:
         vis_cols = [x for x in df.columns if x != "coquery_dummy"]
-        vis_cols = sorted(vis_cols)
 
         resource = session.Resource
 
@@ -445,7 +466,6 @@ class Manager(CoqObject):
                 corpus_features.append(col)
 
         resource_order = resource.get_preferred_output_order()
-
         for feature in resource_order[::-1]:
             lex_list = [col for col in lexical_features if feature in col]
             lex_list = sorted(lex_list)[::-1]
@@ -485,7 +505,7 @@ class Manager(CoqObject):
         self.drop_on_na = None
         self._group_functions = []
 
-        if options.cfg.use_stopwords:
+        if options.cfg.stopword_list:
             df = self.filter_stopwords(df, session)
 
         df = df[[x for x in df.columns if not x.startswith("func_")]]
@@ -498,9 +518,7 @@ class Manager(CoqObject):
 
         df = self.filter(df, session)
         df = self.summarize(df, session)
-
         df = self.select(df, session)
-
         self._functions = (self._group_functions +
                         session.column_functions.get_list() +
                         self.group_functions.get_list() +
@@ -513,9 +531,6 @@ class Manager(CoqObject):
 
 class FrequencyList(Manager):
     name = "FREQUENCY"
-
-    def __init__(self, *args, **kwargs):
-        super(FrequencyList, self).__init__(*args, **kwargs)
 
     def summarize(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
@@ -660,6 +675,8 @@ class Collocations(Manager):
         left or in the right context)
     """
 
+    ignore_user_functions = True
+
     def _get_main_functions(self, df, session):
         """
         This manager will always use a ContextColumn function.
@@ -682,6 +699,14 @@ class Collocations(Manager):
         # Alternatively, get rid of this function call if the
         # corpus size can be handled correctly by an appropriate
         # function
+        # Probably, the best solution is to take the queried corpus
+        # features into account when calculating the collcations.
+        # This would make a comparison of collactions in e.g. COCA across
+        # genres fairly easy. In order to do this, all corpus features
+        # should be included in the aggregation, and the _subcorpus_size()
+        # function should be used to get the correct size.
+        # If no corpus features are selected, the whole corpus will be
+        # used.
         corpus_size = session.Resource.corpus.get_corpus_size()
 
         left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
@@ -764,6 +789,128 @@ class Collocations(Manager):
         return aggregate[order]
 
 
+class ContrastMatrix(Manager):
+    _ll_cache = {}
+    ignore_user_functions = True
+
+    def matrix(self, df, session):
+        labels = sorted(self.collapse_columns(df, session))
+        df["coquery_invisible_row_id"] = labels
+        df = df.sort_values(by="coquery_invisible_row_id")
+
+        for x in labels:
+            df["statistics_g_test_{}".format(x)] = df.apply(
+                self.retrieve_loglikelihood, axis=1, label=x, df=df)
+
+        return df
+
+    def summarize(self, df, session):
+        vis_cols = get_visible_columns(df, manager=self, session=session)
+        #df = df.drop_duplicates(subset=vis_cols)
+
+        self.p_correction = math.factorial(len(vis_cols))
+        self._freq_function = Freq(columns=vis_cols, alias="coquery_invisible_count")
+        self._subcorpus_size = SubcorpusSize(columns=vis_cols, alias="coquery_invisible_size")
+
+        self.manager_summary_functions = FunctionList([self._freq_function,
+                                                       self._subcorpus_size])
+        df = super(ContrastMatrix, self).summarize(df, session)
+        df = self.matrix(df, session)
+
+        return df
+
+    def select(self, df, session):
+        df = super(ContrastMatrix, self).select(df, session)
+        vis_cols = get_visible_columns(df, manager=self, session=session)
+        for i, x in enumerate(vis_cols):
+            if x.startswith("statistics_g_test"):
+                self._start_pos = i
+                break
+        return df
+
+    def collapse_columns(self, df, session):
+        """
+        Return a list of strings. Each string contains the concatinated
+        content of the feature cells in each row of the data frame.
+        """
+        # FIXME: columns should be processed in the order that they appear in
+        # the None results table view.
+
+        def fnc(x, cols=[]):
+            l = [x[col] for col in cols]
+            return ":".join(l)
+
+        vis_cols = get_visible_columns(df, manager=self, session=session)
+        vis_cols = [x for x in vis_cols
+                    if not x in (self._freq_function.get_id(),
+                                 self._subcorpus_size.get_id())]
+        return df.apply(fnc, cols=vis_cols, axis=1).unique()
+
+    def retrieve_loglikelihood(self, row, df, label):
+        def g_test(freq_1, freq_2, total_1, total_2):
+            """
+            This method calculates the G test statistic as described here:
+            http://ucrel.lancs.ac.uk/llwizard.html
+
+            For a formal description of the G² test, see Agresti (2013: 76).
+            """
+            if (freq_1, freq_2, total_1, total_2) not in ContrastMatrix._ll_cache:
+                exp1 = total_1 * (freq_1 + freq_2) / (total_1 + total_2)
+                exp2 = total_2 * (freq_1 + freq_2) / (total_1 + total_2)
+
+                G = 2 * (
+                    (freq_1 * math.log(freq_1 / exp1)) +
+                    (freq_2 * math.log(freq_2 / exp2)))
+
+                ContrastQuery._ll_cache[(freq_1, freq_2, total_1, total_2)] = G
+            return ContrastQuery._ll_cache[(freq_1, freq_2, total_1, total_2)]
+
+        if options.use_scipy:
+            from scipy import stats
+
+        freq = self._freq_function.get_id()
+        size = self._subcorpus_size.get_id()
+
+        freq_1 = row[freq]
+        total_1 = row[size]
+
+        freq_2 = df[df["coquery_invisible_row_id"] == label][freq].values[0]
+        total_2 = df[df["coquery_invisible_row_id"] == label][size].values[0]
+
+        obs = [[freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
+        try:
+            if options.use_scipy:
+                g2, p_g2, _, _ = stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
+                return g2
+            else:
+                return g_test(freq_1, freq_2, total_1, total_2)
+        except ValueError:
+            print(label)
+            print(df)
+            print(obs)
+            return None
+
+    def get_cell_content(self, index, df, session):
+        """
+        Return that content for the indexed cell that is needed to handle
+        a click on it for the current aggregation.
+        """
+        row = df.iloc[index.row()]
+        column = df.iloc[index.column() - self._start_pos]
+
+        freq_1 = row[self._freq_function.get_id()]
+        total_1 = row[self._subcorpus_size.get_id()]
+        label_1 = row["coquery_invisible_row_id"]
+
+        freq_2 = column[self._freq_function.get_id()]
+        total_2 = column[self._subcorpus_size.get_id()]
+        label_2 = column["coquery_invisible_row_id"]
+
+        return {"freq_row": freq_1, "freq_col": freq_2,
+                "total_row": total_1, "total_col": total_2,
+                "label_row": label_1, "label_col": label_2}
+
+
 def manager_factory(manager):
     if manager == QUERY_MODE_FREQUENCIES:
         return FrequencyList()
@@ -771,6 +918,8 @@ def manager_factory(manager):
         return ContingencyTable()
     elif manager == QUERY_MODE_COLLOCATIONS:
         return Collocations()
+    elif manager == QUERY_MODE_CONTRASTS:
+        return ContrastMatrix()
     else:
         return Manager()
 

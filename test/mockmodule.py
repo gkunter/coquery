@@ -25,7 +25,13 @@ class MockOptions(object):
     
     def __setattr__(self, *args, **kwargs):
         return super(MockOptions, self).__setattr__(*args, **kwargs)
-    
+
+class MockSettings(object):
+    def value(self, _, default=None):
+        return default
+
+    def setValue(self, *args, **kwargs):
+        return None
 
 def setup_module(s):
     sys.modules[s] = mock_module

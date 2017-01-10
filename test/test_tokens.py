@@ -1120,16 +1120,14 @@ class TestQuantification(unittest.TestCase):
 
 
 
-if __name__ == '__main__':
-    import timeit
-    
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestModuleMethods),
         unittest.TestLoader().loadTestsFromTestCase(TestQueryTokenCOCA),
         unittest.TestLoader().loadTestsFromTestCase(TestQuantification),
         ])
     
-    print()
-    print(" ----- START ----- ")
-    print()
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

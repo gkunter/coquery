@@ -303,7 +303,7 @@ class SqlDB (object):
         err = io.StringIO()
         sys.stderr = err
         
-        df = pd.read_csv(file_name, **kwargs, engine="c")
+        df = pd.read_csv(file_name, engine="c", **kwargs)
 
         if fillna is not None:
             df = df.fillna(fillna)

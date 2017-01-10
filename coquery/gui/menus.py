@@ -73,15 +73,12 @@ class CoqResourceMenu(QtGui.QMenu):
             self.addAction(unavailable)      
 
 class CoqColumnMenu(QtGui.QMenu):
-    showColumnRequested = QtCore.Signal(list)
     hideColumnRequested = QtCore.Signal(list)
-    renameColumnRequested = QtCore.Signal(str)
-    resetColorRequested = QtCore.Signal(list)
-    changeColorRequested = QtCore.Signal(list)
     addFunctionRequested = QtCore.Signal(list)
     removeFunctionRequested = QtCore.Signal(list)
     editFunctionRequested = QtCore.Signal(str)
     changeSortingRequested = QtCore.Signal(tuple)
+    propertiesRequested = QtCore.Signal(list)
     
     def __init__(self, columns=[], title="", parent=None, *args, **kwargs):
         super(CoqColumnMenu, self).__init__(title, parent, *args, **kwargs)
@@ -94,103 +91,117 @@ class CoqColumnMenu(QtGui.QMenu):
         all_columns_visible = all([x not in manager.hidden_columns for x in columns])
         some_columns_visible = not all([x in manager.hidden_columns for x in columns])
 
+        self.add_header(columns)
+
+        column_properties = QtGui.QAction("&Properties...", parent)
+        column_properties.triggered.connect(lambda: self.propertiesRequested.emit(columns))
+        self.addAction(column_properties)
+
+        # add 'add function'
+        add_function = QtGui.QAction("&Add function...", parent)
+        add_function.triggered.connect(lambda: self.addFunctionRequested.emit(columns))
+        self.addAction(add_function)
+
+        hide_column = QtGui.QAction("&Hide column{}".format(suffix), parent)
+        hide_column.setIcon(parent.get_icon("Forward"))
+        hide_column.triggered.connect(lambda: self.hideColumnRequested.emit(columns))
+        self.addAction(hide_column)
+
+        self.addSeparator()
+
+
+        # add additional function actions, but only if all columns really
+        # are functions:
+        if all([x.startswith("func_") for x in columns]):
+            #if len(columns) == 1:
+                #edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
+                #self.addAction(edit_function)
+            #edit_function = QtGui.QAction("&Edit function...", parent)
+            remove_function = QtGui.QAction("&Remove function{}".format(suffix), parent)
+            remove_function.triggered.connect(lambda: self.removeFunctionRequested.emit(columns))
+            self.addAction(remove_function)
+
+            self.addSeparator()
+
+        # add sorting actions, but only if only one column is selected
+        if len(columns) == 1:
+            column = columns[0]
+            group = QtGui.QActionGroup(self, exclusive=True)
+
+            sort_none = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
+            sort_asc = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
+            sort_desc = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
+            sort_asc.setIcon(parent.get_icon("Ascending Sorting"))
+            sort_desc.setIcon(parent.get_icon("Descending Sorting"))
+
+
+            sort_none.triggered.connect(lambda: self.changeSortingRequested.emit((column, None, None)))
+            sort_asc.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, False)))
+            sort_desc.triggered.connect(lambda: self.changeSortingRequested.emit((column, False, False)))
+
+            self.addAction(sort_none)
+            self.addAction(sort_asc)
+            self.addAction(sort_desc)
+
+            if parent.table_model.content[[column]].dtypes[0] == "object":
+                sort_asc_rev = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
+                sort_desc_rev = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
+                sort_asc_rev.setIcon(parent.get_icon("Ascending Reverse Sorting"))
+                sort_desc_rev.setIcon(parent.get_icon("Descending Reverse Sorting"))
+                sort_asc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, True)))
+                sort_desc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, False, True)))
+                self.addAction(sort_asc_rev)
+                self.addAction(sort_desc_rev)
+
+            # set currently active sorting mode, if any:
+            sorter = manager.get_sorter(columns[0])
+            try:
+                if sorter.ascending:
+                    if sorter.reverse:
+                        sort_asc_rev.setChecked(True)
+                    else:
+                        sort_asc.setChecked(True)
+                else:
+                    if sorter.reverse:
+                        sort_desc_rev.setChecked(True)
+                    else:
+                        sort_desc.setChecked(True)
+            except AttributeError:
+                sort_none.setChecked(True)
+
+    def add_header(self, columns):
         # Add menu header:
-        display_name = "<br/>".join([session.translate_header(x) for x in columns])
-        action = QtGui.QWidgetAction(parent)
+        session = get_toplevel_window().Session
+        display_name = "<br/>".join([session.translate_header(x) for x
+                                     in columns])
+        action = QtGui.QWidgetAction(self.parent())
         label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
         label.setAlignment(QtCore.Qt.AlignCenter)
         action.setDefaultWidget(label)
         self.addAction(action)
         self.addSeparator()
 
+
+class CoqHiddenColumnMenu(CoqColumnMenu):
+    showColumnRequested = QtCore.Signal(list)
+
+    def __init__(self, columns=[], title="", parent=None, *args, **kwargs):
+        super(CoqColumnMenu, self).__init__(title, parent, *args, **kwargs)
+        self.columns = columns
+
+        self.add_header(columns)
+
+        #column_properties = QtGui.QAction("&Properties...", parent)
+        #column_properties.triggered.connect(lambda: self.propertiesRequested.emit(columns))
+        #self.addAction(column_properties)
+
+        ## add 'add function'
+        #add_function = QtGui.QAction("&Add function...", parent)
+        #add_function.triggered.connect(lambda: self.addFunctionRequested.emit(columns))
+        #self.addAction(add_function)
+
+        suffix = "s" if len(columns) > 1 else ""
         show_column = QtGui.QAction("&Show column{}".format(suffix), parent)
-        hide_column = QtGui.QAction("&Hide column{}".format(suffix), parent)
-        rename_column = QtGui.QAction("&Rename column...", parent)
-        reset_color = QtGui.QAction("&Reset color{}".format(suffix), parent)
-        change_color = QtGui.QAction("&Change color{}...".format(suffix), parent)
-        add_function = QtGui.QAction("&Add function...", parent)
-        #edit_function = QtGui.QAction("&Edit function...", parent)
-        remove_function = QtGui.QAction("&Remove function{}".format(suffix), parent)
-
-        show_column.setIcon(parent.get_icon("Expand Arrow"))
-        hide_column.setIcon(parent.get_icon("Collapse Arrow"))
-
-        if not all_columns_visible:
-            show_column.triggered.connect(lambda: self.showColumnRequested.emit(columns))
-            self.addAction(show_column)
-
-        if some_columns_visible:
-            hide_column.triggered.connect(lambda: self.hideColumnRequested.emit(columns))
-            self.addAction(hide_column)
-
-        # Only show additional options if all columns are visible:
-        if all_columns_visible:
-            # add rename:
-            if len(columns) == 1:
-                rename_column.triggered.connect(lambda: self.renameColumnRequested.emit(columns[0]))
-                self.addAction(rename_column)
-            # add color reset
-            if set(columns).intersection(set(options.cfg.column_color.keys())):
-                reset_color.triggered.connect(lambda: self.resetColorRequested.emit(columns))
-                self.addAction(reset_color)
-            # add color change
-            change_color.triggered.connect(lambda: self.changeColorRequested.emit(columns))
-            self.addAction(change_color)
-            
-            self.addSeparator()
-            
-            # add 'add function'
-            add_function.triggered.connect(lambda: self.addFunctionRequested.emit(columns))
-            self.addAction(add_function)
-            
-            # add additional function actions, but only if all columns really 
-            # are functions:
-            if all([x.startswith("func_") for x in columns]):
-                #if len(columns) == 1:
-                    #edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
-                    #self.addAction(edit_function)
-                remove_function.triggered.connect(lambda: self.removeFunctionRequested.emit(columns))
-                self.addAction(remove_function)
-                
-            self.addSeparator()
-
-            # add sorting actions, but only if only one column is selected
-            if len(columns) == 1:
-                column = columns[0]
-                group = QtGui.QActionGroup(self, exclusive=True)
-                
-                sort_none = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
-                sort_asc = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
-                sort_desc = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
-
-                sort_none.triggered.connect(lambda: self.changeSortingRequested.emit((column, None, None)))
-                sort_asc.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, False)))
-                sort_desc.triggered.connect(lambda: self.changeSortingRequested.emit((column, False, False)))
-
-                self.addAction(sort_none)
-                self.addAction(sort_asc)
-                self.addAction(sort_desc)
-                
-                if parent.table_model.content[[column]].dtypes[0] == "object":
-                    sort_asc_rev = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
-                    sort_desc_rev = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
-                    sort_asc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, True)))
-                    sort_desc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, False, True)))
-                    self.addAction(sort_asc_rev)
-                    self.addAction(sort_desc_rev)
-                
-                # set currently active sorting mode, if any:
-                sorter = manager.get_sorter(columns[0])
-                try:
-                    if sorter.ascending:
-                        if sorter.reverse:
-                            sort_asc_rev.setChecked(True)
-                        else:
-                            sort_asc.setChecked(True)
-                    else:
-                        if sorter.reverse:
-                            sort_desc_rev.setChecked(True)
-                        else:
-                            sort_desc.setChecked(True)
-                except AttributeError:
-                    sort_none.setChecked(True)
+        show_column.setIcon(parent.get_icon("Back"))
+        show_column.triggered.connect(lambda: self.showColumnRequested.emit(columns))
+        self.addAction(show_column)

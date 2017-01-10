@@ -279,6 +279,10 @@ MODULE_INFORMATION = {
             "0.7.0",
             "Plot estimated cumulative distributions",
             "http://www.statsmodels.org/stable/"),
+    "alsaaudio": ("alsaaudio – A package containing wrappers for accessing the ALSA API from Python",
+            "0.8.2",
+            "Audio support under Linux",
+            "https://github.com/larsimmisch/pyalsaaudio/")
     }
 
 # for Python 3 compatibility:
@@ -288,6 +292,13 @@ except NameError:
     # Python 3 does not have unicode and long, so define them here:
     unicode = str
     long = int
+
+msg_userdata_warning = """
+<p><b>Your results table contains user data.</b></p>
+<p>If you start a new query, the user data that you have manually entered
+will be lost.</p>
+<p>Do you really want to start a new query?</p>
+"""
 
 msg_invalid_metadata = """
 <p><b>The file that you selected does not appear to contain valid meta data.</b></p>

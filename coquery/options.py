@@ -12,6 +12,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
+import collections
+
 # Python 3.x: import configparser
 # Python 2.x: import ConfigParser as configparser
 try:
@@ -23,7 +25,9 @@ except ImportError:
     from configparser import NoOptionError, ParsingError, NoSectionError
 
 class CoqConfigParser(_configparser, object):
-
+    """
+    A config parser with enhanced type methods
+    """
     def items(self, section):
         try:
             return super(CoqConfigParser, self).items(section)
@@ -834,7 +838,6 @@ class Options(object):
             self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=False)
             self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=False)
 
-            self.args.use_stopwords = config_file.bool("gui", "use_stopwords", fallback=False)
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
             # FIXME: number_of_tokens should not be stored in options.cfg!
             self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)
@@ -907,14 +910,20 @@ class Options(object):
 
         # Use QSettings?
         if settings:
+            column_properties = settings.value("column_properties", {})
+            current_properties = column_properties.get(self.args.corpus, {})
+            self.args.column_color = current_properties.get("colors", {})
+
             for x in [str(x) for x in settings.allKeys()]:
                 if x.startswith("column_width_"):
                     _, _, column = x.partition("column_width_")
                     self.args.column_width[column] = settings.value(x, int)
-                elif x.startswith("column_color_"):
-                    _, _, column = x.partition("column_color_")
-                    self.args.column_color[column] = settings.value(x)
-
+            self.args.summary_functions = settings.value("summary_functions", [])
+            if type(self.args.summary_functions) != list:
+                self.args.summary_functions = []
+            self.args.group_functions = settings.value("group_functions", [])
+            if type(self.args.group_functions) != list:
+                self.args.group_functions = []
 
 cfg = None
 settings = None
@@ -1012,8 +1021,16 @@ def save_configuration():
         for x in cfg.column_width:
             if not x.startswith("coquery_invisible") and cfg.column_width[x] and x:
                 settings.setValue("column_width_{}".format(x), cfg.column_width[x])
-        for x in cfg.column_color:
-            settings.setValue("column_color_{}".format(x), cfg.column_color[x])
+        try:
+            f = cfg.summary_functions
+        except AttributeError:
+            f = {}
+        settings.setValue("summary_functions", f)
+        try:
+            f = cfg.group_functions
+        except AttributeError:
+            f = {}
+        settings.setValue("group_functions", f)
 
         if not "gui" in config.sections():
             config.add_section("gui")
@@ -1024,7 +1041,6 @@ def save_configuration():
         config.set("gui", "show_data_management", cfg.show_data_management)
         config.set("gui", "show_output_columns", cfg.show_output_columns)
         config.set("gui", "last_toolbox", cfg.last_toolbox)
-        config.set("gui", "use_stopwords", cfg.use_stopwords)
         config.set("gui", "drop_duplicates", cfg.drop_duplicates)
 
         try:
@@ -1102,6 +1118,11 @@ def save_configuration():
     with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)
 
+
+def get_column_properties():
+    column_properties = settings.value("column_properties", {})
+    return column_properties.get(cfg.corpus, {})
+
 def get_con_configuration():
     """
     Returns a tuple containing the currently active connection configuration.
@@ -1132,12 +1153,13 @@ def process_options():
     global settings
 
     try:
-        from .gui.pyqt_compat import QtCore
-        settings = QtCore.QSettings(
+        from .gui.pyqt_compat import QtCore, CoqSettings
+        settings = CoqSettings(
                     os.path.join(general.get_home_dir(), "coquery.ini"),
                     QtCore.QSettings.IniFormat)
     except IOError:
         settings = None
+
     options = Options()
     cfg = options.cfg
     options.get_options()
@@ -1482,6 +1504,9 @@ use_bs4 = has_module("bs4")
 use_scipy = has_module("scipy")
 use_cachetools = has_module("cachetools")
 use_statsmodels = has_module("statsmodels")
+use_alsaaudio = has_module("alsaaudio")
+use_winsound = has_module("winsound")
+
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas"]:

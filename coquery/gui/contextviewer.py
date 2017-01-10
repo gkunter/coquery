@@ -15,13 +15,15 @@ from __future__ import unicode_literals
 import sys
 import os
 import pandas as pd
+import tgt
 
 from coquery import options
 from coquery.unicode import utf8
 from . import classes
 from .pyqt_compat import QtCore, QtGui
 from .ui.contextViewerUi import Ui_ContextView
-from .ui.textgridViewUi import Ui_Form
+
+from coquery.sound import Sound
 
 class ContextView(QtGui.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, icon=None, parent=None):
@@ -47,7 +49,16 @@ class ContextView(QtGui.QWidget):
         self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
         self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
 
-        self.ui.textgrid_area.showWave("/home/kunter/Lehre/2016 WS Phonetics_Phonology/2016-12-19-phonemes/christmas_s0204b_id10652.wav")
+        ##S = "/home/kunibert/Dev/coquery/s1601a.wav"
+        #S = "/home/kunibert/Dev/coquery/07_PEERS_s0901b.wav"
+        #sound = Sound(S)
+        #textgrid = tgt.read_textgrid("/home/kunibert/Dev/coquery/07_PEERS_s0901b.TextGrid")
+        #self.ui.textgrid_area.setSound(sound)
+        #self.ui.textgrid_area.setTextgrid(textgrid)
+        #self.ui.textgrid_area.display()
+
+        self.ui.spin_dynamic_range.valueChanged.connect(self.ui.textgrid_area.change_dynamic_range)
+        self.ui.spin_window_length.valueChanged.connect(self.ui.textgrid_area.change_window_length)
 
         L = self.corpus.get_origin_data(token_id)
         for table, fields in sorted(L):

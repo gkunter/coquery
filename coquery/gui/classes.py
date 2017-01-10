@@ -879,10 +879,6 @@ class CoqTreeWidget(QtGui.QTreeWidget):
     Define a tree widget that stores the available output columns in a tree
     with check boxes for each variable.
     """
-    addLink = QtCore.Signal(CoqTreeItem)
-    addFunction = QtCore.Signal(CoqTreeItem)
-    removeItem = QtCore.Signal(CoqTreeItem)
-
     def __init__(self, *args):
         super(CoqTreeWidget, self).__init__(*args)
         self.itemChanged.connect(self.update)
@@ -1653,11 +1649,31 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
         self.formatted = self.format_content(self.content)
 
+    def flags(self, index):
+        if self.content.columns[index.column()].startswith("coq_userdata"):
+            return super(CoqTableModel, self).flags(index) | QtCore.Qt.ItemIsEditable
+        else:
+            return super(CoqTableModel, self).flags(index)
+
     def get_dtype(self, column):
         return self._dtypes[list(self.header).index(column)]
 
+    def setData(self, index, value, role):
+        col = self.content.columns[index.column()]
+        row = self.content.index[index.row()]
+        if (role == QtCore.Qt.EditRole and
+            col.startswith("coq_userdata")):
+            self.content[col][row] = value
+            self.formatted[col][row] = value
+            corpus_id = self.invisible_content.iloc[index.row()]["coquery_invisible_corpus_id"]
+            which = self._session.data_table.coquery_invisible_corpus_id == corpus_id
+            self._session.data_table[col][which] = value
+            self.dataChanged.emit(index, index)
+            return True
+        return False
+
     @staticmethod
-    def format_content(source):
+    def format_content(source, num_to_str=True):
         df = pd.DataFrame(index=source.index)
 
         for col in source.columns:
@@ -1672,7 +1688,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 continue
 
             dtype = pd.Series(source[col].dropna().tolist()).dtype
-
             # float
             if dtype == float:
                 # try to force floats to int:
@@ -1681,20 +1696,30 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 except (ValueError, TypeError):
                     as_int = pd.Series(index=source[col].index)
 
-                if all(as_int == source[col]):
-                    df[col] = as_int.apply(lambda x: str(x) if (
-                                                x is not None and
-                                                x is not pd.np.nan) else None)
+                if num_to_str:
+                    if all(as_int == source[col]):
+                        df[col] = as_int.apply(lambda x: str(x) if (
+                                                    x is not None and
+                                                    x is not pd.np.nan) else None)
+                    else:
+                        df[col] = source[col].apply(lambda x: options.cfg.float_format.format(x) if (
+                                                    x is not None and
+                                                    x is not pd.np.nan) else None)
                 else:
-                    df[col] = source[col].apply(lambda x: options.cfg.float_format.format(x) if (
-                                                x is not None and
-                                                x is not pd.np.nan) else None)
-
+                    if all(as_int == source[col]):
+                        df[col] = as_int.apply(lambda x: int(x) if (
+                                                    x is not None and
+                                                    x is not pd.np.nan) else None)
+                    else:
+                        df[col] = source[col]
             # int
             elif dtype == int:
-                df[col] = source[col].apply(lambda x: str(x) if (
-                                                x is not None and
-                                                x is not pd.np.nan) else None)
+                if num_to_str:
+                    df[col] = source[col].apply(lambda x: str(x) if (
+                                                    x is not None and
+                                                    x is not pd.np.nan) else None)
+                else:
+                    df[col] = source[col]
 
             # bool
             elif dtype == bool:
@@ -1707,6 +1732,12 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             # unknown column type
             else:
                 raise TypeError
+
+        # apply value substitutions:
+        subst = options.get_column_properties().get("substitutions", {})
+        if subst:
+            df = df.replace(subst)
+
         df = df.fillna(options.cfg.na_string)
         return df
 
@@ -1742,6 +1773,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             else:
                 return "[hidden]"
 
+        elif role == QtCore.Qt.EditRole:
+            ix = index.column()
+            return self.formatted.values[index.row()][ix]
+
         # ToolTipRole: return the content as a tooltip:
         elif role == QtCore.Qt.ToolTipRole:
             ix = index.column()
@@ -1759,15 +1794,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.TextAlignmentRole:
             return self._align[index.column()]
 
-        #elif role == QtCore.Qt.UserRole:
-            ## The UserRole is used when clicking on a cell in the results
-            ## table. It is handled differently depending on the query type
-            ## that produced the table.
-            #if session.query_type == queries.ContrastQuery:
-                #return queries.ContrastQuery.get_cell_content(
-                    #index,
-                    #session.output_object,
-                    #session)
+        elif role == QtCore.Qt.UserRole:
+            # The UserRole is used when clicking on a cell in the results
+            # table. It is handled differently depending on the query type
+            # that produced the table.
+            manager = self._session.get_manager()
+            if isinstance(manager, managers.ContrastMatrix):
+                return manager.get_cell_content(
+                    index,
+                    self._session.output_object,
+                    self._session)
         return None
 
     def headerData(self, index, orientation, role):
@@ -1809,11 +1845,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
             sorter = self._manager.get_sorter(column)
             try:
-                # add arrows as sorting direction indicators if necessary:
-                if not sorter.ascending:
-                    return get_toplevel_window().get_icon("Descending Sorting")
-                else:
-                    return get_toplevel_window().get_icon("Ascending Sorting")
+                icon = {(False, False): "Descending Sorting",
+                        (True, False): "Ascending Sorting",
+                        (False, True): "Descending Reverse Sorting",
+                        (True, True): "Ascending Reverse Sorting"}[
+                            sorter.ascending,
+                            sorter.reverse]
+                return get_toplevel_window().get_icon(icon)
             except AttributeError:
                 return None
 
@@ -1827,6 +1865,20 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         """ Return the number of columns. """
         return self.content.columns.size
 
+class CoqTabBar(QtGui.QTabBar):
+    def __init__(self, *args, **kwargs):
+        super(CoqTabBar, self).__init__(*args, **kwargs)
+        self.addTab("Disactivated columns")
+        self.setShape(self.RoundedWest)
+        self.show()
+
+
+class CoqHiddenTableModel(CoqTableModel):
+    def data(self, index, role):
+        if role == QtCore.Qt.DisplayRole:
+            return self.formatted.values[index.row()][index.column()]
+        else:
+            return super(CoqHiddenTableModel, self).data(index, role)
 
 class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
     fill = False
