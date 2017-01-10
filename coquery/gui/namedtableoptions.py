@@ -129,7 +129,7 @@ class NamedTableOptionsDialog(CSVOptionDialog):
     def getOptions(path, fields=[], default=None, parent=None, icon=None):
         dialog = NamedTableOptionsDialog(path, fields, default, parent, icon)
         result = dialog.exec_()
-        if result == QtGui.QDialog.Accepted:
+        if isinstance(result, CSVOptions):
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
                 utf8(dialog.ui.quote_char.currentText())]
 
