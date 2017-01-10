@@ -344,7 +344,7 @@ class VisualizationDesigner(QtGui.QDialog):
 
     def check_figure_types(self):
         last_item = self.ui.list_figures.currentItem()
-        current_item = None
+        restored_position = None
 
         data_x = self.ui.tray_data_x.data()
         data_y = self.ui.tray_data_y.data()
@@ -356,13 +356,14 @@ class VisualizationDesigner(QtGui.QDialog):
             if visualizer.validate_data(data_x, data_y,
                                         self.df, self.session):
                 item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
-                if item == last_item:
-                    current_item = item
             else:
                 item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
             self.ui.list_figures.insertItem(i, item)
-        if current_item:
-            self.ui.list_figures.setCurrentItem(current_item)
+            if last_item and item.text() == last_item.text():
+                restored_position = i
+        if restored_position != None:
+            self.ui.list_figures.setCurrentItem(
+                self.ui.list_figures.item(restored_position))
         self.ui.list_figures.blockSignals(False)
 
     def change_palette(self, x):
