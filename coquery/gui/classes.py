@@ -1861,12 +1861,17 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 raise TypeError
 
         # apply value substitutions:
-        subst = options.get_column_properties().get("substitutions", {})
-        if subst:
-            df = df.replace(subst)
-
+        df = CoqTableModel.apply_substitutions(df)
         df = df.fillna(options.cfg.na_string)
         return df
+
+    @staticmethod
+    def apply_substitutions(df):
+        subst = options.get_column_properties().get("substitutions", {})
+        if subst:
+            return df.replace(subst)
+        else:
+            return df
 
     def is_visible(self, index):
         try:
