@@ -487,7 +487,7 @@ class Freq(BaseFreq):
 
 
 class FreqPMW(Freq):
-    _name = "statistics_per_million_words"
+    _name = "statistics_frequency_pmw"
     words = 1000000
 
     def __init__(self, columns=[], *args, **kwargs):
@@ -504,7 +504,7 @@ class FreqPMW(Freq):
 
 
 class FreqPTW(FreqPMW):
-    _name = "statistics_per_thousand_words"
+    _name = "statistics_frequency_ptw"
     words = 1000
 
 
@@ -513,7 +513,7 @@ class FreqNorm(Freq):
     This function returns the normalized frequency, i.e. the number of
     occurrences relative to the current subcorpus size.
     """
-    _name = "statistics_normalized"
+    _name = "statistics_frequency_normalized"
 
     def __init__(self, columns=[], *args, **kwargs):
         super(FreqNorm, self).__init__(columns, *args, **kwargs)
