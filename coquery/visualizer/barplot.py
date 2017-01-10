@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-""" 
+"""
 barplot.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -25,10 +25,11 @@ from coquery.gui.pyqt_compat import QtCore
 from coquery.functions import *
 from coquery.managers import *
 
+
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
     numerical_axes = 1
-    
+
     function_list = [Freq, FreqPMW, FreqNorm, Proportion, Percent]
     default_func = Freq
 
@@ -41,17 +42,17 @@ class Visualizer(vis.BaseVisualizer):
             self.stacked = kwargs.pop("stacked")
         except KeyError:
             self.stacked = False
-            
+
         super(Visualizer, self).__init__(*args, **kwargs)
 
         # The dictionary _rectangles manages the boxes for mouse-over lookup.
-        
+
         # The keys are strings, and represent the grouping level of the plot.
-        # The values are themselves dictionaries. The keys of these 
-        # dictionaries are tuples and coorrespond to the horizontal 
-        # coordinates of the respective box, i.e. (x0, x1). The associated 
-        # value is a tuple (label, count), where label is the factor level 
-        # of the box, and the count is either the frequency or the 
+        # The values are themselves dictionaries. The keys of these
+        # dictionaries are tuples and coorrespond to the horizontal
+        # coordinates of the respective box, i.e. (x0, x1). The associated
+        # value is a tuple (label, count), where label is the factor level
+        # of the box, and the count is either the frequency or the
         # percentage of that level.
         self._rectangles = dict()
 
@@ -76,9 +77,9 @@ class Visualizer(vis.BaseVisualizer):
             self.options["label_x_axis"] = "Percentage"
         else:
             self.options["label_x_axis"] = "Frequency"
-        
+
         session = options.cfg.main_window.Session
-        
+
         if len(self._groupby) == 2:
             self.options["label_y_axis"] = session.translate_header(self._groupby[0])
             self.options["label_legend"] = session.translate_header(self._groupby[1])
@@ -96,26 +97,26 @@ class Visualizer(vis.BaseVisualizer):
     def format_coord(self, x, y, ax):
         """
         Get the box information at the given position.
-        
-        This method checks if the mouse is currently inside of a box. If so, 
-        return a string containing the grouping labels and the size of the 
+
+        This method checks if the mouse is currently inside of a box. If so,
+        return a string containing the grouping labels and the size of the
         box.
-        
-        As a side effect, this method also sets the tooltip for the widget so 
+
+        As a side effect, this method also sets the tooltip for the widget so
         that the string is shown as the tooltip.
-        
+
         Parameters
         ----------
-        x, y : float 
+        x, y : float
             The grid coordinates of the mouse cursor
-        
-        ax : Axis 
+
+        ax : Axis
             The axis that the mouse is currently located in
-            
+
         Returns
         -------
-        s : string 
-            A formatted string with the grouping levels and the size of the 
+        s : string
+            A formatted string with the grouping levels and the size of the
             box.
         """
         y = y + 0.5
@@ -148,7 +149,7 @@ class Visualizer(vis.BaseVisualizer):
 
     def add_rectangles(self, df, ax, stacked):
         """
-        Add the information stored in the data frame as rectangles to 
+        Add the information stored in the data frame as rectangles to
         the rectangle list for the axis.
         """
         if stacked:
@@ -204,7 +205,7 @@ class Visualizer(vis.BaseVisualizer):
 
                 if len(self._groupby) == 2:
                     data["COQ_FUNC"] = fun.evaluate(data, session=session)
-                    
+
                     df = data.pivot_table(index=self._groupby[0],
                                           columns=[self._groupby[-1]],
                                           values="COQ_FUNC",
@@ -229,8 +230,8 @@ class Visualizer(vis.BaseVisualizer):
                         tmp = sns.barplot(
                             x=stack,
                             y=self._groupby[0],
-                            data=df, 
-                            color=self.options["color_palette_values"][::-1][i], 
+                            data=df,
+                            color=self.options["color_palette_values"][::-1][i],
                             ax=plt.gca())
                 else:
                     # one stacked bar (so, this is basically a spine chart)
@@ -243,7 +244,7 @@ class Visualizer(vis.BaseVisualizer):
                         tmp = sns.barplot(
                             x="COQ_FUNC",
                             data=df.iloc[i],
-                            color=self.options["color_palette_values"][::-1][n], 
+                            color=self.options["color_palette_values"][::-1][n],
                             ax=plt.gca())
 
                 # FIXME: reimplement mouse-over
@@ -266,13 +267,13 @@ class Visualizer(vis.BaseVisualizer):
                           "order": self._levels[0],
                           "palette": self.options["color_palette_values"],
                           "data": df}
-                
+
                 try:
                     kwargs.update({"hue": df[self._groupby[1]], "hue_order": self._levels[1]})
                 except IndexError:
                     # use only one grouping variable
                     pass
-                
+
                 ax = sns.barplot(**kwargs)
 
                 # FIXME: reimplement mouse-over
@@ -284,7 +285,7 @@ class Visualizer(vis.BaseVisualizer):
 
         if self.percentage:
             self._levels[-1] = sorted(self._levels[-1])
-                
+
         sns.despine(self.g.fig,
                     left=False, right=False, top=False, bottom=False)
 
@@ -299,12 +300,12 @@ class Visualizer(vis.BaseVisualizer):
 
         self.map_data(plot_facet)
 
-        self.g.set_axis_labels(self.options["label_x_axis"], 
+        self.g.set_axis_labels(self.options["label_x_axis"],
                                self.options["label_y_axis"])
 
         if self.percentage:
             self.g.set(xlim=(0, 100))
-            
+
         # Add axis labels:
         if self.stacked:
             # Stacked bars always show a legend
@@ -318,3 +319,144 @@ class Visualizer(vis.BaseVisualizer):
                 self.add_legend(self._levels[1], loc="lower right")
             except IndexError:
                 pass
+
+
+class BarPlot(vis.Visualizer):
+    def get_parameters(self, **kwargs):
+        session = kwargs.get("session")
+        self._ax = kwargs.get("ax", plt.gca())
+        self._x = kwargs.get("x")
+        self._y = kwargs.get("y")
+        self._levels_x = kwargs.get("levels_x")
+        self._levels_y = kwargs.get("levels_y")
+        self._hue = kwargs.get("hue")
+        self._hue_order = kwargs.get("hue_order")
+        self._palette = kwargs.get("palette", None)
+
+        df = kwargs.get("data")
+        params = {"palette": self._palette, "ax": self._ax}
+
+        # check if one of the columns is a numeric column:
+        if self._x and self.dtype(self._x, df) != object:
+            numeric = self._x
+            self._x = None
+            self._levels_x = None
+        elif self._y and self.dtype(self._y, df) != object:
+            numeric = self._y
+            self._y = None
+            self._levels_y = None
+        else:
+            # if there is no numeric column, use the provided function, or
+            # Freq() as the default function:
+            numeric = "COQ_FUNC"
+            data_columns = [col for col in (self._x, self._y) if col]
+            func = kwargs.get("func", Freq)
+            fun = func(columns=data_columns, session=session)
+            df[numeric] = fun.evaluate(df, session)
+            df = (df.drop("coquery_invisible_corpus_id", axis=1)
+                    .drop_duplicates().fillna(0).reset_index(drop=True))
+
+        params.update({"data": df,
+                       "x": self._x, "y": self._y, "order": None,
+                       "hue": None, "hue_order": None})
+
+        if self._x and not self._y:
+            # show vertical bars
+            params.update({"y": numeric, "order": self._levels_x})
+        elif self._y and not self._x:
+            # show horizontal bars
+            params.update({"x": numeric, "order": self._levels_y})
+        else:
+            # show horizontal, hued bars
+            params.update({"x": numeric, "y": self._y,
+                           "order": self._levels_y,
+                           "hue": self._x, "hue_order": self._levels_x})
+        return params
+
+    def plot_facet(self, **kwargs):
+        params = self.get_parameters(**kwargs)
+        ax = sns.barplot(**params)
+
+    def get_grid(self, **kwargs):
+        with sns.axes_style("whitegrid"):
+            grid = super(BarPlot, self).get_grid(**kwargs)
+        return grid
+
+    @staticmethod
+    def validate_data(data_x, data_y, df, session):
+        if not vis.Visualizer.validate_data(data_x, data_y, df, session):
+            return False
+
+        dtype_x = BarPlot.dtype(data_x, df)
+        dtype_y = BarPlot.dtype(data_y, df)
+
+        # at least one data type has to be other than None:
+        if dtype_x is None and dtype_y is None:
+            return False
+        # at least one data type has to be categorical:
+        if dtype_x != object and dtype_y != object:
+            return False
+
+        return True
+
+
+class StackedBars(BarPlot):
+    """
+    Stacked bar chart
+    """
+    def transform(self, series):
+        return series.cumsum()
+
+    def group_transform(self, grp, numeric):
+        return grp[numeric].cumsum()
+
+    def plot_facet(self, **kwargs):
+        params = self.get_parameters(**kwargs)
+        data = params["data"]
+        x = params["x"]
+        y = params["y"]
+        hue = params["hue"]
+        numeric = "COQ_FUNC"
+
+        if data.dtypes[x] != object:
+            numeric = x
+            axis = y
+        else:
+            numeric = y
+            axis = x
+
+        if hue:
+            data = data.sort_values([y, hue]).reset_index(drop=True)
+            data[numeric] = (data.groupby(y)
+                                 .apply(self.group_transform, numeric)
+                                 .reset_index(0)[numeric])
+
+            levels = params["hue_order"][::-1]
+            kwargs = {"x": numeric, "y": axis}
+            split = hue
+        else:
+            data = data.sort_values(axis)
+            data[numeric] = self.transform(data[numeric])
+            levels = params["order"][::-1]
+            if x == numeric:
+                kwargs = {"x": x, "y": None}
+            else:
+                kwargs = {"y": y, "x": None}
+            split = axis
+
+        col = sns.color_palette(params["palette"],
+                                n_colors=len(levels))[::-1]
+        for n, val in enumerate(levels):
+            sns.barplot(data=data[data[split] == val],
+                        color=col[n], ax=params["ax"], **kwargs)
+
+
+class PercentBars(Stacked):
+    """
+    Stacked bar chart showing percentages
+    """
+    def transform(self, series):
+        return (series * 100 / series.sum()).cumsum()
+
+    def group_transform(self, grp, numeric):
+        return (grp[numeric] * 100 / grp[numeric].sum()).cumsum()
