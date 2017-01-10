@@ -451,7 +451,7 @@ class StackedBars(BarPlot):
                         color=col[n], ax=params["ax"], **kwargs)
 
 
-class PercentBars(Stacked):
+class PercentBars(StackedBars):
     """
     Stacked bar chart showing percentages
     """
