@@ -6,10 +6,10 @@ from __future__ import print_function
 """
 corpusbuilder.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -68,7 +68,6 @@ import os.path
 import warnings
 import time
 import pandas as pd
-import unicodedata
 import argparse
 import re
 import sys
@@ -1068,19 +1067,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
         step = 50000
         current_id = 0
 
-        iterations = max_id // step + 1
-
-        #if not Verbose:
-            #ProgressBar = progressbar.ProgressBar (Iterations)
-        #ToLog ("Inserting data, %s iterations" % Iterations, logging.info)
-
         corpus_tab = self._new_tables[self.corpus_table]
-        
+
         new_tab_desc = []
         d = {}
         for x in corpus_tab.columns:
             d[x.name] = x
-        
+
         for col in corpus_tab.columns:
             if col.name != word_id:
                 if col.is_identifier:
@@ -1187,7 +1180,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 return
 
             for column in table.columns:
-                # Links should get the same optimal data type as the linked 
+                # Links should get the same optimal data type as the linked
                 # column:
                 if column.key:
                     try:
@@ -1201,13 +1194,18 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         optimal = table.suggest_data_type(column.name)
                     except TypeError:
                         continue
-                current = self.DB.get_field_type(table.name, column.name).strip().upper()
-                
+                try:
+                    current = self.DB.get_field_type(table.name, column.name).strip().upper()
+                except Exception as e:
+                    print(e)
+                    self.logger.error(str(e))
+                    continue
+
                 # length values are only used with VARCHAR types, otherwise,
                 # they are stripped:
                 if column.base_type.upper() != "VARCHAR":
                     current = re.sub("\(\d+\)", "", current)
-                
+
                 if current.lower() != optimal.lower():
                     self.logger.info("Optimizing column {}.{} from {} to {}".format(
                         table.name, column.name, current, optimal))
@@ -1253,8 +1251,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self._widget:
             self._widget.progressSet.emit(len(index_list), "Creating indices... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-
-        index_count = 0
 
         i = 0
         for table, column in index_list:
@@ -1322,7 +1318,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         POS             pos_label, word_pos, lemma_pos, corpus_pos
         
         """
-        l = []
         if not hasattr(self, "query_item_word"):
             for x in ["word_label", "corpus_word"]:
                 if hasattr(self, x):
@@ -1575,8 +1570,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     exec("import {}".format(module))
                 except ImportError:
                     raise DependencyError(package, url)
-        if self.arguments.use_nltk:
-            import nltk
             
         if self.DB.db_type == SQL_MYSQL:
             self.DB.connection.execute("SET NAMES 'utf8'")
@@ -1787,7 +1780,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         new_code = new_code.replace("\\", "\\\\")
         in_class = False
         in_docstring = False
-        in_get_description = False
 
         for x in source:
             if self.arguments.use_nltk:
