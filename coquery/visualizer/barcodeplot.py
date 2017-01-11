@@ -151,6 +151,9 @@ class BarcodePlot(vis.Visualizer):
         cat, num, none = vis.Visualizer.count_parameters(
             data_x, data_y, data_z, df, session)
 
+        if len(df) == 0:
+            return False
+
         if len(num) > 0 or len(cat) > 2:
             return False
         return True
