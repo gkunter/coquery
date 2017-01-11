@@ -2,10 +2,10 @@
 """ 
 scatterplot.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -111,21 +111,21 @@ class Visualizer(vis.BaseVisualizer):
         #if self._levels:
 
             #category_levels = self._levels[-1]
-            
+
             #if len(self._number_columns) > 1:
                 #legend_bar = [
                     #plt.Rectangle(
                         #(0, 0), 1, 1,
                         #fc=sns.color_palette(sequential_palettes[i], 1)[0],
                         #edgecolor="none") for i, _ in enumerate(category_levels)]
-                    
+
             #else:
                 #legend_bar = [
                     #plt.Rectangle(
                         #(0, 0), 1, 1,
                         #fc=self.options["color_palette_values"][i],
                         #edgecolor="none") for i, _ in enumerate(category_levels)]
-                    
+
             #try:
                 #self.g.fig.get_axes()[-1].legend(
                     #legend_bar, category_levels,
@@ -137,5 +137,63 @@ class Visualizer(vis.BaseVisualizer):
             #except Exception as e:
                 #print(e)
                 #raise e
-        
+
+
+class ScatterPlot(vis.Visualizer):
+
+    def plot_facet(self, data, color, **kwargs):
+        x = kwargs.get("x")
+        y = kwargs.get("y")
+        levels_x = kwargs.get("levels_x")
+        levels_y = kwargs.get("levels_y")
+
+        if self.dtype(x, data) == object or self.dtype(y, data) == object:
+            if self.dtype(y, data) == object:
+                category = y
+                numeric = x
+                levels = levels_y
+            else:
+                category = x
+                numeric = y
+                levels = levels_x
+            cols = sns.color_palette(kwargs["palette"], n_colors=len(levels))
+            for i, val in enumerate(levels):
+                df = data[data[category] == val]
+                if category == x:
+                    ax = sns.regplot(x=df.index.values, y=df[numeric],
+                                     color=cols[i],
+                                     ax=kwargs.get("ax", plt.gca()))
+                else:
+                    ax = sns.regplot(x=df[numeric], y=df.index.values,
+                                     color=cols[i],
+                                     ax=kwargs.get("ax", plt.gca()))
+        else:
+            if x is None:
+                val_x = pd.Series(range(len(data)), name=x)
+                val_y = data[y]
+            elif y is None:
+                val_x = data[x]
+                val_y = pd.Series(range(len(data)), name=y)
+            else:
+                val_x = data[x]
+                val_y = data[y]
+            col = sns.color_palette(kwargs["palette"], n_colors=1)
+            ax = sns.regplot(val_x, val_y,
+                             ax=kwargs.get("ax", plt.gca()))
+
+    def get_grid(self, **kwargs):
+        with sns.axes_style("whitegrid"):
+            grid = super(ScatterPlot, self).get_grid(**kwargs)
+        return grid
+
+    @staticmethod
+    def validate_data(data_x, data_y, data_z, df, session):
+        cat, num, none = vis.Visualizer.count_parameters(
+            data_x, data_y, data_z, df, session)
+
+        if len(num) > 2 or len(num) == 0 or len(cat) > 1:
+            return False
+        else:
+            return True
+
 logger = logging.getLogger(NAME)

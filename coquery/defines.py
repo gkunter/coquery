@@ -27,6 +27,7 @@ QUERY_ITEM_POS = "query_item_pos"
 QUERY_ITEM_GLOSS = "query_item_gloss"
 
 QUERY_MODE_TOKENS = "Do not transform"
+QUERY_MODE_TYPES = "Only distinct rows"
 QUERY_MODE_FREQUENCIES = "Frequency list"
 QUERY_MODE_STATISTICS = "Statistics"
 QUERY_MODE_COLLOCATIONS = "Collocation list"
@@ -36,6 +37,7 @@ QUERY_MODE_CONTRASTS = "G-test matrix"
 # this dictionary is used to provide keywords for the command line interface:
 QUERY_MODES = {
     "TOKEN": QUERY_MODE_TOKENS,
+    "TYPES": QUERY_MODE_TYPES,
     "FREQ": QUERY_MODE_FREQUENCIES,
     "STATS": QUERY_MODE_STATISTICS,
     "COLL": QUERY_MODE_COLLOCATIONS,
@@ -47,10 +49,11 @@ QUERY_MODES = {
 # user # interface
 SUMMARY_MODES = [
     QUERY_MODE_TOKENS,
+    QUERY_MODE_TYPES,
     QUERY_MODE_FREQUENCIES,
-    QUERY_MODE_COLLOCATIONS,
     QUERY_MODE_CONTINGENCY,
-    QUERY_MODE_CONTRASTS
+    QUERY_MODE_CONTRASTS,
+    QUERY_MODE_COLLOCATIONS,
     ]
 
 _OPERATORS = ["OP_EQ", "OP_LE", "OP_LT", "OP_GE", "OP_GT", "OP_NE", "OP_IN",
@@ -149,9 +152,9 @@ COLUMN_NAMES = {
     "statistics_subcorpus_size": "Corpus size: Subcorpus",
     "statistics_subcorpus_range_min": "Subcorpus: Lower boundary",
     "statistics_subcorpus_range_max": "Subcorpus: Upper boundary",
-    "statistics_per_million_words": "Frequency pmw",
-    "statistics_per_thousand_words": "Frequency ptw",
-    "statistics_normalized": "Normalized frequency",
+    "statistics_frequency_pmw": "Frequency pmw",
+    "statistics_frequency_ptw": "Frequency ptw",
+    "statistics_frequency_normalized": "Normalized frequency",
     "statistics_tokens": "Number of matches",
     "statistics_types": "Number of unique matches",
     "statistics_ttr": "Type-token ratio",

@@ -1,4 +1,13 @@
 (feature_dplyr branch)
+* there is now a search widget
+* change 'Query' button to 'New query'
+* make keyboard shortcuts more consistent
+* add initial support for using a reference corpus
+* add value substitutions
+* improve TextGrid export features
+* improve segment lookup in corpora that contain segments
+* use Icons8 icon set
+* add user data columns
 * drastically change data management:
     - contexts and functions can be added at any time, not only before the query
     - add completely revised filter dialogs
@@ -16,6 +25,7 @@
     - functions are now added to columns in the results table
 * add query cache that can speed up repeated queries (experimental)
 * add Kernel density estimates and Cumulative density function visualizations
+* add Scatter plot visualizations
 * external links are now persistent when changing the corpus or quitting the
   program
 * add word-wrapping for long columns

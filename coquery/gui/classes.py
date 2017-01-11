@@ -137,6 +137,130 @@ class CoqHelpBrowser(QtGui.QTextBrowser):
             return super(CoqHelpBrowser, self).loadResource(resource_type, name)
 
 
+class CoqFeatureList(QtGui.QListWidget):
+    def __init__(self, parent=None):
+        super(CoqFeatureList, self).__init__(parent)
+        self.setAcceptDrops(True)
+        self.setDragDropMode(self.DragDrop)
+        self.setSelectionMode(self.SingleSelection)
+        super(CoqFeatureList, self).addItem(QtGui.QListWidgetItem(""))
+        self._item_height = (self.visualItemRect(self.item(0)).height() +
+                            self.padding())
+        self._item_width = (self.visualItemRect(self.item(0)).width() +
+                           self.padding())
+        self.takeItem(0)
+
+    def addItem(self, item):
+        item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
+        super(CoqFeatureList, self).addItem(item)
+
+    def itemWidth(self):
+        return self._item_width
+
+    def itemHeight(self):
+        return self._item_height
+
+    def padding(self):
+        return 4 * self.frameWidth()
+        return 0
+
+    def dragEnterEvent(self, e):
+        if "application/x-qabstractitemmodeldatalist" in e.mimeData().formats():
+            e.accept()
+        else:
+            super(CoqFeatureList, self).dragEnterEvent(e)
+
+    def dropEvent(self, e):
+        e.setDropAction(QtCore.Qt.MoveAction)
+        super(CoqFeatureList, self).dropEvent(e)
+        self.item(0).setSizeHint(QtCore.QSize(self.itemWidth(),
+                                              self.itemHeight()))
+
+
+class CoqFeatureTray(CoqFeatureList):
+    """
+    A feature tray is a CoqFeatureTable that can hold up to one feature.
+
+    It never shows scrollbars or headers.
+    """
+    featureChanged = QtCore.Signal(object)
+    featureCleared = QtCore.Signal()
+
+    def __init__(self, parent=None):
+        super(CoqFeatureTray, self).__init__(parent)
+        self.setEditTriggers(self.NoEditTriggers)
+
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        #self.setSpacing(2 * self.frameWidth())
+
+        self.setMaximumHeight(self.itemHeight() + 2 * self.frameWidth())
+        self.setMinimumHeight(self.itemHeight() + 2 * self.frameWidth())
+
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Ignored,
+                                       QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+
+        self._content_source = None
+        self._placed_feature = None
+
+    def padding(self):
+        return 4 * self.frameWidth()
+
+    def text(self):
+        if self.count():
+            return utf8(self.item(0).text())
+        else:
+            return None
+
+    def data(self):
+        if self.count():
+            return utf8(self.item(0).data(QtCore.Qt.UserRole))
+        else:
+            return None
+
+    def send_back(self):
+        item = self.takeItem(0)
+        # return to sender
+        if self._content_source is not None:
+            self._content_source.addItem(item)
+        self._content_source = None
+
+    def clear(self, no_return=False):
+        if self.count() and not no_return:
+            self.send_back()
+        super(CoqFeatureTray, self).clear()
+        self.featureCleared.emit()
+
+    def setItem(self, item, source):
+        if self.count():
+            self.send_back()
+        self._content_source = source
+        self.addItem(item)
+        item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
+        self.setCurrentItem(item)
+        self.featureChanged.emit(item)
+
+    def dropEvent(self, e):
+        if self.count():
+            self.send_back()
+
+        if isinstance(e.source(), CoqFeatureTray):
+            self._content_source = e.source()._content_source
+            e.source().clear(no_return=True)
+        else:
+            self._content_source = e.source()
+        super(CoqFeatureTray, self).dropEvent(e)
+        self.setFocus()
+        self.selectionModel().clear()
+        item = self.item(0)
+        self.setCurrentItem(item)
+        self.featureChanged.emit(item)
+
+
 class CoqInfoLabel(QtGui.QLabel):
     entered = QtCore.Signal()
     left = QtCore.Signal()
@@ -968,6 +1092,12 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         return check_list
 
 
+class CoqTableWidget(QtGui.QTableWidget):
+    def mimeData(self, *args):
+        val = super(CoqTableWidget, self).mimeData(*args)
+        val.setText(",".join([x.data(QtCore.Qt.UserRole) for x in args[0]]))
+        return val
+
 class LogTableModel(QtCore.QAbstractTableModel):
     """
     Define a QAbstractTableModel class that stores logging messages.
@@ -1118,9 +1248,6 @@ class CoqTextEdit(QtGui.QTextEdit):
             #e.setDropAction(QtCore.Qt.MoveAction)
         # tell the QDrag we accepted it
         e.accept()
-
-    def setAcceptDrops(self, *args):
-        super(CoqTextEdit, self).setAcceptDrops(*args)
 
 
 class CoqTextTag(QtGui.QFrame):
@@ -1734,12 +1861,17 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 raise TypeError
 
         # apply value substitutions:
-        subst = options.get_column_properties().get("substitutions", {})
-        if subst:
-            df = df.replace(subst)
-
+        df = CoqTableModel.apply_substitutions(df)
         df = df.fillna(options.cfg.na_string)
         return df
+
+    @staticmethod
+    def apply_substitutions(df):
+        subst = options.get_column_properties().get("substitutions", {})
+        if subst:
+            return df.replace(subst)
+        else:
+            return df
 
     def is_visible(self, index):
         try:
