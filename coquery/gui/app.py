@@ -2152,12 +2152,15 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def visualization_designer(self):
         from . import visualizationdesigner
-        df = pd.concat([self.table_model.content,
-                        self.table_model.invisible_content["coquery_invisible_corpus_id"]],
-                        axis=1)
+        try:
+            df = pd.concat([self.table_model.content,
+                    self.table_model.invisible_content["coquery_invisible_corpus_id"]],
+                    axis=1)
+            df = self.table_model.apply_substitutions(df)
+        except AttributeError:
+            df = pd.DataFrame()
         dialog = visualizationdesigner.VisualizationDesigner(
-            self.table_model.apply_substitutions(df), df.dtypes,
-            self.Session)
+            df, df.dtypes, self.Session)
         dialog.show()
         self.widget_list.append(dialog)
 
