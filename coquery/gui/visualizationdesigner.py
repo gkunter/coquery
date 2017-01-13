@@ -42,8 +42,8 @@ from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 app = get_toplevel_window()
 
 visualizer_mapping = (
-    ("Barcode plot", "Barcode_plot", "barcodeplot", "BarcodePlot"),
     ("Beeswarm plot", "Beeswarm_plot", "beeswarmplot", "BeeswarmPlot"),
+    ("Barcode plot", "Barcode_plot", "barcodeplot", "BarcodePlot"),
     ("Barplot", "Barchart", "barplot", "BarPlot"),
     ("Stacked bars", "Barchart_stacked", "barplot", "StackedBars"),
     ("Percentage bars", "Barchart_percent", "barplot", "PercentBars"),
@@ -59,6 +59,7 @@ visualizer_mapping = (
     )
 
 class VisualizationDesigner(QtGui.QDialog):
+    moduleLoaded = QtCore.Signal(str, str)
     visualizers = {}
 
     def __init__(self, df, dtypes, session, parent=None):
@@ -114,7 +115,17 @@ class VisualizationDesigner(QtGui.QDialog):
 
         self.resize_previews()
 
-    def populate_figure_types(self):
+    def add_figure_type(self, label, icon):
+        item = QtGui.QListWidgetItem(label)
+        try:
+            item.setIcon(app.get_icon(icon, small_n_flat=False))
+        except Exception as e:
+            item.setIcon(app.get_icon(icon, size="64x64"))
+        item.setSizeHint(QtCore.QSize(180,
+                                        64 + 0 * QtGui.QLabel().sizeHint().height()))
+        self.ui.list_figures.addItem(item)
+
+    def load_figure_types(self):
         for x in visualizer_mapping:
             if len(x) == 4:
                 label, icon, module_name, vis_class = x
@@ -122,18 +133,17 @@ class VisualizationDesigner(QtGui.QDialog):
                 label, icon, module_name = x
                 vis_class = "Visualizer"
 
-            item = QtGui.QListWidgetItem(label)
-            try:
-                item.setIcon(app.get_icon(icon, small_n_flat=False))
-            except Exception as e:
-                item.setIcon(app.get_icon(icon, size="64x64"))
-            item.setSizeHint(QtCore.QSize(180,
-                                          64 + 0 * QtGui.QLabel().sizeHint().height()))
-            self.ui.list_figures.addItem(item)
             if label not in VisualizationDesigner.visualizers:
                 module = get_visualizer_module(module_name)
                 visualizer = getattr(module, vis_class)
                 VisualizationDesigner.visualizers[label] = visualizer
+            self.moduleLoaded.emit(label, icon)
+
+    def populate_figure_types(self):
+        self.moduleLoaded.connect(self.add_figure_type)
+        self.figure_loader = QtCore.QThread(self)
+        self.figure_loader.run = self.load_figure_types
+        self.figure_loader.start()
 
     def populate_variable_lists(self):
         self.categorical = [col for col in self.df.columns
