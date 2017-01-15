@@ -918,6 +918,7 @@ class CoqueryApp(QtGui.QMainWindow):
         properties = options.settings.value("column_properties", {})
         current_properties = properties.get(options.cfg.corpus, {})
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
+                                               self.Session.data_table,
                                                current_properties,
                                                columns,
                                                self)
@@ -944,8 +945,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
             if ("substitutions" not in current_properties or
                 current_properties["substitutions"] != result["substitutions"]):
-                self.table_model.formatted = self.table_model.format_content(
-                    self.table_model.content)
+                self.enable_apply_button()
 
     def show_hidden_columns(self):
         manager = self.Session.get_manager()
@@ -2158,7 +2158,6 @@ class CoqueryApp(QtGui.QMainWindow):
             df = pd.concat([self.table_model.content,
                     self.table_model.invisible_content["coquery_invisible_corpus_id"]],
                     axis=1)
-            df = self.table_model.apply_substitutions(df)
         except AttributeError:
             df = pd.DataFrame()
         dialog = visualizationdesigner.VisualizationDesigner(
