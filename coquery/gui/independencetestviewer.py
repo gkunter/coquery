@@ -26,7 +26,6 @@ class IndependenceTestViewer(QtGui.QDialog):
     html_template = """
         <body>
             <h1><span style="font-weight:600;">Corpus: {corpus}</span></h1>
-            {filters}
             <p>
             <table border="0" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;" cellspacing="2" cellpadding="0">
                 <tr>
@@ -51,7 +50,7 @@ class IndependenceTestViewer(QtGui.QDialog):
                 </tr>
             </table></p>
             <h2>Log-likelihood ratio test of independence</h2>
-            <p><span style=" font-style:italic;">G</span><sup>2</sup> = {g2}, <span style=" font-style:italic;">df</span> = 1, <span style=" font-style:italic;">p</span> {g2_op} {p_g2}</p>
+            <p><span style=" font-style:italic;">G</span> = {g2}, <span style=" font-style:italic;">df</span> = 1, <span style=" font-style:italic;">p</span> {g2_op} {p_g2}</p>
             <h2>Chi-square test of independence</h2>
             <p><span style=" font-style:italic;">χ</span><sup>2</sup> = {chi2}, <span style=" font-style:italic;">df</span> = 1, <span style=" font-style:italic;">p</span> {chi2_op} {p_chi2}</p>
             {yates}
@@ -63,7 +62,6 @@ class IndependenceTestViewer(QtGui.QDialog):
 
     latex_template = """
     \\textbf{{Corpus: {corpus}}}
-    {filters}
     \\begin{{table}}[htbp]
         \\centering
         \\begin{{tabular}}{{rrr}}
@@ -79,7 +77,7 @@ class IndependenceTestViewer(QtGui.QDialog):
 
     \\textbf{{Log-likelihood ratio test of independence}}
 
-    $G^2 = {g2}, p {g2_op} {p_g2}$
+    $G = {g2}, p {g2_op} {p_g2}$
 
     \\textbf{{Chi-square test of independence}}
 
@@ -128,13 +126,16 @@ class IndependenceTestViewer(QtGui.QDialog):
                     return "≥ 0.05"
 
         def estimate_strength(phi):
-            if phi <= 0.01:
-                return "negligible"
-            if phi <= 0.1:
+            """
+            Apply standard interpretation of effect sizes (Cohen 1988, 1992)
+            """
+            if phi < 0.1:
+                return "marginal"
+            elif 0.1 <= phi < 0.3:
                 return "small"
-            elif phi <= 0.3:
+            elif 0.3 <= phi < 0.5:
                 return "medium"
-            else:
+            elif 0.5 <= phi:
                 return "strong"
 
         super(IndependenceTestViewer, self).__init__(parent)
@@ -160,7 +161,7 @@ class IndependenceTestViewer(QtGui.QDialog):
             from scipy import stats
             expected = stats.contingency.expected_freq(obs)
             if np.min(expected) < 5:
-                yates = "<p>(using Yates' correction for continuity)</p>"
+                yates = "<p>Tests use Yates' correction for continuity.</p>"
 
             g2, p_g2, _, _ = stats.chi2_contingency(
                 obs, correction=bool(yates), lambda_="log-likelihood")
@@ -195,22 +196,7 @@ class IndependenceTestViewer(QtGui.QDialog):
             chi2_op, p_chi2 = estimate_p(chi2).split()
             p_chi2 = float(p_chi2)
 
-        if session.filter_list:
-            filter_html = """
-            <p>Active filters:<br/>
-            {}
-            </p>
-            """.format("<br/>".join(
-                ["<code>{}</code>".format(x) for x in session.filter_list]))
-            filter_latex = """
-            <p>Active filters:\\\\
-            {}
-            </p>
-            """.format("\\\\".join(
-                ["\\texttt{{{}}}".format(x) for x in session.filter_list]))
-        else:
-            filter_html = ""
-
+        # Calculate Cramér's Phi for the 2x2 case:
         try:
             phi = math.sqrt(chi2/obs.sum())
         except:
@@ -258,7 +244,6 @@ class IndependenceTestViewer(QtGui.QDialog):
         corpus = utf8(get_toplevel_window().ui.combo_corpus.currentText())
         self._html = utf8(self.html_template.format(
             corpus=corpus,
-            filters=filter_html,
             label_1=label_1, label_2=label_2,
             freq_1=freq_1, freq_2=freq_2,
             total_1=total_1, total_2=total_2,
@@ -282,7 +267,6 @@ class IndependenceTestViewer(QtGui.QDialog):
 
         self._latex = utf8(self.latex_template.format(
             corpus=corpus,
-            filters=filter_html,
             label_1=label_1, label_2=label_2,
             freq_1=freq_1, freq_2=freq_2,
             total_1=total_1, total_2=total_2,
