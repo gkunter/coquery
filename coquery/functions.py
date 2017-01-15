@@ -497,7 +497,7 @@ class FreqPMW(Freq):
         session = kwargs["session"]
         val = super(FreqPMW, self).evaluate(df, *args, **kwargs)
         if len(val) > 0:
-            corpus_size = session.Corpus.get_corpus_size(filters=session.filter_list)
+            corpus_size = session.Corpus.get_corpus_size()
         val = val.apply(lambda x: x / (corpus_size / self.words))
         val.index = df.index
         return val
@@ -834,7 +834,7 @@ class CorpusSize(Function):
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
-        corpus_size = session.Corpus.get_corpus_size(filters=session.filter_list)
+        corpus_size = session.Corpus.get_corpus_size()
         return pd.Series([corpus_size] * len(df), index=df.index)
 
 
@@ -858,8 +858,7 @@ class SubcorpusSize(CorpusSize):
 
         val = df.apply(session.Corpus.get_subcorpus_size,
                        columns=column_list,
-                       axis=1,
-                       filters=session.filter_list)
+                       axis=1)
 
         return val
 
