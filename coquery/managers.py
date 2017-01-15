@@ -425,7 +425,7 @@ class Manager(CoqObject):
         df = df.reset_index(drop=True)
 
         print("\tdone")
-        return new_df
+        return df
 
     def select(self, df, session):
         """
