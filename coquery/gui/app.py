@@ -137,6 +137,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self._group_functions = functionlist.FunctionList()
         self._column_functions = functionlist.FunctionList()
         self._target_label = None
+        self._hidden = None
+        self._old_sizes = None
         self.reaggregating = False
 
         self.widget_list = []
@@ -548,6 +550,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.data_preview.verticalHeader().customContextMenuRequested.connect(self.show_row_header_menu)
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
 
+        self.ui.button_toggle_hidden.clicked.connect(self.toggle_hidden)
         self.ui.hidden_columns.horizontalHeader().customContextMenuRequested.connect(
             lambda x: self.show_header_menu(point=x, hidden=True))
 
@@ -850,6 +853,50 @@ class CoqueryApp(QtGui.QMainWindow):
     ###
     ### interface status and interface interaction methods
     ###
+
+    def collapse_hidden_columns(self):
+        splitter_sizeHint = self.ui.splitter_columns.sizeHint()
+        self._hidden = True
+        w = self.ui.button_toggle_hidden.sizeHint().width()
+        self._old_sizes = self.ui.splitter_columns.sizes()
+        self.ui.splitter_columns.setStretchFactor(0,1)
+        self.ui.splitter_columns.setStretchFactor(1,0)
+        self.ui.splitter_columns.setSizes([splitter_sizeHint.width() - w, w])
+
+    def expand_hidden_columns(self):
+        splitter_sizeHint = self.ui.splitter_columns.sizeHint()
+        self._hidden = False
+        self.ui.splitter_columns.setStretchFactor(0,1)
+        self.ui.splitter_columns.setStretchFactor(1,1)
+        w = self._old_sizes[1]
+        button_width = self.ui.button_toggle_hidden.sizeHint().width()
+        print(button_width)
+        if w <= button_width:
+            w = int(splitter_sizeHint.width() * 0.1) + button_width
+            print("NEW w", w)
+        else:
+            print(splitter_sizeHint)
+            print("RESTORING:", splitter_sizeHint.width() - w, w)
+        self.ui.splitter_columns.setSizes([splitter_sizeHint.width() - w, w])
+        self._old_sizes = self.ui.splitter_columns.sizes()
+
+    def toggle_hidden(self):
+        print(self.ui.splitter_columns.sizeHint())
+        sizes = self.ui.splitter_columns.sizes()
+        w = self.ui.button_toggle_hidden.sizeHint().width()
+        print("hidden:       ", self._hidden)
+        print("current sizes:" , sizes)
+        print("old_sizes:    ", self._old_sizes)
+        print("button_width: ", w)
+        if self._hidden:
+            print("SHOWING")
+            self.expand_hidden_columns()
+        else:
+            print("HIDING")
+            self.collapse_hidden_columns()
+        sizes = self.ui.splitter_columns.sizes()
+        print("NEW current sizes:" , sizes)
+        print("NEW old_sizes:    ", self._old_sizes, "\n")
 
     def get_aggregate(self):
         for radio in self.ui.aggregate_radio_list:
@@ -1387,6 +1434,8 @@ class CoqueryApp(QtGui.QMainWindow):
                 hide()
             else:
                 show()
+            if self._hidden == None:
+                self.collapse_hidden_columns()
 
     def change_userdata(self):
         self.user_columns = True
