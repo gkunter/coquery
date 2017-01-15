@@ -798,28 +798,45 @@ class ContrastMatrix(Manager):
     ignore_user_functions = True
 
     def matrix(self, df, session):
-        labels = sorted(self.collapse_columns(df, session))
+        df = df.reset_index(drop=True)
+        labels = self.collapse_columns(df, session)
         df["coquery_invisible_row_id"] = labels
-        df = df.sort_values(by="coquery_invisible_row_id")
+        #df = df.sort_values(by="coquery_invisible_row_id")
 
-        for x in labels:
-            df["statistics_g_test_{}".format(x)] = df.apply(
+        self.p_values = pd.Series()
+
+        for i, x in enumerate(labels):
+            columns = ["statistics_g_test_{}".format(x),
+                       "COQ_P_{}".format(x)]
+
+            df[columns] = df.apply(
                 self.retrieve_loglikelihood, axis=1, label=x, df=df)
-
+            self.p_values = self.p_values.append(df[columns[-1]][i:])
+        df = df[[col for col in df.columns if not col.startswith("COQ_P_")]]
         return df
 
     def summarize(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
-        #df = df.drop_duplicates(subset=vis_cols)
-
-        self.p_correction = math.factorial(len(vis_cols))
+        self.p_adjustment = math.factorial(len(vis_cols))
         self._freq_function = Freq(columns=vis_cols, alias="coquery_invisible_count")
         self._subcorpus_size = SubcorpusSize(columns=vis_cols, alias="coquery_invisible_size")
 
         self.manager_summary_functions = FunctionList([self._freq_function,
                                                        self._subcorpus_size])
         df = super(ContrastMatrix, self).summarize(df, session)
+        df = df.drop_duplicates(subset=vis_cols)
         df = self.matrix(df, session)
+        df = df.sort_values(by=vis_cols)
+
+        # determine critical value, adjusted for the number of comparisons,
+        # using the False Discovery Rate method (Benjamini & Hochberg 1995,
+        # described in Narum 2006).
+        self.p_values = self.p_values.sort_values().reset_index(drop=True)
+        threshold = ((pd.Series(pd.np.arange(len(self.p_values))) + 1) /
+                     len(self.p_values)) * 0.05
+        check = (self.p_values <= threshold)
+        self.critical_value = min(0.05, self.p_values.loc[check[::-1].idxmax()])
+        self.threshold = stats.chi2.ppf(1 - self.critical_value, 1)
 
         return df
 
@@ -885,9 +902,13 @@ class ContrastMatrix(Manager):
         try:
             if options.use_scipy:
                 g2, p_g2, _, _ = stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
-                return g2
+                if (freq_1 / total_1) < (freq_2 / total_2):
+                    df = pd.Series([-g2, p_g2])
+                else:
+                    df = pd.Series([g2, p_g2])
+                return df
             else:
-                return g_test(freq_1, freq_2, total_1, total_2)
+                return (g_test(freq_1, freq_2, total_1, total_2), 0)
         except ValueError:
             print(label)
             print(df)
