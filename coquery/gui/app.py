@@ -1509,8 +1509,10 @@ class CoqueryApp(QtGui.QMainWindow):
         old_list = options.cfg.group_filter_list
 
         try:
-            columns = self.table_model.content.columns
-            dtypes = self.table_model.content.dtypes
+            columns = pd.Index([x for x in self.Session.data_table.columns
+                                if not x.startswith("coquery_")])
+            dtypes = self.Session.data_table[columns].dtypes
+            dtypes = dtypes.reset_index(drop=True)
         except AttributeError:
             columns = []
             dtypes = []

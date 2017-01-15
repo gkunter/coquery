@@ -402,7 +402,7 @@ class Manager(CoqObject):
     def filter_groups(self, df, session):
         if (len(df) == 0 or
                 len(options.cfg.group_columns) == 0 or
-                len(self._group_filters) == 0):
+                len(options.cfg.group_filter_list) == 0):
             return df
 
         print("\tfilter_groups()")
@@ -415,7 +415,7 @@ class Manager(CoqObject):
         for x in grouped.groups:
             dsub = df.iloc[grouped.groups[x]]
             self._len_pre_group_filter[x] = len(dsub)
-            for filt in self._group_filters:
+            for filt in options.cfg.group_filter_list:
                 dsub = filt.apply(dsub)
 
             sub_list.append(dsub)
