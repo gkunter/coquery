@@ -261,6 +261,62 @@ class CoqFeatureTray(CoqFeatureList):
         self.featureChanged.emit(item)
 
 
+class CoqRotatedButton(QtGui.QPushButton):
+    """
+    A rotated push button.
+
+    Adopted from http://stackoverflow.com/a/36083737/5215507
+    """
+
+    def paintEvent(self, event):
+        painter = QtGui.QStylePainter(self)
+        painter.rotate(270)
+        painter.translate(-1 * self.height(), 0);
+        painter.drawControl(QtGui.QStyle.CE_PushButton,
+                            self.getSyleOptions())
+
+    def minimumSizeHint(self):
+        size = super(CoqRotatedButton, self).minimumSizeHint()
+        size.transpose()
+        print("minimumSizeHint", size)
+        return QtCore.QSize(QtGui.QPushButton().minimumSizeHint().height(),
+                            size.width())
+
+    def sizeHint(self):
+        size = super(CoqRotatedButton, self).sizeHint()
+        size.transpose()
+        size.setWidth(QtGui.QLabel().sizeHint().height())
+        print("sizeHint", size)
+        return size
+
+    def getSyleOptions(self):
+        options = QtGui.QStyleOptionButton()
+        options.initFrom(self)
+        size = options.rect.size()
+        size.transpose()
+        options.rect.setSize(size)
+        options.features = getattr(QtGui.QStyleOptionButton, "None")
+        if self.isFlat():
+            options.features |= QtGui.QStyleOptionButton.Flat
+        if self.menu():
+            options.features |= QtGui.QStyleOptionButton.HasMenu
+        if self.autoDefault() or self.isDefault():
+            options.features |= QtGui.QStyleOptionButton.AutoDefaultButton
+        if self.isDefault():
+            options.features |= QtGui.QStyleOptionButton.DefaultButton
+        if self.isDown() or (self.menu() and self.menu().isVisible()):
+            options.state |= QtGui.QStyle.State_Sunken
+        if self.isChecked():
+            options.state |= QtGui.QStyle.State_On
+        if not self.isFlat() and not self.isDown():
+            options.state |= QtGui.QStyle.State_Raised
+
+        options.text = self.text()
+        options.icon = self.icon()
+        options.iconSize = self.iconSize()
+        return options
+
+
 class CoqInfoLabel(QtGui.QLabel):
     entered = QtCore.Signal()
     left = QtCore.Signal()
