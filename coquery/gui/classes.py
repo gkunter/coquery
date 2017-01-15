@@ -1654,39 +1654,6 @@ class CoqTagBox(QtGui.QWidget):
         self.edit_tag.setStyleSheet("CoqTagEdit { border-radius: 5px; font: condensed; }")
 
 
-class QueryFilterBox(CoqTagBox):
-    """
-    Define a CoqTagBox that manages query filters.
-    """
-    def destroyTag(self, tag):
-        """
-        Remove the tag from the tag cloud as well as the filter from the
-        global filter list.
-        """
-        options.cfg.filter_list = [x for x in options.cfg.filter_list if x.text != utf8(tag.text())]
-        super(QueryFilterBox, self).destroyTag(tag)
-
-    def addTag(self, *args):
-        """
-        Add the tag to the tag cloud and the global filter list.
-        """
-        filt = filters.QueryFilter()
-        try:
-            filt.resource = self.resource
-        except AttributeError:
-            return
-        try:
-            if args:
-                filt.text = args[0]
-            else:
-                filt.text = utf8(self.edit_tag.text())
-        except InvalidFilterError:
-            self.edit_tag.setStyleSheet('CoqTagEdit { border-radius: 5px; font: condensed;background-color: rgb(255, 255, 192); }')
-        else:
-            super(QueryFilterBox, self).addTag(filt.text)
-            options.cfg.filter_list.append(filt)
-
-
 class CoqTableView(QtGui.QTableView):
     resizeRow = QtCore.Signal(int, int)
 
@@ -1866,18 +1833,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             else:
                 raise TypeError
 
-        # apply value substitutions:
-        df = CoqTableModel.apply_substitutions(df)
         df = df.fillna(options.cfg.na_string)
         return df
-
-    @staticmethod
-    def apply_substitutions(df):
-        subst = options.get_column_properties().get("substitutions", {})
-        if subst:
-            return df.replace(subst)
-        else:
-            return df
 
     def is_visible(self, index):
         try:
