@@ -1829,7 +1829,12 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                                                     x is not None and
                                                     x is not pd.np.nan) else None)
                     else:
-                        df[col] = source[col].apply(lambda x: options.cfg.float_format.format(x) if (
+                        if col.startswith("statistics_g_test"):
+                            val = abs(source[col])
+                        else:
+                            val = source[col]
+
+                        df[col] = val.apply(lambda x: options.cfg.float_format.format(x) if (
                                                     x is not None and
                                                     x is not pd.np.nan) else None)
                 else:
@@ -1839,6 +1844,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                                                     x is not pd.np.nan) else None)
                     else:
                         df[col] = source[col]
+
             # int
             elif dtype == int:
                 if num_to_str:
@@ -1898,20 +1904,18 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # DisplayRole: return the content of the cell in the data frame:
         # ToolTipRole: also returns the cell content, but in a form suitable
         # for QHTML:
+        ix = index.column()
         if role == QtCore.Qt.DisplayRole:
-            ix = index.column()
             if ix not in self._hidden_columns:
                 return self.formatted.values[index.row()][ix]
             else:
                 return "[hidden]"
 
         elif role == QtCore.Qt.EditRole:
-            ix = index.column()
             return self.formatted.values[index.row()][ix]
 
         # ToolTipRole: return the content as a tooltip:
         elif role == QtCore.Qt.ToolTipRole:
-            ix = index.column()
             if ix not in self._hidden_columns:
                 if self._dtypes[ix] == float:
                     return "<div>{}</div>".format(escape(options.cfg.float_format.format(self.content.values[index.row()][ix])))
@@ -1924,7 +1928,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
         # TextAlignmentRole: return the alignment of the column:
         elif role == QtCore.Qt.TextAlignmentRole:
-            return self._align[index.column()]
+            return self._align[ix]
 
         elif role == QtCore.Qt.UserRole:
             # The UserRole is used when clicking on a cell in the results
@@ -1936,6 +1940,11 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                     index,
                     self._session.output_object,
                     self._session)
+
+        elif role == QtCore.Qt.UserRole + 1:
+            # This role is used to retrieve the G test statistics
+            return self.content.values[index.row()][ix]
+
         return None
 
     def headerData(self, index, orientation, role):
@@ -2011,206 +2020,6 @@ class CoqHiddenTableModel(CoqTableModel):
             return self.formatted.values[index.row()][index.column()]
         else:
             return super(CoqHiddenTableModel, self).data(index, role)
-
-class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
-    fill = False
-
-    def __init__(self, *args, **kwargs):
-        super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
-        CoqResultCellDelegate._app = options.cfg.app
-        CoqResultCellDelegate._table = get_toplevel_window().table_model
-        CoqResultCellDelegate.standard_bg = {
-            True: [
-                CoqResultCellDelegate._app.palette().color(
-                    QtGui.QPalette.Normal, QtGui.QPalette.AlternateBase),
-                CoqResultCellDelegate._app.palette().color(
-                    QtGui.QPalette.Normal, QtGui.QPalette.Base)],
-            False: [
-                CoqResultCellDelegate._app.palette().color(
-                    QtGui.QPalette.Disabled, QtGui.QPalette.AlternateBase),
-                CoqResultCellDelegate._app.palette().color(
-                    QtGui.QPalette.Disabled, QtGui.QPalette.Base)]}
-
-        if not hasattr(CoqResultCellDelegate, "fg_color"):
-            CoqResultCellDelegate.fg_color = None
-        if not hasattr(CoqResultCellDelegate, "bg_color"):
-            CoqResultCellDelegate.bg_color = None
-
-    def get_foreground(self, option, index):
-        if option.state & QtGui.QStyle.State_MouseOver:
-            return self._app.palette().color(QtGui.QPalette().Link)
-        elif option.state & QtGui.QStyle.State_Selected:
-            return self._app.palette().color(QtGui.QPalette().HighlightedText)
-        else:
-            if self._table.is_visible(index):
-                try:
-                    return QtGui.QColor(options.cfg.row_color[self._table.content.index[index.row()]])
-                except KeyError:
-                    pass
-                # return column color if specified:
-                try:
-                    return QtGui.QColor(options.cfg.column_color[self._table.header[index.column()]])
-                except KeyError:
-                    # return default color
-                    return self.fg_color
-            else:
-                # return light grey for hidden cells:
-                return self._app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Text)
-
-    def get_background(self, option, index):
-        if option.state & QtGui.QStyle.State_Selected:
-            return self._app.palette().color(QtGui.QPalette().Highlight)
-        else:
-            if not self.bg_color:
-                return self.standard_bg[self._table.is_visible(index)][index.row() & 1]
-            else:
-                return self.bg_color
-
-    #def sizeHint(self, option, index):
-        #rect = options.cfg.metrics.boundingRect(index.data(QtCore.Qt.DisplayRole))
-        #return rect.adjusted(0, 0, 15, 0).size()
-
-    def paint(self, painter, option, index):
-        """
-        Paint the results cell.
-
-        The paint method of the cell delegates takes the representation
-        from the table's :func:`data` method, using the DecorationRole role.
-        On mouse-over, the cell is rendered like a clickable link.
-        """
-        content = index.data(QtCore.Qt.DisplayRole)
-        if content == "" and not self.fill:
-            return
-        painter.save()
-
-        # show content as a link on mouse-over:
-        if option.state & QtGui.QStyle.State_MouseOver:
-            font = painter.font()
-            font.setUnderline(True)
-            painter.setFont(font)
-
-        fg = self.get_foreground(option, index)
-        bg = self.get_background(option, index)
-        if bg:
-            painter.setBackground(bg)
-            if option.state & QtGui.QStyle.State_Selected or self.fill:
-                painter.fillRect(option.rect, bg)
-
-        if fg:
-            painter.setPen(QtGui.QPen(fg))
-
-        try:
-            if index.data(QtCore.Qt.TextAlignmentRole) == _left_align:
-                painter.drawText(
-                    option.rect.adjusted(2, 0, 2, 0),
-                    _left_align | options.cfg.word_wrap,
-                    content if isinstance(content, str) else str(content))
-            else:
-                painter.drawText(
-                    option.rect.adjusted(-2, 0, -2, 0),
-                    _right_align | options.cfg.word_wrap,
-                    content if isinstance(content, str) else str(content))
-        finally:
-            painter.restore()
-
-
-class CoqTotalDelegate(CoqResultCellDelegate):
-    fill = True
-
-    def __init__(self, *args, **kwargs):
-        super(CoqTotalDelegate, self).__init__(*args, **kwargs)
-        self.fg_color = self._app.palette().color(QtGui.QPalette.ButtonText)
-        self.bg_color = self._app.palette().color(QtGui.QPalette.Button)
-
-
-class CoqProbabilityDelegate(CoqResultCellDelegate):
-    max_value = 1
-    prefix = ""
-    suffix = ""
-    format_str = "{}{}{}"
-
-    def paint(self, painter, option, index):
-        """
-        Paint the results cell.
-
-        The paint method of the cell delegates takes the representation
-        from the table's :func:`data` method, using the DecorationRole role.
-        On mouse-over, the cell is rendered like a clickable link.
-        """
-        painter.save()
-
-        try:
-            value = float(index.data(QtCore.Qt.DisplayRole))
-        except ValueError:
-            print(1, value)
-            painter.restore()
-            return
-
-        content = self.format_str.format(self.prefix, value, self.suffix)
-
-        # show content as a link on mouse-over:
-        if option.state & QtGui.QStyle.State_MouseOver:
-            font = painter.font()
-            font.setUnderline(True)
-            painter.setFont(font)
-        fg = self.get_foreground(option, index)
-        bg = self.get_background(option, index)
-        if bg:
-            if option.state & QtGui.QStyle.State_Selected:
-                painter.fillRect(option.rect, bg)
-            elif value != 0:
-                rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
-                rect.setWidth(int(option.rect.width() * min(self.max_value, value)/self.max_value))
-                painter.fillRect(rect, QtGui.QColor("lightgreen"))
-        if fg:
-            painter.setPen(QtGui.QPen(fg))
-
-        try:
-            if index.data(QtCore.Qt.TextAlignmentRole) == _left_align:
-                painter.drawText(
-                    option.rect.adjusted(2, 0, 2, 0),
-                    _left_align | int(QtCore.Qt.TextWordWrap),
-                    content)
-            else:
-                painter.drawText(
-                    option.rect.adjusted(-2, 0, -2, 0),
-                    _right_align | int(QtCore.Qt.TextWordWrap),
-                    content)
-        finally:
-            painter.restore()
-
-    #def get_background(self, option, index):
-        #try:
-            #value = float(index.data(QtCore.Qt.DisplayRole))
-            #if  value > 1:
-                #return QtGui.QColor("lightyellow")
-            #else:
-                #return super(CoqProbabilityDelegate, self).get_background(option, index)
-        #except ValueError:
-            #return super(CoqProbabilityDelegate, self).get_background(option, index)
-
-
-class CoqPercentDelegate(CoqProbabilityDelegate):
-    max_value = 100
-    format_str = "{}{:3.1f}{}"
-    suffix = "%"
-
-
-class CoqLikelihoodDelegate(CoqResultCellDelegate):
-    fill = True
-
-    def get_background(self, option, index):
-        if option.state & QtGui.QStyle.State_Selected:
-            return self._app.palette().color(QtGui.QPalette().Highlight)
-        else:
-            try:
-                value = float(index.data(QtCore.Qt.DisplayRole))
-            except ValueError:
-                value = 0
-            if value > 3.841:
-                return QtGui.QColor("lightblue")
-            else:
-                return self.bg_color
 
 
 class CoqFlowLayout(QtGui.QLayout):
