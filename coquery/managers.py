@@ -511,6 +511,9 @@ class Manager(CoqObject):
         df = df[[x for x in df.columns if not x.startswith("func_")]]
         df = self.mutate(df, session)
 
+        self.mutated_columns = df.columns
+        df = session.apply_substitutions(df)
+
         self.group_functions = FunctionList([])
         if options.cfg.group_columns:
             df = self.filter_groups(df, session)
@@ -793,7 +796,7 @@ class Collocations(Manager):
         return aggregate[order]
 
 
-class ContrastMatrix(Manager):
+class ContrastMatrix(FrequencyList):
     _ll_cache = {}
     ignore_user_functions = True
 
@@ -816,17 +819,42 @@ class ContrastMatrix(Manager):
         return df
 
     def summarize(self, df, session):
-        vis_cols = get_visible_columns(df, manager=self, session=session)
-        self.p_adjustment = math.factorial(len(vis_cols))
-        self._freq_function = Freq(columns=vis_cols, alias="coquery_invisible_count")
-        self._subcorpus_size = SubcorpusSize(columns=vis_cols, alias="coquery_invisible_size")
+        """
+        Calculate a G-test matrix.
 
-        self.manager_summary_functions = FunctionList([self._freq_function,
-                                                       self._subcorpus_size])
+        The G-test matrix performs a G-test for each frequency of occurrence
+        of value cominbantions in the data frame, taking the subcorpus sizes
+        into account.
+
+        Depending on the number of value combinations, the test matrix can
+        become relatively large, and therefore, many multiple comparisons can
+        be performed. To correct for an inflation of significant test
+        results, a corrected alpha value is determined using the False
+        Discovery Rate method (Benjamini & Hochberg 1995, described in
+        Narum 2006).
+
+        The corrected alpha is used by CoqLikelihoodDelegate class to
+        visualize the test results in the results table.
+        """
+        # first, get the frequency list:
         df = super(ContrastMatrix, self).summarize(df, session)
-        df = df.drop_duplicates(subset=vis_cols)
+        self._freq_function = self.manager_summary_functions.get_list()[0]
+        l = [x if x != self._freq_function.get_id() else "coquery_invisible_count"
+             for x in df.columns]
+        df.columns = l
+        self._freq_function.alias = "coquery_invisible_count"
+        # now, get a subcorpus size for each row:
+        vis_cols = [x for x
+                    in get_visible_columns(df, manager=self, session=session)
+                    if not x == self._freq_function.get_id()]
+        self._subcorpus_size = SubcorpusSize(columns=vis_cols, alias="coquery_invisible_size")
+        self.manager_summary_functions = FunctionList([self._subcorpus_size])
+        df = super(FrequencyList, self).summarize(df, session)
+
+        # finally, calculate the test matrix:
         df = self.matrix(df, session)
         df = df.sort_values(by=vis_cols)
+        df = df.reset_index(drop=True)
 
         # determine critical value, adjusted for the number of comparisons,
         # using the False Discovery Rate method (Benjamini & Hochberg 1995,
@@ -909,11 +937,8 @@ class ContrastMatrix(Manager):
                 return df
             else:
                 return (g_test(freq_1, freq_2, total_1, total_2), 0)
-        except ValueError:
-            print(label)
-            print(df)
-            print(obs)
-            return None
+        except ValueError as e:
+            raise e
 
     def get_cell_content(self, index, df, session):
         """
