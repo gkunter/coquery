@@ -76,7 +76,6 @@ class Session(object):
         self.input_columns = []
         self._manager_cache = {}
         self._first_saved_dataframe = True
-        self.filter_list = []
 
         self.column_functions = functionlist.FunctionList()
         self.group_functions = []
@@ -317,6 +316,14 @@ class Session(object):
             #df = self.output_object
         #self.row_visibility[query_type] = pd.Series(
             #data=[True] * len(df.index), index=df.index)
+
+    @staticmethod
+    def apply_substitutions(df):
+        subst = options.get_column_properties().get("substitutions", {})
+        if subst:
+            return df.replace(subst)
+        else:
+            return df
 
     def retranslate_header(self, label):
         """
