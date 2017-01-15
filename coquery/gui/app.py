@@ -1293,14 +1293,16 @@ class CoqueryApp(QtGui.QMainWindow):
 
         options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
 
+        self.ui.check_restrict.setEnabled(False)
         # Enable "Restrict to sentences" checkbox if corpus
         # actually contains sentence information:
-        if (hasattr(self.resource, "corpus_sentence") or
-            hasattr(self.resource, "corpus_sentence_id") or
-            hasattr(self.resource, "sentence_table")):
-            self.ui.check_restrict.setEnabled(True)
-        else:
-            self.ui.check_restrict.setEnabled(False)
+        try:
+            if (hasattr(self.resource, "corpus_sentence") or
+                hasattr(self.resource, "corpus_sentence_id") or
+                hasattr(self.resource, "sentence_table")):
+                self.ui.check_restrict.setEnabled(True)
+        except AttributeError:
+            pass
 
     def toggle_selected_feature(self, item):
         is_checked = (item.checkState(0) == QtCore.Qt.Checked)
@@ -1559,7 +1561,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 sel = self.ui.data_preview.selectionModel().selection()
                 selected_rows = set([])
                 selected_columns = set([])
-                for x in sel.indexes():
+                for x in self.indexes():
                     selected_rows.add(x.row())
                     selected_columns.add(x.column())
                 tab = tab.iloc[list(selected_rows)][list(selected_columns)]
