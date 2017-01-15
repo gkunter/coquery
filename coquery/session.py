@@ -45,29 +45,40 @@ class Session(object):
 
         # load current corpus module depending on the value of options.cfg.corpus,
         # i.e. the corpus specified as an argumment:
-        ResourceClass, CorpusClass, LexiconClass, Path = options.cfg.current_resources[options.cfg.corpus]
+        if options.cfg.corpus:
 
-        current_lexicon = LexiconClass()
-        current_corpus = CorpusClass()
-        current_resource = ResourceClass(current_lexicon, current_corpus)
+            ResourceClass, CorpusClass, LexiconClass, Path = options.cfg.current_resources[options.cfg.corpus]
 
-        self.Corpus = current_corpus
-        self.Corpus.lexicon = current_lexicon
-        self.Corpus.resource = current_resource
+            current_lexicon = LexiconClass()
+            current_corpus = CorpusClass()
+            current_resource = ResourceClass(current_lexicon, current_corpus)
 
-        self.Lexicon = current_lexicon
-        self.Lexicon.corpus = current_corpus
-        self.Lexicon.resource= current_resource
+            self.Corpus = current_corpus
+            self.Corpus.lexicon = current_lexicon
+            self.Corpus.resource = current_resource
 
-        self.Resource = current_resource
+            self.Lexicon = current_lexicon
+            self.Lexicon.corpus = current_corpus
+            self.Lexicon.resource= current_resource
+
+            self.Resource = current_resource
+
+            self.db_engine = sqlalchemy.create_engine(
+                sqlhelper.sql_url(options.cfg.current_server, self.Resource.db_name))
+
+            logger.info("Corpus '{}' on connection '{}'".format(
+                self.Resource.name, options.cfg.current_server))
+
+        else:
+            self.Corpus = None
+            self.Resource = None
+            self.Lexicon = None
+            self.db_engine = None
+            logger.warn("No corpus available on connection '{}'".format(
+                options.cfg.current_server))
+
         self.show_header = options.cfg.show_header
         self.query_type = queries.get_query_type(options.cfg.MODE)
-
-        logger.info("Corpus '{}' on connection '{}'".format(
-            self.Resource.name, options.cfg.current_server))
-
-        self.db_engine = sqlalchemy.create_engine(
-            sqlhelper.sql_url(options.cfg.current_server, self.Resource.db_name))
 
         self.data_table = pd.DataFrame()
         self.output_object = pd.DataFrame()
