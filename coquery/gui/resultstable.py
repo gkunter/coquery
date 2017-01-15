@@ -226,9 +226,9 @@ class CoqLikelihoodDelegate(CoqResultCellDelegate):
                 value = 0
             if abs(value) > self.threshold - 0.5/(10 ** options.cfg.digits):
                 if value > 0:
-                    return QtGui.QColor("#91bfdb")
-                else:
                     return QtGui.QColor("#fc8d59")
+                else:
+                    return QtGui.QColor("#91bfdb")
             else:
                 return self.bg_color
 
