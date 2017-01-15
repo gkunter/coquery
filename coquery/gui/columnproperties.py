@@ -22,13 +22,14 @@ from .ui.columnPropertiesUi import Ui_ColumnProperties
 class ColumnPropertiesDialog(QtGui.QDialog):
     _color_map = {QtGui.QColor(name).name().lower(): name for name
                   in QtGui.QColor.colorNames()}
-    def __init__(self, df, preset, columns=None, parent=None):
+    def __init__(self, df, raw_df, preset, columns=None, parent=None):
         super(ColumnPropertiesDialog, self).__init__(parent)
 
         self.ui = Ui_ColumnProperties()
         self.ui.setupUi(self)
 
         self.df = df
+        self.raw_df = raw_df
         self.unique_cache = {}
         try:
             self.alias = preset["alias"]
@@ -232,12 +233,13 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         if column in self.unique_cache:
             val = self.unique_cache[column]
         else:
-            val = self.df[column].dropna().unique()
+            val = self.raw_df[column].dropna().unique()
             self.unique_cache[column] = val
         return val
 
     @staticmethod
-    def manage(df, preset, columns=[], parent=None):
-        dialog = ColumnPropertiesDialog(df, preset, columns, parent=parent)
+    def manage(df, raw, preset, columns=[], parent=None):
+        dialog = ColumnPropertiesDialog(df, raw, preset, columns,
+                                        parent=parent)
         dialog.setVisible(True)
         return dialog.exec_()
